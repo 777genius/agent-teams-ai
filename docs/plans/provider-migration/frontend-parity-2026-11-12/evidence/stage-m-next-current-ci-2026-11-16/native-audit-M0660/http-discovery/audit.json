@@ -1,0 +1,221 @@
+{
+  "kind": "Original M0660 published OpenCode2.0.21 HTTP discovery leaf evidence audit",
+  "reviewedAtUtc": "2026-11-16T01:39:04.755680+00:00",
+  "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997620,
+  "jobId": 133017914800,
+  "conclusion": "success",
+  "startedAt": "2026-11-16T01:30:23Z",
+  "completedAt": "2026-11-16T01:32:01Z",
+  "artifact": {
+    "id": 14190093443,
+    "name": "opencode-v2-published-http-persist-ubuntu",
+    "size_in_bytes": 876,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14190093443",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14190093443/zip",
+    "expired": false,
+    "created_at": "2026-11-16T01:31:59Z",
+    "expires_at": "2026-11-23T01:31:58Z",
+    "updated_at": "2026-11-16T01:31:59Z",
+    "digest": "sha256:9ca0176f4424c0a6e789880c1d6bfa9d7a2e707c2e80105316ed4353cce4a817",
+    "workflow_run": {
+      "id": 43780997620,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+    }
+  },
+  "archive": {
+    "path": "archive.zip",
+    "bytes": 876,
+    "blob": "f0e285a8c7613b1ac3942033f2c3839ab80e18fa",
+    "sha256": "9ca0176f4424c0a6e789880c1d6bfa9d7a2e707c2e80105316ed4353cce4a817"
+  },
+  "zipSafety": {
+    "uniqueNames": true,
+    "safeRelativeNames": true,
+    "symlinks": false,
+    "crcAllGood": true,
+    "members": [
+      {
+        "name": "opencode-v2-http-persist.json",
+        "size": 1851,
+        "crc32": "27384646",
+        "path": "extracted/opencode-v2-http-persist.json",
+        "bytes": 1851,
+        "blob": "c4521fbb28a6b8e7b94707b5cd5b2bae0869ef4d",
+        "sha256": "91e3c1cbdc462a130fffd399e521b99acffb5b6c6479c9c0f5a80d593cfbc6aa"
+      }
+    ]
+  },
+  "rawEvidence": [
+    {
+      "path": "job.log",
+      "bytes": 73673,
+      "blob": "d8576d4b843246614861e11ec7fbd1f898896b62",
+      "sha256": "b5e0139701d601066bda1e79546544ce6b75a9287d29c7a64feba1375869ffda"
+    },
+    {
+      "path": "job-api.json",
+      "bytes": 6004,
+      "blob": "228ec7130d88d9f08151368f36ff7ecf1d9322c2",
+      "sha256": "086793dbc4d89f11fb12198571a61427da9d0ac9f0e4d033413e8b234d67a353"
+    },
+    {
+      "path": "artifact-api.json",
+      "bytes": 783,
+      "blob": "0611fa106edd597ee4880cfbcb766d61b70e03ac",
+      "sha256": "b166b560a72bc6bc10c528cf518ca15b30a1218354f11428296d3ba8364f5538"
+    },
+    {
+      "path": "extracted/opencode-v2-http-persist.json",
+      "bytes": 1851,
+      "blob": "c4521fbb28a6b8e7b94707b5cd5b2bae0869ef4d",
+      "sha256": "91e3c1cbdc462a130fffd399e521b99acffb5b6c6479c9c0f5a80d593cfbc6aa"
+    },
+    {
+      "path": "source-audit.json",
+      "bytes": 5017,
+      "blob": "c353dc8c5938635be9e2eff0912ebf27905504d3",
+      "sha256": "4887273fa7350ca1fabd870454fa4ba5e6507375570037b46bcd659f0140419b"
+    }
+  ],
+  "originalRuntimeAndCommands": {
+    "node": "24.21.0",
+    "nodeLogExact": true,
+    "pnpmLogVersion": "11.22.0",
+    "originalInstall": "node ./scripts/ci/install-dependencies-with-retry.mjs with AGENT_TEAMS_INSTALL_PROFILE=node-ci",
+    "build": "pnpm --filter @agent-teams/legacy-agent-host build; two original TypeScript compiler commands completed before the next step",
+    "syntax": "node --check packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+    "publishedSdkInstall": "npm install --prefix \"$RUNNER_TEMP/opencode-v2-http-test\" --save-exact --package-lock=true --ignore-scripts --no-audit --no-fund @opencode/sdk@2.0.21",
+    "tests": [
+      {
+        "name": "shell flag resolver diagnostic",
+        "command": "node --test packages/legacy-agent-host/tests/opencode-v2-shell-flag-policy-probe.test.mjs",
+        "tests": 6,
+        "pass": 6,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      {
+        "name": "setup negatives before SDK prefix",
+        "command": "node --test packages/legacy-agent-host/tests/opencode-v2-http-setup-negative.test.mjs",
+        "tests": 6,
+        "pass": 5,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 1
+      },
+      {
+        "name": "same whole setup file after exact SDK install",
+        "command": "node --test packages/legacy-agent-host/tests/opencode-v2-http-setup-negative.test.mjs",
+        "tests": 6,
+        "pass": 6,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      {
+        "name": "owned parent SIGINT/SIGTERM negatives",
+        "command": "node --test packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs",
+        "tests": 4,
+        "pass": 2,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 2
+      }
+    ],
+    "testExecutionTotals": {
+      "pass": 19,
+      "fail": 0,
+      "skipped": 3,
+      "cancelled": 0,
+      "tests": 22
+    },
+    "totalLimit": "This is four command executions, including the same six-case setup file twice; not nineteen distinct tests or a whole project suite.",
+    "main": "node packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+    "finalVerifier": "Original workflow requires exact sourceHead, explicit false qualification flags, cleanup, all required booleans, one durable event, absent failure and all twelve ordered step labels."
+  },
+  "receipt": {
+    "kind": "TEST_V2_HTTP_DURABLE_DISCOVERY",
+    "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "version": "2.0.21",
+    "qualified": false,
+    "packagedElectronQualified": false,
+    "modelTurnProven": false,
+    "processCustodyQualified": false,
+    "steps": [
+      "TEST_published_server_real_authenticated_HTTP_ready",
+      "TEST_no_unauthenticated_HTTP_access",
+      "TEST_native_shell_flag_permission_split_not_tool_enforcement",
+      "TEST_native_unauthenticated_mutations_rejected",
+      "TEST_published_native_permission_resolver_and_nonreplay",
+      "TEST_real_pending_permission_exists_before_cold_restart",
+      "TEST_official_HTTP_session_created_event_persisted",
+      "TEST_cold_native_permission_not_replayed_or_accepted",
+      "TEST_native_persisted_always_vs_deny_survives_cold_restart",
+      "TEST_durable_HTTP_session_identity_survives_cold_restart_no_prompt",
+      "TEST_real_published_HTTP_Stage1_SPI_ready_no_model_turn",
+      "TEST_Stage1_SPI_readiness_recheck_and_owned_cleanup_no_replay"
+    ],
+    "cleanup": true,
+    "nativeUnauthenticatedDeleteRejected": true,
+    "nativeSessionPermissionOrderReadbackProven": true,
+    "nativeShellFlagPermissionSplitObserved": true,
+    "nativeUnauthenticatedPermissionGrantRejected": true,
+    "nativePermissionResolverProven": true,
+    "nativePermissionReplyRejectNoReplayProven": true,
+    "nativeSavedAlwaysOverridesAskProven": true,
+    "nativeExplicitDenyBeatsSavedAlwaysProven": true,
+    "nativeSavedGrantRemainsProjectScopedAfterRestartProven": true,
+    "nativeFreshSessionSavedGrantSurvivesColdRestartProven": true,
+    "nativeSavedGrantSurvivesColdRestartProven": true,
+    "nativeStalePermissionAfterRestartRejected": true,
+    "nativeStaleGrantAfterRestartRejected": true,
+    "durableHTTPEvents": 1,
+    "nativeModelReadback": "captured",
+    "hostAdmissionPhase": "spi-opened",
+    "hostSpiReadinessProven": true
+  },
+  "sourceBoundSemantics": [
+    {
+      "source": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "lines": "12-34,36-106",
+      "finding": "Linux x64 TEST owner imports published ServerProcess under captured Node, isolated per-run home/config/data/temp and loopback authenticated HTTP; models.fetch=false, project config false, watchers disabled. Both SDK and server package names/versions2.0.21 are asserted. Worker source is copied into the disposable namespace; shared npm prefix is read-only linked, not overwritten on cleanup."
+    },
+    {
+      "source": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "lines": "108-174,202-240",
+      "finding": "Original worker spawn is detached; source captures /proc start ticks with pid=PGID=session, hashes current Node executable and matches authenticated /api/info pid/version. Original signal guard checks retained start identity, and stop waits for both PID and PGID absence with no signal replay. These are TEST-local checks; receipt intentionally retains processCustodyQualified=false."
+    },
+    {
+      "source": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "lines": "241-248,250-697",
+      "finding": "Completed original checks cover one session.created durable event and its exact in-memory fingerprint/sequence after a distinct-PID cold restart; unauthorized DELETE/grant no-effect, ordered resolver rules, ask/reject/nonreplay, saved always versus explicit deny, fresh-session/project scope after restart, and separate stale reject/once/always requests. No model prompt/tool execution is required or qualified."
+    },
+    {
+      "source": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "lines": "699-842",
+      "finding": "The original private Stage1 Session SPI is opened over the actual HTTP server. It requires captured model readback, one initial host-context PUT and three instruction reads, readiness recheck, confirmed driver close and provider cleanup, and physical absence of second worker PID/PGID. These exact assertions precede the final step; their transient PID/start/hash values are not retained in the compact receipt."
+    },
+    {
+      "source": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "lines": "145-174,843-862",
+      "finding": "Existing protected finalizer shares cleanup across interruption/normal paths, retains safe first failure and removes the owned root only after confirmed process stop. Receipt cleanup=true, all twelve steps and absent failure passed the final original workflow verifier."
+    },
+    {
+      "source": "packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs",
+      "lines": "22-135",
+      "finding": "Actual SIGINT/SIGTERM published-HTTP cases require original readiness handshake, signal only their owned parent, exit130/143 with null signal, exact safe interruption receipt, qualified=false, cleanup=true, removed namespace and worker-group ESRCH; native ELF cases were skipped because their prefix was not configured. Only test PASS lines are retained, not each negative receipt/handshake file."
+    }
+  ],
+  "qualificationLimits": [
+    "Overall qualified, packagedElectronQualified, modelTurnProven and processCustodyQualified are all false exactly as recorded. No Host Teams/Processes/Electron/embeddedV2.1.4/P08/P09 or full migration qualification transfers from this separate publishedHTTP leaf.",
+    "The archive contains only one compact receipt. It does not retain the worker PID/start-tick rows, raw HTTP/native session bodies, durable event bytes, copied package trees/lockfile, compiled Host outputs or the two interrupted receipts. Source-bound original assertions and full job success are the proof scope; no independent replay/rebuild or full dependency-byte census is claimed.",
+    "Original three skips remain unqualified here. The pre-install setup skip later passes in its second prescribed command; the two nativeELF interruption cases remain skipped.",
+    "Original Node24.21.0 installation/build success does not replace the awaited Team ten-file stderr privacy RED, later one-helper GREEN, full application types, changed-path lint or any other CI gate.",
+    "This audit downloaded/read original evidence and read Git/source bytes only; it invoked no project compiler/test/provider/native process and changed no source, ref or CI state."
+  ]
+}

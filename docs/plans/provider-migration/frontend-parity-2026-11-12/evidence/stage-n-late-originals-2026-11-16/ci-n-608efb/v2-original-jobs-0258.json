@@ -1,0 +1,99 @@
+{
+  "observedAt": "2026-11-16 02:58:21 UTC",
+  "kind": "v2",
+  "runId": 43795234721,
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "jobs": [
+        {
+          "id": 133062438603,
+          "name": "Native V2.0.21 Host SPI instructions (Ubuntu TEST only)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234721,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062438856,
+          "name": "Published V2.0.21 durable HTTP process (TEST discovery only)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234721,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062438874,
+          "name": "Embedded V2.1.4 original Host (linux-x64)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234721,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062438882,
+          "name": "Embedded V2.1.4 original Host (win32-x64)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234721,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062438887,
+          "name": "Static V01 source test (windows-2022)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234721,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062438907,
+          "name": "Embedded V2.1.4 original Host (win32-arm64)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234721,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062439001,
+          "name": "Embedded V2.1.4 original Host (darwin-arm64)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234721,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062439014,
+          "name": "Static V01 source test (ubuntu-24.04)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234721,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062439089,
+          "name": "Embedded V2.1.4 original Host (darwin-x64)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234721,
+          "logs_url": null,
+          "steps": null
+        }
+      ]
+    },
+    "isError": false
+  }
+}

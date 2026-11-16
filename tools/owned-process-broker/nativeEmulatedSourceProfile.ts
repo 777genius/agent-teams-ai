@@ -142,7 +142,7 @@ if(argv.length===1&&argv[0]==='--version'){
   });
   const cli = realpathSync(fileURLToPath(new URL('../../packages/legacy-agent-host/dist/cli.js', import.meta.url)));
   const hostEntry = join(root, 'TEST-source-host.mjs');
-  const diagnosticPins = ['owned-process/HostWindowsLaunch', 'composition/prepareTeamModelReadiness', 'management/ModelProbeOwner', 'composition/projectRuntimeMember']
+  const diagnosticPins = ['owned-process/HostWindowsLaunch', 'composition/prepareTeamModelReadiness', 'management/ModelProbeOwner', 'composition/projectRuntimeMember', 'adapters/providers/CodexMemberProvider']
     .flatMap(name => (['src', 'dist'] as const).map(directory => {
       const path = fileURLToPath(new URL(`../../packages/legacy-agent-host/${directory}/${name}${directory === 'src' ? '.ts' : '.js'}`, import.meta.url));
       assert.equal(realpathSync(path), path); return { path, sha256: fileHash(path) };
@@ -157,7 +157,7 @@ function validateSourceRefusal(value, persisted) {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value)));
   assert.ok(Object.getOwnPropertySymbols(value).length === 0 && Object.values(Object.getOwnPropertyDescriptors(value)).every(row => 'value' in row));
   const hash = raw => typeof raw === 'string' && /^[a-f0-9]{64}$/.test(raw), clock = raw => typeof raw === 'number' && Number.isSafeInteger(raw) && raw >= 0;
-  const fields = { native: 'capability phase reason dispatched staged rootCaptured deadlineExpired',
+  const fields = { native: 'capability phase reason dispatched staged rootCaptured deadlineExpired checkSite',
     consumer: 'actionDigest groupDigest bindingDigest consumerId phase reason cutoff observedAt',
     reference: 'commandDigest contextDigest phase reason probeCutoff probeNow scopeCutoff scopeNow preparationCutoff preparationNow', limit: '' };
   assert.ok(typeof value.kind === 'string' && Object.hasOwn(fields, value.kind));
@@ -170,6 +170,8 @@ function validateSourceRefusal(value, persisted) {
     assert.ok('sealed current-false current-threw launch-deadline refused unknown result-mismatch preparation-failed'.split(' ').includes(value.reason));
     assert.ok(['dispatched', 'staged', 'rootCaptured'].every(key => typeof value[key] === 'boolean'));
     assert.equal(value.deadlineExpired, value.reason === 'launch-deadline' ? true : null);
+    assert.ok(value.checkSite === null || ['before-owner', 'after-owner', 'request-builder', 'after-reply'].includes(value.checkSite));
+    if (value.checkSite !== null) assert.ok(value.phase === 'resume' && ['sealed', 'current-false', 'current-threw', 'launch-deadline'].includes(value.reason));
   } else {
     assert.ok(value.reason === 'held' || value.reason === 'threw'); const consumer = value.kind === 'consumer';
     assert.ok((consumer ? ['actionDigest', 'groupDigest', 'bindingDigest', 'consumerId'] : ['commandDigest', 'contextDigest']).every(key => hash(value[key])));
@@ -204,6 +206,62 @@ channel('agent-teams.legacy-host.first-refusal').subscribe(value => { try {
   if (pair !== null) references.add(pair);
 } catch { disabled = true; } });
 const projectionLedger = ${JSON.stringify(runtimeProjectionLedger)};
+const codexContexts = [], codexEvents = [], codexStates = [], codexViews = new Map(); let codexUnknown = false;
+const codexReject = () => { codexUnknown = true; codexContexts.length = 0; codexEvents.length = 0; codexStates.length = 0; codexViews.clear(); };
+const codexTuple = (value, fields) => {
+  assert.ok(value && typeof value === 'object' && !Array.isArray(value));
+  assert.ok([Object.prototype, null].includes(Object.getPrototypeOf(value)) && Object.getOwnPropertySymbols(value).length === 0);
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  assert.deepEqual(Object.keys(descriptors).sort(), [...fields].sort());
+  assert.ok(Object.values(descriptors).every(row => 'value' in row));
+  return fields.map(key => descriptors[key].value);
+};
+try { channel('agent-teams.legacy-host.codex-readiness').subscribe(value => { try {
+  if (codexUnknown) return;
+  const [schemaVersion, bindingDigest, sourceId, sourceRevision, sequence, invocation, operation, phase, result] = codexTuple(value,
+    ['schemaVersion', 'bindingDigest', 'sourceId', 'sourceRevision', 'sequence', 'invocation', 'operation', 'phase', 'result']);
+  assert.equal(schemaVersion, 1);
+  assert.ok([bindingDigest, sourceId, sourceRevision].every(value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)));
+  assert.ok(Number.isInteger(sequence) && sequence >= 1 && sequence <= 64 && Number.isInteger(invocation) && invocation >= 1 && invocation <= 16);
+  assert.ok(['open', 'catalog', 'readiness'].includes(operation) && ['before-await', 'after-await', 'returned', 'threw'].includes(phase));
+  assert.ok(phase === 'returned' ? operation !== 'open' && typeof result === 'boolean' : result === null);
+  const identity = [bindingDigest, sourceId, sourceRevision];
+  let contextIndex = codexContexts.findIndex(row => row.every((value, index) => value === identity[index]));
+  if (contextIndex < 0) {
+    assert.ok(codexContexts.length < 4); contextIndex = codexContexts.length;
+    codexContexts.push(identity); codexStates.push({ sequence: 0, invocations: new Map() });
+  }
+  const state = codexStates[contextIndex]; assert.equal(sequence, state.sequence + 1);
+  const prior = state.invocations.get(invocation);
+  if (phase === 'before-await') {
+    assert.equal(prior, undefined); assert.equal(invocation, state.invocations.size + 1);
+  } else {
+    assert.ok(prior && prior[0] === operation);
+    assert.ok(phase === 'after-await' ? prior[1] === 'before-await'
+      : phase === 'returned' ? prior[1] === 'after-await'
+      : prior[1] === 'before-await' || prior[1] === 'after-await');
+  }
+  assert.ok(codexEvents.length < 64);
+  state.sequence = sequence; state.invocations.set(invocation, [operation, phase]);
+  codexEvents.push([contextIndex, sequence, invocation, operation, phase, result]);
+} catch { codexReject(); } }); } catch { codexReject(); }
+try { channel('agent-teams.legacy-host.runtime-projection').subscribe(value => { try {
+  if (codexUnknown) return;
+  const tuple = codexTuple(value, ['viewDigest', 'bindingMatches', 'recordReady', 'providerReady', 'ownerCurrent', 'nativeReady']);
+  assert.ok(typeof tuple[0] === 'string' && /^[a-f0-9]{64}$/.test(tuple[0]));
+  assert.equal(typeof tuple[1], 'boolean'); assert.equal(typeof tuple[5], 'boolean');
+  for (let index = 2; index <= 4; index++)
+    assert.ok(tuple.slice(1, index).every(value => value === true) ? typeof tuple[index] === 'boolean' : tuple[index] === null);
+  assert.equal(tuple[5], tuple.slice(1, 5).every(value => value === true));
+  assert.ok(codexViews.has(tuple[0]) || codexViews.size < 4); codexViews.set(tuple[0], codexEvents.length);
+} catch { codexReject(); } }); } catch { codexReject(); }
+try { process.once('exit', () => { try {
+  const value = codexUnknown ? { schemaVersion: 1, status: 'unknown', reason: 'invalid-overflow-or-observer-failure' }
+    : { schemaVersion: 1, status: 'observed', contexts: codexContexts, events: codexEvents, views: [...codexViews] };
+  const raw = JSON.stringify(value);
+  writeFileSync(projectionLedger + '.codex-readiness', Buffer.byteLength(raw) <= 8192 ? raw :
+    '{"schemaVersion":1,"status":"unknown","reason":"invalid-overflow-or-observer-failure"}', { mode: 0o600, flag: 'wx' });
+} catch { /* A missing separate ledger remains unknown; preserve the original exit listener. */ } }); } catch { codexReject(); }
 const runtimeProjectionRows = new Map(); let projectionUnknown = false;
 channel('agent-teams.legacy-host.runtime-projection').subscribe(value => { try {
   if (projectionUnknown) return;

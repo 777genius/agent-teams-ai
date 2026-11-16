@@ -198,7 +198,7 @@ export function projectIncomingMemberSpawnSnapshot(input: {
     ? {
         ignoredRuntimeRunIds: {
           ...prev.ignoredRuntimeRunIds,
-          [previousRunId!]: teamName,
+          [previousRunId]: teamName,
         },
       }
     : {};

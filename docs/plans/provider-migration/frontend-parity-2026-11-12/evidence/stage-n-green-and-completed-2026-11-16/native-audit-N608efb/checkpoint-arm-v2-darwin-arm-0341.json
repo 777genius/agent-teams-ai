@@ -1,0 +1,197 @@
+{
+  "kind": "ORIGINAL_N608_INCREMENTAL_COMPLETED_NATIVE_EVIDENCE_CHECKPOINT",
+  "createdAt": "2026-11-16T03:40:58.661535+00:00",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runs": [
+    43795234913,
+    43795234721
+  ],
+  "originalJobObservation": "2026-11-16 03:31:01 UTC",
+  "latestOwnedSnapshot": "2026-11-16 03:38:38 UTC",
+  "completedJobs": [
+    {
+      "id": 133062439921,
+      "scope": "Darwin ARM64 Process fixtures; native[]",
+      "conclusion": "success"
+    },
+    {
+      "id": 133062439001,
+      "scope": "Darwin ARM64 earlier manual V2 flow followed by original P09 mutation-marker refusal",
+      "conclusion": "failure"
+    },
+    {
+      "id": 133062438907,
+      "scope": "Windows ARM64 manual/automatic V2 flows and original Job custody",
+      "conclusion": "success"
+    }
+  ],
+  "earlierCheckpointsRetained": [
+    {
+      "path": "native-audit-N608efb/checkpoint-x64-static-0316.json",
+      "bytes": 6277,
+      "blob": "13559ac7a0e122389f53f64615614bdd3475213b",
+      "sha256": "771f3ad62589723bd1ef19c0ae862742991f95d0fc7be15b27e6f6ecf01ccdf5"
+    },
+    {
+      "path": "native-audit-N608efb/checkpoint-arm-process-darwin-x64-0323.json",
+      "bytes": 7126,
+      "blob": "184bec027cc1051d2d51a4bb40fef10619f910f7",
+      "sha256": "b94fd7c54364467518ba883de96d1f260a9c2848d579705ba66f11c1864afe19"
+    }
+  ],
+  "reusedExactCurrentSourceClosure": {
+    "path": "native-audit-N608efb/host-source-N608efb-git-audit.json",
+    "bytes": 163123,
+    "blob": "9c8472f84db2ee0615314b9fd05df207e2c7d112",
+    "sha256": "30dbbf806666206c905b346f15e475646c2840d0c29f326a953fb3202d595ea0"
+  },
+  "associatedOriginalToolResponseSupplement": {
+    "path": "native-audit-N608efb/tool-response-supplement/supplemental-checkpoint.json",
+    "bytes": 9556,
+    "blob": "6113f5b90ed70503b0fc27b61cbef5dba39eb080",
+    "sha256": "d0617277a8625a841ef14e294f980ff2f6865c7985201939468a7e4aec70f92e"
+  },
+  "files": [
+    {
+      "path": "native-audit-N608efb/process-darwin-arm64/job-133062439921.log",
+      "bytes": 118573,
+      "blob": "6e5f285d08c5a74a3c7389891ae647e527c775cf",
+      "sha256": "2f9aaab93ff43bf4df44e3b97025a785343990b07579a9e07a2da59dece3f867"
+    },
+    {
+      "path": "native-audit-N608efb/process-darwin-arm64/artifact-14194928223.zip",
+      "bytes": 12562,
+      "blob": "4673fb1bb146ed3125b51592fde2f193987f9301",
+      "sha256": "ab67b5526e19b46119c486a627086bd1c5e2b72464c1ec4a07baf0c18576fdac"
+    },
+    {
+      "path": "native-audit-N608efb/process-darwin-arm64/archive-audit.json",
+      "bytes": 1910,
+      "blob": "8b00f595c3b006cf599580a2103d7c6241942186",
+      "sha256": "da9ef472e805d7ad7a1ceee4fbc842d16f6f59d81a0ec66cd535b3aa7fa2b0d9"
+    },
+    {
+      "path": "native-audit-N608efb/process-darwin-arm64-qualification-audit.json",
+      "bytes": 7750,
+      "blob": "6d964a031ae72435a65d7061f1b1d2d3fa464727",
+      "sha256": "534085d7461d2220536357eca26dd4984c9949ce4f5c4e2872449ea6a5d00e5e"
+    },
+    {
+      "path": "native-audit-N608efb/v2-darwin-arm64/job-133062439001.log",
+      "bytes": 106797,
+      "blob": "a1a2f673b653e674ffa775eaf3315eebfe8f7ced",
+      "sha256": "05f1dfcccea0abd7566e563e3cffa57001245526f99b6b41ea6ccc53c22845b9"
+    },
+    {
+      "path": "native-audit-N608efb/v2-darwin-arm64/artifact-14194589394.zip",
+      "bytes": 10492,
+      "blob": "ade79a51e23baff08543ed6da7a81d8771fa98b6",
+      "sha256": "fcbee0cda12a3f52e358c48e87d3a5a943c3a2450ed6f15e495bf6cfa82966d8"
+    },
+    {
+      "path": "native-audit-N608efb/v2-darwin-arm64/archive-audit.json",
+      "bytes": 1205,
+      "blob": "66a306af58a607c84be08efea3d79ee5d1cf8446",
+      "sha256": "0e2bba8309d7f6193aeb4959fe16bcb22f21e1df9c14c6afe0372e6de7e4d15a"
+    },
+    {
+      "path": "native-audit-N608efb/p09-darwin-arm64-qualification-audit.json",
+      "bytes": 28364,
+      "blob": "0ebe1846bf2b13ab0ab2b4b257682eb7acbb49b6",
+      "sha256": "98dffbf91eacbdb53ab7b1682b1408f820ec5505458c68096287f1e316ed33ff"
+    },
+    {
+      "path": "native-audit-N608efb/v2-win32-arm64/job-133062438907.log",
+      "bytes": 112775,
+      "blob": "1b56d4ad781b09afda04c5d2396c8fdaaf704f08",
+      "sha256": "9f88fac3ef794b80cc5539e7ebc9ec08000f5d4cc26db34f18bf72d74169f3f5"
+    },
+    {
+      "path": "native-audit-N608efb/v2-win32-arm64/artifact-14195560533.zip",
+      "bytes": 13475,
+      "blob": "75e42c3d38d8378e394aae327d5f8cf596bad554",
+      "sha256": "0c9ef1def19153c46fea68fab390a139cc4af9d2a805cb7ac5ddddae6404f7e7"
+    },
+    {
+      "path": "native-audit-N608efb/v2-win32-arm64/archive-audit.json",
+      "bytes": 1211,
+      "blob": "46a63b1313bbf8fe8921dc2f546db97afc698a59",
+      "sha256": "4be215a832b5a2af292f8ebd7361d8212c448c68f9e21d5541d0315a75fc00b8"
+    },
+    {
+      "path": "native-audit-N608efb/v2-windows-arm64-qualification-audit.json",
+      "bytes": 19933,
+      "blob": "c1d331e5c5650a1c259cf6185d08febe6429685e",
+      "sha256": "b6a97593fafb0ceea04423cb9d3c66a00569305ad04b3bf1de97ea0e4c4866f9"
+    },
+    {
+      "path": "native-audit-N608efb/process-artifacts-0325.json",
+      "bytes": 3895,
+      "blob": "f892bc34be6e5edf9efc2e4e8fddc01b345deb79",
+      "sha256": "8dc22b7214f31e852e646666f6e97801927e80584fb42c073e815803ae3872b7"
+    },
+    {
+      "path": "native-audit-N608efb/v2-artifacts-0325.json",
+      "bytes": 2857,
+      "blob": "ee779347c24f0bc0fd46e9e6300e3e07e7a1bf3c",
+      "sha256": "7a0fe2df2d60665c614bc26fc549160754368050394d7c203fdc1e53434e1363"
+    },
+    {
+      "path": "native-audit-N608efb/v2-artifacts-0331.json",
+      "bytes": 3755,
+      "blob": "fe9fb63abd047dc5f34a8f5d542b81acf4e3e228",
+      "sha256": "ac306005fff8df1373ae2fadbf13ba46db40e51e2cc0ecef0e16b59d8d0d4663"
+    },
+    {
+      "path": "ci-n-608efb/process-jobs-0325.json",
+      "bytes": 22179,
+      "blob": "d3f8a5a4eeb1a064b9167a6813eb02390439785e",
+      "sha256": "b69d5d2725490a939a8cd7acb4e16baf2607a73b052a740e6931bf804361c126"
+    },
+    {
+      "path": "ci-n-608efb/v2-jobs-0325.json",
+      "bytes": 28728,
+      "blob": "9189c5252c3ca35fc170e4298dd86fccd2402d6c",
+      "sha256": "49fdcf162ff5773c7871b94a1acbeb47434b76ffdd57829e19cd08ff5a343da7"
+    },
+    {
+      "path": "ci-n-608efb/process-jobs-0331.json",
+      "bytes": 22179,
+      "blob": "d3f8a5a4eeb1a064b9167a6813eb02390439785e",
+      "sha256": "b69d5d2725490a939a8cd7acb4e16baf2607a73b052a740e6931bf804361c126"
+    },
+    {
+      "path": "ci-n-608efb/v2-jobs-0331.json",
+      "bytes": 28969,
+      "blob": "6a3bd4353c1d875c2efafe427104f16eaccef9b5",
+      "sha256": "1be91434cd5b0c9273ba46a70b385c8eff4910c884005263dcce042959a334b5"
+    }
+  ],
+  "fileCount": 19,
+  "totalBytes": 547609,
+  "archives": [
+    {
+      "path": "native-audit-N608efb/process-darwin-arm64/artifact-14194928223.zip",
+      "members": 6
+    },
+    {
+      "path": "native-audit-N608efb/v2-darwin-arm64/artifact-14194589394.zip",
+      "members": 4
+    },
+    {
+      "path": "native-audit-N608efb/v2-win32-arm64/artifact-14195560533.zip",
+      "members": 4
+    }
+  ],
+  "archiveCount": 3,
+  "archiveMemberCount": 14,
+  "qualification": [
+    "All listed identities bind retained original official bytes and completed source-bound author audits; this checkpoint supplies no new independent review or acceptance.",
+    "All14 extracted archive members are recoverable from the three original ZIPs; redundant extracted copies are not selected.",
+    "The original Darwin ARM64 P09 job remains failed: its earlier manual V2 success does not qualify mutation/consumed-byte binding.",
+    "The five remaining original Linux jobs were queued at03:38:38; none is classified by these completed leaves.",
+    "No original Team177/24 privacy GREEN,93lint,P08,Desktop,release or real-vendor qualification follows.",
+    "The nine exact original full MCP log response objects are separately retained in the referenced supplemental checkpoint; no refetch or earlier-checkpoint mutation.",
+    "No signed URL, project/native/provider execution, source/ref or CI mutation."
+  ]
+}

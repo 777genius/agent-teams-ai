@@ -1,0 +1,808 @@
+{
+  "schemaVersion": 1,
+  "status": "INCOMPLETE",
+  "auditKind": "original CI raw/source audit, no execution by reviewer",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "jobId": 133017915900,
+  "artifactId": 14189374994,
+  "originalJobLog": {
+    "path": "job-133017915900.log",
+    "bytes": 184267,
+    "blob": "18de3a01b1af208e57279ba29317c6c12637911c",
+    "sha256": "e96323c7cd7ec9baba03e6f0c34153b9eec9f99c1b8b9b6b6ba6aa2739e3e422"
+  },
+  "officialArchive": {
+    "path": "artifact-14189374994.zip",
+    "bytes": 665565,
+    "blob": "087218fdd1ee26394fca0f1700171d87a955cd60",
+    "sha256": "4ebbd3445d8a455746843c471d9115e46502be1909c8a2b7b60110aaa0c57a2e"
+  },
+  "receipt": {
+    "path": "extracted/TEST-desktop-backend-DXg4Xj/desktop-backend-receipt.json",
+    "bytes": 756997,
+    "blob": "aeb2650c4ce00e53c7a8b746b506d992eac985e0",
+    "sha256": "189e97065f05e8afba47064b1eb8c63ffc87d97cc6a4b292fd1ca461a092bde3"
+  },
+  "failure": "Original UI target moved after ownership check\n+ actual - expected\n\n  [\n    700,\n+   505.75,\n-   494.75,\n    'BUTTON'\n  ]\n",
+  "failureSource": {
+    "kind": "assertion",
+    "frames": [
+      "scripts/legacy-agent-host/desktop-ui-controls.ts:288:12",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts:87:37",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:421:12",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+    ]
+  },
+  "firstBoundary": {
+    "action": "expand original saved launch settings",
+    "sourceCall": "desktop-emulated-runtime-ui.ts:87",
+    "helperAssertion": "desktop-ui-controls.ts:288",
+    "stablePoint": [
+      700,
+      494.75,
+      "BUTTON"
+    ],
+    "afterOwnershipPoint": [
+      700,
+      505.75,
+      "BUTTON"
+    ],
+    "deltaY": 11,
+    "hoverStepPoint": {
+      "x": 700,
+      "y": 507.5,
+      "text": "Optional launch settingsOptional•OpenCode•test-provider/TEST-model•Fresh lead session",
+      "tag": "BUTTON"
+    },
+    "actualPressedReleasedClickUnreachedForThisTarget": true,
+    "earlierAttemptedMouseClicks": 3,
+    "sourceOnlyOrder": "Stable-target assertion and two settled samples precede owned-renderer guard and final evaluate; geometry mismatch occurs before second guard, click record and mousePressed/mouseReleased.",
+    "limits": [
+      "The raw receipt does not retain the full sequence or timing of stable samples.",
+      "The earlier preflight state before the compared points is unretained. Final Ready display does not prove it caused the movement.",
+      "No uncertainty/retry relaxation or production/navigation repair is inferred."
+    ]
+  },
+  "originalUiJournal": [
+    {
+      "action": "mouseMoved",
+      "label": "hover sidebar row before measuring click",
+      "subject": "TEST persisted Host sidebar seed",
+      "target": {
+        "x": 1261,
+        "y": 206.875
+      }
+    },
+    {
+      "action": "mouseClick",
+      "label": "sidebar task",
+      "subject": "TEST persisted Host sidebar seed",
+      "target": {
+        "x": 1261,
+        "y": 206.875
+      },
+      "state": "attempted"
+    },
+    {
+      "observation": "passive input delivery after sidebar click",
+      "value": {
+        "focused": true,
+        "visibility": "visible",
+        "events": [
+          {
+            "type": "pointerdown",
+            "timeMs": 24986,
+            "x": 1261,
+            "y": 206.875,
+            "button": 0,
+            "buttons": 1,
+            "trusted": true,
+            "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+            "target": {
+              "tag": "SPAN",
+              "id": "",
+              "ariaLabel": null,
+              "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+            },
+            "focusBefore": {
+              "tag": "INPUT",
+              "id": "",
+              "ariaLabel": null,
+              "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+            },
+            "defaultPreventedBefore": false,
+            "sidebarRow": false,
+            "taskId": null,
+            "activeSortable": [],
+            "dragAnnouncement": [
+              ""
+            ],
+            "taskClarification": null,
+            "defaultPreventedAfterMicrotask": false,
+            "focusAfterMicrotask": {
+              "tag": "INPUT",
+              "id": "",
+              "ariaLabel": null,
+              "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+            },
+            "defaultPreventedAfterDispatch": false,
+            "focusAfterDispatch": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+            }
+          },
+          {
+            "type": "focusout",
+            "timeMs": 24987,
+            "trusted": true,
+            "buttonClass": null,
+            "target": {
+              "tag": "INPUT",
+              "id": "",
+              "ariaLabel": null,
+              "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+            },
+            "focusBefore": {
+              "tag": "BODY",
+              "id": "",
+              "ariaLabel": null,
+              "className": ""
+            },
+            "defaultPreventedBefore": false,
+            "sidebarRow": false,
+            "taskId": null,
+            "activeSortable": [],
+            "dragAnnouncement": [
+              ""
+            ],
+            "defaultPreventedAfterMicrotask": false,
+            "focusAfterMicrotask": {
+              "tag": "BODY",
+              "id": "",
+              "ariaLabel": null,
+              "className": ""
+            },
+            "defaultPreventedAfterDispatch": false,
+            "focusAfterDispatch": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+            }
+          },
+          {
+            "type": "focusin",
+            "timeMs": 24989,
+            "trusted": true,
+            "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+            "target": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+            },
+            "focusBefore": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+            },
+            "defaultPreventedBefore": false,
+            "sidebarRow": false,
+            "taskId": null,
+            "activeSortable": [],
+            "dragAnnouncement": [
+              ""
+            ],
+            "defaultPreventedAfterMicrotask": false,
+            "focusAfterMicrotask": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+            },
+            "defaultPreventedAfterDispatch": false,
+            "focusAfterDispatch": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+            }
+          },
+          {
+            "type": "pointerup",
+            "timeMs": 24991,
+            "x": 1261,
+            "y": 206.875,
+            "button": 0,
+            "buttons": 0,
+            "trusted": true,
+            "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+            "target": {
+              "tag": "SPAN",
+              "id": "",
+              "ariaLabel": null,
+              "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+            },
+            "focusBefore": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+            },
+            "defaultPreventedBefore": false,
+            "sidebarRow": false,
+            "taskId": null,
+            "activeSortable": [],
+            "dragAnnouncement": [
+              ""
+            ],
+            "taskClarification": null,
+            "defaultPreventedAfterMicrotask": false,
+            "focusAfterMicrotask": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+            },
+            "defaultPreventedAfterDispatch": false,
+            "focusAfterDispatch": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+            }
+          },
+          {
+            "type": "click",
+            "timeMs": 24991,
+            "x": 1261,
+            "y": 206,
+            "button": 0,
+            "buttons": 0,
+            "trusted": true,
+            "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+            "target": {
+              "tag": "SPAN",
+              "id": "",
+              "ariaLabel": null,
+              "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+            },
+            "focusBefore": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+            },
+            "defaultPreventedBefore": false,
+            "sidebarRow": false,
+            "taskId": null,
+            "activeSortable": [],
+            "dragAnnouncement": [
+              ""
+            ],
+            "taskClarification": null,
+            "defaultPreventedAfterMicrotask": false,
+            "focusAfterMicrotask": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+            },
+            "defaultPreventedAfterDispatch": false,
+            "focusAfterDispatch": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+            }
+          },
+          {
+            "type": "focusout",
+            "timeMs": 25010,
+            "trusted": true,
+            "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+            "target": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+            },
+            "focusBefore": {
+              "tag": "BODY",
+              "id": "",
+              "ariaLabel": null,
+              "className": ""
+            },
+            "defaultPreventedBefore": false,
+            "sidebarRow": false,
+            "taskId": null,
+            "activeSortable": [],
+            "dragAnnouncement": [
+              ""
+            ],
+            "defaultPreventedAfterMicrotask": false,
+            "focusAfterMicrotask": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+            },
+            "defaultPreventedAfterDispatch": false,
+            "focusAfterDispatch": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+            }
+          },
+          {
+            "type": "focusin",
+            "timeMs": 25011,
+            "trusted": true,
+            "buttonClass": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--",
+            "target": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+            },
+            "focusBefore": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+            },
+            "defaultPreventedBefore": false,
+            "sidebarRow": false,
+            "taskId": null,
+            "activeSortable": [],
+            "dragAnnouncement": [
+              ""
+            ],
+            "defaultPreventedAfterMicrotask": false,
+            "focusAfterMicrotask": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+            },
+            "defaultPreventedAfterDispatch": false,
+            "focusAfterDispatch": {
+              "tag": "BUTTON",
+              "id": "",
+              "ariaLabel": null,
+              "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover Open team",
+      "selector": "[role=\"dialog\"] button",
+      "target": {
+        "x": 1050.7264709472656,
+        "y": 202.8566131591797,
+        "text": "Open team",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "action": "mouseClick",
+      "label": "Open team",
+      "selector": "[role=\"dialog\"] button",
+      "expectedText": "Open team",
+      "target": {
+        "x": 1055.3125,
+        "y": 199.625,
+        "text": "Open team",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover open original saved Team Launch",
+      "selector": "button",
+      "target": {
+        "x": 1043.3125,
+        "y": 206,
+        "text": "Launch",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "action": "mouseClick",
+      "label": "open original saved Team Launch",
+      "selector": "button",
+      "expectedText": "Launch",
+      "target": {
+        "x": 1043.3125,
+        "y": 206,
+        "text": "Launch",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover expand original saved launch settings",
+      "selector": "[role=\"dialog\"] button[aria-controls=\"_r_2r_\"]",
+      "target": {
+        "x": 700,
+        "y": 507.5,
+        "text": "Optional launch settingsOptional•OpenCode•test-provider/TEST-model•Fresh lead session",
+        "tag": "BUTTON"
+      }
+    }
+  ],
+  "failureSnapshotSummary": {
+    "readyState": "complete",
+    "focused": true,
+    "visibility": "visible",
+    "inputEventCount": 25,
+    "store": {
+      "teamsLoading": false,
+      "globalTasksLoading": false,
+      "globalTasksInitialized": true,
+      "globalTaskCount": 1,
+      "selectedTeamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-DXg4Xj",
+      "selectedRawMemberCapabilities": {
+        "source": "selected",
+        "state": "available",
+        "count": 1,
+        "overflow": false,
+        "members": [
+          {
+            "valid": true,
+            "provider": "opencode",
+            "capturedOwner": true,
+            "attachments": null,
+            "textAttachments": null,
+            "catalog": {
+              "state": "absent",
+              "count": null,
+              "overflow": false,
+              "hasCost": null
+            }
+          }
+        ]
+      },
+      "provisioning": [
+        {
+          "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-DXg4Xj",
+          "currentProvisioningRunId": null,
+          "currentRuntimeRunId": null,
+          "startedAtFloor": null,
+          "error": null,
+          "ignoredProvisioning": false,
+          "ignoredRuntime": false,
+          "progress": null
+        }
+      ],
+      "globalTaskDetail": null,
+      "paneTabs": [
+        {
+          "type": "team",
+          "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-DXg4Xj"
+        }
+      ]
+    },
+    "dialogs": [
+      {
+        "text": "Close\nLaunch Team\n\nStart team host-team:TEST-desktop-handle-TEST-desktop-backend-DXg4Xj using its configured agent runtimes.\n\nLaunch mode\nFresh Launch\nProject\nFrom project list\nCustom path\nBrowse\nOptional launch settings\nOptional\n•\nOpenCode\n•\ntest-provider/TEST-model\n•\nFresh lead session\nSELECTED PROVIDERS\nOpenCode (200+ providers)\nReady\nAll selected providers are ready.\nOpenCode (OpenCode native): Selected model checks - 1 verified\n\nTEST-model - Selected model verified\n\nLaunch team",
+        "buttons": [
+          {
+            "text": "Close",
+            "disabled": false,
+            "x": 1075,
+            "y": 233.75,
+            "width": 28,
+            "height": 28
+          },
+          {
+            "text": "Fresh Launch",
+            "disabled": false,
+            "x": 322,
+            "y": 341.75,
+            "width": 756,
+            "height": 32
+          },
+          {
+            "text": "From project list",
+            "disabled": false,
+            "x": 312,
+            "y": 435.75,
+            "width": 109.359375,
+            "height": 24
+          },
+          {
+            "text": "Custom path",
+            "disabled": false,
+            "x": 421.359375,
+            "y": 435.75,
+            "width": 92.046875,
+            "height": 24
+          },
+          {
+            "text": "Browse",
+            "disabled": false,
+            "x": 1024.984375,
+            "y": 432.75,
+            "width": 66.015625,
+            "height": 32
+          },
+          {
+            "text": "Optional launch settingsOptional•OpenCode•test-provider/TEST-model•Fresh lead session",
+            "disabled": false,
+            "x": 310,
+            "y": 481.75,
+            "width": 780,
+            "height": 48
+          },
+          {
+            "text": "Launch team",
+            "disabled": false,
+            "x": 926.3125,
+            "y": 547.75,
+            "width": 164.6875,
+            "height": 44
+          }
+        ]
+      }
+    ],
+    "tabs": [
+      {
+        "text": "TEST private backend",
+        "selected": "true"
+      }
+    ],
+    "mixedProgress": []
+  },
+  "viewedImage": {
+    "path": "extracted/TEST-desktop-backend-DXg4Xj/ui-failure.png",
+    "bytes": 98967,
+    "blob": "9e1393d49d0cfdfaefec629c2ff7b8e4ed513ee5",
+    "sha256": "030e755d3913c47faf2364394dd0caa306f254c631ff482bf269a1ac5969aaaa",
+    "viewedByThisReviewer": true,
+    "visibleFacts": [
+      "Original Launch Team dialog remains open for the selected TEST Host Team.",
+      "Optional launch settings remain collapsed.",
+      "OpenCode selected provider shows Ready; All selected providers are ready; selected TEST model verified.",
+      "Launch team is enabled.",
+      "The Team underneath is offline."
+    ],
+    "notProved": "No earlier ready/checking layout state, causal transition, completed launch or subsequent conversation/schedule behavior."
+  },
+  "prerequisites": {
+    "originalNode": "24.21.0",
+    "originalEightHelperCases": {
+      "pass": 115,
+      "fail": 0,
+      "skip": 0,
+      "cancel": 0,
+      "total": 115,
+      "durationMs": 8386.706254
+    },
+    "originalInstallerHelperCases": {
+      "pass": 7,
+      "fail": 0,
+      "skip": 0,
+      "cancel": 0,
+      "total": 7,
+      "durationMs": 170.072953
+    },
+    "teamTenFileContractsExecuted": false
+  },
+  "originalRemainingFlowUnreached": [
+    "prompt fill TEST_UI_BOOT",
+    "Launch team input",
+    "Runtime launch capture",
+    "Composer stream and permission/question controls",
+    "cost/Stats",
+    "Task Activity/LogStream assertions",
+    "standalone schedule work",
+    "reload and product Team Stop"
+  ],
+  "emulatedEffects": {
+    "raw": {
+      "path": "extracted/TEST-desktop-backend-DXg4Xj/TEST-peer-opencode-scope/effects.ndjson",
+      "bytes": 565,
+      "blob": "eb87bd36e0473b88f81331383a05ba463baf9990",
+      "sha256": "78d878f13f081f16decd1645f3e413e55af5c115443236e3153a3b20645f4e56"
+    },
+    "rows": [
+      {
+        "event": "launch",
+        "parentPid": 4604,
+        "argc": 5,
+        "provider": "opencode",
+        "role": "management",
+        "pid": 5180
+      },
+      {
+        "event": "launch",
+        "parentPid": 4604,
+        "argc": 5,
+        "provider": "opencode",
+        "role": "runtime",
+        "pid": 5341
+      },
+      {
+        "event": "input",
+        "marker": "TEST_MODEL_PROBE",
+        "provider": "opencode",
+        "role": "runtime",
+        "pid": 5341
+      },
+      {
+        "event": "terminal",
+        "marker": "TEST_MODEL_PROBE",
+        "outcome": "succeeded",
+        "provider": "opencode",
+        "role": "runtime",
+        "pid": 5341
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "opencode",
+        "role": "runtime",
+        "pid": 5341
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "opencode",
+        "role": "management",
+        "pid": 5180
+      }
+    ],
+    "counts": {
+      "launch": 2,
+      "input": 1,
+      "terminal": 1,
+      "exit": 2
+    },
+    "exactReceiptEquality": true,
+    "onlyInputMarker": "TEST_MODEL_PROBE",
+    "peerPids": [
+      5180,
+      5341
+    ],
+    "allCapturedPeersAbsent": true,
+    "exitCodes": [
+      0,
+      0
+    ],
+    "limit": "Finite preflight peers only; not original Team launch/conversation/provider qualification."
+  },
+  "modelProbeRecord": {
+    "raw": {
+      "path": "extracted/TEST-desktop-backend-DXg4Xj/hoststore/management-commands/03f164d40dc60de82996a045c86a527d1d3ec139a9a69116110d14689f27bf44.json",
+      "bytes": 5775,
+      "blob": "3ba570840ab36cfca3ad51b6f3c60aa867128733",
+      "sha256": "772633be8830dc65b2aa3fb96045da5061d5e978d3d20a0a9e01e53d3dc18176"
+    },
+    "kind": "model.probe",
+    "phase": "completed",
+    "ok": true,
+    "purpose": "native-local-readiness-v1",
+    "resourceHeld": false,
+    "readinessDecision": "allow",
+    "coordination": "not-applicable"
+  },
+  "failureQuit": {
+    "attempted": true,
+    "scope": "Close only the verified TEST window before stopping its dev wrapper",
+    "reply": "acknowledged",
+    "listenerAbsent": true
+  },
+  "originalRequestedQuitExit": {
+    "initialExitCode": null,
+    "initialSignalCode": null,
+    "exitCode": 0,
+    "signalCode": null
+  },
+  "beforeHarnessCleanup": [
+    {
+      "pid": 4354,
+      "ppid": 1,
+      "pgid": 4281
+    }
+  ],
+  "cleanup": {
+    "processGroup": 4281,
+    "remaining": [
+      {
+        "pid": 4354,
+        "ppid": 1,
+        "pgid": 4281
+      }
+    ],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "cleanupFailure": "captured leader absent; retain cleanup debt without signaling",
+    "capturedHostObserved": false,
+    "capturedHostAbsent": null,
+    "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+  },
+  "historicalStartupRow4354": {
+    "pid": 4354,
+    "ppid": 4341,
+    "pgid": 4281,
+    "executable": "esbuild"
+  },
+  "historicalStartupIdentityLimit": "Historical executable esbuild/PID4354 is not a fresh final birth/handle/executable join; final orphan row cause and disposition are unknown.",
+  "sentinel": {
+    "invocations": [
+      {
+        "executable": "claude-multimodel",
+        "allowed": true,
+        "argc": 1,
+        "command": null,
+        "flags": [
+          "--version"
+        ]
+      }
+    ],
+    "preQuitCount": null,
+    "postQuitOrCleanupInvocations": null,
+    "refusedInvocations": [],
+    "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+  },
+  "sourcePinAudit": {
+    "path": "source-pin-audit.json",
+    "bytes": 583301,
+    "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+    "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+  },
+  "pinsCount": 1757,
+  "orderedSourcePrePostEqual": true,
+  "allPinsMatchExactGitLfBytes": true,
+  "reviewedBoundarySource": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 25052,
+      "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+      "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "bytes": 68760,
+      "blob": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+      "sha256": "6ca239d1ea242a3ac64323bf28d41b84450fc1d5d7e4ae2324a069d03bff18ad"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 54778,
+      "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+    }
+  ],
+  "bundleProvenance": "Actual compiled main/preload JS bytes hashed after owned app startup; no claim of reproducible source-to-bundle rebuild",
+  "appLog": {
+    "path": "extracted/TEST-desktop-backend-DXg4Xj/desktop-app.log",
+    "bytes": 16293,
+    "blob": "71c36b4b187baa1371c8ab81ec53b0f885eced5a",
+    "sha256": "b2ca4576e68242005e07157f4b5f5c993890eec8089ec6adb30835330c6911a9"
+  },
+  "appTraceLimit": "Original app log retains a limited Node async/unix-process-table trace and an async node exit; receipt did not capture a Host PID/absence, so no dedicated Host custody/exit claim is promoted.",
+  "limits": [
+    "Overall original job/flow failed; finite peer absence does not remove application group cleanup debt.",
+    "No original product Stop, natural full-subtree absence, all-Host absence or zero post-Quit invocation claim.",
+    "No privacy semantic RED/one-helper GREEN, final UI parity, native/provider or release qualification.",
+    "No source/test/fixture/guard/deadline/action mutation and no project commands or CI replay by reviewer."
+  ]
+}

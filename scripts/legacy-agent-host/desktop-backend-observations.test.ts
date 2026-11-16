@@ -915,7 +915,7 @@ function emulatedObserverFixture(t: TestContext, mode: string,
     ? mode === 'later-row' || mode === 'missing' ? '' : mode === 'duplicate' ? row + row : row
     : mode === 'healthy-empty' ? '' : mode === 'retained-failure'
       ? JSON.stringify({ ...launch, event: 'failure' }) + '\n' : mode === 'malformed-json'
-        ? '{"event":\n' : JSON.stringify({ ...launch, provider: 'opencode' }) + '\n';
+        ? '{"event":\n' : JSON.stringify({ ...launch, provider: mode === 'wrong-provider-claude' ? 'claude' : 'opencode' }) + '\n';
   fs.writeFileSync(journal, journalText);
   let now = 0, censusReads = 0, journalReads = 0, signalCalls = 0;
   t.mock.method(performance, 'now', () => now);
@@ -998,9 +998,194 @@ test(`empty peer observation validates the original ${mode} journal ${phase}`, a
   });
   else if (mode === 'malformed-json') await assert.rejects(f.observe(), SyntaxError);
   else await assert.rejects(f.observe(), { code: 'ERR_ASSERTION', actual: 'opencode', expected: 'codex' });
+  assert.equal(f.reads().censusReads, 1);
   assert.equal(f.reads().journalReads, 1, 'the original journal is read even without a current child');
   assert.equal(f.reads().signalCalls, 0, 'journal validation creates no signal authority');
   assert.equal(fs.readFileSync(f.journal, 'utf8'), f.journalText, 'observation appends no effect');
   assert.equal(f.fixture.emulatedRuntime.observedPeerPids, observed);
   assert.deepEqual(observed, [4300], 'empty or refused observations preserve the original PID inventory');
+});
+
+for (const [label, mode, phase] of [
+  ['no-child-provider-mismatch', 'wrong-provider-claude', 'after-team-read'],
+  ['zero-host-failure', 'retained-failure', 'before-first-team-read'],
+  ['zero-host-clean', 'healthy-empty', 'before-first-team-read'],
+] as const)
+test(`empty peer census preserves ${label} through the original journal oracle`, async t => {
+  const f = emulatedObserverFixture(t, mode, phase);
+  const observed = f.fixture.emulatedRuntime.observedPeerPids;
+  if (mode === 'wrong-provider-claude')
+    await assert.rejects(f.observe(), { code: 'ERR_ASSERTION', actual: 'claude', expected: 'codex' });
+  else if (mode === 'retained-failure') await assert.rejects(f.observe(), {
+    code: 'ERR_ASSERTION', actual: true, expected: false,
+    message: /TEST protocol refusal cannot become a passing UI proof/u,
+  });
+  else await f.observe();
+  assert.equal(f.fixture.emulatedRuntime.observedPeerPids, observed);
+  assert.deepEqual(observed, []);
+  assert.deepEqual(f.reads(), { censusReads: 1, journalReads: 1, signalCalls: 0 });
+  assert.equal(fs.readFileSync(f.journal, 'utf8'), f.journalText);
+});
+
+function capturedLinuxNodeTuple() {
+  const birth = 'Mon Nov 16 06:10:25 2026';
+  return { platform: 'linux' as NodeJS.Platform, expectedIdentity: birth + ' /TEST/node /TEST/pnpm.js dev:mcp',
+    observedIdentity: birth + ' [MainThread] <defunct>', state: 'Z', childPid: 44001, group: 44001,
+    leader: { pid: 44001, ppid: process.pid, pgid: 44001 }, parentPid: process.pid };
+}
+
+test('captured Linux original Node wrapper admits only its exact retained MainThread zombie tuple', t => {
+  t.mock.method(process, 'kill', () => assert.fail('the identity predicate never signals'));
+  assert.equal(isCapturedOriginalNodeZombie(capturedLinuxNodeTuple()), true);
+});
+
+test('Linux wrapper identity refuses changed custody, birth, invocation and other platform display forms', t => {
+  let signals = 0; t.mock.method(process, 'kill', () => { signals++; return true; });
+  const base = capturedLinuxNodeTuple();
+  for (const change of [
+    { state: 'S' }, { state: '' }, { childPid: undefined }, { childPid: 44002 },
+    { group: 0 }, { group: -1 }, { group: Number.MAX_SAFE_INTEGER + 1 },
+    { leader: undefined }, { leader: { ...base.leader, pid: 44002 } },
+    { leader: { ...base.leader, ppid: base.parentPid + 1 } }, { leader: { ...base.leader, pgid: 44002 } },
+    { observedIdentity: base.observedIdentity.replace('06:10:25', '06:10:26') },
+    { expectedIdentity: base.expectedIdentity.replace('/node ', '/other ') },
+    { expectedIdentity: base.expectedIdentity.replace('dev:mcp', 'dev:other') },
+    { observedIdentity: base.observedIdentity.replace('[MainThread] <defunct>', '(node)') },
+    { observedIdentity: base.observedIdentity.replace('[MainThread] <defunct>', '<defunct>') },
+    { observedIdentity: base.observedIdentity + ' extra' },
+    { platform: 'darwin' as const }, { platform: 'win32' as const }, { platform: 'freebsd' as const },
+    { expectedIdentity: 'Mon Nov 16 06:10:25 2026 /TEST/Agent Teams AI.app/Contents/MacOS/Agent Teams AI --remote-debugging-port=9222',
+      observedIdentity: 'Mon Nov 16 06:10:25 2026 (Agent Teams AI)' },
+  ]) assert.equal(isCapturedOriginalNodeZombie({ ...base, ...change }), false, JSON.stringify(change));
+  assert.equal(signals, 0);
+});
+
+type LinuxEpochMode = 'valid' | 'state' | 'birth' | 'child' | 'group' | 'parent' | 'leader' |
+  'invocation' | 'display' | 'group-debt' | 'host-debt' | 'port-debt';
+
+async function finiteLinuxOwnerEpoch(t: TestContext, mode: LinuxEpochMode) {
+  const { finishDesktopOwnerRoutingEpoch } = await import('./desktop-owner-routing-epoch.ts');
+  const { selectedCdpPort } = await import('./desktop-backend-observations.ts');
+  const net = createRequire(import.meta.url)('node:net') as typeof import('node:net');
+  const platform = Object.getOwnPropertyDescriptor(process, 'platform'); assert.ok(platform);
+  Object.defineProperty(process, 'platform', { ...platform, value: 'linux' });
+  t.after(() => { Object.defineProperty(process, 'platform', platform); t.mock.restoreAll(); syncBuiltinESMExports(); });
+  const base = capturedLinuxNodeTuple(), group = mode === 'group' ? 0 : base.group;
+  const app = { pid: mode === 'child' ? 44002 : base.childPid, exitCode: null, signalCode: null };
+  const epoch: Record<string, unknown> = { cdpListener: 45001 }, hosts = [{ pid: 46001 }];
+  const state = mode === 'state' ? 'S' : base.state;
+  const observed = mode === 'birth' ? base.observedIdentity.replace('06:10:25', '06:10:26')
+    : mode === 'display' ? base.observedIdentity.replace('[MainThread] <defunct>', '(node)') : base.observedIdentity;
+  const expected = mode === 'invocation' ? base.expectedIdentity.replace('/node ', '/other ') : base.expectedIdentity;
+  const counts = { tables: 0, states: 0, identities: 0, owned: 0, close: 0, disconnect: 0,
+    signals: 0, sockets: 0, destroys: 0 };
+  const delays: number[] = [], cleared: number[] = [], signals: { pid: number; signal: unknown }[] = [];
+  const timers = new Map<object, number>(); let now = 0;
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {
+    delays.push(delay); const token = { delay, serial: delays.length }; timers.set(token, delay);
+    if (delay === 100) { now += counts.signals ? 30_000 : 3000; queueMicrotask(callback); }
+    else assert.equal(delay, 3000, 'only the two original bounded close/disconnect timers');
+    return token as unknown as NodeJS.Timeout;
+  });
+  t.mock.method(globalThis, 'clearTimeout', (token: NodeJS.Timeout) => {
+    const delay = timers.get(token); assert.equal(delay, 3000); cleared.push(delay!); timers.delete(token);
+  });
+  const originalMembers = () => [
+    { pid: 44001, ppid: mode === 'parent' ? process.pid + 1 : process.pid, pgid: 44001 },
+    { pid: 44002, ppid: 44001, pgid: 44001 }, { pid: 44003, ppid: 44002, pgid: 44001 },
+    { pid: 44004, ppid: 44003, pgid: 44001 },
+  ];
+  t.mock.method(childProcess, 'execFileSync', (file: string, args: readonly string[], options: unknown) => {
+    assert.equal(file, '/bin/ps'); assert.deepEqual(options, { encoding: 'utf8', timeout: 3000 });
+    if (args[0] === '-ax') {
+      assert.deepEqual(args, ['-ax', '-o', 'pid=,ppid=,pgid=']); counts.tables++;
+      let rows = counts.signals && mode !== 'group-debt' ? [] : originalMembers();
+      if (mode === 'leader' && counts.tables === 6) rows = rows.filter(row => row.pid !== 44001);
+      if (counts.signals && mode === 'host-debt') rows.push({ pid: 46001, ppid: 1, pgid: 99001 });
+      return [{ pid: 99001, ppid: 1, pgid: 99001 }, ...rows].map(row => `${row.pid} ${row.ppid} ${row.pgid}`).join('\n');
+    }
+    assert.deepEqual(args.slice(0, 3), ['-p', String(group), '-o']);
+    if (args[3] === 'stat=') { counts.states++; return state; }
+    assert.equal(args[3], 'lstart=,command='); counts.identities++; return observed;
+  });
+  t.mock.method(process, 'kill', (pid: number, signal: unknown) => {
+    counts.signals++; signals.push({ pid, signal }); assert.deepEqual({ pid, signal }, { pid: -44001, signal: 'SIGTERM' });
+    assert.equal(counts.signals, 1, 'only the existing one guarded group signal'); return true;
+  });
+  t.mock.method(net, 'createConnection', (options: unknown) => {
+    counts.sockets++; assert.deepEqual(options, { host: '127.0.0.1', port: selectedCdpPort });
+    const socket = Object.assign(new EventEmitter(), {
+      destroy(): EventEmitter { counts.destroys++; return socket; },
+      setTimeout(delay: number): EventEmitter {
+        assert.equal(delay, 1000); queueMicrotask(() => socket.emit(mode === 'port-debt' ? 'connect' : 'error', new Error('TEST absent')));
+        return socket;
+      },
+    });
+    return socket;
+  });
+  syncBuiltinESMExports();
+  let error: unknown;
+  try {
+    await finishDesktopOwnerRoutingEpoch({ app: app as unknown as Parameters<typeof finishDesktopOwnerRoutingEpoch>[0]['app'],
+      group, appIdentity: expected, hosts, epoch, assertOwned() { counts.owned++; }, cdp: {
+        async evaluate(expression: string) { counts.close++; assert.equal(expression, 'window.electronAPI.windowControls.close()'); return undefined; },
+        async close() { counts.disconnect++; },
+      } as Parameters<typeof finishDesktopOwnerRoutingEpoch>[0]['cdp'] });
+  } catch (caught) { error = caught; }
+  return { error, epoch, counts, signals, delays, cleared, now, originalMembers: originalMembers() };
+}
+
+function assertOriginalEpochClose(f: Awaited<ReturnType<typeof finiteLinuxOwnerEpoch>>) {
+  assert.deepEqual([f.counts.owned, f.counts.close, f.counts.disconnect], [1, 1, 1]);
+  assert.deepEqual(f.cleared, [3000, 3000]);
+  assert.deepEqual(f.epoch.failureQuit, { attempted: true,
+    scope: 'Close only the verified TEST window before stopping its dev wrapper', reply: 'acknowledged', listenerAbsent: true });
+  const cleanup = f.epoch.cleanup as Record<string, unknown>;
+  assert.equal(cleanup.quitAttempted, true); assert.equal(cleanup.appExitCode, null); assert.equal(cleanup.appSignalCode, null);
+}
+
+test('actual owner epoch cleans the captured Linux zombie group only after original close and fresh identity guards', async t => {
+  const f = await finiteLinuxOwnerEpoch(t, 'valid'); assertOriginalEpochClose(f);
+  if (f.error) {
+    assert.match(String(f.error), /original epoch invocation identity remains current/);
+    assert.deepEqual([f.counts.tables, f.counts.states, f.counts.identities, f.counts.signals, f.counts.sockets], [6, 2, 1, 0, 0]);
+    assert.deepEqual((f.epoch.cleanup as Record<string, unknown>).remaining, f.originalMembers);
+  }
+  assert.equal(f.error, undefined, 'the exact captured Linux tuple must reach the original guarded cleanup');
+  assert.deepEqual(f.counts, { tables: 8, states: 2, identities: 1, owned: 1, close: 1, disconnect: 1,
+    signals: 1, sockets: 1, destroys: 1 });
+  assert.deepEqual(f.signals, [{ pid: -44001, signal: 'SIGTERM' }]); assert.deepEqual(f.delays, [3000, 3000, 100]);
+  assert.equal(f.now, 3000); assert.deepEqual(f.epoch.originalZombieGuard, { group: 44001, state: 'Z', status: 'verified-original-zombie' });
+  const cleanup = f.epoch.cleanup as Record<string, unknown>;
+  assert.deepEqual(cleanup.remaining, []); assert.equal(cleanup.hostsAbsent, true); assert.equal(cleanup.signalAttempted, true);
+  assert.equal((f.epoch.originalAppReap as Record<string, unknown>).settled, false);
+  assert.equal((f.epoch.originalAppReap as Record<string, unknown>).reason, 'ineligible-original-defunct-observation');
+});
+
+for (const mode of ['state', 'birth', 'child', 'group', 'parent', 'leader', 'invocation', 'display'] as const)
+test('actual Linux owner cleanup retains debt and zero signals for wrong ' + mode, async t => {
+  const f = await finiteLinuxOwnerEpoch(t, mode); assertOriginalEpochClose(f);
+  assert.match(String(f.error), mode === 'group' ? /Captured app group must be positive/ : /original epoch invocation identity remains current/);
+  assert.equal(f.counts.signals, 0); assert.deepEqual(f.signals, []); assert.equal(f.counts.sockets, 0);
+  const cleanup = f.epoch.cleanup as Record<string, unknown>;
+  assert.equal(cleanup.signalAttempted, false); assert.equal(cleanup.hostsAbsent, null);
+  assert.equal(typeof f.epoch.cleanupFailure, 'string');
+});
+
+for (const [mode, message] of [
+  ['group-debt', /no next configuration while the captured epoch group remains/],
+  ['host-debt', /every captured owner Host is absent before the next epoch/],
+  ['port-debt', /true !== false/],
+] as const)
+test('actual Linux owner cleanup keeps final ' + mode + ' as failure after its one guarded signal', async t => {
+  const f = await finiteLinuxOwnerEpoch(t, mode); assertOriginalEpochClose(f);
+  assert.match(String(f.error), message); assert.deepEqual(f.signals, [{ pid: -44001, signal: 'SIGTERM' }]);
+  assert.equal(f.counts.tables, 8); assert.equal(f.counts.states, 2); assert.equal(f.counts.identities, 1);
+  assert.equal(f.counts.sockets, mode === 'port-debt' ? 1 : 0); assert.equal(f.counts.destroys, f.counts.sockets);
+  assert.deepEqual(f.delays, mode === 'group-debt' ? [3000, 3000, 100, 100] : [3000, 3000, 100]);
+  assert.equal(f.now, mode === 'group-debt' ? 33_000 : 3000);
+  const cleanup = f.epoch.cleanup as Record<string, unknown>;
+  assert.equal(cleanup.signalAttempted, true); assert.equal(cleanup.hostsAbsent, mode !== 'host-debt');
+  assert.deepEqual(cleanup.remaining, mode === 'group-debt' ? f.originalMembers : []);
 });

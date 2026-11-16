@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "jobId": 133017916079,
+  "classification": "ACTUAL SEMANTIC RED: exactly the three previously planned held-value suffix assertions; not installation/setup failure.",
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/team-contracts/job-133017916079.log",
+      "bytes": 123603,
+      "blob": "a077622804d499d0a8ca20465aa6d7eba62b2b5c",
+      "sha256": "8a07b50c59d8d8a7507c9b5279cae5cfe50f28895f90474a12518eddc8f7b27b"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0152.json",
+      "bytes": 167251,
+      "blob": "7411ae35e8d202b049e03e1006e6c02fbf8100ac",
+      "sha256": "7796a24241524ce5e64ca5ebdaad0136b624ce2a2babbd62ee317028c0a2bdc7"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/team-contracts/official-artifacts-0152.json",
+      "bytes": 13430,
+      "blob": "637c725b3944769b95d7ded2ae9c1e64d9a2934d",
+      "sha256": "58c0d7f786899bd34c10873b279afa8e3a7f0ded460714c1de8054b8270bb14c"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/team-contracts/audit.json",
+      "bytes": 74840,
+      "blob": "12610ec53882123bcb3b240deab17921a24c09d5",
+      "sha256": "594dc7b8c0a49a8abb57d82ce8c6585c9f377753d0c5d53d6af6acc65e53625d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/team-contracts/Plan29-Team-privacy-RED-appendix.md",
+      "bytes": 5512,
+      "blob": "ea47515d4083e53f9e126126bb0c39202dc46e2c",
+      "sha256": "3c4c3caa47b045fd85704b7de2eef3a03cc5ce81c1bc14280236c272ba4a145d"
+    }
+  ],
+  "artifact": null,
+  "artifactReason": "No Team archive exists in the saved original artifact listing. Original always-run upload step warns No files found after contracts fail before Desktop capture. No ZIP or UI receipt is invented.",
+  "aggregate": {
+    "tests": 177,
+    "pass": 174,
+    "fail": 3,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0,
+    "durationMs": 87614.502124
+  },
+  "stderrCases": {
+    "pass": 21,
+    "fail": 3,
+    "total": 24
+  },
+  "unexecutedLimits": [
+    "Actual whole10 RED qualifies the planned held-value counterexample on 0660 only.",
+    "No helper GREEN, static gate PASS, real provider/native/desktop or aggregate merge qualification is claimed.",
+    "The later whole-line fail-closed helper remains unapplied by this auditor; every original test and all current cohort evidence must be preserved.",
+    "No local project/test/compiler/lint/install/Node/provider or CI/ref/source action was performed during this audit."
+  ]
+}

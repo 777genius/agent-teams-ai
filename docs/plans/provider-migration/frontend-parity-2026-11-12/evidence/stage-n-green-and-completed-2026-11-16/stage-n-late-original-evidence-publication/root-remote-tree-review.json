@@ -1,0 +1,15 @@
+{
+  "schema": "N-late-original-root-actual-remote-tree-review/v1",
+  "manifestBlob": "6b8eb1844643a601f5e377c7371fc9464d8d2d41",
+  "expectedTree": "3cbed68d3c8e45b2ebd88e25deb3837dcf20414c",
+  "remoteTree": "3cbed68d3c8e45b2ebd88e25deb3837dcf20414c",
+  "truncated": false,
+  "entries": 12013,
+  "leaves": 10463,
+  "allDirectoryObjectsRehashedIncludingRoot": 1551,
+  "allLeavesExactlyMatchManifestFullMap": true,
+  "all8798NonDocumentationLeavesUnchanged": true,
+  "nonDocumentationMapSha256": "d3ed00695b2d09d3bcd38d41830ddde5670908c858a600bae03c757dc00bc397",
+  "sourceChangeByDocsCut": false,
+  "actualHelperGREENObserved": false
+}

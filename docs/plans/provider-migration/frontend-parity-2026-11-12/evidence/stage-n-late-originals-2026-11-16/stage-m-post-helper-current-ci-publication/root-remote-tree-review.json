@@ -1,0 +1,15 @@
+{
+  "schema": "M-post-helper-root-actual-remote-tree-review/v1",
+  "manifestBlob": "ab5294c34a04d1472ae62212178e7e842fabeb8b",
+  "expectedTree": "87e104735545a0860ec2bbcd9bf1ef2318dbbebb",
+  "remoteTree": "87e104735545a0860ec2bbcd9bf1ef2318dbbebb",
+  "truncated": false,
+  "entries": 11867,
+  "leaves": 10334,
+  "allDirectoryObjectsRehashedIncludingRoot": 1534,
+  "allLeavesExactlyMatchManifestFullMap": true,
+  "all8798NonDocumentationLeavesUnchanged": true,
+  "nonDocumentationMapSha256": "d3ed00695b2d09d3bcd38d41830ddde5670908c858a600bae03c757dc00bc397",
+  "sourceChangeByDocsCut": false,
+  "actualHelperGREENObserved": false
+}

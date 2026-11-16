@@ -1958,3 +1958,142 @@ test('provider receipt shape, package selection and original file or JSON errors
   await rm(manifestPath);
   await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ENOENT', path: manifestPath });
 });
+
+type SavedLaunchFrame = {
+  count?: number; model?: string; id?: string | null; expanded?: string | null; dialog?: boolean;
+  rect?: { x: number; y: number; width: number; height: number };
+  animations?: { pending: boolean; playState: string }[];
+};
+
+async function savedLaunchReadinessFixture(t: import('node:test').TestContext, frames: SavedLaunchFrame[]) {
+  const { record } = await import('./desktop-resume-records.ts');
+  const { desktopJsLiteral } = await import('./desktop-ui-controls.ts');
+  const source = await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8');
+  const first = "await ui.click('button', 'open original saved Team Launch', 'Launch');";
+  const last = "const lead = '[role=\"dialog\"] [data-role=\"lead-row\"]';";
+  assert.equal(source.split(first).length, 2, 'one actual saved-Launch action boundary');
+  assert.equal(source.split(last).length, 2, 'one actual end of the saved-settings prefix');
+  const begin = source.indexOf(first), end = source.indexOf(last, begin);
+  assert.ok(end > begin);
+  const prefix = source.slice(begin, end), model = 'TEST-model \'quoted\' <ready>';
+  let now = 0, reads = 0, owned = 0, queries = 0, animationReads = 0;
+  const waits: number[] = [], labels: string[] = [];
+  const clicks: { selector: string; label: string; text: string | undefined; read: number }[] = [];
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {
+    assert.equal(delay, 100, 'the original wait cadence is unchanged');
+    waits.push(delay); now += delay; queueMicrotask(callback);
+    return 1 as unknown as NodeJS.Timeout;
+  });
+  const actual = createDesktopUiControls({
+    async evaluate(expression: string) {
+      const frame = frames[Math.min(reads++, frames.length - 1)]!;
+      assert.ok(frame, 'finite DOM frames are present');
+      const dialog = { getAnimations(options?: { subtree?: boolean }) {
+        animationReads++; assert.equal(options?.subtree ?? false, false, 'no descendant spinner observation');
+        return frame.animations ?? [];
+      } };
+      const row = {
+        textContent: 'Optional launch settings ' + (frame.model ?? model),
+        getAttribute(name: string) {
+          assert.ok(name === 'aria-controls' || name === 'aria-expanded');
+          return name === 'aria-controls' ? frame.id === undefined ? 'TEST-settings' : frame.id
+            : frame.expanded === undefined ? 'false' : frame.expanded;
+        },
+        getBoundingClientRect: () => frame.rect ?? { x: 412, y: 368.75, width: 200, height: 32 },
+        closest(selector: string) { assert.equal(selector, '[role="dialog"]'); return frame.dialog === false ? null : dialog; },
+      };
+      const document = {
+        querySelectorAll(selector: string) {
+          queries++; assert.equal(selector, '[role="dialog"] button[aria-controls]');
+          return Array.from({ length: frame.count ?? 1 }, () => row);
+        },
+        get body() { return assert.fail('model preflight status must not gate editable launch settings'); },
+      };
+      return runInNewContext(expression, { document });
+    },
+    async send() { return assert.fail('the readiness fixture never dispatches browser input'); },
+  }, { assertOwnedRenderer() { owned++; }, step() { assert.fail('waitRead is observation only'); } });
+  const ui = {
+    async click(selector: string, label: string, text?: string) { clicks.push({ selector, label, text, read: reads }); },
+    waitRead(...args: Parameters<typeof actual.waitRead>) {
+      labels.push(args[1]); assert.equal(args[2] ?? 30_000, 30_000);
+      return actual.waitRead(...args);
+    },
+  };
+  return { run: () => runInNewContext('(async () => {\n' + prefix + '\n})()',
+    { ui, selected: { model }, record, literal: desktopJsLiteral }) as Promise<void>,
+  clicks, waits, labels, counts: () => ({ now, reads, owned, queries, animationReads }) };
+}
+
+function assertSavedLaunchBoundary(f: Awaited<ReturnType<typeof savedLaunchReadinessFixture>>, reads: number,
+  id = 'TEST-settings', expanded = false) {
+  assert.deepEqual(f.labels, ['saved model hydrates original Launch'], 'one original readiness wait');
+  assert.deepEqual(f.clicks, [
+    { selector: 'button', label: 'open original saved Team Launch', text: 'Launch', read: 0 },
+    ...expanded ? [] : [{ selector: `[role="dialog"] button[aria-controls=${JSON.stringify(id)}]`,
+      label: 'expand original saved launch settings', text: undefined, read: reads }],
+  ], 'the original settings action happens only after three equal eligible returned samples');
+  assert.equal(f.counts().reads, reads); assert.equal(f.counts().owned, reads);
+  assert.equal(f.counts().queries, reads);
+  assert.deepEqual(f.waits, Array.from({ length: reads - 1 }, () => 100));
+}
+
+test('saved Launch uses three stable actual DOM samples before its original settings action', async t => {
+  const f = await savedLaunchReadinessFixture(t, [{}]); await f.run();
+  assertSavedLaunchBoundary(f, 3); assert.equal(f.counts().animationReads, 3);
+});
+
+test('saved Launch resets exact geometry when the original button shifts by a quarter pixel', async t => {
+  const shifted = { rect: { x: 412, y: 368.5, width: 200, height: 32 } };
+  const f = await savedLaunchReadinessFixture(t, [{}, shifted]); await f.run();
+  assertSavedLaunchBoundary(f, 4);
+});
+
+for (const [label, changed, id, expanded] of [
+  ['identity', { id: 'TEST-next-settings' }, 'TEST-next-settings', false],
+  ['expanded state', { expanded: 'true' }, 'TEST-settings', true],
+  ['horizontal position', { rect: { x: 413, y: 368.75, width: 200, height: 32 } }, 'TEST-settings', false],
+  ['width', { rect: { x: 412, y: 368.75, width: 201, height: 32 } }, 'TEST-settings', false],
+  ['height', { rect: { x: 412, y: 368.75, width: 200, height: 33 } }, 'TEST-settings', false],
+] as const)
+test('saved Launch restarts its three samples after changed ' + label, async t => {
+  const f = await savedLaunchReadinessFixture(t, [{}, {}, changed]); await f.run();
+  assertSavedLaunchBoundary(f, 5, id, expanded);
+});
+
+for (const [label, invalid] of [
+  ['absent target', { count: 0 }], ['ambiguous target', { count: 2 }], ['wrong model', { model: 'TEST-other-model' }],
+  ['absent identity', { id: null }], ['empty identity', { id: '' }], ['invalid expansion', { expanded: null }],
+  ['missing owning dialog', { dialog: false }],
+  ['nonfinite x', { rect: { x: NaN, y: 368.75, width: 200, height: 32 } }],
+  ['nonfinite y', { rect: { x: 412, y: Infinity, width: 200, height: 32 } }],
+  ['zero width', { rect: { x: 412, y: 368.75, width: 0, height: 32 } }],
+  ['negative height', { rect: { x: 412, y: 368.75, width: 200, height: -1 } }],
+  ['running own animation', { animations: [{ pending: false, playState: 'running' }] }],
+  ['paused own animation', { animations: [{ pending: false, playState: 'paused' }] }],
+  ['pending own animation', { animations: [{ pending: true, playState: 'finished' }] }],
+] satisfies readonly (readonly [string, SavedLaunchFrame])[])
+test('saved Launch resets its original readiness after ' + label, async t => {
+  const f = await savedLaunchReadinessFixture(t, [{}, {}, invalid, {}]); await f.run();
+  assertSavedLaunchBoundary(f, 6);
+});
+
+for (const playState of ['finished', 'idle'])
+test('saved Launch allows ' + playState + ' own animation without inspecting descendant spinners or model status', async t => {
+  const f = await savedLaunchReadinessFixture(t, [{ animations: [{ pending: false, playState }] }]);
+  await f.run(); assertSavedLaunchBoundary(f, 3); assert.equal(f.counts().animationReads, 3);
+});
+
+for (const [label, frame] of [
+  ['no matching model', { model: 'TEST-other-model' }],
+  ['unsettled own dialog', { animations: [{ pending: false, playState: 'running' }] }],
+] satisfies readonly (readonly [string, SavedLaunchFrame])[])
+test('saved Launch exhausts its one original deadline with ' + label + ' and no settings action', async t => {
+  const f = await savedLaunchReadinessFixture(t, [frame]);
+  await assert.rejects(f.run(), /UI read timed out: saved model hydrates original Launch; no mutation retry/);
+  assert.deepEqual(f.labels, ['saved model hydrates original Launch']);
+  assert.deepEqual(f.clicks, [{ selector: 'button', label: 'open original saved Team Launch', text: 'Launch', read: 0 }]);
+  assert.equal(f.counts().reads, 300); assert.equal(f.counts().owned, 300); assert.equal(f.counts().queries, 300);
+  assert.equal(f.counts().now, 30_000); assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));
+});

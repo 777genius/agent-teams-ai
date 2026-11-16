@@ -1,0 +1,2686 @@
+{
+  "schemaVersion": 1,
+  "kind": "prospective-narrow-e1-history-and-source-reconciliation",
+  "own": {
+    "repository": "777genius/agent-teams-ai",
+    "branch": "fix/frontend-parity-coobservation-c714-20261115",
+    "commit": "a8e149f50537f1840ef8fbf7b10781f44da97fd4",
+    "tree": "3336379236ff7ac4e7483f47a6d0e1a145aefe00",
+    "localCheckoutUnchanged": "47d9f29602bae778f20ae8cc133ca332e458e59a"
+  },
+  "incoming": {
+    "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "tree": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+    "comparisonBase": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+    "fullDeltaCount": 67,
+    "fullIncomingDelta": [
+      {
+        "path": ".github/workflows/ci.yml",
+        "before": {
+          "path": ".github/workflows/ci.yml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+          "size": 175238,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/de7e1b4d8388065a15345cca434f1868ec694fc5"
+        },
+        "incoming": {
+          "path": ".github/workflows/ci.yml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "da94c393b024d3c8a40159edbf9975cd528007a6",
+          "size": 175238,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/da94c393b024d3c8a40159edbf9975cd528007a6"
+        },
+        "own": {
+          "path": ".github/workflows/ci.yml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a93ff6ba1e5656523668694bca24910a468aebc7",
+          "size": 175238,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a93ff6ba1e5656523668694bca24910a468aebc7"
+        }
+      },
+      {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "before": {
+          "path": ".github/workflows/electron-packaged-ci.yml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+          "size": 19532,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0938e9f31bad7520fec025ebde6aad8e071cfe69"
+        },
+        "incoming": {
+          "path": ".github/workflows/electron-packaged-ci.yml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "8a39884bdf09fe22fe153c7a9fc3eae89dc749e8",
+          "size": 19680,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/8a39884bdf09fe22fe153c7a9fc3eae89dc749e8"
+        },
+        "own": {
+          "path": ".github/workflows/electron-packaged-ci.yml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+          "size": 19532,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0938e9f31bad7520fec025ebde6aad8e071cfe69"
+        }
+      },
+      {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "before": {
+          "path": ".github/workflows/host-process-acceptance.yml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+          "size": 30399,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/123e52f461e42790ddf5fb8b1ea653b9e32c30db"
+        },
+        "incoming": {
+          "path": ".github/workflows/host-process-acceptance.yml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+          "size": 32248,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3228b9978cf5064c103ec486468b2e5c5a36956e"
+        },
+        "own": {
+          "path": ".github/workflows/host-process-acceptance.yml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "70202d22a5840401a00025cd60b797c514f3e455",
+          "size": 34313,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/70202d22a5840401a00025cd60b797c514f3e455"
+        }
+      },
+      {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "before": {
+          "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+          "size": 36013,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+        },
+        "incoming": {
+          "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+          "size": 36309,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/7ccbfb3cf20349d35087798b66e369c95e91a71e"
+        },
+        "own": {
+          "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+          "size": 36013,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+        }
+      },
+      {
+        "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "before": {
+          "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "ef939f224a1642cb596906324c8d61441780ccc7",
+          "size": 6522,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/ef939f224a1642cb596906324c8d61441780ccc7"
+        },
+        "incoming": {
+          "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "72c1a8f760a99c53ce7d279c7bb9d5e3ddaa7298",
+          "size": 6522,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/72c1a8f760a99c53ce7d279c7bb9d5e3ddaa7298"
+        },
+        "own": {
+          "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "ef939f224a1642cb596906324c8d61441780ccc7",
+          "size": 6522,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/ef939f224a1642cb596906324c8d61441780ccc7"
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "before": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "1b3308c9f2e7726b31f9bf4755038abfc26c77a4",
+          "size": 1668253,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1b3308c9f2e7726b31f9bf4755038abfc26c77a4"
+        },
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "4decf2aa39aba619f90103a77dd8467e37c50cfb",
+          "size": 1875442,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/4decf2aa39aba619f90103a77dd8467e37c50cfb"
+        },
+        "own": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "2e55f47962e32c1964f281d39c56e4a1d53814f3",
+          "size": 2367777,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2e55f47962e32c1964f281d39c56e4a1d53814f3"
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/30-windows-same-main-retry-integration-2026-11-15.md",
+        "before": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/30-windows-same-main-retry-integration-2026-11-15.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "eb68d2643eb11527594d546d8a5088f48f8e2865",
+          "size": 120803,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/eb68d2643eb11527594d546d8a5088f48f8e2865"
+        },
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/30-windows-same-main-retry-integration-2026-11-15.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "74e17f8bc1abfa1cb4f7567e83b640bfe29fe3fb",
+          "size": 132735,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/74e17f8bc1abfa1cb4f7567e83b640bfe29fe3fb"
+        },
+        "own": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/30-windows-same-main-retry-integration-2026-11-15.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "fcadb8b52b0ff58f434be7d56acd703dd85dc2b5",
+          "size": 215059,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/fcadb8b52b0ff58f434be7d56acd703dd85dc2b5"
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/creation-windows-133102584969.log",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/creation-windows-133102584969.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "19bc94a3e446f40f2438fa7e9eb7fa368f35f795",
+          "size": 27675,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/19bc94a3e446f40f2438fa7e9eb7fa368f35f795"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/audit.json",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/audit.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b3acc4683ffd7c1be77ee5aa51d7f14dc82e09a2",
+          "size": 32378,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b3acc4683ffd7c1be77ee5aa51d7f14dc82e09a2"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585065.log",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585065.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "571cd137a403a2ea53984da3c8e2b6181c64abce",
+          "size": 26109,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/571cd137a403a2ea53984da3c8e2b6181c64abce"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585195.log",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585195.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "7bb6c4cad0f6de5859c0c7d5bf9fe2c176e2ec39",
+          "size": 31546,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/7bb6c4cad0f6de5859c0c7d5bf9fe2c176e2ec39"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585206.log",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585206.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a4d56d87e99c213b7c5836cd701d5b132d973eb3",
+          "size": 108985,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a4d56d87e99c213b7c5836cd701d5b132d973eb3"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585222.log",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585222.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "6e468c8d39355d62ec00f4206a57f9834eda3659",
+          "size": 30284,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6e468c8d39355d62ec00f4206a57f9834eda3659"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585293.log",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585293.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "e1e06100399ec6bbb352812c19dca69c8443c4e1",
+          "size": 26695,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/e1e06100399ec6bbb352812c19dca69c8443c4e1"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585672.log",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585672.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "bd0e537e23cdfe3d8e05c21edfb5af753f7eb6e3",
+          "size": 28154,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/bd0e537e23cdfe3d8e05c21edfb5af753f7eb6e3"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/review.md",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/review.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "f1bbe16a11e1a7270fcdd2bc729145e7e5de5cff",
+          "size": 4201,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f1bbe16a11e1a7270fcdd2bc729145e7e5de5cff"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/load-view-review.md",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/load-view-review.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "975407cb6109039b3d154105c023ac17ffb4f10a",
+          "size": 5954,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/975407cb6109039b3d154105c023ac17ffb4f10a"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/load-view-source-pins.json",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/load-view-source-pins.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "708eab3ffd17049cea5e3a75745616d3807cfd12",
+          "size": 11852,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/708eab3ffd17049cea5e3a75745616d3807cfd12"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/native-source-cleanup-audit.json",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/native-source-cleanup-audit.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "e542ea4318825b919c43fd1050a367d1fdc3c476",
+          "size": 11802,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/e542ea4318825b919c43fd1050a367d1fdc3c476"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/native-source-cleanup-review.md",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/native-source-cleanup-review.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "5406e4c093693ec1137292fdce172124401a3286",
+          "size": 5489,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/5406e4c093693ec1137292fdce172124401a3286"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/renderer-load-view-audit.json",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/renderer-load-view-audit.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9a47a805c75a69926bf0544635386793197f5718",
+          "size": 9185,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9a47a805c75a69926bf0544635386793197f5718"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/renderer-review.md",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/renderer-review.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "4a022e85ba3c7dcdb9eb9a1c6836669de2342d42",
+          "size": 1737,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/4a022e85ba3c7dcdb9eb9a1c6836669de2342d42"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/source-pin-audit.json",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/source-pin-audit.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "3652a1cc49221ac08523548af77ef4b7d4bff9b6",
+          "size": 454583,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3652a1cc49221ac08523548af77ef4b7d4bff9b6"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/artifact-14198298316.zip",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/artifact-14198298316.zip",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "3adb081cb77d221e57a7f7e36ab1525155b95656",
+          "size": 625065,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3adb081cb77d221e57a7f7e36ab1525155b95656"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/audit.json",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/audit.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "5ee18d84f44c68b6fd14d6ee477a7755258721b7",
+          "size": 14199,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/5ee18d84f44c68b6fd14d6ee477a7755258721b7"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/job-133091842656.log",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/job-133091842656.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "8ddce6f138a109fd5b4ef0100ac31d39d2ef274d",
+          "size": 314374,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/8ddce6f138a109fd5b4ef0100ac31d39d2ef274d"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/retry-timing-audit.json",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/retry-timing-audit.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "079565604cec118e6bb7535ed5f7f5242b0e26e5",
+          "size": 3585,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/079565604cec118e6bb7535ed5f7f5242b0e26e5"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/review.md",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/review.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a74ca6aa022a789a892f2f30bc24fe35a75bd145",
+          "size": 6319,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a74ca6aa022a789a892f2f30bc24fe35a75bd145"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/source-pin-audit.json",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/source-pin-audit.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "de2c3a75c9ddc2810ceed5b230543024c75f0b5f",
+          "size": 709557,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/de2c3a75c9ddc2810ceed5b230543024c75f0b5f"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/artifact-14191980301.zip",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/artifact-14191980301.zip",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "352cc91ca6171eb0527c20c1601e703c3f561fd6",
+          "size": 1064941,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/352cc91ca6171eb0527c20c1601e703c3f561fd6"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/audit.json",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/audit.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9fd3a815206330e3c846ee63c0772f4831099386",
+          "size": 8894,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9fd3a815206330e3c846ee63c0772f4831099386"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/job-133040244365.log",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/job-133040244365.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "e056cc375319a3f9f47faa2b228dbde477e86dd6",
+          "size": 157719,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/e056cc375319a3f9f47faa2b228dbde477e86dd6"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/review.md",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/review.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "d14327bd95a214c3631dd668c13662266fb437cf",
+          "size": 7147,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/d14327bd95a214c3631dd668c13662266fb437cf"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/source-pin-audit.json",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/source-pin-audit.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a4c85fcf288018bef0ada8dc9e3bad211046c8c0",
+          "size": 677417,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a4c85fcf288018bef0ada8dc9e3bad211046c8c0"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/actual-red-0660/original-ci-red-audit.json",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/actual-red-0660/original-ci-red-audit.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "1eafe2b6e74687670713b297e41a936e4f4f766f",
+          "size": 7347,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1eafe2b6e74687670713b297e41a936e4f4f766f"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/team-contracts-608-2026-11-16/audit.json",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/team-contracts-608-2026-11-16/audit.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "98b70a41d6922f1639c6eb81cf2127268f80bad2",
+          "size": 12236,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/98b70a41d6922f1639c6eb81cf2127268f80bad2"
+        },
+        "own": null
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/team-contracts-608-2026-11-16/job-133062441494.log",
+        "before": null,
+        "incoming": {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/team-contracts-608-2026-11-16/job-133062441494.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c5446ac9cf26e5515cf8c2b2c9f0df55f8e43795",
+          "size": 2205340,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c5446ac9cf26e5515cf8c2b2c9f0df55f8e43795"
+        },
+        "own": null
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+        "before": {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "78b22adbb55ab285186285e4e3f6ada38f413ecb",
+          "size": 23243,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/78b22adbb55ab285186285e4e3f6ada38f413ecb"
+        },
+        "incoming": {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b98f057ce72161d867b99f01dde0f83e3244c3d2",
+          "size": 24664,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b98f057ce72161d867b99f01dde0f83e3244c3d2"
+        },
+        "own": {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "78b22adbb55ab285186285e4e3f6ada38f413ecb",
+          "size": 23243,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/78b22adbb55ab285186285e4e3f6ada38f413ecb"
+        }
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+        "before": {
+          "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b9dd573db23b3033b5f3db7024b317681ce31499",
+          "size": 43732,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b9dd573db23b3033b5f3db7024b317681ce31499"
+        },
+        "incoming": {
+          "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "08552af73c0f67cd62fca0e5b773cde2281eb152",
+          "size": 44781,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/08552af73c0f67cd62fca0e5b773cde2281eb152"
+        },
+        "own": {
+          "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b9dd573db23b3033b5f3db7024b317681ce31499",
+          "size": 43732,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b9dd573db23b3033b5f3db7024b317681ce31499"
+        }
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+        "before": {
+          "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "0727339627757c3a96d54da2933eb7c1b60685f7",
+          "size": 16103,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0727339627757c3a96d54da2933eb7c1b60685f7"
+        },
+        "incoming": {
+          "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "ce5c3a7511009501ca057f01957008a8ce3ef67b",
+          "size": 16208,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/ce5c3a7511009501ca057f01957008a8ce3ef67b"
+        },
+        "own": {
+          "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "2891a53b464c400c64ab41dd99674ac6c463b39a",
+          "size": 17991,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2891a53b464c400c64ab41dd99674ac6c463b39a"
+        }
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-member-provider.test.ts",
+        "before": {
+          "path": "packages/legacy-agent-host/tests/opencode-member-provider.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "40e2f39d04da90f663f3d8b1b9308481a8371e23",
+          "size": 41996,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/40e2f39d04da90f663f3d8b1b9308481a8371e23"
+        },
+        "incoming": {
+          "path": "packages/legacy-agent-host/tests/opencode-member-provider.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9dbb76223a34fffac60c40d92398d2ca31a41b53",
+          "size": 44442,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9dbb76223a34fffac60c40d92398d2ca31a41b53"
+        },
+        "own": {
+          "path": "packages/legacy-agent-host/tests/opencode-member-provider.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "40e2f39d04da90f663f3d8b1b9308481a8371e23",
+          "size": 41996,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/40e2f39d04da90f663f3d8b1b9308481a8371e23"
+        }
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+        "before": {
+          "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "077ad7ea54675a4782984fcb5399f9964d5ec5e6",
+          "size": 60689,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/077ad7ea54675a4782984fcb5399f9964d5ec5e6"
+        },
+        "incoming": {
+          "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "76480223b97320827c97a8469a11418f5ccb0206",
+          "size": 63022,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/76480223b97320827c97a8469a11418f5ccb0206"
+        },
+        "own": {
+          "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "077ad7ea54675a4782984fcb5399f9964d5ec5e6",
+          "size": 60689,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/077ad7ea54675a4782984fcb5399f9964d5ec5e6"
+        }
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "before": {
+          "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79",
+          "size": 207427,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79"
+        },
+        "incoming": {
+          "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "331ed90ca8996b09daee62f4bcad2fcda6080b04",
+          "size": 207380,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/331ed90ca8996b09daee62f4bcad2fcda6080b04"
+        },
+        "own": {
+          "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "43325a4e2b4d7ad2b69bacab51275a2a2af9bd8f",
+          "size": 234346,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/43325a4e2b4d7ad2b69bacab51275a2a2af9bd8f"
+        }
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+        "before": {
+          "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "bc0913e775d3e076518009c4fe7b5ee45f8c7e7b",
+          "size": 87973,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/bc0913e775d3e076518009c4fe7b5ee45f8c7e7b"
+        },
+        "incoming": {
+          "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "6a668daeaf47a920aeddfb87c4d2658a35754f11",
+          "size": 90081,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6a668daeaf47a920aeddfb87c4d2658a35754f11"
+        },
+        "own": {
+          "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "bc0913e775d3e076518009c4fe7b5ee45f8c7e7b",
+          "size": 87973,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/bc0913e775d3e076518009c4fe7b5ee45f8c7e7b"
+        }
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+        "before": {
+          "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb",
+          "size": 14327,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb"
+        },
+        "incoming": {
+          "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "bb5eb306bd81fdd5bdd69ccd9f10664d44d2c1c4",
+          "size": 16910,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/bb5eb306bd81fdd5bdd69ccd9f10664d44d2c1c4"
+        },
+        "own": {
+          "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb",
+          "size": 14327,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb"
+        }
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "before": {
+          "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "71d5629149e8f499a45b54a99922145ee3cae09e",
+          "size": 12335,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/71d5629149e8f499a45b54a99922145ee3cae09e"
+        },
+        "incoming": {
+          "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "5e21bb5f8c50a3c9dd2a18b1d8c461896e0f91a9",
+          "size": 12614,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/5e21bb5f8c50a3c9dd2a18b1d8c461896e0f91a9"
+        },
+        "own": {
+          "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "71d5629149e8f499a45b54a99922145ee3cae09e",
+          "size": 12335,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/71d5629149e8f499a45b54a99922145ee3cae09e"
+        }
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "before": {
+          "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+          "size": 16835,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+        },
+        "incoming": {
+          "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "0be43ad7d6549642c60080caf6001aa5f6d2a23b",
+          "size": 20150,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0be43ad7d6549642c60080caf6001aa5f6d2a23b"
+        },
+        "own": {
+          "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+          "size": 16835,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "before": {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+          "size": 52461,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33"
+        },
+        "incoming": {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "e2b96672feefb924a39e20131514e0db5e347311",
+          "size": 53683,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/e2b96672feefb924a39e20131514e0db5e347311"
+        },
+        "own": {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b47e3a6e0227e2c3521a4e0124074ce6ec94bae8",
+          "size": 53550,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b47e3a6e0227e2c3521a4e0124074ce6ec94bae8"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "before": {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+          "size": 68760,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1bde37adb7cba710ad77784eedbbe0d6c6e556df"
+        },
+        "incoming": {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "76f4e9aa4d29e4eab14041e5343e0e3a5b46b3cf",
+          "size": 68865,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/76f4e9aa4d29e4eab14041e5343e0e3a5b46b3cf"
+        },
+        "own": {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "d52680f4d848e58dee54f8a9a4beae9435c2b14c",
+          "size": 69089,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/d52680f4d848e58dee54f8a9a4beae9435c2b14c"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+        "before": {
+          "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "7628e511b2f219ad27e517d4a96ecb7aec604131",
+          "size": 19234,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/7628e511b2f219ad27e517d4a96ecb7aec604131"
+        },
+        "incoming": {
+          "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "13229f20c93226ee5b3f4d07516d16f94b0d48d5",
+          "size": 20040,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/13229f20c93226ee5b3f4d07516d16f94b0d48d5"
+        },
+        "own": {
+          "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "7628e511b2f219ad27e517d4a96ecb7aec604131",
+          "size": 19234,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/7628e511b2f219ad27e517d4a96ecb7aec604131"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+        "before": {
+          "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "74c3aaddba29d7309af436610f6a8b64c8c337e1",
+          "size": 20394,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/74c3aaddba29d7309af436610f6a8b64c8c337e1"
+        },
+        "incoming": {
+          "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "7f224d52e429bbdecb173d65b470a2ac154de475",
+          "size": 20435,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/7f224d52e429bbdecb173d65b470a2ac154de475"
+        },
+        "own": {
+          "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "74c3aaddba29d7309af436610f6a8b64c8c337e1",
+          "size": 20394,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/74c3aaddba29d7309af436610f6a8b64c8c337e1"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "before": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+          "size": 103573,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4"
+        },
+        "incoming": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+          "size": 111672,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/95b983dc9b53c9f74a4a551bf59bdae6acc91c6e"
+        },
+        "own": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "8e9884ea50b1aae54b50d6271367b495c1ca591e",
+          "size": 119247,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/8e9884ea50b1aae54b50d6271367b495c1ca591e"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "before": {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+          "size": 25052,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2ea000d33b7c872a4a1bcd5f2a510c8418924fe5"
+        },
+        "incoming": {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c634a6275a18c527d623e3de922634e1e75448ec",
+          "size": 27188,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c634a6275a18c527d623e3de922634e1e75448ec"
+        },
+        "own": {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "1e94339df46ef3bb963555fc3cc7253055766a78",
+          "size": 28741,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1e94339df46ef3bb963555fc3cc7253055766a78"
+        }
+      },
+      {
+        "path": "src/features/agent-backend/main/adapters/output/projectTeamActivity.ts",
+        "before": {
+          "path": "src/features/agent-backend/main/adapters/output/projectTeamActivity.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "2f03dbc22891af7d294df53f61af1d3b6e79c0bd",
+          "size": 4794,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2f03dbc22891af7d294df53f61af1d3b6e79c0bd"
+        },
+        "incoming": {
+          "path": "src/features/agent-backend/main/adapters/output/projectTeamActivity.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "bfa65f8590566ec3139838d6a38cc40ffc2e5bda",
+          "size": 4943,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/bfa65f8590566ec3139838d6a38cc40ffc2e5bda"
+        },
+        "own": {
+          "path": "src/features/agent-backend/main/adapters/output/projectTeamActivity.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "2f03dbc22891af7d294df53f61af1d3b6e79c0bd",
+          "size": 4794,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2f03dbc22891af7d294df53f61af1d3b6e79c0bd"
+        }
+      },
+      {
+        "path": "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
+        "before": {
+          "path": "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c30094a87db542547a5741bb94930a7dd99e4aaf",
+          "size": 14495,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c30094a87db542547a5741bb94930a7dd99e4aaf"
+        },
+        "incoming": {
+          "path": "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "fde63957a08c0b076bd50ae272115737c4a4af19",
+          "size": 14513,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/fde63957a08c0b076bd50ae272115737c4a4af19"
+        },
+        "own": {
+          "path": "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c30094a87db542547a5741bb94930a7dd99e4aaf",
+          "size": 14495,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c30094a87db542547a5741bb94930a7dd99e4aaf"
+        }
+      },
+      {
+        "path": "src/renderer/components/ui/MentionableTextarea.tsx",
+        "before": {
+          "path": "src/renderer/components/ui/MentionableTextarea.tsx",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "3589e26ff85efb370577bd2d8b404fb62bd63fdb",
+          "size": 52237,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3589e26ff85efb370577bd2d8b404fb62bd63fdb"
+        },
+        "incoming": {
+          "path": "src/renderer/components/ui/MentionableTextarea.tsx",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "94a360626de2ee67ceac964e3fd8529d345e3843",
+          "size": 52375,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/94a360626de2ee67ceac964e3fd8529d345e3843"
+        },
+        "own": {
+          "path": "src/renderer/components/ui/MentionableTextarea.tsx",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "3589e26ff85efb370577bd2d8b404fb62bd63fdb",
+          "size": 52237,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3589e26ff85efb370577bd2d8b404fb62bd63fdb"
+        }
+      },
+      {
+        "path": "test/features/agent-backend/hostTaskActivity.test.ts",
+        "before": {
+          "path": "test/features/agent-backend/hostTaskActivity.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "66508376c5c12fe35cbedcbc6cba84a9f6720966",
+          "size": 13948,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/66508376c5c12fe35cbedcbc6cba84a9f6720966"
+        },
+        "incoming": {
+          "path": "test/features/agent-backend/hostTaskActivity.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "294d5368e92a6f871a394206bc75a4177a59f666",
+          "size": 17955,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/294d5368e92a6f871a394206bc75a4177a59f666"
+        },
+        "own": {
+          "path": "test/features/agent-backend/hostTaskActivity.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "66508376c5c12fe35cbedcbc6cba84a9f6720966",
+          "size": 13948,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/66508376c5c12fe35cbedcbc6cba84a9f6720966"
+        }
+      },
+      {
+        "path": "test/features/agent-backend/runtimeActivityFacade.test.ts",
+        "before": {
+          "path": "test/features/agent-backend/runtimeActivityFacade.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "3233fc10c6f598345f566e542c1f47b5acc18d33",
+          "size": 36912,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3233fc10c6f598345f566e542c1f47b5acc18d33"
+        },
+        "incoming": {
+          "path": "test/features/agent-backend/runtimeActivityFacade.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "8aef5576630d01c091f1514bd2896ef415130d13",
+          "size": 39469,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/8aef5576630d01c091f1514bd2896ef415130d13"
+        },
+        "own": {
+          "path": "test/features/agent-backend/runtimeActivityFacade.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "3233fc10c6f598345f566e542c1f47b5acc18d33",
+          "size": 36912,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3233fc10c6f598345f566e542c1f47b5acc18d33"
+        }
+      },
+      {
+        "path": "test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx",
+        "before": {
+          "path": "test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b7fd855c6a3964a56731ba8b86718fc64f6e91bd",
+          "size": 46946,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b7fd855c6a3964a56731ba8b86718fc64f6e91bd"
+        },
+        "incoming": {
+          "path": "test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "0f18886c763559877aff19f319e11575058af08a",
+          "size": 49616,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0f18886c763559877aff19f319e11575058af08a"
+        },
+        "own": {
+          "path": "test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b7fd855c6a3964a56731ba8b86718fc64f6e91bd",
+          "size": 46946,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b7fd855c6a3964a56731ba8b86718fc64f6e91bd"
+        }
+      },
+      {
+        "path": "test/renderer/components/team/dialogs/TaskCommentInput.test.tsx",
+        "before": {
+          "path": "test/renderer/components/team/dialogs/TaskCommentInput.test.tsx",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "896779479753aaa7c924e1273e4713b2d059e7b4",
+          "size": 7077,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/896779479753aaa7c924e1273e4713b2d059e7b4"
+        },
+        "incoming": {
+          "path": "test/renderer/components/team/dialogs/TaskCommentInput.test.tsx",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "4b81622262f5f690d1c5e17dfc289f27cbb80b70",
+          "size": 14830,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/4b81622262f5f690d1c5e17dfc289f27cbb80b70"
+        },
+        "own": {
+          "path": "test/renderer/components/team/dialogs/TaskCommentInput.test.tsx",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "896779479753aaa7c924e1273e4713b2d059e7b4",
+          "size": 7077,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/896779479753aaa7c924e1273e4713b2d059e7b4"
+        }
+      },
+      {
+        "path": "tools/owned-process-broker/debugServiceTest.h",
+        "before": {
+          "path": "tools/owned-process-broker/debugServiceTest.h",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "f8a03669780c34de68010184ad6ca03a8440a2e4",
+          "size": 7271,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f8a03669780c34de68010184ad6ca03a8440a2e4"
+        },
+        "incoming": {
+          "path": "tools/owned-process-broker/debugServiceTest.h",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+          "size": 9009,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/e17c33ba6a45d8a6471439907e50519af8d7338b"
+        },
+        "own": {
+          "path": "tools/owned-process-broker/debugServiceTest.h",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "f8a03669780c34de68010184ad6ca03a8440a2e4",
+          "size": 7271,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f8a03669780c34de68010184ad6ca03a8440a2e4"
+        }
+      },
+      {
+        "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+        "before": {
+          "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "e3cb3ac88b3b46c8935f64bc2f2b0060e163676b",
+          "size": 20067,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/e3cb3ac88b3b46c8935f64bc2f2b0060e163676b"
+        },
+        "incoming": {
+          "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "e002d7fc688cac9e2db38abbd1c1c9e851f975dd",
+          "size": 25009,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/e002d7fc688cac9e2db38abbd1c1c9e851f975dd"
+        },
+        "own": {
+          "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "cf20ceb57c06b71af1d25eac794fb92b15597930",
+          "size": 29164,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cf20ceb57c06b71af1d25eac794fb92b15597930"
+        }
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+        "before": {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+          "size": 22666,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/91098e2083ed64dc4bd551df2424f40fbec064ee"
+        },
+        "incoming": {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "ae066b7c62e2875d975e0f6d701a92bb102a8594",
+          "size": 23934,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/ae066b7c62e2875d975e0f6d701a92bb102a8594"
+        },
+        "own": {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "740f654c9c04318779fb4fd9f15b79b76711e53f",
+          "size": 27229,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/740f654c9c04318779fb4fd9f15b79b76711e53f"
+        }
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "before": {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+          "size": 56556,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/296e4ccab2d1aea5d9eb88629c1fdf56a9c88329"
+        },
+        "incoming": {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "dd1e8cd2f1ea052f0480833cfe1fca6be9b5d2e6",
+          "size": 58249,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/dd1e8cd2f1ea052f0480833cfe1fca6be9b5d2e6"
+        },
+        "own": {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "f2af726dd2f352a1ecc0fa40753b76e72d008e14",
+          "size": 60524,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f2af726dd2f352a1ecc0fa40753b76e72d008e14"
+        }
+      },
+      {
+        "path": "tools/owned-process-broker/nativeFixture.cpp",
+        "before": {
+          "path": "tools/owned-process-broker/nativeFixture.cpp",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "ca0ded66441b8818bdf5726ee7d8ffa95abb8518",
+          "size": 17444,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/ca0ded66441b8818bdf5726ee7d8ffa95abb8518"
+        },
+        "incoming": {
+          "path": "tools/owned-process-broker/nativeFixture.cpp",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "dd14a6cbdc9976bbeaf2ae48efda560623fa72c5",
+          "size": 19357,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/dd14a6cbdc9976bbeaf2ae48efda560623fa72c5"
+        },
+        "own": {
+          "path": "tools/owned-process-broker/nativeFixture.cpp",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a42f7513e9a5d2732c5c9f65fa1cc6cf1c970062",
+          "size": 15038,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a42f7513e9a5d2732c5c9f65fa1cc6cf1c970062"
+        }
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+        "before": {
+          "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "1d16506c9aa8ef2834bb379d373665947ea06c19",
+          "size": 2514,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1d16506c9aa8ef2834bb379d373665947ea06c19"
+        },
+        "incoming": {
+          "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+          "size": 7387,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b930a01a0af87cb5c6a5356f6dc9948bf6c06a94"
+        },
+        "own": {
+          "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "1d16506c9aa8ef2834bb379d373665947ea06c19",
+          "size": 2514,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1d16506c9aa8ef2834bb379d373665947ea06c19"
+        }
+      },
+      {
+        "path": "tools/owned-process-broker/serviceScopes.h",
+        "before": {
+          "path": "tools/owned-process-broker/serviceScopes.h",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+          "size": 15888,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/ab432fc33f763ee28ed406f8c33e7064fb023169"
+        },
+        "incoming": {
+          "path": "tools/owned-process-broker/serviceScopes.h",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b3fbd2949a5b015bf36c56eb19ca8ef43ec42329",
+          "size": 16379,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b3fbd2949a5b015bf36c56eb19ca8ef43ec42329"
+        },
+        "own": {
+          "path": "tools/owned-process-broker/serviceScopes.h",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+          "size": 15888,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/ab432fc33f763ee28ed406f8c33e7064fb023169"
+        }
+      }
+    ],
+    "liveMainLaterChangesExcluded": true
+  },
+  "selectedPaths": [
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "mode": "100644",
+      "preimage": "077ad7ea54675a4782984fcb5399f9964d5ec5e6",
+      "incoming": "76480223b97320827c97a8469a11418f5ccb0206",
+      "selection": "exact-incoming",
+      "reason": "Refuse unattributed process output in Task activity while preserving member logs"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "mode": "100644",
+      "preimage": "881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb",
+      "incoming": "bb5eb306bd81fdd5bdd69ccd9f10664d44d2c1c4",
+      "selection": "exact-incoming",
+      "reason": "Refuse unattributed process output in Task activity while preserving member logs"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "mode": "100644",
+      "preimage": "d52680f4d848e58dee54f8a9a4beae9435c2b14c",
+      "incoming": "76f4e9aa4d29e4eab14041e5343e0e3a5b46b3cf",
+      "selection": "reapply-only-three-guards",
+      "reason": "Fresh ownership check immediately before original privileged read"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "mode": "100644",
+      "preimage": "7628e511b2f219ad27e517d4a96ecb7aec604131",
+      "incoming": "13229f20c93226ee5b3f4d07516d16f94b0d48d5",
+      "selection": "exact-incoming",
+      "reason": "Fresh ownership check immediately before original privileged read"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "mode": "100644",
+      "preimage": "74c3aaddba29d7309af436610f6a8b64c8c337e1",
+      "incoming": "7f224d52e429bbdecb173d65b470a2ac154de475",
+      "selection": "exact-incoming",
+      "reason": "Fresh ownership check immediately before original privileged read"
+    },
+    {
+      "path": "src/features/agent-backend/main/adapters/output/projectTeamActivity.ts",
+      "mode": "100644",
+      "preimage": "2f03dbc22891af7d294df53f61af1d3b6e79c0bd",
+      "incoming": "bfa65f8590566ec3139838d6a38cc40ffc2e5bda",
+      "selection": "exact-incoming",
+      "reason": "Refuse unattributed process output in Task activity while preserving member logs"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
+      "mode": "100644",
+      "preimage": "c30094a87db542547a5741bb94930a7dd99e4aaf",
+      "incoming": "fde63957a08c0b076bd50ae272115737c4a4af19",
+      "selection": "exact-incoming",
+      "reason": "Focusable read-only comment ownership with original mutation guards"
+    },
+    {
+      "path": "src/renderer/components/ui/MentionableTextarea.tsx",
+      "mode": "100644",
+      "preimage": "3589e26ff85efb370577bd2d8b404fb62bd63fdb",
+      "incoming": "94a360626de2ee67ceac964e3fd8529d345e3843",
+      "selection": "exact-incoming",
+      "reason": "Focusable read-only comment ownership with original mutation guards"
+    },
+    {
+      "path": "test/features/agent-backend/hostTaskActivity.test.ts",
+      "mode": "100644",
+      "preimage": "66508376c5c12fe35cbedcbc6cba84a9f6720966",
+      "incoming": "294d5368e92a6f871a394206bc75a4177a59f666",
+      "selection": "exact-incoming",
+      "reason": "Refuse unattributed process output in Task activity while preserving member logs"
+    },
+    {
+      "path": "test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "mode": "100644",
+      "preimage": "3233fc10c6f598345f566e542c1f47b5acc18d33",
+      "incoming": "8aef5576630d01c091f1514bd2896ef415130d13",
+      "selection": "exact-incoming",
+      "reason": "Refuse unattributed process output in Task activity while preserving member logs"
+    },
+    {
+      "path": "test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx",
+      "mode": "100644",
+      "preimage": "b7fd855c6a3964a56731ba8b86718fc64f6e91bd",
+      "incoming": "0f18886c763559877aff19f319e11575058af08a",
+      "selection": "exact-incoming",
+      "reason": "Focusable read-only comment ownership with original mutation guards"
+    },
+    {
+      "path": "test/renderer/components/team/dialogs/TaskCommentInput.test.tsx",
+      "mode": "100644",
+      "preimage": "896779479753aaa7c924e1273e4713b2d059e7b4",
+      "incoming": "4b81622262f5f690d1c5e17dfc289f27cbb80b70",
+      "selection": "exact-incoming",
+      "reason": "Focusable read-only comment ownership with original mutation guards"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "mode": "100644",
+      "preimage": "b47e3a6e0227e2c3521a4e0124074ce6ec94bae8",
+      "incoming": "e2b96672feefb924a39e20131514e0db5e347311",
+      "selection": "bounded-preservation-test-union",
+      "reason": "Preserve own41 cases and add three finite empty-journal preservation cases"
+    }
+  ],
+  "unselectedNonDocumentaryPaths": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "before": {
+        "path": ".github/workflows/ci.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+        "size": 175238,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/de7e1b4d8388065a15345cca434f1868ec694fc5"
+      },
+      "incoming": {
+        "path": ".github/workflows/ci.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "da94c393b024d3c8a40159edbf9975cd528007a6",
+        "size": 175238,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/da94c393b024d3c8a40159edbf9975cd528007a6"
+      },
+      "own": {
+        "path": ".github/workflows/ci.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a93ff6ba1e5656523668694bca24910a468aebc7",
+        "size": 175238,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a93ff6ba1e5656523668694bca24910a468aebc7"
+      }
+    },
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "before": {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+        "size": 19532,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0938e9f31bad7520fec025ebde6aad8e071cfe69"
+      },
+      "incoming": {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8a39884bdf09fe22fe153c7a9fc3eae89dc749e8",
+        "size": 19680,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/8a39884bdf09fe22fe153c7a9fc3eae89dc749e8"
+      },
+      "own": {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+        "size": 19532,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0938e9f31bad7520fec025ebde6aad8e071cfe69"
+      }
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "before": {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+        "size": 30399,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/123e52f461e42790ddf5fb8b1ea653b9e32c30db"
+      },
+      "incoming": {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+        "size": 32248,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3228b9978cf5064c103ec486468b2e5c5a36956e"
+      },
+      "own": {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "70202d22a5840401a00025cd60b797c514f3e455",
+        "size": 34313,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/70202d22a5840401a00025cd60b797c514f3e455"
+      }
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "before": {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+        "size": 36013,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+      },
+      "incoming": {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+        "size": 36309,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/7ccbfb3cf20349d35087798b66e369c95e91a71e"
+      },
+      "own": {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+        "size": 36013,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+      }
+    },
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "before": {
+        "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ef939f224a1642cb596906324c8d61441780ccc7",
+        "size": 6522,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/ef939f224a1642cb596906324c8d61441780ccc7"
+      },
+      "incoming": {
+        "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "72c1a8f760a99c53ce7d279c7bb9d5e3ddaa7298",
+        "size": 6522,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/72c1a8f760a99c53ce7d279c7bb9d5e3ddaa7298"
+      },
+      "own": {
+        "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ef939f224a1642cb596906324c8d61441780ccc7",
+        "size": 6522,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/ef939f224a1642cb596906324c8d61441780ccc7"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+      "before": {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "78b22adbb55ab285186285e4e3f6ada38f413ecb",
+        "size": 23243,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/78b22adbb55ab285186285e4e3f6ada38f413ecb"
+      },
+      "incoming": {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b98f057ce72161d867b99f01dde0f83e3244c3d2",
+        "size": 24664,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b98f057ce72161d867b99f01dde0f83e3244c3d2"
+      },
+      "own": {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "78b22adbb55ab285186285e4e3f6ada38f413ecb",
+        "size": 23243,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/78b22adbb55ab285186285e4e3f6ada38f413ecb"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "before": {
+        "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b9dd573db23b3033b5f3db7024b317681ce31499",
+        "size": 43732,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b9dd573db23b3033b5f3db7024b317681ce31499"
+      },
+      "incoming": {
+        "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "08552af73c0f67cd62fca0e5b773cde2281eb152",
+        "size": 44781,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/08552af73c0f67cd62fca0e5b773cde2281eb152"
+      },
+      "own": {
+        "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b9dd573db23b3033b5f3db7024b317681ce31499",
+        "size": 43732,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b9dd573db23b3033b5f3db7024b317681ce31499"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "before": {
+        "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0727339627757c3a96d54da2933eb7c1b60685f7",
+        "size": 16103,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0727339627757c3a96d54da2933eb7c1b60685f7"
+      },
+      "incoming": {
+        "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ce5c3a7511009501ca057f01957008a8ce3ef67b",
+        "size": 16208,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/ce5c3a7511009501ca057f01957008a8ce3ef67b"
+      },
+      "own": {
+        "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2891a53b464c400c64ab41dd99674ac6c463b39a",
+        "size": 17991,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2891a53b464c400c64ab41dd99674ac6c463b39a"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-member-provider.test.ts",
+      "before": {
+        "path": "packages/legacy-agent-host/tests/opencode-member-provider.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "40e2f39d04da90f663f3d8b1b9308481a8371e23",
+        "size": 41996,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/40e2f39d04da90f663f3d8b1b9308481a8371e23"
+      },
+      "incoming": {
+        "path": "packages/legacy-agent-host/tests/opencode-member-provider.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9dbb76223a34fffac60c40d92398d2ca31a41b53",
+        "size": 44442,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9dbb76223a34fffac60c40d92398d2ca31a41b53"
+      },
+      "own": {
+        "path": "packages/legacy-agent-host/tests/opencode-member-provider.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "40e2f39d04da90f663f3d8b1b9308481a8371e23",
+        "size": 41996,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/40e2f39d04da90f663f3d8b1b9308481a8371e23"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "before": {
+        "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79",
+        "size": 207427,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79"
+      },
+      "incoming": {
+        "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "331ed90ca8996b09daee62f4bcad2fcda6080b04",
+        "size": 207380,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/331ed90ca8996b09daee62f4bcad2fcda6080b04"
+      },
+      "own": {
+        "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "43325a4e2b4d7ad2b69bacab51275a2a2af9bd8f",
+        "size": 234346,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/43325a4e2b4d7ad2b69bacab51275a2a2af9bd8f"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "before": {
+        "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bc0913e775d3e076518009c4fe7b5ee45f8c7e7b",
+        "size": 87973,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/bc0913e775d3e076518009c4fe7b5ee45f8c7e7b"
+      },
+      "incoming": {
+        "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6a668daeaf47a920aeddfb87c4d2658a35754f11",
+        "size": 90081,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6a668daeaf47a920aeddfb87c4d2658a35754f11"
+      },
+      "own": {
+        "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bc0913e775d3e076518009c4fe7b5ee45f8c7e7b",
+        "size": 87973,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/bc0913e775d3e076518009c4fe7b5ee45f8c7e7b"
+      }
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "before": {
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "size": 12335,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/71d5629149e8f499a45b54a99922145ee3cae09e"
+      },
+      "incoming": {
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5e21bb5f8c50a3c9dd2a18b1d8c461896e0f91a9",
+        "size": 12614,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/5e21bb5f8c50a3c9dd2a18b1d8c461896e0f91a9"
+      },
+      "own": {
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "size": 12335,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/71d5629149e8f499a45b54a99922145ee3cae09e"
+      }
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "before": {
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+        "size": 16835,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+      },
+      "incoming": {
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0be43ad7d6549642c60080caf6001aa5f6d2a23b",
+        "size": 20150,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0be43ad7d6549642c60080caf6001aa5f6d2a23b"
+      },
+      "own": {
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+        "size": 16835,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "before": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "size": 103573,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4"
+      },
+      "incoming": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+        "size": 111672,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/95b983dc9b53c9f74a4a551bf59bdae6acc91c6e"
+      },
+      "own": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8e9884ea50b1aae54b50d6271367b495c1ca591e",
+        "size": 119247,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/8e9884ea50b1aae54b50d6271367b495c1ca591e"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "before": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+        "size": 25052,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2ea000d33b7c872a4a1bcd5f2a510c8418924fe5"
+      },
+      "incoming": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "size": 27188,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c634a6275a18c527d623e3de922634e1e75448ec"
+      },
+      "own": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1e94339df46ef3bb963555fc3cc7253055766a78",
+        "size": 28741,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1e94339df46ef3bb963555fc3cc7253055766a78"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "before": {
+        "path": "tools/owned-process-broker/debugServiceTest.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f8a03669780c34de68010184ad6ca03a8440a2e4",
+        "size": 7271,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f8a03669780c34de68010184ad6ca03a8440a2e4"
+      },
+      "incoming": {
+        "path": "tools/owned-process-broker/debugServiceTest.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+        "size": 9009,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/e17c33ba6a45d8a6471439907e50519af8d7338b"
+      },
+      "own": {
+        "path": "tools/owned-process-broker/debugServiceTest.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f8a03669780c34de68010184ad6ca03a8440a2e4",
+        "size": 7271,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f8a03669780c34de68010184ad6ca03a8440a2e4"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "before": {
+        "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e3cb3ac88b3b46c8935f64bc2f2b0060e163676b",
+        "size": 20067,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/e3cb3ac88b3b46c8935f64bc2f2b0060e163676b"
+      },
+      "incoming": {
+        "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e002d7fc688cac9e2db38abbd1c1c9e851f975dd",
+        "size": 25009,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/e002d7fc688cac9e2db38abbd1c1c9e851f975dd"
+      },
+      "own": {
+        "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "cf20ceb57c06b71af1d25eac794fb92b15597930",
+        "size": 29164,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cf20ceb57c06b71af1d25eac794fb92b15597930"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "before": {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+        "size": 22666,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/91098e2083ed64dc4bd551df2424f40fbec064ee"
+      },
+      "incoming": {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ae066b7c62e2875d975e0f6d701a92bb102a8594",
+        "size": 23934,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/ae066b7c62e2875d975e0f6d701a92bb102a8594"
+      },
+      "own": {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "740f654c9c04318779fb4fd9f15b79b76711e53f",
+        "size": 27229,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/740f654c9c04318779fb4fd9f15b79b76711e53f"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "before": {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+        "size": 56556,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/296e4ccab2d1aea5d9eb88629c1fdf56a9c88329"
+      },
+      "incoming": {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "dd1e8cd2f1ea052f0480833cfe1fca6be9b5d2e6",
+        "size": 58249,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/dd1e8cd2f1ea052f0480833cfe1fca6be9b5d2e6"
+      },
+      "own": {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f2af726dd2f352a1ecc0fa40753b76e72d008e14",
+        "size": 60524,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f2af726dd2f352a1ecc0fa40753b76e72d008e14"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "before": {
+        "path": "tools/owned-process-broker/nativeFixture.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ca0ded66441b8818bdf5726ee7d8ffa95abb8518",
+        "size": 17444,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/ca0ded66441b8818bdf5726ee7d8ffa95abb8518"
+      },
+      "incoming": {
+        "path": "tools/owned-process-broker/nativeFixture.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "dd14a6cbdc9976bbeaf2ae48efda560623fa72c5",
+        "size": 19357,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/dd14a6cbdc9976bbeaf2ae48efda560623fa72c5"
+      },
+      "own": {
+        "path": "tools/owned-process-broker/nativeFixture.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a42f7513e9a5d2732c5c9f65fa1cc6cf1c970062",
+        "size": 15038,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a42f7513e9a5d2732c5c9f65fa1cc6cf1c970062"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+      "before": {
+        "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1d16506c9aa8ef2834bb379d373665947ea06c19",
+        "size": 2514,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1d16506c9aa8ef2834bb379d373665947ea06c19"
+      },
+      "incoming": {
+        "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+        "size": 7387,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b930a01a0af87cb5c6a5356f6dc9948bf6c06a94"
+      },
+      "own": {
+        "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1d16506c9aa8ef2834bb379d373665947ea06c19",
+        "size": 2514,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1d16506c9aa8ef2834bb379d373665947ea06c19"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/serviceScopes.h",
+      "before": {
+        "path": "tools/owned-process-broker/serviceScopes.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+        "size": 15888,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/ab432fc33f763ee28ed406f8c33e7064fb023169"
+      },
+      "incoming": {
+        "path": "tools/owned-process-broker/serviceScopes.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b3fbd2949a5b015bf36c56eb19ca8ef43ec42329",
+        "size": 16379,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b3fbd2949a5b015bf36c56eb19ca8ef43ec42329"
+      },
+      "own": {
+        "path": "tools/owned-process-broker/serviceScopes.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+        "size": 15888,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/ab432fc33f763ee28ed406f8c33e7064fb023169"
+      }
+    }
+  ],
+  "compositions": {
+    "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts": {
+      "preimage": "d52680f4d848e58dee54f8a9a4beae9435c2b14c",
+      "sourceHunks": "Only the three added assertOwnedRenderer calls from 953-to-e1, immediately before the two original clipboard.readText reads and schedules.getRunLogs. Each old statement occurs exactly once. Preserve every other own byte, including original visibleLogFact source-title/unique-visible-row/current-event checks.",
+      "addedLines": 3,
+      "deletedLines": 0,
+      "physicalLinesAfter": 794
+    },
+    "scripts/legacy-agent-host/desktop-backend-observations.test.ts": {
+      "preimage": "b47e3a6e0227e2c3521a4e0124074ce6ec94bae8",
+      "sourceHunks": "Keep all41 own cases, /proc openSync/readFileSync mocks, both ps mocks, original fixture and every original assertion. Extend only the emptyPhase foreign-provider selector to choose claude for wrong-provider-claude, otherwise opencode. Add exactly-one-census assertion to the existing eight-case sentinel[4300] loop. Append three bounded cases through the existing helper: wrong-provider-claude/after-team-read refusal(actual claude expected codex); retained-failure/before-first-team-read exact original protocol refusal; healthy-empty/before-first-team-read success. Each retains its original empty array by identity, requires [] afterwards, exactly one census/one journal/zero signals, and unchanged journal bytes.",
+      "maxAddedLines": 40,
+      "maxDeletedLines": 1,
+      "maxPhysicalLines": 1045,
+      "predictedCases": 44,
+      "predictionIsNotExecution": true
+    }
+  },
+  "documentaryPhase1": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/old-readonly-v1.zip",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f98bc75bf1421dad1de1fe8ee52b4fa7970733f8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/old-readonly-v2.zip",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bac8d78f3abfcc503941b37a100570462383b67b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/old-read-boundary.zip",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5289a0b18a3c82bdef17f1274984d9b004702d51"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/old-desktop-v1.zip",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f6a3c2f484934f15a867ce8bb1f2823f8537eda6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/old-desktop-v2.zip",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "aba7305127715ce66d20ca13a49efd2b1237d201"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/e1-recovered-files.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7d335ffa9f4374a6b7454343c74e256e677f6305"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/e1-recovery-index.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1923dda19cbff43c2738ab8813ddd8628a5f6f0b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1212-later-terminals.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cd91443243b3c53b6a74cf48366c5091c018f994"
+    }
+  ],
+  "documentaryPhase2": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/creation-windows-133102584969.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "19bc94a3e446f40f2438fa7e9eb7fa368f35f795",
+      "size": 27675,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/19bc94a3e446f40f2438fa7e9eb7fa368f35f795"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/audit.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b3acc4683ffd7c1be77ee5aa51d7f14dc82e09a2",
+      "size": 32378,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b3acc4683ffd7c1be77ee5aa51d7f14dc82e09a2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585065.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "571cd137a403a2ea53984da3c8e2b6181c64abce",
+      "size": 26109,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/571cd137a403a2ea53984da3c8e2b6181c64abce"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585195.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7bb6c4cad0f6de5859c0c7d5bf9fe2c176e2ec39",
+      "size": 31546,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/7bb6c4cad0f6de5859c0c7d5bf9fe2c176e2ec39"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585206.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a4d56d87e99c213b7c5836cd701d5b132d973eb3",
+      "size": 108985,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a4d56d87e99c213b7c5836cd701d5b132d973eb3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585222.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6e468c8d39355d62ec00f4206a57f9834eda3659",
+      "size": 30284,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6e468c8d39355d62ec00f4206a57f9834eda3659"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585293.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e1e06100399ec6bbb352812c19dca69c8443c4e1",
+      "size": 26695,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/e1e06100399ec6bbb352812c19dca69c8443c4e1"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585672.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bd0e537e23cdfe3d8e05c21edfb5af753f7eb6e3",
+      "size": 28154,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/bd0e537e23cdfe3d8e05c21edfb5af753f7eb6e3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/review.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f1bbe16a11e1a7270fcdd2bc729145e7e5de5cff",
+      "size": 4201,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f1bbe16a11e1a7270fcdd2bc729145e7e5de5cff"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/load-view-review.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "975407cb6109039b3d154105c023ac17ffb4f10a",
+      "size": 5954,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/975407cb6109039b3d154105c023ac17ffb4f10a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/load-view-source-pins.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "708eab3ffd17049cea5e3a75745616d3807cfd12",
+      "size": 11852,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/708eab3ffd17049cea5e3a75745616d3807cfd12"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/native-source-cleanup-audit.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e542ea4318825b919c43fd1050a367d1fdc3c476",
+      "size": 11802,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/e542ea4318825b919c43fd1050a367d1fdc3c476"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/native-source-cleanup-review.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5406e4c093693ec1137292fdce172124401a3286",
+      "size": 5489,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/5406e4c093693ec1137292fdce172124401a3286"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/renderer-load-view-audit.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9a47a805c75a69926bf0544635386793197f5718",
+      "size": 9185,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9a47a805c75a69926bf0544635386793197f5718"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/renderer-review.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4a022e85ba3c7dcdb9eb9a1c6836669de2342d42",
+      "size": 1737,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/4a022e85ba3c7dcdb9eb9a1c6836669de2342d42"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/source-pin-audit.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3652a1cc49221ac08523548af77ef4b7d4bff9b6",
+      "size": 454583,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3652a1cc49221ac08523548af77ef4b7d4bff9b6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/artifact-14198298316.zip",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3adb081cb77d221e57a7f7e36ab1525155b95656",
+      "size": 625065,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3adb081cb77d221e57a7f7e36ab1525155b95656"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/audit.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5ee18d84f44c68b6fd14d6ee477a7755258721b7",
+      "size": 14199,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/5ee18d84f44c68b6fd14d6ee477a7755258721b7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/job-133091842656.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8ddce6f138a109fd5b4ef0100ac31d39d2ef274d",
+      "size": 314374,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/8ddce6f138a109fd5b4ef0100ac31d39d2ef274d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/retry-timing-audit.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "079565604cec118e6bb7535ed5f7f5242b0e26e5",
+      "size": 3585,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/079565604cec118e6bb7535ed5f7f5242b0e26e5"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/review.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a74ca6aa022a789a892f2f30bc24fe35a75bd145",
+      "size": 6319,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a74ca6aa022a789a892f2f30bc24fe35a75bd145"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/source-pin-audit.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "de2c3a75c9ddc2810ceed5b230543024c75f0b5f",
+      "size": 709557,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/de2c3a75c9ddc2810ceed5b230543024c75f0b5f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/artifact-14191980301.zip",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "352cc91ca6171eb0527c20c1601e703c3f561fd6",
+      "size": 1064941,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/352cc91ca6171eb0527c20c1601e703c3f561fd6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/audit.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9fd3a815206330e3c846ee63c0772f4831099386",
+      "size": 8894,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9fd3a815206330e3c846ee63c0772f4831099386"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/job-133040244365.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e056cc375319a3f9f47faa2b228dbde477e86dd6",
+      "size": 157719,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/e056cc375319a3f9f47faa2b228dbde477e86dd6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/review.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d14327bd95a214c3631dd668c13662266fb437cf",
+      "size": 7147,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/d14327bd95a214c3631dd668c13662266fb437cf"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/source-pin-audit.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a4c85fcf288018bef0ada8dc9e3bad211046c8c0",
+      "size": 677417,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a4c85fcf288018bef0ada8dc9e3bad211046c8c0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/actual-red-0660/original-ci-red-audit.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1eafe2b6e74687670713b297e41a936e4f4f766f",
+      "size": 7347,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1eafe2b6e74687670713b297e41a936e4f4f766f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/team-contracts-608-2026-11-16/audit.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "98b70a41d6922f1639c6eb81cf2127268f80bad2",
+      "size": 12236,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/98b70a41d6922f1639c6eb81cf2127268f80bad2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/team-contracts-608-2026-11-16/job-133062441494.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c5446ac9cf26e5515cf8c2b2c9f0df55f8e43795",
+      "size": 2205340,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c5446ac9cf26e5515cf8c2b2c9f0df55f8e43795"
+    }
+  ],
+  "historicalPlanCopies": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-e1-plan29.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4decf2aa39aba619f90103a77dd8467e37c50cfb"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-e1-plan30.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "74e17f8bc1abfa1cb4f7567e83b640bfe29fe3fb"
+    }
+  ],
+  "ownPlan29Before": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "blob": "2e55f47962e32c1964f281d39c56e4a1d53814f3"
+  },
+  "ownPlan30Unchanged": "fcadb8b52b0ff58f434be7d56acd703dd85dc2b5",
+  "phase2Plan29Append": "\n\n## Narrow e1 reconciliation after independent source and recovered execution review\n\nThis merge preserves the complete preceding Plan 29 bytes and the complete own Plan 30. Its incoming history parent is e1d14b9cd0fa1d7896b58e513f9040639e9e4940; its source selection is limited to the thirteen paths and two bounded compositions authorized by e1-read-boundary-r1.md and their exact independent R2. The incoming Plan 29 is not a prefix-compatible extension: its full original bytes are retained separately as evidence/coobservation-2026-11-15/incoming-e1-plan29.md, and incoming Plan 30 likewise as incoming-e1-plan30.md. Thirty newly introduced incoming documentary files retain their original Git paths, modes and blobs. The earlier forty path relocations remain selected; historical documentary references do not restore long checkout paths. All other non-documentary paths, all forty-two workflow bodies, provider c79 archives, deadline/oracle/currentness/ownership rules and production budgets remain exact to the first parent. Historical GREEN results qualify their recorded source/dependency states only. Actual resulting-source qualification remains open; this merge does not close M16, P09, P11, the original 15-second Process gate, or either frozen Installer/Cross-Team refusal.\n",
+  "recovery": {
+    "index": "1923dda19cbff43c2738ab8813ddd8628a5f6f0b",
+    "review": "7d335ffa9f4374a6b7454343c74e256e677f6305",
+    "originalFiles": 192,
+    "originalBytes": 27980352,
+    "originalCommandReceipts": [
+      {
+        "scope": "public-task-comment-readonly-integration",
+        "path": "validation/green-lint.json",
+        "blob": "0e90b2360787f3c1e844cc9b83be5bca5dada7b8",
+        "bytes": 438005,
+        "sha256": "148fdd81a28896c4569d0eb58c34d0de349677d14842ca30b53559ba39186f8d"
+      },
+      {
+        "scope": "public-task-comment-readonly-integration",
+        "path": "validation/green-readonly-tests.json",
+        "blob": "5f26e1be9c6b045f617612801793f4592f7662c8",
+        "bytes": 438041,
+        "sha256": "9ac6a92f4c05d658fdecf536456ce0617bf4ede5970dc4967eb0459341f3352e"
+      },
+      {
+        "scope": "public-task-comment-readonly-integration",
+        "path": "validation/green-selected-types.json",
+        "blob": "2810840fe5b4d065ce470db0256d83476f7a6674",
+        "bytes": 437849,
+        "sha256": "1fb88ac851073fbd1285254d8a4005d0575c7a884af300493f52c314cae15f1b"
+      },
+      {
+        "scope": "public-task-comment-readonly-integration",
+        "path": "validation/red-readonly-tests.json",
+        "blob": "c6d70067a2175f7d7ccf3015868eea984e76c000",
+        "bytes": 438038,
+        "sha256": "eccf40154d8544fc03640edd4ebbd98804a92427656b415403147df8cdfff49a"
+      },
+      {
+        "scope": "public-task-comment-readonly-integration-v2",
+        "path": "validation/green-lint.json",
+        "blob": "8749736bd9fed9f5de6c3d9847ec3349c643595a",
+        "bytes": 438005,
+        "sha256": "ead2247363d4830660e920bb271f85a00ead7b900c5a3d1ef6583d6416782a4b"
+      },
+      {
+        "scope": "public-task-comment-readonly-integration-v2",
+        "path": "validation/green-readonly-tests.json",
+        "blob": "0db6167fa0531031f5c53a7c81d82c9addc6ace6",
+        "bytes": 438041,
+        "sha256": "ee35033cdfaad1ebadb5c14e4dc6705e390bd5561b78f35b1843143da56687dd"
+      },
+      {
+        "scope": "public-task-comment-readonly-integration-v2",
+        "path": "validation/green-selected-types.json",
+        "blob": "ccd7ae79f197a25ece73a0142e79ed97ffbae1f5",
+        "bytes": 437852,
+        "sha256": "eb6d054f2788ea90544167d36ee56f8a7e97fb4ef9bdb35468de48d88f4ff47f"
+      },
+      {
+        "scope": "public-task-comment-readonly-integration-v2",
+        "path": "validation/green-source-size.json",
+        "blob": "6eda575084a392876bd8d4d200144f6bd130a1b4",
+        "bytes": 437729,
+        "sha256": "7dcddf2006bd3e6adeca5eef29e5efe75cb458f05b005686940f51c685dbf67d"
+      },
+      {
+        "scope": "public-read-boundary-integration",
+        "path": "validation/baseline-controller-build.json",
+        "blob": "f14e3cfe1b632839509cd20b7247e1e82743ac9d",
+        "bytes": 7922,
+        "sha256": "720705fed1cba6c5b43e8439f7b5cdc3b3e4596e481c5548a39bc54277d5176c"
+      },
+      {
+        "scope": "public-read-boundary-integration",
+        "path": "validation/baseline-host-build.json",
+        "blob": "1ec3d7f66bfc038c3a6241aa0c064a3ad77083b0",
+        "bytes": 226131,
+        "sha256": "fe1fc82d3fd837cf6d118770dad6a32b2b79340e5d729f270efc814ffc6e8ae3"
+      },
+      {
+        "scope": "public-read-boundary-integration",
+        "path": "validation/green-app-activity.json",
+        "blob": "8f41560ed261645285969363e551ef46600e5660",
+        "bytes": 437881,
+        "sha256": "fddb91490b2ec378b1dc8da89c4071cff5149546b8b4f974a8a66209d61c53c7"
+      },
+      {
+        "scope": "public-read-boundary-integration",
+        "path": "validation/green-app-types.json",
+        "blob": "cd368f9a94229f8d7070ed2846577f3ac4a04c5b",
+        "bytes": 437835,
+        "sha256": "e5acf5c58efa203d5894b55a09047c772fd8fcccbeafc9099fdecea03a4847ae"
+      },
+      {
+        "scope": "public-read-boundary-integration",
+        "path": "validation/green-host-activity.json",
+        "blob": "9f46b1da3091e702c6354fc364914e1c8bd15f84",
+        "bytes": 437774,
+        "sha256": "a5d9670e337fdef4dd5e6a4ec07f3cd5aede5c632d7c61c006a777d7163e2f38"
+      },
+      {
+        "scope": "public-read-boundary-integration",
+        "path": "validation/green-host-types.json",
+        "blob": "8eb751bef90e3da0a3575505ea05e52eada7581f",
+        "bytes": 437838,
+        "sha256": "719c326da21b2d08a7404cfa0ad2c0252adf12a0bae7be24928c5641915713db"
+      },
+      {
+        "scope": "public-read-boundary-integration",
+        "path": "validation/green-provisioning.json",
+        "blob": "44ceedaa4b9aeabe495ee40706a60164da4b99f4",
+        "bytes": 437740,
+        "sha256": "9d8ae3f8c4298618f10ffaff8629e4aeff83bf938c0913870fffd05fd1b3ea04"
+      },
+      {
+        "scope": "public-read-boundary-integration",
+        "path": "validation/green-script-types.json",
+        "blob": "c99bdbb2ff73ee62f86ef817dbc4f5801a9ecc72",
+        "bytes": 437732,
+        "sha256": "be5bec96c8ded1077684bc4bc2ce2d6b1de20ef1152d57807a391ef40f0d14db"
+      },
+      {
+        "scope": "public-read-boundary-integration",
+        "path": "validation/green-source-lint.json",
+        "blob": "c8c3c1dbbe5a4120ac2e5786e150cb0df7b5e347",
+        "bytes": 438277,
+        "sha256": "fcf64cc41d647d85f21ae0ed6e5ed031a73618bc6ed1099bab44e8b5874c4122"
+      },
+      {
+        "scope": "public-read-boundary-integration",
+        "path": "validation/green-source-size.json",
+        "blob": "940ebc06bff8c852436c52fe73caf8a1cba17942",
+        "bytes": 437725,
+        "sha256": "2564d1e118c2a282cf81d4b08e2279ac307b2888faee9824210f54652e4e5ff0"
+      },
+      {
+        "scope": "public-read-boundary-integration",
+        "path": "validation/green-v2-records.json",
+        "blob": "dc2b280235976ba8b3ee69ee9be8f389eba3e630",
+        "bytes": 437718,
+        "sha256": "e36f6f6b702b4c9c9becc0c78bc4652a2b50f4b9de05cd4e231cd43e78088f52"
+      },
+      {
+        "scope": "public-read-boundary-integration",
+        "path": "validation/red-task-activity.json",
+        "blob": "cb6354012e91765714fbad9334e95e89d56dd16d",
+        "bytes": 437813,
+        "sha256": "0ceddb9aaa73b8739b8312e99cd8eb5682eb6219fc98c976c23e2544550080c4"
+      },
+      {
+        "scope": "public-read-boundary-integration",
+        "path": "validation/red-v2-records.json",
+        "blob": "da06829f3c393e2446a914d16e2911cf947f4312",
+        "bytes": 437715,
+        "sha256": "5ec9cfffecf31faf8a5a6515a2a27f9ff8e5b12e19ce8c3990f16241313fbb2b"
+      },
+      {
+        "scope": "public-desktop-preservation-integration",
+        "path": "validation/red-desktop-tests.json",
+        "blob": "66656ee688fcbd4e7159bd23acc0659bcc8771e1",
+        "bytes": 437775,
+        "sha256": "dd104b330ee57ff1c8337df9e533a652abdfb3c955a4c48e1a96669551ccccb1"
+      },
+      {
+        "scope": "public-desktop-preservation-integration-v2",
+        "path": "validation/green-desktop-tests.json",
+        "blob": "774626b86daa0d56b3ebb25e4e73ccc3790cd073",
+        "bytes": 437779,
+        "sha256": "91de6fafee54bfa2d05a90f5ad5f4b7bfd90172c0e5d6a16048717ee54b3f1e3"
+      },
+      {
+        "scope": "public-desktop-preservation-integration-v2",
+        "path": "validation/green-lint.json",
+        "blob": "f45103059391770624e8e53f472c06b04edd5860",
+        "bytes": 437914,
+        "sha256": "ec961598179b8e4129fee8ee2d8c394b92bf6ea22d408a0246da4c97b801ada2"
+      },
+      {
+        "scope": "public-desktop-preservation-integration-v2",
+        "path": "validation/green-script-types.json",
+        "blob": "2a34079fd4946aeaa1ed0663c23495a2ffcc4981",
+        "bytes": 437736,
+        "sha256": "5da6390b3971436d5ac894c71c82d64ac9204409ed201007e8f268bd9848cb13"
+      },
+      {
+        "scope": "public-desktop-preservation-integration-v2",
+        "path": "validation/green-source-size.json",
+        "blob": "58f85dd496de5ce51196dda7d35a801f1d4544f6",
+        "bytes": 437729,
+        "sha256": "25bdab782ceaddd6a56f2b7cfcb357940720628890021ccc1bc936f8504b1849"
+      },
+      {
+        "scope": "public-desktop-preservation-integration-v2",
+        "path": "validation/red-desktop-tests.json",
+        "blob": "bd94bea867999489f51fbb12ecf705ea820e4e49",
+        "bytes": 437776,
+        "sha256": "9c0ca60d51ac39c75752a9e298150baf4bfdb361eec6e93ecf291c9723495e72"
+      }
+    ],
+    "fiveArchivesAreNewLosslessPackagingNotNewRuns": true
+  },
+  "phaseOrder": [
+    "Publish docs-only R1 checkpoint on own a8; independently full-read actual published commit/ref/tree and complete R1/Plan29/evidence",
+    "Only after that acceptance, author two bounded composition candidates; independently full-read and R2 exact13 source postimages plus complete expected merge tree and documentary preservation",
+    "Create ordinary two-parent commit with ordered parents [published R1 checkpoint,e1]; immediately push with exact lease/force=false, then independently full-read actual published postimage",
+    "Prepare and publish a separate exact CI binding/body after the actual resulting tree, full uncapped B diff and all42 workflow bodies have been independently reviewed; only then create one frozen Draft observer venue"
+  ],
+  "newLocalProductExecutionAuthorized": false,
+  "ci": {
+    "frozenBase": "b3e3bc604e2053b70de75d3d5307f408a04920a4",
+    "existingBaseRef": "ci/frontend-parity-observer-base-c714-20261116",
+    "proposedFreshHeadRef": "ci/frontend-parity-read-boundaries-c714-20261116",
+    "draft": true,
+    "maintainerCanModify": false,
+    "oneOpeningAfterSeparatePublishedExactBinding": true,
+    "fullUncappedPathBound": 1000,
+    "existingA8RoutingReportNotReusable": "ee613b72a46d41b5cb19888e6e00c6745296fe76",
+    "forbidden": [
+      "editing or rerunning frozen1206/1207/1208/1211/1212",
+      "manual dispatch/cancel/rerun",
+      "real Claude/Codex including version",
+      "main/default merge or Ready or Stage2/release",
+      "workflow/filter/ignore/budget broadening"
+    ]
+  },
+  "preservation": {
+    "nonDocumentaryOutside13": "exact first-parent bytes/modes/types",
+    "workflows": 42,
+    "productionCap": 800,
+    "existingExceptions": 141,
+    "productionSourceCount": 5020,
+    "providerHead": "c79b81bf002eaac95436da71c7049d7f309906a9",
+    "deadlines": "Original Process15s, P08 Retry10s, original UI action and cleanup budgets; no renewed observation authority",
+    "open": [
+      "M16 genuine old-owner donor/bridge",
+      "P09 original same-path selected-byte oracle",
+      "P11 resulting-source typed gate then A RED/B GREEN/C original native UI",
+      "frozen1212 Installer final point movement refusal",
+      "frozen1212 Cross-Team epoch identity/physical cleanup refusal"
+    ]
+  },
+  "laterTerminalBundle": {
+    "blob": "cd91443243b3c53b6a74cf48366c5091c018f994",
+    "bytes": 3412182,
+    "sha256": "09389284718ba86b0395cc72e0170fa9f991bbf15f31b7d18a594abc7fa87b4e",
+    "fullRecords": 48,
+    "sourceHead": "3a81d8bfb72b2f21a2bca1c0b1d8cf24fc61cc6d"
+  }
+}

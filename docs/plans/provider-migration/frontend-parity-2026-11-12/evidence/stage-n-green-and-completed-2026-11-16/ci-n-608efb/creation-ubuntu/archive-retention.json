@@ -1,0 +1,259 @@
+{
+  "artifactId": 14196341016,
+  "head": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "officialDigestVerified": true,
+  "safeUniquePaths": true,
+  "crcAllPassed": true,
+  "archiveBytes": 2870789,
+  "archiveSha256": "e3ed46646107240d2ddd3076a3c21a290e2967df8ddeb9c4c5c0e6d5c50ee2d6",
+  "jobLogBytes": 57342,
+  "jobLogSha256": "fee77fe87382fdfc4555d6a345183206682f2e510c349c0ee5f21a9347908e8d",
+  "entries": [
+    {
+      "path": "teams-create-config-only-created.png",
+      "bytes": 44696,
+      "sha256": "3fdd48b49675676fba80dd6d9b5b8eaffdcf3b85e81ef545e045d81674846b23",
+      "crc32": "475bb39e"
+    },
+    {
+      "path": "teams-create-copy-resumed-edits.png",
+      "bytes": 73749,
+      "sha256": "2ba4f3e6b98326c706c487a122346ffdcc128e8a99e7bc24ed029fa021de4967",
+      "crc32": "02b8a3af"
+    },
+    {
+      "path": "teams-create-css-zoom-200.png",
+      "bytes": 64743,
+      "sha256": "048a46585be5752a92214a3198dc7fb634236f0a961aefad2ad182e30874cb81",
+      "crc32": "46ec123e"
+    },
+    {
+      "path": "teams-create-edited.png",
+      "bytes": 81119,
+      "sha256": "a7da3c4b8a321a49fca0f3ceea4b651e5cf068b5d3cc0571db30afc68a1613dc",
+      "crc32": "78e3126b"
+    },
+    {
+      "path": "teams-create-launch-controls-loaded.png",
+      "bytes": 86827,
+      "sha256": "ed134f3148c29a5d5c71848b7853de27fea26d3e9675048601cdc8708511ea68",
+      "crc32": "e47ce26a"
+    },
+    {
+      "path": "teams-create-launch-still-modal.png",
+      "bytes": 86819,
+      "sha256": "438b0f586715a482fd5773e522d85d1d4ee6c19f730b473d936a5dc709863d60",
+      "crc32": "27545bec"
+    },
+    {
+      "path": "teams-create-missing-cli-value-validated.png",
+      "bytes": 91131,
+      "sha256": "d9b0bb43ba88564d20e016faf8057e58da8157eabeb276b530fee2cd7270c742",
+      "crc32": "ac627655"
+    },
+    {
+      "path": "teams-create-native-electron-zoom-200.png",
+      "bytes": 76963,
+      "sha256": "69e489921a2931a677823dd0b9d2315cf15343b07ba6c5fc5fdf6fd26edd7ad3",
+      "crc32": "244fa563"
+    },
+    {
+      "path": "teams-create-opened.png",
+      "bytes": 68046,
+      "sha256": "17360ece4765ba83165885d2f8ba72f87106eeee5816642c8831ee21a85049bc",
+      "crc32": "547f98e4"
+    },
+    {
+      "path": "teams-create-organization-created.png",
+      "bytes": 41041,
+      "sha256": "19d3eb9892d39dced9939aada58d0165c7d1d284e7cd7628dd6a58821110b86f",
+      "crc32": "917dbc42"
+    },
+    {
+      "path": "teams-create-organization-entry.png",
+      "bytes": 75724,
+      "sha256": "210836a45c2a37f987b88209b62b60ae5751105a9522fb9ec427c19731e2759c",
+      "crc32": "ee7f25b2"
+    },
+    {
+      "path": "teams-create-page-result.json",
+      "bytes": 2207,
+      "sha256": "61b0ef0afa34af72958fe0a27efabde8b3889cdb1899498a0ad3b66e7bf129d7",
+      "crc32": "2a3d09ed"
+    },
+    {
+      "path": "teams-create-provider-refreshed.png",
+      "bytes": 92645,
+      "sha256": "bfc6b03df36eab7507022233049341b45b7016a45b2a1a74f6cb8f447101f197",
+      "crc32": "5401c03e"
+    },
+    {
+      "path": "teams-create-restarted.png",
+      "bytes": 69461,
+      "sha256": "f98240e931956c08f6e9ec779ceb8a3c69f2a0bbb6c7b0e64a9f407b78df217a",
+      "crc32": "8e1bff12"
+    },
+    {
+      "path": "teams-create-resumed.png",
+      "bytes": 96426,
+      "sha256": "8b70cc03698109d2ba368aa0c38afbffe813b6bf2e54cc11e873ef1fb3508bd5",
+      "crc32": "03aacebe"
+    },
+    {
+      "path": "teams-create-save-rejected.png",
+      "bytes": 55032,
+      "sha256": "05d13dbfa30c50f4aa2881e90df1ffe26c0050d930f33137aac262518e240724",
+      "crc32": "7b725952"
+    },
+    {
+      "path": "teams-create-schedules-delete-confirm.png",
+      "bytes": 62043,
+      "sha256": "de9552daf4c00cf45f28f9d9748bd56495ee3167363f3f76ce3482aed2f13f1b",
+      "crc32": "cf7f6564"
+    },
+    {
+      "path": "teams-create-schedules-deleted.png",
+      "bytes": 42934,
+      "sha256": "659ac513ae2afdfc8124c693ddad316c43f4acc2c33cd2d85d582e60894d5bcc",
+      "crc32": "36f7b56b"
+    },
+    {
+      "path": "teams-create-schedules-edit.png",
+      "bytes": 89925,
+      "sha256": "49d14f9dec76095c46bde002b2117bc9e27c964a05c579980e0b2aa75c62b410",
+      "crc32": "84fc3a18"
+    },
+    {
+      "path": "teams-create-schedules-editor-opened.png",
+      "bytes": 107291,
+      "sha256": "000ede845b8524226b0c8c90c7d8ad156206c52ff4fa0fba2c76c30d2e75f9b5",
+      "crc32": "b083cd24"
+    },
+    {
+      "path": "teams-create-schedules-invalid-cron.png",
+      "bytes": 91262,
+      "sha256": "45c0195e5e4d6204836f2f57cb5364d10055f123f4f538c9756a558e23fcb84a",
+      "crc32": "3f1db14a"
+    },
+    {
+      "path": "teams-create-schedules-list-dark.png",
+      "bytes": 48699,
+      "sha256": "5e6f2bf3a27129326b159862f9bd5a4a5bfdda37004657d58f273927036a14ef",
+      "crc32": "e07332cd"
+    },
+    {
+      "path": "teams-create-schedules-list-light.png",
+      "bytes": 48751,
+      "sha256": "9b40313bf622f834ad73bf9c98a46b49242174ee5b27a11e4ec8877f2e57514c",
+      "crc32": "b55cbd7b"
+    },
+    {
+      "path": "teams-create-schedules-list-narrow-700.png",
+      "bytes": 40619,
+      "sha256": "b13354fa4752000ac047dcc1965dc60982d11d715d04f7e0dfc94917ff66aef8",
+      "crc32": "8fddab1b"
+    },
+    {
+      "path": "teams-create-schedules-list-native-electron-zoom-200.png",
+      "bytes": 90755,
+      "sha256": "f49fd0aac605b3afb6bb79ae8011edbecb54d9ef62b003c46bd0242294227a9e",
+      "crc32": "bc7296a5"
+    },
+    {
+      "path": "teams-create-schedules-old-prompt-review.png",
+      "bytes": 94378,
+      "sha256": "2f9341e02f0cbd98b1f07b003a48e8235d1d5ae34bb8af915023665fa8eeb7ef",
+      "crc32": "ca93d132"
+    },
+    {
+      "path": "teams-create-schedules-paused.png",
+      "bytes": 50874,
+      "sha256": "0da44e27996fa2dc6d419999411bae84874ddf2aa68458e71e37cd939bd75000",
+      "crc32": "53fe6202"
+    },
+    {
+      "path": "teams-create-schedules-pristine-submit-validation.png",
+      "bytes": 75612,
+      "sha256": "80ef82679f88730a2a22cd56fba6d8f99e4eda813f9f1df330f180d5d0218417",
+      "crc32": "f27df7e9"
+    },
+    {
+      "path": "teams-create-schedules-ready-to-create.png",
+      "bytes": 87414,
+      "sha256": "e4cb9957e1e5aeec208dcd8114264e229f443a79d9cd6c73a455bd3e75bf4482",
+      "crc32": "b210d3e7"
+    },
+    {
+      "path": "teams-create-schedules-run-history.png",
+      "bytes": 55602,
+      "sha256": "92b2a7fde7a43817e74771c334b7d22b94344bbf9411aeb7e0482c127a3fed7d",
+      "crc32": "41a67d91"
+    },
+    {
+      "path": "teams-create-schedules-resumed.png",
+      "bytes": 48125,
+      "sha256": "28e5325d90caa33679413688ba8dc5e393975a5f43b28e525270f38ccccf59d1",
+      "crc32": "961e5fcc"
+    },
+    {
+      "path": "teams-create-schedules-run-log.png",
+      "bytes": 62078,
+      "sha256": "d68a3a74c24db8c6108b5fd914b64583c7f857ead304bb3a0777dc18d776840c",
+      "crc32": "bba3a2e4"
+    },
+    {
+      "path": "teams-create-split-pane.png",
+      "bytes": 137469,
+      "sha256": "204eec9e48f0b359023547d5a57a59cc89433d7387e7efcbac324c81a1455efd",
+      "crc32": "966fb124"
+    },
+    {
+      "path": "teams-create-teammate-mode-override.png",
+      "bytes": 91298,
+      "sha256": "7542ef3e3606ab1a46d60a539322e2c10c76f15565e7d7e787a110a1586763f1",
+      "crc32": "36e65d4f"
+    },
+    {
+      "path": "teams-create-teammate-mode-validated.png",
+      "bytes": 93056,
+      "sha256": "e2042a2738364da4074763c8c7e375900c938c7eb49b6b735184743654fe7873",
+      "crc32": "570c0ca1"
+    },
+    {
+      "path": "teams-create-template-confirmed.png",
+      "bytes": 100087,
+      "sha256": "b58b32ce13ae2861d881f065bd74f2c4a0941796e97a825d7b88f5a757d8963b",
+      "crc32": "1aa1776e"
+    },
+    {
+      "path": "teams-create-theme-dark.png",
+      "bytes": 82785,
+      "sha256": "6ac195162d0a42b0aee751eb5ed44a23dbffcf5d5daa7c812e6f86c828316444",
+      "crc32": "409abeb2"
+    },
+    {
+      "path": "teams-create-theme-light.png",
+      "bytes": 82577,
+      "sha256": "21ef1da44f293865d592656958c90f44a8ef1fa869ac04d8435b8afd73c1814e",
+      "crc32": "2660076e"
+    },
+    {
+      "path": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+      "bytes": 99897,
+      "sha256": "1fe1e4efe8f26f0778d086c5f0c989611f31408983c26086f8d1fde88141dcb6",
+      "crc32": "fba5399f"
+    },
+    {
+      "path": "teams-create-zh-tw-task-detail-dialog.png",
+      "bytes": 94298,
+      "sha256": "d02b096831f871d637b087f4bd76c69c461decbd0befc528bb619e2a424eb518",
+      "crc32": "c4ae510a"
+    },
+    {
+      "path": "teams-create-zh-tw-task-detail-tab.png",
+      "bytes": 60051,
+      "sha256": "8b85340d4df0338f694802933357434a74dfd5f5d60b4f764856b411b342af11",
+      "crc32": "83a6a709"
+    }
+  ]
+}

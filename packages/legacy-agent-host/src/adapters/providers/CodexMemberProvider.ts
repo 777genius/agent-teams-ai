@@ -1,3 +1,5 @@
+import { channel } from 'node:diagnostics_channel';
+import { managementDigest } from '../../management/identity.js';
 import { NATIVE_IMAGE_MIME_TYPES } from '../../attachments/mimeTypes.js';
 import { capturedMcpSourceCurrent } from '../../mcp-catalog/capturedSource.js';
 import { qualifiedCodexProtocolRevision } from '../../composition/runtimeSourceQualification.js';
@@ -23,6 +25,8 @@ import type { CapturedProcessPort } from './CapturedProcess.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
 import type { CodexMemberProfile } from '../../composition/runtimeProfile.js';
 
+type ReadinessOperation = 'open' | 'catalog' | 'readiness';
+type ReadinessPhase = 'before-await' | 'after-await' | 'returned' | 'threw';
 const TEAM_TOKEN_ENV = 'LEGACY_AGENT_HOST_TEAM_MCP_TOKEN';
 
 /** Captured native flags only. RPC, native configuration acceptance and discovery belong to D. */
@@ -81,6 +85,38 @@ export function createCodexMemberProvider(
 ): MemberProvider {
   const { profile } = context;
   const evidence = context.codexEvidence;
+  const readinessObservation = (() => {
+    let diagnostic: ReturnType<typeof channel> | undefined;
+    let identity: { schemaVersion: 1; bindingDigest: string; sourceId: string; sourceRevision: string } | undefined;
+    let sequence = 0, invocations = 0, disabled = false;
+    try {
+      diagnostic = channel('agent-teams.legacy-host.codex-readiness');
+      const origin = context.processOrigin, binding = context.endpoint.binding;
+      const sourceId = origin?.sourceId, sourceRevision = origin?.revision;
+      if (origin?.origin.kind === 'runtime' && typeof sourceId === 'string' && /^[a-f0-9]{64}$/.test(sourceId) &&
+          typeof sourceRevision === 'string' && /^[a-f0-9]{64}$/.test(sourceRevision)) {
+        const { backendId, teamId, runId, memberId, generation } = binding;
+        if ([backendId, teamId, runId, memberId, generation].every(value => typeof value === 'string'))
+          identity = { schemaVersion: 1, bindingDigest: managementDigest({ backendId, teamId, runId, memberId, generation }), sourceId, sourceRevision };
+      }
+    } catch { disabled = true; }
+    const limit = (): void => { try {
+      if (!identity || disabled) return; disabled = true;
+      if (diagnostic?.hasSubscribers) diagnostic.publish({ ...identity, limit: true });
+    } catch { disabled = true; } };
+    const publish = (invocation: number | undefined, operation: ReadinessOperation, phase: ReadinessPhase, result: boolean | null = null): void => { try {
+      if (!identity || disabled || invocation === undefined) return;
+      if (sequence >= 64) { limit(); return; }
+      sequence++;
+      if (diagnostic?.hasSubscribers) diagnostic.publish({ ...identity, sequence, invocation, operation, phase, result });
+    } catch { disabled = true; } };
+    const begin = (operation: ReadinessOperation): number | undefined => { try {
+      if (!identity || disabled) return undefined;
+      if (invocations >= 16) { limit(); return undefined; }
+      const invocation = ++invocations; publish(invocation, operation, 'before-await'); return invocation;
+    } catch { disabled = true; return undefined; } };
+    return { begin, publish };
+  })();
   if (profile.provider !== 'codex') throw new Error('Invalid Codex profile');
   qualifiedCodexProtocolRevision(profile.protocolRevision);
   if (!capturedMcpSourceCurrent(profile)) throw new Error('Captured MCP source changed');
@@ -123,21 +159,27 @@ export function createCodexMemberProvider(
     !sealed && context.isCurrent() && custody.isRunning() && capturedMcpSourceCurrent(profile);
   const verifyCatalog = async (signal?: AbortSignal): Promise<boolean> => {
     if (!policy) return true;
+    let invocation: number | undefined;
     const assertCurrent = () => {
       if (sealed || !context.isCurrent() || !capturedMcpSourceCurrent(profile))
         throw new Error('Captured MCP authority changed');
     };
     try {
       assertCurrent();
+      invocation = readinessObservation.begin('catalog');
       const actual = await (options.readCatalog ?? readCodexMcpCatalog)(
         profile,
         assertCurrent,
         signal,
         capturedNativeProcessFactory(context.retainedWindowsLaunch, context.processOrigin)
       );
+      readinessObservation.publish(invocation, 'catalog', 'after-await');
       assertCurrent();
-      return actual.digest === policy.catalog.digest;
+      const matches = actual.digest === policy.catalog.digest;
+      readinessObservation.publish(invocation, 'catalog', 'returned', matches);
+      return matches;
     } catch {
+      readinessObservation.publish(invocation, 'catalog', 'threw');
       return false;
     }
   };
@@ -215,8 +257,11 @@ export function createCodexMemberProvider(
   });
   const factory: DriverFactory = {
     async open(request) {
+      let invocation: number | undefined;
       try {
+        invocation = readinessObservation.begin('open');
         const opened = await native.open(request);
+        readinessObservation.publish(invocation, 'open', 'after-await');
         const source = opened.driver;
         const driver: Session = {
           sessionRef: source.sessionRef,
@@ -230,9 +275,17 @@ export function createCodexMemberProvider(
           respondToInteraction: (reference, reply) => source.respondToInteraction(reference, reply),
           interrupt: (operation) => source.interrupt(operation),
           async checkReadiness() {
-            const proof = await source.checkReadiness();
-            ready = proof.ok && current();
-            return proof;
+            const invocation = readinessObservation.begin('readiness');
+            try {
+              const proof = await source.checkReadiness();
+              readinessObservation.publish(invocation, 'readiness', 'after-await');
+              ready = proof.ok && current();
+              readinessObservation.publish(invocation, 'readiness', 'returned', ready);
+              return proof;
+            } catch (error) {
+              readinessObservation.publish(invocation, 'readiness', 'threw');
+              throw error;
+            }
           },
           checkpoint: () => source.checkpoint(),
           async close() {
@@ -243,6 +296,7 @@ export function createCodexMemberProvider(
         };
         return { ...opened, driver };
       } catch {
+        readinessObservation.publish(invocation, 'open', 'threw');
         // D may reject a checkpoint/configuration after transport allocation. Always clean up our handles.
         sealed = true;
         ready = false;

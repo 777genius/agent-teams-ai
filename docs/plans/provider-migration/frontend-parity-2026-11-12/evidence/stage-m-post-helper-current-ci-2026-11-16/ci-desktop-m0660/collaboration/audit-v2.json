@@ -1,0 +1,2251 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "jobId": 133017916023,
+  "status": "PASS",
+  "qualification": "Original full mixed-provider Collaboration Desktop flow with finite TEST peers, including actual roster progress and Stop/reload predicates; no real-vendor/native or pending privacy GREEN qualification.",
+  "originalLog": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/job-133017916023.log",
+    "bytes": 181311,
+    "blob": "f71a175d26edb1726336519590e1928043abb163",
+    "sha256": "c9892d877a242e037ce3963494d30b6b2451f0c8d0db9a73b9abcceae5c1f155"
+  },
+  "originalZip": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/artifact-14191567899.zip",
+    "bytes": 1646654,
+    "blob": "82e24692ea7234b89389500601bd46b18bbfcb10",
+    "sha256": "c43ec6168b096d4b6520e73f20be2411d693603497997c2428976e7ee48f46be"
+  },
+  "archiveEntries": 43,
+  "safeUniqueCrcExtractedByteEquality": true,
+  "officialArtifact": {
+    "id": 14191567899,
+    "name": "host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-collaboration",
+    "size_in_bytes": 1646654,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14191567899",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14191567899/zip",
+    "expired": false,
+    "created_at": "2026-11-16T01:58:13Z",
+    "expires_at": "2026-11-30T01:58:11Z",
+    "updated_at": "2026-11-16T01:58:13Z",
+    "digest": "sha256:c43ec6168b096d4b6520e73f20be2411d693603497997c2428976e7ee48f46be",
+    "workflow_run": {
+      "id": 43780997237,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+    }
+  },
+  "officialApiFile": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-artifacts-0203.json",
+    "bytes": 15080,
+    "blob": "4a9b4ebd7f7a1410184b5d5df605e574984c67a5",
+    "sha256": "a0ab504afd23015acb2d8677eb0a7be34ee6deb5ce6e9b7a2497f97605a46e49"
+  },
+  "terminalJob": {
+    "id": 133017916023,
+    "name": "Offline Host Desktop (linux-x64, collaboration)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43780997237,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Verify original checkout and runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Prepare private Linux display",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Install frozen workspace and Electron",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build existing Desktop prerequisites and verify admission",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Verify original Runtime and Team conversation contracts",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 9
+      },
+      {
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 10
+      },
+      {
+        "name": "Capture package-manager and Host inputs without vendor executables",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Capture original controlled Linux process input without a provider",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Exercise ordinary Team controls and renderer reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Exercise ordinary Taskboard controls and persistence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Exercise original Skills and cross-Team controls",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15
+      },
+      {
+        "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17
+      },
+      {
+        "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Exercise original Review after a cold Host and app restart",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Exercise saved next-launch selection while the original Team remains live",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 24
+      },
+      {
+        "name": "Exercise stock Codex Update while the original Team retains its captured source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 25
+      },
+      {
+        "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 26
+      },
+      {
+        "name": "Prepare exact OpenCode V2 Bun and engine graph",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 27
+      },
+      {
+        "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 28
+      },
+      {
+        "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 29
+      },
+      {
+        "name": "Verify exact source, original screenshots, receipts and cleanup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 30
+      },
+      {
+        "name": "Preserve original Desktop evidence, including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 60
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 61
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 62
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 63
+      }
+    ]
+  },
+  "terminalApiFile": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0203.json",
+    "bytes": 184637,
+    "blob": "6e46a30c12b354171499b3d07089b1801d32eab7",
+    "sha256": "487fba5cb804d01f5d6cf2c8a82f338535c4c23eb7a98c02d0564791bc7c6bc9"
+  },
+  "receipt": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/desktop-backend-receipt.json",
+    "bytes": 1012298,
+    "blob": "574f8dbc0679d75a45d498ff71e1d874c4fdbb50",
+    "sha256": "daa2d1405c791f8a41aac1b3e3fbac6e72f398ffe909c95dd4b24b2a93b5b82a"
+  },
+  "sourcePins": {
+    "count": 1757,
+    "orderedPreEqualsPost": true,
+    "allMatchCompleteGitLfCensus": true,
+    "reference": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    },
+    "gitBytes": 20308016,
+    "attribution": "Every ordered pre/post entry compared with the previously retained complete Git 0660 census; no independent rebuild or new process observation."
+  },
+  "relevantSourceLeaves": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "gitBlob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+      "gitBytes": 25052,
+      "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7",
+      "preEqualsPost": true,
+      "recordedEqualsGitLfBytes": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-chat-attachments-ui.ts",
+      "gitBlob": "428fad07141d46553b261864ce9985bd746aa17a",
+      "gitBytes": 12210,
+      "sha256": "776df02aeb4d8c8eec24d302475075625d2479f6e4c095ffd020000405c9fd91",
+      "preEqualsPost": true,
+      "recordedEqualsGitLfBytes": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "gitBlob": "97e14385a298a38a9b81b8805dc3f6d2da66545c",
+      "gitBytes": 16555,
+      "sha256": "8340911817fb4228e8d948425a1f85796fba16d244b6763b04e307ed6f290713",
+      "preEqualsPost": true,
+      "recordedEqualsGitLfBytes": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-records.ts",
+      "gitBlob": "c73049b7a3d7fb946b3804d365bae83b4efce430",
+      "gitBytes": 13266,
+      "sha256": "b3c42f1dcd906c5392350bddd9bb96746fed50e79ca79eb3c73bdac0b27b3c50",
+      "preEqualsPost": true,
+      "recordedEqualsGitLfBytes": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "gitBlob": "aff6e19ec4cf492841aa667442c1b7d71541c7c5",
+      "gitBytes": 34086,
+      "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f",
+      "preEqualsPost": true,
+      "recordedEqualsGitLfBytes": true
+    }
+  ],
+  "uiLines": 377,
+  "originalPrerequisites": {
+    "node": "24.21.0",
+    "summaries": {
+      "tests": [
+        "115",
+        "7"
+      ],
+      "pass": [
+        "115",
+        "7"
+      ],
+      "fail": [
+        "0",
+        "0"
+      ],
+      "skipped": [
+        "0",
+        "0"
+      ],
+      "duration_ms": [
+        "10664.6017",
+        "260.065534"
+      ]
+    },
+    "commands": [
+      "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "node --test test/scripts/installDependenciesWithRetry.test.mjs"
+    ],
+    "TeamContracts": "The original ten-file Team contract step is not run by this Collaboration lane."
+  },
+  "receiptPins": {
+    "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+    "corepackPackageSha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+    "corepackLibrarySha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+    "pnpmStubSha256": "325da73c1d2b2b4be1a453b22be5d23ad7a6fdc861925f358df0384f28286516",
+    "profileSha256": "e1a44b871d1afe20994c965dd60705f125f24161ef7887fdc7b083abd354e157",
+    "descriptorSha256": "0b312c437a699442cf71db9a048b4543c49427089a3923abe71fb1658de0eec1",
+    "sentinelSha256": "f8492b2a7d4e8c57136f79f4c43df72d910e2526c01f4b0610ee03bea8223ad3",
+    "shellProbeSha256": "9118e4d0b50b63128425b3b47932a8e504195f4d0ef2fb883462d5717a388cd5",
+    "providerArchiveSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+    "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+    "electronSha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+    "smokeSourceSha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+    "fixtureSourceSha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+    "uiSourceSha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf"
+  },
+  "compiledBundleHashesAfterStartup": [
+    {
+      "path": "main/chunks/index-D9GX0Q6a.cjs",
+      "sha256": "89c988b7be61f7f30f0effaed6a2626a2279b0ed753228360e77e227884d0a92"
+    },
+    {
+      "path": "main/chunks/index-yaJFGvjB.cjs",
+      "sha256": "ec64b11e28a53961fd7846392857a0167886b8b086d14f54e20041ddc9927155"
+    },
+    {
+      "path": "main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+      "sha256": "7babbc9bd69c863a2210647b3d5f589d96437a9a80fd794b54196387849217f6"
+    },
+    {
+      "path": "main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+      "sha256": "c14cfc36aeec6fd7103c507f258097aaeccf552dbbf608fea43f9e3c7a7ef3b3"
+    },
+    {
+      "path": "main/chunks/taskChangeState-rZolvpL6.cjs",
+      "sha256": "f40557112189b351692a4b0f19244d7845a4dfe754f468326a21c36386efa1cd"
+    },
+    {
+      "path": "main/chunks/taskHistory-2kbwfqIg.cjs",
+      "sha256": "1d336b6cea5aa5c4768954541a24347fe89bb46a83faddaf8b26fd6e0afb7f85"
+    },
+    {
+      "path": "main/chunks/TeamDataService-DySh5-O-.cjs",
+      "sha256": "ed455bf2423e0511bf1fb8e30069280fe99b505e8e4968df3705309a7131556e"
+    },
+    {
+      "path": "main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+      "sha256": "2915a9af73772eda67fa92bd4499976d75724d9605cc947e356bd1dc1cee600c"
+    },
+    {
+      "path": "main/index.cjs",
+      "sha256": "c451aecd5463c127c7e72bc238a802912304a21eafb255acb547f38e8851b771"
+    },
+    {
+      "path": "main/internal-storage-worker.cjs",
+      "sha256": "3433cb94575a5748d3133174952698af2a98ac2afb348cb159fcb1110e0b284f"
+    },
+    {
+      "path": "main/task-change-worker.cjs",
+      "sha256": "f8fcc24dd4dc9842cd0f70ffe02891d39eef84019d4aab4ed21b529ba9326446"
+    },
+    {
+      "path": "main/team-data-worker.cjs",
+      "sha256": "dc145e9f1fb5fdfa2e5f51ca6d6f2db8e22e89cb3ab34dae2745ccfd4e6f3823"
+    },
+    {
+      "path": "main/team-fs-worker.cjs",
+      "sha256": "6e6410a44a3d1b97065085259858215045ed137b5bd0dd27bf70f797091c9c83"
+    },
+    {
+      "path": "preload/index.js",
+      "sha256": "4f02e5f1659bb0373f5515d81c7edf5f9bc7af8b67a39f1600171f8acb291406"
+    }
+  ],
+  "bundleProvenance": "Actual compiled main/preload JS bytes hashed after owned app startup; no claim of reproducible source-to-bundle rebuild",
+  "uiSteps": [
+    {
+      "action": "mouseMoved",
+      "label": "hover sidebar row before measuring click"
+    },
+    {
+      "action": "mouseClick",
+      "label": "sidebar task",
+      "state": "attempted"
+    },
+    {},
+    {
+      "action": "mouseMoved",
+      "label": "hover Open team"
+    },
+    {
+      "action": "mouseClick",
+      "label": "Open team",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover open original saved Team Launch"
+    },
+    {
+      "action": "mouseClick",
+      "label": "open original saved Team Launch",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover expand original saved launch settings"
+    },
+    {
+      "action": "mouseClick",
+      "label": "expand original saved launch settings",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseWheel",
+      "label": "original collaboration input"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover focus original collaboration input"
+    },
+    {
+      "action": "mouseClick",
+      "label": "focus original collaboration input",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover launch original two-member team once"
+    },
+    {
+      "action": "mouseClick",
+      "label": "launch original two-member team once",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover open original alice conversation"
+    },
+    {
+      "action": "mouseClick",
+      "label": "open original alice conversation",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover original Back to chats"
+    },
+    {
+      "action": "mouseClick",
+      "label": "original Back to chats",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover open original Add Members"
+    },
+    {
+      "action": "mouseClick",
+      "label": "open original Add Members",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover focus original collaboration input"
+    },
+    {
+      "action": "mouseClick",
+      "label": "focus original collaboration input",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover expand original member model selector"
+    },
+    {
+      "action": "mouseClick",
+      "label": "expand original member model selector",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover select original Local models"
+    },
+    {
+      "action": "mouseClick",
+      "label": "select original Local models",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseWheel",
+      "label": "configured original OpenCode model"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover select original OpenCode model"
+    },
+    {
+      "action": "mouseClick",
+      "label": "select original OpenCode model",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover add original Carol once"
+    },
+    {
+      "action": "mouseClick",
+      "label": "add original Carol once",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover open original bob conversation"
+    },
+    {
+      "action": "mouseClick",
+      "label": "open original bob conversation",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover focus original collaboration input"
+    },
+    {
+      "action": "mouseClick",
+      "label": "focus original collaboration input",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover send original direct message once"
+    },
+    {
+      "action": "mouseClick",
+      "label": "send original direct message once",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover original Back to chats"
+    },
+    {
+      "action": "mouseClick",
+      "label": "original Back to chats",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover open original carol conversation"
+    },
+    {
+      "action": "mouseClick",
+      "label": "open original carol conversation",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover original Back to chats"
+    },
+    {
+      "action": "mouseClick",
+      "label": "original Back to chats",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover open original alice conversation"
+    },
+    {
+      "action": "mouseClick",
+      "label": "open original alice conversation",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover focus original collaboration input"
+    },
+    {
+      "action": "mouseClick",
+      "label": "focus original collaboration input",
+      "state": "attempted"
+    },
+    {
+      "action": "DOM.setFileInputFiles",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover send original attachments once"
+    },
+    {
+      "action": "mouseClick",
+      "label": "send original attachments once",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover expand original sent attachment message once"
+    },
+    {
+      "action": "mouseClick",
+      "label": "expand original sent attachment message once",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover download original sent file once"
+    },
+    {
+      "action": "mouseClick",
+      "label": "download original sent file once",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover original Back to chats"
+    },
+    {
+      "action": "mouseClick",
+      "label": "original Back to chats",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover original Create group chat"
+    },
+    {
+      "action": "mouseClick",
+      "label": "original Create group chat",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover focus original collaboration input"
+    },
+    {
+      "action": "mouseClick",
+      "label": "focus original collaboration input",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover fixed original group membership"
+    },
+    {
+      "action": "mouseClick",
+      "label": "fixed original group membership",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover create original group once"
+    },
+    {
+      "action": "mouseClick",
+      "label": "create original group once",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover original group directed recipient"
+    },
+    {
+      "action": "mouseClick",
+      "label": "original group directed recipient",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover original Bob group recipient"
+    },
+    {
+      "action": "mouseClick",
+      "label": "original Bob group recipient",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover focus original collaboration input"
+    },
+    {
+      "action": "mouseClick",
+      "label": "focus original collaboration input",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover send original directed group once"
+    },
+    {
+      "action": "mouseClick",
+      "label": "send original directed group once",
+      "state": "attempted"
+    },
+    {},
+    {
+      "action": "mouseMoved",
+      "label": "hover original Back to chats"
+    },
+    {
+      "action": "mouseClick",
+      "label": "original Back to chats",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover expand original collaboration Logs"
+    },
+    {
+      "action": "mouseClick",
+      "label": "expand original collaboration Logs",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover open original log source selector"
+    },
+    {
+      "action": "mouseClick",
+      "label": "open original log source selector",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover select original Bob Logs"
+    },
+    {
+      "action": "mouseClick",
+      "label": "select original Bob Logs",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover expand original selected member output"
+    },
+    {
+      "action": "mouseClick",
+      "label": "expand original selected member output",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover reopen original log sources"
+    },
+    {
+      "action": "mouseClick",
+      "label": "reopen original log sources",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover restore original Lead Logs"
+    },
+    {
+      "action": "mouseClick",
+      "label": "restore original Lead Logs",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover open original Carol detail"
+    },
+    {
+      "action": "mouseClick",
+      "label": "open original Carol detail",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover request original Carol removal once"
+    },
+    {
+      "action": "mouseClick",
+      "label": "request original Carol removal once",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover confirm original Carol removal once"
+    },
+    {
+      "action": "mouseClick",
+      "label": "confirm original Carol removal once",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover restore original Carol once"
+    },
+    {
+      "action": "mouseClick",
+      "label": "restore original Carol once",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover open original carol conversation"
+    },
+    {
+      "action": "mouseClick",
+      "label": "open original carol conversation",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover focus original collaboration input"
+    },
+    {
+      "action": "mouseClick",
+      "label": "focus original collaboration input",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover send original direct message once"
+    },
+    {
+      "action": "mouseClick",
+      "label": "send original direct message once",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseWheel",
+      "label": "original whole Team Stop"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover stop original whole team once"
+    },
+    {
+      "action": "mouseClick",
+      "label": "stop original whole team once",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover sidebar row before measuring click"
+    },
+    {
+      "action": "mouseClick",
+      "label": "sidebar task",
+      "state": "attempted"
+    },
+    {},
+    {
+      "action": "mouseMoved",
+      "label": "hover Open team"
+    },
+    {
+      "action": "mouseClick",
+      "label": "Open team",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover open original carol conversation"
+    },
+    {
+      "action": "mouseClick",
+      "label": "open original carol conversation",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover original Back to chats"
+    },
+    {
+      "action": "mouseClick",
+      "label": "original Back to chats",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover open original alice conversation"
+    },
+    {
+      "action": "mouseClick",
+      "label": "open original alice conversation",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover original Back to chats"
+    },
+    {
+      "action": "mouseClick",
+      "label": "original Back to chats",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover open original retained group"
+    },
+    {
+      "action": "mouseClick",
+      "label": "open original retained group",
+      "state": "attempted"
+    }
+  ],
+  "oneAttemptLabels": [
+    "launch original two-member team once",
+    "add original Carol once",
+    "confirm original Carol removal once",
+    "restore original Carol once",
+    "stop original whole team once",
+    "send original attachments once",
+    "create original group once",
+    "send original directed group once",
+    "download original sent file once"
+  ],
+  "initial": {
+    "capture": {
+      "commandId": "capture:launch:roster:41c87ac3-9779-4418-97b0-2e98c0f76290",
+      "configurationRevision": "2a8739d1c074268e0031481408f79f8d92947ef3f8136699d285bfa0348d65b1",
+      "launchId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+      "members": [
+        {
+          "memberId": "alice-id",
+          "principalId": "agent:c5a594f5-09ef-536d-a080-ec576a385d4f",
+          "delivery": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+            "teamId": "TEST-desktop-team",
+            "teamName": "test-desktop-backend",
+            "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+            "memberId": "alice-id",
+            "generation": "capture-659fbb5e-c3ce-59d3-84e9-620755839f91"
+          }
+        },
+        {
+          "memberId": "bob-id",
+          "principalId": "agent:04f729e0-93bc-55ac-82c9-e9392868fc8d",
+          "delivery": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+            "teamId": "TEST-desktop-team",
+            "teamName": "test-desktop-backend",
+            "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+            "memberId": "bob-id",
+            "generation": "capture-71d7863e-1daa-5ea6-9d21-44ca8b7f32e5"
+          }
+        }
+      ],
+      "principalId": "TEST-human",
+      "fingerprint": "0b894c17a97a63da8e49a75b7d820cc8ec8aba47678e22c2d8ede5c3ece73d2c"
+    },
+    "sessions": [
+      {
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "teamId": "TEST-desktop-team",
+          "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+          "memberId": "bob-id",
+          "generation": "capture-71d7863e-1daa-5ea6-9d21-44ca8b7f32e5"
+        },
+        "phase": "allocated",
+        "custody": "owned",
+        "nativeReady": true,
+        "sessionRef": "d21238e8-e81d-5aa4-ba88-07a35e8fc01c",
+        "configuration": {
+          "tenantId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "projectId": "TEST-project-TEST-desktop-backend-mL97kT",
+          "sessionId": "d21238e8-e81d-5aa4-ba88-07a35e8fc01c",
+          "generation": 2,
+          "configRevision": "capture-fa12d5cb487f3af7392fd7a2c5a5d6fbadaf5281416e64ad5e384e2e0f6364d1",
+          "requiredCapabilities": [
+            "text",
+            "tools"
+          ]
+        },
+        "inputs": []
+      },
+      {
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "teamId": "TEST-desktop-team",
+          "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+          "memberId": "alice-id",
+          "generation": "capture-659fbb5e-c3ce-59d3-84e9-620755839f91"
+        },
+        "phase": "allocated",
+        "custody": "owned",
+        "nativeReady": true,
+        "sessionRef": "1b2ebfae-4643-51a9-a7dc-d19fc8122515",
+        "configuration": {
+          "tenantId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "projectId": "TEST-project-TEST-desktop-backend-mL97kT",
+          "sessionId": "1b2ebfae-4643-51a9-a7dc-d19fc8122515",
+          "generation": 2,
+          "configRevision": "capture-8943528978787a984fffb56aa343ac0f4827f33f757db488a2f0afc570bbd3e1",
+          "requiredCapabilities": [
+            "session.conversation"
+          ]
+        },
+        "inputs": [
+          {
+            "inputId": "ed51a934-471e-50df-9344-ae265fd35485",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ]
+      }
+    ],
+    "physical": [
+      [
+        "claude",
+        {
+          "pid": 6137,
+          "parentPid": 4858,
+          "groupId": 6137,
+          "birth": "Mon Nov 16 01:55:49 2026",
+          "command": "MainThread"
+        }
+      ],
+      [
+        "codex",
+        {
+          "pid": 6149,
+          "parentPid": 4858,
+          "groupId": 6149,
+          "birth": "Mon Nov 16 01:55:49 2026",
+          "command": "MainThread"
+        }
+      ]
+    ]
+  },
+  "membership": {
+    "added": {
+      "commandId": "5931ec3b-d10e-4cdb-a409-97d5d80e4971",
+      "phase": "completed",
+      "kind": "add",
+      "launchId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+      "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+      "session": {
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "teamId": "TEST-desktop-team",
+          "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+          "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+          "generation": "live-4ae702ce408a55432b4efd9a4c6d6f5180395bd84abde5bf4bd0444316750383"
+        },
+        "phase": "allocated",
+        "custody": "owned",
+        "nativeReady": true,
+        "sessionRef": "f75b1e9b-a20a-500d-9ed0-27728b3980ec",
+        "configuration": {
+          "tenantId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "projectId": "TEST-project-TEST-desktop-backend-mL97kT",
+          "sessionId": "f75b1e9b-a20a-500d-9ed0-27728b3980ec",
+          "generation": 2,
+          "configRevision": "live-cb5ee2c6bb1c1a3b47c96907bb62f6ca00f85a70504e1af0f620fc68cd05c184",
+          "requiredCapabilities": [
+            "text",
+            "tools"
+          ]
+        },
+        "inputs": []
+      },
+      "selection": {
+        "principalId": "agent:584dc045-fbbc-53ff-abeb-f2962e117c2c",
+        "delivery": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "teamId": "TEST-desktop-team",
+          "teamName": "test-desktop-backend",
+          "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+          "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+          "generation": "live-4ae702ce408a55432b4efd9a4c6d6f5180395bd84abde5bf4bd0444316750383"
+        },
+        "configurationDigest": "42addd674744a4468be38f1ea5b29711b2ac6059b5dc3e311bf0eaa15266c588"
+      },
+      "physical": {
+        "pid": 6648,
+        "parentPid": 4858,
+        "groupId": 6648,
+        "birth": "Mon Nov 16 01:56:02 2026",
+        "command": "MainThread"
+      },
+      "nativeSession": {
+        "event": "collaboration-session",
+        "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+        "sessionId": "ses_TESTdesktop6648",
+        "provider": "opencode",
+        "role": "runtime",
+        "pid": 6648
+      }
+    },
+    "removed": {
+      "commandId": "8f91e592-9a3a-49fc-822b-3fdc21255d13",
+      "phase": "completed",
+      "kind": "remove",
+      "launchId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+      "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+      "session": {
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "teamId": "TEST-desktop-team",
+          "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+          "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+          "generation": "live-4ae702ce408a55432b4efd9a4c6d6f5180395bd84abde5bf4bd0444316750383"
+        },
+        "phase": "closed",
+        "custody": "released",
+        "nativeReady": false,
+        "sessionRef": "f75b1e9b-a20a-500d-9ed0-27728b3980ec",
+        "configuration": {
+          "tenantId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "projectId": "TEST-project-TEST-desktop-backend-mL97kT",
+          "sessionId": "f75b1e9b-a20a-500d-9ed0-27728b3980ec",
+          "generation": 2,
+          "configRevision": "live-cb5ee2c6bb1c1a3b47c96907bb62f6ca00f85a70504e1af0f620fc68cd05c184",
+          "requiredCapabilities": [
+            "text",
+            "tools"
+          ]
+        },
+        "inputs": [
+          {
+            "inputId": "3b97145f-b440-51db-a175-c96544ccf15c",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "inputId": "967c8de1-dd1c-53ca-ade2-247366f2dd51",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ]
+      },
+      "oldGrant": {
+        "principalId": "agent:584dc045-fbbc-53ff-abeb-f2962e117c2c",
+        "memberName": "carol",
+        "permissions": [
+          "read",
+          "task.write",
+          "message.write",
+          "process.write"
+        ],
+        "revision": 2,
+        "revoked": true
+      },
+      "originalProcessAbsent": true
+    },
+    "restored": {
+      "commandId": "8e7db335-282b-4f09-8121-3d18dc5ba9f4",
+      "phase": "completed",
+      "kind": "restore",
+      "launchId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+      "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+      "session": {
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "teamId": "TEST-desktop-team",
+          "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+          "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+          "generation": "live-411859c0f0196c209a2bcf926141862e26c496e4f5c8ab966b7a13527ab68c0a"
+        },
+        "phase": "allocated",
+        "custody": "owned",
+        "nativeReady": true,
+        "sessionRef": "6d2bb3a4-c149-5894-a1b5-3d7ad1eba134",
+        "configuration": {
+          "tenantId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "projectId": "TEST-project-TEST-desktop-backend-mL97kT",
+          "sessionId": "6d2bb3a4-c149-5894-a1b5-3d7ad1eba134",
+          "generation": 3,
+          "configRevision": "live-58659588f24d86d906c4ab80b6607228234bd813b687bad0a5ebcb1357844d37",
+          "requiredCapabilities": [
+            "text",
+            "tools"
+          ]
+        },
+        "inputs": []
+      },
+      "selection": {
+        "principalId": "agent:cc5ce96f-595c-579d-b770-09eabf9b3d56",
+        "delivery": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "teamId": "TEST-desktop-team",
+          "teamName": "test-desktop-backend",
+          "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+          "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+          "generation": "live-411859c0f0196c209a2bcf926141862e26c496e4f5c8ab966b7a13527ab68c0a"
+        },
+        "configurationDigest": "bc27e623afffe37ff4eaf9df0d67dbe0f1390e660566ad80fe655c6c0266db4a"
+      },
+      "physical": {
+        "pid": 8763,
+        "parentPid": 4858,
+        "groupId": 8763,
+        "birth": "Mon Nov 16 01:57:05 2026",
+        "command": "MainThread"
+      },
+      "nativeSession": {
+        "event": "collaboration-session",
+        "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+        "sessionId": "ses_TESTdesktop8763",
+        "provider": "opencode",
+        "role": "runtime",
+        "pid": 8763
+      }
+    }
+  },
+  "direct": {
+    "replyPrincipal": "agent:584dc045-fbbc-53ff-abeb-f2962e117c2c",
+    "replyPhase": "completed"
+  },
+  "attachments": {
+    "proof": {
+      "status": "PASS",
+      "files": [
+        {
+          "filename": "TEST-native-chat.png",
+          "mimeType": "image/png",
+          "size": 71,
+          "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6"
+        },
+        {
+          "filename": "TEST-native-chat.txt",
+          "mimeType": "text/plain",
+          "size": 40,
+          "sha256": "55af81cd5ddf9f9313ee38f2929d75f1f15429edd697b9196cf2d70e996d81af"
+        }
+      ],
+      "preparedImage": {
+        "filename": "TEST-native-chat.prepared.png",
+        "originalFilename": "TEST-native-chat.png",
+        "mimeType": "image/png",
+        "size": 90,
+        "sha256": "43d614f0bc1b36ec2da1effa16b34498a3a62922caff5fd38238990423c50d49",
+        "width": 2,
+        "height": 1,
+        "source": "existing Composer pending image before Send"
+      },
+      "nativeInference": "Pinned SDK with finite TEST peer; no vendor executable or inference",
+      "execution": "finite-protocol-peer",
+      "sentMessage": {
+        "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-mL97kT",
+        "messageId": "a0b7b8eb-cc23-4036-9bff-43fec03c999c",
+        "from": "user",
+        "to": "alice",
+        "text": "TEST_UI_COLLAB_ATTACH",
+        "expanded": true,
+        "attachments": [
+          {
+            "id": "45457586-7d77-437c-b096-f00aed3f688d",
+            "filename": "TEST-native-chat.png",
+            "mimeType": "image/png",
+            "size": 90
+          },
+          {
+            "id": "1669991f-5a8c-4491-b3ed-43c1de68687a",
+            "filename": "TEST-native-chat.txt",
+            "mimeType": "text/plain",
+            "size": 40
+          }
+        ]
+      },
+      "preview": {
+        "sha256": "43d614f0bc1b36ec2da1effa16b34498a3a62922caff5fd38238990423c50d49",
+        "width": 2,
+        "height": 1
+      },
+      "download": {
+        "filename": "TEST-native-chat.txt",
+        "sha256": "55af81cd5ddf9f9313ee38f2929d75f1f15429edd697b9196cf2d70e996d81af",
+        "size": 40
+      },
+      "finiteReadback": {
+        "previewRetained": true,
+        "downloadedBytesRetained": true,
+        "downloadClicks": 0
+      }
+    },
+    "observedBytes": {
+      "provider": "claude",
+      "role": "runtime",
+      "pid": 6137,
+      "event": "collaboration-attachments",
+      "marker": "TEST_UI_COLLAB_ATTACH",
+      "inputId": "fc82df8c-05ac-437a-b435-262ec69e8430",
+      "memberName": "alice",
+      "image": {
+        "sha256": "43d614f0bc1b36ec2da1effa16b34498a3a62922caff5fd38238990423c50d49",
+        "size": 90,
+        "mimeType": "image/png"
+      },
+      "document": {
+        "sha256": "55af81cd5ddf9f9313ee38f2929d75f1f15429edd697b9196cf2d70e996d81af",
+        "size": 40,
+        "mimeType": "text/plain"
+      }
+    },
+    "initialDownloadAttempts": 1,
+    "reloadDownloadAttempts": 0
+  },
+  "group": {
+    "group": {
+      "id": "813e86ab-6038-42ea-b5a8-0e3c00e7e123",
+      "name": "TEST-finite-collaboration",
+      "createdAt": "2026-11-16T01:56:32.282Z",
+      "archivedAt": null,
+      "membership": {
+        "kind": "fixed",
+        "memberNames": [
+          "alice",
+          "bob",
+          "carol"
+        ]
+      }
+    },
+    "logicalCount": 2,
+    "sendCount": 2,
+    "sendPhases": [
+      "completed",
+      "completed"
+    ],
+    "reactions": [
+      {
+        "groupChatId": "813e86ab-6038-42ea-b5a8-0e3c00e7e123",
+        "messageId": "554bdd58-2638-4a50-8a97-9cb5eef0734b",
+        "actors": [
+          {
+            "name": "bob",
+            "reactedAt": "2026-11-16T01:56:38.320Z",
+            "inboxMessageId": "554bdd58-2638-4a50-8a97-9cb5eef0734b:g:81b637d8fcd2c6da6359e696",
+            "groupRunKey": "host-group-v1:3476218b7fdca9d2c566415da16c405e78da1f87ea6b11b1dcf7ba28a6e7e964"
+          }
+        ]
+      },
+      {
+        "groupChatId": "813e86ab-6038-42ea-b5a8-0e3c00e7e123",
+        "messageId": "b79fd675-3375-4972-8dec-bad006df8b89",
+        "actors": [
+          {
+            "name": "alice",
+            "reactedAt": "2026-11-16T01:56:42.390Z",
+            "inboxMessageId": "b79fd675-3375-4972-8dec-bad006df8b89:g:2bd806c97f0e00af1a1fc332",
+            "groupRunKey": "host-group-v1:43d610459a483e4b5de10c6719353397d00cf11e3dc95c81842f59222542d64d"
+          },
+          {
+            "name": "carol",
+            "reactedAt": "2026-11-16T01:56:45.084Z",
+            "inboxMessageId": "b79fd675-3375-4972-8dec-bad006df8b89:g:4c26d9074c27d89ede59270c",
+            "groupRunKey": "host-group-v1:cd7f7d9e3ad2b1d5bfa872042726570b393989e0ca005b067b110b33951c1fe5"
+          }
+        ]
+      }
+    ],
+    "physicalDeliveryMembers": [
+      "alice-id",
+      "bb16b405-8941-51b4-a053-7897f24ff9be",
+      "bob-id"
+    ],
+    "allThreePhysicalInputsSucceeded": true,
+    "calls": [
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 6137,
+        "event": "collaboration-call",
+        "marker": "TEST_UI_COLLAB_GROUP_REPLY",
+        "inputId": "283cbe91-7301-4441-9d09-c7ed8cb57cf9",
+        "memberName": "alice",
+        "name": "group_chat_react",
+        "commandId": "TEST-collab-alice-6137-283cbe91-7301-4441-9d09-c7ed8cb57cf9-ack"
+      },
+      {
+        "event": "collaboration-call",
+        "marker": "TEST_UI_COLLAB_DM",
+        "inputId": "TEST-turn-6149-1",
+        "memberName": "bob",
+        "name": "message_send",
+        "commandId": "TEST-collab-bob-6149-TEST-turn-6149-1-dispatch",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 6149
+      },
+      {
+        "event": "collaboration-call",
+        "marker": "TEST_UI_COLLAB_GROUP",
+        "inputId": "TEST-turn-6149-2",
+        "memberName": "bob",
+        "name": "group_chat_react",
+        "commandId": "TEST-collab-bob-6149-TEST-turn-6149-2-ack",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 6149
+      },
+      {
+        "event": "collaboration-call",
+        "marker": "TEST_UI_COLLAB_GROUP",
+        "inputId": "TEST-turn-6149-2",
+        "memberName": "bob",
+        "name": "group_chat_send",
+        "commandId": "TEST-collab-bob-6149-TEST-turn-6149-2-group-reply",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 6149
+      },
+      {
+        "event": "collaboration-call",
+        "marker": "TEST_UI_COLLAB_WORK",
+        "inputId": "msg_1e211c6a600021bba3fbd32c93",
+        "memberName": "carol",
+        "name": "message_send",
+        "commandId": "TEST-collab-carol-6648-msg_1e211c6a600021bba3fbd32c93-reply",
+        "provider": "opencode",
+        "role": "runtime",
+        "pid": 6648
+      },
+      {
+        "event": "collaboration-call",
+        "marker": "TEST_UI_COLLAB_GROUP_REPLY",
+        "inputId": "msg_1e21229d4000745893b4255599",
+        "memberName": "carol",
+        "name": "group_chat_react",
+        "commandId": "TEST-collab-carol-6648-msg_1e21229d4000745893b4255599-ack",
+        "provider": "opencode",
+        "role": "runtime",
+        "pid": 6648
+      }
+    ],
+    "observedInputs": [
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 6137,
+        "event": "collaboration-group",
+        "marker": "TEST_UI_COLLAB_GROUP_REPLY",
+        "inputId": "283cbe91-7301-4441-9d09-c7ed8cb57cf9",
+        "memberName": "alice",
+        "groupChatId": "813e86ab-6038-42ea-b5a8-0e3c00e7e123",
+        "messageId": "b79fd675-3375-4972-8dec-bad006df8b89:g:2bd806c97f0e00af1a1fc332",
+        "groupMessageId": "b79fd675-3375-4972-8dec-bad006df8b89",
+        "groupRunKey": "host-group-v1:43d610459a483e4b5de10c6719353397d00cf11e3dc95c81842f59222542d64d"
+      },
+      {
+        "event": "collaboration-group",
+        "marker": "TEST_UI_COLLAB_GROUP",
+        "inputId": "TEST-turn-6149-2",
+        "memberName": "bob",
+        "groupChatId": "813e86ab-6038-42ea-b5a8-0e3c00e7e123",
+        "messageId": "554bdd58-2638-4a50-8a97-9cb5eef0734b:g:81b637d8fcd2c6da6359e696",
+        "groupMessageId": "554bdd58-2638-4a50-8a97-9cb5eef0734b",
+        "groupRunKey": "host-group-v1:3476218b7fdca9d2c566415da16c405e78da1f87ea6b11b1dcf7ba28a6e7e964",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 6149
+      },
+      {
+        "event": "collaboration-group",
+        "marker": "TEST_UI_COLLAB_GROUP_REPLY",
+        "inputId": "msg_1e21229d4000745893b4255599",
+        "memberName": "carol",
+        "groupChatId": "813e86ab-6038-42ea-b5a8-0e3c00e7e123",
+        "messageId": "b79fd675-3375-4972-8dec-bad006df8b89:g:4c26d9074c27d89ede59270c",
+        "groupMessageId": "b79fd675-3375-4972-8dec-bad006df8b89",
+        "groupRunKey": "host-group-v1:cd7f7d9e3ad2b1d5bfa872042726570b393989e0ca005b067b110b33951c1fe5",
+        "provider": "opencode",
+        "role": "runtime",
+        "pid": 6648
+      }
+    ]
+  },
+  "memberLogs": {
+    "memberId": "bob-id",
+    "binding": {
+      "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+      "teamId": "TEST-desktop-team",
+      "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+      "memberId": "bob-id",
+      "generation": "capture-71d7863e-1daa-5ea6-9d21-44ca8b7f32e5"
+    },
+    "eventId": "3c868402bd87963f61781eadd9e815caa197aba2f63a3d0950b54ffc409d61a6:14",
+    "sequence": 14,
+    "text": "TEST group reply sent",
+    "screenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-member-logs.png",
+      "sha256": "f7cb036459d5fd1e432d1448c0492c53a567cc9d2976bec35cd3c99acf4228e8"
+    }
+  },
+  "stopped": {
+    "sessions": [
+      {
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "teamId": "TEST-desktop-team",
+          "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+          "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+          "generation": "live-4ae702ce408a55432b4efd9a4c6d6f5180395bd84abde5bf4bd0444316750383"
+        },
+        "phase": "closed",
+        "custody": "released",
+        "nativeReady": false,
+        "sessionRef": "f75b1e9b-a20a-500d-9ed0-27728b3980ec",
+        "configuration": {
+          "tenantId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "projectId": "TEST-project-TEST-desktop-backend-mL97kT",
+          "sessionId": "f75b1e9b-a20a-500d-9ed0-27728b3980ec",
+          "generation": 2,
+          "configRevision": "live-cb5ee2c6bb1c1a3b47c96907bb62f6ca00f85a70504e1af0f620fc68cd05c184",
+          "requiredCapabilities": [
+            "text",
+            "tools"
+          ]
+        },
+        "inputs": [
+          {
+            "inputId": "3b97145f-b440-51db-a175-c96544ccf15c",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "inputId": "967c8de1-dd1c-53ca-ade2-247366f2dd51",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ]
+      },
+      {
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "teamId": "TEST-desktop-team",
+          "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+          "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+          "generation": "live-411859c0f0196c209a2bcf926141862e26c496e4f5c8ab966b7a13527ab68c0a"
+        },
+        "phase": "closed",
+        "custody": "released",
+        "nativeReady": false,
+        "sessionRef": "6d2bb3a4-c149-5894-a1b5-3d7ad1eba134",
+        "configuration": {
+          "tenantId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "projectId": "TEST-project-TEST-desktop-backend-mL97kT",
+          "sessionId": "6d2bb3a4-c149-5894-a1b5-3d7ad1eba134",
+          "generation": 3,
+          "configRevision": "live-58659588f24d86d906c4ab80b6607228234bd813b687bad0a5ebcb1357844d37",
+          "requiredCapabilities": [
+            "text",
+            "tools"
+          ]
+        },
+        "inputs": [
+          {
+            "inputId": "282be76d-eafd-5f06-ab8b-1ab18dab18bf",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ]
+      },
+      {
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "teamId": "TEST-desktop-team",
+          "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+          "memberId": "bob-id",
+          "generation": "capture-71d7863e-1daa-5ea6-9d21-44ca8b7f32e5"
+        },
+        "phase": "closed",
+        "custody": "released",
+        "nativeReady": false,
+        "sessionRef": "d21238e8-e81d-5aa4-ba88-07a35e8fc01c",
+        "configuration": {
+          "tenantId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "projectId": "TEST-project-TEST-desktop-backend-mL97kT",
+          "sessionId": "d21238e8-e81d-5aa4-ba88-07a35e8fc01c",
+          "generation": 2,
+          "configRevision": "capture-fa12d5cb487f3af7392fd7a2c5a5d6fbadaf5281416e64ad5e384e2e0f6364d1",
+          "requiredCapabilities": [
+            "text",
+            "tools"
+          ]
+        },
+        "inputs": [
+          {
+            "inputId": "5d67df04-c27f-5fd8-977c-aac6e57b45b5",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "inputId": "8ebad2ce-9f10-52cf-a67b-8454ef315766",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ]
+      },
+      {
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "teamId": "TEST-desktop-team",
+          "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+          "memberId": "alice-id",
+          "generation": "capture-659fbb5e-c3ce-59d3-84e9-620755839f91"
+        },
+        "phase": "closed",
+        "custody": "released",
+        "nativeReady": false,
+        "sessionRef": "1b2ebfae-4643-51a9-a7dc-d19fc8122515",
+        "configuration": {
+          "tenantId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "projectId": "TEST-project-TEST-desktop-backend-mL97kT",
+          "sessionId": "1b2ebfae-4643-51a9-a7dc-d19fc8122515",
+          "generation": 2,
+          "configRevision": "capture-8943528978787a984fffb56aa343ac0f4827f33f757db488a2f0afc570bbd3e1",
+          "requiredCapabilities": [
+            "session.conversation"
+          ]
+        },
+        "inputs": [
+          {
+            "inputId": "ed51a934-471e-50df-9344-ae265fd35485",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "inputId": "292c3617-b546-5a2f-891f-97ce7c313033",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "inputId": "1c2f78b5-6942-56e8-bce9-1315653c4732",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ]
+      }
+    ],
+    "originalBirths": [
+      {
+        "pid": 6137,
+        "parentPid": 4858,
+        "groupId": 6137,
+        "birth": "Mon Nov 16 01:55:49 2026",
+        "command": "MainThread"
+      },
+      {
+        "pid": 6149,
+        "parentPid": 4858,
+        "groupId": 6149,
+        "birth": "Mon Nov 16 01:55:49 2026",
+        "command": "MainThread"
+      },
+      {
+        "pid": 6648,
+        "parentPid": 4858,
+        "groupId": 6648,
+        "birth": "Mon Nov 16 01:56:02 2026",
+        "command": "MainThread"
+      },
+      {
+        "pid": 8763,
+        "parentPid": 4858,
+        "groupId": 8763,
+        "birth": "Mon Nov 16 01:57:05 2026",
+        "command": "MainThread"
+      }
+    ],
+    "originalProcessesAbsent": true
+  },
+  "reload": {
+    "historyRetained": true,
+    "noEffects": true,
+    "screenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-reloaded.png",
+      "sha256": "f629e6e8d439391aff6a4ecdc155b46e52b10ca2c02dc12803f5c47c8a10e491"
+    }
+  },
+  "sourcePredicateBoundary": {
+    "joined": "Two existing 60-second owner-qualified visible reply reads require exactly the current all 2 teammates joined progress and no Finishing launch/still joining; no additional action.",
+    "stop": "Original 75-second/100ms poll separately requires all four Runtime records closed/released then combines physical absence of all four captured PIDs with current owner Offline/enabled Launch and no progress diagnostics control. Original post-read cutoff and renderer/effects guards remain.",
+    "serializationLimit": "Accepted DOM operands and their timestamp are not separately serialized; PASS/source reachability and original PNGs provide bounded evidence, not an atomic lifetime observation."
+  },
+  "effects": {
+    "proofFile": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-effects.json",
+      "bytes": 27680,
+      "blob": "b6a815ae16f8653105ee107088de5a906be91fb3",
+      "sha256": "8ea157ade6688d6c38cfe32fbc28506d8ddee1da85b0b05889fd177c359c44a6"
+    },
+    "proofCount": 113,
+    "proofFileEqualsProof": true,
+    "finalRawFiles": [
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-claude-scope/effects.ndjson",
+        "bytes": 7015,
+        "blob": "894b3cb61af228a3bb6a1f1a0702ea942b5e8ad5",
+        "sha256": "db810f03d55d91fdf7be95bf450c3cbe42ce5c62db912ef228ca001ba2507e6a",
+        "provider": "claude",
+        "entries": 27
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-codex-scope/effects.ndjson",
+        "bytes": 7265,
+        "blob": "7913d4b8220ca0dac76b04f8caad51887346990f",
+        "sha256": "52a0143f0abce35e362089e820e586e5501e903afbdee33392ba05ae72f12b69",
+        "provider": "codex",
+        "entries": 57
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-opencode-scope/effects.ndjson",
+        "bytes": 6546,
+        "blob": "aa842473bff516f87cdada2cac9af68546da1de8",
+        "sha256": "d4c24add6e7f9da58eb205e1bcda47d11afaa97598305d189a5522486f537488",
+        "provider": "opencode",
+        "entries": 30
+      }
+    ],
+    "finalCount": 114,
+    "finalRawEqualsCleanup": true,
+    "finalOnlyAddedRows": [
+      {
+        "code": 0,
+        "event": "exit",
+        "pid": 5665,
+        "provider": "opencode",
+        "role": "management"
+      }
+    ],
+    "proofCounts": {
+      "launch": 30,
+      "started": 5,
+      "initialized": 5,
+      "input": 12,
+      "terminal": 12,
+      "mcp-connected": 1,
+      "collaboration-attachments": 1,
+      "collaboration-call": 8,
+      "collaboration-group": 3,
+      "exit": 17,
+      "mcp-catalog": 7,
+      "managed-configuration-read": 5,
+      "connected": 3,
+      "policy-configured": 2,
+      "collaboration-session": 2
+    },
+    "finalCounts": {
+      "launch": 30,
+      "started": 5,
+      "initialized": 5,
+      "input": 12,
+      "terminal": 12,
+      "mcp-connected": 1,
+      "collaboration-attachments": 1,
+      "collaboration-call": 8,
+      "collaboration-group": 3,
+      "exit": 18,
+      "mcp-catalog": 7,
+      "managed-configuration-read": 5,
+      "connected": 3,
+      "policy-configured": 2,
+      "collaboration-session": 2
+    },
+    "exitRows": [
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 5652
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 5889
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 5898
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 5906
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5930
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 6114
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 6356
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 6572
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 6820
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 7002
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 7187
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 6149
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 9995
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "opencode",
+        "role": "runtime",
+        "pid": 6552
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "opencode",
+        "role": "runtime",
+        "pid": 6648
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "opencode",
+        "role": "runtime",
+        "pid": 8603
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "opencode",
+        "role": "runtime",
+        "pid": 8763
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "opencode",
+        "role": "management",
+        "pid": 5665
+      }
+    ]
+  },
+  "screenshots": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-attachments.png",
+      "bytes": 126473,
+      "blob": "93648e34416793e839a4587bfc0580c5d2ecb56d",
+      "sha256": "662ca3f71f6b15aac207af1be4587ed12ed0cfd512817119ac6b6d8ed2d36bea",
+      "receiptSha256Matched": true,
+      "actuallyViewed": true,
+      "observation": "Expanded original sent image/text attachment cards and finite recipient reply; green joined roster; bob still visibly Delivering."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-direct.png",
+      "bytes": 113790,
+      "blob": "5b8e33396798283ae315613cafe21cc825a75312",
+      "sha256": "a6350dd1e9a741751380fbf78fe91f8b5538b84f88a84d267addeebb83c45863",
+      "receiptSha256Matched": true,
+      "actuallyViewed": true,
+      "observation": "Carol reply and green all 2 teammates joined; bob is visibly Delivering, so this is not a universal-idle frame."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-group.png",
+      "bytes": 112220,
+      "blob": "d9e5e0138a96ed09e91b8b48dfbbabac683a1c8d",
+      "sha256": "595abf15371e643a2f4e1f435757c2d42d02546840cd9d233fbf51afd879fb3f",
+      "receiptSha256Matched": true,
+      "actuallyViewed": true,
+      "observation": "Actual directed group reply with acknowledgement badge and current three-member roster."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-launch.png",
+      "bytes": 107832,
+      "blob": "daedfbe11c77933f3c43daf49ffd3666e9eb517f",
+      "sha256": "846c3c1bc1f53548559a6099988f54d61d433e9254d32ceb638863fc5d5498d3",
+      "receiptSha256Matched": true,
+      "actuallyViewed": true,
+      "observation": "Lead and bob visible; green all 1 teammate joined; TEST boot ready."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-member-logs.png",
+      "bytes": 168193,
+      "blob": "dfdfe9c34c5f2f6c77c7c341f6720512ee646574",
+      "sha256": "f7cb036459d5fd1e432d1448c0492c53a567cc9d2976bec35cd3c99acf4228e8",
+      "receiptSha256Matched": true,
+      "actuallyViewed": true,
+      "observation": "Selected bob captured Runtime header/generation and expanded TEST group reply sent; Lead content is not substituted."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-reloaded.png",
+      "bytes": 113653,
+      "blob": "8106fffd94eb199d52f223c6623dd6d2b19c70a3",
+      "sha256": "f629e6e8d439391aff6a4ecdc155b46e52b10ca2c02dc12803f5c47c8a10e491",
+      "receiptSha256Matched": true,
+      "actuallyViewed": true,
+      "observation": "Original group reply retained after reload; Team offline/Launch, no launch-progress block, all members offline, send disabled pending compatible Runtime."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-restored.png",
+      "bytes": 156228,
+      "blob": "a2aa09a09706da25d48bee61ccf31b2eaa786ca8",
+      "sha256": "c59f9d00660fee933cb0c470027dd8c7a4b716e3db8a67c4674407d21db231c7",
+      "receiptSha256Matched": true,
+      "actuallyViewed": true,
+      "observation": "Carol restored reply, alice/bob/carol visible, green all 2 teammates joined with no joining text."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-stopped.png",
+      "bytes": 151461,
+      "blob": "2db965066919cd558884953f04fab5a468e5a37a",
+      "sha256": "0bf1b7142e0c9114add3d63a52b9ee6b850ec46a35d48ed80e40a4417ce34cbc",
+      "receiptSha256Matched": true,
+      "actuallyViewed": true,
+      "observation": "Team is offline, enabled Launch and no launch-progress block; all members offline. Logs also retains the visible Host read crossed a mutation boundary error with old content; no error-free-screen claim."
+    }
+  ],
+  "otherPngs": "Two tiny original attachment-input/prepared images receive byte/CRC verification, not a UI screenshot review claim.",
+  "cleanup": {
+    "processGroup": 4485,
+    "remaining": [],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostObserved": true,
+    "capturedHostAbsent": true,
+    "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+  },
+  "hostChild": {
+    "pid": 4858,
+    "ppid": 4614,
+    "pgid": 4485,
+    "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+    "observedBeforeShutdown": true
+  },
+  "originalRequestedQuitExit": {
+    "initialExitCode": null,
+    "initialSignalCode": null,
+    "exitCode": 0,
+    "signalCode": null
+  },
+  "beforeHarnessCleanup": [
+    {
+      "pid": 4559,
+      "ppid": 1,
+      "pgid": 4485
+    }
+  ],
+  "originalExitedGroup": {
+    "settled": true,
+    "reason": "original-natural-exit-and-fresh-absence",
+    "initialMembers": [
+      {
+        "pid": 4559,
+        "ppid": 1,
+        "pgid": 4485
+      }
+    ],
+    "remaining": [],
+    "capturedHostAbsent": true,
+    "capturedDescendantsAbsent": true,
+    "appExitCode": 0,
+    "appSignalCode": null
+  },
+  "peers": {
+    "originalPeerPids": [
+      5665,
+      5645,
+      5873,
+      5986,
+      6137,
+      9989,
+      5652,
+      5889,
+      5898,
+      5906,
+      5930,
+      6101,
+      6114,
+      6130,
+      6149,
+      6161,
+      6190,
+      6202,
+      6356,
+      6572,
+      6820,
+      7002,
+      7045,
+      7187,
+      7829,
+      9995,
+      6552,
+      6648,
+      8603,
+      8763
+    ],
+    "remaining": [],
+    "absent": true
+  },
+  "sentinel": {
+    "invocations": [
+      {
+        "executable": "claude-multimodel",
+        "allowed": true,
+        "argc": 1,
+        "command": null,
+        "flags": [
+          "--version"
+        ]
+      }
+    ],
+    "preQuitCount": 1,
+    "postQuitOrCleanupInvocations": [],
+    "refusedInvocations": [],
+    "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+  },
+  "fixturePins": {
+    "provider": "claude",
+    "providers": [
+      "claude",
+      "codex",
+      "opencode"
+    ],
+    "sources": [
+      {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+        "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87"
+      },
+      {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/providerPeer.mjs",
+        "sha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd"
+      },
+      {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+        "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a"
+      },
+      {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/providerCollaboration.mjs",
+        "sha256": "c82248007e55ae6d28608d965d72f93dadf9993cec28f294524464fe111b5ee9"
+      },
+      {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/adapters/providers/OpenCodeMcpPolicyPlugin.js",
+        "sha256": "64d2db6a0a14d6214e37e2f81a6e9b3afffd9f901f37bcd351026f98bf64f02b"
+      }
+    ],
+    "executables": [
+      {
+        "provider": "claude",
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-mL97kT/bin/TEST-claude-collaboration",
+        "sha256": "780cd2cebee75560d49e563e511bf990231d1ba0cdd8021f13066862b4da25ac"
+      },
+      {
+        "provider": "codex",
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-mL97kT/bin/TEST-codex-collaboration.mjs",
+        "sha256": "6624963126f57aa819339cfdaaf60a0cc185736ffa312fc6a56be84c10a72c62"
+      },
+      {
+        "provider": "opencode",
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-mL97kT/bin/TEST-opencode-collaboration.mjs",
+        "sha256": "f53d33d751a91e3444d8326218e2247327fc9c1eb18b945ab102ae9714799e1e"
+      }
+    ],
+    "protocolRevisions": {
+      "claude": "sdk-0.3.305",
+      "codex": "0.162.0",
+      "opencode": "1.19.4"
+    },
+    "runtimeConfigured": true,
+    "managementConfigured": true,
+    "vendorsAllowed": false,
+    "collaborationVariant": "mixed-v1"
+  },
+  "limits": [
+    "Historical 6626 failure and its exact interleaving are not reclassified by this later PASS.",
+    "The stopped image retains a Logs mutation-boundary error; original Stop/progress predicates do not assert universal absence of UI errors.",
+    "Thirty peer absences are not thirty exit callbacks: only eighteen explicit exit effects exist.",
+    "The dedicated receipt/Main-owned transport field exposes no separate Host exit code; the original passive Main child trace separately reports captured Host PID4858 exit0/null. This bounded callback is not a new custody certificate or atomic executable proof.",
+    "Group attachments remain unavailable by the original product contract.",
+    "No vendor inference/native campaign/privacy GREEN/other-lane or aggregate merge qualification."
+  ],
+  "precisionV2": {
+    "previousFrozenAudit": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/audit.json",
+      "bytes": 70873,
+      "blob": "0a1d56e3e05a10a8f63041bb995c68e99a609502",
+      "sha256": "eedf19eff5470d6983fb10db123ab5f08332cea6116e2309461d5784dc10f7d3"
+    },
+    "reason": "Narrow the prior blanket missing-Host-exit claim after independent review found the original passive Main callback. Original receipt field remains verbatim.",
+    "originalAppLog": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/desktop-app.log",
+      "bytes": 32323,
+      "blob": "8017a34e1cc382ed9d08753ce74867d06f00e2c2",
+      "sha256": "4493ab10ea95568cbf291a9745e1b4bada860bab19901418ce3e131aa45d94d9"
+    },
+    "sameCapturedHostPid": 4858,
+    "records": [
+      {
+        "line": 89,
+        "record": {
+          "mainPid": 4614,
+          "event": "async-spawn",
+          "pid": 4858,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "node",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "19925",
+            "parentPid": 4614,
+            "processGroupId": 4485
+          },
+          "atomic": false,
+          "observedAtMs": 1794794092364
+        }
+      },
+      {
+        "line": 240,
+        "record": {
+          "mainPid": 4614,
+          "event": "async-exit",
+          "pid": 4858,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794794289728
+        }
+      },
+      {
+        "line": 249,
+        "record": {
+          "mainPid": 4614,
+          "event": "trace-summary",
+          "rows": 32,
+          "droppedObservations": 0,
+          "observedChildren": 14,
+          "unobservedChildren": 0,
+          "observationFailures": 0,
+          "limited": false,
+          "coverage": "node-async-and-unix-process-table-only"
+        }
+      }
+    ],
+    "source": {
+      "path": "src/main/utils/testChildProcessTrace.ts",
+      "blob": "b3d2ec4b410de5df6d63075955fa8f89fc7c9b88",
+      "sha256": "bff51a48a14cc0d77f8c7233c034c1bbe0eb79b0f5f5270c9540faf70e6472eb",
+      "semantics": "originalPid is captured in the ChildProcess spawn closure and reused by its original once(exit) callback; protected observational path, non-atomic birth observation, node-async-and-unix-process-table-only."
+    },
+    "limit": "The dedicated receipt/Main-owned transport field exposes no separate Host exit code; the original passive Main child trace separately reports captured Host PID4858 exit0/null. This bounded callback is not a new custody certificate or atomic executable proof."
+  }
+}

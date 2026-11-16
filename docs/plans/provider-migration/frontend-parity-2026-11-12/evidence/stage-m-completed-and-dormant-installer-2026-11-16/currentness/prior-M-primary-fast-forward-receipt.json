@@ -1,0 +1,19 @@
+{
+  "source": "ordinary expected-SHA PR fast-forward after all exact M/publication R2 and useful completed9e evidence preservation",
+  "before": "9e542899f36c47598a88c764c9e6745589fea3e1",
+  "after": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "base": "def734338f13bcc3209e78079a0cedbc48f05a5b",
+  "draft": true,
+  "compare": {
+    "status": "ahead",
+    "ahead_by": 27,
+    "behind_by": 0,
+    "merge_base_commit": "9e542899f36c47598a88c764c9e6745589fea3e1"
+  },
+  "update": {
+    "success": true
+  },
+  "observedUtc": "2026-11-16 00:32:34 UTC",
+  "noManualActions": true,
+  "noTestQualification": true
+}

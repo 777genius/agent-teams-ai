@@ -1,0 +1,140 @@
+{
+  "kind": "ORIGINAL_N608_COMPLETED_X64_AND_STATIC_CHECKPOINT",
+  "source": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "createdAt": "2026-11-16T03:16:08.985841+00:00",
+  "qualificationState": "Author artifact/source audit complete; independent R2 not yet performed.",
+  "jobs": [
+    133062439990,
+    133062438882,
+    133062438887
+  ],
+  "artifacts": [
+    14194361871,
+    14194840850
+  ],
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/host-source-N608efb-git-audit.json",
+      "bytes": 163123,
+      "blob": "9c8472f84db2ee0615314b9fd05df207e2c7d112",
+      "sha256": "30dbbf806666206c905b346f15e475646c2840d0c29f326a953fb3202d595ea0"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/process-source-pin-audit-x64.json",
+      "bytes": 36175,
+      "blob": "877d2454840fca215844a862ccca763e93c4adb8",
+      "sha256": "03a133d46606097641d36cc7ee5276522f22c2d3ec588be8184dbf79c016ea4a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/process-windows-x64-qualification-audit.json",
+      "bytes": 38875,
+      "blob": "cefb59b2f2e8552aa2efb2ff85b343443914a13b",
+      "sha256": "3e527838aed6286b0d10ffdaa48c25cda03dac805020c878659066f261d716e2"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/v2-windows-x64-qualification-audit.json",
+      "bytes": 18482,
+      "blob": "701aaeaf58276d7f9936b5cdcf858dedcfc85cfd",
+      "sha256": "f3a608b08a3e5b60846d80094fe88f1c7763e028a1032c020176529066261957"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/static-windows-qualification-audit.json",
+      "bytes": 8992,
+      "blob": "30ebf2f01a8560e943c48f0a4bca368809b16544",
+      "sha256": "5879f603b9d88f17d06b45d1829d7951d6a69ca9e19eb69228bcb68713c74a08"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/process-win32-x64/job-133062439990.log",
+      "bytes": 418292,
+      "blob": "2837889b471effc5fa63b1ef164bcdeb6055c91b",
+      "sha256": "48fc6a47973686705e0a8f961fb3a58ec2913a2d4e813decf2d223a4b3da82d1"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/v2-win32-x64/job-133062438882.log",
+      "bytes": 89327,
+      "blob": "453a5e16ab67e80851fd47be4b442c1f3228a5cd",
+      "sha256": "8dd1f64ac7e4dc57f89d23aeac046d4fe695f71b15781a9d05f595db21be2c47"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/static-windows/job-133062438887.log",
+      "bytes": 104364,
+      "blob": "1dcc29f97f80bc28e5279267987e45cc808cb551",
+      "sha256": "268429c4dabcd86d247037f9c40c50a4d0e18e4be18d3c1426adaa4714192d86"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/process-win32-x64/artifact-14194361871.zip",
+      "bytes": 71811,
+      "blob": "a4b4f9dc61f4c5280eefec95f6c2f0a0ccedcb79",
+      "sha256": "1b32ea9a443b91f9a2a1251dc0a91c5c1d04cbd71a5217cf0fb011331c96d56c"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/v2-win32-x64/artifact-14194840850.zip",
+      "bytes": 13219,
+      "blob": "170b8bf173a612d14ce04d4454a923ba32420da6",
+      "sha256": "ec3bc002e8fcb96f0a554f63a1328c987e05fbbd8d5a2a729a38470cd10b01bb"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/process-win32-x64/archive-audit.json",
+      "bytes": 5523,
+      "blob": "6296054e667ed2cd85dbe4c0b75e6b3d0a47bc22",
+      "sha256": "b338e6bc64166bb7b88f154cce536bb7dadef532eefbe13286542cdd06e9d30c"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/v2-win32-x64/archive-audit.json",
+      "bytes": 1209,
+      "blob": "1cdfa3a3e0952dfc20c8777ca02b4edc9aa6dfdf",
+      "sha256": "7ca47384527600c9f973853b3c56b8108c6232c58c427459ac009cc6dfa3c844"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/process-artifacts-0310.json",
+      "bytes": 2028,
+      "blob": "1250c85455e11f6eda6c573f01df72e85d90412d",
+      "sha256": "0ec5ecb0f9e45777db6a3559b22e30281a47e166e4c6a4ca569b29be2db588f1"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/v2-artifacts-0310.json",
+      "bytes": 1061,
+      "blob": "73f3834808946fddc09888e443f2018bd2c4dbcb",
+      "sha256": "ffecb368be334103b19bb8c32c0acf6233d213a2b7ae0b736d745142b6419239"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/process-jobs-0310.json",
+      "bytes": 16520,
+      "blob": "6f8cfa27de895e6bae078a7682d0ae4f8bc20bf9",
+      "sha256": "19bc02d805eecc4d223f308ed554c10e408899c30dc99bd3c5081bfcc80a10aa"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/v2-jobs-0310.json",
+      "bytes": 22625,
+      "blob": "5ff3f452e79bebcb81f7e3beb1e915de3e3072e1",
+      "sha256": "27cdaefa35039cbec461a3a26a907666ea86cb775290d12093266d3e663af629"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/process-run-0304.json",
+      "bytes": 29997,
+      "blob": "138edd5499c43d4ed102be50f8cc10884c4cb1a2",
+      "sha256": "b841fc1e9dced3e7724220ddc08e9fd050dc50ab91d1ad995d39d6074c080bc9"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/v2-run-0304.json",
+      "bytes": 30041,
+      "blob": "0a2a637ed1140ce87d6954fad7d6e559709111e0",
+      "sha256": "f74e5db88b9a64c836e1ad48be6630f7a7420123159e770ee79fd41e7e06db82"
+    }
+  ],
+  "payloadCount": 18,
+  "bytes": 1071664,
+  "recoverability": "Two original ZIPs contain all23 independently CRC/path/hash-verified members. Exact extracted members may be recovered from the ZIPs and archive-audit manifests. No signed download URL retained.",
+  "sourceClosure": {
+    "hostTypeScriptFiles": 619,
+    "sourcePinOccurrences": 38,
+    "uniquePinnedSources": 14,
+    "builtPathCount": 6,
+    "limits": "Tracked Git sources independently hashed; no rebuilt output or executing provider/native code."
+  },
+  "limits": [
+    "Scope only these three completed original N jobs, not pending Team privacy177/24, typedlint93, P08/P09 or any other architecture.",
+    "Original recorded negatives/signals/skips remain distinct from natural exit and positive cases.",
+    "Other N jobs continue independently; this checkpoint is immutable and does not relabel later evidence."
+  ]
+}

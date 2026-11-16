@@ -1,0 +1,115 @@
+{
+  "schema": "read-only-followup-documentation-route/v1",
+  "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "followupBranch": "fix/frontend-parity-e2e-followups-20261115",
+  "openPRReadCompletedUTC": "2026-11-16 01:19:36 UTC",
+  "originalOpenPRResponse": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-m-completed-evidence-publication/followup-open-prs-original-0119.json",
+    "bytes": 779,
+    "blob": "577ca9e51429944b1e9b35c7a3af20059348ce36",
+    "sha256": "34ade56c9c95bec9246093851d646b47284d188f0136b8b82c4a8a1bd1d61991"
+  },
+  "openPRCount": 0,
+  "sourceWorkflowCountWithPush": 11,
+  "pushWorkflowEvidence": [
+    {
+      "path": ".github/workflows/announcements-content.yml",
+      "bytes": 2301,
+      "blob": "d7d1c6fde200971f29defe95c2c0436a0318b499",
+      "sha256": "4380473bf81c1e8762e11d1803bb023e60308c5525c6c409531d9749ec7661d8",
+      "pushBranchBlock": "branches: [main]"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 175238,
+      "blob": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+      "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce",
+      "pushBranchBlock": "branches:\n      - main\n      # Long-lived integration branches: pushes here previously ran no CI at all,\n      # which let multi-day test regressions land unnoticed (they only surfaced\n      # through PR #252's merge CI).\n      - refactor/team-provisioning-round2-reapply\n      - refactor/hosted-web-feature-boundaries"
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "bytes": 2479,
+      "blob": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1",
+      "sha256": "d35b6d96c6d3582415b4feaf3144575f5d3a520c6e058c673ec15f95ddae5a7b",
+      "pushBranchBlock": "branches: [main]"
+    },
+    {
+      "path": ".github/workflows/codex-runtime-smoke.yml",
+      "bytes": 3229,
+      "blob": "cef44447c47e39a7da678f37e2518952e218da08",
+      "sha256": "2d9b2fb19cb3d1e2797611254104bf5ab433b588427350747f0c0c6196f4490d",
+      "pushBranchBlock": "branches: [main]"
+    },
+    {
+      "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+      "bytes": 3218,
+      "blob": "490c2048dfbd9f275f784d7a0f1a6eeba0a9f361",
+      "sha256": "c85dd3daa63c0d31b8c87e5fe4b935456f6c47dbf9a0be1f06b6b8fbfaf84d25",
+      "pushBranchBlock": "branches: [main]"
+    },
+    {
+      "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+      "bytes": 3335,
+      "blob": "95d681fe04abd838dd11799d7791fa59444c6e32",
+      "sha256": "572df7cb9de920ed0685febc94f6ddd08f18d7d96312e8ed946933a63ccbcdb3",
+      "pushBranchBlock": "branches: [main]"
+    },
+    {
+      "path": ".github/workflows/landing-hetzner-release.yml",
+      "bytes": 7306,
+      "blob": "4b54f229156f9d347e1a33da0d83b3374acc4078",
+      "sha256": "ad5337b9e4a36797703c0e340a9539f0c12f2739eed6805851fcfa8cb00d1290",
+      "pushBranchBlock": "branches: [main]"
+    },
+    {
+      "path": ".github/workflows/landing.yml",
+      "bytes": 5592,
+      "blob": "4a1ad9ae59ff2e338930a195d54fdff62da1ebc5",
+      "sha256": "1bda852e705b3b744b5b001e0fe3cb2d8fd80eaa3108d17787c076ad3b753b32",
+      "pushBranchBlock": "branches: [main]"
+    },
+    {
+      "path": ".github/workflows/provider-real-runtime-e2e.yml",
+      "bytes": 8958,
+      "blob": "4ee30807aa18f043fe53d090bfb6211bb5458ce0",
+      "sha256": "9903545813f74656b4e78e53641449a7c4c09b6b3564263f83aa7f2f2f8f0737",
+      "pushBranchBlock": "branches: [main]"
+    },
+    {
+      "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+      "bytes": 5079,
+      "blob": "4020f668ab2a9a7b16fcb0aa7fd2d79a061f1d44",
+      "sha256": "65e296bb4946582ca3745930f1ecf0b16df481d38fb591a06c26f80529881f15",
+      "pushBranchBlock": "branches: [main]"
+    },
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "bytes": 6522,
+      "blob": "ef939f224a1642cb596906324c8d61441780ccc7",
+      "sha256": "f57bf21347769c79b9c8c21f6f35b40b772fbfe9cb5f8155d7daabb54499d15f",
+      "pushBranchBlock": "branches: [main]"
+    }
+  ],
+  "priorPRMetadata": {
+    "number": 1192,
+    "state": "open",
+    "draft": true,
+    "base": "feat/provider-host-frontend-parity-20261112",
+    "base_sha": "def734338f13bcc3209e78079a0cedbc48f05a5b",
+    "head": "fix/frontend-parity-completion-20261113",
+    "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "merge_commit_sha": "a0e9dd786b88abdbe72e6c0e2bdf2a1ca1d83cbe"
+  },
+  "priorPRFullResponseIdentity": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/pr-current-0113.json",
+    "bytes": 67216,
+    "blob": "c35ad42e3679a62b86493d39bb796f7bb059ced6",
+    "sha256": "4c31f5cda0574ecc961b34b247cf19e7f18a8b7857af1930f8daa38023d3d16f"
+  },
+  "limits": [
+    "Only configured workflow triggers inspected, not a claim about unknown external services.",
+    "No open PR for the followup branch in this exact observation; fresh branch/PR lease checks remain required before a commit.",
+    "This is read-only publication-route planning; no source application, new branch/PR/workflow or CI action.",
+    "Original primary M cohort and source remain preserved; followup documentation is not an alternate validation venue."
+  ]
+}

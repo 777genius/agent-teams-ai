@@ -1,0 +1,11 @@
+--- a/src/renderer/store/team/teamRuntimeRunAdoption.ts
++++ b/src/renderer/store/team/teamRuntimeRunAdoption.ts
+@@ -198,7 +198,7 @@
+     ? {
+         ignoredRuntimeRunIds: {
+           ...prev.ignoredRuntimeRunIds,
+-          [previousRunId!]: teamName,
++          [previousRunId]: teamName,
+         },
+       }
+     : {};

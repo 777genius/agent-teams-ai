@@ -1,0 +1,359 @@
+{
+  "schema": "root-independent-original-HTTP-discovery-review/v1",
+  "reviewedUtc": "2026-11-16T01:42:30.830045+00:00",
+  "verdict": "APPROVE scope-limited original evidence; all four broad qualification flags remain false",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997620,
+  "jobId": 133017914800,
+  "attempt": 1,
+  "jobConclusion": "success",
+  "checkpoint": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/http-discovery/checkpoint.json",
+    "bytes": 2616,
+    "blob": "39f88689db88eb55c2f372f97a56e414cd152974",
+    "sha256": "4f14af4e2bb398aa666e74899ed1bc3e01becd6223b4afca47c3d52d9ef1c13c"
+  },
+  "payloadCount": 8,
+  "payloadBytes": 103623,
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/http-discovery/archive.zip",
+      "bytes": 876,
+      "blob": "f0e285a8c7613b1ac3942033f2c3839ab80e18fa",
+      "sha256": "9ca0176f4424c0a6e789880c1d6bfa9d7a2e707c2e80105316ed4353cce4a817"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/http-discovery/job.log",
+      "bytes": 73673,
+      "blob": "d8576d4b843246614861e11ec7fbd1f898896b62",
+      "sha256": "b5e0139701d601066bda1e79546544ce6b75a9287d29c7a64feba1375869ffda"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/http-discovery/job-api.json",
+      "bytes": 6004,
+      "blob": "228ec7130d88d9f08151368f36ff7ecf1d9322c2",
+      "sha256": "086793dbc4d89f11fb12198571a61427da9d0ac9f0e4d033413e8b234d67a353"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/http-discovery/artifact-api.json",
+      "bytes": 783,
+      "blob": "0611fa106edd597ee4880cfbcb766d61b70e03ac",
+      "sha256": "b166b560a72bc6bc10c528cf518ca15b30a1218354f11428296d3ba8364f5538"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/http-discovery/extracted/opencode-v2-http-persist.json",
+      "bytes": 1851,
+      "blob": "c4521fbb28a6b8e7b94707b5cd5b2bae0869ef4d",
+      "sha256": "91e3c1cbdc462a130fffd399e521b99acffb5b6c6479c9c0f5a80d593cfbc6aa"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/http-discovery/source-audit.json",
+      "bytes": 5017,
+      "blob": "c353dc8c5938635be9e2eff0912ebf27905504d3",
+      "sha256": "4887273fa7350ca1fabd870454fa4ba5e6507375570037b46bcd659f0140419b"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/http-discovery/audit.json",
+      "bytes": 11815,
+      "blob": "19a1e4176e1fa54b4800431474d84fea973d0f05",
+      "sha256": "178c1748d874b0d6f94c7e9b891dfe6c98d572327fb447567cc5ca2c62580c93"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/http-discovery/Plan29-http-discovery-appendix.md",
+      "bytes": 3604,
+      "blob": "3d8451f4091ccc820a5c8990a7775d30f1cfa1aa",
+      "sha256": "957dda02790336b0d1227b3dc0ad1c09b88912d93f9e1df82e9e02e21f736141"
+    }
+  ],
+  "sourceLeaves": [
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36013,
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+      "gitAndWorktreeExact": true
+    },
+    {
+      "path": "package.json",
+      "bytes": 26839,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "gitAndWorktreeExact": true
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+      "gitAndWorktreeExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "bytes": 12355,
+      "blob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b",
+      "gitAndWorktreeExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "bytes": 456,
+      "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab",
+      "gitAndWorktreeExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs",
+      "bytes": 49160,
+      "blob": "aeae8fcb8e0a064977aca5600473546968a40765",
+      "sha256": "54e077160701a4c76dca7d23b24fafe1003e0d67547a04f87b5066b66958a7d8",
+      "gitAndWorktreeExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-http-setup-negative.test.mjs",
+      "bytes": 9525,
+      "blob": "9a410364742b3ad6345da89668becf31cf757bcc",
+      "sha256": "cdd0ec07afaa75331c34170e80b1551279f2c27c8caba82b6b3d4c8c9d839984",
+      "gitAndWorktreeExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs",
+      "bytes": 6483,
+      "blob": "d20c5b3dc77a9fc9a8c4179ff6d8bf486c6c2020",
+      "sha256": "3a393846259e883c0d0e9ea324b932a47055c424dfe135e7332261eff1ef7805",
+      "gitAndWorktreeExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-shell-flag-policy-probe.test.mjs",
+      "bytes": 4384,
+      "blob": "b6ab60be6f021b3cdcacba35f2ed4bcf357528fa",
+      "sha256": "8f95333c8c2ae33191031003863a525db73c3f38d763cd191c99efe1857582a3",
+      "gitAndWorktreeExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-shell-flag-policy-probe.mjs",
+      "bytes": 2661,
+      "blob": "d489fc8012c6bfa3ef706c5d79f4fcc61965fddb",
+      "sha256": "f954c94a11af08da5a4250eb4bfb6b6b44c8b3669850c38121c754863c527d91",
+      "gitAndWorktreeExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-process-guard.mjs",
+      "bytes": 634,
+      "blob": "d8522e59f917838468c07ba4a43beb71c08809c2",
+      "sha256": "2dfe3eb1e99067c4bcfec025b33effa5313aed5db84bec7894238419a0c4416b",
+      "gitAndWorktreeExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-log-parse.mjs",
+      "bytes": 4222,
+      "blob": "fba657e913aa08cfb8742400e44007a745a6b70d",
+      "sha256": "3d3b01ff3c519704d83d32b4563e99614b73bfad6dc99e496ae22d032fb3ccc0",
+      "gitAndWorktreeExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-session-guard.mjs",
+      "bytes": 950,
+      "blob": "f0b3bda7d1f2e2731ffca1c773c6cbf1504cea23",
+      "sha256": "e30430400acf68eee82b15deb6a4e8d5a248443ef2776e9fe6637ea852619e8a",
+      "gitAndWorktreeExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/openCodeV2StaticPreflight.ts",
+      "bytes": 19050,
+      "blob": "e4ef669047f308bcb4378283d92a4064b3e3e062",
+      "sha256": "ce2b40432a29553b322e9e2b40b05a43ca620515e60d060194df72c7e5ccedff",
+      "gitAndWorktreeExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2MemberProvider.ts",
+      "bytes": 48064,
+      "blob": "89f2eb8711025416f7afd07727ed62fcd4ad3dad",
+      "sha256": "0d5775cebf1c7fcf7883e11db479a4a4a3efdcc943638065dccfa889cf17ae68",
+      "gitAndWorktreeExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelVariant.ts",
+      "bytes": 768,
+      "blob": "0df38e070a24cf3f2f6762954d2f706e50409d37",
+      "sha256": "b257839d3a5c8b3e70e3f05ab33068d497fd2ed8bb01a31a61bd670ece9f2ae2",
+      "gitAndWorktreeExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/team-launch/context.ts",
+      "bytes": 290,
+      "blob": "03f264613cbdfc553675a7263ed6124ca475efe3",
+      "sha256": "d588944b04b0ef58fb24a85c2ecc703b9f1d96ed221266c8f8434860ea0869ac",
+      "gitAndWorktreeExact": true
+    }
+  ],
+  "originalArtifact": {
+    "id": 14190093443,
+    "name": "opencode-v2-published-http-persist-ubuntu",
+    "size_in_bytes": 876,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14190093443",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14190093443/zip",
+    "expired": false,
+    "created_at": "2026-11-16T01:31:59Z",
+    "expires_at": "2026-11-23T01:31:58Z",
+    "updated_at": "2026-11-16T01:31:59Z",
+    "digest": "sha256:9ca0176f4424c0a6e789880c1d6bfa9d7a2e707c2e80105316ed4353cce4a817",
+    "workflow_run": {
+      "id": 43780997620,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+    }
+  },
+  "zip": {
+    "safeUniqueNonsymlinkMembers": 1,
+    "allCRCGood": true,
+    "memberBytesExactlyEqualExtracted": true,
+    "member": {
+      "name": "opencode-v2-http-persist.json",
+      "bytes": 1851,
+      "blob": "c4521fbb28a6b8e7b94707b5cd5b2bae0869ef4d",
+      "sha256": "91e3c1cbdc462a130fffd399e521b99acffb5b6c6479c9c0f5a80d593cfbc6aa"
+    }
+  },
+  "originalNodeMetricsByCommand": {
+    "tests": [
+      6,
+      6,
+      6,
+      4
+    ],
+    "pass": [
+      6,
+      5,
+      6,
+      2
+    ],
+    "fail": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "cancelled": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "skipped": [
+      0,
+      1,
+      0,
+      2
+    ],
+    "todo": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "totals": {
+    "tests": 22,
+    "pass": 19,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 3,
+    "todo": 0
+  },
+  "fourCommandsIncludeSameSetupFileTwice": true,
+  "allOriginalJobStepsSuccess": true,
+  "checkoutAndRuntimeOriginalLogJoined": {
+    "head": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "node": "24.21.0",
+    "pnpm": "11.22.0",
+    "hostBuildStep": "success",
+    "packageVersion": "2.0.21"
+  },
+  "originalReceipt": {
+    "kind": "TEST_V2_HTTP_DURABLE_DISCOVERY",
+    "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "version": "2.0.21",
+    "qualified": false,
+    "packagedElectronQualified": false,
+    "modelTurnProven": false,
+    "processCustodyQualified": false,
+    "steps": [
+      "TEST_published_server_real_authenticated_HTTP_ready",
+      "TEST_no_unauthenticated_HTTP_access",
+      "TEST_native_shell_flag_permission_split_not_tool_enforcement",
+      "TEST_native_unauthenticated_mutations_rejected",
+      "TEST_published_native_permission_resolver_and_nonreplay",
+      "TEST_real_pending_permission_exists_before_cold_restart",
+      "TEST_official_HTTP_session_created_event_persisted",
+      "TEST_cold_native_permission_not_replayed_or_accepted",
+      "TEST_native_persisted_always_vs_deny_survives_cold_restart",
+      "TEST_durable_HTTP_session_identity_survives_cold_restart_no_prompt",
+      "TEST_real_published_HTTP_Stage1_SPI_ready_no_model_turn",
+      "TEST_Stage1_SPI_readiness_recheck_and_owned_cleanup_no_replay"
+    ],
+    "cleanup": true,
+    "nativeUnauthenticatedDeleteRejected": true,
+    "nativeSessionPermissionOrderReadbackProven": true,
+    "nativeShellFlagPermissionSplitObserved": true,
+    "nativeUnauthenticatedPermissionGrantRejected": true,
+    "nativePermissionResolverProven": true,
+    "nativePermissionReplyRejectNoReplayProven": true,
+    "nativeSavedAlwaysOverridesAskProven": true,
+    "nativeExplicitDenyBeatsSavedAlwaysProven": true,
+    "nativeSavedGrantRemainsProjectScopedAfterRestartProven": true,
+    "nativeFreshSessionSavedGrantSurvivesColdRestartProven": true,
+    "nativeSavedGrantSurvivesColdRestartProven": true,
+    "nativeStalePermissionAfterRestartRejected": true,
+    "nativeStaleGrantAfterRestartRejected": true,
+    "durableHTTPEvents": 1,
+    "nativeModelReadback": "captured",
+    "hostAdmissionPhase": "spi-opened",
+    "hostSpiReadinessProven": true
+  },
+  "workflowRequiredOrderedStepCount": 12,
+  "workflowRequiredTrueFields": [
+    "cleanup",
+    "hostSpiReadinessProven",
+    "nativeSessionPermissionOrderReadbackProven",
+    "nativeShellFlagPermissionSplitObserved",
+    "nativePermissionResolverProven",
+    "nativePermissionReplyRejectNoReplayProven",
+    "nativeSavedAlwaysOverridesAskProven",
+    "nativeExplicitDenyBeatsSavedAlwaysProven",
+    "nativeSavedGrantSurvivesColdRestartProven",
+    "nativeFreshSessionSavedGrantSurvivesColdRestartProven",
+    "nativeSavedGrantRemainsProjectScopedAfterRestartProven",
+    "nativeUnauthenticatedDeleteRejected",
+    "nativeUnauthenticatedPermissionGrantRejected",
+    "nativeStalePermissionAfterRestartRejected",
+    "nativeStaleGrantAfterRestartRejected"
+  ],
+  "sourceReview": {
+    "mainRangesRead": [
+      "12-174",
+      "202-248",
+      "699-862"
+    ],
+    "permissionColdRestartAssertionsRead": "250-697 selected assertions; exact original source hash retained",
+    "interruptNegativeFileRead": "whole original source",
+    "workflowFinalVerifierRead": true,
+    "observations": [
+      "The original main asserts authenticated worker readiness, captures start ticks and Node executable identity, uses one guarded stop signal and physical PID/PGID absence. The compact receipt does not retain transient PID/start/hash rows.",
+      "Permission/cold-state checks and twelve original ordered step labels are distinct from model/tool execution. No prompt was inferred.",
+      "SPI original checks require captured model, one initial instruction write, three reads, readiness recheck and confirmed close/provider cleanup.",
+      "SIGINT/SIGTERM tests own their parent only, require exit130/143 with null signal and cleaned namespace plus worker-group ESRCH. Their detailed transient receipts are not in this one-member archive."
+    ]
+  },
+  "limits": [
+    "19 passes are case executions across four commands; repeated setup case executions are not distinct test count.",
+    "One original pre-prefix SDK skip later passes in the separate prescribed setup command; two native ELF skips remain unqualified.",
+    "No independent loaded dependency tree/compiled output census or replay/rebuild was performed.",
+    "No Team privacy semantic RED, helper GREEN, embeddedV2.1.4, Desktop, native vendor, P08/P09 or whole-goal acceptance follows."
+  ],
+  "readerCorrection": "An initial scratch review command had a Python syntax error before execution; no project command or artifact mutation occurred. This corrected reader validates original immutable files.",
+  "projectCodeExecuted": false,
+  "sourceChanged": false,
+  "ciStateChanged": false
+}

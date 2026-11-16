@@ -1,0 +1,2285 @@
+{
+  "schemaVersion": 1,
+  "kind": "ROOT_INDEPENDENT_M0660_V2_MANAGEMENT_ACTUAL_R2",
+  "reviewedAtUtc": "2026-11-16T02:36:43.205437+00:00",
+  "reviewer": "/root, independent of ui_failures packet author",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "jobId": 133017916035,
+  "conclusion": "Original Settings route PASS within finite captured V2 scope; visible credential-copy discrepancy remains open; no general readiness transfer",
+  "checkpoint": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/checkpoint-v2-management.json",
+    "bytes": 14149,
+    "blob": "b852ef2ad40a43464ff4fe0d38158bfce485251a",
+    "sha256": "36f0469fb32ed9e227036129ae6c894eede148aef72ca82667accd1c3e8dcb8e"
+  },
+  "allTenPayloadBytesRecomputed": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/job-133017916035.log",
+      "bytes": 108881,
+      "blob": "6af62654e11a977fd92b2c835ddcb35f60dcdbb1",
+      "sha256": "20cefcab96008865b435d59eb37923b2ae7e7b16eafe44e7f6d335123e4e7fee"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/artifact-14191785424.zip",
+      "bytes": 1011648,
+      "blob": "7ab6151c0f069b5efbc06e55eb6906ef126a4bbb",
+      "sha256": "da6292a773eb4e7af1a410d730457bec318c35e15c92518b92f0e770d386b9dd"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/archive-audit.json",
+      "bytes": 10267,
+      "blob": "c262d1a35093b9f05916e6fb66c2033f7d04cc34",
+      "sha256": "e177ec4cf78c09ea7c800cd18187d7a169641f444253d2b0d00d070bcf9c9d1b"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/desktop-backend-receipt.json",
+      "bytes": 731095,
+      "blob": "dd5d95ca4b7baf611d21b9eda4a424c2d2aaa1aa",
+      "sha256": "4c3649898de49bb965d9e6a2c4028c7ca84c1cae96da55c50beb5c881de29597"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/source-pin-audit.json",
+      "bytes": 3952,
+      "blob": "c16e0d2aed256d193f444f1b200b4954f84da66c",
+      "sha256": "519809764fa42830bf3288210d0e21e1f1542d18e6b2d292daac29b6543f6167"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/audit.json",
+      "bytes": 68126,
+      "blob": "bc37513941f528e5cb21d7999706f6a249ee88b6",
+      "sha256": "5f4b4e6df677ffc95952ab1ce8da6f00ae7d93813eae7fb06c4123581c5ab02a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/Plan29-v2-management-appendix.md",
+      "bytes": 6798,
+      "blob": "bbbbcba4d99893bd4b08bdf0b27aebc4b60c7b4f",
+      "sha256": "1f41e3822955bc756fcc318f7bdcb3f42c03619f4988133bdd3616044c9a8f25"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-artifacts-0203.json",
+      "bytes": 15080,
+      "blob": "4a9b4ebd7f7a1410184b5d5df605e574984c67a5",
+      "sha256": "a0ab504afd23015acb2d8677eb0a7be34ee6deb5ce6e9b7a2497f97605a46e49"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0203.json",
+      "bytes": 184637,
+      "blob": "6e46a30c12b354171499b3d07089b1801d32eab7",
+      "sha256": "487fba5cb804d01f5d6cf2c8a82f338535c4c23eb7a98c02d0564791bc7c6bc9"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    }
+  ],
+  "officialJobAndArtifactJoined": true,
+  "all33SafeCrcExtractedMembers": [
+    {
+      "name": "TEST-desktop-backend-n3BzGv/desktop-backend-app.log",
+      "bytes": 17085,
+      "sha256": "32a3d425b56a30cd41831ab873cb1c50925c66114099412029fb7c385c680894",
+      "blob": "ce8e66caae91321f6700229bd9282e0fb621b71c",
+      "crc32": "50b7e1d7"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/desktop-backend-receipt.json",
+      "bytes": 731095,
+      "sha256": "4c3649898de49bb965d9e6a2c4028c7ca84c1cae96da55c50beb5c881de29597",
+      "blob": "dd5d95ca4b7baf611d21b9eda4a424c2d2aaa1aa",
+      "crc32": "5f7b59bd"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/desktop-descriptor.json",
+      "bytes": 3319,
+      "sha256": "0fd1d101a1865e985b2a103c06d9ddd00edf4f8668e235a2bb556607874b8db0",
+      "blob": "0b89da22053866bdf180e20055ca69cda7ff93b5",
+      "crc32": "1c493ccd"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/host-profile.json",
+      "bytes": 5011,
+      "sha256": "8a0d8fa0a506537f3fa17e5af2837083ba20c831d90d45f80bc035049232337b",
+      "blob": "c2b01db7876ac5cb5deabfd466616fd737dc426d",
+      "crc32": "da90a503"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/188e0ca5fd5ac6bd40621401e97426d2d75714c80d3d432625a309a1e1e85d64.json",
+      "bytes": 3216,
+      "sha256": "d100d06600cf0d99321f523be9869b7873d7f7a6287ce9d314e8c8498d43ea1d",
+      "blob": "81ea8f961a2a35d4994c853c3c983adc4c12d3cb",
+      "crc32": "d95260b6"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/1d35e62d9afcabecc54d23fa0d8726b6a463eb8fadc083b96538c3a3bf9fe588.json",
+      "bytes": 1345,
+      "sha256": "395166a162509f4a7b334ace7e5fa7ccd4378a5894518d603b0c5d552bb8ae47",
+      "blob": "c52ef4bd67798a0a7922acbcf379fa96f07a8b87",
+      "crc32": "16d14b61"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/1de194a9d4da7f88ee8245ac0d5b14e66f3bd566fee7c36bb6ac8be515c742ff.json",
+      "bytes": 3237,
+      "sha256": "dc23b93c0a59aa5adc121a0d1430625a454c95e3c89d0ea320f769777ed435fe",
+      "blob": "e92e78bb1c54319dca56e5d97bb30a666d03b24d",
+      "crc32": "5aa03bf0"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/387897222be465245b1c621d8d19acf6e588fbb4e1d93bc935a661698d658204.json",
+      "bytes": 3267,
+      "sha256": "b580291f0f938814861bffdac169d289e6721d389382d15503b35d4492a3b721",
+      "blob": "06c60e0167ae4b3e61033230e9576e7aaca928d3",
+      "crc32": "3c3dbdc5"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/3cd72e9eaa496e1f367f941f2d64fd0004e465564ef0169092a4ee4150ed6224.json",
+      "bytes": 804,
+      "sha256": "b8a79dad29218077c76698c7796fe806f7f390030b41333d25cde9c011e0ad64",
+      "blob": "e772ea607a549cfa49f96864fb92470083716a3e",
+      "crc32": "fb3be979"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/6a4dab2969f303ee469161138fd59a8cbe0ad4612db624fca09b630c947469b4.json",
+      "bytes": 2811,
+      "sha256": "cc479068d1df26ff2ce4cd38f0cc34f204d5882cea1ab8d3bfda4de7a429dc7e",
+      "blob": "e0caa70161861ff71ab6f11e48b6481953f3c10c",
+      "crc32": "8f46ecd4"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/853e7960b1786cf1a8a4a68cbc1fe8958340e3bdc5318e58820801653ded1eb0.json",
+      "bytes": 1370,
+      "sha256": "782fbbf1483593b956df798e92166baf5e6c1580a0f6975b035537066f57e477",
+      "blob": "640a1cc869a70c54bcb40cedea4091016fd6e244",
+      "crc32": "6d231676"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/8cbb340f020c2b09eff4ee2fe40abad7660d2063efeb47472b6d5731372e6247.json",
+      "bytes": 2832,
+      "sha256": "1dda6fe0df5f8b07a7957f9c0663f54c592b35ff94572938b79bf0fc5af38347",
+      "blob": "9c399413559f31210c974116ebe616b7da8ade4d",
+      "crc32": "2904f392"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/9b9a22aa18c7f67ac028ff52d6e44425572f6ba884466dabc00cd260faac8242.json",
+      "bytes": 812,
+      "sha256": "8d18193f44f329b58969459814d5ee99fcb268fe6a6a6c344d13fe30e0bf9f5f",
+      "blob": "e4eace80488be69d8df414ae0832f75cd475aabe",
+      "crc32": "abaa413b"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/ab7a4405139097711a68735e0a40e2d1c7123aaebe2d1f199105ca978ab22b01.json",
+      "bytes": 812,
+      "sha256": "448419e4a0a32300920e4a586117c1eb0abafd6d0587ae0e3f05c455a95100ea",
+      "blob": "530d56a8d06cae03557b502e373e6298263d2c3f",
+      "crc32": "34c7fddc"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/d19d0f344ea662f18302754d3e5f55551ccabe017a11bfbe08924ea075b9f475.json",
+      "bytes": 3245,
+      "sha256": "47d64609aea6fa4d3fb254511e2bd6fb2554cee2d547f299f8744d9d591a3326",
+      "blob": "327171cb9071bbb3874bab7cf43082be64c21155",
+      "crc32": "475858bb"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/ded973d826635e14459c6e5b1aa95404545536f25ba4d4fbdb241683663cbd0e.json",
+      "bytes": 3237,
+      "sha256": "052614beb90a8fb6a05bc2a1116e4d5fe2eb043b4c1f3ddd8f018e421297162b",
+      "blob": "e32ca45c31706133a35a67055d832e07676b2f3c",
+      "crc32": "3c5337ea"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/hoststore/runtime-sources/index.json",
+      "bytes": 15919,
+      "sha256": "bc51bb3119df7d80aeeabcc54ca6289df9c46da0c5c11a40fbf4cc089d6dcc82",
+      "blob": "c2ea7f7ddf6daa99741b04459e08b494fccb9c39",
+      "crc32": "7f6a3f92"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/preferences/global/global-runtime-preferences.json",
+      "bytes": 142,
+      "sha256": "cac5d9be2ad49793b423ac2e4b18eb9f6991083f4faa92d227ce14bbb0a1ab14",
+      "blob": "e25d1b2d66ad660821605f4a0ec1712029972629",
+      "crc32": "dec4c3b5"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/preferences/workspace/agent-teams-runtime-preferences.json",
+      "bytes": 123,
+      "sha256": "2994a15037107281f14c901bba5999e42d1d31541c690f7a8410eee4ce8846cf",
+      "blob": "ec2ab78f62f443285d02373e7840796a47e05eba",
+      "crc32": "1722e86a"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/sentinel-invocations.ndjson",
+      "bytes": 686,
+      "sha256": "22f07046b2d6f9156c8345612fe82234eb4057899a9424d22ebad0a36d56e2fd",
+      "blob": "11f58ef0fcba4ace4844ef7b6e5163b9443facf8",
+      "crc32": "e60f1fd1"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/ui-v2-management-connected.png",
+      "bytes": 104089,
+      "sha256": "0332e54ff70eef0d81c8de9f6722334906ef5352910d46a67aaa3f7ca5e3f5df",
+      "blob": "424513eea137744e58f872018302b493c1a99799",
+      "crc32": "1e2efeac"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/ui-seed-receipt.json",
+      "bytes": 2037,
+      "sha256": "bfaa0c1957d444e35a77989db2db8bb251bd1fea694958e709d80f16bbb0102f",
+      "blob": "f0b55e1af7f9cec351aee138c032155e7361de46",
+      "crc32": "fa9b5d54"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/ui-v2-management-inherited.png",
+      "bytes": 73947,
+      "sha256": "3f26be4db8199a5155583c0218e040d20c65c9f6e9c4003c8d872079061ac037",
+      "blob": "f8ab5ead3bc11ecb2ea0e08c8f0468d199eaa441",
+      "crc32": "3cf98143"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/ui-v2-management-project-override.png",
+      "bytes": 75402,
+      "sha256": "637a6dc16bb24455ff910f8b77e328d025ce4acd1a651ad6c85d523f47c88051",
+      "blob": "76da20056b91199f4901730d50faf87c33c2e6d7",
+      "crc32": "7661cd6e"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/ui-v2-management-rejected-key.png",
+      "bytes": 123027,
+      "sha256": "748b96fcc1e445fef56e45541e9f44569df7a66f2e70132641bc14da37a48241",
+      "blob": "61076f8cd1b956d93fc8f5988f75a015b147108d",
+      "crc32": "59b25af6"
+    },
+    {
+      "name": "TEST-desktop-backend-n3BzGv/ui-v2-management-reloaded.png",
+      "bytes": 74122,
+      "sha256": "215c56f2683536753acf51d3439c2c4d4f64284844727846b511556407f0637c",
+      "blob": "f76380d956d70f6e229268281c93a7c16becf980",
+      "crc32": "8abb9cb8"
+    },
+    {
+      "name": "TEST-emulated-ui-inputs-pgAW7E/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "crc32": "ed0ca14b"
+    },
+    {
+      "name": "TEST-emulated-ui-inputs-pgAW7E/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "crc32": "e06f2443"
+    },
+    {
+      "name": "host-emulated-inputs.json",
+      "bytes": 1838,
+      "sha256": "1c431709442542e47919c59e8dd136c0a4e79d432fa26cdf7e5e040702609ccc",
+      "blob": "5321c3f48b31288bf55516b0631bf2cdb751c390",
+      "crc32": "990f7494"
+    },
+    {
+      "name": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "sha256": "c3892ff622df5b2101290d4475e0c9e78db31a8cb10c529b1cf71f90ab0829cb",
+      "blob": "a449a9594c55faf43761c4532b752e6633732abe",
+      "crc32": "9a6a5880"
+    },
+    {
+      "name": "host-emulated-opencode-v2-inputs.json",
+      "bytes": 783,
+      "sha256": "65e44d0af912fc29331080ef6a38c5558e74751995c9ab1e797b391be35d077a",
+      "blob": "fe2c55107e7b754335c1d8834843478fb18f2b87",
+      "crc32": "7f1e866a"
+    },
+    {
+      "name": "host-emulated-opencode-v2-management-ui-verified.json",
+      "bytes": 402,
+      "sha256": "1f7cd378a6018a5a2c204592c629931443ad4c4a071767dd97ceeee70956777f",
+      "blob": "b0b9b79ed0ed54521ee8a8515fe8c731fcbb0f04",
+      "crc32": "7e5c021b"
+    },
+    {
+      "name": "host-emulated-opencode-v2-management-ui.log",
+      "bytes": 260,
+      "sha256": "6c50b8b9b27724261a41ea41ee1351fa73d51fc91b75dfdb89c3e53ce2c54246",
+      "blob": "52f4be9bba1bb43e32a91803a120f0b17a0a2d6c",
+      "crc32": "cb5e4efb"
+    }
+  ],
+  "originalTeeContainedInFullTimestampStrippedJobLog": true,
+  "originalPrerequisiteReporters": {
+    "tests": [
+      "115",
+      "7"
+    ],
+    "pass": [
+      "115",
+      "7"
+    ],
+    "fail": [
+      "0",
+      "0"
+    ],
+    "skipped": [
+      "0",
+      "0"
+    ],
+    "duration_ms": [
+      "9299.545988",
+      "213.474067"
+    ]
+  },
+  "sourcePins": {
+    "orderedBeforeEqualsAfter": true,
+    "count": 1769,
+    "allFreshImmutableGitBytesRehashed": true,
+    "bytes": 20443491,
+    "fullOrderedArraySha256": "6b7771834f7728a898f74f60412659d3ae30fe02e20da497d65dbe8c2c7aa859",
+    "common": 1757,
+    "additional": [
+      {
+        "path": "scripts/legacy-agent-host/verify-desktop-v2-management-receipt.ts",
+        "sha256": "1693e23f265b2d1e4024c5553e1577827ebe8e98c8a7e347346e6aa229bb7e72",
+        "bytes": 18828,
+        "blob": "b7d447d7acea4c55fcb578b922194a528440e3b1"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/applyOpenCodeRuntimeSource.ts",
+        "sha256": "a9d537ee66a38c75945e45a10809b6f55b5e2a9e693bd1027993341b08af9c10",
+        "bytes": 2610,
+        "blob": "958e53a9d61cb007b25d2614b8587f5956bf3dcc"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/openCodeV2ModelSelection.ts",
+        "sha256": "442082d1ee1c3e7f834de329c4f7dea5a79d093391a671df99c9d077348e16ba",
+        "bytes": 3515,
+        "blob": "77f26b866e9aba755d32f055c309ea9bcdb5ddd3"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts",
+        "sha256": "7137298d7c6caa935924c175cf8d0b8d58f6c3968cb45ebe3c01e66a7b1e89f9",
+        "bytes": 11488,
+        "blob": "6efd49158d9f3ab93d916fdb562fa61b2f8aa039"
+      },
+      {
+        "path": "scripts/legacy-agent-host/fixtures/c226-opencode-v2-management.json",
+        "sha256": "f3720ccacff5f36965ed38f018da34e6427eac53249e3da7cafc857b9e202ce2",
+        "bytes": 14635,
+        "blob": "b26d4f0d3092677dfdef1dd9381e8ec581e3ebf7"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-fixture.ts",
+        "sha256": "cc7a6d5aaf57a1a35608025819847b43f43a418558858e95baf4a39bcc564112",
+        "bytes": 8880,
+        "blob": "35518a67d9e6e9c987395bef9b4cb1012ac77bb2"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-model.ts",
+        "sha256": "e3e2b49684125157aa0a958e2e9800de81686aa4f227545c0111864250f88e39",
+        "bytes": 5678,
+        "blob": "6ce3b1342c187e7ea9bc0d5233296f3fa3811e4a"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-process.ts",
+        "sha256": "1a01a3b5538e2838f5926358c1c69bd0f0fe9b40537d26c355a457bc64451e92",
+        "bytes": 5096,
+        "blob": "8463257cb866eed1f222e76aa4b23ae6b07440cf"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.ts",
+        "sha256": "356fde85403680c557633ba90e4df4840d69bfea4e8c58b39ad6855e3e2596ab",
+        "bytes": 12815,
+        "blob": "4cb498c7846dd6b24c46b987266e148065add852"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+        "sha256": "f4ea5ccdfd127a0ea0271a4923a8da12fcc2bf542a30a152f0b2d34360f781fe",
+        "bytes": 19234,
+        "blob": "7628e511b2f219ad27e517d4a96ecb7aec604131"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+        "sha256": "91bfb3b90c18e38af200e23d167811e526b339d1525ccc502db43759a5e6bf77",
+        "bytes": 12302,
+        "blob": "6f8e3da7ba0cda6a13d5cfbafd1ecaf58ac738dd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+        "sha256": "bd70a28a13d10c5150843cd5de88aeb6007c1e27bc6bfcf4b45ced8413d01b3c",
+        "bytes": 20394,
+        "blob": "74c3aaddba29d7309af436610f6a8b64c8c337e1"
+      }
+    ]
+  },
+  "receipt": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/desktop-backend-receipt.json",
+    "bytes": 731095,
+    "blob": "dd5d95ca4b7baf611d21b9eda4a424c2d2aaa1aa",
+    "sha256": "4c3649898de49bb965d9e6a2c4028c7ca84c1cae96da55c50beb5c881de29597"
+  },
+  "verifiedCompanion": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/host-emulated-opencode-v2-management-ui-verified.json",
+    "bytes": 402,
+    "blob": "b0b9b79ed0ed54521ee8a8515fe8c731fcbb0f04",
+    "sha256": "1f7cd378a6018a5a2c204592c629931443ad4c4a071767dd97ceeee70956777f"
+  },
+  "twelveOriginalJournalsDigestFilenameAndIntentJoins": [
+    {
+      "identity": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/hoststore/management-commands/188e0ca5fd5ac6bd40621401e97426d2d75714c80d3d432625a309a1e1e85d64.json",
+        "bytes": 3216,
+        "blob": "81ea8f961a2a35d4994c853c3c983adc4c12d3cb",
+        "sha256": "d100d06600cf0d99321f523be9869b7873d7f7a6287ce9d314e8c8498d43ea1d"
+      },
+      "body": {
+        "schemaVersion": 1,
+        "commandId": "8ba9bdc5-69e5-4b47-b766-83f49a34e68d",
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "providerId": "opencode",
+        "fingerprint": "a083c5c10d37c1db05b0667439cadb4092c8bd35541dbf4e3c37dc78d6e62f6a",
+        "selectionDigest": "998daf38199f5d6cece178e378c363de8ceb0c1fd93ab2effa390e478652810d",
+        "resourceId": "4221ae7d9855f0f2734899c6a20152d7dcdd62126bc9567c9ffaa8ba8bf12646",
+        "resourceHeld": false,
+        "kind": "runtime.source",
+        "phase": "published",
+        "sourceId": "4221ae7d9855f0f2734899c6a20152d7dcdd62126bc9567c9ffaa8ba8bf12646",
+        "revision": "84ccfae4f9293be6cf02097d4c98a0252a31520e81c1a5b3a5303f06f9d9c674",
+        "expectedRevision": "998daf38199f5d6cece178e378c363de8ceb0c1fd93ab2effa390e478652810d",
+        "publicationJson": "{\"grant\":{\"targetId\":\"4221ae7d9855f0f2734899c6a20152d7dcdd62126bc9567c9ffaa8ba8bf12646\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-n3BzGv\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace\",\"runtimeId\":\"opencode\",\"profileId\":\"TEST-v2-settings-management\",\"configRevision\":\"TEST-opencode-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-n3BzGv\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-n3BzGv\"}]},\"commandId\":\"8ba9bdc5-69e5-4b47-b766-83f49a34e68d\",\"expectedRevision\":\"998daf38199f5d6cece178e378c363de8ceb0c1fd93ab2effa390e478652810d\",\"candidate\":{\"sourceKind\":\"captured\",\"executable\":{\"path\":\"/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun\",\"sha256\":\"45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675\"},\"openCodeConfiguration\":{\"scope\":\"project\",\"files\":[{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/home/.config/opencode/opencode.json\",\"digest\":\"ea503713005b188f26a137c441bae252c7734a881ae1d608bce0039bdc69fc7e\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/home/.config/opencode/opencode.jsonc\",\"digest\":\"da0c9ac6572314ef5411059d6acf1fa4d12218aa73984484b01a69200922add2\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/config/opencode/opencode.json\",\"digest\":\"b4ea1cb1be7be1ef59abf39c6112bfd5fb7c8b5bba61f956721e6d08af9b2493\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/config/opencode/opencode.jsonc\",\"digest\":\"539cc0121c857a2eab3a2140e53721c0d49badc9650731f1f7775330e6cd8005\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace/opencode.json\",\"digest\":\"0ba32e81d5a41660fd7fb612addc2eecbc2bb7a2dbc1ca56e5300e5068290f70\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace/opencode.jsonc\",\"digest\":\"0e8d20e25e20b31ec195da7443ef38237dd7f2d0cdb16ce65c36cddfa5e4f1cf\"}],\"inlineDigest\":null},\"openCodePreferences\":{\"defaultModelId\":null,\"modelLimitOverrides\":{}}},\"intent\":\"configuration\"}"
+      }
+    },
+    {
+      "identity": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/hoststore/management-commands/1d35e62d9afcabecc54d23fa0d8726b6a463eb8fadc083b96538c3a3bf9fe588.json",
+        "bytes": 1345,
+        "blob": "c52ef4bd67798a0a7922acbcf379fa96f07a8b87",
+        "sha256": "395166a162509f4a7b334ace7e5fa7ccd4378a5894518d603b0c5d552bb8ae47"
+      },
+      "body": {
+        "schemaVersion": 1,
+        "commandId": "a510ee9b-756d-4796-b625-888baf35fdb4",
+        "profileId": "runtime-source:1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "configRevision": "runtime-source:1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "providerId": "test-local",
+        "fingerprint": "35d8e8b5bf827a1c158ec297452932ab604d2b9b15457c8fa870a8d3e8b83019",
+        "selectionDigest": "3a02c31a8118716e7017086d53fa58b9e10ddc0331caad0d2ab85daf92810244",
+        "resourceId": "89fc823d1fc93d01635c7ec74d88f2950cbb331400807c4f7e3d60b87e720100",
+        "resourceHeld": false,
+        "kind": "credential.set",
+        "phase": "completed",
+        "finishedAtMs": 1794793317258,
+        "openCodeV2": {
+          "phase": "probe-completed",
+          "integrationId": "test-local",
+          "nativeNamespace": "6b3d83ccf069d42ff18bc833d28049c93e968e0881a444b503b02b89bb5508f0",
+          "beforeAuthDigest": "7de2e7871659a74febc47517b73c151e55314b24c6a45aceb24ba39f6c9cfa14",
+          "credentialId": "cred_1e2046c0d001jwgwldtDbDV0Zs",
+          "authDigest": "fa2b3b80549598b528352fa3cc83bbaf997cbe61caf493e396bb62ed27ebad08",
+          "verification": {
+            "commandId": "connect-verify-1d35e62d9afcabecc54d23fa0d8726b6a463eb8fadc083b9",
+            "modelId": "test-local/TEST-model",
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "identity": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/hoststore/management-commands/1de194a9d4da7f88ee8245ac0d5b14e66f3bd566fee7c36bb6ac8be515c742ff.json",
+        "bytes": 3237,
+        "blob": "e92e78bb1c54319dca56e5d97bb30a666d03b24d",
+        "sha256": "dc23b93c0a59aa5adc121a0d1430625a454c95e3c89d0ea320f769777ed435fe"
+      },
+      "body": {
+        "schemaVersion": 1,
+        "commandId": "a05d88ea-3f0c-4e1e-8645-33b3907984d1",
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "providerId": "opencode",
+        "fingerprint": "63d3c36d74c37ee4e618591257bee150c468e941109d7a2ff3db63ea0f015d06",
+        "selectionDigest": "998daf38199f5d6cece178e378c363de8ceb0c1fd93ab2effa390e478652810d",
+        "resourceId": "4221ae7d9855f0f2734899c6a20152d7dcdd62126bc9567c9ffaa8ba8bf12646",
+        "resourceHeld": false,
+        "kind": "runtime.source",
+        "phase": "published",
+        "sourceId": "4221ae7d9855f0f2734899c6a20152d7dcdd62126bc9567c9ffaa8ba8bf12646",
+        "revision": "537a336eb6da0b5c5d9be443211ecd9ff159f643dd09a63712ca5dd5b4681556",
+        "expectedRevision": "29940dafc3d3d65cf21507867c9cd9a27431891aab1a6f715a6af87f39e9611b",
+        "publicationJson": "{\"grant\":{\"targetId\":\"4221ae7d9855f0f2734899c6a20152d7dcdd62126bc9567c9ffaa8ba8bf12646\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-n3BzGv\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace\",\"runtimeId\":\"opencode\",\"profileId\":\"TEST-v2-settings-management\",\"configRevision\":\"TEST-opencode-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-n3BzGv\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-n3BzGv\"}]},\"commandId\":\"a05d88ea-3f0c-4e1e-8645-33b3907984d1\",\"expectedRevision\":\"29940dafc3d3d65cf21507867c9cd9a27431891aab1a6f715a6af87f39e9611b\",\"candidate\":{\"sourceKind\":\"captured\",\"executable\":{\"path\":\"/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun\",\"sha256\":\"45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675\"},\"openCodeConfiguration\":{\"scope\":\"project\",\"files\":[{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/home/.config/opencode/opencode.json\",\"digest\":\"ea503713005b188f26a137c441bae252c7734a881ae1d608bce0039bdc69fc7e\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/home/.config/opencode/opencode.jsonc\",\"digest\":\"da0c9ac6572314ef5411059d6acf1fa4d12218aa73984484b01a69200922add2\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/config/opencode/opencode.json\",\"digest\":\"b4ea1cb1be7be1ef59abf39c6112bfd5fb7c8b5bba61f956721e6d08af9b2493\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/config/opencode/opencode.jsonc\",\"digest\":\"539cc0121c857a2eab3a2140e53721c0d49badc9650731f1f7775330e6cd8005\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace/opencode.json\",\"digest\":\"0ba32e81d5a41660fd7fb612addc2eecbc2bb7a2dbc1ca56e5300e5068290f70\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace/opencode.jsonc\",\"digest\":\"0e8d20e25e20b31ec195da7443ef38237dd7f2d0cdb16ce65c36cddfa5e4f1cf\"}],\"inlineDigest\":null},\"openCodePreferences\":{\"defaultModelId\":\"test-local/TEST-model\",\"modelLimitOverrides\":{}}},\"intent\":\"configuration\"}"
+      }
+    },
+    {
+      "identity": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/hoststore/management-commands/387897222be465245b1c621d8d19acf6e588fbb4e1d93bc935a661698d658204.json",
+        "bytes": 3267,
+        "blob": "06c60e0167ae4b3e61033230e9576e7aaca928d3",
+        "sha256": "b580291f0f938814861bffdac169d289e6721d389382d15503b35d4492a3b721"
+      },
+      "body": {
+        "schemaVersion": 1,
+        "commandId": "80b342a8-22c9-4f7c-ae18-22d996356b40",
+        "profileId": "TEST-v2-settings-management-other",
+        "configRevision": "TEST-opencode-management",
+        "providerId": "opencode",
+        "fingerprint": "5fa408063969de23ec36d605931a2f3422fec02d5592ba40d54f00be9426bdca",
+        "selectionDigest": "459194b587cdc2d4dbf394e909084c3290ccd48d7913783609362d8187115e00",
+        "resourceId": "3705e3ceeec8d27ce3d3438143992f96a2fd53726b00eb14542aa9292c0966d5",
+        "resourceHeld": false,
+        "kind": "runtime.source",
+        "phase": "published",
+        "sourceId": "3705e3ceeec8d27ce3d3438143992f96a2fd53726b00eb14542aa9292c0966d5",
+        "revision": "450988a7a869bd17c37f3b49fa290371b30e83e5377b5f8d2330b36830232445",
+        "expectedRevision": "459194b587cdc2d4dbf394e909084c3290ccd48d7913783609362d8187115e00",
+        "publicationJson": "{\"grant\":{\"targetId\":\"3705e3ceeec8d27ce3d3438143992f96a2fd53726b00eb14542aa9292c0966d5\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-n3BzGv\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace-other\",\"runtimeId\":\"opencode\",\"profileId\":\"TEST-v2-settings-management-other\",\"configRevision\":\"TEST-opencode-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-n3BzGv\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-n3BzGv\"}]},\"commandId\":\"80b342a8-22c9-4f7c-ae18-22d996356b40\",\"expectedRevision\":\"459194b587cdc2d4dbf394e909084c3290ccd48d7913783609362d8187115e00\",\"candidate\":{\"sourceKind\":\"captured\",\"executable\":{\"path\":\"/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun\",\"sha256\":\"45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675\"},\"openCodeConfiguration\":{\"scope\":\"project\",\"files\":[{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/home/.config/opencode/opencode.json\",\"digest\":\"ea503713005b188f26a137c441bae252c7734a881ae1d608bce0039bdc69fc7e\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/home/.config/opencode/opencode.jsonc\",\"digest\":\"da0c9ac6572314ef5411059d6acf1fa4d12218aa73984484b01a69200922add2\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/config/opencode/opencode.json\",\"digest\":\"b4ea1cb1be7be1ef59abf39c6112bfd5fb7c8b5bba61f956721e6d08af9b2493\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/config/opencode/opencode.jsonc\",\"digest\":\"539cc0121c857a2eab3a2140e53721c0d49badc9650731f1f7775330e6cd8005\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace-other/opencode.json\",\"digest\":\"dbb558b6210471016847fbe08d62a6ff682a3b0f2bc19e4117365943c3affe08\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace-other/opencode.jsonc\",\"digest\":\"d3f324dd723ca7ff31cb832539fe8dbba458c47c03cac62cb951f13b26805fef\"}],\"inlineDigest\":null},\"openCodePreferences\":{\"defaultModelId\":\"test-local/TEST-model\",\"modelLimitOverrides\":{}}},\"intent\":\"configuration\"}"
+      }
+    },
+    {
+      "identity": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/hoststore/management-commands/3cd72e9eaa496e1f367f941f2d64fd0004e465564ef0169092a4ee4150ed6224.json",
+        "bytes": 804,
+        "blob": "e772ea607a549cfa49f96864fb92470083716a3e",
+        "sha256": "b8a79dad29218077c76698c7796fe806f7f390030b41333d25cde9c011e0ad64"
+      },
+      "body": {
+        "schemaVersion": 1,
+        "commandId": "88d90120-08fd-4faf-93d4-12d2feea4ea2",
+        "profileId": "runtime-source:1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "configRevision": "runtime-source:1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "providerId": "test-local",
+        "fingerprint": "d0855ac3cb49ca078f2777e3e06aad7ea44f5f6f26f6370207d3caa6a1d46cb4",
+        "selectionDigest": "3a02c31a8118716e7017086d53fa58b9e10ddc0331caad0d2ab85daf92810244",
+        "resourceId": "89fc823d1fc93d01635c7ec74d88f2950cbb331400807c4f7e3d60b87e720100",
+        "resourceHeld": false,
+        "kind": "model.probe",
+        "modelId": "test-local/TEST-model",
+        "phase": "completed",
+        "expiresAt": 1794793544198,
+        "ok": true
+      }
+    },
+    {
+      "identity": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/hoststore/management-commands/6a4dab2969f303ee469161138fd59a8cbe0ad4612db624fca09b630c947469b4.json",
+        "bytes": 2811,
+        "blob": "e0caa70161861ff71ab6f11e48b6481953f3c10c",
+        "sha256": "cc479068d1df26ff2ce4cd38f0cc34f204d5882cea1ab8d3bfda4de7a429dc7e"
+      },
+      "body": {
+        "schemaVersion": 1,
+        "commandId": "857d29f3-e49a-400d-a4c9-5c5b91e20445",
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "providerId": "opencode",
+        "fingerprint": "ced834dfc5c4d4f9ba0074b9168bffb2022cac2b3efba39891d38cff7648c328",
+        "selectionDigest": "7c504f0024bd40657e7437dcb7e447e25eb4ebb7323a499ed362cc93f10f0a2c",
+        "resourceId": "7ff9173cb1fe2b3e71de76f91994782296a3cc362cbac0bb269ecf01a31d6141",
+        "resourceHeld": false,
+        "kind": "runtime.source",
+        "phase": "published",
+        "sourceId": "7ff9173cb1fe2b3e71de76f91994782296a3cc362cbac0bb269ecf01a31d6141",
+        "revision": "1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "expectedRevision": "7c504f0024bd40657e7437dcb7e447e25eb4ebb7323a499ed362cc93f10f0a2c",
+        "publicationJson": "{\"grant\":{\"targetId\":\"7ff9173cb1fe2b3e71de76f91994782296a3cc362cbac0bb269ecf01a31d6141\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-n3BzGv\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":null,\"runtimeId\":\"opencode\",\"profileId\":\"TEST-v2-settings-management\",\"configRevision\":\"TEST-opencode-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-n3BzGv\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-n3BzGv\"}]},\"commandId\":\"857d29f3-e49a-400d-a4c9-5c5b91e20445\",\"expectedRevision\":\"7c504f0024bd40657e7437dcb7e447e25eb4ebb7323a499ed362cc93f10f0a2c\",\"candidate\":{\"sourceKind\":\"captured\",\"executable\":{\"path\":\"/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun\",\"sha256\":\"45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675\"},\"openCodeConfiguration\":{\"scope\":\"global\",\"files\":[{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/home/.config/opencode/opencode.json\",\"digest\":\"ea503713005b188f26a137c441bae252c7734a881ae1d608bce0039bdc69fc7e\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/home/.config/opencode/opencode.jsonc\",\"digest\":\"da0c9ac6572314ef5411059d6acf1fa4d12218aa73984484b01a69200922add2\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/config/opencode/opencode.json\",\"digest\":\"b4ea1cb1be7be1ef59abf39c6112bfd5fb7c8b5bba61f956721e6d08af9b2493\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/config/opencode/opencode.jsonc\",\"digest\":\"539cc0121c857a2eab3a2140e53721c0d49badc9650731f1f7775330e6cd8005\"}],\"inlineDigest\":null},\"openCodePreferences\":{\"defaultModelId\":null,\"modelLimitOverrides\":{}}},\"intent\":\"configuration\"}"
+      }
+    },
+    {
+      "identity": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/hoststore/management-commands/853e7960b1786cf1a8a4a68cbc1fe8958340e3bdc5318e58820801653ded1eb0.json",
+        "bytes": 1370,
+        "blob": "640a1cc869a70c54bcb40cedea4091016fd6e244",
+        "sha256": "782fbbf1483593b956df798e92166baf5e6c1580a0f6975b035537066f57e477"
+      },
+      "body": {
+        "schemaVersion": 1,
+        "commandId": "5e5d5363-bc8e-4a7e-8ef9-510364093677",
+        "profileId": "runtime-source:1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "configRevision": "runtime-source:1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "providerId": "test-local",
+        "fingerprint": "1229d37387106f82754f2cffc6e07501f17044deb23b06fa98d618298ac994f7",
+        "selectionDigest": "3a02c31a8118716e7017086d53fa58b9e10ddc0331caad0d2ab85daf92810244",
+        "resourceId": "89fc823d1fc93d01635c7ec74d88f2950cbb331400807c4f7e3d60b87e720100",
+        "resourceHeld": false,
+        "kind": "credential.set",
+        "phase": "held",
+        "finishedAtMs": 1794793291808,
+        "openCodeV2": {
+          "phase": "probe-completed",
+          "integrationId": "test-local",
+          "nativeNamespace": "308ea538c45d11b2dbff3e2b67c1ce78535a3c1127325edb8e5b62b88fa475b7",
+          "beforeAuthDigest": "71e5f9840fa889471aafac3ed7169475cee6865586b75ab6a79a820e2055a53a",
+          "credentialId": "cred_1e203ee10001T8MNyMOvWBFF3Z",
+          "authDigest": "7de2e7871659a74febc47517b73c151e55314b24c6a45aceb24ba39f6c9cfa14",
+          "verification": {
+            "commandId": "connect-verify-853e7960b1786cf1a8a4a68cbc1fe8958340e3bdc5318e58",
+            "modelId": "test-local/TEST-model",
+            "ok": false
+          }
+        },
+        "terminalRejection": true
+      }
+    },
+    {
+      "identity": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/hoststore/management-commands/8cbb340f020c2b09eff4ee2fe40abad7660d2063efeb47472b6d5731372e6247.json",
+        "bytes": 2832,
+        "blob": "9c399413559f31210c974116ebe616b7da8ade4d",
+        "sha256": "1dda6fe0df5f8b07a7957f9c0663f54c592b35ff94572938b79bf0fc5af38347"
+      },
+      "body": {
+        "schemaVersion": 1,
+        "commandId": "52f4a394-b0c1-4fc1-8714-54328c4c1202",
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "providerId": "opencode",
+        "fingerprint": "ebbe4089100662eed7b7e4b910bce1b7e14889186c1c96896d34519022f9d6e8",
+        "selectionDigest": "7c504f0024bd40657e7437dcb7e447e25eb4ebb7323a499ed362cc93f10f0a2c",
+        "resourceId": "7ff9173cb1fe2b3e71de76f91994782296a3cc362cbac0bb269ecf01a31d6141",
+        "resourceHeld": false,
+        "kind": "runtime.source",
+        "phase": "published",
+        "sourceId": "7ff9173cb1fe2b3e71de76f91994782296a3cc362cbac0bb269ecf01a31d6141",
+        "revision": "58c0e7695e73cc8b4e07ff7319508a8db58b7b29ba041a415591c48a51184397",
+        "expectedRevision": "1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "publicationJson": "{\"grant\":{\"targetId\":\"7ff9173cb1fe2b3e71de76f91994782296a3cc362cbac0bb269ecf01a31d6141\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-n3BzGv\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":null,\"runtimeId\":\"opencode\",\"profileId\":\"TEST-v2-settings-management\",\"configRevision\":\"TEST-opencode-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-n3BzGv\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-n3BzGv\"}]},\"commandId\":\"52f4a394-b0c1-4fc1-8714-54328c4c1202\",\"expectedRevision\":\"1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2\",\"candidate\":{\"sourceKind\":\"captured\",\"executable\":{\"path\":\"/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun\",\"sha256\":\"45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675\"},\"openCodeConfiguration\":{\"scope\":\"global\",\"files\":[{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/home/.config/opencode/opencode.json\",\"digest\":\"ea503713005b188f26a137c441bae252c7734a881ae1d608bce0039bdc69fc7e\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/home/.config/opencode/opencode.jsonc\",\"digest\":\"da0c9ac6572314ef5411059d6acf1fa4d12218aa73984484b01a69200922add2\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/config/opencode/opencode.json\",\"digest\":\"b4ea1cb1be7be1ef59abf39c6112bfd5fb7c8b5bba61f956721e6d08af9b2493\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/config/opencode/opencode.jsonc\",\"digest\":\"539cc0121c857a2eab3a2140e53721c0d49badc9650731f1f7775330e6cd8005\"}],\"inlineDigest\":null},\"openCodePreferences\":{\"defaultModelId\":\"test-local/TEST-model\",\"modelLimitOverrides\":{}}},\"intent\":\"configuration\"}"
+      }
+    },
+    {
+      "identity": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/hoststore/management-commands/9b9a22aa18c7f67ac028ff52d6e44425572f6ba884466dabc00cd260faac8242.json",
+        "bytes": 812,
+        "blob": "e4eace80488be69d8df414ae0832f75cd475aabe",
+        "sha256": "8d18193f44f329b58969459814d5ee99fcb268fe6a6a6c344d13fe30e0bf9f5f"
+      },
+      "body": {
+        "schemaVersion": 1,
+        "commandId": "0e965c84-f22b-47d3-915e-f7244702f11d",
+        "profileId": "runtime-source:8773e1c2162941ac151cf1debc4296f1750b282ae0f5762d84a95fc9af646ee5",
+        "configRevision": "runtime-source:8773e1c2162941ac151cf1debc4296f1750b282ae0f5762d84a95fc9af646ee5",
+        "providerId": "test-local",
+        "fingerprint": "0bf7f6c0ea1ffaa490c99262158ed7e6ef9293c15564d6789bb3923be9125177",
+        "selectionDigest": "53baeec23abf6827aa5368cfe8ea08339c8b73c7c55f666c69b3981dc06aa92e",
+        "resourceId": "89fc823d1fc93d01635c7ec74d88f2950cbb331400807c4f7e3d60b87e720100",
+        "resourceHeld": false,
+        "kind": "model.probe",
+        "modelId": "test-local/TEST-project-model",
+        "phase": "completed",
+        "expiresAt": 1794793616508,
+        "ok": true
+      }
+    },
+    {
+      "identity": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/hoststore/management-commands/ab7a4405139097711a68735e0a40e2d1c7123aaebe2d1f199105ca978ab22b01.json",
+        "bytes": 812,
+        "blob": "530d56a8d06cae03557b502e373e6298263d2c3f",
+        "sha256": "448419e4a0a32300920e4a586117c1eb0abafd6d0587ae0e3f05c455a95100ea"
+      },
+      "body": {
+        "schemaVersion": 1,
+        "commandId": "f4bac3ae-d934-4d25-96e3-5a2fe9ae6cbc",
+        "profileId": "runtime-source:29940dafc3d3d65cf21507867c9cd9a27431891aab1a6f715a6af87f39e9611b",
+        "configRevision": "runtime-source:29940dafc3d3d65cf21507867c9cd9a27431891aab1a6f715a6af87f39e9611b",
+        "providerId": "test-local",
+        "fingerprint": "23b0e1fb7e075a1d932da24d616e251358e5edce6c020b82efe65e04f9832ce0",
+        "selectionDigest": "f52216878063416fca1e8abab071a944e03dec6e7ba04f12dcd51974f594049e",
+        "resourceId": "89fc823d1fc93d01635c7ec74d88f2950cbb331400807c4f7e3d60b87e720100",
+        "resourceHeld": false,
+        "kind": "model.probe",
+        "modelId": "test-local/TEST-project-model",
+        "phase": "completed",
+        "expiresAt": 1794793657394,
+        "ok": true
+      }
+    },
+    {
+      "identity": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/hoststore/management-commands/d19d0f344ea662f18302754d3e5f55551ccabe017a11bfbe08924ea075b9f475.json",
+        "bytes": 3245,
+        "blob": "327171cb9071bbb3874bab7cf43082be64c21155",
+        "sha256": "47d64609aea6fa4d3fb254511e2bd6fb2554cee2d547f299f8744d9d591a3326"
+      },
+      "body": {
+        "schemaVersion": 1,
+        "commandId": "060c6c7d-a120-44f6-8c75-3a326bc4f566",
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "providerId": "opencode",
+        "fingerprint": "4008cbff76223307654471fc124f603c3a62d38ec4ef734e2532924f0c88bce3",
+        "selectionDigest": "998daf38199f5d6cece178e378c363de8ceb0c1fd93ab2effa390e478652810d",
+        "resourceId": "4221ae7d9855f0f2734899c6a20152d7dcdd62126bc9567c9ffaa8ba8bf12646",
+        "resourceHeld": false,
+        "kind": "runtime.source",
+        "phase": "published",
+        "sourceId": "4221ae7d9855f0f2734899c6a20152d7dcdd62126bc9567c9ffaa8ba8bf12646",
+        "revision": "29940dafc3d3d65cf21507867c9cd9a27431891aab1a6f715a6af87f39e9611b",
+        "expectedRevision": "8773e1c2162941ac151cf1debc4296f1750b282ae0f5762d84a95fc9af646ee5",
+        "publicationJson": "{\"grant\":{\"targetId\":\"4221ae7d9855f0f2734899c6a20152d7dcdd62126bc9567c9ffaa8ba8bf12646\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-n3BzGv\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace\",\"runtimeId\":\"opencode\",\"profileId\":\"TEST-v2-settings-management\",\"configRevision\":\"TEST-opencode-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-n3BzGv\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-n3BzGv\"}]},\"commandId\":\"060c6c7d-a120-44f6-8c75-3a326bc4f566\",\"expectedRevision\":\"8773e1c2162941ac151cf1debc4296f1750b282ae0f5762d84a95fc9af646ee5\",\"candidate\":{\"sourceKind\":\"captured\",\"executable\":{\"path\":\"/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun\",\"sha256\":\"45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675\"},\"openCodeConfiguration\":{\"scope\":\"project\",\"files\":[{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/home/.config/opencode/opencode.json\",\"digest\":\"ea503713005b188f26a137c441bae252c7734a881ae1d608bce0039bdc69fc7e\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/home/.config/opencode/opencode.jsonc\",\"digest\":\"da0c9ac6572314ef5411059d6acf1fa4d12218aa73984484b01a69200922add2\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/config/opencode/opencode.json\",\"digest\":\"b4ea1cb1be7be1ef59abf39c6112bfd5fb7c8b5bba61f956721e6d08af9b2493\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/config/opencode/opencode.jsonc\",\"digest\":\"539cc0121c857a2eab3a2140e53721c0d49badc9650731f1f7775330e6cd8005\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace/opencode.json\",\"digest\":\"0ba32e81d5a41660fd7fb612addc2eecbc2bb7a2dbc1ca56e5300e5068290f70\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace/opencode.jsonc\",\"digest\":\"0e8d20e25e20b31ec195da7443ef38237dd7f2d0cdb16ce65c36cddfa5e4f1cf\"}],\"inlineDigest\":null},\"openCodePreferences\":{\"defaultModelId\":\"test-local/TEST-project-model\",\"modelLimitOverrides\":{}}},\"intent\":\"configuration\"}"
+      }
+    },
+    {
+      "identity": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/hoststore/management-commands/ded973d826635e14459c6e5b1aa95404545536f25ba4d4fbdb241683663cbd0e.json",
+        "bytes": 3237,
+        "blob": "e32ca45c31706133a35a67055d832e07676b2f3c",
+        "sha256": "052614beb90a8fb6a05bc2a1116e4d5fe2eb043b4c1f3ddd8f018e421297162b"
+      },
+      "body": {
+        "schemaVersion": 1,
+        "commandId": "9f4ac98e-026d-4a21-89e2-993603c1946e",
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "providerId": "opencode",
+        "fingerprint": "61afddf51c2b45e8c323dbd9bbfd7dae6640a0349d69a32bd2e4dc6d1976284a",
+        "selectionDigest": "998daf38199f5d6cece178e378c363de8ceb0c1fd93ab2effa390e478652810d",
+        "resourceId": "4221ae7d9855f0f2734899c6a20152d7dcdd62126bc9567c9ffaa8ba8bf12646",
+        "resourceHeld": false,
+        "kind": "runtime.source",
+        "phase": "published",
+        "sourceId": "4221ae7d9855f0f2734899c6a20152d7dcdd62126bc9567c9ffaa8ba8bf12646",
+        "revision": "8773e1c2162941ac151cf1debc4296f1750b282ae0f5762d84a95fc9af646ee5",
+        "expectedRevision": "84ccfae4f9293be6cf02097d4c98a0252a31520e81c1a5b3a5303f06f9d9c674",
+        "publicationJson": "{\"grant\":{\"targetId\":\"4221ae7d9855f0f2734899c6a20152d7dcdd62126bc9567c9ffaa8ba8bf12646\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-n3BzGv\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace\",\"runtimeId\":\"opencode\",\"profileId\":\"TEST-v2-settings-management\",\"configRevision\":\"TEST-opencode-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-n3BzGv\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-n3BzGv\"}]},\"commandId\":\"9f4ac98e-026d-4a21-89e2-993603c1946e\",\"expectedRevision\":\"84ccfae4f9293be6cf02097d4c98a0252a31520e81c1a5b3a5303f06f9d9c674\",\"candidate\":{\"sourceKind\":\"captured\",\"executable\":{\"path\":\"/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun\",\"sha256\":\"45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675\"},\"openCodeConfiguration\":{\"scope\":\"project\",\"files\":[{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/home/.config/opencode/opencode.json\",\"digest\":\"ea503713005b188f26a137c441bae252c7734a881ae1d608bce0039bdc69fc7e\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/home/.config/opencode/opencode.jsonc\",\"digest\":\"da0c9ac6572314ef5411059d6acf1fa4d12218aa73984484b01a69200922add2\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/config/opencode/opencode.json\",\"digest\":\"b4ea1cb1be7be1ef59abf39c6112bfd5fb7c8b5bba61f956721e6d08af9b2493\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/config/opencode/opencode.jsonc\",\"digest\":\"539cc0121c857a2eab3a2140e53721c0d49badc9650731f1f7775330e6cd8005\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace/opencode.json\",\"digest\":\"0ba32e81d5a41660fd7fb612addc2eecbc2bb7a2dbc1ca56e5300e5068290f70\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace/opencode.jsonc\",\"digest\":\"0e8d20e25e20b31ec195da7443ef38237dd7f2d0cdb16ce65c36cddfa5e4f1cf\"}],\"inlineDigest\":null},\"openCodePreferences\":{\"defaultModelId\":\"test-local/TEST-model\",\"modelLimitOverrides\":{}}},\"intent\":\"configuration\"}"
+      }
+    }
+  ],
+  "runtimeIndex": {
+    "identity": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/hoststore/runtime-sources/index.json",
+      "bytes": 15919,
+      "blob": "c2ea7f7ddf6daa99741b04459e08b494fccb9c39",
+      "sha256": "bc51bb3119df7d80aeeabcc54ca6289df9c46da0c5c11a40fbf4cc089d6dcc82"
+    },
+    "digestRecomputed": true,
+    "sevenRecordRevisionsRecomputed": true,
+    "threeCurrentPointersJoined": true,
+    "publications": [
+      {
+        "commandId": "857d29f3-e49a-400d-a4c9-5c5b91e20445",
+        "sourceId": "7ff9173cb1fe2b3e71de76f91994782296a3cc362cbac0bb269ecf01a31d6141",
+        "revision": "1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "previousRevision": "7c504f0024bd40657e7437dcb7e447e25eb4ebb7323a499ed362cc93f10f0a2c",
+        "profileId": "runtime-source:1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "configRevision": "runtime-source:1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "projectPath": null,
+        "defaultModelId": null
+      },
+      {
+        "commandId": "8ba9bdc5-69e5-4b47-b766-83f49a34e68d",
+        "sourceId": "4221ae7d9855f0f2734899c6a20152d7dcdd62126bc9567c9ffaa8ba8bf12646",
+        "revision": "84ccfae4f9293be6cf02097d4c98a0252a31520e81c1a5b3a5303f06f9d9c674",
+        "previousRevision": "998daf38199f5d6cece178e378c363de8ceb0c1fd93ab2effa390e478652810d",
+        "profileId": "runtime-source:84ccfae4f9293be6cf02097d4c98a0252a31520e81c1a5b3a5303f06f9d9c674",
+        "configRevision": "runtime-source:84ccfae4f9293be6cf02097d4c98a0252a31520e81c1a5b3a5303f06f9d9c674",
+        "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace",
+        "defaultModelId": null
+      },
+      {
+        "commandId": "52f4a394-b0c1-4fc1-8714-54328c4c1202",
+        "sourceId": "7ff9173cb1fe2b3e71de76f91994782296a3cc362cbac0bb269ecf01a31d6141",
+        "revision": "58c0e7695e73cc8b4e07ff7319508a8db58b7b29ba041a415591c48a51184397",
+        "previousRevision": "1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "profileId": "runtime-source:58c0e7695e73cc8b4e07ff7319508a8db58b7b29ba041a415591c48a51184397",
+        "configRevision": "runtime-source:58c0e7695e73cc8b4e07ff7319508a8db58b7b29ba041a415591c48a51184397",
+        "projectPath": null,
+        "defaultModelId": "test-local/TEST-model"
+      },
+      {
+        "commandId": "9f4ac98e-026d-4a21-89e2-993603c1946e",
+        "sourceId": "4221ae7d9855f0f2734899c6a20152d7dcdd62126bc9567c9ffaa8ba8bf12646",
+        "revision": "8773e1c2162941ac151cf1debc4296f1750b282ae0f5762d84a95fc9af646ee5",
+        "previousRevision": "84ccfae4f9293be6cf02097d4c98a0252a31520e81c1a5b3a5303f06f9d9c674",
+        "profileId": "runtime-source:8773e1c2162941ac151cf1debc4296f1750b282ae0f5762d84a95fc9af646ee5",
+        "configRevision": "runtime-source:8773e1c2162941ac151cf1debc4296f1750b282ae0f5762d84a95fc9af646ee5",
+        "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace",
+        "defaultModelId": "test-local/TEST-model"
+      },
+      {
+        "commandId": "060c6c7d-a120-44f6-8c75-3a326bc4f566",
+        "sourceId": "4221ae7d9855f0f2734899c6a20152d7dcdd62126bc9567c9ffaa8ba8bf12646",
+        "revision": "29940dafc3d3d65cf21507867c9cd9a27431891aab1a6f715a6af87f39e9611b",
+        "previousRevision": "8773e1c2162941ac151cf1debc4296f1750b282ae0f5762d84a95fc9af646ee5",
+        "profileId": "runtime-source:29940dafc3d3d65cf21507867c9cd9a27431891aab1a6f715a6af87f39e9611b",
+        "configRevision": "runtime-source:29940dafc3d3d65cf21507867c9cd9a27431891aab1a6f715a6af87f39e9611b",
+        "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace",
+        "defaultModelId": "test-local/TEST-project-model"
+      },
+      {
+        "commandId": "80b342a8-22c9-4f7c-ae18-22d996356b40",
+        "sourceId": "3705e3ceeec8d27ce3d3438143992f96a2fd53726b00eb14542aa9292c0966d5",
+        "revision": "450988a7a869bd17c37f3b49fa290371b30e83e5377b5f8d2330b36830232445",
+        "previousRevision": "459194b587cdc2d4dbf394e909084c3290ccd48d7913783609362d8187115e00",
+        "profileId": "runtime-source:450988a7a869bd17c37f3b49fa290371b30e83e5377b5f8d2330b36830232445",
+        "configRevision": "runtime-source:450988a7a869bd17c37f3b49fa290371b30e83e5377b5f8d2330b36830232445",
+        "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace-other",
+        "defaultModelId": "test-local/TEST-model"
+      },
+      {
+        "commandId": "a05d88ea-3f0c-4e1e-8645-33b3907984d1",
+        "sourceId": "4221ae7d9855f0f2734899c6a20152d7dcdd62126bc9567c9ffaa8ba8bf12646",
+        "revision": "537a336eb6da0b5c5d9be443211ecd9ff159f643dd09a63712ca5dd5b4681556",
+        "previousRevision": "29940dafc3d3d65cf21507867c9cd9a27431891aab1a6f715a6af87f39e9611b",
+        "profileId": "runtime-source:537a336eb6da0b5c5d9be443211ecd9ff159f643dd09a63712ca5dd5b4681556",
+        "configRevision": "runtime-source:537a336eb6da0b5c5d9be443211ecd9ff159f643dd09a63712ca5dd5b4681556",
+        "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace",
+        "defaultModelId": "test-local/TEST-model"
+      }
+    ]
+  },
+  "originalEffects": [
+    {
+      "step": "reject-key",
+      "commandId": "5e5d5363-bc8e-4a7e-8ef9-510364093677",
+      "kind": "credential.set",
+      "phase": "held",
+      "resourceHeld": false,
+      "source": {
+        "commandId": "857d29f3-e49a-400d-a4c9-5c5b91e20445",
+        "sourceId": "7ff9173cb1fe2b3e71de76f91994782296a3cc362cbac0bb269ecf01a31d6141",
+        "revision": "1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "previousRevision": "7c504f0024bd40657e7437dcb7e447e25eb4ebb7323a499ed362cc93f10f0a2c",
+        "profileId": "runtime-source:1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "configRevision": "runtime-source:1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "projectPath": null,
+        "defaultModelId": null
+      }
+    },
+    {
+      "step": "connect-key",
+      "commandId": "a510ee9b-756d-4796-b625-888baf35fdb4",
+      "kind": "credential.set",
+      "phase": "completed",
+      "resourceHeld": false,
+      "source": {
+        "commandId": "857d29f3-e49a-400d-a4c9-5c5b91e20445",
+        "sourceId": "7ff9173cb1fe2b3e71de76f91994782296a3cc362cbac0bb269ecf01a31d6141",
+        "revision": "1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "previousRevision": "7c504f0024bd40657e7437dcb7e447e25eb4ebb7323a499ed362cc93f10f0a2c",
+        "profileId": "runtime-source:1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "configRevision": "runtime-source:1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "projectPath": null,
+        "defaultModelId": null
+      }
+    },
+    {
+      "step": "global-default",
+      "commandId": "88d90120-08fd-4faf-93d4-12d2feea4ea2",
+      "kind": "model.probe",
+      "phase": "completed",
+      "resourceHeld": false,
+      "source": {
+        "commandId": "857d29f3-e49a-400d-a4c9-5c5b91e20445",
+        "sourceId": "7ff9173cb1fe2b3e71de76f91994782296a3cc362cbac0bb269ecf01a31d6141",
+        "revision": "1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "previousRevision": "7c504f0024bd40657e7437dcb7e447e25eb4ebb7323a499ed362cc93f10f0a2c",
+        "profileId": "runtime-source:1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "configRevision": "runtime-source:1c873f7e148ac616cdbb5b35553d3ef53e9481fc54343c88809e7fb7ee4cd3a2",
+        "projectPath": null,
+        "defaultModelId": null
+      }
+    },
+    {
+      "step": "project-default",
+      "commandId": "0e965c84-f22b-47d3-915e-f7244702f11d",
+      "kind": "model.probe",
+      "phase": "completed",
+      "resourceHeld": false,
+      "source": {
+        "commandId": "9f4ac98e-026d-4a21-89e2-993603c1946e",
+        "sourceId": "4221ae7d9855f0f2734899c6a20152d7dcdd62126bc9567c9ffaa8ba8bf12646",
+        "revision": "8773e1c2162941ac151cf1debc4296f1750b282ae0f5762d84a95fc9af646ee5",
+        "previousRevision": "84ccfae4f9293be6cf02097d4c98a0252a31520e81c1a5b3a5303f06f9d9c674",
+        "profileId": "runtime-source:8773e1c2162941ac151cf1debc4296f1750b282ae0f5762d84a95fc9af646ee5",
+        "configRevision": "runtime-source:8773e1c2162941ac151cf1debc4296f1750b282ae0f5762d84a95fc9af646ee5",
+        "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace",
+        "defaultModelId": "test-local/TEST-model"
+      }
+    },
+    {
+      "step": "project-test",
+      "commandId": "f4bac3ae-d934-4d25-96e3-5a2fe9ae6cbc",
+      "kind": "model.probe",
+      "phase": "completed",
+      "resourceHeld": false,
+      "source": {
+        "commandId": "060c6c7d-a120-44f6-8c75-3a326bc4f566",
+        "sourceId": "4221ae7d9855f0f2734899c6a20152d7dcdd62126bc9567c9ffaa8ba8bf12646",
+        "revision": "29940dafc3d3d65cf21507867c9cd9a27431891aab1a6f715a6af87f39e9611b",
+        "previousRevision": "8773e1c2162941ac151cf1debc4296f1750b282ae0f5762d84a95fc9af646ee5",
+        "profileId": "runtime-source:29940dafc3d3d65cf21507867c9cd9a27431891aab1a6f715a6af87f39e9611b",
+        "configRevision": "runtime-source:29940dafc3d3d65cf21507867c9cd9a27431891aab1a6f715a6af87f39e9611b",
+        "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/workspace",
+        "defaultModelId": "test-local/TEST-project-model"
+      }
+    }
+  ],
+  "modelRequests": [
+    {
+      "step": "reject-key",
+      "model": "TEST-model",
+      "tools": 0,
+      "authorizationMatched": true,
+      "promptMatched": true,
+      "outcome": "refused"
+    },
+    {
+      "step": "connect-key",
+      "model": "TEST-model",
+      "tools": 0,
+      "authorizationMatched": true,
+      "promptMatched": true,
+      "outcome": "OK"
+    },
+    {
+      "step": "global-default",
+      "model": "TEST-model",
+      "tools": 0,
+      "authorizationMatched": true,
+      "promptMatched": true,
+      "outcome": "OK"
+    },
+    {
+      "step": "project-default",
+      "model": "TEST-project-model",
+      "tools": 0,
+      "authorizationMatched": true,
+      "promptMatched": true,
+      "outcome": "OK"
+    },
+    {
+      "step": "project-test",
+      "model": "TEST-project-model",
+      "tools": 0,
+      "authorizationMatched": true,
+      "promptMatched": true,
+      "outcome": "OK"
+    }
+  ],
+  "uiSteps": [
+    {
+      "monotonicMs": 61927,
+      "action": "mouseMoved",
+      "label": "hover original Settings menu",
+      "selector": "button[aria-label=\"More actions\"]",
+      "target": {
+        "x": 1384,
+        "y": 51.5,
+        "text": "",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 62421,
+      "action": "mouseClick",
+      "label": "original Settings menu",
+      "selector": "button[aria-label=\"More actions\"]",
+      "target": {
+        "x": 1384,
+        "y": 51.5,
+        "text": "",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 62534,
+      "action": "mouseMoved",
+      "label": "hover original Settings",
+      "selector": "button",
+      "target": {
+        "x": 1272,
+        "y": 124.5,
+        "text": "Settings",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 63018,
+      "action": "mouseClick",
+      "label": "original Settings",
+      "selector": "button",
+      "expectedText": "Settings",
+      "target": {
+        "x": 1272,
+        "y": 124.5,
+        "text": "Settings",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 63238,
+      "action": "mouseMoved",
+      "label": "hover original Providers settings",
+      "selector": "[data-testid=\"settings-nav-providers\"]",
+      "target": {
+        "x": 95.5,
+        "y": 222,
+        "text": "Providers",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 63947,
+      "action": "mouseClick",
+      "label": "original Providers settings",
+      "selector": "[data-testid=\"settings-nav-providers\"]",
+      "target": {
+        "x": 95.5,
+        "y": 222,
+        "text": "Providers",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 64515,
+      "action": "mouseWheel",
+      "label": "original OpenCode Manage",
+      "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-opencode\"]",
+      "deltaY": 416.75
+    },
+    {
+      "monotonicMs": 64948,
+      "action": "mouseMoved",
+      "label": "hover original OpenCode Manage",
+      "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-opencode\"]",
+      "target": {
+        "x": 1005.9296875,
+        "y": 777.75,
+        "text": "Manage",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 65512,
+      "action": "mouseClick",
+      "label": "original OpenCode Manage",
+      "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-opencode\"]",
+      "target": {
+        "x": 1005.9296875,
+        "y": 777.75,
+        "text": "Manage",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 74141,
+      "action": "mouseMoved",
+      "label": "hover original provider directory",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-tab-providers\"]",
+      "target": {
+        "x": 349.7109375,
+        "y": 283,
+        "text": "Providers",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 74755,
+      "action": "mouseClick",
+      "label": "original provider directory",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-tab-providers\"]",
+      "target": {
+        "x": 349.7109375,
+        "y": 283,
+        "text": "Providers",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 91804,
+      "action": "mouseMoved",
+      "label": "hover open original API key form",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] button",
+      "target": {
+        "x": 1090.6484375,
+        "y": 388,
+        "text": "Connect",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 92521,
+      "action": "mouseClick",
+      "label": "open original API key form",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] button",
+      "expectedText": "Connect",
+      "target": {
+        "x": 1090.6484375,
+        "y": 388,
+        "text": "Connect",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 103183,
+      "action": "mouseMoved",
+      "label": "hover rejected TEST key",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form input[type=\"password\"]",
+      "target": {
+        "x": 692,
+        "y": 553.5,
+        "text": "",
+        "tag": "INPUT"
+      }
+    },
+    {
+      "monotonicMs": 103752,
+      "action": "mouseClick",
+      "label": "rejected TEST key",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form input[type=\"password\"]",
+      "target": {
+        "x": 692,
+        "y": 553.5,
+        "text": "",
+        "tag": "INPUT"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 104868,
+      "action": "mouseMoved",
+      "label": "hover submit rejected TEST key once",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form button[type=\"submit\"]",
+      "target": {
+        "x": 1069.9765625,
+        "y": 645.5,
+        "text": "Connect & verify",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 105464,
+      "action": "mouseClick",
+      "label": "submit rejected TEST key once",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form button[type=\"submit\"]",
+      "target": {
+        "x": 1069.9765625,
+        "y": 645.5,
+        "text": "Connect & verify",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 140109,
+      "action": "mouseMoved",
+      "label": "hover replacement TEST key",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form input[type=\"password\"]",
+      "target": {
+        "x": 687,
+        "y": 631.5,
+        "text": "",
+        "tag": "INPUT"
+      }
+    },
+    {
+      "monotonicMs": 140669,
+      "action": "mouseClick",
+      "label": "replacement TEST key",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form input[type=\"password\"]",
+      "target": {
+        "x": 687,
+        "y": 631.5,
+        "text": "",
+        "tag": "INPUT"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 141550,
+      "action": "mouseMoved",
+      "label": "hover submit replacement TEST key once",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form button[type=\"submit\"]",
+      "target": {
+        "x": 1059.9765625,
+        "y": 723.5,
+        "text": "Connect & verify",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 142112,
+      "action": "mouseClick",
+      "label": "submit replacement TEST key once",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form button[type=\"submit\"]",
+      "target": {
+        "x": 1059.9765625,
+        "y": 723.5,
+        "text": "Connect & verify",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 191822,
+      "action": "mouseMoved",
+      "label": "hover original Models tab",
+      "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+      "target": {
+        "x": 269.5703125,
+        "y": 283,
+        "text": "Models",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 192791,
+      "action": "mouseClick",
+      "label": "original Models tab",
+      "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+      "target": {
+        "x": 269.5703125,
+        "y": 205,
+        "text": "Models",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 219160,
+      "action": "mouseMoved",
+      "label": "hover original project context",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-project-context-trigger\"]",
+      "target": {
+        "x": 696,
+        "y": 505,
+        "text": "Select project context",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 219808,
+      "action": "mouseClick",
+      "label": "original project context",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-project-context-trigger\"]",
+      "target": {
+        "x": 696,
+        "y": 505,
+        "text": "Select project context",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 220005,
+      "action": "mouseMoved",
+      "label": "hover select original TEST project",
+      "selector": "[role=\"option\"]",
+      "target": {
+        "x": 697,
+        "y": 576.2335510253906,
+        "text": "workspace",
+        "tag": "DIV"
+      }
+    },
+    {
+      "monotonicMs": 220658,
+      "action": "mouseClick",
+      "label": "select original TEST project",
+      "selector": "[role=\"option\"]",
+      "expectedText": "workspace",
+      "target": {
+        "x": 697,
+        "y": 578,
+        "text": "workspace",
+        "tag": "DIV"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 238082,
+      "action": "mouseMoved",
+      "label": "hover Change: Default model",
+      "selector": "[role=\"dialog\"] button[aria-label=\"Change: Default model\"]",
+      "target": {
+        "x": 1096.9765625,
+        "y": 346,
+        "text": "Change",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 238811,
+      "action": "mouseClick",
+      "label": "Change: Default model",
+      "selector": "[role=\"dialog\"] button[aria-label=\"Change: Default model\"]",
+      "target": {
+        "x": 1096.9765625,
+        "y": 346,
+        "text": "Change",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 240472,
+      "action": "mouseMoved",
+      "label": "hover expand original configured provider",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local-header\"]",
+      "target": {
+        "x": 691,
+        "y": 463,
+        "text": "TEtest-localV2 model not verifiedConfigured2 modelsOpenCodeFrom OpenCode settingsAn API key is saved in this scope. Test a model to verify access.Connect",
+        "tag": "DIV"
+      }
+    },
+    {
+      "monotonicMs": 241205,
+      "action": "mouseClick",
+      "label": "expand original configured provider",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local-header\"]",
+      "target": {
+        "x": 691,
+        "y": 463,
+        "text": "TEtest-localV2 model not verifiedConfigured2 modelsOpenCodeFrom OpenCode settingsAn API key is saved in this scope. Test a model to verify access.Connect",
+        "tag": "DIV"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 254864,
+      "action": "mouseMoved",
+      "label": "hover select original global default once",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-model-row-test-local/TEST-model\"] button[aria-label=\"Select: TEST-model: Test this model successfully before using it.\"]",
+      "target": {
+        "x": 1093.3203125,
+        "y": 721,
+        "text": "Select",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 255345,
+      "action": "mouseClick",
+      "label": "select original global default once",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-model-row-test-local/TEST-model\"] button[aria-label=\"Select: TEST-model: Test this model successfully before using it.\"]",
+      "target": {
+        "x": 1093.3203125,
+        "y": 721,
+        "text": "Select",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 322504,
+      "action": "mouseMoved",
+      "label": "hover original Models tab",
+      "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+      "target": {
+        "x": 269.5703125,
+        "y": 251,
+        "text": "Models",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 323202,
+      "action": "mouseClick",
+      "label": "original Models tab",
+      "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+      "target": {
+        "x": 269.5703125,
+        "y": 251,
+        "text": "Models",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 324193,
+      "action": "mouseMoved",
+      "label": "hover Use another model: This project: workspace",
+      "selector": "[role=\"dialog\"] button[aria-label=\"Use another model: This project: workspace\"]",
+      "target": {
+        "x": 1067.3046875,
+        "y": 459.5,
+        "text": "Use another model",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 324873,
+      "action": "mouseClick",
+      "label": "Use another model: This project: workspace",
+      "selector": "[role=\"dialog\"] button[aria-label=\"Use another model: This project: workspace\"]",
+      "target": {
+        "x": 1067.3046875,
+        "y": 459.5,
+        "text": "Use another model",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 326339,
+      "action": "mouseMoved",
+      "label": "hover select original project default once",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-model-row-test-local/TEST-project-model\"] button[aria-label=\"Select: TEST-project-model: Test this model successfully before using it.\"]",
+      "target": {
+        "x": 1083.3203125,
+        "y": 648,
+        "text": "Select",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 327029,
+      "action": "mouseClick",
+      "label": "select original project default once",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-model-row-test-local/TEST-project-model\"] button[aria-label=\"Select: TEST-project-model: Test this model successfully before using it.\"]",
+      "target": {
+        "x": 1083.3203125,
+        "y": 648,
+        "text": "Select",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 383919,
+      "action": "mouseMoved",
+      "label": "hover Test original project model once",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-model-test-test-local/TEST-project-model\"]",
+      "target": {
+        "x": 967.296875,
+        "y": 648,
+        "text": "Test",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 384611,
+      "action": "mouseClick",
+      "label": "Test original project model once",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-model-test-test-local/TEST-project-model\"]",
+      "target": {
+        "x": 967.296875,
+        "y": 648,
+        "text": "Test",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 419356,
+      "action": "mouseMoved",
+      "label": "hover original Models tab",
+      "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+      "target": {
+        "x": 269.5703125,
+        "y": 205,
+        "text": "Models",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 420162,
+      "action": "mouseClick",
+      "label": "original Models tab",
+      "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+      "target": {
+        "x": 269.5703125,
+        "y": 205,
+        "text": "Models",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 421080,
+      "action": "mouseMoved",
+      "label": "hover original project context",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-project-context-trigger\"]",
+      "target": {
+        "x": 696,
+        "y": 464,
+        "text": "workspace",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 421626,
+      "action": "mouseClick",
+      "label": "original project context",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-project-context-trigger\"]",
+      "target": {
+        "x": 696,
+        "y": 464,
+        "text": "workspace",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 421806,
+      "action": "mouseMoved",
+      "label": "hover select original TEST project",
+      "selector": "[role=\"option\"]",
+      "target": {
+        "x": 697,
+        "y": 563.2473754882812,
+        "text": "workspace-other",
+        "tag": "DIV"
+      }
+    },
+    {
+      "monotonicMs": 422377,
+      "action": "mouseClick",
+      "label": "select original TEST project",
+      "selector": "[role=\"option\"]",
+      "expectedText": "workspace-other",
+      "target": {
+        "x": 697,
+        "y": 569,
+        "text": "workspace-other",
+        "tag": "DIV"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 439804,
+      "action": "mouseMoved",
+      "label": "hover original project context",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-project-context-trigger\"]",
+      "target": {
+        "x": 696,
+        "y": 464,
+        "text": "workspace-other",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 440422,
+      "action": "mouseClick",
+      "label": "original project context",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-project-context-trigger\"]",
+      "target": {
+        "x": 696,
+        "y": 464,
+        "text": "workspace-other",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 440587,
+      "action": "mouseMoved",
+      "label": "hover select original TEST project",
+      "selector": "[role=\"option\"]",
+      "target": {
+        "x": 696.9999694824219,
+        "y": 533.9032897949219,
+        "text": "workspace",
+        "tag": "DIV"
+      }
+    },
+    {
+      "monotonicMs": 441138,
+      "action": "mouseClick",
+      "label": "select original TEST project",
+      "selector": "[role=\"option\"]",
+      "expectedText": "workspace",
+      "target": {
+        "x": 697,
+        "y": 537,
+        "text": "workspace",
+        "tag": "DIV"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 443377,
+      "action": "mouseMoved",
+      "label": "hover clear original project override once",
+      "selector": "[role=\"dialog\"] button[aria-label=\"Use default: This project: workspace\"]",
+      "target": {
+        "x": 316.3515625,
+        "y": 504,
+        "text": "Use default",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 444018,
+      "action": "mouseClick",
+      "label": "clear original project override once",
+      "selector": "[role=\"dialog\"] button[aria-label=\"Use default: This project: workspace\"]",
+      "target": {
+        "x": 316.3515625,
+        "y": 504,
+        "text": "Use default",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 472633,
+      "action": "mouseMoved",
+      "label": "hover original Settings menu",
+      "selector": "button[aria-label=\"More actions\"]",
+      "target": {
+        "x": 1384,
+        "y": 51.5,
+        "text": "",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 473977,
+      "action": "mouseClick",
+      "label": "original Settings menu",
+      "selector": "button[aria-label=\"More actions\"]",
+      "target": {
+        "x": 1384,
+        "y": 51.5,
+        "text": "",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 474148,
+      "action": "mouseMoved",
+      "label": "hover original Settings",
+      "selector": "button",
+      "target": {
+        "x": 1272,
+        "y": 124.5,
+        "text": "Settings",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 474708,
+      "action": "mouseClick",
+      "label": "original Settings",
+      "selector": "button",
+      "expectedText": "Settings",
+      "target": {
+        "x": 1272,
+        "y": 124.5,
+        "text": "Settings",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 474977,
+      "action": "mouseMoved",
+      "label": "hover original Providers settings",
+      "selector": "[data-testid=\"settings-nav-providers\"]",
+      "target": {
+        "x": 95.5,
+        "y": 222,
+        "text": "Providers",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 475653,
+      "action": "mouseClick",
+      "label": "original Providers settings",
+      "selector": "[data-testid=\"settings-nav-providers\"]",
+      "target": {
+        "x": 95.5,
+        "y": 222,
+        "text": "Providers",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 476186,
+      "action": "mouseWheel",
+      "label": "original OpenCode Manage",
+      "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-opencode\"]",
+      "deltaY": 416.75
+    },
+    {
+      "monotonicMs": 476587,
+      "action": "mouseMoved",
+      "label": "hover original OpenCode Manage",
+      "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-opencode\"]",
+      "target": {
+        "x": 1005.9296875,
+        "y": 777.75,
+        "text": "Manage",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 477179,
+      "action": "mouseClick",
+      "label": "original OpenCode Manage",
+      "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-opencode\"]",
+      "target": {
+        "x": 1005.9296875,
+        "y": 777.75,
+        "text": "Manage",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 482145,
+      "action": "mouseMoved",
+      "label": "hover original Models tab",
+      "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+      "target": {
+        "x": 269.5703125,
+        "y": 283,
+        "text": "Models",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 482695,
+      "action": "mouseClick",
+      "label": "original Models tab",
+      "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+      "target": {
+        "x": 269.5703125,
+        "y": 283,
+        "text": "Models",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 497521,
+      "action": "mouseMoved",
+      "label": "hover original project context",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-project-context-trigger\"]",
+      "target": {
+        "x": 696,
+        "y": 459,
+        "text": "Select project context",
+        "tag": "BUTTON"
+      }
+    },
+    {
+      "monotonicMs": 498050,
+      "action": "mouseClick",
+      "label": "original project context",
+      "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-project-context-trigger\"]",
+      "target": {
+        "x": 696,
+        "y": 459,
+        "text": "Select project context",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    {
+      "monotonicMs": 498267,
+      "action": "mouseMoved",
+      "label": "hover select original TEST project",
+      "selector": "[role=\"option\"]",
+      "target": {
+        "x": 697.0000305175781,
+        "y": 528.903076171875,
+        "text": "workspace",
+        "tag": "DIV"
+      }
+    },
+    {
+      "monotonicMs": 498868,
+      "action": "mouseClick",
+      "label": "select original TEST project",
+      "selector": "[role=\"option\"]",
+      "expectedText": "workspace",
+      "target": {
+        "x": 697,
+        "y": 532,
+        "text": "workspace",
+        "tag": "DIV"
+      },
+      "state": "attempted"
+    }
+  ],
+  "exactlyOneClickForEachOfSixIntentLabels": [
+    "submit rejected TEST key once",
+    "submit replacement TEST key once",
+    "select original global default once",
+    "select original project default once",
+    "Test original project model once",
+    "clear original project override once"
+  ],
+  "finalPreferences": [
+    {
+      "scope": "global",
+      "sha256": "cac5d9be2ad49793b423ac2e4b18eb9f6991083f4faa92d227ce14bbb0a1ab14",
+      "defaultModelId": "test-local/TEST-model"
+    },
+    {
+      "scope": "project",
+      "sha256": "2994a15037107281f14c901bba5999e42d1d31541c690f7a8410eee4ce8846cf",
+      "defaultModelId": null
+    },
+    {
+      "scope": "other",
+      "sha256": null,
+      "defaultModelId": null
+    }
+  ],
+  "credentialProof": {
+    "authSha256": "ec9a5ca72560031c0361d3b27c3c208ba5c1bc31a33bb78085a80d47ea40393a",
+    "rejectedKeyRetainedUntilExplicitReplacement": true,
+    "successfulReplacementVerified": true
+  },
+  "authFileArchived": false,
+  "screenshotsActuallyViewed": [
+    {
+      "key": "rejectionScreenshot",
+      "actuallyViewedByRoot": true,
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/ui-v2-management-rejected-key.png",
+      "bytes": 123027,
+      "blob": "61076f8cd1b956d93fc8f5988f75a015b147108d",
+      "sha256": "748b96fcc1e445fef56e45541e9f44569df7a66f2e70132641bc14da37a48241"
+    },
+    {
+      "key": "connectedScreenshot",
+      "actuallyViewedByRoot": true,
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/ui-v2-management-connected.png",
+      "bytes": 104089,
+      "blob": "424513eea137744e58f872018302b493c1a99799",
+      "sha256": "0332e54ff70eef0d81c8de9f6722334906ef5352910d46a67aaa3f7ca5e3f5df"
+    },
+    {
+      "key": "projectScreenshot",
+      "actuallyViewedByRoot": true,
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/ui-v2-management-project-override.png",
+      "bytes": 75402,
+      "blob": "76da20056b91199f4901730d50faf87c33c2e6d7",
+      "sha256": "637a6dc16bb24455ff910f8b77e328d025ce4acd1a651ad6c85d523f47c88051"
+    },
+    {
+      "key": "inheritanceScreenshot",
+      "actuallyViewedByRoot": true,
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/ui-v2-management-inherited.png",
+      "bytes": 73947,
+      "blob": "f8ab5ead3bc11ecb2ea0e08c8f0468d199eaa441",
+      "sha256": "3f26be4db8199a5155583c0218e040d20c65c9f6e9c4003c8d872079061ac037"
+    },
+    {
+      "key": "reloadedScreenshot",
+      "actuallyViewedByRoot": true,
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/ui-v2-management-reloaded.png",
+      "bytes": 74122,
+      "blob": "f76380d956d70f6e229268281c93a7c16becf980",
+      "sha256": "215c56f2683536753acf51d3439c2c4d4f64284844727846b511556407f0637c"
+    }
+  ],
+  "visualFindings": [
+    "Rejected key: visible error says The new credential was not kept, while exact original source207 asserts rejected TEST key in auth storage and proof records retention until replacement. This product copy mismatch remains open; no independent archived auth bytes exist.",
+    "Connected: green Connected badge and OpenCode settings attribution, while Connect spinner and model skeletons remain visible.",
+    "Project override: TEST-model global and TEST-project-model workspace with Project override badge.",
+    "Inheritance: workspace shows TEST-model and Uses default; controls are dimmed.",
+    "Reload: global/workspace still TEST-model and Uses default; Providers tab still has a spinner. No universal idle-state or elapsed-duration claim."
+  ],
+  "nativeInput": {
+    "generation": "v2",
+    "version": "2.1.4",
+    "bunSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+    "manifestSha256": "30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce",
+    "profileSha256": "8a0d8fa0a506537f3fa17e5af2837083ba20c831d90d45f80bc035049232337b",
+    "descriptorSha256": "0fd1d101a1865e985b2a103c06d9ddd00edf4f8668e235a2bb556607874b8db0",
+    "runtimeConfigured": false,
+    "managementConfigured": true,
+    "managementProfiles": 2,
+    "codexOrClaudeExecutable": false
+  },
+  "nativeProcesses": {
+    "children": [
+      {
+        "pid": 7037,
+        "ppid": 4823,
+        "pgid": 7037,
+        "birth": "29475",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-probe-32f95ad1a20e4903-1QSfwh",
+        "role": "probe"
+      },
+      {
+        "pid": 7106,
+        "ppid": 4823,
+        "pgid": 7106,
+        "birth": "29742",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-v9Fg9v",
+        "role": "catalog"
+      },
+      {
+        "pid": 7827,
+        "ppid": 4823,
+        "pgid": 7827,
+        "birth": "32466",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-probe-78392e840e1549aa-7eZ2a0",
+        "role": "probe"
+      },
+      {
+        "pid": 9887,
+        "ppid": 4823,
+        "pgid": 9887,
+        "birth": "41669",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-mfOevK",
+        "role": "catalog"
+      },
+      {
+        "pid": 10339,
+        "ppid": 4823,
+        "pgid": 10339,
+        "birth": "43598",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-rlyWPn",
+        "role": "catalog"
+      },
+      {
+        "pid": 10562,
+        "ppid": 4823,
+        "pgid": 10562,
+        "birth": "44494",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-probe-2f21a1a3659f528d-vJrF3o",
+        "role": "probe"
+      },
+      {
+        "pid": 11565,
+        "ppid": 4823,
+        "pgid": 11565,
+        "birth": "47975",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-NuXvKr",
+        "role": "catalog"
+      },
+      {
+        "pid": 11726,
+        "ppid": 4823,
+        "pgid": 11726,
+        "birth": "48514",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-5Apocy",
+        "role": "catalog"
+      },
+      {
+        "pid": 12010,
+        "ppid": 4823,
+        "pgid": 12010,
+        "birth": "49581",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-44WxLR",
+        "role": "catalog"
+      },
+      {
+        "pid": 12222,
+        "ppid": 4823,
+        "pgid": 12222,
+        "birth": "50504",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-T4yQp5",
+        "role": "catalog"
+      },
+      {
+        "pid": 12532,
+        "ppid": 4823,
+        "pgid": 12532,
+        "birth": "51970",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-probe-e8c0e162ddad8cee-1jcGfu",
+        "role": "probe"
+      },
+      {
+        "pid": 12567,
+        "ppid": 4823,
+        "pgid": 12567,
+        "birth": "52085",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-gcs7qY",
+        "role": "catalog"
+      },
+      {
+        "pid": 12979,
+        "ppid": 4823,
+        "pgid": 12979,
+        "birth": "53882",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-E0iSI9",
+        "role": "catalog"
+      },
+      {
+        "pid": 13582,
+        "ppid": 4823,
+        "pgid": 13582,
+        "birth": "55979",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-probe-6782ba97db311c96-xUFIsF",
+        "role": "probe"
+      },
+      {
+        "pid": 14623,
+        "ppid": 4823,
+        "pgid": 14623,
+        "birth": "60414",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-GJWT4L",
+        "role": "catalog"
+      },
+      {
+        "pid": 15197,
+        "ppid": 4823,
+        "pgid": 15197,
+        "birth": "62614",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-93Yeua",
+        "role": "catalog"
+      },
+      {
+        "pid": 15799,
+        "ppid": 4823,
+        "pgid": 15799,
+        "birth": "65545",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-Mpsz0O",
+        "role": "catalog"
+      }
+    ],
+    "probes": [
+      {
+        "step": "reject-key",
+        "pid": 7037,
+        "birth": "29475",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-probe-32f95ad1a20e4903-1QSfwh",
+        "absentAfterReceipt": true
+      },
+      {
+        "step": "connect-key",
+        "pid": 7827,
+        "birth": "32466",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-probe-78392e840e1549aa-7eZ2a0",
+        "absentAfterReceipt": true
+      },
+      {
+        "step": "global-default",
+        "pid": 10562,
+        "birth": "44494",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-probe-2f21a1a3659f528d-vJrF3o",
+        "absentAfterReceipt": true
+      },
+      {
+        "step": "project-default",
+        "pid": 12532,
+        "birth": "51970",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-probe-e8c0e162ddad8cee-1jcGfu",
+        "absentAfterReceipt": true
+      },
+      {
+        "step": "project-test",
+        "pid": 13582,
+        "birth": "55979",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-probe-6782ba97db311c96-xUFIsF",
+        "absentAfterReceipt": true
+      }
+    ]
+  },
+  "nativeBeforeClose": [
+    {
+      "pid": 9887,
+      "ppid": 4823,
+      "pgid": 9887,
+      "birth": "41669",
+      "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-mfOevK",
+      "role": "catalog"
+    },
+    {
+      "pid": 10339,
+      "ppid": 4823,
+      "pgid": 10339,
+      "birth": "43598",
+      "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-rlyWPn",
+      "role": "catalog"
+    },
+    {
+      "pid": 12222,
+      "ppid": 4823,
+      "pgid": 12222,
+      "birth": "50504",
+      "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-T4yQp5",
+      "role": "catalog"
+    },
+    {
+      "pid": 12979,
+      "ppid": 4823,
+      "pgid": 12979,
+      "birth": "53882",
+      "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-E0iSI9",
+      "role": "catalog"
+    },
+    {
+      "pid": 14623,
+      "ppid": 4823,
+      "pgid": 14623,
+      "birth": "60414",
+      "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-GJWT4L",
+      "role": "catalog"
+    },
+    {
+      "pid": 15197,
+      "ppid": 4823,
+      "pgid": 15197,
+      "birth": "62614",
+      "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-93Yeua",
+      "role": "catalog"
+    },
+    {
+      "pid": 15799,
+      "ppid": 4823,
+      "pgid": 15799,
+      "birth": "65545",
+      "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-n3BzGv/providers/opencode-v2/data/agent-teams-v2-catalog-Mpsz0O",
+      "role": "catalog"
+    }
+  ],
+  "app": {
+    "pid": 4456,
+    "processGroup": 4456,
+    "identity": "Mon Nov 16 01:39:19 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-pgAW7E/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox",
+    "invocation": [
+      "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+      "/home/runner/work/_temp/TEST-emulated-ui-inputs-pgAW7E/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+      "dev:mcp",
+      "--remoteDebuggingPort",
+      "9222",
+      "--noSandbox"
+    ]
+  },
+  "hostChild": {
+    "pid": 4823,
+    "birth": "20489",
+    "observedBeforeShutdown": true
+  },
+  "originalClose": {
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "groupRemaining": [],
+    "hostAbsent": true,
+    "nativeRemaining": []
+  },
+  "originalRequestedQuitExit": {
+    "initialExitCode": 0,
+    "initialSignalCode": null,
+    "exitCode": 0,
+    "signalCode": null
+  },
+  "cleanup": {
+    "remaining": [],
+    "capturedHostAbsent": true,
+    "hostPid": 4823
+  },
+  "finiteModelCompleteAndServerClosed": true,
+  "finalFiniteSentinels": [
+    {
+      "executable": "claude-multimodel",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    },
+    {
+      "executable": "opencode",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    },
+    {
+      "executable": "shell-env",
+      "allowed": true,
+      "argc": 2,
+      "flags": [
+        "-lic"
+      ]
+    },
+    {
+      "executable": "opencode",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    },
+    {
+      "executable": "opencode",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    },
+    {
+      "executable": "opencode",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    },
+    {
+      "executable": "opencode",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    },
+    {
+      "executable": "opencode",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    }
+  ],
+  "sourceReview": {
+    "uiFull277Lines": "One UI intent click, original250s receipt loop. Default selections additionally require one visible aria-pressed button/no direct spinner and original post-await ownership/deadline checks. Later original30s reads/controls and reload remain. Source207/212 checks rejected retention then replacement. No intent resend.",
+    "recordsFull170Lines": "Original descriptor grants and management seed select each retained source publication. Command digest/filename, immutable revision, expected predecessor, profile/config, project/model, index history/current pointers are joined; final result is not retargeted from a later current pointer.",
+    "modelFullSource": "Five ordered loopback-only original requests, exact TEST auth/prompt/models and no tools. One401 refusal/fourOK. Native probe observed before finite response; complete/passive assertions disallow replay or extra model calls.",
+    "processFull88Lines": "Read-only original Host and direct-child PID/birth checks, Bun executable/argv/data namespace and detached group; five original probes absent by birth after receipt. Process/path observations grant no signal authority and remain non-atomic.",
+    "smokeFull168Lines": "Original verified TEST-window close acknowledged then group/Host/native absence and launcher0/null before harness cleanup. Final source/native input and finite model checked. No separate native-child exit codes are synthesized from absence."
+  },
+  "limits": [
+    "The33-member original archive retain sanitized receipt/journals/images; native binary and complete auth/config input bytes are not all archived. Runtime/compiler/bundle hashes remain original measurements, not an independent rebuild.",
+    "Five original intents are one refusal and four successful TEST model results. No real vendor auth/inference, real Claude/Codex, V2 OAuth/forget or Team runtime launch.",
+    "Default intent exact accepted DOM sample and promise duration are not separately serialized. This original source PASS does not reconstruct the historical6626 awaited state or prove a production busy-state repair.",
+    "Seventeen original native identities and five absence observations are not17 natural-exit callbacks or an atomic custody certificate. App0/null and Host/native absence are distinct facts.",
+    "The current privacy helper6ff was not under test. No transfer to its ten-file GREEN, other lanes, P08/P09, release or merge readiness.",
+    "Only Python standard-library parsing and immutable Git reads were used; no project/native/provider/compiler/test/lint/install command, source/ref change, CI action or business replay."
+  ]
+}

@@ -1,0 +1,793 @@
+{
+  "schema": "original-process-receipt-git-source-pins/v1",
+  "source": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "artifacts": [
+    14194361871
+  ],
+  "sourceOccurrences": 38,
+  "uniqueSourcePaths": 14,
+  "sourceObjects": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "bytes": 43732,
+      "blob": "b9dd573db23b3033b5f3db7024b317681ce31499",
+      "LF": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14",
+      "CRLF": "f514e025dfd60394442348f9f0871592e4315072067779b0aef2ad55812f7cbc"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "bytes": 3398,
+      "blob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f",
+      "LF": "352c62fcce347599a89658a5dc98d3d05d35d4a6d26618cc87faa6ece2f995df",
+      "CRLF": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "bytes": 30721,
+      "blob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+      "LF": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+      "CRLF": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "bytes": 22408,
+      "blob": "3b5a244c27d004af6e82fffa092fa83e1894de73",
+      "LF": "447a3ae82ab6ce0ec866305af2cd426619df3618fbec2397931212379d945784",
+      "CRLF": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "bytes": 32221,
+      "blob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+      "LF": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+      "CRLF": "e5df2f06618adcdda1ad763db90268e6f5acfe4828db433e429526a6a6479fe6"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "bytes": 39026,
+      "blob": "76f5d1953816fd125f576a966c42caefcfc297e2",
+      "LF": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a",
+      "CRLF": "1ea2bf4ba7cb932bdd3b59ad33d3761fdaa07edae4f53d550f4b4de72ba23e2d"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+      "bytes": 9569,
+      "blob": "44c8cba99e4932905da77539a59c904a39da4e36",
+      "LF": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd",
+      "CRLF": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "bytes": 7926,
+      "blob": "67180ac5c567cbeb089d4ef3248391c792e1ba4d",
+      "LF": "8cdc9a1bcc80b61998e93813959f53542a85cb5953c93ae1feb2397e37d9080e",
+      "CRLF": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "bytes": 15213,
+      "blob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+      "LF": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd",
+      "CRLF": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "bytes": 22666,
+      "blob": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+      "LF": "69f6948490d5f4c88f090135912bf8c8189c3558e2480eb1ee4ac69ac15a2c5c",
+      "CRLF": "34ff05cd50faab2f309cfa242cf8a0b1a57865c0641b2bdbe3fc9af4e5e445e3"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "bytes": 6451,
+      "blob": "a7e45d6cadba355ec46a516a68297d46147d741e",
+      "LF": "83d26a98fd977696a05aafbceae9e28a1fbf71c553bc9c1db565c20567fcf470",
+      "CRLF": "119802fbff75a78790b6b28e4e366b81ed266ddcf4005500e45c1b9772d1e0d2"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "bytes": 56556,
+      "blob": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+      "LF": "3cba93b8d78463415511f25e2b86132801fd5a0059d168072e39e03a0ad624b0",
+      "CRLF": "2778e592554d7c3bda511f673da39a4c2dc22f99fd9cb62076f5e24e41ce4648"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "bytes": 7278,
+      "blob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+      "LF": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+      "CRLF": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.ts",
+      "bytes": 1367,
+      "blob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+      "LF": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+      "CRLF": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4"
+    }
+  ],
+  "joins": [
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 6,
+      "recorded": "34ff05cd50faab2f309cfa242cf8a0b1a57865c0641b2bdbe3fc9af4e5e445e3",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceProfile.ts",
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 7,
+      "recorded": "2778e592554d7c3bda511f673da39a4c2dc22f99fd9cb62076f5e24e41ce4648",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts",
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 8,
+      "recorded": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProviderGate.ts",
+      "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 9,
+      "recorded": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProfile.ts",
+      "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 10,
+      "recorded": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeGateContext.ts",
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 11,
+      "recorded": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeGateEvents.ts",
+      "path": "tools/owned-process-broker/nativeGateEvents.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 12,
+      "recorded": "119802fbff75a78790b6b28e4e366b81ed266ddcf4005500e45c1b9772d1e0d2",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceReadiness.ts",
+      "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 13,
+      "recorded": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\fixtures\\providerPeer.mjs",
+      "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 14,
+      "recorded": "1ea2bf4ba7cb932bdd3b59ad33d3761fdaa07edae4f53d550f4b4de72ba23e2d",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\fixtures\\providerDesktopPeer.mjs",
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 15,
+      "recorded": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\owned-process\\HostWindowsLaunch.ts",
+      "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 17,
+      "recorded": "f514e025dfd60394442348f9f0871592e4315072067779b0aef2ad55812f7cbc",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\composition\\prepareTeamModelReadiness.ts",
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 19,
+      "recorded": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\management\\ModelProbeOwner.ts",
+      "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 21,
+      "recorded": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\composition\\projectRuntimeMember.ts",
+      "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 6,
+      "recorded": "34ff05cd50faab2f309cfa242cf8a0b1a57865c0641b2bdbe3fc9af4e5e445e3",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceProfile.ts",
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 7,
+      "recorded": "2778e592554d7c3bda511f673da39a4c2dc22f99fd9cb62076f5e24e41ce4648",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts",
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 8,
+      "recorded": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProviderGate.ts",
+      "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 9,
+      "recorded": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProfile.ts",
+      "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 10,
+      "recorded": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeGateContext.ts",
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 11,
+      "recorded": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeGateEvents.ts",
+      "path": "tools/owned-process-broker/nativeGateEvents.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 12,
+      "recorded": "119802fbff75a78790b6b28e4e366b81ed266ddcf4005500e45c1b9772d1e0d2",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceReadiness.ts",
+      "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 13,
+      "recorded": "e5df2f06618adcdda1ad763db90268e6f5acfe4828db433e429526a6a6479fe6",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\fixtures\\claudeProviderPeer.mjs",
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 14,
+      "recorded": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\owned-process\\HostWindowsLaunch.ts",
+      "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 16,
+      "recorded": "f514e025dfd60394442348f9f0871592e4315072067779b0aef2ad55812f7cbc",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\composition\\prepareTeamModelReadiness.ts",
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 18,
+      "recorded": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\management\\ModelProbeOwner.ts",
+      "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 20,
+      "recorded": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\composition\\projectRuntimeMember.ts",
+      "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 6,
+      "recorded": "34ff05cd50faab2f309cfa242cf8a0b1a57865c0641b2bdbe3fc9af4e5e445e3",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceProfile.ts",
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 7,
+      "recorded": "2778e592554d7c3bda511f673da39a4c2dc22f99fd9cb62076f5e24e41ce4648",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts",
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 8,
+      "recorded": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProviderGate.ts",
+      "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 9,
+      "recorded": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProfile.ts",
+      "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 10,
+      "recorded": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeGateContext.ts",
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 11,
+      "recorded": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeGateEvents.ts",
+      "path": "tools/owned-process-broker/nativeGateEvents.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 12,
+      "recorded": "119802fbff75a78790b6b28e4e366b81ed266ddcf4005500e45c1b9772d1e0d2",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceReadiness.ts",
+      "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 13,
+      "recorded": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\fixtures\\providerPeer.mjs",
+      "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 14,
+      "recorded": "1ea2bf4ba7cb932bdd3b59ad33d3761fdaa07edae4f53d550f4b4de72ba23e2d",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\fixtures\\providerDesktopPeer.mjs",
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 16,
+      "recorded": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\owned-process\\HostWindowsLaunch.ts",
+      "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 18,
+      "recorded": "f514e025dfd60394442348f9f0871592e4315072067779b0aef2ad55812f7cbc",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\composition\\prepareTeamModelReadiness.ts",
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 20,
+      "recorded": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\management\\ModelProbeOwner.ts",
+      "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "matches": true
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 22,
+      "recorded": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\composition\\projectRuntimeMember.ts",
+      "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "matches": true
+    }
+  ],
+  "builtOutputOccurrences": [
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 2,
+      "recorded": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\cli.js",
+      "path": "packages/legacy-agent-host/dist/cli.js"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 16,
+      "recorded": "975108117efd64201c73fb9f565ac890d8b156f7c0a06eb46d5bb6fc15018cb4",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\owned-process\\HostWindowsLaunch.js",
+      "path": "packages/legacy-agent-host/dist/owned-process/HostWindowsLaunch.js"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 18,
+      "recorded": "265208df5743490006ea59f2f4016ab3cd59619c37af575162576c319e2d416f",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\composition\\prepareTeamModelReadiness.js",
+      "path": "packages/legacy-agent-host/dist/composition/prepareTeamModelReadiness.js"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 20,
+      "recorded": "7201def22b57f351f0c85f20270240c918e203691bb029a44b278580f6b25283",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\management\\ModelProbeOwner.js",
+      "path": "packages/legacy-agent-host/dist/management/ModelProbeOwner.js"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 22,
+      "recorded": "371c569579af59881eaf03a3cd5a622a67a62b2fb780267d0ff78fd8e6fe6770",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\composition\\projectRuntimeMember.js",
+      "path": "packages/legacy-agent-host/dist/composition/projectRuntimeMember.js"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 2,
+      "recorded": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\cli.js",
+      "path": "packages/legacy-agent-host/dist/cli.js"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 15,
+      "recorded": "975108117efd64201c73fb9f565ac890d8b156f7c0a06eb46d5bb6fc15018cb4",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\owned-process\\HostWindowsLaunch.js",
+      "path": "packages/legacy-agent-host/dist/owned-process/HostWindowsLaunch.js"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 17,
+      "recorded": "265208df5743490006ea59f2f4016ab3cd59619c37af575162576c319e2d416f",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\composition\\prepareTeamModelReadiness.js",
+      "path": "packages/legacy-agent-host/dist/composition/prepareTeamModelReadiness.js"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 19,
+      "recorded": "7201def22b57f351f0c85f20270240c918e203691bb029a44b278580f6b25283",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\management\\ModelProbeOwner.js",
+      "path": "packages/legacy-agent-host/dist/management/ModelProbeOwner.js"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 21,
+      "recorded": "371c569579af59881eaf03a3cd5a622a67a62b2fb780267d0ff78fd8e6fe6770",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\composition\\projectRuntimeMember.js",
+      "path": "packages/legacy-agent-host/dist/composition/projectRuntimeMember.js"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 2,
+      "recorded": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\cli.js",
+      "path": "packages/legacy-agent-host/dist/cli.js"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 15,
+      "recorded": "64d2db6a0a14d6214e37e2f81a6e9b3afffd9f901f37bcd351026f98bf64f02b",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\adapters\\providers\\OpenCodeMcpPolicyPlugin.js",
+      "path": "packages/legacy-agent-host/dist/adapters/providers/OpenCodeMcpPolicyPlugin.js"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 17,
+      "recorded": "975108117efd64201c73fb9f565ac890d8b156f7c0a06eb46d5bb6fc15018cb4",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\owned-process\\HostWindowsLaunch.js",
+      "path": "packages/legacy-agent-host/dist/owned-process/HostWindowsLaunch.js"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 19,
+      "recorded": "265208df5743490006ea59f2f4016ab3cd59619c37af575162576c319e2d416f",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\composition\\prepareTeamModelReadiness.js",
+      "path": "packages/legacy-agent-host/dist/composition/prepareTeamModelReadiness.js"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 21,
+      "recorded": "7201def22b57f351f0c85f20270240c918e203691bb029a44b278580f6b25283",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\management\\ModelProbeOwner.js",
+      "path": "packages/legacy-agent-host/dist/management/ModelProbeOwner.js"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 23,
+      "recorded": "371c569579af59881eaf03a3cd5a622a67a62b2fb780267d0ff78fd8e6fe6770",
+      "originalPath": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\composition\\projectRuntimeMember.js",
+      "path": "packages/legacy-agent-host/dist/composition/projectRuntimeMember.js"
+    }
+  ],
+  "builtOutputPaths": [
+    "packages/legacy-agent-host/dist/adapters/providers/OpenCodeMcpPolicyPlugin.js",
+    "packages/legacy-agent-host/dist/cli.js",
+    "packages/legacy-agent-host/dist/composition/prepareTeamModelReadiness.js",
+    "packages/legacy-agent-host/dist/composition/projectRuntimeMember.js",
+    "packages/legacy-agent-host/dist/management/ModelProbeOwner.js",
+    "packages/legacy-agent-host/dist/owned-process/HostWindowsLaunch.js"
+  ],
+  "outsideGitPins": [
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 0,
+      "recorded": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+      "originalPath": "C:\\hostedtoolcache\\windows\\node\\24.21.0\\x64\\node.exe"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 1,
+      "recorded": "0f7324b639c4e62d7a428245129d1a0d8a540abf5715a24166d7eb9f83a1442c",
+      "originalPath": "D:\\a\\_temp\\TEST-process-scoped-stage-x64\\owned-process-broker.exe"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 3,
+      "recorded": "4fcb11217d20082a8cf502e7f8d9f90b95911dfe6c22dd2d2b8035a55d6af3ef",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgDCA.tmp\\TEST-desktop-backend-codexe19d35f7b407425da880b4705ef6550d\\TEST-source-host.mjs"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 4,
+      "recorded": "ca06c8d9d80f78a2ca9401ae8873787dcb4222a96e6aa1cb0c8fd17d17fe41e4",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgDCA.tmp\\TEST-desktop-backend-codexe19d35f7b407425da880b4705ef6550d\\TEST-source-profile.json"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 5,
+      "recorded": "acb963eafb8422a8d3c61428eb86258ff7f1977ba916c5fc9d69cc141de6cd02",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgDCA.tmp\\TEST-desktop-backend-codexe19d35f7b407425da880b4705ef6550d\\TEST-source-descriptor.json"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 23,
+      "recorded": "04f197dbb30ba948bf3b637985e48e307be42a17c91b8201f68a2c3c062d992f",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgDCA.tmp\\TEST-desktop-backend-codexe19d35f7b407425da880b4705ef6550d\\bin\\TEST source A.cmd"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 24,
+      "recorded": "3d70369838e3b952ec88214e47be8fb382fa6443d31dd5c579f4a036cba69657",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgDCA.tmp\\TEST-desktop-backend-codexe19d35f7b407425da880b4705ef6550d\\bin\\TEST-source-A.mjs"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 25,
+      "recorded": "af86e8d3327aa0f1ad2349113f34c8312cce0527aa2dd83e49efee3595f77a91",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgDCA.tmp\\TEST-desktop-backend-codexe19d35f7b407425da880b4705ef6550d\\bin\\TEST source B.cmd"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "codex",
+      "index": 26,
+      "recorded": "0344e207abbb84a1905eabc9410dafe8749da2f0b5604597fc6b7b3839302231",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgDCA.tmp\\TEST-desktop-backend-codexe19d35f7b407425da880b4705ef6550d\\bin\\TEST-source-B.mjs"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 0,
+      "recorded": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+      "originalPath": "C:\\hostedtoolcache\\windows\\node\\24.21.0\\x64\\node.exe"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 1,
+      "recorded": "0f7324b639c4e62d7a428245129d1a0d8a540abf5715a24166d7eb9f83a1442c",
+      "originalPath": "D:\\a\\_temp\\TEST-process-scoped-stage-x64\\owned-process-broker.exe"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 3,
+      "recorded": "5794502137043c093f52f70bc91e435812ced459f9ddc7ae06d6d647063cfa79",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgC61E.tmp\\TEST-desktop-backend-claude389a7b91483b4cfab46c2a86d2d09925\\TEST-source-host.mjs"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 4,
+      "recorded": "a8f968f92a681395d90d212e6517582431143d270abfa70c2855fe7dfce7dcec",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgC61E.tmp\\TEST-desktop-backend-claude389a7b91483b4cfab46c2a86d2d09925\\TEST-source-profile.json"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 5,
+      "recorded": "ac8f38621cc06bdaa4d74533932772fa1081623397226fd3d7cef8a73d06116e",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgC61E.tmp\\TEST-desktop-backend-claude389a7b91483b4cfab46c2a86d2d09925\\TEST-source-descriptor.json"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 22,
+      "recorded": "fa0db2c4bb797e12c20ccbd36c382a95d78814cc0de665df169426aa0c79f914",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgC61E.tmp\\TEST-desktop-backend-claude389a7b91483b4cfab46c2a86d2d09925\\bin\\TEST source A.cmd"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 23,
+      "recorded": "1a7d7169bdcc4a0525de79d351d5c445677adb95c3280f7e69c93524cbbc9dec",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgC61E.tmp\\TEST-desktop-backend-claude389a7b91483b4cfab46c2a86d2d09925\\bin\\TEST-source-A.mjs"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 24,
+      "recorded": "6bcb541ffa444300a1e6b7a4f5740ac3032ebacecb9e230643376ea176f9aecc",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgC61E.tmp\\TEST-desktop-backend-claude389a7b91483b4cfab46c2a86d2d09925\\bin\\TEST source B.cmd"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "claude",
+      "index": 25,
+      "recorded": "00824dde923d9f5a2c8d21e322b6f4655119f4883f345d639aa2f618d537cd07",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgC61E.tmp\\TEST-desktop-backend-claude389a7b91483b4cfab46c2a86d2d09925\\bin\\TEST-source-B.mjs"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 0,
+      "recorded": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+      "originalPath": "C:\\hostedtoolcache\\windows\\node\\24.21.0\\x64\\node.exe"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 1,
+      "recorded": "0f7324b639c4e62d7a428245129d1a0d8a540abf5715a24166d7eb9f83a1442c",
+      "originalPath": "D:\\a\\_temp\\TEST-process-scoped-stage-x64\\owned-process-broker.exe"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 3,
+      "recorded": "a24cc26cff95c7b15768bf27a1830a20e42a35eb5e93fe6ea040438f014ac8dc",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg214D.tmp\\TEST-desktop-backend-opencode5db561b4e8224eafa2a0b003cbad0ba6\\TEST-source-host.mjs"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 4,
+      "recorded": "7160b5a40c16cd30256b39b920a4d2d49dd7a8ea5f9d8a20d00e222a2daed9e9",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg214D.tmp\\TEST-desktop-backend-opencode5db561b4e8224eafa2a0b003cbad0ba6\\TEST-source-profile.json"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 5,
+      "recorded": "bc1c78659d59baaae4a590162f5f658972ad3e6f521f0327a9ebb556b70a9f9c",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg214D.tmp\\TEST-desktop-backend-opencode5db561b4e8224eafa2a0b003cbad0ba6\\TEST-source-descriptor.json"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 24,
+      "recorded": "3cbd21ed827ee9e5c804baae9b09e66b04de6ec85dc208afe15216cb4c6ac0f1",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg214D.tmp\\TEST-desktop-backend-opencode5db561b4e8224eafa2a0b003cbad0ba6\\bin\\TEST source A.cmd"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 25,
+      "recorded": "4859d3fbae79d3ce7ba57c472d30e941dbc7f3d4b8cef53bd231e2df2c2f5f2f",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg214D.tmp\\TEST-desktop-backend-opencode5db561b4e8224eafa2a0b003cbad0ba6\\bin\\TEST-source-A.mjs"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 26,
+      "recorded": "55484b3156a181da2b360f619efa2839d1c0d335ff42c11a30ec3da64311d804",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg214D.tmp\\TEST-desktop-backend-opencode5db561b4e8224eafa2a0b003cbad0ba6\\bin\\TEST source B.cmd"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 27,
+      "recorded": "69ad3b6ddf56eb4df937e475dd01c51a1a1df72c1f9b1fffd537d81c4c5d583b",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg214D.tmp\\TEST-desktop-backend-opencode5db561b4e8224eafa2a0b003cbad0ba6\\bin\\TEST-source-B.mjs"
+    },
+    {
+      "artifact": 14194361871,
+      "provider": "opencode",
+      "index": 28,
+      "recorded": "1b9a87390b69c62078e0d95bbb7f42504b7b5cd6ead47068730d116f93bbe528",
+      "originalPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg214D.tmp\\TEST-desktop-backend-opencode5db561b4e8224eafa2a0b003cbad0ba6\\workspace\\opencode.json"
+    }
+  ],
+  "limits": [
+    "Exact tracked source pins matched Git LF or Windows CRLF bytes.",
+    "Built outputs, runtime/broker binaries and generated TEST paths are retained receipt observations; no independent build or native execution."
+  ]
+}

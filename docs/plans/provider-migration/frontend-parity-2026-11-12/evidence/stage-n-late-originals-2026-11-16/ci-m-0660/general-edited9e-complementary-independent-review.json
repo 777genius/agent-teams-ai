@@ -1,0 +1,1440 @@
+{
+  "schemaVersion": 1,
+  "result": "APPROVE_EVIDENCE_WITH_ORIGINAL_RENDERER_FAILURE",
+  "reviewer": "/root",
+  "reviewedUtc": "2026-11-16T03:22:21.261724+00:00",
+  "scope": "Five newly completed historical9e edited-General producers (shards1/2/3 and renderer/features lint), joined to the independently reviewed original shard4 for an exact four-shard aggregate. Evidence review is not a passing overall workflow.",
+  "projectExecution": false,
+  "sourceOrRefMutation": false,
+  "additionalCiQueriesForReview": false,
+  "runId": 43776996041,
+  "sourceHead": "9e542899f36c47598a88c764c9e6745589fea3e1",
+  "sourceTree": "dc7e07838cef3f0b6bf83ffce8b5a34f6e7484e4",
+  "syntheticCheckout": "7d5c2e0b8b541eaae9e94495a76e67db0c0cafcf",
+  "checkoutProof": {
+    "originalMergeApi": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-merge-commit-original.json",
+      "bytes": 2653,
+      "blob": "ef866594aca5b5e1508c45eac8372ecb09f93cdd",
+      "sha256": "fca04f15e204a0dfde01b6896c97b26f093fbca514b8fbe0370f80cc379a97f6"
+    },
+    "orderedParents": [
+      "def734338f13bcc3209e78079a0cedbc48f05a5b",
+      "9e542899f36c47598a88c764c9e6745589fea3e1"
+    ],
+    "allSixFullLogsRecordExactMerge": true,
+    "full9429LeafSourceTreeEqualsOriginalApiTree": true,
+    "syntheticObjectLocallyPresentRequired": false
+  },
+  "foundation": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-complementary-foundation.json",
+    "bytes": 2852354,
+    "blob": "3338c3f95abb32f37bcfcc0f2daf477d322a8217",
+    "sha256": "732413870a8b15b1b544799bc2d1981d3cf03cf938ee87033195f778a186be48"
+  },
+  "foundationQualification": "Frozen machine-readable original log/source foundation, not a standalone final verdict. Its hostSkipRows field records only the literal # SKIP row; this review joins the second original reason-labelled skip explicitly.",
+  "priorIndependentShard4AndValidateMain": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-three-producers-independent-review.json",
+    "bytes": 353611,
+    "blob": "582ca153c120ed1e3049ccc018fbae105a018a50",
+    "sha256": "6a6acda4d53e391cd0975fcbb9d5dfc84f8cd647ff814c7b14a5eb8d4e11b91d"
+  },
+  "originalJobSnapshot": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-9e-edited-jobs-0316.json",
+    "bytes": 41417,
+    "blob": "457984d6b8dd44eb0d70cc7a6fa13d23a40e8aa9",
+    "sha256": "20c4ca689c3edf8132172cf64be158758879219b012e43cf3dedfd0be543eee4"
+  },
+  "reviewedJobs": {
+    "test-shard1": {
+      "id": 133026000840,
+      "name": "test (1/4)",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 43776996041,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "CI runner proof: Linux | X64 | ubuntu-24.04",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Setup pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Setup captured Host Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Capture exact Host test runtime",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Read runner image identity",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "CI image proof: ubuntu24@20261111.127.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9
+        },
+        {
+          "name": "Restore pnpm node-gyp executable bit",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10
+        },
+        {
+          "name": "Install lsof for diagnostics ownership checks",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12
+        },
+        {
+          "name": "Rebuild test SQLite native module for Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "Test workspace packages",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14
+        },
+        {
+          "name": "Test CI scripts and OpenCode proof runner safety",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        },
+        {
+          "name": "Build MCP server for root integration tests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16
+        },
+        {
+          "name": "Build captured Host and ledger prerequisites",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        },
+        {
+          "name": "Test root shard",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18
+        },
+        {
+          "name": "Test feedback policy",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 35
+        },
+        {
+          "name": "Post Setup captured Host Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 36
+        },
+        {
+          "name": "Post Setup pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 37
+        },
+        {
+          "name": "Post Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 38
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 39
+        }
+      ]
+    },
+    "test-shard2": {
+      "id": 133026000867,
+      "name": "test (2/4)",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 43776996041,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "CI runner proof: Linux | X64 | ubuntu-24.04",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Setup pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Setup captured Host Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Capture exact Host test runtime",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Read runner image identity",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "CI image proof: ubuntu24@20261111.370.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9
+        },
+        {
+          "name": "Restore pnpm node-gyp executable bit",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10
+        },
+        {
+          "name": "Install lsof for diagnostics ownership checks",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12
+        },
+        {
+          "name": "Rebuild test SQLite native module for Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "Test workspace packages",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14
+        },
+        {
+          "name": "Test CI scripts and OpenCode proof runner safety",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 15
+        },
+        {
+          "name": "Build MCP server for root integration tests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16
+        },
+        {
+          "name": "Build captured Host and ledger prerequisites",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        },
+        {
+          "name": "Test root shard",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18
+        },
+        {
+          "name": "Test feedback policy",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 35
+        },
+        {
+          "name": "Post Setup captured Host Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 36
+        },
+        {
+          "name": "Post Setup pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 37
+        },
+        {
+          "name": "Post Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 38
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 39
+        }
+      ]
+    },
+    "test-shard3": {
+      "id": 133026000853,
+      "name": "test (3/4)",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 43776996041,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "CI runner proof: Linux | X64 | ubuntu-24.04",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Setup pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Setup captured Host Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Capture exact Host test runtime",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Read runner image identity",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "CI image proof: ubuntu24@20261111.370.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9
+        },
+        {
+          "name": "Restore pnpm node-gyp executable bit",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10
+        },
+        {
+          "name": "Install lsof for diagnostics ownership checks",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12
+        },
+        {
+          "name": "Rebuild test SQLite native module for Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "Test workspace packages",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14
+        },
+        {
+          "name": "Test CI scripts and OpenCode proof runner safety",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 15
+        },
+        {
+          "name": "Build MCP server for root integration tests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16
+        },
+        {
+          "name": "Build captured Host and ledger prerequisites",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        },
+        {
+          "name": "Test root shard",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18
+        },
+        {
+          "name": "Test feedback policy",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 35
+        },
+        {
+          "name": "Post Setup captured Host Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 36
+        },
+        {
+          "name": "Post Setup pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 37
+        },
+        {
+          "name": "Post Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 38
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 39
+        }
+      ]
+    },
+    "test-shard4": {
+      "id": 133026000848,
+      "name": "test (4/4)",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 43776996041,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "CI runner proof: Linux | X64 | ubuntu-24.04",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Setup pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Setup captured Host Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Capture exact Host test runtime",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Read runner image identity",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "CI image proof: ubuntu24@20261111.127.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9
+        },
+        {
+          "name": "Restore pnpm node-gyp executable bit",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10
+        },
+        {
+          "name": "Install lsof for diagnostics ownership checks",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12
+        },
+        {
+          "name": "Rebuild test SQLite native module for Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "Test workspace packages",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14
+        },
+        {
+          "name": "Test CI scripts and OpenCode proof runner safety",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 15
+        },
+        {
+          "name": "Build MCP server for root integration tests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16
+        },
+        {
+          "name": "Build captured Host and ledger prerequisites",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        },
+        {
+          "name": "Test root shard",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18
+        },
+        {
+          "name": "Test feedback policy",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 35
+        },
+        {
+          "name": "Post Setup captured Host Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 36
+        },
+        {
+          "name": "Post Setup pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 37
+        },
+        {
+          "name": "Post Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 38
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 39
+        }
+      ]
+    },
+    "lint-renderer": {
+      "id": 133026000887,
+      "name": "lint (renderer)",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_id": 43776996041,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "CI runner proof: Linux | X64 | ubuntu-24.04",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Setup pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Read runner image identity",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "CI image proof: ubuntu24@20261111.127.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Restore pnpm node-gyp executable bit",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9
+        },
+        {
+          "name": "Build captured Host and ledger prerequisites",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10
+        },
+        {
+          "name": "Restore ESLint cache",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Lint source shard",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 12
+        },
+        {
+          "name": "Lint MCP package",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13
+        },
+        {
+          "name": "Post Restore ESLint cache",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 23
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 24
+        },
+        {
+          "name": "Post Setup pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 25
+        },
+        {
+          "name": "Post Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27
+        }
+      ]
+    },
+    "lint-features": {
+      "id": 133026001008,
+      "name": "lint (features)",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 43776996041,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "CI runner proof: Linux | X64 | ubuntu-24.04",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Setup pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Read runner image identity",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "CI image proof: ubuntu24@20261111.370.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Restore pnpm node-gyp executable bit",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9
+        },
+        {
+          "name": "Build captured Host and ledger prerequisites",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10
+        },
+        {
+          "name": "Restore ESLint cache",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Lint source shard",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12
+        },
+        {
+          "name": "Lint MCP package",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13
+        },
+        {
+          "name": "Post Restore ESLint cache",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 24
+        },
+        {
+          "name": "Post Setup pnpm",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 25
+        },
+        {
+          "name": "Post Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27
+        }
+      ]
+    }
+  },
+  "originalInputs": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-test-shard1-original.log",
+      "bytes": 421565,
+      "blob": "3d30659b9a275707f871067144ce56bc554d4942",
+      "sha256": "6559fc946927b84f7c50cc7c278644d0e59f77ab9211e5382b4691c60f043fbf"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-test-shard1-original-response.json",
+      "bytes": 468630,
+      "blob": "d6d4e535225063655b7dd47ce2523a54b0a7cd58",
+      "sha256": "c69a9038ca864afff1a16d559e7f222b7c79c5c5860ad6d97e71cd4e313afb97"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-test-shard2-original.log",
+      "bytes": 200505,
+      "blob": "1569ef2ab062d95a3397949d7eda4c08b92ee095",
+      "sha256": "774a18e81e0f1e03a7326bce8bb4b4ae2aa7e885159a0877506c3026a8005fc8"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-test-shard2-original-response.json",
+      "bytes": 244576,
+      "blob": "755cc571e1e0881b304d4c30b23cd44136f37f22",
+      "sha256": "572a3b91d03e08fbdcc94ee6644467fe4a3630d264a35d60cbe85ca9113bf204"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-test-shard3-original.log",
+      "bytes": 181389,
+      "blob": "79af5d71f2c78e767b4b8aa9f0cadf447ec9cfc6",
+      "sha256": "6a8f67e80f9f54e978cf799bf0db760722519778ae9433149fc4caf7d76c33eb"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-test-shard3-original-response.json",
+      "bytes": 221198,
+      "blob": "6a719b2eb9da24124ec6e4d4df427e476fe58522",
+      "sha256": "0ed23e179646d91eba770fda33c5c56c74f48d0a5df619f6ecca78f3401b0059"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-test-shard4-original.log",
+      "bytes": 209979,
+      "blob": "e0eab264998d76c3f8383cdad398c309d4c648af",
+      "sha256": "a8e329923e5b8c460455aaf13f5956018db89152b184006eecb3706e87535226"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-test-shard4-original-log-response.json",
+      "bytes": 255928,
+      "blob": "22446dcb348eebd2034e44691f7da4882d6629cf",
+      "sha256": "40eb79fb15bc944dfbc2a916a2f6a799190e572702dc081a18c3ad2f7d0d0f4a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-lint-renderer-original.log",
+      "bytes": 813705,
+      "blob": "6ef3bb2a385b54da8114f767ff316a859047c557",
+      "sha256": "1dc0b94aada3975157fd18f625ab1d1502b7831d8d8723c62078a942a0c8f115"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-lint-renderer-original-response.json",
+      "bytes": 819661,
+      "blob": "2341e3154de771ef27efd34d4774263f3c1b21cd",
+      "sha256": "8acb89ecc95f284c944b70d2f8da6937b35d87b0b3551ff04802ccd599bbc5a5"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-lint-features-original.log",
+      "bytes": 451897,
+      "blob": "5f85d29ed6e0691a4d899e1a0a175e0155709bf3",
+      "sha256": "5279d1e35249fa37360c310704125832d05def60c0f6b485bde3756612382071"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-lint-features-original-response.json",
+      "bytes": 455690,
+      "blob": "79bcb96a52437f8623cfbda5994cc46bebc06b77",
+      "sha256": "9c86402794f7d787f61af05c476aa80e1b5009c3a053695edc77185e047e16e7"
+    }
+  ],
+  "allSixRetainedMcpContentStringsEncodeToExactFullRawUtf8": true,
+  "wireByteLimit": "The tool-decoded log string and its exact saved UTF8 re-encoding are proved, not original compressed redirect HTTP-wire bytes.",
+  "freshSourceVerification": {
+    "uniqueFiles": 3145,
+    "bytes": 44681185,
+    "fullGitObjectBytesIndependentlyRead": true,
+    "allBlobAndSha256Verified": true,
+    "sourceManifest": "foundation.sourceInputs",
+    "manualSemanticScope": "Execution selectors/configuration, all skip admission guards, mixed live/finite boundaries, original command groups, and the sole lint error; does not assert a manual semantic code review of all3145files."
+  },
+  "rootShards": [
+    {
+      "shard": 1,
+      "command": "pnpm exec vitest run --maxWorkers=2 --shard=1/4",
+      "startLine": 2249,
+      "endLine": 3174,
+      "files": 549,
+      "passedFiles": 539,
+      "skippedFiles": 10,
+      "tests": 6235,
+      "pass": 6209,
+      "skip": 26,
+      "fail": 0,
+      "duration": "Duration  305.45s (transform 28.27s, setup 12.09s, collect 272.27s, tests 156.86s, environment 83.63s, prepare 26.02s)"
+    },
+    {
+      "shard": 2,
+      "command": "pnpm exec vitest run --maxWorkers=2 --shard=2/4",
+      "startLine": 601,
+      "endLine": 1671,
+      "files": 549,
+      "passedFiles": 539,
+      "skippedFiles": 10,
+      "tests": 6692,
+      "pass": 6653,
+      "skip": 39,
+      "fail": 0,
+      "duration": "Duration  413.50s (transform 34.74s, setup 26.54s, collect 336.84s, tests 220.31s, environment 124.67s, prepare 38.70s)"
+    },
+    {
+      "shard": 3,
+      "command": "pnpm exec vitest run --maxWorkers=2 --shard=3/4",
+      "startLine": 601,
+      "endLine": 1546,
+      "files": 549,
+      "passedFiles": 541,
+      "skippedFiles": 8,
+      "tests": 6365,
+      "pass": 6347,
+      "skip": 18,
+      "fail": 0,
+      "duration": "Duration  388.80s (transform 34.80s, setup 20.09s, collect 337.40s, tests 166.15s, environment 132.05s, prepare 38.78s)"
+    },
+    {
+      "shard": 4,
+      "command": "pnpm exec vitest run --maxWorkers=2 --shard=4/4",
+      "startLine": 598,
+      "endLine": 1708,
+      "files": 548,
+      "passedFiles": 539,
+      "skippedFiles": 9,
+      "tests": 6648,
+      "pass": 6629,
+      "skip": 19,
+      "fail": 0,
+      "duration": "Duration  298.50s (transform 26.74s, setup 12.97s, collect 245.64s, tests 182.98s, environment 76.06s, prepare 24.44s)"
+    }
+  ],
+  "rootAggregate": {
+    "files": 2195,
+    "passedFiles": 2158,
+    "skippedFiles": 37,
+    "tests": 25940,
+    "pass": 25838,
+    "skip": 102,
+    "fail": 0,
+    "allFourDisjoint": true
+  },
+  "exactRootUniverse": {
+    "configuredIncludes": [
+      "test/**/*.test.ts",
+      "test/**/*.test.tsx",
+      "src/**/*.test.ts",
+      "src/**/*.test.tsx"
+    ],
+    "frozenGitMatchingFiles": 2195,
+    "actualFourShardUnionFiles": 2195,
+    "missing": [],
+    "extra": [],
+    "disjoint": true,
+    "all548PriorShard4OrderedRowsRejoined": true,
+    "vitestVersion": "3.2.6",
+    "maxWorkers": 2,
+    "defaultEnvironment": "happy-dom",
+    "defaultTestTimeoutMs": 15000,
+    "limit": "Per-file environment and per-test timeout overrides are preserved; this does not claim all tests used the default environment/timeout or that summary pass counts are unique product capabilities."
+  },
+  "skips": {
+    "cases": 102,
+    "fullySkippedFiles": 37,
+    "filesWithAtLeastOneSkip": 53,
+    "allGuardsFreshSourceRead": true,
+    "guardRows": "foundation.skipSources",
+    "preservedCategories": [
+      "Explicit opt-in live provider/account/project/data scenarios",
+      "Native fixture/SDK/diagnostic prerequisites",
+      "OS-specific Windows/macOS paths and installed-shell availability",
+      "Owned OpenCode proof-wrapper admission"
+    ],
+    "limit": "Observed SKIP plus source guard is retained. No skipped case becomes acceptance, and an unexecuted guard does not prove a specific missing credential/environment value."
+  },
+  "mixedLiveFiles": [
+    {
+      "path": "test/main/services/team/OpenCodeSemanticModelGauntlet.live.test.ts",
+      "pass": 11,
+      "skip": 1,
+      "passedScope": "Report classification/ranking/rendering helpers; live model gauntlet is skipped.",
+      "source": {
+        "path": "test/main/services/team/OpenCodeSemanticModelGauntlet.live.test.ts",
+        "bytes": 74249,
+        "blob": "8eee3b1fb8f67a0af5e5ce14404e576604c6dc03",
+        "sha256": "e3fb4f1d4e0dc55903e298ad1d36e1a9ee5cd58110dd4f157f9f4f2a6f56cc6f",
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "test/main/services/team/OpenCodeSemanticMessaging.live.test.ts",
+      "pass": 2,
+      "skip": 4,
+      "passedScope": "Temporary sandbox project selection/refusal; four live delivery cases are skipped.",
+      "source": {
+        "path": "test/main/services/team/OpenCodeSemanticMessaging.live.test.ts",
+        "bytes": 20827,
+        "blob": "8beb974966b9243e754d942bf4fe44739893bbbf",
+        "sha256": "95c8a31139453bdf2528f48bd1e9c42014a5c44205d2bb3bc1c07feaa9d4cb36",
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "test/main/services/team/OpenCodeFullTeamCollaboration.live.test.ts",
+      "pass": 3,
+      "skip": 1,
+      "passedScope": "Completed assistant call/result evidence and wrong-model rejection; live paid team is skipped.",
+      "source": {
+        "path": "test/main/services/team/OpenCodeFullTeamCollaboration.live.test.ts",
+        "bytes": 31120,
+        "blob": "e2dd21f54cd37b4e3f16e7b83e0e159be034fe9c",
+        "sha256": "06b8e6ea4e9e520f21ae25cff35ef8a9c626fad7d8c004b5ae5e2681cc89a2d1",
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "pass": 2,
+      "skip": 3,
+      "passedScope": "Platform/binary eligibility refusal; three original Windows packaged variants are skipped.",
+      "source": {
+        "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+        "bytes": 20452,
+        "blob": "57083b1e030958ff4279ea15fffd3a0e7deecad0",
+        "sha256": "b2d86e9ce908930fa1f0da0662d31c9eb6354a578ef69c94a9e581f414d3efbf",
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "src/main/services/infrastructure/codexAppServer/__tests__/CodexBinaryResolver.real.test.ts",
+      "pass": 3,
+      "skip": 1,
+      "passedScope": "Explicit TEST shell executable with isolated PATH and synthetic version99.0.0; current local Codex smoke is skipped.",
+      "source": {
+        "path": "src/main/services/infrastructure/codexAppServer/__tests__/CodexBinaryResolver.real.test.ts",
+        "bytes": 5081,
+        "blob": "e1e93fd32288ca463fda5513688e364e180d1b7f",
+        "sha256": "45c8961b91b3c622f9771899c3aea71f4843b202deae738ab14afb0fdbc24ed8",
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "test/main/services/runtime/AnthropicAutoShellEnv.safe-e2e.test.ts",
+      "pass": 9,
+      "skip": 1,
+      "passedScope": "Finite local runtime stub and shell environment behavior; configured native-runtime smoke is skipped.",
+      "source": {
+        "path": "test/main/services/runtime/AnthropicAutoShellEnv.safe-e2e.test.ts",
+        "bytes": 22427,
+        "blob": "b848b741a71d70676af7cd65cd745244e0dde1c8",
+        "sha256": "333a56feffedaa1b86a9c2deb7e5fc8572684319d7e745a191c39da03a9eb4a7",
+        "mode": "100644"
+      }
+    }
+  ],
+  "workspaceShard1": {
+    "workflowSource": {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 175238,
+      "blob": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+      "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce",
+      "mode": "100644"
+    },
+    "controllerVitest": {
+      "files": 19,
+      "tests": 424,
+      "pass": 424,
+      "fail": 0,
+      "skip": 0,
+      "durationSeconds": 10.54
+    },
+    "mcpVitest": {
+      "files": 4,
+      "tests": 78,
+      "pass": 78,
+      "fail": 0,
+      "skip": 0,
+      "durationSeconds": 1.06
+    },
+    "portableHost": {
+      "command": "PATH=\"$(dirname \"$AGENT_BACKEND_TEST_NODE\"):$PATH\" pnpm --filter @agent-teams/legacy-agent-host test",
+      "packageScript": "pnpm build && pnpm typecheck:test && node --test --test-concurrency=1 tests/*.test.ts tests/fixtures/native-claude-team/model.test.ts tests/fixtures/native-opencode-team/model.test.ts tests/fixtures/native-codex-team/model.test.ts",
+      "node": "24.21.0",
+      "tests": 1412,
+      "pass": 1410,
+      "fail": 0,
+      "skip": 2,
+      "cancelled": 0,
+      "todo": 0,
+      "durationMs": 262113.611343,
+      "originalSkipCases": [
+        {
+          "originalLogLine": 1387,
+          "name": "private V2 driver refuses drive-relative Windows cwd before network access",
+          "sourcePath": "packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts",
+          "sourceLine": 3223,
+          "guard": "{ skip: process.platform !== 'win32' }",
+          "scope": "Windows-only branch remains unexecuted on Linux.",
+          "source": {
+            "path": "packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts",
+            "bytes": 182299,
+            "blob": "de09aac5ead356339b87fcc568798f930067f1cc",
+            "sha256": "c3c736d96b9df0808b7841a593205afc2648a41f70e202b359244e756e9750da",
+            "mode": "100644"
+          }
+        },
+        {
+          "originalLogLine": 1483,
+          "name": "V2 current-main live checkout never inherits a TEST-only historical candidate",
+          "sourcePath": "packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts",
+          "sourceLine": 136,
+          "guard": "if (!currentProductPath) { t.skip('real-main manifest supplied by dedicated Actions job'); return; }",
+          "scope": "A distinct real-main lock was not supplied to this portable package invocation; dedicated current-product qualification is not inferred.",
+          "source": {
+            "path": "packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts",
+            "bytes": 37133,
+            "blob": "a346d346c617b8fb79192cd19970e7cde2e98854",
+            "sha256": "d0c5c343bb732f7c6d3063bc55edf2ad7e2431a14eb7c57dc99694e61d38844f",
+            "mode": "100644"
+          }
+        }
+      ],
+      "sourceExpansion": "foundation.originalShellPatternExpansions",
+      "limit": "This historical package script and old stderr regression file do not execute current0660/608 ten-file177 command or certify current24stderr GREEN."
+    },
+    "ciSafety": {
+      "command": "node --test test/scripts/auditDependencies.test.mjs test/scripts/installDependenciesWithRetry.test.mjs test/scripts/proveOpenCode*.test.mjs test/scripts/opencodeProofVitest.integration.test.mjs 2>&1 | tail -20",
+      "pass": 166,
+      "fail": 0,
+      "skip": 0,
+      "cancelled": 0,
+      "todo": 0,
+      "durationMs": 3216.093502,
+      "pipefail": true,
+      "retentionLimit": "Original workflow deliberately retains only its final20lines. The full job log cannot restore discarded per-case output; summary and exact frozen shell-expansion sources are joined without claiming all166individualcase logs."
+    },
+    "feedbackPolicy": {
+      "command": "node --test --test-force-exit test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts",
+      "pass": 117,
+      "fail": 0,
+      "skip": 0,
+      "cancelled": 0,
+      "todo": 0,
+      "durationMs": 908.003995,
+      "limit": "Existing original --test-force-exit is retained as a test-command property, not native product process-cleanup evidence."
+    },
+    "otherShardsSkipShard1OnlySteps": true
+  },
+  "runtime": {
+    "rootAndLintNode": "26.12.1",
+    "capturedHostNode": "24.21.0",
+    "pnpm": "11.22.0",
+    "projectCompilerAlias": "@typescript/native = npm:typescript@7.0.2",
+    "lintTypescript": "5.9.3",
+    "typescriptEslint": "8.54.0",
+    "rootAndLintInstallProfile": "node-ci",
+    "electronInstallSkip": "1",
+    "originalUnsupportedEngineWarningsRetained": true,
+    "limit": "A captured Node variable alone is not evidence every subprocess used24; the Host-only PATH prefix in the original shard1 command is explicit."
+  },
+  "lint": {
+    "renderer": {
+      "conclusion": "failure",
+      "errors": 1,
+      "warnings": 1416,
+      "diagnosticFiles": 419,
+      "command": "pnpm lint:ci:files src/renderer --cache-location .eslintcache-renderer",
+      "potentiallyFixableErrors": 1,
+      "potentiallyFixableWarnings": 76,
+      "soleError": {
+        "originalLogLine": 5148,
+        "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+        "line": 201,
+        "column": 12,
+        "severity": "error",
+        "messageHead": "This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion"
+      },
+      "source": {
+        "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+        "bytes": 8708,
+        "blob": "8299f9f9589810c106c328840b2c0d3640113811",
+        "sha256": "96511a26aaf8ead7ebdaeec018d79d4f9568ff29ee85f8b4eef46adbc2a4a954",
+        "mode": "100644"
+      },
+      "sourceExcerpt": [
+        {
+          "line": 181,
+          "text": "  const previousRunId = prev.currentRuntimeRunIdByTeam[teamName];"
+        },
+        {
+          "line": 182,
+          "text": "  const hostCurrent = hostMemberSpawnSnapshotCurrentness(snapshot, teamName);"
+        },
+        {
+          "line": 183,
+          "text": "  const hostRevision ="
+        },
+        {
+          "line": 184,
+          "text": "    typeof previousRunId === 'string' &&"
+        },
+        {
+          "line": 185,
+          "text": "    typeof snapshot.runId === 'string' &&"
+        },
+        {
+          "line": 186,
+          "text": "    isSameHostLaunchRevision(teamName, previousRunId, snapshot.runId);"
+        },
+        {
+          "line": 187,
+          "text": "  if (hostCurrent === false || (hostRevision && hostCurrent !== true)) return {};"
+        },
+        {
+          "line": 188,
+          "text": "  if ("
+        },
+        {
+          "line": 189,
+          "text": "    hostRevision &&"
+        },
+        {
+          "line": 190,
+          "text": "    [previousRunId, snapshot.runId].some("
+        },
+        {
+          "line": 191,
+          "text": "      (runId) =>"
+        },
+        {
+          "line": 192,
+          "text": "        prev.ignoredRuntimeRunIds[runId!] === teamName ||"
+        },
+        {
+          "line": 193,
+          "text": "        prev.ignoredProvisioningRunIds?.[runId!] === teamName"
+        },
+        {
+          "line": 194,
+          "text": "    )"
+        },
+        {
+          "line": 195,
+          "text": "  )"
+        },
+        {
+          "line": 196,
+          "text": "    return {};"
+        },
+        {
+          "line": 197,
+          "text": "  const retired = hostRevision"
+        },
+        {
+          "line": 198,
+          "text": "    ? {"
+        },
+        {
+          "line": 199,
+          "text": "        ignoredRuntimeRunIds: {"
+        },
+        {
+          "line": 200,
+          "text": "          ...prev.ignoredRuntimeRunIds,"
+        },
+        {
+          "line": 201,
+          "text": "          [previousRunId!]: teamName,"
+        },
+        {
+          "line": 202,
+          "text": "        },"
+        },
+        {
+          "line": 203,
+          "text": "      }"
+        },
+        {
+          "line": 204,
+          "text": "    : {};"
+        }
+      ],
+      "minimalLaterCandidate": "Remove only the assertion! on previousRunId at line201. The hostRevision conditional already narrows this identifier. Keep callback assertions at192/193 and all guards. No patch/R1/application performed here."
+    },
+    "features": {
+      "conclusion": "success",
+      "errors": 0,
+      "warnings": 1483,
+      "diagnosticFiles": 410,
+      "command": "pnpm lint:ci:files src/features --cache-location .eslintcache-features",
+      "potentiallyFixableWarnings": 98
+    },
+    "all2900DiagnosticHeadsAndSourceJoins": "foundation.lint",
+    "allDiagnosticCountsRecomputed": true,
+    "multilineMessages": "Full raw logs retain continuation text. Foundation diagnostic rows deliberately retain the message head and original source/log location, not a claim that every message is one line.",
+    "cache": "Existing --cache --cache-strategy content and original restore steps retained; not an uncached run.",
+    "memoryMiB": 8192,
+    "zeroWarningGate": false
+  },
+  "currentness": [
+    {
+      "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "historical9eBlob": "8299f9f9589810c106c328840b2c0d3640113811",
+      "original0660Blob": "8299f9f9589810c106c328840b2c0d3640113811",
+      "current608Blob": "8299f9f9589810c106c328840b2c0d3640113811"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "historical9eBlob": "e52785444caebdc8c698d87ac122f4a13742b5cc",
+      "original0660Blob": "0727339627757c3a96d54da2933eb7c1b60685f7",
+      "current608Blob": "0727339627757c3a96d54da2933eb7c1b60685f7"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "historical9eBlob": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+      "original0660Blob": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+      "current608Blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9"
+    }
+  ],
+  "qualificationLimits": [
+    "Historical9e results do not qualify current608 privacy or current-source full CI.",
+    "Original renderer lint is FAILURE; its TypeScript/ESLint context is distinct from project TS7.0.2 typechecking.",
+    "No frontend Desktop, packaged/native physical custody or real vendor execution acceptance follows from these unit/integration totals.",
+    "Previous dedicated backend compiler137 and original K Host build-9 remain original failures; no local/full/dedicated compiler retry was performed.",
+    "At frozen03:16snapshot Full qualification was queued; no terminal or successful gate is inferred. Draft policy and Stage1 skips remain unchanged.",
+    "No workflow change, manual dispatch/rerun/cancel, Ready transition, source patch or ref write occurred during this audit."
+  ],
+  "finalVerdict": "Accept the five original producer records and exact historical four-shard aggregate with all102root skips,2portableHost skips,166case truncated-log limit,2899lint warnings and the sole renderer error preserved. Current privacy qualification remains pending."
+}

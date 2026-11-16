@@ -1,0 +1,83 @@
+{
+  "kind": "Recoverable original N Linux Process author packet",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234913,
+  "jobId": 133062439920,
+  "artifactId": 14196613192,
+  "payloads": [
+    {
+      "path": "native-audit-N608efb/new-terminal-0413/job-133062439920.log",
+      "bytes": 133872,
+      "blob": "b048300df3438322dde9746378079704671affd8",
+      "sha256": "81dfd53ed34af94a997eb5446e5229ff71ef8dd2fd9928f612e164e9c6781b4b"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0413/processLinuxLog-original-response.json",
+      "bytes": 140903,
+      "blob": "80778e952838e666c64c675656ee33ab6b677bc5",
+      "sha256": "f5e768f7fa38322334351eb0321a6d7f88d074c9699f5e6ae1bf035fc4206f7e"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0413/artifact-14196613192.zip",
+      "bytes": 1522684,
+      "blob": "d9c2b646e9f49540e7779a1605db2ac5cac4e09b",
+      "sha256": "ebe2edcfa0ce9b684408155d9348cf6d83d7c3c0a7c47e2a4963a404bae99065"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0413/archive-14196613192-retention.json",
+      "bytes": 13483,
+      "blob": "955ddc27f5551a5e6f02db89fa79266c63978584",
+      "sha256": "11b193fc52c00822fd896422661963225abcb9993ab54692c8aa0afe610929ad"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0413/processArtifacts-original-response.json",
+      "bytes": 5082,
+      "blob": "32d23ea81740742a842d5aacac2d2f7ac162a6e2",
+      "sha256": "60926a9aed41484cff76dd1c270e90b5d4709327a7022432ca4532b3772f518d"
+    },
+    {
+      "path": "ci-n-608efb/process-jobs-0413.json",
+      "bytes": 31010,
+      "blob": "1dbdc22f813006883dbcf3db4277de5ad53ed17f",
+      "sha256": "21ab6297e9699f7a01b85531964c995aee9dbeb43f411b56b72c436ffa3b25de"
+    },
+    {
+      "path": "ci-n-608efb/process-original-run-0258.json",
+      "bytes": 30100,
+      "blob": "5df818f7e9483a282a981409714e07334dc11b67",
+      "sha256": "430697b8e7e520788d7ae2c8f0d43e0b6ab3354f44155a4ce482d8df509dc92d"
+    },
+    {
+      "path": "native-audit-N608efb/host-source-N608efb-git-audit.json",
+      "bytes": 163123,
+      "blob": "9c8472f84db2ee0615314b9fd05df207e2c7d112",
+      "sha256": "30dbbf806666206c905b346f15e475646c2840d0c29f326a953fb3202d595ea0"
+    },
+    {
+      "path": "native-audit-N608efb/process-linux-x64/source-audit.json",
+      "bytes": 18194,
+      "blob": "fab59c62fe2d06d1839e5f0b29eaf8182ed79e80",
+      "sha256": "f5393855084ec4e12a56760808177e875e5219bb885f43eca0f7616a7858af4d"
+    },
+    {
+      "path": "native-audit-N608efb/process-linux-x64/audit.json",
+      "bytes": 95155,
+      "blob": "248788344f65015104993c2dd9a9f6c9e281ca08",
+      "sha256": "49a2609bf5f77c06c9b241e20007b528894030c2d8f1f71fd942ff5bc85c1654"
+    },
+    {
+      "path": "native-audit-N608efb/process-linux-x64/Plan29-linux-process-appendix.md",
+      "bytes": 4016,
+      "blob": "61fb2dcd3046bdd695bfa7a9744ec3fdda95676a",
+      "sha256": "444b9a5c8217af05ee5656d2301a6cea6ff537e1d1dfe92d6bc9ed9cb3771c59"
+    }
+  ],
+  "payloadCount": 11,
+  "payloadBytes": 2157622,
+  "archiveMembers": 51,
+  "duplicateCopies": 20,
+  "canonicalNativeRuns": 4,
+  "recoverability": "Original archive contains all native proof/log/build-source-manifest/selection members; original full APIs/MCP/log and current source audit are separate exact payloads.",
+  "independentReviewPending": true,
+  "signedUrlsRetained": false
+}

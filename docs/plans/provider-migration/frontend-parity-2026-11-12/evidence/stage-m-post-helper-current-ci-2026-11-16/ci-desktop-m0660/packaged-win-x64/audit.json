@@ -1,0 +1,2837 @@
+{
+  "schemaVersion": 1,
+  "kind": "TEST_CANONICAL_M0660_PACKAGED_WINDOWS_X64_P08_EVIDENCE",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997349,
+  "jobId": 133040244339,
+  "artifactId": 14192765823,
+  "status": "FAIL original step38; receipt INCOMPLETE; cleanup false",
+  "originalLog": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/job-133040244339.log",
+    "bytes": 312815,
+    "blob": "54d03abce960911fabeea18886c7d307591245ef",
+    "sha256": "88401bfac2583e744b54b65d39593cb773e4de2c7b54bce90dbdea1d90d7d1fc"
+  },
+  "originalZip": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/artifact-14192765823.zip",
+    "bytes": 625025,
+    "blob": "ed207c9bf138be138427abcd2f93066716e439b0",
+    "sha256": "d84e424a053851aaab9c98e58fd3d2683632e8ad068b950bce926003cdd5f076"
+  },
+  "originalReceipt": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/extracted/_temp/windows-same-main-process-ui.json",
+    "bytes": 750601,
+    "blob": "13f00f66b65073fe972abd96c78f464d73023f2b",
+    "sha256": "b7201be98fe33679e7e6a5c8ee3366e942bde08a32090d39344a911cd342d2ae"
+  },
+  "officialArtifact": {
+    "id": 14192765823,
+    "name": "packaged-v2-host-win32-x64-0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "size_in_bytes": 625025,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192765823",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192765823/zip",
+    "expired": false,
+    "created_at": "2026-11-16T02:15:34Z",
+    "expires_at": "2026-11-23T02:15:33Z",
+    "updated_at": "2026-11-16T02:15:34Z",
+    "digest": "sha256:d84e424a053851aaab9c98e58fd3d2683632e8ad068b950bce926003cdd5f076",
+    "workflow_run": {
+      "id": 43780997349,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+    }
+  },
+  "officialArtifactApi": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-packaged-artifacts-0220.json",
+    "bytes": 2023,
+    "blob": "14cbc8c0c56d232877a0934b966fdcf5b651904a",
+    "sha256": "da68a3637c026dcc031780492f60517efb0fadf6042cd79539a867c9a1ca7487"
+  },
+  "terminalJob": {
+    "id": 133040244339,
+    "name": "packaged smoke (win32-x64)",
+    "status": "completed",
+    "conclusion": "failure",
+    "run_id": 43780997349,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Run actions/setup-python@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Install Linux packaging tools",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 6
+      },
+      {
+        "name": "Restore node-gyp executable bit",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Verify selected provider archives against frozen lock before install",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Install frozen dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Verify managed Git pins and archive path safety",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Validate packaged OpenCode project-path smoke syntax early",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 11
+      },
+      {
+        "name": "Typecheck packaged CI policy with pinned compiler",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 12
+      },
+      {
+        "name": "Assert Electron binary was provisioned during install",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13
+      },
+      {
+        "name": "Test bundled undici security version policy",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 14
+      },
+      {
+        "name": "Verify CI Node and Electron built-in undici versions",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15
+      },
+      {
+        "name": "Verify native rebuild",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16
+      },
+      {
+        "name": "Stage bundled runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17
+      },
+      {
+        "name": "Stage terminal platform runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 18
+      },
+      {
+        "name": "Stage Windows console wrapper",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 19
+      },
+      {
+        "name": "Build app",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 20
+      },
+      {
+        "name": "Select exact Host Node for candidate staging",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 21
+      },
+      {
+        "name": "Prepare actual pinned V2 Bun, engine and admitted process custody",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 22
+      },
+      {
+        "name": "Prefill pinned macOS arm64 Host Node archive",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Stage V2 Host closure in existing candidate extraResources",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24
+      },
+      {
+        "name": "Typecheck and test packaged Host capture boundaries",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 25
+      },
+      {
+        "name": "Verify and stage original Windows scoped broker for packaged Retry",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 26
+      },
+      {
+        "name": "Package unsigned test bundle",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 27
+      },
+      {
+        "name": "Verify bundle native architecture",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 28
+      },
+      {
+        "name": "Smoke packaged SQLite and PTY modules",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 29
+      },
+      {
+        "name": "Smoke packaged Git without external installation",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 30
+      },
+      {
+        "name": "Smoke managed Git inside native Windows terminal",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Smoke packaged MCP handshake",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 32
+      },
+      {
+        "name": "Verify macOS 13 minimum",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 33
+      },
+      {
+        "name": "Smoke packaged app",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 34
+      },
+      {
+        "name": "Qualify packaged macOS OpenCode project-path status and model list",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 35
+      },
+      {
+        "name": "Smoke packaged app under Xvfb",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 36
+      },
+      {
+        "name": "Qualify actual packaged V2 Host tools, MCP, Stop and cold Resume",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 37
+      },
+      {
+        "name": "Qualify packaged Windows same-Main Retry and original Processes UI Kill with finite peers",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 38
+      },
+      {
+        "name": "Qualify original packaged macOS app relaunch with finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 39
+      },
+      {
+        "name": "Preserve exact packaged Host evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 40
+      },
+      {
+        "name": "Post Select exact Host Node for candidate staging",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 76
+      },
+      {
+        "name": "Post Run actions/setup-python@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 77
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 78
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 79
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 80
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 81
+      }
+    ]
+  },
+  "terminalJobApi": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0225.json",
+    "bytes": 210964,
+    "blob": "73e6774f138b77b61aff42522ccf9e8065b1762f",
+    "sha256": "d51bd60401a56507c6cd36408e6c60fc62cf736a39405a61fda9df11e383d7a5"
+  },
+  "archiveAudit": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/archive-audit.json",
+    "bytes": 2456,
+    "blob": "1e1abb1589aaf3f421b2cd1fe61711a7de1679f9",
+    "sha256": "921e66ee396cb714990b981e052a5976fc6dd79cc8629d8e007bbcab219e43d1"
+  },
+  "archiveEntries": [
+    {
+      "path": "_temp/opencode-v2-packaged-native.json",
+      "bytes": 5382,
+      "blob": "bd0f1dc8bd060e5d88cf74b34127a5f51837abd5",
+      "sha256": "bdb5ca3216b29b614a987a8c0916a8c4847b2b83c5441302f366883e7161f079",
+      "crc32": "5f5373a3"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154517,
+      "blob": "c938cf81f8141b52f080b44e670e98ba8f789b06",
+      "sha256": "3962998118a070023cc160e39e7c8cb88d9b72feebe97438ee79f7be8f171288",
+      "crc32": "dc157fd2"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-inputs.json",
+      "bytes": 780,
+      "blob": "28ad81eada9b2576778a1f8dca4328da068fc117",
+      "sha256": "aff88b8d6fa750b9caa673e6b79570ec8fe33b3ec77f1ffd6dac469c94579aef",
+      "crc32": "2e455caa"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged.json",
+      "bytes": 1186,
+      "blob": "cdfde45c5485f9a340d175672686e3b462e860d1",
+      "sha256": "fdaa0c94021a8f0035e517750eb052bd4cea168eaf777dc2777214e25d2ca38a",
+      "crc32": "c91bf6b1"
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.app.log",
+      "bytes": 4766,
+      "blob": "8bd0f24b93c92901da992c19b0cd59b152178e3d",
+      "sha256": "68281bffce158378af8edbc15f166a6b6b9efb1ae1a01f13d15417d89fd14e0f",
+      "crc32": "39f8d49a"
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.before-crash.png",
+      "bytes": 79896,
+      "blob": "1c16d610142abf298c038fba12d9ef1553f039b9",
+      "sha256": "347f6b6883726b0ccaebfb5c181cdeea0c85005cf7ec957360a61dc551404221",
+      "crc32": "0488afdb"
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.controller.log",
+      "bytes": 42469,
+      "blob": "4472e4302c6dc7a54684fbedc42785915ecfc0c4",
+      "sha256": "b76513cb574dd577b0e2d382760ef5b95494ad9212aab210365149c141c73c3c",
+      "crc32": "5ba30e2f"
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.json",
+      "bytes": 750601,
+      "blob": "13f00f66b65073fe972abd96c78f464d73023f2b",
+      "sha256": "b7201be98fe33679e7e6a5c8ee3366e942bde08a32090d39344a911cd342d2ae",
+      "crc32": "b1bb0816"
+    }
+  ],
+  "safeUniqueCrcExtractedEquality": true,
+  "independentSourcePins": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/independent-source-pin-audit.json",
+    "bytes": 769896,
+    "blob": "1e24dc0aff1b7092325864003d72238b99581210",
+    "sha256": "3f97c11cd8e162e9e23881b9276429c37822941fe6c665fb99ae2138ae259510"
+  },
+  "sourcePins": {
+    "count": 1798,
+    "orderedBeforeAfterExact": true,
+    "allGitLfToCrLfMatch": true,
+    "gitLfBytes": 21139539,
+    "windowsRecordedBytes": 21660108,
+    "mismatches": []
+  },
+  "priorUiPhaseSourceReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/ui-phase-source-review.json",
+    "bytes": 12686,
+    "blob": "a5c6bcbffe16d2d699375e335be0a194704131c6",
+    "sha256": "eae7757371d43db93f86630ac88ccd92b2cabac5b568e29dbd928810981479f9"
+  },
+  "independentByteFoundation": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/independent-byte-foundation.json",
+    "bytes": 14546,
+    "blob": "b51d14161c6cdb98c66e3f366fa489f2e0021e2c",
+    "sha256": "7ac302384de38eba0574e94cbcd5de3505f6b68bd40bffc3c9b7519d4ede643e"
+  },
+  "independentCustodySourceReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/independent-custody-source-review.json",
+    "bytes": 55527,
+    "blob": "88f73005c5f578ee64a15ebcdeba744f4f5113e8",
+    "sha256": "1db9d0a8fdb39dd65042f83aaff03d592dd1764782c9c650e883053c0fb8eaea"
+  },
+  "prerequisites": {
+    "initialSetupNode": "26.12.1",
+    "selectedHostAndP08Node": "24.21.0",
+    "hostRuntimeReceipt": "v24.21.0",
+    "nodeReporterBlocks": [
+      {
+        "line": 748,
+        "tests": 11,
+        "pass": 11,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      {
+        "line": 800,
+        "tests": 2,
+        "pass": 2,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      {
+        "line": 1312,
+        "tests": 26,
+        "pass": 26,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    ],
+    "brokerVitest": {
+      "files": 3,
+      "tests": 53,
+      "pass": 53,
+      "fail": 0
+    },
+    "totalListedReporterCases": 92,
+    "totalListedPass": 92,
+    "totalListedSkip": 0,
+    "scope": "These original earlier finite reporter results and compile/package smokes are prerequisites, not completed same-Main Retry/Stop qualification; no claim of full repository tests."
+  },
+  "counts": {
+    "mainStarts": 1,
+    "initialRuntimeOpen": 1,
+    "businessInput": 1,
+    "refreshClicks": 1,
+    "retryClicks": 1,
+    "uiStops": 0,
+    "quit": 1
+  },
+  "phases": [
+    {
+      "phase": "packaged-App-startup",
+      "atMs": 0.05400000000008731,
+      "budgetMs": 120000
+    },
+    {
+      "phase": "one-initial-Runtime-Open",
+      "atMs": 4436.473099999999,
+      "budgetMs": 45000
+    },
+    {
+      "phase": "one-original-business-input-and-UI",
+      "atMs": 8805.960899999998,
+      "budgetMs": 35000
+    },
+    {
+      "phase": "actual-Host-A-exit-and-metadata-Refresh",
+      "atMs": 28405.971299999997,
+      "budgetMs": 10000
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "atMs": 37301.0172,
+      "budgetMs": 10000
+    },
+    {
+      "phase": "original-product-Quit",
+      "atMs": 47983.038199999995,
+      "budgetMs": 30000
+    }
+  ],
+  "retryUi": {
+    "stages": {
+      "clickReturnedMs": 5380,
+      "writerObservedMs": 6819,
+      "hostCheckedMs": 7162,
+      "uiReadyMs": 8748
+    },
+    "returnedReads": 2,
+    "countTruncated": false,
+    "last": {
+      "atMs": 8748,
+      "result": "ready"
+    }
+  },
+  "retryCensusTiming": {
+    "phaseRows": [
+      {
+        "phase": "packaged-App-startup",
+        "atMs": 0.05400000000008731,
+        "budgetMs": 120000
+      },
+      {
+        "phase": "one-initial-Runtime-Open",
+        "atMs": 4436.473099999999,
+        "budgetMs": 45000
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "atMs": 8805.960899999998,
+        "budgetMs": 35000
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "atMs": 28405.971299999997,
+        "budgetMs": 10000
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "atMs": 37301.0172,
+        "budgetMs": 10000
+      },
+      {
+        "phase": "original-product-Quit",
+        "atMs": 47983.038199999995,
+        "budgetMs": 30000
+      }
+    ],
+    "allCensusReads": [
+      {
+        "phase": "packaged-App-startup",
+        "operation": "process-census",
+        "startMs": 308.4034999999967,
+        "endMs": 632.1877999999997,
+        "returned": true
+      },
+      {
+        "phase": "packaged-App-startup",
+        "operation": "process-listener-snapshot",
+        "startMs": 1803.0688999999984,
+        "endMs": 2970.667599999997,
+        "returned": true
+      },
+      {
+        "phase": "packaged-App-startup",
+        "operation": "process-listener-snapshot",
+        "startMs": 3011.929899999999,
+        "endMs": 3869.0113999999994,
+        "returned": true
+      },
+      {
+        "phase": "packaged-App-startup",
+        "operation": "process-census",
+        "startMs": 4109.829399999999,
+        "endMs": 4435.272699999998,
+        "returned": true
+      },
+      {
+        "phase": "one-initial-Runtime-Open",
+        "operation": "process-listener-snapshot",
+        "startMs": 4437.0949999999975,
+        "endMs": 5489.111699999998,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 8806.625099999997,
+        "endMs": 9540.846099999999,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 9650.847399999999,
+        "endMs": 10446.722099999999,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 11142.0088,
+        "endMs": 12022.909499999998,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 12497.412499999999,
+        "endMs": 13281.7807,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-census",
+        "startMs": 13510.994299999998,
+        "endMs": 13790.269999999997,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 13799.427099999997,
+        "endMs": 14529.246499999997,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 14535.603899999998,
+        "endMs": 15268.488999999998,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 15272.327599999997,
+        "endMs": 15991.080999999998,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 15995.686099999999,
+        "endMs": 16763.465299999996,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 16783.3235,
+        "endMs": 17544.2944,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 17648.834499999997,
+        "endMs": 18357.0663,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 18361.6978,
+        "endMs": 19107.5861,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 19151.216499999995,
+        "endMs": 20058.1192,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 20062.820200000002,
+        "endMs": 20830.7364,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 20852.0496,
+        "endMs": 21638.9119,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 21746.3405,
+        "endMs": 22528.374499999998,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 22633.841699999997,
+        "endMs": 23400.531600000002,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 23404.138899999998,
+        "endMs": 24167.889499999997,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 24172.1838,
+        "endMs": 24922.162899999996,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 24987.17,
+        "endMs": 25946.6719,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 25953.0498,
+        "endMs": 26770.630899999996,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 26775.566099999996,
+        "endMs": 27566.839199999995,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 27611.8142,
+        "endMs": 28340.095199999996,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-census",
+        "startMs": 28407.891299999996,
+        "endMs": 28695.0378,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 28791.845699999998,
+        "endMs": 29516.390999999996,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 29522.535799999998,
+        "endMs": 30212.689099999996,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 30216.910499999998,
+        "endMs": 30927.8549,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 30945.576,
+        "endMs": 31706.1668,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 31810.941099999996,
+        "endMs": 32561.2204,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 32666.511899999998,
+        "endMs": 33414.8119,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 33419.5047,
+        "endMs": 34200.3016,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 34204.5239,
+        "endMs": 34962.742399999996,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 34972.945,
+        "endMs": 35758.954,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 35763.7684,
+        "endMs": 36544.3214,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 36549.0269,
+        "endMs": 37297.0028,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 37303.3451,
+        "endMs": 38057.960999999996,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 38062.6497,
+        "endMs": 38797.0705,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 38804.3304,
+        "endMs": 39538.890699999996,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 39643.6165,
+        "endMs": 40382.4886,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 40487.127499999995,
+        "endMs": 41201.8875,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 41206.901099999995,
+        "endMs": 41948.0272,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 41951.9743,
+        "endMs": 42672.164899999996,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-census",
+        "startMs": 44120.732299999996,
+        "endMs": 44461.771799999995,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 44463.2763,
+        "endMs": 45201.641899999995,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 45306.5878,
+        "endMs": 46045.7382,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 46049.7838,
+        "endMs": 46923.560099999995,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 47206.771,
+        "endMs": 47979.6743,
+        "returned": true
+      },
+      {
+        "phase": "original-product-Quit",
+        "operation": "process-census",
+        "startMs": 47983.089199999995,
+        "endMs": 48284.2973,
+        "returned": true
+      },
+      {
+        "phase": "original-product-Quit",
+        "operation": "process-census",
+        "startMs": 48284.8447,
+        "endMs": 48571.3695,
+        "returned": true
+      },
+      {
+        "phase": "original-product-Quit",
+        "operation": "process-census",
+        "startMs": 49194.54699999999,
+        "endMs": 49485.6109,
+        "returned": true
+      },
+      {
+        "phase": "original-product-Quit",
+        "operation": "process-census",
+        "startMs": 50115.2825,
+        "endMs": 50445.285099999994,
+        "returned": true
+      },
+      {
+        "phase": "original-product-Quit",
+        "operation": "process-census",
+        "startMs": 52336.4102,
+        "endMs": 52611.0892,
+        "returned": true
+      }
+    ],
+    "totalCensusRows": 57,
+    "truncated": false,
+    "returnedCount": 57,
+    "operationCounts": {
+      "process-census": 10,
+      "process-listener-snapshot": 47
+    },
+    "retryRows": 12,
+    "retryOperationCounts": {
+      "process-listener-snapshot": 11,
+      "process-census": 1
+    },
+    "retryRecordedReadDurationSumMs": 8603.780899999983,
+    "lastReadStartSinceRetryMs": 9905.753799999999,
+    "lastReadEndSinceRetryMs": 10678.657099999997,
+    "lastReadDurationMs": 772.9032999999981,
+    "phaseStdoutRows": [
+      {
+        "line": 1808,
+        "row": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "packaged-App-startup",
+          "atMs": 0.05400000000008731,
+          "budgetMs": 120000
+        }
+      },
+      {
+        "line": 1857,
+        "row": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "one-initial-Runtime-Open",
+          "atMs": 4436.473099999999,
+          "budgetMs": 45000
+        }
+      },
+      {
+        "line": 1866,
+        "row": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "one-original-business-input-and-UI",
+          "atMs": 8805.960899999998,
+          "budgetMs": 35000
+        }
+      },
+      {
+        "line": 2051,
+        "row": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "atMs": 28405.971299999997,
+          "budgetMs": 10000
+        }
+      },
+      {
+        "line": 2148,
+        "row": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "one-explicit-same-Main-Retry",
+          "atMs": 37301.0172,
+          "budgetMs": 10000
+        }
+      },
+      {
+        "line": 2246,
+        "row": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "original-product-Quit",
+          "atMs": 47983.038199999995,
+          "budgetMs": 30000
+        }
+      }
+    ],
+    "failureStdoutRows": [
+      {
+        "line": 2245,
+        "row": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_FAILURE",
+          "phase": "one-explicit-same-Main-Retry",
+          "error": "AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: one-explicit-same-Main-Retry\n    at remaining (file:///D:/a/a"
+        }
+      }
+    ],
+    "limits": "Timing is the existing performance.now span around each original synchronous read, including its execution/return overhead. The process and listener commands remain ordered observations, not atomic. Phase stdout precedes its admission check. No extra timing, query, replay, optimization or deadline proposal is made."
+  },
+  "originalIdentities": {
+    "controller": {
+      "pid": 6152,
+      "parent": 7516,
+      "birth": "2026-11-16T02:14:10.5174560Z",
+      "executable": "D:\\a\\_temp\\TEST-Windows-UI-build-43780997349-X64\\Release\\owned-process-gate-controller.exe"
+    },
+    "driver": {
+      "pid": 4384,
+      "parent": 6152,
+      "birth": "2026-11-16T02:14:10.5246930Z",
+      "executable": "C:\\hostedtoolcache\\windows\\node\\24.21.0\\x64\\node.exe"
+    },
+    "main": {
+      "pid": 6948,
+      "parent": 4384,
+      "birth": "2026-11-16T02:14:27.1238240Z",
+      "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\AgentTeamsAI.exe"
+    },
+    "hostA": {
+      "identity": {
+        "pid": 4900,
+        "parent": 6948,
+        "birth": "2026-11-16T02:14:29.5860850Z",
+        "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe"
+      },
+      "writer": {
+        "pid": 4900,
+        "token": "a6c8a96e-a119-427f-9cd7-f74b1a2718e3",
+        "publishedAtMs": 1794795270940,
+        "sha256": "983f2ad53d86a600a0a547750c537b42c6a3b4b1003759b439cff32b22d6872f",
+        "dev": "2695480082",
+        "ino": "1125899908172728"
+      }
+    },
+    "hostB": {
+      "identity": {
+        "pid": 3748,
+        "parent": 6948,
+        "birth": "2026-11-16T02:15:10.0835570Z",
+        "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe"
+      },
+      "writer": {
+        "pid": 3748,
+        "token": "15283698-24b0-4bc4-be9d-2585b35221a2",
+        "publishedAtMs": 1794795311176,
+        "sha256": "04435ecc45fb607ba3a21a6eed755f4997825871fee517d089e29785e4b05a5e",
+        "dev": "2695480082",
+        "ino": "1407374884883384"
+      }
+    },
+    "hostBirthJournal": [
+      {
+        "pid": 4900,
+        "parentPid": 6948
+      },
+      {
+        "pid": 3748,
+        "parentPid": 6948
+      }
+    ],
+    "actualHostSuccessors": 1,
+    "nativeSource": {
+      "mainEpoch": "0ddf7947-c217-4bb4-92bc-449f719f367b",
+      "providerCapability": "829f8b67-0a88-42c4-bb91-94961061457b",
+      "providerGeneration": "e8bfc917-f4bd-493d-bdf2-7838db018ff8",
+      "root": {
+        "pid": 3552,
+        "birth": "01dd757038ec1d3d"
+      }
+    },
+    "serviceTargets": [
+      {
+        "role": "TEST-primary",
+        "pid": 3160,
+        "birth": "01dd75703b209ec7",
+        "key": "0000000000000002",
+        "processRef": "p1:a90564f8-eb00-48bd-b654-c9e504a14d82:ce144f375bb8c1fa183894beb2ac1d6c648803701118e26cdfa91dc600435fca",
+        "commandId": "TEST-register-TEST-primary",
+        "registrationPhase": "completed",
+        "runtimeRegistrar": {
+          "backendId": "TEST-owner-d6a52f75-ef6d-4b4f-a46d-9378b8020027",
+          "teamId": "TEST-team",
+          "runId": "TEST-run",
+          "memberId": "alice-id",
+          "generation": "1"
+        },
+        "nativeCaptureOperationRef": "e40e9176-828e-4478-84d7-5ab5b3df48ca",
+        "sameOriginalPublicRowBeforeAndAfterRetry": true
+      },
+      {
+        "role": "TEST-neighbor",
+        "pid": 7004,
+        "birth": "01dd75703bc7fe90",
+        "key": "0000000000000004",
+        "processRef": "p1:f82b3342-93dd-431c-a2d1-f2fab09dc51f:bf755dc69df461f8f18ad156bb7c21bd70c765ec2ae5f9076c5dae6c2d74dec6",
+        "commandId": "TEST-register-TEST-neighbor",
+        "registrationPhase": "completed",
+        "runtimeRegistrar": {
+          "backendId": "TEST-owner-d6a52f75-ef6d-4b4f-a46d-9378b8020027",
+          "teamId": "TEST-team",
+          "runId": "TEST-run",
+          "memberId": "alice-id",
+          "generation": "1"
+        },
+        "nativeCaptureOperationRef": "909a388b-8b81-4686-bd2f-e6b4bbc3702f",
+        "sameOriginalPublicRowBeforeAndAfterRetry": true
+      }
+    ],
+    "beforeAfterPublicRowsEqual": true,
+    "afterRetryPublic": {
+      "processes": [
+        {
+          "id": "a90564f8-eb00-48bd-b654-c9e504a14d82",
+          "pid": 3160,
+          "label": "TEST-primary",
+          "registeredAt": "2026-11-16T02:14:38.946Z",
+          "processRef": "p1:a90564f8-eb00-48bd-b654-c9e504a14d82:ce144f375bb8c1fa183894beb2ac1d6c648803701118e26cdfa91dc600435fca",
+          "canTerminate": true,
+          "observation": "same-live",
+          "registeredBy": "alice"
+        },
+        {
+          "id": "f82b3342-93dd-431c-a2d1-f2fab09dc51f",
+          "pid": 7004,
+          "label": "TEST-neighbor",
+          "registeredAt": "2026-11-16T02:14:39.592Z",
+          "processRef": "p1:f82b3342-93dd-431c-a2d1-f2fab09dc51f:bf755dc69df461f8f18ad156bb7c21bd70c765ec2ae5f9076c5dae6c2d74dec6",
+          "canTerminate": true,
+          "observation": "same-live",
+          "registeredBy": "alice"
+        }
+      ],
+      "readRoute": "packaged-public-process-list"
+    },
+    "originalRuntimeState": {
+      "memberId": "alice-id",
+      "generation": "1",
+      "phase": "allocated",
+      "sealed": false,
+      "custody": "owned",
+      "nativeReady": true,
+      "attached": true,
+      "inputs": [
+        {
+          "inputId": "894c414d-a258-5e33-ba6a-b017470c0e5c",
+          "phase": "terminal",
+          "terminal": "succeeded"
+        }
+      ],
+      "interactions": [],
+      "sessionCommands": [
+        {
+          "name": "cost",
+          "description": "Show reported token usage for this captured session"
+        }
+      ],
+      "attachmentCapabilities": {
+        "images": true,
+        "documents": false,
+        "textFiles": false
+      }
+    },
+    "originalRuntimeHistoryKeys": [
+      "binding",
+      "config",
+      "profileId",
+      "openFingerprint",
+      "sessionRef",
+      "inputs",
+      "checkpoints"
+    ],
+    "originalRuntimeInputCount": 1,
+    "inputContentNotCopiedIntoReview": true
+  },
+  "threeOriginalHandleWitnesses": {
+    "sourceProof": "captureOriginal in nativeWindowsAppFixture.ts creates exactly two service witnesses and one provider-root witness before original Host crash/Retry. The ordinary P08 flow has already launched its provider and registered services; reused helper comments about before-provider-resume are not used to claim that timing here.",
+    "nativeImplementation": "nativeFixture.cpp opens each selected PID once with SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION and validates the full original GetProcessTimes birth before emitting captured. Q observes only WaitForSingleObject on the same retained HANDLE at zero timeout; no PID reopen or signal. Both native and TS count at most four sequential Q commands.",
+    "completedPrefixInference": "Presence of afterRetryPublic and the actual Gate502 stack prove the ordered originalBinding and fixture.afterRetry call returned. Thus the existing provider-root alive assertion, both service alive assertions, exact original registration-receipt equality, input pins, peer and unchanged Runtime-history assertions at fixture395-403 completed. Seven Q alive returns (3 provider, 2 per service) follow from the executed original source prefix; individual raw witness stdout/PIDs were not separately archived.",
+    "nativeIdentityAndCensusSeparation": "Exact full native birth hex is kept with each original HANDLE. CIM birth strings have microsecond precision here and are not relabelled byte-equal to native 100-nanosecond FILETIME; retained PID/CIM ancestry and native capture/witness are separate evidence.",
+    "unreached": "Both UI Kill phases, target absent observations, witness W success waits, native stop/settle receipt assertions, and final three zero-exit witness checks were not reached."
+  },
+  "firstFailure": {
+    "error": "AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: one-explicit-same-Main-Retry\n    at remaining (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:123:10)\n    at validateCensus (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:179:3)\n    at Object.assertOwnedRenderer (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:207:20)\n    at Object.waitRead (D:\\a\\agent-teams-ai\\agent-teams-ai\\scripts\\legacy-agent-host\\desktop-ui-controls.ts:157:15)\n    at file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:502:35",
+    "phase": "one-explicit-same-Main-Retry",
+    "originalBudgetMs": 10000,
+    "retryUi": {
+      "stages": {
+        "clickReturnedMs": 5380,
+        "writerObservedMs": 6819,
+        "hostCheckedMs": 7162,
+        "uiReadyMs": 8748
+      },
+      "returnedReads": 2,
+      "countTruncated": false,
+      "last": {
+        "atMs": 8748,
+        "result": "ready"
+      }
+    },
+    "sourcePosition": "nativeWindowsAppGate.mjs:502 -> desktop-ui-controls.ts:157 -> assertOwnedRenderer:207 -> validateCensus:179 -> remaining:123",
+    "meaning": "The original fresh process/listener call returned, then controller/driver/Main identity, complete-census and orphan-negative checks passed before the remaining-budget guard refused. Listener ownership assertion after validateCensus and the current awaited processOwner DOM read were not reached. This is not the historical pre-readiness Gate449 failure.",
+    "notRetained": "Which of the two processOwner loop rows/current iterations was active is not retained; no after-Retry owner DOM value or screenshot proves both rows were rendered. No specific internal OS-query cost or product readiness cause is inferred."
+  },
+  "beforeCrashPublic": {
+    "processes": [
+      {
+        "id": "a90564f8-eb00-48bd-b654-c9e504a14d82",
+        "pid": 3160,
+        "label": "TEST-primary",
+        "registeredAt": "2026-11-16T02:14:38.946Z",
+        "processRef": "p1:a90564f8-eb00-48bd-b654-c9e504a14d82:ce144f375bb8c1fa183894beb2ac1d6c648803701118e26cdfa91dc600435fca",
+        "canTerminate": true,
+        "observation": "same-live",
+        "registeredBy": "alice"
+      },
+      {
+        "id": "f82b3342-93dd-431c-a2d1-f2fab09dc51f",
+        "pid": 7004,
+        "label": "TEST-neighbor",
+        "registeredAt": "2026-11-16T02:14:39.592Z",
+        "processRef": "p1:f82b3342-93dd-431c-a2d1-f2fab09dc51f:bf755dc69df461f8f18ad156bb7c21bd70c765ec2ae5f9076c5dae6c2d74dec6",
+        "canTerminate": true,
+        "observation": "same-live",
+        "registeredBy": "alice"
+      }
+    ],
+    "readRoute": "packaged-public-process-list"
+  },
+  "afterRetryPublic": {
+    "processes": [
+      {
+        "id": "a90564f8-eb00-48bd-b654-c9e504a14d82",
+        "pid": 3160,
+        "label": "TEST-primary",
+        "registeredAt": "2026-11-16T02:14:38.946Z",
+        "processRef": "p1:a90564f8-eb00-48bd-b654-c9e504a14d82:ce144f375bb8c1fa183894beb2ac1d6c648803701118e26cdfa91dc600435fca",
+        "canTerminate": true,
+        "observation": "same-live",
+        "registeredBy": "alice"
+      },
+      {
+        "id": "f82b3342-93dd-431c-a2d1-f2fab09dc51f",
+        "pid": 7004,
+        "label": "TEST-neighbor",
+        "registeredAt": "2026-11-16T02:14:39.592Z",
+        "processRef": "p1:f82b3342-93dd-431c-a2d1-f2fab09dc51f:bf755dc69df461f8f18ad156bb7c21bd70c765ec2ae5f9076c5dae6c2d74dec6",
+        "canTerminate": true,
+        "observation": "same-live",
+        "registeredBy": "alice"
+      }
+    ],
+    "readRoute": "packaged-public-process-list"
+  },
+  "cleanup": {
+    "qualifiedCleanup": false,
+    "counts": {
+      "mainStarts": 1,
+      "initialRuntimeOpen": 1,
+      "businessInput": 1,
+      "refreshClicks": 1,
+      "retryClicks": 1,
+      "uiStops": 0,
+      "quit": 1
+    },
+    "originalMainExit": {
+      "code": 0,
+      "signal": null
+    },
+    "quit": {
+      "attempted": true,
+      "endpoint": "ws://127.0.0.1:9222/devtools/browser/9fcd645d-27e0-4543-acca-62c457c162c3",
+      "command": {
+        "at": 1794795318210,
+        "id": 1,
+        "method": "Browser.close"
+      },
+      "socketClosed": {
+        "at": 1794795319421,
+        "afterSend": true
+      },
+      "acknowledgement": "socket-closed"
+    },
+    "hostAAbsentFromExitCensus": true,
+    "hostExitCensusRows": 146,
+    "retainedLineageRows": 17,
+    "finalCensusRows": 133,
+    "all17RetainedPidBirthsAbsent": true,
+    "providerAndBothServicePidsAbsentInFinalCensus": true,
+    "finalOwnedRemaining": [],
+    "finalListeners": [],
+    "finalDrained": true,
+    "secondaryFailure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 2\n\n    at Object.afterQuit (D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeWindowsAppFixture.ts:467:16)\n    at file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:548:56\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async within (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:141:20)\n    at async file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:548:29",
+    "fixtureCloseFailureFieldPresent": false,
+    "fixtureCloseSourceLimit": "The original finally calls fixture.close and no fixtureCloseFailure field is present. close ends original witness stdin and awaits every retained witness exit, but does not require exit code 0; do not turn it into the afterQuit zero-exit/Stop proof. The final source afterQuit fails first at stops.size === 2, before provider.wait, three exit-code assertions, writer-lock absence and final Runtime history/peer completion suffix.",
+    "originalControllerRows": [
+      {
+        "gateController": "drained",
+        "rootExitCode": 1,
+        "activeProcesses": 0
+      }
+    ],
+    "controllerSourceLimit": "The original outer controller retained the original driver process handle until signaled exit, observed zero accounting in its private Job, closed it and removed its sandbox before emitting drained. rootExitCode 1 preserves failure; drained distinguishes this from its emergency-fail branch. This containment evidence is separate from incomplete original UI Stop/native cleanup oracles.",
+    "originalRuntimeGenerations": null,
+    "nativeCleanupFieldPresent": false,
+    "noSuccessfulStopReceipt": true
+  },
+  "retainedLineage": [
+    {
+      "pid": 6948,
+      "parent": 4384,
+      "birth": "2026-11-16T02:14:27.1238240Z",
+      "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\AgentTeamsAI.exe",
+      "firstSeen": 1794795267748,
+      "lastSeen": 1794795317563,
+      "parentBirth": null
+    },
+    {
+      "pid": 7724,
+      "parent": 6948,
+      "birth": "2026-11-16T02:14:28.1209360Z",
+      "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\AgentTeamsAI.exe",
+      "firstSeen": 1794795270086,
+      "lastSeen": 1794795317563,
+      "parentBirth": "2026-11-16T02:14:27.1238240Z"
+    },
+    {
+      "pid": 968,
+      "parent": 6948,
+      "birth": "2026-11-16T02:14:28.1293770Z",
+      "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\AgentTeamsAI.exe",
+      "firstSeen": 1794795270086,
+      "lastSeen": 1794795317563,
+      "parentBirth": "2026-11-16T02:14:27.1238240Z"
+    },
+    {
+      "pid": 1284,
+      "parent": 6948,
+      "birth": "2026-11-16T02:14:28.1575960Z",
+      "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\AgentTeamsAI.exe",
+      "firstSeen": 1794795270086,
+      "lastSeen": 1794795317563,
+      "parentBirth": "2026-11-16T02:14:27.1238240Z"
+    },
+    {
+      "pid": 4900,
+      "parent": 6948,
+      "birth": "2026-11-16T02:14:29.5860850Z",
+      "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe",
+      "firstSeen": 1794795270984,
+      "lastSeen": 1794795295455,
+      "parentBirth": "2026-11-16T02:14:27.1238240Z"
+    },
+    {
+      "pid": 3880,
+      "parent": 4900,
+      "birth": "2026-11-16T02:14:29.5879650Z",
+      "executable": "C:\\Windows\\system32\\conhost.exe",
+      "firstSeen": 1794795270984,
+      "lastSeen": 1794795295455,
+      "parentBirth": "2026-11-16T02:14:29.5860850Z"
+    },
+    {
+      "pid": 4624,
+      "parent": 6948,
+      "birth": "2026-11-16T02:14:32.1635650Z",
+      "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\AgentTeamsAI.exe",
+      "firstSeen": 1794795276656,
+      "lastSeen": 1794795317563,
+      "parentBirth": "2026-11-16T02:14:27.1238240Z"
+    },
+    {
+      "pid": 8144,
+      "parent": 6948,
+      "birth": "2026-11-16T02:14:34.2535180Z",
+      "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\windows-retry-custody\\owned-process-broker.exe",
+      "firstSeen": 1794795276656,
+      "lastSeen": 1794795317563,
+      "parentBirth": "2026-11-16T02:14:27.1238240Z"
+    },
+    {
+      "pid": 1344,
+      "parent": 8144,
+      "birth": "2026-11-16T02:14:34.2574790Z",
+      "executable": "C:\\Windows\\system32\\conhost.exe",
+      "firstSeen": 1794795276656,
+      "lastSeen": 1794795317563,
+      "parentBirth": "2026-11-16T02:14:34.2535180Z"
+    },
+    {
+      "pid": 3552,
+      "parent": 8144,
+      "birth": "2026-11-16T02:14:34.2767930Z",
+      "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe",
+      "firstSeen": 1794795276656,
+      "lastSeen": 1794795317563,
+      "parentBirth": "2026-11-16T02:14:34.2535180Z"
+    },
+    {
+      "pid": 4500,
+      "parent": 3552,
+      "birth": "2026-11-16T02:14:34.6215000Z",
+      "executable": "C:\\Windows\\system32\\conhost.exe",
+      "firstSeen": 1794795276656,
+      "lastSeen": 1794795317563,
+      "parentBirth": "2026-11-16T02:14:34.2767930Z"
+    },
+    {
+      "pid": 3160,
+      "parent": 3552,
+      "birth": "2026-11-16T02:14:37.9763390Z",
+      "executable": "D:\\a\\_temp\\TEST-Windows-UI-build-43780997349-X64\\Release\\owned-process-fixture.exe",
+      "firstSeen": 1794795279138,
+      "lastSeen": 1794795317563,
+      "parentBirth": "2026-11-16T02:14:34.2767930Z"
+    },
+    {
+      "pid": 6728,
+      "parent": 3160,
+      "birth": "2026-11-16T02:14:37.9808730Z",
+      "executable": "C:\\Windows\\system32\\conhost.exe",
+      "firstSeen": 1794795279138,
+      "lastSeen": 1794795317563,
+      "parentBirth": "2026-11-16T02:14:37.9763390Z"
+    },
+    {
+      "pid": 7004,
+      "parent": 3552,
+      "birth": "2026-11-16T02:14:39.0732430Z",
+      "executable": "D:\\a\\_temp\\TEST-Windows-UI-build-43780997349-X64\\Release\\owned-process-fixture.exe",
+      "firstSeen": 1794795280397,
+      "lastSeen": 1794795317563,
+      "parentBirth": "2026-11-16T02:14:34.2767930Z"
+    },
+    {
+      "pid": 7820,
+      "parent": 7004,
+      "birth": "2026-11-16T02:14:39.0777030Z",
+      "executable": "C:\\Windows\\system32\\conhost.exe",
+      "firstSeen": 1794795280397,
+      "lastSeen": 1794795317563,
+      "parentBirth": "2026-11-16T02:14:39.0732430Z"
+    },
+    {
+      "pid": 3748,
+      "parent": 6948,
+      "birth": "2026-11-16T02:15:10.0835570Z",
+      "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe",
+      "firstSeen": 1794795311579,
+      "lastSeen": 1794795317563,
+      "parentBirth": "2026-11-16T02:14:27.1238240Z"
+    },
+    {
+      "pid": 6776,
+      "parent": 3748,
+      "birth": "2026-11-16T02:15:10.0852480Z",
+      "executable": "C:\\Windows\\system32\\conhost.exe",
+      "firstSeen": 1794795311579,
+      "lastSeen": 1794795317563,
+      "parentBirth": "2026-11-16T02:15:10.0835570Z"
+    }
+  ],
+  "finalCensus": {
+    "ownedRemaining": [],
+    "listenerPids": [],
+    "drained": true,
+    "census": [
+      {
+        "pid": 0,
+        "parent": 0,
+        "birth": "2026-11-16T01:04:01.0043160Z"
+      },
+      {
+        "pid": 4,
+        "parent": 0,
+        "birth": "2026-11-16T01:04:01.0043160Z"
+      },
+      {
+        "pid": 72,
+        "parent": 4,
+        "birth": "2026-11-16T01:03:58.5106850Z"
+      },
+      {
+        "pid": 124,
+        "parent": 4,
+        "birth": "2026-11-16T01:03:58.5511360Z"
+      },
+      {
+        "pid": 500,
+        "parent": 4,
+        "birth": "2026-11-16T01:04:01.0500980Z"
+      },
+      {
+        "pid": 632,
+        "parent": 620,
+        "birth": "2026-11-16T01:04:05.7764080Z"
+      },
+      {
+        "pid": 756,
+        "parent": 620,
+        "birth": "2026-11-16T01:04:06.3056510Z"
+      },
+      {
+        "pid": 848,
+        "parent": 756,
+        "birth": "2026-11-16T01:04:06.8196590Z"
+      },
+      {
+        "pid": 868,
+        "parent": 756,
+        "birth": "2026-11-16T01:04:07.5544040Z"
+      },
+      {
+        "pid": 876,
+        "parent": 756,
+        "birth": "2026-11-16T01:04:07.5610270Z",
+        "executable": "C:\\Windows\\system32\\lsass.exe"
+      },
+      {
+        "pid": 1000,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:09.5772120Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 436,
+        "parent": 756,
+        "birth": "2026-11-16T01:04:09.6748280Z",
+        "executable": "C:\\Windows\\system32\\fontdrvhost.exe"
+      },
+      {
+        "pid": 564,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:09.7850740Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 940,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:09.9258000Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 1152,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:10.3438930Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 1188,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:10.3512820Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 1272,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:10.3628290Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 1336,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:10.4168910Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 1368,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:10.4274480Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 1376,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:10.4279610Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 1384,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:10.4290620Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 1424,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:10.4413600Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 1540,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:10.4592270Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 1648,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:10.5664600Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 1684,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:10.6155800Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 1716,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:10.6290710Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 1744,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:10.6435570Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 1788,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:10.6965560Z",
+        "executable": "C:\\Windows\\system32\\vmms.exe"
+      },
+      {
+        "pid": 1836,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:10.7187140Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 1864,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:10.7393440Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 1896,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:10.7931270Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 1984,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:10.8916100Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 2132,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.0151900Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 2164,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.0320140Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 2168,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.0320150Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 2312,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.0759600Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 2364,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.1315340Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 2376,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.1347250Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 2384,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.1355430Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 2400,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.1378840Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 2468,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.1522060Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 2588,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.1887780Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 2644,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.2055110Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 2740,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.2415980Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 2764,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.2480010Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 2784,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.2526070Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 2820,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.2583070Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 2868,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.2706640Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 2940,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.2851420Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 3088,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.4514860Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 3132,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.4648660Z",
+        "executable": "C:\\Windows\\System32\\spoolsv.exe"
+      },
+      {
+        "pid": 3292,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.5245350Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 3304,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.5276670Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 3312,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.5283550Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 3324,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.5289950Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 3332,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.5310520Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 3340,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.5316950Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 3356,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.5339960Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 3380,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.5402890Z",
+        "executable": "C:\\WindowsAzure\\GuestAgent_2.7.41491.1243_2026-11-12_002039\\WindowsAzureGuestAgent.exe"
+      },
+      {
+        "pid": 3400,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.5439410Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 3416,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.5481080Z",
+        "executable": "C:\\WindowsAzure\\GuestAgent_2.7.41491.1243_2026-11-12_002039\\WaAppAgent.exe"
+      },
+      {
+        "pid": 3460,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.5544800Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 3516,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.5602660Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 3532,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.5623260Z",
+        "executable": "C:\\Program Files\\Microsoft SQL Server\\90\\Shared\\sqlwriter.exe"
+      },
+      {
+        "pid": 3604,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.5761560Z"
+      },
+      {
+        "pid": 3612,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.5773600Z",
+        "executable": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\SMSvcHost.exe"
+      },
+      {
+        "pid": 3660,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.5850000Z"
+      },
+      {
+        "pid": 3700,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.6034880Z",
+        "executable": "C:\\Windows\\system32\\dockerd.exe"
+      },
+      {
+        "pid": 3756,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.6171340Z",
+        "executable": "C:\\Windows\\system32\\mqsvc.exe"
+      },
+      {
+        "pid": 3808,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:11.6529600Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 4376,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:12.3033900Z",
+        "executable": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\SMSvcHost.exe"
+      },
+      {
+        "pid": 4412,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:12.3483910Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 4764,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:12.8475720Z",
+        "executable": "C:\\Windows\\system32\\vmcompute.exe"
+      },
+      {
+        "pid": 4972,
+        "parent": 1000,
+        "birth": "2026-11-16T01:04:13.3800700Z",
+        "executable": "C:\\Windows\\system32\\DllHost.exe"
+      },
+      {
+        "pid": 6108,
+        "parent": 1896,
+        "birth": "2026-11-16T01:04:16.6875380Z",
+        "executable": "C:\\Windows\\system32\\taskhostw.exe"
+      },
+      {
+        "pid": 5512,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:18.6784120Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 6080,
+        "parent": 3416,
+        "birth": "2026-11-16T01:04:24.6689710Z",
+        "executable": "C:\\WindowsAzure\\SecAgent\\WaSecAgentProv.exe"
+      },
+      {
+        "pid": 6052,
+        "parent": 6080,
+        "birth": "2026-11-16T01:04:24.6715870Z",
+        "executable": "C:\\Windows\\system32\\conhost.exe"
+      },
+      {
+        "pid": 6264,
+        "parent": 6252,
+        "birth": "2026-11-16T01:04:38.5747980Z"
+      },
+      {
+        "pid": 6312,
+        "parent": 6252,
+        "birth": "2026-11-16T01:04:38.5833920Z",
+        "executable": "C:\\Windows\\system32\\winlogon.exe"
+      },
+      {
+        "pid": 6360,
+        "parent": 6312,
+        "birth": "2026-11-16T01:04:38.6058540Z",
+        "executable": "C:\\Windows\\system32\\fontdrvhost.exe"
+      },
+      {
+        "pid": 6384,
+        "parent": 6312,
+        "birth": "2026-11-16T01:04:38.6165470Z",
+        "executable": "C:\\Windows\\system32\\dwm.exe"
+      },
+      {
+        "pid": 7008,
+        "parent": 3604,
+        "birth": "2026-11-16T01:04:41.5892120Z"
+      },
+      {
+        "pid": 7036,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:41.6599210Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 7096,
+        "parent": 2784,
+        "birth": "2026-11-16T01:04:41.6768760Z",
+        "executable": "C:\\Windows\\system32\\sihost.exe"
+      },
+      {
+        "pid": 4472,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:41.7096430Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 5868,
+        "parent": 4472,
+        "birth": "2026-11-16T01:04:41.7488980Z",
+        "executable": "C:\\Windows\\system32\\ctfmon.exe"
+      },
+      {
+        "pid": 2628,
+        "parent": 1896,
+        "birth": "2026-11-16T01:04:41.8968030Z",
+        "executable": "C:\\Windows\\system32\\taskhostw.exe"
+      },
+      {
+        "pid": 5668,
+        "parent": 1896,
+        "birth": "2026-11-16T01:04:42.0051110Z",
+        "executable": "C:\\Windows\\system32\\taskhostw.exe"
+      },
+      {
+        "pid": 5452,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:42.0947180Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 548,
+        "parent": 768,
+        "birth": "2026-11-16T01:04:42.8944750Z",
+        "executable": "C:\\Windows\\Explorer.EXE"
+      },
+      {
+        "pid": 556,
+        "parent": 768,
+        "birth": "2026-11-16T01:04:43.2272220Z",
+        "executable": "C:\\Windows\\System32\\SystemPropertiesPerformance.exe"
+      },
+      {
+        "pid": 6700,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:45.4323790Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 6628,
+        "parent": 848,
+        "birth": "2026-11-16T01:04:46.9445410Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 7336,
+        "parent": 1000,
+        "birth": "2026-11-16T01:04:53.0101010Z",
+        "executable": "C:\\Windows\\SystemApps\\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\\TextInputHost.exe"
+      },
+      {
+        "pid": 7368,
+        "parent": 1000,
+        "birth": "2026-11-16T01:04:53.1738090Z",
+        "executable": "C:\\Windows\\SystemApps\\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\\StartMenuExperienceHost.exe"
+      },
+      {
+        "pid": 7468,
+        "parent": 1000,
+        "birth": "2026-11-16T01:04:54.0392650Z",
+        "executable": "C:\\Windows\\System32\\RuntimeBroker.exe"
+      },
+      {
+        "pid": 7604,
+        "parent": 1000,
+        "birth": "2026-11-16T01:04:54.8439480Z",
+        "executable": "C:\\Windows\\SystemApps\\Microsoft.Windows.Search_cw5n1h2txyewy\\SearchApp.exe"
+      },
+      {
+        "pid": 7660,
+        "parent": 1000,
+        "birth": "2026-11-16T01:04:54.9889810Z",
+        "executable": "C:\\Windows\\System32\\RuntimeBroker.exe"
+      },
+      {
+        "pid": 5004,
+        "parent": 848,
+        "birth": "2026-11-16T01:05:04.9099050Z",
+        "executable": "C:\\Windows\\System32\\WUDFHost.exe"
+      },
+      {
+        "pid": 1476,
+        "parent": 548,
+        "birth": "2026-11-16T01:05:06.8050570Z",
+        "executable": "C:\\Windows\\AzureArcSetup\\Systray\\AzureArcSysTray.exe"
+      },
+      {
+        "pid": 3260,
+        "parent": 548,
+        "birth": "2026-11-16T01:05:07.2787470Z",
+        "executable": "C:\\Program Files\\Microsoft SDKs\\Service Fabric\\Tools\\ServiceFabricLocalClusterManager\\ServiceFabricLocalClusterManager.exe"
+      },
+      {
+        "pid": 5652,
+        "parent": 1000,
+        "birth": "2026-11-16T01:05:08.5660790Z",
+        "executable": "C:\\Windows\\system32\\OpenWith.exe"
+      },
+      {
+        "pid": 8108,
+        "parent": 1000,
+        "birth": "2026-11-16T01:05:08.5953440Z",
+        "executable": "C:\\Windows\\SystemApps\\ShellExperienceHost_cw5n1h2txyewy\\ShellExperienceHost.exe"
+      },
+      {
+        "pid": 4676,
+        "parent": 1000,
+        "birth": "2026-11-16T01:05:09.1861690Z",
+        "executable": "C:\\Windows\\System32\\RuntimeBroker.exe"
+      },
+      {
+        "pid": 1244,
+        "parent": 1000,
+        "birth": "2026-11-16T01:05:09.9716840Z",
+        "executable": "C:\\Windows\\System32\\RuntimeBroker.exe"
+      },
+      {
+        "pid": 4320,
+        "parent": 1896,
+        "birth": "2026-11-16T01:05:30.3709220Z",
+        "executable": "C:\\ProgramData\\GitHub\\HostedComputeAgent\\hosted-compute-agent"
+      },
+      {
+        "pid": 6836,
+        "parent": 4320,
+        "birth": "2026-11-16T01:05:30.3738130Z",
+        "executable": "C:\\Windows\\system32\\conhost.exe"
+      },
+      {
+        "pid": 3632,
+        "parent": 4320,
+        "birth": "2026-11-16T01:05:35.0050970Z",
+        "executable": "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\provjobd.exe4135054017"
+      },
+      {
+        "pid": 7016,
+        "parent": 848,
+        "birth": "2026-11-16T01:05:37.1354830Z"
+      },
+      {
+        "pid": 5292,
+        "parent": 848,
+        "birth": "2026-11-16T01:06:16.5986980Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 8072,
+        "parent": 848,
+        "birth": "2026-11-16T01:06:16.8641400Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 1696,
+        "parent": 848,
+        "birth": "2026-11-16T01:06:17.0247560Z",
+        "executable": "C:\\Windows\\System32\\msdtc.exe"
+      },
+      {
+        "pid": 2952,
+        "parent": 848,
+        "birth": "2026-11-16T01:06:17.5971070Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 1468,
+        "parent": 848,
+        "birth": "2026-11-16T01:06:19.4931250Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 5156,
+        "parent": 848,
+        "birth": "2026-11-16T01:06:19.7598970Z",
+        "executable": "C:\\Windows\\system32\\svchost.exe"
+      },
+      {
+        "pid": 7000,
+        "parent": 4320,
+        "birth": "2026-11-16T01:46:21.5242220Z",
+        "executable": "C:\\actions-runner\\cached\\2.338.2\\bin\\Runner.Listener.exe"
+      },
+      {
+        "pid": 7352,
+        "parent": 7000,
+        "birth": "2026-11-16T01:46:22.8136560Z",
+        "executable": "C:\\actions-runner\\cached\\2.338.2\\bin\\Runner.Worker.exe"
+      },
+      {
+        "pid": 6916,
+        "parent": 7352,
+        "birth": "2026-11-16T01:46:22.8171610Z",
+        "executable": "C:\\Windows\\system32\\conhost.exe"
+      },
+      {
+        "pid": 5388,
+        "parent": 848,
+        "birth": "2026-11-16T02:01:19.2152610Z",
+        "executable": "C:\\Windows\\System32\\svchost.exe"
+      },
+      {
+        "pid": 7516,
+        "parent": 7352,
+        "birth": "2026-11-16T02:14:10.1156670Z",
+        "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.EXE"
+      },
+      {
+        "pid": 6152,
+        "parent": 7516,
+        "birth": "2026-11-16T02:14:10.5174560Z",
+        "executable": "D:\\a\\_temp\\TEST-Windows-UI-build-43780997349-X64\\Release\\owned-process-gate-controller.exe"
+      },
+      {
+        "pid": 4384,
+        "parent": 6152,
+        "birth": "2026-11-16T02:14:10.5246930Z",
+        "executable": "C:\\hostedtoolcache\\windows\\node\\24.21.0\\x64\\node.exe"
+      },
+      {
+        "pid": 7240,
+        "parent": 4384,
+        "birth": "2026-11-16T02:14:10.6866040Z",
+        "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\node_modules\\.pnpm\\@esbuild+win32-x64@0.28.1\\node_modules\\@esbuild\\win32-x64\\esbuild.exe"
+      },
+      {
+        "pid": 7596,
+        "parent": 1000,
+        "birth": "2026-11-16T02:14:12.6444560Z",
+        "executable": "C:\\Windows\\system32\\wbem\\wmiprvse.exe"
+      },
+      {
+        "pid": 1804,
+        "parent": 4384,
+        "birth": "2026-11-16T02:14:40.5737170Z",
+        "executable": "D:\\a\\_temp\\TEST-Windows-UI-build-43780997349-X64\\Release\\owned-process-fixture.exe"
+      },
+      {
+        "pid": 1740,
+        "parent": 1804,
+        "birth": "2026-11-16T02:14:40.5759320Z",
+        "executable": "C:\\Windows\\system32\\conhost.exe"
+      },
+      {
+        "pid": 6712,
+        "parent": 4384,
+        "birth": "2026-11-16T02:14:40.5941020Z",
+        "executable": "D:\\a\\_temp\\TEST-Windows-UI-build-43780997349-X64\\Release\\owned-process-fixture.exe"
+      },
+      {
+        "pid": 6464,
+        "parent": 6712,
+        "birth": "2026-11-16T02:14:40.5961960Z",
+        "executable": "C:\\Windows\\system32\\conhost.exe"
+      },
+      {
+        "pid": 828,
+        "parent": 4384,
+        "birth": "2026-11-16T02:14:40.6122480Z",
+        "executable": "D:\\a\\_temp\\TEST-Windows-UI-build-43780997349-X64\\Release\\owned-process-fixture.exe"
+      },
+      {
+        "pid": 5028,
+        "parent": 828,
+        "birth": "2026-11-16T02:14:40.6141300Z",
+        "executable": "C:\\Windows\\system32\\conhost.exe"
+      },
+      {
+        "pid": 7896,
+        "parent": 4384,
+        "birth": "2026-11-16T02:15:19.4557640Z",
+        "executable": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+      },
+      {
+        "pid": 7384,
+        "parent": 7896,
+        "birth": "2026-11-16T02:15:19.4582900Z",
+        "executable": "C:\\Windows\\system32\\conhost.exe"
+      }
+    ],
+    "lineage": [
+      {
+        "pid": 6948,
+        "parent": 4384,
+        "birth": "2026-11-16T02:14:27.1238240Z",
+        "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\AgentTeamsAI.exe",
+        "firstSeen": 1794795267748,
+        "lastSeen": 1794795317563,
+        "parentBirth": null
+      },
+      {
+        "pid": 7724,
+        "parent": 6948,
+        "birth": "2026-11-16T02:14:28.1209360Z",
+        "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\AgentTeamsAI.exe",
+        "firstSeen": 1794795270086,
+        "lastSeen": 1794795317563,
+        "parentBirth": "2026-11-16T02:14:27.1238240Z"
+      },
+      {
+        "pid": 968,
+        "parent": 6948,
+        "birth": "2026-11-16T02:14:28.1293770Z",
+        "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\AgentTeamsAI.exe",
+        "firstSeen": 1794795270086,
+        "lastSeen": 1794795317563,
+        "parentBirth": "2026-11-16T02:14:27.1238240Z"
+      },
+      {
+        "pid": 1284,
+        "parent": 6948,
+        "birth": "2026-11-16T02:14:28.1575960Z",
+        "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\AgentTeamsAI.exe",
+        "firstSeen": 1794795270086,
+        "lastSeen": 1794795317563,
+        "parentBirth": "2026-11-16T02:14:27.1238240Z"
+      },
+      {
+        "pid": 4900,
+        "parent": 6948,
+        "birth": "2026-11-16T02:14:29.5860850Z",
+        "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe",
+        "firstSeen": 1794795270984,
+        "lastSeen": 1794795295455,
+        "parentBirth": "2026-11-16T02:14:27.1238240Z"
+      },
+      {
+        "pid": 3880,
+        "parent": 4900,
+        "birth": "2026-11-16T02:14:29.5879650Z",
+        "executable": "C:\\Windows\\system32\\conhost.exe",
+        "firstSeen": 1794795270984,
+        "lastSeen": 1794795295455,
+        "parentBirth": "2026-11-16T02:14:29.5860850Z"
+      },
+      {
+        "pid": 4624,
+        "parent": 6948,
+        "birth": "2026-11-16T02:14:32.1635650Z",
+        "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\AgentTeamsAI.exe",
+        "firstSeen": 1794795276656,
+        "lastSeen": 1794795317563,
+        "parentBirth": "2026-11-16T02:14:27.1238240Z"
+      },
+      {
+        "pid": 8144,
+        "parent": 6948,
+        "birth": "2026-11-16T02:14:34.2535180Z",
+        "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\windows-retry-custody\\owned-process-broker.exe",
+        "firstSeen": 1794795276656,
+        "lastSeen": 1794795317563,
+        "parentBirth": "2026-11-16T02:14:27.1238240Z"
+      },
+      {
+        "pid": 1344,
+        "parent": 8144,
+        "birth": "2026-11-16T02:14:34.2574790Z",
+        "executable": "C:\\Windows\\system32\\conhost.exe",
+        "firstSeen": 1794795276656,
+        "lastSeen": 1794795317563,
+        "parentBirth": "2026-11-16T02:14:34.2535180Z"
+      },
+      {
+        "pid": 3552,
+        "parent": 8144,
+        "birth": "2026-11-16T02:14:34.2767930Z",
+        "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe",
+        "firstSeen": 1794795276656,
+        "lastSeen": 1794795317563,
+        "parentBirth": "2026-11-16T02:14:34.2535180Z"
+      },
+      {
+        "pid": 4500,
+        "parent": 3552,
+        "birth": "2026-11-16T02:14:34.6215000Z",
+        "executable": "C:\\Windows\\system32\\conhost.exe",
+        "firstSeen": 1794795276656,
+        "lastSeen": 1794795317563,
+        "parentBirth": "2026-11-16T02:14:34.2767930Z"
+      },
+      {
+        "pid": 3160,
+        "parent": 3552,
+        "birth": "2026-11-16T02:14:37.9763390Z",
+        "executable": "D:\\a\\_temp\\TEST-Windows-UI-build-43780997349-X64\\Release\\owned-process-fixture.exe",
+        "firstSeen": 1794795279138,
+        "lastSeen": 1794795317563,
+        "parentBirth": "2026-11-16T02:14:34.2767930Z"
+      },
+      {
+        "pid": 6728,
+        "parent": 3160,
+        "birth": "2026-11-16T02:14:37.9808730Z",
+        "executable": "C:\\Windows\\system32\\conhost.exe",
+        "firstSeen": 1794795279138,
+        "lastSeen": 1794795317563,
+        "parentBirth": "2026-11-16T02:14:37.9763390Z"
+      },
+      {
+        "pid": 7004,
+        "parent": 3552,
+        "birth": "2026-11-16T02:14:39.0732430Z",
+        "executable": "D:\\a\\_temp\\TEST-Windows-UI-build-43780997349-X64\\Release\\owned-process-fixture.exe",
+        "firstSeen": 1794795280397,
+        "lastSeen": 1794795317563,
+        "parentBirth": "2026-11-16T02:14:34.2767930Z"
+      },
+      {
+        "pid": 7820,
+        "parent": 7004,
+        "birth": "2026-11-16T02:14:39.0777030Z",
+        "executable": "C:\\Windows\\system32\\conhost.exe",
+        "firstSeen": 1794795280397,
+        "lastSeen": 1794795317563,
+        "parentBirth": "2026-11-16T02:14:39.0732430Z"
+      },
+      {
+        "pid": 3748,
+        "parent": 6948,
+        "birth": "2026-11-16T02:15:10.0835570Z",
+        "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe",
+        "firstSeen": 1794795311579,
+        "lastSeen": 1794795317563,
+        "parentBirth": "2026-11-16T02:14:27.1238240Z"
+      },
+      {
+        "pid": 6776,
+        "parent": 3748,
+        "birth": "2026-11-16T02:15:10.0852480Z",
+        "executable": "C:\\Windows\\system32\\conhost.exe",
+        "firstSeen": 1794795311579,
+        "lastSeen": 1794795317563,
+        "parentBirth": "2026-11-16T02:15:10.0835570Z"
+      }
+    ]
+  },
+  "finitePeer": {
+    "provider": "codex",
+    "connected": 1,
+    "registrations": 1,
+    "serviceExitObservations": 0,
+    "failures": 0,
+    "metadata": {
+      "events": 0,
+      "claudeVersions": 0,
+      "codexVersions": 0,
+      "refused": 0
+    },
+    "modelRequests": 0,
+    "probes": 0,
+    "realVendorExecutions": 0
+  },
+  "inputFreeze": {
+    "originalPins": 17,
+    "receiptFlag": true,
+    "limits": "The original gate remeasured all 17 captured input paths plus packaged artifacts and Node/Host closure after the failed flow. Most executable/profile/wrapper bytes are not included in this 8-member ZIP, so the independent review does not rebuild or independently rehash their unavailable payloads."
+  },
+  "originalInputPins": [
+    {
+      "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe",
+      "sha256": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32"
+    },
+    {
+      "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\fixtures\\providerPeer.mjs",
+      "sha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc"
+    },
+    {
+      "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg4697.tmp\\fixture\\TEST codex Я\\TEST codex.cmd",
+      "sha256": "808f1868f1cb9649df4edf133c1f7d8da7e888b513b380868de8659ef46b90ca"
+    },
+    {
+      "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\host\\packages\\0000\\dist\\cli.js",
+      "sha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add"
+    },
+    {
+      "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg4697.tmp\\fixture\\TEST codex Я\\TEST-profile.json",
+      "sha256": "dddaff72afccaa7d9cab1563680d5b263de186b4e49e78cb267faea5c2d19687"
+    },
+    {
+      "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg4697.tmp\\fixture\\TEST codex Я\\TEST-host.mjs",
+      "sha256": "44ea1525831e667f6f63b618ad37636c9bd7a1f7388a003218888e5b0f68adab"
+    },
+    {
+      "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\windows-retry-custody\\owned-process-broker.exe",
+      "sha256": "807cb5a5e87aa3457d503fb65d4303f11066f28ba07c399e4d4b848eac443007"
+    },
+    {
+      "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\windows-retry-custody\\manifest.json",
+      "sha256": "9c4aed866b0ddf0c3d5cfbf7820b867b25ff6b165a87990b1e08ca2f8121b051"
+    },
+    {
+      "path": "D:\\a\\_temp\\TEST-Windows-UI-build-43780997349-X64\\Release\\owned-process-gate-controller.exe",
+      "sha256": "f9a381cae1b7e10c501afac381a1962ecc6c7c9bae9bec3c06a0fff280967618"
+    },
+    {
+      "path": "D:\\a\\_temp\\TEST-Windows-UI-build-43780997349-X64\\Release\\owned-process-fixture.exe",
+      "sha256": "ba85b99f6313e01dc48b82683bfb694a78cbe5dd81b642db92cb5c7992424de6"
+    },
+    {
+      "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg4697.tmp\\fixture\\TEST-desktop-descriptor.json",
+      "sha256": "2d214b01b5f3a61fd86b57ef69d29eb44b1c20ad596ea7582d20ee1ff76d75e7"
+    },
+    {
+      "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg4697.tmp\\fixture\\ui-seed-receipt.json",
+      "sha256": "f840f8b3897e27a4bb11691733ee2b884090194be9de3c270a8a7d38d1c531a4"
+    },
+    {
+      "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg4697.tmp\\fixture\\TEST-codex-metadata.cjs",
+      "sha256": "630c851c3acc800520108016a8bdcfac6e5cc0417913dd045888317d188ecddc"
+    },
+    {
+      "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg4697.tmp\\fixture\\TEST-codex-metadata.cmd",
+      "sha256": "b21244614d2b0eed4257c9723e7245c76fac78617656217147fd293ce48ae1e4"
+    },
+    {
+      "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg4697.tmp\\fixture\\TEST-claude-metadata.cjs",
+      "sha256": "c2c7e988500d3e1335aa2af634cf3b945d92638aedd3a222cb821ea360366f2b"
+    },
+    {
+      "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg4697.tmp\\fixture\\TEST-claude-metadata.cmd",
+      "sha256": "49ed0b803658c82abdb4b6ad926e82b6079dc9f78f30f93fd12a726f0717ba70"
+    },
+    {
+      "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg4697.tmp\\app-user-data\\data\\runtimes\\codex\\current.json",
+      "sha256": "f3d1f0666018332d3167f2f1e5885876c3b3324d8b02cc959c92d35eb23c8a94"
+    }
+  ],
+  "precedingPackagedNativeStep37": {
+    "summary": {
+      "kind": "TEST_PACKAGED_V2_QUALIFICATION",
+      "status": "PASS",
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "platform": "win32-x64",
+      "cleanup": true,
+      "phase": "finished",
+      "desktopJourneyQualified": false,
+      "vendorAuthQualified": false,
+      "releaseQualified": false,
+      "cleanupObservation": {
+        "originalExitObserved": true,
+        "nativeReceiptParsed": true,
+        "nativeReceiptBound": true,
+        "nativeCleanupConfirmed": true,
+        "firstFailure": null,
+        "firstRestorationFailure": null
+      },
+      "appAsarSha256": "f9669e2d6ab8f14c29951c1a64268e461fc27c0a214502743c7f7303c1a61921",
+      "candidateManifestSha256": "3962998118a070023cc160e39e7c8cb88d9b72feebe97438ee79f7be8f171288",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "nodeSha256": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+      "nativeExit": {
+        "code": 0,
+        "signal": null
+      },
+      "nativeReceiptSha256": "bdb5ca3216b29b614a987a8c0916a8c4847b2b83c5441302f366883e7161f079",
+      "sourceCheckoutUnavailable": true,
+      "legacyRuntimeUnavailable": true,
+      "sourceRestored": true,
+      "bundleRestored": true,
+      "legacyRuntimeRestored": true
+    },
+    "nativeReceipt": {
+      "kind": "TEST_PACKAGED_NATIVE_V2_HOST",
+      "status": "PASS",
+      "packaged": {
+        "executionOrigin": "packaged-extraResources",
+        "appAsarSha256": "f9669e2d6ab8f14c29951c1a64268e461fc27c0a214502743c7f7303c1a61921",
+        "candidateManifestSha256": "3962998118a070023cc160e39e7c8cb88d9b72feebe97438ee79f7be8f171288",
+        "harnessSha256": "dc915c015f2e62ab6c7ca5d22d11f6e10e7867f6155afed3ff1fd98235472e1b",
+        "sourceCheckoutUnavailable": true,
+        "legacyRuntimeUnavailable": true,
+        "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+        "nodeArchiveSha256": "158f7685b44de51f6c0df1d153526cbcd3e1bc739a8dfc607721cef75de9e541",
+        "providerArtifacts": [
+          {
+            "name": "@agent-teams/provider-implementations",
+            "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+          },
+          {
+            "name": "@agent-teams/provider-session-contracts",
+            "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+          }
+        ],
+        "packages": 120,
+        "files": 8131
+      },
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "platform": "win32-x64",
+      "version": "2.1.4",
+      "approvalMode": "manual",
+      "nodeVersion": "v24.21.0",
+      "modelSelection": {
+        "providerId": "TEST-local",
+        "modelId": "TEST-model-B",
+        "variant": "high"
+      },
+      "configurationSelection": {
+        "scope": "project",
+        "original": "project-A",
+        "later": "project-B"
+      },
+      "preferencesSelection": {
+        "nativeDefault": "TEST-local/TEST-model",
+        "appDefault": "TEST-local/TEST-model-B"
+      },
+      "digests": {
+        "bun": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+        "manifest": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+        "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+        "hostSource": "1954a191a22264609ce109f1d99c014faacb2df3d3dae5fab168a21b51b19d16",
+        "hostDist": "2e9a3d32128d0659c02af024bc096dd56f1df28af8ddecb1fe5a0ad5ef1f22a0",
+        "provider": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+        "windowsShell": "38f4384643b3fa0de714d2367b712c2e0fa1c89e2cfd131ae6b831ad962b1033"
+      },
+      "steps": [
+        "original_host_embedded_native_and_mcp_ready",
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+        "changed_project_config_did_not_retarget_running_native_session",
+        "original_uploaded_PNG_native_image_inference_and_public_readback",
+        "checkpoint_and_original_host_native_cleanup_confirmed",
+        "cold_host_restored_native_history_without_model_or_tool_replay"
+      ],
+      "cleanup": true,
+      "phaseElapsedMs": {
+        "original_host_embedded_native_and_mcp_ready": 38217,
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 114298,
+        "changed_project_config_did_not_retarget_running_native_session": 114298,
+        "original_uploaded_PNG_native_image_inference_and_public_readback": 114298,
+        "checkpoint_and_original_host_native_cleanup_confirmed": 114642,
+        "cold_host_restored_native_history_without_model_or_tool_replay": 140688
+      },
+      "elapsedMs": 151069,
+      "cancelled": false,
+      "inputObservation": {
+        "reads": 498,
+        "last": {
+          "phase": "allocated",
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true,
+          "sealed": false,
+          "diagnostic": null,
+          "inputs": [
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            },
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            }
+          ],
+          "interactions": [
+            {
+              "kind": "permission",
+              "phase": "resolved"
+            },
+            {
+              "kind": "permission",
+              "phase": "resolved"
+            }
+          ]
+        }
+      },
+      "launchObservation": {
+        "openElapsedMs": 26177,
+        "afterOpen": {
+          "available": true,
+          "status": "ready",
+          "reason": "context-applied",
+          "elapsedSinceAttemptMs": 25600,
+          "capturedTimeoutMs": 120000,
+          "claimed": true,
+          "nativeReady": true,
+          "contextApplied": true,
+          "everReady": true,
+          "usable": true,
+          "controlAvailable": true,
+          "noAllocation": false
+        }
+      },
+      "failureCode": null,
+      "hosts": [
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        },
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        }
+      ],
+      "modelOrigin": "localhost-scripted",
+      "modelRequests": 11,
+      "modelProgress": [
+        {
+          "elapsedMs": 38310,
+          "requests": 0
+        },
+        {
+          "elapsedMs": 43110,
+          "requests": 1
+        },
+        {
+          "elapsedMs": 43235,
+          "requests": 2
+        },
+        {
+          "elapsedMs": 43424,
+          "requests": 3
+        },
+        {
+          "elapsedMs": 43551,
+          "requests": 4
+        },
+        {
+          "elapsedMs": 75657,
+          "requests": 5
+        },
+        {
+          "elapsedMs": 75814,
+          "requests": 6
+        },
+        {
+          "elapsedMs": 75955,
+          "requests": 7
+        },
+        {
+          "elapsedMs": 76096,
+          "requests": 8
+        },
+        {
+          "elapsedMs": 85651,
+          "requests": 9
+        },
+        {
+          "elapsedMs": 112259,
+          "requests": 10
+        },
+        {
+          "elapsedMs": 112416,
+          "requests": 11
+        }
+      ],
+      "coordination": {
+        "status": "unqualified",
+        "cleanup": null
+      },
+      "modelFailures": [],
+      "vendorAuthQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    },
+    "preparedInputs": {
+      "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+      "status": "READY",
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "platform": "win32-x64",
+      "nodeVersion": "v24.21.0",
+      "productQualified": false,
+      "stage": "prepared",
+      "baseArchiveSha256": "fafa3d891922cb3a5df6d1bd7dec80cc105352c619b39e298761657add677f49",
+      "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "bun": {
+        "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\resources\\runtime\\bun\\bun.exe",
+        "sha256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+        "version": "1.4.3"
+      },
+      "supportArchiveSha256": "9cea106d78a0482a0ea8bd05b0a7cb44c604fcf4f6de3fdac5549a5ba552787c",
+      "manifestSha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628"
+    },
+    "manifest": {
+      "path": "ci-desktop-m0660/packaged-win-x64/extracted/agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154517,
+      "blob": "c938cf81f8141b52f080b44e670e98ba8f789b06",
+      "sha256": "3962998118a070023cc160e39e7c8cb88d9b72feebe97438ee79f7be8f171288"
+    },
+    "manifestPackageCount": 120,
+    "manifestFileCount": 8131,
+    "hostSourceFiles": 619,
+    "independentHostSourceLF": "802af77294547c258a7306e17598978305b6edf86705d0884196b98bc095cd39",
+    "independentHostSourceCRLF": "1954a191a22264609ce109f1d99c014faacb2df3d3dae5fab168a21b51b19d16",
+    "manifestReceiptAndP08DigestJoinsExact": true,
+    "limits": "Original separate manual native flow reports six required steps, two original Host exits 0/null, eleven localhost-scripted model requests, no replay after cold restoration, and source/bundle/legacy restoration. Its artifact hash joins and Host source digest are independently checked; 8131 manifested compiled/dependency files and the binaries are not rearchived or independently rebuilt here. It does not qualify P08 desktop Retry/Stop, auto approval, real-vendor authentication, release or P09."
+  },
+  "screenshots": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/extracted/_temp/windows-same-main-process-ui.before-crash.png",
+      "bytes": 79896,
+      "blob": "1c16d610142abf298c038fba12d9ef1553f039b9",
+      "sha256": "347f6b6883726b0ccaebfb5c181cdeea0c85005cf7ec957360a61dc551404221",
+      "actuallyViewed": true,
+      "phase": "before original Host crash",
+      "observations": "Only pre-crash frame: original test team Running, Alice online/Idle, registered-services reply and original task, product Stop available. There is no after-Retry or Kill frame."
+    }
+  ],
+  "limits": [
+    "Original job FAIL/receipt INCOMPLETE/cleanup false is preserved. Physical final absence and controller drainage do not substitute for either original UI Stop or the afterQuit zero-exit/lock/history suffix.",
+    "The diagnostic uiReady mark means the original recovery predicate accepted ready; it does not qualify the later Process owner rows. The failing guard prevented its pending DOM evaluation; which original process row/iteration was active is unretained.",
+    "The three-HANDLE alive assertions are established by exact executed source order and retained afterRetryPublic, not separately archived witness stdout. Neither native FILETIME nor returned CIM census is relabelled as the other precision/authority.",
+    "Recorded census durations are descriptive original synchronous-call intervals, not an identified Windows/product cause or proof that any ownership/read/witness may be removed. The original 10-second deadline, guards/actions/witnesses remain unchanged.",
+    "The only retained P08 image is before-crash; there is no after-Retry/Stop screenshot. Missing first/last DOM operand samples or unretained cleanup fields remain unknown.",
+    "The full1798 Git-to-CRLF source check is independent Native R2. The17 input freeze and8131 packaged payload manifest remain original hashed/source-checked records; unavailable executable/dependency payloads are not independently rebuilt or fully rearchived.",
+    "Step37 manual packaged native V2 PASS is separate from failed step38 P08, auto approval, P09, real-vendor authentication, Desktop journey and release. No source fix, timeout widening, rerun or local project execution occurred."
+  ],
+  "evidenceOnly": true,
+  "sourceFixProposed": false,
+  "auditExecution": "Only saved original byte/JSON/ZIP/source review; no source/ref/CI change, native/provider replay or project test/build/compiler/lint/install."
+}

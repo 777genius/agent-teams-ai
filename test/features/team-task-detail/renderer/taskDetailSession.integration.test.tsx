@@ -12,6 +12,7 @@ import { __resetTeamSliceModuleStateForTests } from '@renderer/store/slices/team
 import {
   acceptTaskDetailLiveTeamSnapshot,
   captureTaskDetailReadScope,
+  invalidateTeamSnapshotResource,
   invalidateTeamTaskFullResource,
 } from '@renderer/store/team/taskDetailReadAuthority';
 import { invalidateContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
@@ -163,6 +164,65 @@ describe('task session surface and origin integration', () => {
     vi.unstubAllGlobals();
   });
 
+  it('refuses retained callbacks after metadata invalidation before a new render', async () => {
+    let controller!: TaskDetailSessionController;
+    await act(async () => {
+      mount('dialog', (value) => {
+        controller = value;
+      });
+    });
+    const chip = {
+      id: 'TEST-chip',
+      filePath: '/TEST/retained.ts',
+      fileName: 'retained.ts',
+      fromLine: null,
+      toLine: null,
+      codeText: '',
+      language: 'typescript',
+    };
+    await act(async () => {
+      controller.setCommentText('TEST retained draft');
+      controller.addCommentChip(chip);
+    });
+    const retained = controller;
+    const before = structuredClone(retained.session);
+    const fileReader = vi.fn(() => {
+      throw new Error('Unexpected FileReader before current owner authority');
+    });
+    vi.stubGlobal('FileReader', fileReader);
+    invalidateTeamSnapshotResource(identity.contextId, identity.teamName);
+    expect(retained.isOwner).toBe(true);
+    expect(retained.canEditNow()).toBe(false);
+    await act(async () => {
+      retained.setCommentText('TEST refused typing');
+      retained.addCommentChip({ ...chip, id: 'TEST-refused' });
+      retained.removeCommentChip(chip.id);
+      retained.setReply({ taskId: identity.taskId, author: 'alice', text: 'TEST refused reply' });
+      await retained.addPendingFiles([new File(['TEST'], 'refused.txt', { type: 'text/plain' })]);
+      await retained.submitComment();
+      useStore.setState((state) => ({ teamDataCacheByName: { ...state.teamDataCacheByName } }));
+    });
+    expect(controller.isOwner).toBe(false);
+    expect(controller.canSubmit).toBe(false);
+    expect(controller.session).toEqual(before);
+    expect(fileReader).not.toHaveBeenCalled();
+    expect(apiMock.teams.addTaskComment).not.toHaveBeenCalled();
+    await act(async () => acceptLiveTeamSnapshotFixture(identity.teamName));
+    expect(controller.isOwner).toBe(true);
+    expect(controller.canEditNow()).toBe(true);
+    expect(controller.session.ownerSurfaceId).toBe(before.ownerSurfaceId);
+    expect(controller.session.ownerRevision).toBe(before.ownerRevision);
+    await act(async () => controller.setCommentText('TEST current owner resumes editing'));
+    expect(controller.session.commentText).toBe('TEST current owner resumes editing');
+    const current = controller;
+    invalidateContextScopedRequestEpoch();
+    expect(current.canEditNow()).toBe(false);
+    await act(async () => current.setCommentText('TEST stale scope refusal'));
+    expect(useStore.getState().taskDetailSessionById[key].commentText).toBe(
+      'TEST current owner resumes editing'
+    );
+  });
+
   it('retains Host comment ID/payload across actual unmount/reopen and retirement while preserving newer draft edits', async () => {
     const hostIdentity = { ...identity, teamName: 'host-team:TEST-owner' };
     const hostKey = taskDetailKey(hostIdentity);
@@ -252,7 +312,7 @@ describe('task session surface and origin integration', () => {
       [identity.teamName, 'full tail A'],
       [other.teamName, 'full tail B'],
     ]);
-    let fullRefresh: Promise<void> | undefined;
+    let fullRefresh: Promise<void> | undefined = undefined;
     apiMock.teams.getTask.mockImplementation(async (teamName: string) => {
       if (teamName === identity.teamName && fullRefresh) await fullRefresh;
       return { ...task, needsClarification: 'user', description: tails.get(teamName) };

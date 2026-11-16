@@ -1,0 +1,855 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "jobId": 133017915899,
+  "status": "PASS",
+  "qualification": "Original current-source Skills UI scenario in an isolated TEST root, including the real original Main OS Trash callback; no native agent/provider or ambient Trash inventory qualification.",
+  "originalLog": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/skills/job-133017915899.log",
+    "bytes": 180752,
+    "blob": "53f57e27537daf32dcabf1a130414ab7ca70bd44",
+    "sha256": "10a8f61d0f47414d77fde9e5bb8a8c00102090836e6617f127eee4829190ed3d"
+  },
+  "originalZip": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/skills/artifact-14190383138.zip",
+    "bytes": 1378321,
+    "blob": "aa0005723f1377c724ce9b7b05456fb27219b88f",
+    "sha256": "72abf5c5187f8d975b3b0a451648dd6ac0a54c6c8f92b5a1bc00cba21f3a5c9c"
+  },
+  "receipt": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/skills/extracted/TEST-desktop-backend-R0GqZJ/desktop-backend-receipt.json",
+    "bytes": 714970,
+    "blob": "bc89f6087ee39379c27a8e0a1b29a6a132f958ab",
+    "sha256": "be1148ba0cf9b49e5a9c3bd1f0dde4c5672c66dad17f2c820ba2437bd3c99429"
+  },
+  "archiveEntries": 25,
+  "archiveSafeCrcAllBytes": true,
+  "officialArtifact": {
+    "id": 14190383138,
+    "name": "host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-skills",
+    "size_in_bytes": 1378321,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14190383138",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14190383138/zip",
+    "expired": false,
+    "created_at": "2026-11-16T01:31:42Z",
+    "expires_at": "2026-11-30T01:31:41Z",
+    "updated_at": "2026-11-16T01:31:42Z",
+    "digest": "sha256:72abf5c5187f8d975b3b0a451648dd6ac0a54c6c8f92b5a1bc00cba21f3a5c9c",
+    "workflow_run": {
+      "id": 43780997237,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+    }
+  },
+  "artifactApi": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/terminal-artifacts-0135.json",
+    "bytes": 8035,
+    "blob": "0643c77ab28f7b587a3238c565b5c82a2106a10d",
+    "sha256": "60c2bbadcdb5376f7ff468cc7533f58b3caf362b00661f9e3c562ac44ff94c97"
+  },
+  "terminalJob": {
+    "id": 133017915899,
+    "name": "Offline Host Desktop (linux-x64, skills)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43780997237,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Verify original checkout and runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Prepare private Linux display",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Install frozen workspace and Electron",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build existing Desktop prerequisites and verify admission",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Verify original Runtime and Team conversation contracts",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 9
+      },
+      {
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 10
+      },
+      {
+        "name": "Capture package-manager and Host inputs without vendor executables",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Capture original controlled Linux process input without a provider",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Exercise ordinary Team controls and renderer reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Exercise ordinary Taskboard controls and persistence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Exercise original Skills and cross-Team controls",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15
+      },
+      {
+        "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Exercise original Review after a cold Host and app restart",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Exercise saved next-launch selection while the original Team remains live",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 24
+      },
+      {
+        "name": "Exercise stock Codex Update while the original Team retains its captured source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 25
+      },
+      {
+        "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 26
+      },
+      {
+        "name": "Prepare exact OpenCode V2 Bun and engine graph",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 27
+      },
+      {
+        "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 28
+      },
+      {
+        "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 29
+      },
+      {
+        "name": "Verify exact source, original screenshots, receipts and cleanup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 30
+      },
+      {
+        "name": "Preserve original Desktop evidence, including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 60
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 61
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 62
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 63
+      }
+    ]
+  },
+  "terminalApi": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0147.json",
+    "bytes": 148774,
+    "blob": "f63d8113e2091f5862c8b02c1873255d7161556e",
+    "sha256": "409ff46b32b5ce57efe8b42f12bca12ff75fab5c9819af374cfe1e254f65ea25"
+  },
+  "sourcePins": {
+    "count": 1757,
+    "orderedBeforeEqualsAfter": true,
+    "allEqualCompleteGitLfCensus": true,
+    "reference": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    },
+    "gitBytesTotal": 20308016,
+    "limit": "Exact comparison to the previously independently computed full Git0660 census; no rebuild or new application read."
+  },
+  "sourceSkills": {
+    "path": "scripts/legacy-agent-host/desktop-skills-ui-smoke.ts",
+    "gitBlob": "2e9991d85d9df0eeec1b35e16e63ff37f3904f5d",
+    "gitBytes": 18641,
+    "sha256": "e0b6d31fd3674c0fa4677bdfc6a2668ca6a54eae5871a4cf4aeb82e4480a0e8f",
+    "preEqualsPost": true,
+    "recordedEqualsGitLfBytes": true
+  },
+  "sourceLines": 414,
+  "prerequisites": {
+    "node": "24.21.0",
+    "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "helper8": {
+      "tests": 115,
+      "pass": 115,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 8958.700269
+    },
+    "installerHelper": {
+      "tests": 7,
+      "pass": 7,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 202.785954
+    },
+    "Team10": "Not executed by this Skills lane."
+  },
+  "proof": {
+    "status": "PASS",
+    "qaInventory": [
+      "Existing typed import source and review: visible binary/hidden warnings, exact target, no target or journal writes",
+      "Source changes after review: existing confirm rejects; re-review then applies exact new bytes and preserves unmanaged files/empty directories",
+      "Existing Create and Edit dialogs review/apply real SKILL.md changes",
+      "Existing Delete confirmation: original inode reaches OS Trash callback, completed original journal, replacement at old name survives",
+      "Pre-staged original UNKNOWN Codex intent: existing Delete/retry remains held with original bytes and receipt unchanged",
+      "Supported TEST config API replaces original local context while review is open; existing confirm rejects original stale grant without target writes"
+    ],
+    "exclusions": [
+      "real projects or credentials",
+      "native agents/inference",
+      "native folder picker",
+      "reading ambient OS Trash inventory",
+      "claiming forced unknown native callback from a pre-staged UNKNOWN fixture"
+    ],
+    "sourceSha256": "e0b6d31fd3674c0fa4677bdfc6a2668ca6a54eae5871a4cf4aeb82e4480a0e8f",
+    "initialScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-R0GqZJ/ui-skills-initial.png",
+      "sha256": "d416d585a299dc07b1dc317fb174f0e39d19db3c2f8ef803670fd586ddf9138b"
+    },
+    "importPreviewScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-R0GqZJ/ui-skills-import-review.png",
+      "sha256": "1d3a389c9448fb586ab07e88f542d1e73fd2c0bd88cf40aac266946c227b5733"
+    },
+    "knownRejectedScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-R0GqZJ/ui-skills-known-rejected.png",
+      "sha256": "f1dac2be7f8942695d20d48cbb4521351bd3197dbddf28c11ea286ff2da697d5"
+    },
+    "importApplied": {
+      "/": "directory",
+      "SKILL.md": "bb7c7a741994e48ea9b4a12f7c5708c5490c77237d974e516c40d83cf5d82cd0",
+      "assets/": "directory",
+      "assets/picture.bin": "cf971cb781ba3f4fd2e4228dd62f31415bc78e781b97550e3f3c86a4074739a5",
+      "empty-sidecar/": "directory",
+      "keep.txt": "844adc52f7647c9b1b95c95bfa6148ae616021e6b0d677465d125195b8777404",
+      "references/": "directory",
+      "references/guide.md": "e0166c9ff76193a052790c0f971258495897513c5ac49035de778eeda4c0d900"
+    },
+    "importAppliedScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-R0GqZJ/ui-skills-import-applied.png",
+      "sha256": "11b7152fd648e37308cfa3f2619485c55c19cc0e049ba0fbce74fb13842e57e6"
+    },
+    "editAppliedScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-R0GqZJ/ui-skills-edit-applied.png",
+      "sha256": "471fe91dec7cf5c20fcf24de46571ef0b5434305d66fdfda349a28885b70f922"
+    },
+    "nativeTrash": {
+      "completed": {
+        "schemaVersion": 1,
+        "commandId": "skills-cfd951d6f5a2d133f1aa56defa1c778066017ba87dff738332e083f99e3d8203",
+        "profileId": "TEST-skills-claude",
+        "configRevision": "TEST-skills-claude-1",
+        "providerId": "claude",
+        "fingerprint": "4322cea5f71983a92690de75178140a1ffee9ad91960a29659727a98b4392e5a",
+        "selectionDigest": "6f7f4be4c45e4f0b3abc8f327cae9f6edee02aac5cd2eb3c185c69f735e773c0",
+        "resourceId": "011ae7dd9e18c6df66ccf76c2a11ad308da54fbaa4c3443bb3376c78387a97e4",
+        "resourceHeld": false,
+        "kind": "skill.mutation",
+        "targetId": "ef7aa911a01fb143ab73a3d2640e314cb8eded931ef80d2806e48b865133654f",
+        "intentDigest": "394bfb6cc16eb90e6bc73651615b452dee6d232f5b09d74cf5f980710f68dc01",
+        "action": "trash",
+        "scope": "user",
+        "rootKind": "claude",
+        "phase": "completed",
+        "trash": {
+          "path": "/home/runner/work/_temp/TEST-desktop-backend-R0GqZJ/claude/skills/._desktop-skill-d517b47bfbdcf8d79827edcb62912ab4120331e5347c311303f5df9208ea7dc5/original",
+          "dev": 66305,
+          "ino": 8305294,
+          "parentDev": 66305,
+          "parentIno": 8305297,
+          "token": "9f6cc4ee295c5508a9bd670f21ccc4bf92755e8e93dd92961ec0cbe0618a8fa0"
+        },
+        "digest": "a4a74768354f6eacc94858531413c752092d074ec58726652523aa1972caf434"
+      },
+      "originalSnapshot": {
+        "/": "directory",
+        "SKILL.md": "bed85bbf62a10997d5229608670d85e9ccf8160905a0e0f71b893c823af6d9bb"
+      },
+      "replacementSurvived": true,
+      "trashObservations": [
+        {
+          "observedOriginalStage": "/home/runner/work/_temp/TEST-desktop-backend-R0GqZJ/claude/skills/._desktop-skill-d517b47bfbdcf8d79827edcb62912ab4120331e5347c311303f5df9208ea7dc5/original",
+          "dev": 66305,
+          "ino": 8305294,
+          "markdownSha256": "bed85bbf62a10997d5229608670d85e9ccf8160905a0e0f71b893c823af6d9bb"
+        },
+        {
+          "observedOriginalAbsent": true,
+          "replacementCreatedAtMs": 77217.495493
+        }
+      ],
+      "callbackEvidence": "Host completed requires original Main nativeCompleted=true plus staged absence; OS Trash destination inventory was not read"
+    },
+    "trashCompletedScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-R0GqZJ/ui-skills-trash-completed.png",
+      "sha256": "7f7ad10915498f9985e2e96744ab7092cdcdbe104567fd0d6d01008d7b88bc77"
+    },
+    "unknownHeldScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-R0GqZJ/ui-skills-unknown-held.png",
+      "sha256": "a204bc32f941da4231b1213f5fab4d81f30fccfb7fca18a704eb1e7b69dc299d"
+    },
+    "staleContextScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-R0GqZJ/ui-skills-stale-context.png",
+      "sha256": "c271b6550ffeb7da9d8705c9fe4be70b82be2a44a2ac360937aa64e22a888887"
+    },
+    "contextBoundary": "Real original local ServiceContext replacement through existing config API while the actual review stays open; existing confirm cannot reuse old import grant",
+    "finalJournal": [
+      {
+        "schemaVersion": 1,
+        "commandId": "skills-ea8daeb4c149d720371689b4ef66cf72e5a21d71b369d3ea32279e5c8eef8a3b",
+        "profileId": "TEST-skills-claude",
+        "configRevision": "TEST-skills-claude-1",
+        "providerId": "claude",
+        "fingerprint": "4414520373bf01abf6eb2a9d3c96f35fef9d3b3aeceda1f9abf3f26144189d0a",
+        "selectionDigest": "6f7f4be4c45e4f0b3abc8f327cae9f6edee02aac5cd2eb3c185c69f735e773c0",
+        "resourceId": "011ae7dd9e18c6df66ccf76c2a11ad308da54fbaa4c3443bb3376c78387a97e4",
+        "resourceHeld": false,
+        "kind": "skill.mutation",
+        "targetId": "ef7aa911a01fb143ab73a3d2640e314cb8eded931ef80d2806e48b865133654f",
+        "intentDigest": "22c187cecc1e0c11f9614607a0dfde9e479bb4025535846897779890a33c813e",
+        "action": "import",
+        "scope": "user",
+        "rootKind": "claude",
+        "phase": "completed",
+        "digest": "0e76fb1a0dcd83c0999c958f8eaa7c0158b1c5d0e9e8af79c15cf6eb8d16b34a"
+      },
+      {
+        "schemaVersion": 1,
+        "commandId": "skills-c5c4f0c813fabbea65e5c173e60e09288874e03b659606feecd7f08a4c63d8d7",
+        "profileId": "TEST-skills-claude",
+        "configRevision": "TEST-skills-claude-1",
+        "providerId": "claude",
+        "fingerprint": "6c34fc97fa8c6dbf8d542eea1cb4e5ca04ee9feecd843c76b4bf733d9c1b7b01",
+        "selectionDigest": "6f7f4be4c45e4f0b3abc8f327cae9f6edee02aac5cd2eb3c185c69f735e773c0",
+        "resourceId": "011ae7dd9e18c6df66ccf76c2a11ad308da54fbaa4c3443bb3376c78387a97e4",
+        "resourceHeld": false,
+        "kind": "skill.mutation",
+        "targetId": "ef7aa911a01fb143ab73a3d2640e314cb8eded931ef80d2806e48b865133654f",
+        "intentDigest": "a08b25276adf132a236c08e94369390c0f67b6f71fa9c53a897014921e5e9e7f",
+        "action": "upsert",
+        "scope": "user",
+        "rootKind": "claude",
+        "phase": "completed",
+        "digest": "53216e9b8fd23f0e26d7e5098068dfb7a9940c7f9a09813329fd2cf531ddb193"
+      },
+      {
+        "schemaVersion": 1,
+        "commandId": "TEST-original-unknown-skill-trash",
+        "profileId": "TEST-skills-codex",
+        "configRevision": "TEST-skills-codex-1",
+        "providerId": "codex",
+        "fingerprint": "41985cf1c4bc240bd36fde8143de9e6a3432fe728e893bd056821296db09a92c",
+        "selectionDigest": "3f6dbdacfb872342d1a2720e36b8430864d15b4587f0065ff5583c0209f81fca",
+        "resourceId": "9058252b98253030288f00e6e356208c7f479f97614cfe6217cab3a9ee0107b6",
+        "resourceHeld": true,
+        "kind": "skill.mutation",
+        "targetId": "adc88322a3cd5ce8718fc3d8a3a58800054f92195066cbe78348e1e9d1c23802",
+        "intentDigest": "9a3999c53db04b2006521aaea08c9a130fdafc4009b3a6576c149c9d548feb8f",
+        "action": "trash",
+        "scope": "user",
+        "rootKind": "codex",
+        "phase": "held",
+        "digest": "bafdcd2f15df3f01a99e2e016a151f706be1f229f19f4ecd99ef45d23f629557"
+      },
+      {
+        "schemaVersion": 1,
+        "commandId": "skills-cfd951d6f5a2d133f1aa56defa1c778066017ba87dff738332e083f99e3d8203",
+        "profileId": "TEST-skills-claude",
+        "configRevision": "TEST-skills-claude-1",
+        "providerId": "claude",
+        "fingerprint": "4322cea5f71983a92690de75178140a1ffee9ad91960a29659727a98b4392e5a",
+        "selectionDigest": "6f7f4be4c45e4f0b3abc8f327cae9f6edee02aac5cd2eb3c185c69f735e773c0",
+        "resourceId": "011ae7dd9e18c6df66ccf76c2a11ad308da54fbaa4c3443bb3376c78387a97e4",
+        "resourceHeld": false,
+        "kind": "skill.mutation",
+        "targetId": "ef7aa911a01fb143ab73a3d2640e314cb8eded931ef80d2806e48b865133654f",
+        "intentDigest": "394bfb6cc16eb90e6bc73651615b452dee6d232f5b09d74cf5f980710f68dc01",
+        "action": "trash",
+        "scope": "user",
+        "rootKind": "claude",
+        "phase": "completed",
+        "trash": {
+          "path": "/home/runner/work/_temp/TEST-desktop-backend-R0GqZJ/claude/skills/._desktop-skill-d517b47bfbdcf8d79827edcb62912ab4120331e5347c311303f5df9208ea7dc5/original",
+          "dev": 66305,
+          "ino": 8305294,
+          "parentDev": 66305,
+          "parentIno": 8305297,
+          "token": "9f6cc4ee295c5508a9bd670f21ccc4bf92755e8e93dd92961ec0cbe0618a8fa0"
+        },
+        "digest": "a4a74768354f6eacc94858531413c752092d074ec58726652523aa1972caf434"
+      },
+      {
+        "schemaVersion": 1,
+        "commandId": "skills-2d8941a3fc882fdd531243ffba85f56c15ce21c6f89189bd128c5e8e55a30d1b",
+        "profileId": "TEST-skills-claude",
+        "configRevision": "TEST-skills-claude-1",
+        "providerId": "claude",
+        "fingerprint": "5dd47b9aa5a1a2c3995e61aa0cbe750e5dbdfe7b58b7a04d1cbc1957b3a43669",
+        "selectionDigest": "6f7f4be4c45e4f0b3abc8f327cae9f6edee02aac5cd2eb3c185c69f735e773c0",
+        "resourceId": "011ae7dd9e18c6df66ccf76c2a11ad308da54fbaa4c3443bb3376c78387a97e4",
+        "resourceHeld": false,
+        "kind": "skill.mutation",
+        "targetId": "ef7aa911a01fb143ab73a3d2640e314cb8eded931ef80d2806e48b865133654f",
+        "intentDigest": "420848e1e18382721f9fec2eb4f561ef81a6da3347a1606ee9b8a4cc687a12f8",
+        "action": "upsert",
+        "scope": "user",
+        "rootKind": "claude",
+        "phase": "completed",
+        "digest": "ec286f8a1b9f00fc54fef586faaf5f21df9de094d43676e79614c9e0b0500e7d"
+      }
+    ],
+    "visualAcceptance": "pending screenshot inspection",
+    "finishedAt": "2026-11-16T01:31:39.217Z"
+  },
+  "stepCount": 78,
+  "journalFiles": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/skills/extracted/TEST-desktop-backend-R0GqZJ/hoststore/management-commands/0375e941059bdee75e006578d5b0a56f556c1389d04ac4e9c3187db8e82e1f57.json",
+      "bytes": 869,
+      "blob": "8e955341265038c5060e29c2b6bd66a3ff3722e9",
+      "sha256": "47fa436604f294d9fda4b0d4d19bee250fa29af5a8d1b85280d8f4d9df3aa96a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/skills/extracted/TEST-desktop-backend-R0GqZJ/hoststore/management-commands/bd811300658b35d8cfcf140f7ec6e101bf872c3e9c047d924a48bdad1ff3e856.json",
+      "bytes": 869,
+      "blob": "5d902bbc5b1140678603f308a710d2537c04ad5f",
+      "sha256": "6addb2af72aeebed87784742182ad262970b869c8792e9417cb454125ada0cca"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/skills/extracted/TEST-desktop-backend-R0GqZJ/hoststore/management-commands/d259a2f21c23fe0861b409824484a152033a0e25ce7dfa9edffc061e09655796.json",
+      "bytes": 820,
+      "blob": "66fbc7dfd89dcdeb9a23b44e8a89f9f145e20608",
+      "sha256": "9ab389fee8c6e2efd591945b4ebb99ae70cee10cfff0844a4ae4ffba656fe2c3"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/skills/extracted/TEST-desktop-backend-R0GqZJ/hoststore/management-commands/d517b47bfbdcf8d79827edcb62912ab4120331e5347c311303f5df9208ea7dc5.json",
+      "bytes": 1225,
+      "blob": "f05d24b00e89a7366ec7f4dadf584c631d120f5b",
+      "sha256": "f5c9c4c8ed5686f99dba8f32f2d17022de09402c576654486e7eadd9f5cafd72"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/skills/extracted/TEST-desktop-backend-R0GqZJ/hoststore/management-commands/f38ded3f6e38c903d68da9baff3164d78dc9f6aee4088e34291b3cbaba88891a.json",
+      "bytes": 869,
+      "blob": "4a0cc2aaea6fb02a311db5fe55e1412bdf4f3a61",
+      "sha256": "5c8b92c4f9920885c608c832badf764b156865949a3272e0fda858dcce1df1d8"
+    }
+  ],
+  "allFiveJournalRecordsEqualReceipt": true,
+  "completedMutations": 4,
+  "retainedUnknownHeldIntents": 1,
+  "sourceEnforcedBoundaries": [
+    "Initial review and known source-change refusal compare original target snapshot and complete journal without writes.",
+    "Re-review applies exact changed bytes, including binary/reference data, while keeping unmanaged keep.txt and empty-sidecar and omitting hidden/obsolete files.",
+    "Create/Edit use original dialogs and original file checks.",
+    "Original Trash observer identifies exact staged dev/inode/markdown before absence, preserves replacement directory, and is closed in original finally.",
+    "Both original held-Delete attempts keep pre-staged unknown receipt and bytes identical.",
+    "Original config.update changes local ServiceContext during review; confirm rejects stale grant, target absent and journal unchanged."
+  ],
+  "screenshots": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/skills/extracted/TEST-desktop-backend-R0GqZJ/ui-skills-initial.png",
+      "bytes": 128869,
+      "blob": "7318b5f09301522c19ae6570092c59252c15b49b",
+      "sha256": "d416d585a299dc07b1dc317fb174f0e39d19db3c2f8ef803670fd586ddf9138b",
+      "actuallyViewed": true,
+      "receiptHashMatched": true,
+      "observation": "Original Extensions/Skills screen with two personal rows; provider status still Checking/Loading or unavailable, not a claimed ready state."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/skills/extracted/TEST-desktop-backend-R0GqZJ/ui-skills-import-review.png",
+      "bytes": 97492,
+      "blob": "b2d37d97f4ef424180b33642dcce6873afa576e0",
+      "sha256": "1d3a389c9448fb586ab07e88f542d1e73fd2c0bd88cf40aac266946c227b5733",
+      "actuallyViewed": true,
+      "receiptHashMatched": true,
+      "observation": "Exact TEST target; four changes, binary and hidden-file warnings, preserved-files warning and enabled Import Skill."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/skills/extracted/TEST-desktop-backend-R0GqZJ/ui-skills-known-rejected.png",
+      "bytes": 102044,
+      "blob": "735ad3b627498d8f4e2b96e3fc3ed0f706d4f7ba",
+      "sha256": "f1dac2be7f8942695d20d48cbb4521351bd3197dbddf28c11ea286ff2da697d5",
+      "actuallyViewed": true,
+      "receiptHashMatched": true,
+      "observation": "Review retained with visible source-changed-after-review error; original no-target/no-journal-write assertions are source-backed, not inferred from PNG."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/skills/extracted/TEST-desktop-backend-R0GqZJ/ui-skills-import-applied.png",
+      "bytes": 116140,
+      "blob": "d0cd9b4c988c81a47c99b14ed5ce28ef7f7d7d7d",
+      "sha256": "11b7152fd648e37308cfa3f2619485c55c19cc0e049ba0fbce74fb13842e57e6",
+      "actuallyViewed": true,
+      "receiptHashMatched": true,
+      "observation": "Success notice and imported-v2 title; details still Loading in this frame, so no settled-detail claim."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/skills/extracted/TEST-desktop-backend-R0GqZJ/ui-skills-edit-applied.png",
+      "bytes": 92678,
+      "blob": "bfe282ff13a7311e81f0220b72a6f09661f4e473",
+      "sha256": "471fe91dec7cf5c20fcf24de46571ef0b5434305d66fdfda349a28885b70f922",
+      "actuallyViewed": true,
+      "receiptHashMatched": true,
+      "observation": "Saved-success notice and edited title/description; details still Loading in this frame."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/skills/extracted/TEST-desktop-backend-R0GqZJ/ui-skills-trash-completed.png",
+      "bytes": 98139,
+      "blob": "8a4456f8d0a619e147298dd3bc0dcbd90fe5db01",
+      "sha256": "7f7ad10915498f9985e2e96744ab7092cdcdbe104567fd0d6d01008d7b88bc77",
+      "actuallyViewed": true,
+      "receiptHashMatched": true,
+      "observation": "Original created-skill search shows no matches and no deleting dialog; inode/callback/absence come from separate original source/receipt."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/skills/extracted/TEST-desktop-backend-R0GqZJ/ui-skills-unknown-held.png",
+      "bytes": 121213,
+      "blob": "285ed8591d480d99809d9c492ba0cbe7b5f0bae1",
+      "sha256": "a204bc32f941da4231b1213f5fab4d81f30fccfb7fca18a704eb1e7b69dc299d",
+      "actuallyViewed": true,
+      "receiptHashMatched": true,
+      "observation": "Unconfirmed original mutation error while held TEST bytes remain visible; this is the pre-staged UNKNOWN fixture, not an induced native-callback loss."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/skills/extracted/TEST-desktop-backend-R0GqZJ/ui-skills-stale-context.png",
+      "bytes": 86723,
+      "blob": "1b0d34844771faba2183134167c26b3351ce4ed2",
+      "sha256": "c271b6550ffeb7da9d8705c9fe4be70b82be2a44a2ac360937aa64e22a888887",
+      "actuallyViewed": true,
+      "receiptHashMatched": true,
+      "observation": "Open review refuses stale grant with Review the original skill import before saving; original target/journal no-write checks remain separate."
+    }
+  ],
+  "visualReview": "All eight original images actually viewed. Loading/provider-checking states remain explicitly unqualified.",
+  "cleanup": {
+    "processGroup": 4409,
+    "remaining": [],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostObserved": true,
+    "capturedHostAbsent": true,
+    "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+  },
+  "beforeHarnessCleanup": [
+    {
+      "pid": 4483,
+      "ppid": 1,
+      "pgid": 4409
+    }
+  ],
+  "originalRequestedQuitExit": {
+    "initialExitCode": 0,
+    "initialSignalCode": null,
+    "exitCode": 0,
+    "signalCode": null
+  },
+  "hostChild": {
+    "pid": 4776,
+    "ppid": 4535,
+    "pgid": 4409,
+    "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+    "observedBeforeShutdown": true
+  },
+  "sentinel": {
+    "invocations": [
+      {
+        "executable": "claude-multimodel",
+        "allowed": true,
+        "argc": 1,
+        "command": null,
+        "flags": [
+          "--version"
+        ]
+      },
+      {
+        "executable": "skills-claude-management",
+        "allowed": false,
+        "skillsMetadataRefusal": true,
+        "operation": "sdk.metadata",
+        "argc": 12,
+        "flags": [
+          "--output-format",
+          "--verbose",
+          "--input-format",
+          "--tools",
+          "--setting-sources",
+          "--strict-mcp-config",
+          "--permission-mode",
+          "--no-session-persistence",
+          "--settings"
+        ]
+      },
+      {
+        "executable": "skills-codex-management",
+        "allowed": false,
+        "skillsMetadataRefusal": true,
+        "operation": "app-server.read",
+        "argc": 3,
+        "flags": [
+          "--listen"
+        ]
+      },
+      {
+        "executable": "codex",
+        "allowed": true,
+        "argc": 1,
+        "command": null,
+        "flags": [
+          "--version"
+        ]
+      },
+      {
+        "executable": "skills-codex-management",
+        "allowed": false,
+        "skillsMetadataRefusal": true,
+        "operation": "app-server.read",
+        "argc": 3,
+        "flags": [
+          "--listen"
+        ]
+      },
+      {
+        "executable": "skills-codex-management",
+        "allowed": false,
+        "skillsMetadataRefusal": true,
+        "operation": "app-server.read",
+        "argc": 3,
+        "flags": [
+          "--listen"
+        ]
+      },
+      {
+        "executable": "skills-codex-management",
+        "allowed": false,
+        "skillsMetadataRefusal": true,
+        "operation": "app-server.read",
+        "argc": 3,
+        "flags": [
+          "--listen"
+        ]
+      },
+      {
+        "executable": "skills-codex-management",
+        "allowed": false,
+        "skillsMetadataRefusal": true,
+        "operation": "app-server.read",
+        "argc": 3,
+        "flags": [
+          "--listen"
+        ]
+      }
+    ],
+    "preQuitCount": 8,
+    "postQuitOrCleanupInvocations": [],
+    "refusedInvocations": [
+      {
+        "executable": "skills-claude-management",
+        "allowed": false,
+        "skillsMetadataRefusal": true,
+        "operation": "sdk.metadata",
+        "argc": 12,
+        "flags": [
+          "--output-format",
+          "--verbose",
+          "--input-format",
+          "--tools",
+          "--setting-sources",
+          "--strict-mcp-config",
+          "--permission-mode",
+          "--no-session-persistence",
+          "--settings"
+        ]
+      },
+      {
+        "executable": "skills-codex-management",
+        "allowed": false,
+        "skillsMetadataRefusal": true,
+        "operation": "app-server.read",
+        "argc": 3,
+        "flags": [
+          "--listen"
+        ]
+      },
+      {
+        "executable": "skills-codex-management",
+        "allowed": false,
+        "skillsMetadataRefusal": true,
+        "operation": "app-server.read",
+        "argc": 3,
+        "flags": [
+          "--listen"
+        ]
+      },
+      {
+        "executable": "skills-codex-management",
+        "allowed": false,
+        "skillsMetadataRefusal": true,
+        "operation": "app-server.read",
+        "argc": 3,
+        "flags": [
+          "--listen"
+        ]
+      },
+      {
+        "executable": "skills-codex-management",
+        "allowed": false,
+        "skillsMetadataRefusal": true,
+        "operation": "app-server.read",
+        "argc": 3,
+        "flags": [
+          "--listen"
+        ]
+      },
+      {
+        "executable": "skills-codex-management",
+        "allowed": false,
+        "skillsMetadataRefusal": true,
+        "operation": "app-server.read",
+        "argc": 3,
+        "flags": [
+          "--listen"
+        ]
+      }
+    ],
+    "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+  },
+  "limits": [
+    "OS Trash destination inventory was not read; nativeCompleted plus staged absence and original identity are the retained completion boundary.",
+    "The held UNKNOWN is pre-staged, not evidence that an actual native callback was forcibly lost.",
+    "Original target file snapshots and original source assertions qualify their original times; no current target filesystem is available from this archive.",
+    "Initial remaining group row4483 is not assigned a birth identity or invented exit reason; final original cleanup is separate.",
+    "No full provider/native/merge, other UI lanes, Team privacy GREEN or static-gate qualification.",
+    "No project test/compiler/lint/install/Node/provider/CI/source/ref action during this read-only evidence audit."
+  ]
+}

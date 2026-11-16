@@ -1,0 +1,1632 @@
+{
+  "kind": "N608EFB_ORIGINAL_CLAUDE_RUNTIME_DESKTOP_AUDIT",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234483,
+  "jobId": 133062441515,
+  "status": "PASS",
+  "qualification": "Original finite TEST Claude SDK peer Desktop route only; no real vendor inference/authentication/native-provider or release qualification.",
+  "originalLog": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/job-133062441515.log",
+    "bytes": 180983,
+    "gitBlob": "0f09318102da8b395ac9810fca22b8334de0d8fe",
+    "sha256": "739619b89c2ea34b76edfd6910f4a8914fdd4072e99e586ef4553c630d010014"
+  },
+  "originalLogResponse": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/original-job-log-response.json",
+    "bytes": 190849,
+    "gitBlob": "e97edbbca66c92b329d223f9329612051af901c7",
+    "sha256": "998a03151e6f7ef5555815fd1a9637d288e1868632c89af2c1c99326d122df36"
+  },
+  "rawMcpContentExact": true,
+  "originalZip": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/artifact-14196143608.zip",
+    "bytes": 3641990,
+    "gitBlob": "14adaf1395d90e583245d169506f6414a7978dc0",
+    "sha256": "9ae943a70446735e8120b306d36a304f1fc009845c4e70318cda05f9d44da49d"
+  },
+  "archiveEntries": [
+    {
+      "path": "TEST-desktop-backend-tSQgtC/TEST-peer-claude-scope/config/projects/TEST-desktop-peer/56a7338a-c059-4287-b1ed-f582ce7e0db0.jsonl",
+      "bytes": 27629,
+      "sha256": "5ba21d83375fc890e106760037072432ba7cf3ab09091d89ed82ec743c9d28af",
+      "crc32": "32346028"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/TEST-peer-claude-scope/effects.ndjson",
+      "bytes": 21336,
+      "sha256": "1443ff1f91530af3fdc21465613725d463478a0cf964268dd48be32b043f79c1",
+      "crc32": "37c464f9"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/desktop-backend-receipt.json",
+      "bytes": 889817,
+      "sha256": "6b7c46ab8300f72a6b31434ce2e80d00f5dd6c05184b31dcd7eba6fba0452286",
+      "crc32": "a25512e9"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/desktop-app.log",
+      "bytes": 58930,
+      "sha256": "157d31fe012ceaf998b750efe80972188ada82f68c9a8b578e67b7e1f7077939",
+      "crc32": "848d1dca"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/desktop-descriptor.json",
+      "bytes": 2641,
+      "sha256": "d99b464b63f5c109686f9f95eed657a3d2c558f20a5336c28418003fb51130d6",
+      "crc32": "ee091e31"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/host-profile.json",
+      "bytes": 7322,
+      "sha256": "cef755a6ed89036001b89a0c691a459899e872e24a60b73e793e40eba497be58",
+      "crc32": "68681eeb"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/hoststore/management-commands/ff21dc5cd5bed087689c518222c2cdbf4f5eae875338f97380bc0d04cd471443.json",
+      "bytes": 956,
+      "sha256": "3da3d80391861c4e68bb006b5a251a1b55686524f431b61947713b6cd38f4d78",
+      "crc32": "5240ba13"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+      "bytes": 5416,
+      "sha256": "1da5b11ea0e90182fd4777c5090ed1bb18d40aa600121ad23702e7d9b82b458a",
+      "crc32": "1d49bf4b"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/hoststore/teams/test-desktop-backend/inboxes/user.json",
+      "bytes": 995,
+      "sha256": "8b0b7850b10947b5a6b92092c7a35a2ca2b1663298f2e2f8a47c4e8de8fde002",
+      "crc32": "7b97ef13"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+      "crc32": "9fc3bdb4"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-allow-pending.png",
+      "bytes": 160306,
+      "sha256": "7832ea902064b3a119327a6ef9c313cbaa2fcd97c0ea93f14d4b9a26aa8bed1d",
+      "crc32": "3498bd65"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-compact.png",
+      "bytes": 140013,
+      "sha256": "c9f3cfd7b70c73737dfd2335e5b931f62772baf8cb9ee1a5e866b8fed796b196",
+      "crc32": "2432ad71"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-completed.png",
+      "bytes": 134870,
+      "sha256": "50cb532bfcd3f0006788d38e3cd050b90924d8dfdb843ed8d395e28f71ebc77d",
+      "crc32": "c6e229f1"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-cost.png",
+      "bytes": 142543,
+      "sha256": "f9e02c7765160ed4947551bf886beb2bfa047e7ea5dca8fa1f3dbbd6f7681d6f",
+      "crc32": "11f183fa"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-deny-pending.png",
+      "bytes": 155003,
+      "sha256": "b7859163221a2345914cefb5e6478e77515b1c979e729ea9d4822e647147481b",
+      "crc32": "6404720b"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-effects.json",
+      "bytes": 27276,
+      "sha256": "8427c81a9e4a346068575d631854a71cd6e4fc2a04505ff1d91d92722e3bd874",
+      "crc32": "7f389210"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-launch.png",
+      "bytes": 102456,
+      "sha256": "81a65f16552ba09025ee0ddc2fb32481311a5d495aa1c50e08d4256a1c26513b",
+      "crc32": "560dbba4"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-held.png",
+      "bytes": 114654,
+      "sha256": "35e6b7e60cef9147204191001af3d698239b7e0e2c3d0ca4267edb98a99a6aae",
+      "crc32": "4525def9"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-lead-logs.png",
+      "bytes": 58907,
+      "sha256": "cc198ae284a9c417e94d74bb543f0d17cd602aab0b757391ec8bca7b09fae9a9",
+      "crc32": "e6d570f5"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-logs.png",
+      "bytes": 133613,
+      "sha256": "21366add93fdb951b5ab4874041ea9de4d3f4345179aba9352b68cbef46db1bb",
+      "crc32": "5b8a1f9b"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-partial.png",
+      "bytes": 106917,
+      "sha256": "3c57c41267673ca5f580162b6f153669d8c9d502c95c572ee5e4a4bc61b57ddc",
+      "crc32": "f171f4b6"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-question-decline-pending.png",
+      "bytes": 154663,
+      "sha256": "e35e8ab7aecb4a0c4698a1cef4bae88b9ef48012d7fe35c71636887a4846546d",
+      "crc32": "f4470d1d"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-question-pending.png",
+      "bytes": 154331,
+      "sha256": "9359d093b2734c2d0fb0ca72fa004b042601df971e64575e7db2745e41a44532",
+      "crc32": "c60853ac"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-reloaded.png",
+      "bytes": 129234,
+      "sha256": "c6f55e4769780be60c81ffc479ac175b37b9372ed391e4b90abc985fdddd137a",
+      "crc32": "1ed677eb"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-review.png",
+      "bytes": 142846,
+      "sha256": "a563a965687ce228564c97b7625cba256bff252d3391033dce1254700e13e4a1",
+      "crc32": "f5b7ca62"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-schedule-automatic.png",
+      "bytes": 127976,
+      "sha256": "e7a7d4f0f98d9d8ece6be344f1ad2e7a1450a544ef3f616e9631d6fc166ce529",
+      "crc32": "eb1e469c"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-schedule.png",
+      "bytes": 116765,
+      "sha256": "6397b677bb2c3cba95c3fd2f99262e400fffa0ba9ea7efe7a862dd299e5b9481",
+      "crc32": "318c7893"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-standalone-completed.png",
+      "bytes": 115720,
+      "sha256": "411d28fd70bb8843fda5a1c4790c174edb690f112b01493131d1b284bcb7a966",
+      "crc32": "2508ea3e"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-standalone-deleted.png",
+      "bytes": 98747,
+      "sha256": "8082a9623558aa6449395fe66a37b3c978dd7198a26faf51ca62099b96404bd1",
+      "crc32": "b8b43e92"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-standalone-held.png",
+      "bytes": 119486,
+      "sha256": "d74ae6548f9bc699ee1eb45bd2f63eec06b253e3a97bd67bb525f8392fedaeb5",
+      "crc32": "a7fe386e"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-stats.png",
+      "bytes": 142532,
+      "sha256": "ba7ce2a02284e40f7a07da11fc7a8cbf23d25ae9857b7eba9bfa6933cd5e395b",
+      "crc32": "64446cdd"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-stopped.png",
+      "bytes": 125945,
+      "sha256": "075ef1b30b517da1b351d6f9a449fecb7207b06b870126505bf7a9e00339d55d",
+      "crc32": "7c1d5593"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-task-activity.png",
+      "bytes": 177641,
+      "sha256": "680783476a2f5489ac51d64a49ab12dce4d7feefbca061b4b15a0cfa9c378f36",
+      "crc32": "997d7ae4"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-task-log-stream.png",
+      "bytes": 152222,
+      "sha256": "a1725e3d2b764d693031f48750d29a197ff28444b61971c1ef2ccb3e3145f6a7",
+      "crc32": "16563690"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-emulated-runtime-test-desktop-skill.png",
+      "bytes": 143433,
+      "sha256": "023c5252d68b2e7586ab212d33243f1d5fba89b7534f91640edb782a17d8c91d",
+      "crc32": "c3633581"
+    },
+    {
+      "path": "TEST-desktop-backend-tSQgtC/ui-seed-receipt.json",
+      "bytes": 2335,
+      "sha256": "d010ddd08ea66c263c28b8a4119dfa1185fad10cb450f57464b09deee4ff77fc",
+      "crc32": "43db4aff"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-1KD4ni/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "crc32": "ed0ca14b"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-1KD4ni/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "crc32": "e06f2443"
+    },
+    {
+      "path": "host-emulated-emulated-claude-runtime-ui.log",
+      "bytes": 225,
+      "sha256": "9abea790df0c98965cbe9e96ad8a9938efe6709cc3f5bc06a31d8df88ec4ebb0",
+      "crc32": "a4ed1fda"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1803,
+      "sha256": "1c3bc185b07a37d780069e3c9ee140017886a6e8c01b9e3e63d7dd6b71aaaa27",
+      "crc32": "666a4434"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "sha256": "913445be30ab121bea5ded8d9d838f43ba5a41a150563ca61b516a8d73950d08",
+      "crc32": "d679a2ed"
+    },
+    {
+      "path": "host-emulated-summary.json",
+      "bytes": 2116,
+      "sha256": "117987ce790f34ca5c67a1effcaf348faf530352dc0eaced80036bd718d2b1e3",
+      "crc32": "45e4fb83"
+    }
+  ],
+  "archiveSafeUniqueCrcAndExtractedBytes": true,
+  "officialArtifact": {
+    "id": 14196143608,
+    "name": "host-emulated-linux-x64-608efb78823d7c74b35f8a674fcfb6faea8ecfc5-claude",
+    "size_in_bytes": 3641990,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14196143608",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14196143608/zip",
+    "expired": false,
+    "created_at": "2026-11-16T03:53:17Z",
+    "expires_at": "2026-11-30T03:53:16Z",
+    "updated_at": "2026-11-16T03:53:17Z",
+    "digest": "sha256:9ae943a70446735e8120b306d36a304f1fc009845c4e70318cda05f9d44da49d",
+    "workflow_run": {
+      "id": 43795234483,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+    }
+  },
+  "officialApi": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/official-host-artifacts-0359.json",
+    "bytes": 6683,
+    "gitBlob": "14b0bd728f5173fba3a26cba373e2c7fd3fb1002",
+    "sha256": "c11a14868785e967397dd0307da8c2be6ea320f1d1ec933b7859a8b47d2f8318"
+  },
+  "terminalJob": {
+    "id": 133062441515,
+    "name": "Offline Host Desktop (linux-x64, claude)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43795234483,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Verify original checkout and runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Prepare private Linux display",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Install frozen workspace and Electron",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build existing Desktop prerequisites and verify admission",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Verify original Runtime and Team conversation contracts",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 9
+      },
+      {
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 10
+      },
+      {
+        "name": "Capture package-manager and Host inputs without vendor executables",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Capture original controlled Linux process input without a provider",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Exercise ordinary Team controls and renderer reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Exercise ordinary Taskboard controls and persistence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Exercise original Skills and cross-Team controls",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15
+      },
+      {
+        "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 20
+      },
+      {
+        "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Exercise original Review after a cold Host and app restart",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Exercise saved next-launch selection while the original Team remains live",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 24
+      },
+      {
+        "name": "Exercise stock Codex Update while the original Team retains its captured source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 25
+      },
+      {
+        "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 26
+      },
+      {
+        "name": "Prepare exact OpenCode V2 Bun and engine graph",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 27
+      },
+      {
+        "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 28
+      },
+      {
+        "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 29
+      },
+      {
+        "name": "Verify exact source, original screenshots, receipts and cleanup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 30
+      },
+      {
+        "name": "Preserve original Desktop evidence, including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 60
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 61
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 62
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 63
+      }
+    ]
+  },
+  "terminalApi": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/owned-api-jobs-0359.json",
+    "bytes": 74155,
+    "gitBlob": "1d22478c6f314ce2384e2aa49be1cfc5f5d24691",
+    "sha256": "a1c4586cff2c3355ca035f881a1d42211247a89c3136fe8a347676f5b3b8d014"
+  },
+  "receipt": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/desktop-backend-receipt.json",
+    "bytes": 889817,
+    "gitBlob": "70c6a43101717b3bda2c6fccc618dee7d90717f2",
+    "sha256": "6b7c46ab8300f72a6b31434ce2e80d00f5dd6c05184b31dcd7eba6fba0452286"
+  },
+  "sourcePins": {
+    "count": 1757,
+    "orderedBeforeEqualsAfter": true,
+    "everyRowMatchesFreshExactNGitBasis": true,
+    "reference": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/cross-team/source-pin-audit.json",
+      "bytes": 461936,
+      "gitBlob": "bc23e5da6e447ed75d4d17adcc4fe1d5de5dbf64",
+      "sha256": "b3a5a97d7b4ba5406ef566cc61351eca3f04b7bbd2f7a6e3d673f56f8a85558a"
+    },
+    "gitBytesTotal": 20308471,
+    "limit": "All original Claude ordered rows compared against the fresh complete N Git census retained by the current Cross audit. No build output/installed dependency census or rebuild invented."
+  },
+  "relevantSourceLeaves": [
+    {
+      "path": "src/main/utils/testChildProcessTrace.ts",
+      "gitBlob": "b3d2ec4b410de5df6d63075955fa8f89fc7c9b88",
+      "gitBytes": 9633,
+      "sha256": "bff51a48a14cc0d77f8c7233c034c1bbe0eb79b0f5f5270c9540faf70e6472eb"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+      "gitBlob": "797cf587243a6c6ba1cd466ed105d5bb6d81772e",
+      "gitBytes": 22826,
+      "sha256": "6677695937f2c532da1867df1b91afa43856229badf98035a6aa7467102d1791"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "gitBlob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+      "gitBytes": 25052,
+      "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "gitBlob": "a9d725fbe11278dd98611b49d570c19d80684087",
+      "gitBytes": 22082,
+      "sha256": "3aa149837f6686e8307ba1803984874b4c673d8211094bd3e8e52b9ddb3d70cd"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "gitBlob": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+      "gitBytes": 68760,
+      "sha256": "6ca239d1ea242a3ac64323bf28d41b84450fc1d5d7e4ae2324a069d03bff18ad"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+      "gitBytes": 32221,
+      "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87"
+    }
+  ],
+  "runtimeUiLines": 788,
+  "originalPrerequisites": {
+    "node": "24.21.0",
+    "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "helper8": {
+      "tests": 115,
+      "passed": 115,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 9241.532356
+    },
+    "installerHelper": {
+      "tests": 7,
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 210.178341
+    },
+    "Team10Contracts": "Skipped here; actual N177/24 belongs to the separate Team job, whose later renderer typed lint fails."
+  },
+  "receiptPins": {
+    "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+    "corepackPackageSha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+    "corepackLibrarySha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+    "pnpmStubSha256": "dc464a02f8f8c631a55f0ca5c8d8427aa3c053d1b710f9851d8e22abdad99519",
+    "profileSha256": "cef755a6ed89036001b89a0c691a459899e872e24a60b73e793e40eba497be58",
+    "descriptorSha256": "d99b464b63f5c109686f9f95eed657a3d2c558f20a5336c28418003fb51130d6",
+    "sentinelSha256": "a794c35490498b105d5d588aa3c12e31963492f667aecb6694890826d18076f0",
+    "shellProbeSha256": "3ca284eeada4a93d0605c7b25c5388f0673693c79e83276ddc6cccda8c53f6fa",
+    "providerArchiveSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+    "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+    "electronSha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+    "smokeSourceSha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+    "fixtureSourceSha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+    "uiSourceSha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf"
+  },
+  "compiledBundleHashesAfterStartup": [
+    {
+      "path": "main/chunks/index-D9GX0Q6a.cjs",
+      "sha256": "89c988b7be61f7f30f0effaed6a2626a2279b0ed753228360e77e227884d0a92"
+    },
+    {
+      "path": "main/chunks/index-yaJFGvjB.cjs",
+      "sha256": "ec64b11e28a53961fd7846392857a0167886b8b086d14f54e20041ddc9927155"
+    },
+    {
+      "path": "main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+      "sha256": "7babbc9bd69c863a2210647b3d5f589d96437a9a80fd794b54196387849217f6"
+    },
+    {
+      "path": "main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+      "sha256": "c14cfc36aeec6fd7103c507f258097aaeccf552dbbf608fea43f9e3c7a7ef3b3"
+    },
+    {
+      "path": "main/chunks/taskChangeState-rZolvpL6.cjs",
+      "sha256": "f40557112189b351692a4b0f19244d7845a4dfe754f468326a21c36386efa1cd"
+    },
+    {
+      "path": "main/chunks/taskHistory-2kbwfqIg.cjs",
+      "sha256": "1d336b6cea5aa5c4768954541a24347fe89bb46a83faddaf8b26fd6e0afb7f85"
+    },
+    {
+      "path": "main/chunks/TeamDataService-DySh5-O-.cjs",
+      "sha256": "ed455bf2423e0511bf1fb8e30069280fe99b505e8e4968df3705309a7131556e"
+    },
+    {
+      "path": "main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+      "sha256": "2915a9af73772eda67fa92bd4499976d75724d9605cc947e356bd1dc1cee600c"
+    },
+    {
+      "path": "main/index.cjs",
+      "sha256": "047e62401bd12685acfbff8675c1afe006b894b5b32fceba6ec26332faa36ef1"
+    },
+    {
+      "path": "main/internal-storage-worker.cjs",
+      "sha256": "3433cb94575a5748d3133174952698af2a98ac2afb348cb159fcb1110e0b284f"
+    },
+    {
+      "path": "main/task-change-worker.cjs",
+      "sha256": "f8fcc24dd4dc9842cd0f70ffe02891d39eef84019d4aab4ed21b529ba9326446"
+    },
+    {
+      "path": "main/team-data-worker.cjs",
+      "sha256": "dc145e9f1fb5fdfa2e5f51ca6d6f2db8e22e89cb3ab34dae2745ccfd4e6f3823"
+    },
+    {
+      "path": "main/team-fs-worker.cjs",
+      "sha256": "6e6410a44a3d1b97065085259858215045ed137b5bd0dd27bf70f797091c9c83"
+    },
+    {
+      "path": "preload/index.js",
+      "sha256": "4f02e5f1659bb0373f5515d81c7edf5f9bc7af8b67a39f1600171f8acb291406"
+    }
+  ],
+  "bundleProvenance": "Actual compiled main/preload JS bytes hashed after owned app startup; no claim of reproducible source-to-bundle rebuild",
+  "proof": {
+    "status": "PASS",
+    "provider": "claude",
+    "commands": [
+      {
+        "text": "TEST_UI_STREAM",
+        "commandId": "18a93f32-5606-41a4-98f9-9d456531859d",
+        "inputId": "0971d85a-d3ee-514c-a677-820e81750248"
+      },
+      {
+        "text": "TEST_UI_APPROVAL_DENY",
+        "commandId": "4b316ec0-2ce8-4ef3-ab41-2c053a9173a2",
+        "inputId": "27789c1e-f3f7-58e5-bba3-716386f09bb0"
+      },
+      {
+        "text": "TEST_UI_APPROVAL_ALLOW",
+        "commandId": "a85b0023-8691-4b7d-9697-8ff561403917",
+        "inputId": "e8feb44a-9171-5317-bb03-7c69f72c51c3"
+      },
+      {
+        "text": "TEST_UI_QUESTION",
+        "commandId": "97d39cce-7d08-42c6-bf76-48c1af60374f",
+        "inputId": "112e3802-db91-5da8-960a-3b0ef50c397b"
+      },
+      {
+        "text": "TEST_UI_QUESTION_DECLINE",
+        "commandId": "b3492efd-b0d4-473f-94a1-496772ecf466",
+        "inputId": "64dd5cb1-8adb-5796-8274-a3dddae46269"
+      },
+      {
+        "text": "/compact",
+        "commandId": "3ee1b08e-2783-4f80-a163-988ee5c08dab",
+        "inputId": "7de03182-69ed-55ff-ad3e-380b75b82e5f"
+      },
+      {
+        "text": "/test-desktop-skill",
+        "commandId": "61c34062-6f7d-441b-b2fb-3792d652916e",
+        "inputId": "e0f93689-19a0-5440-a986-9465de2cf776"
+      },
+      {
+        "text": "/review TEST_UI_REVIEW",
+        "commandId": "ac34aeb8-b953-42b4-a479-ea9e9db521df",
+        "inputId": "e1b1a1f4-690a-5f3d-a605-687c5f454146"
+      },
+      {
+        "text": "/cost",
+        "commandId": "9b4d84cf-be8b-4ee9-b4de-b4a963f3e363",
+        "inputId": "33b2a670-5c3a-5496-8159-462dcd860f5f"
+      },
+      {
+        "text": "TEST_UI_HOLD",
+        "commandId": "395ebdc8-e151-48a9-9a2f-5875564d3a8c",
+        "inputId": "c3caabc8-9c10-552c-9736-acd8a906f7e8"
+      }
+    ],
+    "scope": "Original Launch, Composer stream, permission/question controls, cost/Stats, schedules, Task Activity/detail/Stream, renderer reload and Team Stop through original Host/D and finite TEST protocol peers",
+    "excluded": [
+      "vendor inference/authentication",
+      "per-turn interrupt UI (no original control)",
+      "native provider qualification"
+    ],
+    "launchScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-launch.png",
+      "sha256": "81a65f16552ba09025ee0ddc2fb32481311a5d495aa1c50e08d4256a1c26513b"
+    },
+    "capture": {
+      "commandId": "capture:launch:roster:1a4a3c8e-7511-43fe-95ce-9fae4311a004",
+      "configurationRevision": "49637e2257a898f2e5b190b082175bf2ef0d59120170b92688b8f4a4a5bd3979",
+      "launchId": "022b6213-830f-5bc6-8fb6-d95744b5dd59",
+      "members": [
+        {
+          "memberId": "alice-id",
+          "principalId": "agent:c8b5ea9f-1c9c-509b-9c60-cd93305dc5f0",
+          "delivery": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-tSQgtC",
+            "teamId": "TEST-desktop-team",
+            "teamName": "test-desktop-backend",
+            "runId": "022b6213-830f-5bc6-8fb6-d95744b5dd59",
+            "memberId": "alice-id",
+            "generation": "capture-b4a39b1f-d3f8-5bca-bdc1-196dfd98bff5"
+          }
+        }
+      ],
+      "principalId": "TEST-human",
+      "fingerprint": "ed910d6f8634ecdf2b29d8bc73b30aa6cfa6a60fd834807b47f0cbc97f7d0c45"
+    },
+    "partialScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-partial.png",
+      "sha256": "3c57c41267673ca5f580162b6f153669d8c9d502c95c572ee5e4a4bc61b57ddc"
+    },
+    "completedScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-completed.png",
+      "sha256": "50cb532bfcd3f0006788d38e3cd050b90924d8dfdb843ed8d395e28f71ebc77d"
+    },
+    "leadLogsScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-lead-logs.png",
+      "sha256": "cc198ae284a9c417e94d74bb543f0d17cd602aab0b757391ec8bca7b09fae9a9"
+    },
+    "leadLogs": {
+      "partial": {
+        "eventId": "3cd04b64f22dbd118ae2d161cc99eab83bd27db67f36cf192e756113de9aa1d5:15",
+        "sequence": 15,
+        "text": "TEST stream partial"
+      },
+      "complete": {
+        "eventId": "3cd04b64f22dbd118ae2d161cc99eab83bd27db67f36cf192e756113de9aa1d5:18",
+        "sequence": 18,
+        "text": "TEST stream partial complete"
+      },
+      "fullscreen": {
+        "eventId": "3cd04b64f22dbd118ae2d161cc99eab83bd27db67f36cf192e756113de9aa1d5:17",
+        "sequence": 17,
+        "text": "TEST selected member stderr"
+      },
+      "actualClipboard": true,
+      "thinking": {
+        "partialEventId": "3cd04b64f22dbd118ae2d161cc99eab83bd27db67f36cf192e756113de9aa1d5:16",
+        "completeEventId": "3cd04b64f22dbd118ae2d161cc99eab83bd27db67f36cf192e756113de9aa1d5:19",
+        "messageRef": "01acf339-b6b4-4e66-8b91-104168bb1326",
+        "block": 1
+      },
+      "stderr": {
+        "eventId": "3cd04b64f22dbd118ae2d161cc99eab83bd27db67f36cf192e756113de9aa1d5:17",
+        "sequence": 17,
+        "text": "TEST selected member stderr",
+        "inputId": null
+      },
+      "defaultLeadRoute": true,
+      "filtersAndSearch": true,
+      "addedInputs": 0,
+      "addedBusinessCommands": 0
+    },
+    "denyScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-deny-pending.png",
+      "sha256": "b7859163221a2345914cefb5e6478e77515b1c979e729ea9d4822e647147481b"
+    },
+    "allowScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-allow-pending.png",
+      "sha256": "7832ea902064b3a119327a6ef9c313cbaa2fcd97c0ea93f14d4b9a26aa8bed1d"
+    },
+    "leadLogTools": {
+      "inputId": "e8feb44a-9171-5317-bb03-7c69f72c51c3",
+      "toolRef": "711ee42c-8429-4f3b-be4a-987ee6ae5e3e",
+      "eventIds": [
+        "3cd04b64f22dbd118ae2d161cc99eab83bd27db67f36cf192e756113de9aa1d5:39",
+        "3cd04b64f22dbd118ae2d161cc99eab83bd27db67f36cf192e756113de9aa1d5:44"
+      ],
+      "addedInputs": 0,
+      "addedBusinessCommands": 0,
+      "addedProviderActions": 0
+    },
+    "questionScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-question-pending.png",
+      "sha256": "9359d093b2734c2d0fb0ca72fa004b042601df971e64575e7db2745e41a44532"
+    },
+    "questionDeclineScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-question-decline-pending.png",
+      "sha256": "e35e8ab7aecb4a0c4698a1cef4bae88b9ef48012d7fe35c71636887a4846546d"
+    },
+    "catalog": [
+      "/compact",
+      "/cost",
+      "/review",
+      "/test-desktop-skill"
+    ],
+    "compactScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-compact.png",
+      "sha256": "c9f3cfd7b70c73737dfd2335e5b931f62772baf8cb9ee1a5e866b8fed796b196"
+    },
+    "skillScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-test-desktop-skill.png",
+      "sha256": "023c5252d68b2e7586ab212d33243f1d5fba89b7534f91640edb782a17d8c91d"
+    },
+    "reviewScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-review.png",
+      "sha256": "a563a965687ce228564c97b7625cba256bff252d3391033dce1254700e13e4a1"
+    },
+    "costScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-cost.png",
+      "sha256": "f9e02c7765160ed4947551bf886beb2bfa047e7ea5dca8fa1f3dbbd6f7681d6f"
+    },
+    "nativeCommands": [
+      {
+        "text": "/compact",
+        "commandId": "3ee1b08e-2783-4f80-a163-988ee5c08dab",
+        "inputId": "7de03182-69ed-55ff-ad3e-380b75b82e5f",
+        "reply": "TEST context compacted",
+        "screenshot": {
+          "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-compact.png",
+          "sha256": "c9f3cfd7b70c73737dfd2335e5b931f62772baf8cb9ee1a5e866b8fed796b196"
+        }
+      },
+      {
+        "text": "/test-desktop-skill",
+        "commandId": "61c34062-6f7d-441b-b2fb-3792d652916e",
+        "inputId": "e0f93689-19a0-5440-a986-9465de2cf776",
+        "reply": "TEST skill complete",
+        "screenshot": {
+          "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-test-desktop-skill.png",
+          "sha256": "023c5252d68b2e7586ab212d33243f1d5fba89b7534f91640edb782a17d8c91d"
+        }
+      },
+      {
+        "text": "/review TEST_UI_REVIEW",
+        "commandId": "ac34aeb8-b953-42b4-a479-ea9e9db521df",
+        "inputId": "e1b1a1f4-690a-5f3d-a605-687c5f454146",
+        "reply": "TEST review complete",
+        "screenshot": {
+          "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-review.png",
+          "sha256": "a563a965687ce228564c97b7625cba256bff252d3391033dce1254700e13e4a1"
+        }
+      },
+      {
+        "text": "/cost",
+        "commandId": "9b4d84cf-be8b-4ee9-b4de-b4a963f3e363",
+        "inputId": "33b2a670-5c3a-5496-8159-462dcd860f5f",
+        "reply": "TEST cost input=378 output=162 total=$0.1107",
+        "screenshot": {
+          "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-cost.png",
+          "sha256": "f9e02c7765160ed4947551bf886beb2bfa047e7ea5dca8fa1f3dbbd6f7681d6f"
+        }
+      }
+    ],
+    "stats": {
+      "kind": "host_activity_stats",
+      "memberName": "alice",
+      "scope": "retained_runtime_activity",
+      "generations": 1,
+      "observedMessages": 10,
+      "compactions": 1,
+      "toolUsage": {
+        "Write": 2,
+        "AskUserQuestion": 2
+      },
+      "inputTokens": 378,
+      "outputTokens": 162,
+      "costUsd": 0.1107,
+      "gaps": [],
+      "computedAt": "2026-11-16T03:50:53.564Z"
+    },
+    "logsScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-logs.png",
+      "sha256": "21366add93fdb951b5ab4874041ea9de4d3f4345179aba9352b68cbef46db1bb"
+    },
+    "statsScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-stats.png",
+      "sha256": "ba7ce2a02284e40f7a07da11fc7a8cbf23d25ae9857b7eba9bfa6933cd5e395b"
+    },
+    "leadLogsAfterReload": {
+      "eventId": "3cd04b64f22dbd118ae2d161cc99eab83bd27db67f36cf192e756113de9aa1d5:18",
+      "sequence": 18,
+      "text": "TEST stream partial complete"
+    },
+    "stderrLogsAfterReload": {
+      "eventId": "3cd04b64f22dbd118ae2d161cc99eab83bd27db67f36cf192e756113de9aa1d5:17",
+      "sequence": 17,
+      "text": "TEST selected member stderr"
+    },
+    "thinkingLogsAfterReload": {
+      "eventId": "3cd04b64f22dbd118ae2d161cc99eab83bd27db67f36cf192e756113de9aa1d5:19",
+      "sequence": 19,
+      "text": "TEST stream thought complete"
+    },
+    "reloadedScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-reloaded.png",
+      "sha256": "c6f55e4769780be60c81ffc479ac175b37b9372ed391e4b90abc985fdddd137a"
+    },
+    "reloadWithoutReplay": true,
+    "standaloneCompletedScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-standalone-completed.png",
+      "sha256": "411d28fd70bb8843fda5a1c4790c174edb690f112b01493131d1b284bcb7a966"
+    },
+    "standaloneHeldScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-standalone-held.png",
+      "sha256": "d74ae6548f9bc699ee1eb45bd2f63eec06b253e3a97bd67bb525f8392fedaeb5"
+    },
+    "standaloneDeletedScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-standalone-deleted.png",
+      "sha256": "8082a9623558aa6449395fe66a37b3c978dd7198a26faf51ca62099b96404bd1"
+    },
+    "standalone": {
+      "scheduleId": "TEST-original-one-shot-schedule",
+      "completedRunId": "e8e39910-a290-46c7-9dcc-dc2817be192a",
+      "heldRunId": "d49f9332-4d8f-4c9e-9d8a-0976e2255253",
+      "logVisible": true,
+      "thinkingEventId": "810b1ff820f6849b983f373cb41a6a3a9c44316a6dba1e271c80caa0a493f657:10",
+      "stderrEventId": "810b1ff820f6849b983f373cb41a6a3a9c44316a6dba1e271c80caa0a493f657:8",
+      "activityDigest": "bda816cc78769afa0eab8b43c3206efa999a7499f89f94654fdf981cb9f05194",
+      "actualThinkingClipboard": true,
+      "limits": {
+        "maxTurns": 6,
+        "maxBudgetUsd": 0.25
+      },
+      "originalPids": [
+        9970,
+        10360
+      ],
+      "deletedWhileActive": true,
+      "cleanup": "confirmed",
+      "releasedRecord": {
+        "schemaVersion": 1,
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-tSQgtC",
+          "teamId": "TEST-desktop-team",
+          "runId": "scheduled-standalone",
+          "memberId": "80989bde-c682-5051-ae62-92b4597e28ad",
+          "generation": "d49f9332-4d8f-4c9e-9d8a-0976e2255253"
+        },
+        "profileId": "TEST-desktop-profile-TEST-desktop-backend-tSQgtC",
+        "config": {
+          "tenantId": "TEST-desktop-owner-TEST-desktop-backend-tSQgtC",
+          "projectId": "TEST-project-TEST-desktop-backend-tSQgtC",
+          "sessionId": "6b674278-ef4e-5f80-8ba4-14bb9e68a359",
+          "generation": 0,
+          "configRevision": "scheduled-1f0d50cdc32806738ed826bdc5923fb74ca317c129ca44e4e7a76be2f1abfcc6",
+          "requiredCapabilities": [
+            "session.conversation"
+          ]
+        },
+        "openFingerprint": "2a3376e6bb501df5d32a9afe75e75a0e562bec9a5eab015269c6fad6815616eb",
+        "hostIncarnation": "82905063-4515-4be1-aeea-91f8d6eaab27",
+        "phase": "closed",
+        "sealed": true,
+        "custody": "released",
+        "nativeReady": false,
+        "inputs": [
+          {
+            "intent": {
+              "binding": {
+                "backendId": "TEST-desktop-owner-TEST-desktop-backend-tSQgtC",
+                "teamId": "TEST-desktop-team",
+                "runId": "scheduled-standalone",
+                "memberId": "80989bde-c682-5051-ae62-92b4597e28ad",
+                "generation": "d49f9332-4d8f-4c9e-9d8a-0976e2255253"
+              },
+              "deliveryId": "d49f9332-4d8f-4c9e-9d8a-0976e2255253",
+              "inputId": "d49f9332-4d8f-4c9e-9d8a-0976e2255253",
+              "messageId": "d49f9332-4d8f-4c9e-9d8a-0976e2255253",
+              "content": "TEST_UI_STANDALONE_HOLD"
+            },
+            "fingerprint": "9ae8a912dc0800ec90bf414249ce6c992c9c4b619ee307350ac28e1e90b1d669",
+            "operationRef": "d8a6be01-679a-478b-8765-7c383e49b48b",
+            "phase": "unknown"
+          }
+        ],
+        "interactions": [],
+        "conversation": {
+          "sequence": 8,
+          "digest": "2ab2985596fffd6ad10f29d7a38b166ccb7afdef340f093d5f7a914e5c7f1673",
+          "gaps": []
+        },
+        "activitySequence": 12,
+        "sessionRef": "6b674278-ef4e-5f80-8ba4-14bb9e68a359",
+        "closeClaimed": true,
+        "diagnostic": "observe-ended"
+      },
+      "capture": {
+        "schemaVersion": 1,
+        "input": {
+          "runId": "e8e39910-a290-46c7-9dcc-dc2817be192a",
+          "scheduleId": "TEST-original-one-shot-schedule",
+          "expectedRosterRevision": "49637e2257a898f2e5b190b082175bf2ef0d59120170b92688b8f4a4a5bd3979",
+          "config": {
+            "cwd": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/workspace",
+            "prompt": "TEST_UI_STANDALONE_DONE",
+            "providerId": "anthropic",
+            "model": "sonnet",
+            "effort": "low",
+            "fastMode": "off",
+            "resolvedFastMode": false,
+            "skipPermissions": true
+          },
+          "maxTurns": 6,
+          "maxBudgetUsd": 0.25
+        },
+        "teamScope": "c2a2dbb7ac54c8131cd9c725f890218699757699aa3b5dbf0f6eb2fd7d993566",
+        "memberId": "alice-id",
+        "authorityRevision": 1,
+        "recipeDigest": "88947755cf764b5b27f2de735e8563a6446363d1400691669ddeca7cdd9fa416",
+        "workspaceIdentity": "ea714194c5e0ca5932e8b369716b35c4454c6a81fda7a45eeb909958f010ec6a",
+        "capturedAt": "2026-11-16T03:51:25.986Z"
+      },
+      "taskWrites": 0
+    },
+    "scheduleScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-schedule.png",
+      "sha256": "6397b677bb2c3cba95c3fd2f99262e400fffa0ba9ea7efe7a862dd299e5b9481"
+    },
+    "schedule": {
+      "scheduleId": "82c35423-1e38-45a5-88a9-54e46cbe01d6",
+      "runId": "bec28706-f4de-4be3-b1fe-f2c4d45af476",
+      "taskId": "4889572a-7d33-5690-bed8-4f9476b57336",
+      "status": "dispatched",
+      "savedPromptAcknowledged": true,
+      "savedPromptNotReplayed": true
+    },
+    "automaticSchedule": {
+      "scheduleId": "82c35423-1e38-45a5-88a9-54e46cbe01d6",
+      "runId": "b5be6d7d-deb2-4baf-8b81-0429f18e0ada",
+      "taskId": "303159b5-76d6-5972-af76-2c504b2c29db",
+      "cronExpression": "55 52 3 16 11 *",
+      "timezone": "UTC",
+      "armedAt": "2026-11-16T03:51:57.419Z",
+      "selectedNextRunAt": "2026-11-16T03:52:55.000Z",
+      "scheduledFor": "2026-11-16T03:52:55.003Z",
+      "startedAt": "2026-11-16T03:52:55.003Z",
+      "status": "dispatched",
+      "trigger": "real-cron-tick",
+      "runNowClicks": 0,
+      "taskCompleted": true,
+      "savedPromptNotReplayed": true,
+      "peerEffect": {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5748,
+        "event": "scheduled",
+        "inputId": "6a77c50e-fdca-4d10-a975-ec5307174637",
+        "taskId": "303159b5-76d6-5972-af76-2c504b2c29db"
+      },
+      "paused": true,
+      "screenshot": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-schedule-automatic.png",
+        "sha256": "e7a7d4f0f98d9d8ece6be344f1ad2e7a1450a544ef3f616e9631d6fc166ce529"
+      }
+    },
+    "taskActivity": {
+      "taskId": "303159b5-76d6-5972-af76-2c504b2c29db",
+      "taskStartCommandId": "b5be6d7d-deb2-4baf-8b81-0429f18e0ada:start:303159b5-76d6-5972-af76-2c504b2c29db",
+      "deliveryId": "29d8ae3d-4add-550e-9d39-dbc40d5a84b4",
+      "inputId": "29d8ae3d-4add-550e-9d39-dbc40d5a84b4",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-tSQgtC",
+        "teamId": "TEST-desktop-team",
+        "runId": "022b6213-830f-5bc6-8fb6-d95744b5dd59",
+        "memberId": "alice-id",
+        "generation": "capture-b4a39b1f-d3f8-5bca-bdc1-196dfd98bff5"
+      },
+      "operationRef": "af7f9ca6-6ef4-4680-9d50-1f58251650fb",
+      "eventId": "3cd04b64f22dbd118ae2d161cc99eab83bd27db67f36cf192e756113de9aa1d5:114",
+      "sequence": 114,
+      "activityDigest": "5b40111077f7fa50ff2284012d6d8830acd125e5f3aa6ca5336b1989b30bdaa7",
+      "views": [
+        {
+          "tab": "Task Activity",
+          "rendered": {
+            "eventId": "3cd04b64f22dbd118ae2d161cc99eab83bd27db67f36cf192e756113de9aa1d5:114",
+            "sequence": 114,
+            "text": "TEST scheduled complete",
+            "source": "alice · Captured Task input · generation capture-b4a39b1f-d3f8-5bca-bdc1-196dfd98bff5 · 3 retained facts"
+          },
+          "screenshot": {
+            "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-task-activity.png",
+            "sha256": "680783476a2f5489ac51d64a49ab12dce4d7feefbca061b4b15a0cfa9c378f36"
+          }
+        },
+        {
+          "tab": "Task Log Stream",
+          "rendered": {
+            "eventId": "3cd04b64f22dbd118ae2d161cc99eab83bd27db67f36cf192e756113de9aa1d5:114",
+            "sequence": 114,
+            "text": "TEST scheduled complete",
+            "source": "alice · Captured runtime activity · generation capture-b4a39b1f-d3f8-5bca-bdc1-196dfd98bff51 observed messages · timestamps unavailable"
+          },
+          "screenshot": {
+            "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-task-log-stream.png",
+            "sha256": "a1725e3d2b764d693031f48750d29a197ff28444b61971c1ef2ccb3e3145f6a7"
+          }
+        }
+      ],
+      "addedInputs": 0,
+      "addedBusinessCommands": 0,
+      "addedProviderActions": 0
+    },
+    "heldScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-held.png",
+      "sha256": "35e6b7e60cef9147204191001af3d698239b7e0e2c3d0ca4267edb98a99a6aae"
+    },
+    "stoppedInput": {
+      "inputId": "c3caabc8-9c10-552c-9736-acd8a906f7e8",
+      "phase": "unknown",
+      "terminalConfirmed": false
+    },
+    "stoppedScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-stopped.png",
+      "sha256": "075ef1b30b517da1b351d6f9a449fecb7207b06b870126505bf7a9e00339d55d"
+    },
+    "originalRuntimePids": [
+      5748
+    ],
+    "stopReleased": true,
+    "fixturePins": {
+      "executable": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-tSQgtC/bin/TEST-claude-peer",
+        "sha256": "3619fea584d5e90ebb80a3f2ea660df54f7adc7380b2f6fc88e135574a0d380d"
+      },
+      "sources": [
+        {
+          "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87"
+        }
+      ],
+      "provider": "claude",
+      "protocolRevision": "sdk-0.3.305",
+      "runtimeConfigured": true,
+      "managementConfigured": true,
+      "vendorsAllowed": false
+    },
+    "visualReview": "Original screenshot files require independent inspection"
+  },
+  "stepCount": 334,
+  "commandCount": 10,
+  "originalTeamStopClicks": 1,
+  "effects": {
+    "json": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-effects.json",
+      "bytes": 27276,
+      "gitBlob": "e824357a1b34ace5c412378cda0bbf35283596cf",
+      "sha256": "8427c81a9e4a346068575d631854a71cd6e4fc2a04505ff1d91d92722e3bd874"
+    },
+    "rawNdjson": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/TEST-peer-claude-scope/effects.ndjson",
+      "bytes": 21336,
+      "gitBlob": "5c8377879a6460eb1858c1cc5c0d47f1cd2f47ed",
+      "sha256": "1443ff1f91530af3fdc21465613725d463478a0cf964268dd48be32b043f79c1"
+    },
+    "allFourCopiesEqual": true,
+    "count": 91,
+    "counts": {
+      "launch": 8,
+      "started": 8,
+      "initialized": 8,
+      "input": 16,
+      "terminal": 14,
+      "mcp-connected": 1,
+      "partial": 3,
+      "control-request": 20,
+      "decision": 4,
+      "compact": 1,
+      "mcp-call": 6,
+      "scheduled": 2
+    },
+    "inputMarkers": {
+      "TEST_MODEL_PROBE": 1,
+      "TEST_UI_BOOT": 1,
+      "TEST_UI_STREAM": 1,
+      "TEST_UI_APPROVAL_DENY": 1,
+      "TEST_UI_APPROVAL_ALLOW": 1,
+      "TEST_UI_QUESTION": 1,
+      "TEST_UI_QUESTION_DECLINE": 1,
+      "/compact": 1,
+      "/test-desktop-skill": 1,
+      "/review TEST_UI_REVIEW": 1,
+      "/cost": 1,
+      "TEST_UI_STANDALONE_DONE": 1,
+      "TEST_UI_STANDALONE_HOLD": 1,
+      "TEST_UI_SCHEDULE_DONE": 2,
+      "TEST_UI_HOLD": 1
+    },
+    "decisions": [
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5748,
+        "event": "decision",
+        "inputId": "06290033-570f-4c69-8858-5a819a1518e5",
+        "marker": "TEST_UI_APPROVAL_DENY",
+        "toolUseId": "4c95e3de-b06d-4489-90c5-e7ecf6f928d3",
+        "decision": "deny",
+        "text": "TEST approval denied"
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5748,
+        "event": "decision",
+        "inputId": "b239e62c-5d10-4956-bd32-60512a7a9f99",
+        "marker": "TEST_UI_APPROVAL_ALLOW",
+        "toolUseId": "711ee42c-8429-4f3b-be4a-987ee6ae5e3e",
+        "decision": "allow",
+        "text": "TEST approval allowed"
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5748,
+        "event": "decision",
+        "inputId": "124d4ff4-6387-4323-9ec9-ef3265cf92c4",
+        "marker": "TEST_UI_QUESTION",
+        "toolUseId": "fce7dfac-5288-4565-a38c-fd28f7eea957",
+        "decision": "allow",
+        "text": "TEST question Alpha"
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5748,
+        "event": "decision",
+        "inputId": "6ee2ab5e-ca3d-4384-b507-e905bf841d6f",
+        "marker": "TEST_UI_QUESTION_DECLINE",
+        "toolUseId": "1c2fc699-afd4-4db8-aacb-1ec6d7ef699f",
+        "decision": "deny",
+        "text": "TEST question declined"
+      }
+    ],
+    "peerExitCallbacks": 0
+  },
+  "screenshots": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-allow-pending.png",
+      "bytes": 160306,
+      "gitBlob": "4a1b4ab4e7c472107f8e39b7917b8590f177e3bd",
+      "sha256": "7832ea902064b3a119327a6ef9c313cbaa2fcd97c0ea93f14d4b9a26aa8bed1d",
+      "receiptSha256Matched": true,
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-compact.png",
+      "bytes": 140013,
+      "gitBlob": "883c312d156e2124c9aba0337b502eb15bb0510f",
+      "sha256": "c9f3cfd7b70c73737dfd2335e5b931f62772baf8cb9ee1a5e866b8fed796b196",
+      "receiptSha256Matched": true,
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-completed.png",
+      "bytes": 134870,
+      "gitBlob": "492ce1ea74b45f0b632c042e1b80783cfcde4ebd",
+      "sha256": "50cb532bfcd3f0006788d38e3cd050b90924d8dfdb843ed8d395e28f71ebc77d",
+      "receiptSha256Matched": true,
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-cost.png",
+      "bytes": 142543,
+      "gitBlob": "2a8e484dd0285ec61a716c6302d3aa0f352b25e7",
+      "sha256": "f9e02c7765160ed4947551bf886beb2bfa047e7ea5dca8fa1f3dbbd6f7681d6f",
+      "receiptSha256Matched": true,
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-deny-pending.png",
+      "bytes": 155003,
+      "gitBlob": "49a0fde535f6a017a1f79c104618ca17e798d17b",
+      "sha256": "b7859163221a2345914cefb5e6478e77515b1c979e729ea9d4822e647147481b",
+      "receiptSha256Matched": true,
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-held.png",
+      "bytes": 114654,
+      "gitBlob": "a55155a979f10727394c82fa35dcb35f8360cc87",
+      "sha256": "35e6b7e60cef9147204191001af3d698239b7e0e2c3d0ca4267edb98a99a6aae",
+      "receiptSha256Matched": true,
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-launch.png",
+      "bytes": 102456,
+      "gitBlob": "ce5d30db6edd716533f893608ba65a3c3ae78b4e",
+      "sha256": "81a65f16552ba09025ee0ddc2fb32481311a5d495aa1c50e08d4256a1c26513b",
+      "receiptSha256Matched": true,
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-lead-logs.png",
+      "bytes": 58907,
+      "gitBlob": "f0229dcf77e069da6fae87227b34266ac361eb7e",
+      "sha256": "cc198ae284a9c417e94d74bb543f0d17cd602aab0b757391ec8bca7b09fae9a9",
+      "receiptSha256Matched": true,
+      "actuallyViewed": true,
+      "observation": "Fullscreen Logs with alice captured generation, filtered TEST selected member stderr and expanded real body."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-logs.png",
+      "bytes": 133613,
+      "gitBlob": "5b472c5aa3246db243c95c0d9fb7be63c9cdc573",
+      "sha256": "21366add93fdb951b5ab4874041ea9de4d3f4345179aba9352b68cbef46db1bb",
+      "receiptSha256Matched": true,
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-partial.png",
+      "bytes": 106917,
+      "gitBlob": "943f47a8795abc01a485fbff0321404a9d7bc569",
+      "sha256": "3c57c41267673ca5f580162b6f153669d8c9d502c95c572ee5e4a4bc61b57ddc",
+      "receiptSha256Matched": true,
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-question-decline-pending.png",
+      "bytes": 154663,
+      "gitBlob": "42c2681a059d81af9d7a3362752465b98d756895",
+      "sha256": "e35e8ab7aecb4a0c4698a1cef4bae88b9ef48012d7fe35c71636887a4846546d",
+      "receiptSha256Matched": true,
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-question-pending.png",
+      "bytes": 154331,
+      "gitBlob": "f0816b06ef606158b5d0ac846ba809020826f0f5",
+      "sha256": "9359d093b2734c2d0fb0ca72fa004b042601df971e64575e7db2745e41a44532",
+      "receiptSha256Matched": true,
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-reloaded.png",
+      "bytes": 129234,
+      "gitBlob": "b85e85faeb25ac275abad1f7d283fd93e436e22b",
+      "sha256": "c6f55e4769780be60c81ffc479ac175b37b9372ed391e4b90abc985fdddd137a",
+      "receiptSha256Matched": true,
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-review.png",
+      "bytes": 142846,
+      "gitBlob": "e00f5fee4a2be51612d3b3163a8f69fccd3ae19c",
+      "sha256": "a563a965687ce228564c97b7625cba256bff252d3391033dce1254700e13e4a1",
+      "receiptSha256Matched": true,
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-schedule-automatic.png",
+      "bytes": 127976,
+      "gitBlob": "228a7fafabd8a7f4d608c52f71f8bd3cea4801f5",
+      "sha256": "e7a7d4f0f98d9d8ece6be344f1ad2e7a1450a544ef3f616e9631d6fc166ce529",
+      "receiptSha256Matched": true,
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-schedule.png",
+      "bytes": 116765,
+      "gitBlob": "c0c26b81853b2b97b6889fe916b956caa294294a",
+      "sha256": "6397b677bb2c3cba95c3fd2f99262e400fffa0ba9ea7efe7a862dd299e5b9481",
+      "receiptSha256Matched": true,
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-standalone-completed.png",
+      "bytes": 115720,
+      "gitBlob": "765f23f7060c134fccb27bbed2325cf2359235d0",
+      "sha256": "411d28fd70bb8843fda5a1c4790c174edb690f112b01493131d1b284bcb7a966",
+      "receiptSha256Matched": true,
+      "actuallyViewed": true,
+      "observation": "Run Log Completed/exit0 presentation with TEST standalone thought complete and separate stderr. UI exit field is not an independent OS exit callback."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-standalone-deleted.png",
+      "bytes": 98747,
+      "gitBlob": "41515e5079f462d162b1d11708c02127837e5d52",
+      "sha256": "8082a9623558aa6449395fe66a37b3c978dd7198a26faf51ca62099b96404bd1",
+      "receiptSha256Matched": true,
+      "actuallyViewed": true,
+      "observation": "Original schedule removed and No schedules yet visible; peer absence is separately retained in original receipt."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-standalone-held.png",
+      "bytes": 119486,
+      "gitBlob": "025b597054d4abc6d438c5e8fd826c86a3c3fd72",
+      "sha256": "d74ae6548f9bc699ee1eb45bd2f63eec06b253e3a97bd67bb525f8392fedaeb5",
+      "receiptSha256Matched": true,
+      "actuallyViewed": true,
+      "observation": "Original schedule lists Running held run and the prior Completed run; no physical termination conclusion from image."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-stats.png",
+      "bytes": 142532,
+      "gitBlob": "984388e3db565ce0d5a16f5ee258ead055693cf3",
+      "sha256": "ba7ce2a02284e40f7a07da11fc7a8cbf23d25ae9857b7eba9bfa6933cd5e395b",
+      "receiptSha256Matched": true,
+      "actuallyViewed": false,
+      "observation": null
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-stopped.png",
+      "bytes": 125945,
+      "gitBlob": "9d921f6c5f20bf888ca87bcc3d4ab659296b0c0f",
+      "sha256": "075ef1b30b517da1b351d6f9a449fecb7207b06b870126505bf7a9e00339d55d",
+      "receiptSha256Matched": true,
+      "actuallyViewed": true,
+      "observation": "Team offline/Launch and alice offline, held partial text retained; no green launch-progress wrapper visible in this frame and no continuous-state guarantee."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-task-activity.png",
+      "bytes": 177641,
+      "gitBlob": "3f7af92cc1f4c52168cb02a1c9a585782d08ace5",
+      "sha256": "680783476a2f5489ac51d64a49ab12dce4d7feefbca061b4b15a0cfa9c378f36",
+      "receiptSha256Matched": true,
+      "actuallyViewed": true,
+      "observation": "Original Task Activity timeline with exact captured Task input header and expanded TEST scheduled complete; no claim of native timestamps."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-task-log-stream.png",
+      "bytes": 152222,
+      "gitBlob": "9bf4edab3524a12e6f981116fa503472132727d1",
+      "sha256": "a1725e3d2b764d693031f48750d29a197ff28444b61971c1ef2ccb3e3145f6a7",
+      "receiptSha256Matched": true,
+      "actuallyViewed": true,
+      "observation": "Task Log Stream tab with captured generation and expanded same TEST scheduled complete body."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/ui-emulated-runtime-test-desktop-skill.png",
+      "bytes": 143433,
+      "gitBlob": "13f12d7c9f87edb0cb33e0702941c5a2f78b3f93",
+      "sha256": "023c5252d68b2e7586ab212d33243f1d5fba89b7534f91640edb782a17d8c91d",
+      "receiptSha256Matched": true,
+      "actuallyViewed": false,
+      "observation": null
+    }
+  ],
+  "visualReview": {
+    "actuallyViewed": [
+      "ui-emulated-runtime-lead-logs.png",
+      "ui-emulated-runtime-task-activity.png",
+      "ui-emulated-runtime-task-log-stream.png",
+      "ui-emulated-runtime-standalone-completed.png",
+      "ui-emulated-runtime-standalone-held.png",
+      "ui-emulated-runtime-standalone-deleted.png",
+      "ui-emulated-runtime-stopped.png"
+    ],
+    "count": 7,
+    "other17": "Integrity verified only; no visual-inspection claim."
+  },
+  "cleanup": {
+    "processGroup": 4284,
+    "remaining": [],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostObserved": true,
+    "capturedHostAbsent": true,
+    "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+  },
+  "hostChild": {
+    "pid": 4623,
+    "ppid": 4407,
+    "pgid": 4284,
+    "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+    "observedBeforeShutdown": true
+  },
+  "beforeHarnessCleanup": [],
+  "originalRequestedQuitExit": {
+    "initialExitCode": null,
+    "initialSignalCode": null,
+    "exitCode": 0,
+    "signalCode": null
+  },
+  "peerCleanup": {
+    "originalPeerPids": [
+      5333,
+      5538,
+      5645,
+      5748,
+      9105,
+      9556,
+      9970,
+      10360
+    ],
+    "remaining": [],
+    "absent": true
+  },
+  "passiveHostTrace": {
+    "appLog": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude/extracted/TEST-desktop-backend-tSQgtC/desktop-app.log",
+      "bytes": 58930,
+      "gitBlob": "7c56229a35e83ced53f21ff5b14641463f7c992f",
+      "sha256": "157d31fe012ceaf998b750efe80972188ada82f68c9a8b578e67b7e1f7077939"
+    },
+    "matchingOriginalHostRows": [
+      {
+        "mainPid": 4407,
+        "event": "async-spawn",
+        "pid": 4623,
+        "requestedCommand": "linux-child-exec",
+        "linuxChildExecTarget": "node",
+        "versionOnly": false,
+        "observedBirth": {
+          "startTicks": "22291",
+          "parentPid": 4407,
+          "processGroupId": 4284
+        },
+        "atomic": false,
+        "observedAtMs": 1794800936376
+      },
+      {
+        "mainPid": 4407,
+        "event": "async-exit",
+        "pid": 4623,
+        "status": 0,
+        "signal": null,
+        "observedAtMs": 1794801195169
+      }
+    ],
+    "summary": {
+      "mainPid": 4407,
+      "event": "trace-summary",
+      "rows": 26,
+      "droppedObservations": 0,
+      "observedChildren": 12,
+      "unobservedChildren": 0,
+      "observationFailures": 0,
+      "limited": false,
+      "coverage": "node-async-and-unix-process-table-only"
+    },
+    "limit": "The dedicated receipt transport does not expose a Host exit code. A separate bounded passive Main original-ChildProcess callback does report0/null; it is not an independent native custody certificate or atomic executable identity proof."
+  },
+  "sentinel": {
+    "invocations": [
+      {
+        "executable": "claude-multimodel",
+        "allowed": true,
+        "argc": 1,
+        "command": null,
+        "flags": [
+          "--version"
+        ]
+      }
+    ],
+    "preQuitCount": 1,
+    "postQuitOrCleanupInvocations": [],
+    "refusedInvocations": [],
+    "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+  },
+  "limits": [
+    "No vendor inference/authentication or native provider qualification.",
+    "Eight peer absences are separate from zero peer exit-effect callbacks.",
+    "Held Team and standalone inputs retain unknown phase, not successful completion.",
+    "The current original full ten-file privacyGREEN is a separate Team job; its subsequent staticFAIL is not erased.",
+    "Receipt identity/DOM/source assertions are distinct observations; images do not establish atomicity or continuous state.",
+    "Embedded Runtime records/activity digests are not substituted for independently archived copies of all original storage files.",
+    "No cause or repair inference transfers from earlier M failures or successes."
+  ],
+  "reviewerExecution": "Read-only bytes/Git/images and scratch evidence only; no project/Node/compiler/lint/provider/native/CI action."
+}

@@ -1,0 +1,1547 @@
+{
+  "kind": "independent-N-Windows-ARM64-Process-and-V2-qualification-review/v1",
+  "reviewer": "migration_scope",
+  "createdAt": "2026-11-16T04:01:32.565245+00:00",
+  "result": "APPROVE",
+  "independentOriginalBytesExact": true,
+  "independentSourceJoinsExact": true,
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "sourceTree": "87e104735545a0860ec2bbcd9bf1ef2318dbbebb",
+  "sourceParent": "6ff83bb45af88f660d8b124e7467664ad2ddd590",
+  "reviewedOriginalJobs": [
+    {
+      "job": 133062440000,
+      "run": 43795234913,
+      "artifact": 14194558632,
+      "platform": "win32-arm64",
+      "result": "SUCCESS",
+      "scope": "Original finite Process prerequisites, Node/Electron Windows Job/control/C++ fixtures, wrappers and finite source A/B provider scenarios."
+    },
+    {
+      "job": 133062438907,
+      "run": 43795234721,
+      "artifact": 14195560533,
+      "platform": "win32-arm64",
+      "result": "SUCCESS",
+      "scope": "Original controlled OpenCode V2 native Windows custody and distinct manual/automatic approval full flows."
+    }
+  ],
+  "originalAuthorAudits": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/process-windows-arm64-qualification-audit.json",
+      "bytes": 45763,
+      "blob": "4e5e5cd5d004c5ca3f83ef2dde5c6b6523e0a6c8",
+      "sha256": "df0380086df26f9f1ebf5855f28fb392f2d219ce45be4dab563b0f3d677fe2c4"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/v2-windows-arm64-qualification-audit.json",
+      "bytes": 19933,
+      "blob": "c1d331e5c5650a1c259cf6185d08febe6429685e",
+      "sha256": "b6a97593fafb0ceea04423cb9d3c66a00569305ad04b3bf1de97ea0e4c4866f9"
+    }
+  ],
+  "originalCheckpoints": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/checkpoint-arm-process-darwin-x64-0323.json",
+      "bytes": 7126,
+      "blob": "184bec027cc1051d2d51a4bb40fef10619f910f7",
+      "sha256": "b94fd7c54364467518ba883de96d1f260a9c2848d579705ba66f11c1864afe19"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/checkpoint-arm-v2-darwin-arm-0341.json",
+      "bytes": 8010,
+      "blob": "ee43190ebf2556da2abb29cde19534200edc7e73",
+      "sha256": "43cb556b9397e00432e6bb2b3281816ff47e0a711aeaebfa93ad437758b54c7d"
+    }
+  ],
+  "supportingIndependentProofs": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/independent-windows-arm64-process-v2-byte-verification.json",
+      "bytes": 230215,
+      "blob": "c1a94a3970875d213dc5f2a1cc59a0464b3e2432",
+      "sha256": "2b8aa576d319de8ddafe1d26d524046bffbf2f5a713c67550dca9993732bad8b"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/independent-windows-arm64-original-claims.json",
+      "bytes": 77741,
+      "blob": "8ac96acc4842f8a15071602a772c582959612e24",
+      "sha256": "616bfe159c44cba8434fd361a6b8b36aadb544074e2fc8607818fa3cd1a28dae"
+    }
+  ],
+  "methods": [
+    "Rehashed all38 files mapped by the two combined retained checkpoints; verified byte/blob/SHA identities, counts and byte totals. This broader byte exercise does not constitute semantic qualification review of the combined Darwin entries, which root owns.",
+    "Independently opened both complete official Windows ARM64 ZIPs, checked official API digest/size/run/source, all23 unique safe non-directory non-symlink members and CRC, and compared every recovered byte with extracted members and archive-audit identities.",
+    "Read and parsed both full original job logs and the retained original log-response strings. UTF8 reproduction is exact for450975 Process bytes and112775 V2 bytes. Every nonempty normalized line of nine archived Process logs is present in the original full Process job; only timestamp/ANSI wrappers were removed for that join, never for identity.",
+    "Fresh immutable Git reads at exact608efb reproduced all619 tracked Host source identities, complete ordered roster and both LF and explicit Windows CRLF tree digests. Fresh Git source verification covered all14 unique Process tracked paths/38 occurrences plus nine named claim-bearing workflow/harness leaves.",
+    "Classified every one of82 provider source-scenario pins without borrowing another architecture:38 tracked occurrences,16 recorded built-output occurrences across six paths,28 external/generated/binary input occurrences. All38 tracked values match explicit Windows CRLF; none matches Git LF directly.",
+    "Parsed both complete native logs, all final helper/capability records, all three final provider receipts and six epochs, wrapper receipt, scope.json duplicated receipts, and all four V2 receipt bodies; recomputed author projections against original values.",
+    "Read current source assertions for pending CREATE, scoped Stop, original handle/Job cleanup, finite A/B source readiness and standalone/cold history, both absolute deadline handoffs and late capture postconditions, and actual V2 image/tool/model/configuration/approval/checkpoint/restore behavior.",
+    "Read-only inspection and pure evidence hashing/parsing only. No project, Node, test, compiler, build, install, provider/native process, CI poll/action or source/ref/checkout mutation."
+  ],
+  "byteCustody": {
+    "checkpointUniqueFiles": 38,
+    "officialZIPs": [
+      {
+        "path": "native-audit-N608efb/process-win32-arm64/artifact-14194558632.zip",
+        "bytes": 72294,
+        "blob": "02a0765eca19742afc372fab80456b7b4b3eebb4",
+        "sha256": "c63bcdc4d931ddad1788bf8b7daa7c0a25d1c8d1d4e1305ab03b2ab33518bfdc",
+        "CRC": true,
+        "safeUniqueNonSymlinkMembers": true,
+        "extractedBytesExact": true,
+        "memberCount": 19
+      },
+      {
+        "path": "native-audit-N608efb/v2-win32-arm64/artifact-14195560533.zip",
+        "bytes": 13475,
+        "blob": "75e42c3d38d8378e394aae327d5f8cf596bad554",
+        "sha256": "0c9ef1def19153c46fea68fab390a139cc4af9d2a805cb7ac5ddddae6404f7e7",
+        "CRC": true,
+        "safeUniqueNonSymlinkMembers": true,
+        "extractedBytesExact": true,
+        "memberCount": 4
+      }
+    ],
+    "memberCount": 23,
+    "fullOriginalLogResponses": [
+      {
+        "job": 133062440000,
+        "rawPath": "native-audit-N608efb/process-win32-arm64/job-133062440000.log",
+        "bytes": 450975,
+        "blob": "8cca1336af0ca8e4f7075597eced808ffcad363a",
+        "sha256": "77cfe0f157d407abf397de0315f831617716ac33e884e553879e1e0d276363f6",
+        "responsePath": "native-audit-N608efb/process-win32-arm64/original-job-log-response.json",
+        "responseIdentity": {
+          "bytes": 496145,
+          "blob": "09f2016aa2c24ad4b63cec11ece6c49d74cfe8d2",
+          "sha256": "2760116e93429819e8c97a5265f73cd4842484b0c0373d96beaf25040219881d"
+        },
+        "verbatimUTF8FullResponseEqual": true
+      },
+      {
+        "job": 133062438907,
+        "rawPath": "native-audit-N608efb/v2-win32-arm64/job-133062438907.log",
+        "bytes": 112775,
+        "blob": "1b56d4ad781b09afda04c5d2396c8fdaaf704f08",
+        "sha256": "9f88fac3ef794b80cc5539e7ebc9ec08000f5d4cc26db34f18bf72d74169f3f5",
+        "responsePath": "native-audit-N608efb/v2-win32-arm64/original-job-log-full-response.json",
+        "responseIdentity": {
+          "bytes": 117098,
+          "blob": "c375363d64cd8f3ff8d1d9af5cc130d2aacddee0",
+          "sha256": "3f2fab2af3a60684e773b273ea6d6f7c225c2bcd22fa5aa0d3142595b96b3b91"
+        },
+        "verbatimUTF8FullResponseEqual": true
+      }
+    ],
+    "noScreenshotsInTheseTwoArchives": true,
+    "limits": "Raw archive bodies and original harness assertions are retained. Reviewer did not recover/rebuild the compiled binaries or reproduce every built output from source."
+  },
+  "source": {
+    "closureAudit": {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/host-source-N608efb-git-audit.json",
+      "bytes": 163123,
+      "blob": "9c8472f84db2ee0615314b9fd05df207e2c7d112",
+      "sha256": "30dbbf806666206c905b346f15e475646c2840d0c29f326a953fb3202d595ea0"
+    },
+    "fresh619Files": 619,
+    "freshGitBytes": 4111602,
+    "LF": "4a97065f4e44d4dd380638100abb11769cf1290d61eaac64a9e3bf6e956041d9",
+    "explicitWindowsCRLF": "c78da4032309d11e82c24bde6143d738a31a863701f55d7bf9b769500f11945f",
+    "algorithm": "Sorted relative path + NUL + exact .ts bytes + NUL recursively, original native-host.ts treeHash.",
+    "sourcePinAudit": {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/process-source-pin-audit-arm64.json",
+      "bytes": 36208,
+      "blob": "bd6f02f36bec244fa4f9af0a6ddc200d72704472",
+      "sha256": "109ae274c0085042f2f47cbdc19b8ba0aa61e31d655a0c8b5e7b86545851cd15"
+    },
+    "trackedUniquePaths": 14,
+    "trackedOccurrences": 38,
+    "all82PinsClassified": true,
+    "trackedLFMatches": 0,
+    "trackedCRLFMatches": 38,
+    "builtOutputOccurrences": 16,
+    "builtOutputUniquePaths": 6,
+    "externalOccurrences": 28,
+    "claimBearingLeaves": [
+      {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "bytes": 30399,
+        "blob": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+        "sha256": "a7e59eb17ee93d15ffad248322d79e536d9d9c0b02c83a30a31687fd6e618ce0"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGate.ts",
+        "bytes": 22330,
+        "blob": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d",
+        "sha256": "3b549e313e3ca43b76232282b7dbe9e7a1dfcec594ad93bc81c047f740851197"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+        "bytes": 20067,
+        "blob": "e3cb3ac88b3b46c8935f64bc2f2b0060e163676b",
+        "sha256": "3da229429f0dfa6c53449078a1b8125715130be2165986f2d4cc1fab31a53951"
+      },
+      {
+        "path": "tools/owned-process-broker/debugServiceTest.h",
+        "bytes": 7271,
+        "blob": "f8a03669780c34de68010184ad6ca03a8440a2e4",
+        "sha256": "ec0665d1f6289492ea103bce13821c2a06847a2599396c8b47de21dde4e4f2a4"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "bytes": 56556,
+        "blob": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+        "sha256": "3cba93b8d78463415511f25e2b86132801fd5a0059d168072e39e03a0ad624b0"
+      },
+      {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "bytes": 36013,
+        "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+        "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+        "bytes": 33259,
+        "blob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+        "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v1-version-source.ts",
+        "bytes": 9765,
+        "blob": "78cb6f0026821785b1d0c0c1ad21ddfe76cdaee4",
+        "sha256": "0ff252732bedb1807cf428370e41628922a4d719090f479a41f25117d7227979"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+        "bytes": 15303,
+        "blob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5",
+        "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01"
+      }
+    ],
+    "V2FreshSourceJoins": [
+      {
+        "receipt": "opencode-v2-windows-custody.json",
+        "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+        "sourceDigestFields": [
+          [
+            "hostSourceDigest",
+            "c78da4032309d11e82c24bde6143d738a31a863701f55d7bf9b769500f11945f"
+          ]
+        ],
+        "fresh619GitCRLFMatch": true
+      },
+      {
+        "receipt": "opencode-v2-embedded-host.json",
+        "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+        "sourceDigestFields": [
+          [
+            "hostSource",
+            "c78da4032309d11e82c24bde6143d738a31a863701f55d7bf9b769500f11945f"
+          ]
+        ],
+        "fresh619GitCRLFMatch": true
+      },
+      {
+        "receipt": "opencode-v2-embedded-host-auto.json",
+        "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+        "sourceDigestFields": [
+          [
+            "hostSource",
+            "c78da4032309d11e82c24bde6143d738a31a863701f55d7bf9b769500f11945f"
+          ]
+        ],
+        "fresh619GitCRLFMatch": true
+      }
+    ],
+    "limit": "No all-architecture or historical-source transfer. Receipt hostDist/provider equality remains the original harness assertion, not an independently rebuilt distribution closure."
+  },
+  "process": {
+    "prerequisites": {
+      "hostContracts": {
+        "tests": 167,
+        "pass": 164,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 3
+      },
+      "vitest": [
+        {
+          "log": "protocol.log",
+          "passedFiles": 3,
+          "pass": 53,
+          "fail": 0,
+          "skip": 0
+        },
+        {
+          "log": "retained-main.log",
+          "passedFiles": 8,
+          "pass": 81,
+          "fail": 0,
+          "skip": 0
+        }
+      ],
+      "totalPass": 298,
+      "originalSkips": 3
+    },
+    "scope": {
+      "kind": "TEST_HOST_PROCESS_FIXTURE_ACCEPTANCE",
+      "status": "PASS",
+      "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "platform": "win32-arm64",
+      "nodeVersion": "v24.21.0",
+      "controlledContracts": true,
+      "retainedMainTransport": true,
+      "posixProcessGroups": false,
+      "nativeProviderRuntimeQualified": false,
+      "darwinNativeRegistrationQualified": false,
+      "posixExecutableAdmissionQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    },
+    "archivedOriginalLogJoins": [
+      {
+        "log": "host-contracts.log",
+        "nonemptyLines": 181,
+        "allLinesRetainedInFullOriginalJob": true
+      },
+      {
+        "log": "protocol.log",
+        "nonemptyLines": 8,
+        "allLinesRetainedInFullOriginalJob": true
+      },
+      {
+        "log": "retained-main.log",
+        "nonemptyLines": 59,
+        "allLinesRetainedInFullOriginalJob": true
+      },
+      {
+        "log": "windows-node24.log",
+        "nonemptyLines": 414,
+        "allLinesRetainedInFullOriginalJob": true
+      },
+      {
+        "log": "windows-electron.log",
+        "nonemptyLines": 414,
+        "allLinesRetainedInFullOriginalJob": true
+      },
+      {
+        "log": "windows-emulated-provider.log",
+        "nonemptyLines": 12,
+        "allLinesRetainedInFullOriginalJob": true
+      },
+      {
+        "log": "windows-source-codex.log",
+        "nonemptyLines": 64,
+        "allLinesRetainedInFullOriginalJob": true
+      },
+      {
+        "log": "windows-source-claude.log",
+        "nonemptyLines": 34,
+        "allLinesRetainedInFullOriginalJob": true
+      },
+      {
+        "log": "windows-source-opencode.log",
+        "nonemptyLines": 26,
+        "allLinesRetainedInFullOriginalJob": true
+      }
+    ],
+    "nativeRuns": [
+      {
+        "log": "windows-node24.log",
+        "identity": {
+          "bytes": 89128,
+          "blob": "18cead7f64b990bb7e855029c9e9e36e545455f9",
+          "sha256": "049e90e56357808f8fec5d32d196dc307203c98fcae678752b402a3b9199de52"
+        },
+        "versions": {
+          "node": "24.21.0",
+          "electron": null,
+          "modules": "137"
+        },
+        "namedResults": [
+          "tree",
+          "root-first-tail-held-pipe",
+          "blocked-output-independent-stop",
+          "breakaway-denied",
+          "pre-resume-cancel-first-nonce",
+          "facade-private-stdin-after-native-owner-tail-exit",
+          "facade-pre-resume-cancel-no-private-input",
+          "captured-provider-native-argv-env-cwd-and-stop",
+          "captured-root-first-original-descendants-and-neighbor",
+          "TEST-only-debug-service-prebirth-nested-job-feasibility",
+          "TEST-only-scoped-stop-pending-create-isolation",
+          "TEST-only-wow64-root-child-startup-and-application-exceptions",
+          "birth-failure-unknown-first-nonce",
+          "owner-eof",
+          "accounting-failure-latched-unknown-distinct-reconciliation",
+          "post-launch-pending-read-genuine-prepared",
+          "released-ack-eof-exit-zero",
+          "watcher-lock-contention-released-ack-exit-zero",
+          "failure-winner-after-complete-ack-exit-74",
+          "broker-crash",
+          "wrong-generation",
+          "malformed",
+          "truncated",
+          "lost-prepared-no-resume-first-nonce",
+          "sentinel-isolation"
+        ],
+        "namedResultCount": 25,
+        "allNativePhaseRows": 271,
+        "completedInternalPhases": 31,
+        "pendingCreate": [
+          {
+            "rootExited": false,
+            "activeProcesses": 0,
+            "queryError": 0,
+            "dispatchError": 0,
+            "stopReplied": false
+          }
+        ],
+        "finalHelperRecords": 64,
+        "allClosedEndedEmptyNoError": true,
+        "retainedCapabilities": 9,
+        "nonzeroOrSignalledHelpers": [
+          {
+            "slot": 0,
+            "scenario": "sentinel",
+            "exit": {
+              "code": null,
+              "signal": "SIGTERM"
+            },
+            "cleanupRequested": true
+          },
+          {
+            "slot": 48,
+            "scenario": "terminal-race",
+            "exit": {
+              "code": 74,
+              "signal": null
+            },
+            "cleanupRequested": false
+          },
+          {
+            "slot": 50,
+            "scenario": "owner-eof",
+            "exit": {
+              "code": 70,
+              "signal": null
+            },
+            "cleanupRequested": false
+          },
+          {
+            "slot": 52,
+            "scenario": "broker-crash",
+            "exit": {
+              "code": null,
+              "signal": "SIGTERM"
+            },
+            "cleanupRequested": true
+          },
+          {
+            "slot": 54,
+            "scenario": "wrong-generation",
+            "exit": {
+              "code": 75,
+              "signal": null
+            },
+            "cleanupRequested": false
+          },
+          {
+            "slot": 56,
+            "scenario": "lost-prepared",
+            "exit": {
+              "code": 70,
+              "signal": null
+            },
+            "cleanupRequested": false
+          },
+          {
+            "slot": 58,
+            "scenario": "malformed",
+            "exit": {
+              "code": 75,
+              "signal": null
+            },
+            "cleanupRequested": false
+          },
+          {
+            "slot": 60,
+            "scenario": "truncated",
+            "exit": {
+              "code": 75,
+              "signal": null
+            },
+            "cleanupRequested": false
+          }
+        ],
+        "originalController": {
+          "gateController": "drained",
+          "rootExitCode": 0,
+          "activeProcesses": 0
+        }
+      },
+      {
+        "log": "windows-electron.log",
+        "identity": {
+          "bytes": 89152,
+          "blob": "cf4963c0484985558920e8f66eca6193695aca22",
+          "sha256": "c12b3b563fda15d78e33830490390151c793d2e0f3d95ba00010ab85bea56dc3"
+        },
+        "versions": {
+          "node": "24.22.1",
+          "electron": "44.10.1",
+          "modules": "149"
+        },
+        "namedResults": [
+          "tree",
+          "root-first-tail-held-pipe",
+          "blocked-output-independent-stop",
+          "breakaway-denied",
+          "pre-resume-cancel-first-nonce",
+          "facade-private-stdin-after-native-owner-tail-exit",
+          "facade-pre-resume-cancel-no-private-input",
+          "captured-provider-native-argv-env-cwd-and-stop",
+          "captured-root-first-original-descendants-and-neighbor",
+          "TEST-only-debug-service-prebirth-nested-job-feasibility",
+          "TEST-only-scoped-stop-pending-create-isolation",
+          "TEST-only-wow64-root-child-startup-and-application-exceptions",
+          "birth-failure-unknown-first-nonce",
+          "owner-eof",
+          "accounting-failure-latched-unknown-distinct-reconciliation",
+          "post-launch-pending-read-genuine-prepared",
+          "released-ack-eof-exit-zero",
+          "watcher-lock-contention-released-ack-exit-zero",
+          "failure-winner-after-complete-ack-exit-74",
+          "broker-crash",
+          "wrong-generation",
+          "malformed",
+          "truncated",
+          "lost-prepared-no-resume-first-nonce",
+          "sentinel-isolation"
+        ],
+        "namedResultCount": 25,
+        "allNativePhaseRows": 271,
+        "completedInternalPhases": 31,
+        "pendingCreate": [
+          {
+            "rootExited": false,
+            "activeProcesses": 0,
+            "queryError": 0,
+            "dispatchError": 0,
+            "stopReplied": false
+          }
+        ],
+        "finalHelperRecords": 64,
+        "allClosedEndedEmptyNoError": true,
+        "retainedCapabilities": 9,
+        "nonzeroOrSignalledHelpers": [
+          {
+            "slot": 0,
+            "scenario": "sentinel",
+            "exit": {
+              "code": null,
+              "signal": "SIGTERM"
+            },
+            "cleanupRequested": true
+          },
+          {
+            "slot": 48,
+            "scenario": "terminal-race",
+            "exit": {
+              "code": 74,
+              "signal": null
+            },
+            "cleanupRequested": false
+          },
+          {
+            "slot": 50,
+            "scenario": "owner-eof",
+            "exit": {
+              "code": 70,
+              "signal": null
+            },
+            "cleanupRequested": false
+          },
+          {
+            "slot": 52,
+            "scenario": "broker-crash",
+            "exit": {
+              "code": null,
+              "signal": "SIGTERM"
+            },
+            "cleanupRequested": true
+          },
+          {
+            "slot": 54,
+            "scenario": "wrong-generation",
+            "exit": {
+              "code": 75,
+              "signal": null
+            },
+            "cleanupRequested": false
+          },
+          {
+            "slot": 56,
+            "scenario": "lost-prepared",
+            "exit": {
+              "code": 70,
+              "signal": null
+            },
+            "cleanupRequested": false
+          },
+          {
+            "slot": 58,
+            "scenario": "malformed",
+            "exit": {
+              "code": 75,
+              "signal": null
+            },
+            "cleanupRequested": false
+          },
+          {
+            "slot": 60,
+            "scenario": "truncated",
+            "exit": {
+              "code": 75,
+              "signal": null
+            },
+            "cleanupRequested": false
+          }
+        ],
+        "originalController": {
+          "gateController": "drained",
+          "rootExitCode": 0,
+          "activeProcesses": 0
+        }
+      }
+    ],
+    "pendingCreateMeaning": {
+      "exactOperands": {
+        "rootExited": false,
+        "activeProcesses": 0,
+        "queryError": 0,
+        "dispatchError": 0,
+        "stopReplied": false
+      },
+      "source": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "sourceLines": "233–281",
+      "meaning": "The original scoped Stop remains pending while CREATE continuation is held. The source accepts !rootExited || activeProcesses>0, refuses settle/current capture and exact inherited-Job registration, releases the existing barriers, then requires terminal original root HANDLE exit, empty Job, zero query/dispatch errors and original witness exits. Current false/zero observations do not recover missing values from earlier sources."
+    },
+    "nativeCleanupMeaning": "Each invocation retains a pre-private-abandon observation and a later after-helper-wait snapshot, then an independent native controller drained/rootExit0/active0.64 observed helper records are not64 test PASS cases and are not all natural zero exits. Expected failure-winner74, owner-eof70, wrong-generation/malformed/truncated75 and deliberate sentinel/broker-crash SIGTERM retain their exact categories. Nine retained capabilities include the original contained-suspended preparation refusal. No containment fallback is promoted to a released product bridge receipt.",
+    "finiteWrappers": {
+      "wrapperNames": [
+        "npm-node",
+        "generated-bun",
+        "opaque-cmd",
+        "positional-bat",
+        "npm-native"
+      ],
+      "providers": [
+        {
+          "provider": "codex",
+          "wrapper": "npm-node",
+          "pins": {
+            "node": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+            "peer": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+            "wrapper": "d43e0701ac8436be9ce28b2832791e08fd7fa02585422c75fadb531ed6cd564f",
+            "cli": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+            "source": "b5066f3c31cfb632dbf2614f85cb872638f242a7835c14f35ded44bb43c2a7bf"
+          },
+          "counts": {
+            "allocate": 1,
+            "prepare": 1,
+            "resume": 1,
+            "stop": 1,
+            "release": 1,
+            "serviceCapture": 2,
+            "serviceStop": 2,
+            "serviceSettle": 2
+          },
+          "nativeReady": true,
+          "inputCompleted": true,
+          "registeredServices": 2,
+          "scopedStops": 2,
+          "neighborSurvivedPrimary": true,
+          "providerSurvivedScopedStops": true,
+          "cleanup": true
+        },
+        {
+          "provider": "opencode",
+          "wrapper": "opaque-cmd",
+          "pins": {
+            "node": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+            "peer": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+            "wrapper": "cb47ac0c670cc03cf1f40edb052ba855553525dffd7f8429e1a00bdca78c641d",
+            "cli": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+            "source": "b606ba5611b63dc6a4f54b2835f24f59e21fc5d1e0569a58caf2635190de58bd"
+          },
+          "counts": {
+            "allocate": 1,
+            "prepare": 1,
+            "resume": 1,
+            "stop": 1,
+            "release": 1,
+            "serviceCapture": 2,
+            "serviceStop": 2,
+            "serviceSettle": 2
+          },
+          "nativeReady": true,
+          "inputCompleted": true,
+          "registeredServices": 2,
+          "scopedStops": 2,
+          "neighborSurvivedPrimary": true,
+          "providerSurvivedScopedStops": true,
+          "cleanup": true
+        }
+      ],
+      "realProviderExecuted": false,
+      "cleanup": true,
+      "desktopQualified": false,
+      "releaseQualified": false
+    },
+    "providerScenarios": [
+      {
+        "provider": "codex",
+        "receiptIdentity": {
+          "bytes": 60455,
+          "blob": "8ed68b3427369a2755f9042d03cfd2b77730cf7c",
+          "sha256": "9379c0bda51faa522d58f24f04dd779ae5b06ebde3bf93c60b416df0c9acc911"
+        },
+        "versions": {
+          "A": "0.162.0",
+          "B": "0.162.0"
+        },
+        "epochJobCounts": [
+          25,
+          0
+        ],
+        "epochPendingAdmissions": [
+          {
+            "admitted": 2,
+            "revoked": 2
+          },
+          {
+            "admitted": 1,
+            "revoked": 1
+          }
+        ],
+        "allFiveFinalCustodyFieldsTrue": true,
+        "foreignScopeGrantRefusedBeforeAllocation": true,
+        "management": {
+          "source": {
+            "sourceId": "f31e9ba2bda55f5deccceb8b91ebacfb503a6c87c2d38bfbeab88d7e1c07d4e5",
+            "revision": "01e016d94b9d9d5f9499397c3c4920042abb1dd1c3369639ec1fdfc4d20947d1"
+          },
+          "metadataRead": true,
+          "modelProbeCompleted": true,
+          "modelProbeReplayAllocated": false,
+          "modelProbeInputs": 1,
+          "metadataHostRetained": false
+        },
+        "lastLaunchReadiness": {
+          "source": {
+            "sourceId": "f31e9ba2bda55f5deccceb8b91ebacfb503a6c87c2d38bfbeab88d7e1c07d4e5",
+            "revision": "01e016d94b9d9d5f9499397c3c4920042abb1dd1c3369639ec1fdfc4d20947d1"
+          },
+          "image": "B",
+          "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+          "readCount": 112,
+          "elapsedMs": 17581.428099999997,
+          "lastRuntimeRead": {
+            "viewDigest": "322d611415d1de09975bb832e4f366a34c8a315a2594c0d6f7e9444463a1c6a9",
+            "memberId": "alice-id",
+            "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+            "phase": "allocated",
+            "sealed": false,
+            "custody": "owned",
+            "nativeReady": true,
+            "attached": true
+          }
+        },
+        "lastStandaloneCompletionFieldPresent": true,
+        "lastStandaloneCompletion": {
+          "source": {
+            "sourceId": "f31e9ba2bda55f5deccceb8b91ebacfb503a6c87c2d38bfbeab88d7e1c07d4e5",
+            "revision": "01e016d94b9d9d5f9499397c3c4920042abb1dd1c3369639ec1fdfc4d20947d1"
+          },
+          "runId": "TEST-source-standalone-B",
+          "scheduleId": "TEST-source-schedule-B",
+          "readCount": 152,
+          "elapsedMs": 18636.334099999993,
+          "lastRunRead": {
+            "phase": "completed",
+            "cleanup": "confirmed",
+            "exitCode": 0
+          }
+        },
+        "standalone": {
+          "phase": "completed",
+          "source": {
+            "sourceId": "f31e9ba2bda55f5deccceb8b91ebacfb503a6c87c2d38bfbeab88d7e1c07d4e5",
+            "revision": "01e016d94b9d9d5f9499397c3c4920042abb1dd1c3369639ec1fdfc4d20947d1"
+          },
+          "inputDigest": "733b9243fe58abe74165a9a2f5d1db373347bcf2b820375d6f195a8cbaddf040",
+          "limits": null,
+          "ephemeral": true,
+          "replayAllocated": false
+        },
+        "cold": {
+          "currentB": true,
+          "retainedA": true,
+          "lookup": true,
+          "physicalReplayAllocations": 0,
+          "sourcePublishPendingAdmission": {
+            "admitted": 1,
+            "revoked": 1
+          },
+          "originalInputsReplayed": false,
+          "sdkPeerCheckpointRestored": false
+        },
+        "controller": {
+          "gateController": "drained",
+          "rootExitCode": 0,
+          "activeProcesses": 0
+        },
+        "passiveCleanupRows": 25,
+        "passiveCleanupHandleAbsentFalse": 23
+      },
+      {
+        "provider": "claude",
+        "receiptIdentity": {
+          "bytes": 27740,
+          "blob": "a53bf5a1a7e5c7dfe9463dbbfe99504b8cf487d3",
+          "sha256": "b4228441cb8afac52a170b44d7b47a8342fc8d2057de1077068fd0a363f62138"
+        },
+        "versions": {
+          "A": "2.1.34",
+          "B": "2.1.34"
+        },
+        "epochJobCounts": [
+          8,
+          1
+        ],
+        "epochPendingAdmissions": [
+          {
+            "admitted": 2,
+            "revoked": 2
+          },
+          {
+            "admitted": 1,
+            "revoked": 1
+          }
+        ],
+        "allFiveFinalCustodyFieldsTrue": true,
+        "foreignScopeGrantRefusedBeforeAllocation": true,
+        "management": {
+          "source": {
+            "sourceId": "680f47d750a02cfb1e4543502a1d55f8d48b5aee95ca1118590c4ccce56fe6fb",
+            "revision": "a0560bf1f663e46abbc0f91a9d1b1bd3e0e63b7ec0ceed1a28dbe36a7e1dcd7f"
+          },
+          "metadataRead": true,
+          "modelProbeCompleted": true,
+          "modelProbeReplayAllocated": false,
+          "modelProbeInputs": 1,
+          "metadataHostRetained": false
+        },
+        "lastLaunchReadiness": {
+          "source": {
+            "sourceId": "680f47d750a02cfb1e4543502a1d55f8d48b5aee95ca1118590c4ccce56fe6fb",
+            "revision": "a0560bf1f663e46abbc0f91a9d1b1bd3e0e63b7ec0ceed1a28dbe36a7e1dcd7f"
+          },
+          "image": "B",
+          "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+          "readCount": 17,
+          "elapsedMs": 4162.726699999999,
+          "lastRuntimeRead": {
+            "viewDigest": "e9c711bebe8d482154970603455182c2f6ea79e5fe18e55d8428109bec781af6",
+            "memberId": "alice-id",
+            "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+            "phase": "allocated",
+            "sealed": false,
+            "custody": "owned",
+            "nativeReady": true,
+            "attached": true
+          }
+        },
+        "lastStandaloneCompletionFieldPresent": true,
+        "lastStandaloneCompletion": {
+          "source": {
+            "sourceId": "680f47d750a02cfb1e4543502a1d55f8d48b5aee95ca1118590c4ccce56fe6fb",
+            "revision": "a0560bf1f663e46abbc0f91a9d1b1bd3e0e63b7ec0ceed1a28dbe36a7e1dcd7f"
+          },
+          "runId": "TEST-source-standalone-B",
+          "scheduleId": "TEST-source-schedule-B",
+          "readCount": 21,
+          "elapsedMs": 1870.8134000000027,
+          "lastRunRead": {
+            "phase": "completed",
+            "cleanup": "confirmed",
+            "exitCode": 0
+          }
+        },
+        "standalone": {
+          "phase": "completed",
+          "source": {
+            "sourceId": "680f47d750a02cfb1e4543502a1d55f8d48b5aee95ca1118590c4ccce56fe6fb",
+            "revision": "a0560bf1f663e46abbc0f91a9d1b1bd3e0e63b7ec0ceed1a28dbe36a7e1dcd7f"
+          },
+          "inputDigest": "8c34a758de911b4b89fbc8194566ebcd47d2bb28b05ab3c0ea818d9253e9f59d",
+          "limits": {
+            "maxTurns": 6,
+            "maxBudgetUsd": 0.25
+          },
+          "ephemeral": true,
+          "replayAllocated": false
+        },
+        "cold": {
+          "currentB": true,
+          "retainedA": true,
+          "lookup": true,
+          "physicalReplayAllocations": 0,
+          "sourcePublishPendingAdmission": {
+            "admitted": 1,
+            "revoked": 1
+          },
+          "originalInputsReplayed": false,
+          "sdkPeerCheckpointRestored": true,
+          "originalNativeSessionRetained": true,
+          "restoredGeneration": "restore-ee52bb0c2e7807049d9763769c8868c94c781721c2115e8afc6e929da6b3e63f",
+          "newInputId": "107b87df-0269-5588-87c2-0b779b08d451",
+          "source": {
+            "sourceId": "680f47d750a02cfb1e4543502a1d55f8d48b5aee95ca1118590c4ccce56fe6fb",
+            "revision": "2cf2af8747c2a6ee30abed8b5301aa93e868d225284bc5c5a536dfb67cb92a62"
+          }
+        },
+        "controller": {
+          "gateController": "drained",
+          "rootExitCode": 0,
+          "activeProcesses": 0
+        },
+        "passiveCleanupRows": 9,
+        "passiveCleanupHandleAbsentFalse": 6
+      },
+      {
+        "provider": "opencode",
+        "receiptIdentity": {
+          "bytes": 26033,
+          "blob": "0f33e9148999541dbc2cf730bdcfdf5d6504fb16",
+          "sha256": "30d230cda2d65da9158025ade672e6b4581f02c65cc72c2ab11c98585ba6c25b"
+        },
+        "versions": {
+          "A": "1.19.4",
+          "B": "1.19.4"
+        },
+        "epochJobCounts": [
+          7,
+          0
+        ],
+        "epochPendingAdmissions": [
+          {
+            "admitted": 2,
+            "revoked": 2
+          },
+          {
+            "admitted": 1,
+            "revoked": 1
+          }
+        ],
+        "allFiveFinalCustodyFieldsTrue": true,
+        "foreignScopeGrantRefusedBeforeAllocation": true,
+        "management": {
+          "source": {
+            "sourceId": "ebae422515d3dd7386df7f895d89cbe9d8c6b6a3a805db45f5d7a1d28f4f3939",
+            "revision": "1158d4ae2d7c1cc22e89f67caed2313264d3f82e3fa78a1c685de52b67a9a9e5"
+          },
+          "metadataRead": true,
+          "modelProbeCompleted": true,
+          "modelProbeReplayAllocated": false,
+          "modelProbeInputs": 1,
+          "metadataHostRetained": true
+        },
+        "lastLaunchReadiness": {
+          "source": {
+            "sourceId": "ebae422515d3dd7386df7f895d89cbe9d8c6b6a3a805db45f5d7a1d28f4f3939",
+            "revision": "1158d4ae2d7c1cc22e89f67caed2313264d3f82e3fa78a1c685de52b67a9a9e5"
+          },
+          "image": "B",
+          "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+          "readCount": 15,
+          "elapsedMs": 36078.6024,
+          "lastRuntimeRead": {
+            "viewDigest": "b511010e8e3f029298d97c17493cf8e1ef1803d003f90c2eaea9a76f8931d929",
+            "memberId": "alice-id",
+            "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+            "phase": "allocated",
+            "sealed": false,
+            "custody": "owned",
+            "nativeReady": true,
+            "attached": true
+          }
+        },
+        "lastStandaloneCompletionFieldPresent": false,
+        "lastStandaloneCompletion": null,
+        "standalone": {
+          "supported": false,
+          "reason": "Original scheduledRunProfile rejects OpenCode"
+        },
+        "cold": {
+          "currentB": true,
+          "retainedA": true,
+          "lookup": true,
+          "physicalReplayAllocations": 0,
+          "sourcePublishPendingAdmission": {
+            "admitted": 1,
+            "revoked": 1
+          },
+          "originalInputsReplayed": false,
+          "sdkPeerCheckpointRestored": false
+        },
+        "controller": {
+          "gateController": "drained",
+          "rootExitCode": 0,
+          "activeProcesses": 0
+        },
+        "passiveCleanupRows": 7,
+        "passiveCleanupHandleAbsentFalse": 5
+      }
+    ],
+    "totalFinalSourceJobs": 41,
+    "fiveCustodyFields": [
+      "resumed",
+      "stopped",
+      "drained",
+      "released",
+      "originalHandleAbsent"
+    ],
+    "sourceCleanupPrecision": "Codex25+0, Claude8+1, OpenCode7+0 are final epoch allocations. All41 final Jobs record all five custody fields true. Earlier close-diagnostic rows include originalHandleAbsent:false for23 Codex,6 Claude and5 OpenCode observations; these earlier rows are not substituted for the later final receipt. Claude cold1 is a separate SDK rehydration allocation with exact prior checkpoint/native-session and new-generation assertions, not replay of original business inputs. Zero-job cold epochs alone are not the no-replay oracle; original source/pending/inputs/entries/history assertions provide that separate proof.",
+    "readinessAndDeadlineMeaning": "The source poll checks the same absolute deadline before and after the existing read. Current captured member90s applies to Codex and OpenCode, including existing OpenCode preparation plus Start/ACK; existing Claude fallback remains15s. The Codex standalone cutoff is anchored before Start and derived from an early immutable recipe/binding capture, with the original late fresh capture/input/source postcondition preserved. Receipt readiness elapsedMs begins at readiness-observer setup and standalone elapsedMs begins at its completion-observer setup; these are not total launch/recipe durations. ARM OpenCode B36078.6024ms and Codex standalone18636.3341ms qualify only these current-policy originals, not prior15s runs. OpenCode has no lastStandaloneCompletion field and explicitly unsupported standalone; normalized null in a derived summary is not a completion result."
+  },
+  "v2": {
+    "nodeCommandSummaries": [
+      {
+        "tests": 58,
+        "pass": 57,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 1
+      },
+      {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    ],
+    "totalPass": 60,
+    "originalSkip": 1,
+    "inputs": {
+      "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+      "status": "READY",
+      "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "platform": "win32-arm64",
+      "nodeVersion": "v24.21.0",
+      "productQualified": false,
+      "stage": "prepared",
+      "baseArchiveSha256": "6455e6269b41ac044357de847e07b783000a56ca7503a340739510c446ad004a",
+      "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "bun": {
+        "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\resources\\runtime\\bun\\bun.exe",
+        "sha256": "b662cf80f932866036fc2ef33d0d4e2efcf9e4ba282d2deb3391effdcfe0b98f",
+        "version": "1.4.3"
+      },
+      "supportArchiveSha256": "c52b4ba9f8ec03d40d71e5f60a37978596dc22030be3a41ca46190e766e15f2e",
+      "manifestSha256": "64fb47f2378124e0fbe5564e9ffb0221272ffb4937d326756551edfa27cf76f5"
+    },
+    "originalWindowsCustody": {
+      "kind": "TEST_WINDOWS_ORIGINAL_JOB_CUSTODY",
+      "status": "PASS",
+      "cleanup": true,
+      "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "platform": "win32-arm64",
+      "nodeVersion": "v24.21.0",
+      "bunSha256": "b662cf80f932866036fc2ef33d0d4e2efcf9e4ba282d2deb3391effdcfe0b98f",
+      "manifestSha256": "64fb47f2378124e0fbe5564e9ffb0221272ffb4937d326756551edfa27cf76f5",
+      "hostBuild": {
+        "hostSourceDigest": "c78da4032309d11e82c24bde6143d738a31a863701f55d7bf9b769500f11945f",
+        "hostDistDigest": "2bf4a98b1ee3d93e2d22cca4b93e4b75349ecf0a79d67165369da6daa5fe9b07",
+        "providerDigest": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+      },
+      "productQualified": false,
+      "desktopQualified": false,
+      "captureBeforeInput": true,
+      "descendantSurvivedRootExit": true,
+      "originalJobCleanup": "confirmed",
+      "neighborSurvivedTargetStop": true,
+      "neighborJobCleanup": "confirmed"
+    },
+    "manualAndAutomatic": [
+      {
+        "receiptName": "opencode-v2-embedded-host.json",
+        "identity": {
+          "bytes": 95134,
+          "blob": "1144ad78b8324ee4b482e662190c47a86d4df79e",
+          "sha256": "ce4df9013461ce7a6107ddc767b261ac7aaafa5af6d0b1fe8050ccea22c61950"
+        },
+        "summary": {
+          "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+          "status": "PASS",
+          "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+          "platform": "win32-arm64",
+          "version": "2.1.4",
+          "approvalMode": "manual",
+          "nodeVersion": "v24.21.0",
+          "modelSelection": {
+            "providerId": "TEST-local",
+            "modelId": "TEST-model-B",
+            "variant": "high"
+          },
+          "configurationSelection": {
+            "scope": "project",
+            "original": "project-A",
+            "later": "project-B"
+          },
+          "preferencesSelection": {
+            "nativeDefault": "TEST-local/TEST-model",
+            "appDefault": "TEST-local/TEST-model-B"
+          },
+          "digests": {
+            "bun": "b662cf80f932866036fc2ef33d0d4e2efcf9e4ba282d2deb3391effdcfe0b98f",
+            "manifest": "64fb47f2378124e0fbe5564e9ffb0221272ffb4937d326756551edfa27cf76f5",
+            "node": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+            "hostSource": "c78da4032309d11e82c24bde6143d738a31a863701f55d7bf9b769500f11945f",
+            "hostDist": "2bf4a98b1ee3d93e2d22cca4b93e4b75349ecf0a79d67165369da6daa5fe9b07",
+            "provider": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+            "windowsShell": "6a5b945e4c27a4eb819988018d219a48ff9bb1bcbdadc56a45539ff26875c617"
+          },
+          "steps": [
+            "original_host_embedded_native_and_mcp_ready",
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+            "changed_project_config_did_not_retarget_running_native_session",
+            "original_uploaded_PNG_native_image_inference_and_public_readback",
+            "checkpoint_and_original_host_native_cleanup_confirmed",
+            "cold_host_restored_native_history_without_model_or_tool_replay"
+          ],
+          "cleanup": true,
+          "phaseElapsedMs": {
+            "original_host_embedded_native_and_mcp_ready": 63229,
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 178895,
+            "changed_project_config_did_not_retarget_running_native_session": 178895,
+            "original_uploaded_PNG_native_image_inference_and_public_readback": 178895,
+            "checkpoint_and_original_host_native_cleanup_confirmed": 180003,
+            "cold_host_restored_native_history_without_model_or_tool_replay": 237549
+          },
+          "elapsedMs": 239387,
+          "cancelled": false,
+          "inputObservation": {
+            "reads": 304,
+            "last": {
+              "phase": "allocated",
+              "custody": "owned",
+              "nativeReady": true,
+              "attached": true,
+              "sealed": false,
+              "diagnostic": null,
+              "inputs": [
+                {
+                  "phase": "terminal",
+                  "terminal": "succeeded"
+                },
+                {
+                  "phase": "terminal",
+                  "terminal": "succeeded"
+                }
+              ],
+              "interactions": [
+                {
+                  "kind": "permission",
+                  "phase": "resolved"
+                },
+                {
+                  "kind": "permission",
+                  "phase": "resolved"
+                }
+              ]
+            }
+          },
+          "launchObservation": {
+            "openElapsedMs": 53334,
+            "afterOpen": {
+              "available": true,
+              "status": "ready",
+              "reason": "context-applied",
+              "elapsedSinceAttemptMs": 51620,
+              "capturedTimeoutMs": 120000,
+              "claimed": true,
+              "nativeReady": true,
+              "contextApplied": true,
+              "everReady": true,
+              "usable": true,
+              "controlAvailable": true,
+              "noAllocation": false
+            }
+          },
+          "failureCode": null,
+          "hosts": [
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "stdoutValid": true
+            },
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "stdoutValid": true
+            }
+          ],
+          "modelOrigin": "localhost-scripted",
+          "modelRequests": 11,
+          "coordination": {
+            "status": "unqualified",
+            "cleanup": null
+          },
+          "modelFailures": [],
+          "vendorAuthQualified": false,
+          "desktopQualified": false,
+          "releaseQualified": false
+        },
+        "passiveTrace": {
+          "rows": 254,
+          "events": {
+            "child-spawn": 1,
+            "child-ready": 1,
+            "request": 105,
+            "response": 104,
+            "request-send-headers": 15,
+            "request-body-sent": 15,
+            "response-end": 12,
+            "trace-limit": 1
+          },
+          "last": {
+            "epoch": 1,
+            "event": "trace-limit",
+            "atMs": 86539,
+            "child": null,
+            "request": null,
+            "route": null,
+            "method": null,
+            "durationMs": null,
+            "status": null,
+            "contentEncoding": null,
+            "stage": null,
+            "code": null,
+            "exitCode": null,
+            "signal": null
+          },
+          "notCompleteChronology": true
+        },
+        "cpuMetadata": {
+          "epoch": 1,
+          "scope": "original-source-host-including-cleanup",
+          "status": "available",
+          "rawDiscarded": true,
+          "samplingIntervalUs": 10000,
+          "profileDurationUs": 172495206,
+          "sampledUs": 172494983,
+          "unsampledUs": 223,
+          "nodeCount": 27699,
+          "sampleCount": 16691,
+          "fileBytes": 6767631,
+          "fileOverLimit": false
+        },
+        "cpuLimit": "Original metadata only; no raw-profile reproduction, timing cause or performance qualification."
+      },
+      {
+        "receiptName": "opencode-v2-embedded-host-auto.json",
+        "identity": {
+          "bytes": 94956,
+          "blob": "d963aeffadbf31df32bcf69d03ea0441a4e54b00",
+          "sha256": "0d04f5163421d760dd434cd474ffd04405f7425c55b80b5f587c3425044197b5"
+        },
+        "summary": {
+          "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+          "status": "PASS",
+          "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+          "platform": "win32-arm64",
+          "version": "2.1.4",
+          "approvalMode": "auto",
+          "nodeVersion": "v24.21.0",
+          "modelSelection": {
+            "providerId": "TEST-local",
+            "modelId": "TEST-model-B",
+            "variant": "high"
+          },
+          "configurationSelection": {
+            "scope": "project",
+            "original": "project-A",
+            "later": "project-B"
+          },
+          "preferencesSelection": {
+            "nativeDefault": "TEST-local/TEST-model",
+            "appDefault": "TEST-local/TEST-model-B"
+          },
+          "digests": {
+            "bun": "b662cf80f932866036fc2ef33d0d4e2efcf9e4ba282d2deb3391effdcfe0b98f",
+            "manifest": "64fb47f2378124e0fbe5564e9ffb0221272ffb4937d326756551edfa27cf76f5",
+            "node": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+            "hostSource": "c78da4032309d11e82c24bde6143d738a31a863701f55d7bf9b769500f11945f",
+            "hostDist": "2bf4a98b1ee3d93e2d22cca4b93e4b75349ecf0a79d67165369da6daa5fe9b07",
+            "provider": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+            "windowsShell": "6a5b945e4c27a4eb819988018d219a48ff9bb1bcbdadc56a45539ff26875c617"
+          },
+          "steps": [
+            "original_host_embedded_native_and_mcp_ready",
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+            "changed_project_config_did_not_retarget_running_native_session",
+            "original_uploaded_PNG_native_image_inference_and_public_readback",
+            "checkpoint_and_original_host_native_cleanup_confirmed",
+            "cold_host_restored_native_history_without_model_or_tool_replay"
+          ],
+          "cleanup": true,
+          "phaseElapsedMs": {
+            "original_host_embedded_native_and_mcp_ready": 64130,
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 168819,
+            "changed_project_config_did_not_retarget_running_native_session": 168819,
+            "original_uploaded_PNG_native_image_inference_and_public_readback": 168819,
+            "checkpoint_and_original_host_native_cleanup_confirmed": 170008,
+            "cold_host_restored_native_history_without_model_or_tool_replay": 227145
+          },
+          "elapsedMs": 229029,
+          "cancelled": false,
+          "inputObservation": {
+            "reads": 265,
+            "last": {
+              "phase": "allocated",
+              "custody": "owned",
+              "nativeReady": true,
+              "attached": true,
+              "sealed": false,
+              "diagnostic": null,
+              "inputs": [
+                {
+                  "phase": "terminal",
+                  "terminal": "succeeded"
+                },
+                {
+                  "phase": "terminal",
+                  "terminal": "succeeded"
+                }
+              ],
+              "interactions": []
+            }
+          },
+          "launchObservation": {
+            "openElapsedMs": 53843,
+            "afterOpen": {
+              "available": true,
+              "status": "ready",
+              "reason": "context-applied",
+              "elapsedSinceAttemptMs": 51987,
+              "capturedTimeoutMs": 120000,
+              "claimed": true,
+              "nativeReady": true,
+              "contextApplied": true,
+              "everReady": true,
+              "usable": true,
+              "controlAvailable": true,
+              "noAllocation": false
+            }
+          },
+          "failureCode": null,
+          "hosts": [
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "stdoutValid": true
+            },
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "stdoutValid": true
+            }
+          ],
+          "modelOrigin": "localhost-scripted",
+          "modelRequests": 11,
+          "coordination": {
+            "status": "unqualified",
+            "cleanup": null
+          },
+          "modelFailures": [],
+          "vendorAuthQualified": false,
+          "desktopQualified": false,
+          "releaseQualified": false
+        },
+        "passiveTrace": {
+          "rows": 254,
+          "events": {
+            "child-spawn": 1,
+            "child-ready": 1,
+            "request": 105,
+            "response": 104,
+            "request-send-headers": 15,
+            "request-body-sent": 15,
+            "response-end": 12,
+            "trace-limit": 1
+          },
+          "last": {
+            "epoch": 1,
+            "event": "trace-limit",
+            "atMs": 88861,
+            "child": null,
+            "request": null,
+            "route": null,
+            "method": null,
+            "durationMs": null,
+            "status": null,
+            "contentEncoding": null,
+            "stage": null,
+            "code": null,
+            "exitCode": null,
+            "signal": null
+          },
+          "notCompleteChronology": true
+        },
+        "cpuMetadata": {
+          "epoch": 1,
+          "scope": "original-source-host-including-cleanup",
+          "status": "available",
+          "rawDiscarded": true,
+          "samplingIntervalUs": 10000,
+          "profileDurationUs": 162251340,
+          "sampledUs": 162251021,
+          "unsampledUs": 319,
+          "nodeCount": 27480,
+          "sampleCount": 15689,
+          "fileBytes": 6706485,
+          "fileOverLimit": false
+        },
+        "cpuLimit": "Original metadata only; no raw-profile reproduction, timing cause or performance qualification."
+      }
+    ],
+    "sourceAssertionMeaning": "The six-step receipt is emitted after original opened.nativeReady, actual two business inputs, exactly11 scripted model requests, manual2once permission replies or automatic0, actual tool effect ONE/TWO, completed Task and replies, actual original image inference/public history, no running-session retarget after projectA→B, original checkpoint/Stop closed+released, first Host close, cold lookup/idempotent Execute and image/history equality, new-generation runtime.restore, no additional model/tool effect, and resumed Stop/cold Host close. Native shell exit7 is explicitly asserted as a failed tool. Original source/dist checks run before success; cleanup or cancellation cannot silently produce PASS.",
+    "launchAndTraceLimits": "The captured V2 startup120s and existing Host RPC bounds are separate from source-provider90s policy. Manual open53334ms / automatic53843ms and input read counts304/265 are original observations. Both passive traces stop at254 rows/trace-limit. Cumulative phaseElapsedMs values are not independent phase durations. CPU metadata is original limited sampling with rawDiscarded:true, not a causal or performance conclusion.",
+    "coordinationAndBroadLimits": {
+      "coordination": {
+        "status": "unqualified",
+        "cleanup": null
+      },
+      "vendorAuthQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false,
+      "modelOrigin": "localhost-scripted",
+      "noDarwinAutomaticTransfer": true
+    }
+  },
+  "officialAPIJoins": [
+    {
+      "jobAPI": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/process-jobs-0320.json",
+        "bytes": 21882,
+        "blob": "2e87ce750a8570b1c8773626f1e977d9a0a7b752",
+        "sha256": "d76b3ad930aecc3024de7c447c979db3b8dface17ba6526b9fd5fb2abee45489"
+      },
+      "artifactAPI": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/process-artifacts-0320.json",
+        "bytes": 2961,
+        "blob": "1068fee22883dcf987dc6e51e019824897e6031a",
+        "sha256": "46724ae9b4515c4e8bb36716f9e5610f4c78dcdb6e476e80abc2787c0491c948"
+      },
+      "jobId": 133062440000,
+      "runId": 43795234913,
+      "status": "completed",
+      "conclusion": "success",
+      "artifact": {
+        "id": 14194558632,
+        "name": "host-process-fixtures-win32-arm64-608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+        "size_in_bytes": 72294,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14194558632",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14194558632/zip",
+        "expired": false,
+        "created_at": "2026-11-16T03:16:05Z",
+        "expires_at": "2026-11-30T03:16:04Z",
+        "updated_at": "2026-11-16T03:16:05Z",
+        "digest": "sha256:c63bcdc4d931ddad1788bf8b7daa7c0a25d1c8d1d4e1305ab03b2ab33518bfdc",
+        "workflow_run": {
+          "id": 43795234913,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+        }
+      }
+    },
+    {
+      "jobAPI": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/v2-jobs-0331.json",
+        "bytes": 28969,
+        "blob": "6a3bd4353c1d875c2efafe427104f16eaccef9b5",
+        "sha256": "1be91434cd5b0c9273ba46a70b385c8eff4910c884005263dcce042959a334b5"
+      },
+      "artifactAPI": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/v2-artifacts-0331.json",
+        "bytes": 3755,
+        "blob": "fe9fb63abd047dc5f34a8f5d542b81acf4e3e228",
+        "sha256": "ac306005fff8df1373ae2fadbf13ba46db40e51e2cc0ecef0e16b59d8d0d4663"
+      },
+      "jobId": 133062438907,
+      "runId": 43795234721,
+      "status": "completed",
+      "conclusion": "success",
+      "artifact": {
+        "id": 14195560533,
+        "name": "opencode-v2-embedded-native-win32-arm64",
+        "size_in_bytes": 13475,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14195560533",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14195560533/zip",
+        "expired": false,
+        "created_at": "2026-11-16T03:26:59Z",
+        "expires_at": "2026-11-23T03:26:59Z",
+        "updated_at": "2026-11-16T03:26:59Z",
+        "digest": "sha256:0c9ef1def19153c46fea68fab390a139cc4af9d2a805cb7ac5ddddae6404f7e7",
+        "workflow_run": {
+          "id": 43795234721,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+        }
+      }
+    }
+  ],
+  "findings": [],
+  "separateProspectiveSharedAppendix": {
+    "identityRead": {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/Plan29-nine-completed-native-originals-appendix.md",
+      "bytes": 8606,
+      "blob": "f0e9cde116f4737f3dad217df433655d3dd27f98",
+      "sha256": "cb93a50c42c0f0c3c94502ddeb8ea30171d0daf9c3382a2b3be86ad7f93e3c85"
+    },
+    "scopeReviewed": "Windows ARM Process/V2 rows, source closure, pending CREATE/provider allocation/readiness language and broad qualification boundaries; not a fresh semantic review of the other seven jobs.",
+    "preciseWordingCorrectionRequestedAndAcceptedByRoot": "Replace31 phase records,64 helper passes with31 completed internal phases,64 observed helper records. Original logs contain271 nativePhase rows; expected negative helpers are not test PASS cases. Root will preservev1 and createv2; no author Process/V2 audit or original acceptance result changes.",
+    "otherWindowsARMClaims": "Supported by the original receipts and exact current source. Missing completion remains absent; source90s policy and standalone timings are not historical15s qualification."
+  },
+  "limits": [
+    "This approves only the two named original N Windows ARM64 packets. Darwin/static/x64 reviews are separately owned and are not counted as this reviewer repeating their semantic audit.",
+    "No Team177/24 privacy GREEN conclusion is derived here. These jobs do not execute the prescribed whole ten-file Team gate, even though this source contains the one-helper privacy change.",
+    "No P08/P09, Desktop, installed/custom executable, real-vendor authentication, release, fullworkspace/backend/frontend or overall goal-completion claim follows from these packets.",
+    "Current source and original job/artifact/receipt identity are bound; old failures, skips and unqualified coordination remain preserved. No historical result is replaced or replayed.",
+    "The new independent verifier artifacts are scratch-only data reports; all original author files/checkpoints/source and repository refs remain untouched."
+  ],
+  "projectExecutionPerformed": false,
+  "CIPollsOrActionsPerformed": false,
+  "sourceOrRefMutationPerformed": false
+}

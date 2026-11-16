@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997349,
+  "jobId": 133040244339,
+  "artifactId": 14192765823,
+  "outcome": "FAIL step38; receipt INCOMPLETE; cleanup false; no successful original UI Stop",
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/job-133040244339.log",
+      "bytes": 312815,
+      "blob": "54d03abce960911fabeea18886c7d307591245ef",
+      "sha256": "88401bfac2583e744b54b65d39593cb773e4de2c7b54bce90dbdea1d90d7d1fc"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/artifact-14192765823.zip",
+      "bytes": 625025,
+      "blob": "ed207c9bf138be138427abcd2f93066716e439b0",
+      "sha256": "d84e424a053851aaab9c98e58fd3d2683632e8ad068b950bce926003cdd5f076"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/archive-audit.json",
+      "bytes": 2456,
+      "blob": "1e1abb1589aaf3f421b2cd1fe61711a7de1679f9",
+      "sha256": "921e66ee396cb714990b981e052a5976fc6dd79cc8629d8e007bbcab219e43d1"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-packaged-artifacts-0220.json",
+      "bytes": 2023,
+      "blob": "14cbc8c0c56d232877a0934b966fdcf5b651904a",
+      "sha256": "da68a3637c026dcc031780492f60517efb0fadf6042cd79539a867c9a1ca7487"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0225.json",
+      "bytes": 210964,
+      "blob": "73e6774f138b77b61aff42522ccf9e8065b1762f",
+      "sha256": "d51bd60401a56507c6cd36408e6c60fc62cf736a39405a61fda9df11e383d7a5"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/ui-phase-source-review.json",
+      "bytes": 12686,
+      "blob": "a5c6bcbffe16d2d699375e335be0a194704131c6",
+      "sha256": "eae7757371d43db93f86630ac88ccd92b2cabac5b568e29dbd928810981479f9"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/independent-byte-foundation.json",
+      "bytes": 14546,
+      "blob": "b51d14161c6cdb98c66e3f366fa489f2e0021e2c",
+      "sha256": "7ac302384de38eba0574e94cbcd5de3505f6b68bd40bffc3c9b7519d4ede643e"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/independent-source-pin-audit.json",
+      "bytes": 769896,
+      "blob": "1e24dc0aff1b7092325864003d72238b99581210",
+      "sha256": "3f97c11cd8e162e9e23881b9276429c37822941fe6c665fb99ae2138ae259510"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/independent-custody-source-review.json",
+      "bytes": 55527,
+      "blob": "88f73005c5f578ee64a15ebcdeba744f4f5113e8",
+      "sha256": "1db9d0a8fdb39dd65042f83aaff03d592dd1764782c9c650e883053c0fb8eaea"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/audit.json",
+      "bytes": 96592,
+      "blob": "9e2d1e930560a228b4ab0a096074211851c2af32",
+      "sha256": "36eab371f0da48573bcc2d08b932488e43ef0aa90daaaeaba655bc8ca5981def"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/Plan29-packaged-win-x64-failure-appendix.md",
+      "bytes": 7512,
+      "blob": "3b74ee93b197787c77e7368cf12e057566b08412",
+      "sha256": "d15ad75cd0c0ca37811aee2c2db2df8b47320f5e0d9a4a0f6a9dbcde740f0f8b"
+    }
+  ],
+  "recoverableOriginalMembers": [
+    {
+      "path": "_temp/opencode-v2-packaged-native.json",
+      "bytes": 5382,
+      "blob": "bd0f1dc8bd060e5d88cf74b34127a5f51837abd5",
+      "sha256": "bdb5ca3216b29b614a987a8c0916a8c4847b2b83c5441302f366883e7161f079",
+      "crc32": "5f5373a3"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154517,
+      "blob": "c938cf81f8141b52f080b44e670e98ba8f789b06",
+      "sha256": "3962998118a070023cc160e39e7c8cb88d9b72feebe97438ee79f7be8f171288",
+      "crc32": "dc157fd2"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-inputs.json",
+      "bytes": 780,
+      "blob": "28ad81eada9b2576778a1f8dca4328da068fc117",
+      "sha256": "aff88b8d6fa750b9caa673e6b79570ec8fe33b3ec77f1ffd6dac469c94579aef",
+      "crc32": "2e455caa"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged.json",
+      "bytes": 1186,
+      "blob": "cdfde45c5485f9a340d175672686e3b462e860d1",
+      "sha256": "fdaa0c94021a8f0035e517750eb052bd4cea168eaf777dc2777214e25d2ca38a",
+      "crc32": "c91bf6b1"
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.app.log",
+      "bytes": 4766,
+      "blob": "8bd0f24b93c92901da992c19b0cd59b152178e3d",
+      "sha256": "68281bffce158378af8edbc15f166a6b6b9efb1ae1a01f13d15417d89fd14e0f",
+      "crc32": "39f8d49a"
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.before-crash.png",
+      "bytes": 79896,
+      "blob": "1c16d610142abf298c038fba12d9ef1553f039b9",
+      "sha256": "347f6b6883726b0ccaebfb5c181cdeea0c85005cf7ec957360a61dc551404221",
+      "crc32": "0488afdb"
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.controller.log",
+      "bytes": 42469,
+      "blob": "4472e4302c6dc7a54684fbedc42785915ecfc0c4",
+      "sha256": "b76513cb574dd577b0e2d382760ef5b95494ad9212aab210365149c141c73c3c",
+      "crc32": "5ba30e2f"
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.json",
+      "bytes": 750601,
+      "blob": "13f00f66b65073fe972abd96c78f464d73023f2b",
+      "sha256": "b7201be98fe33679e7e6a5c8ee3366e942bde08a32090d39344a911cd342d2ae",
+      "crc32": "b1bb0816"
+    }
+  ],
+  "actuallyViewedPngCount": 1,
+  "limits": [
+    "Original job FAIL/receipt INCOMPLETE/cleanup false is preserved. Physical final absence and controller drainage do not substitute for either original UI Stop or the afterQuit zero-exit/lock/history suffix.",
+    "The diagnostic uiReady mark means the original recovery predicate accepted ready; it does not qualify the later Process owner rows. The failing guard prevented its pending DOM evaluation; which original process row/iteration was active is unretained.",
+    "The three-HANDLE alive assertions are established by exact executed source order and retained afterRetryPublic, not separately archived witness stdout. Neither native FILETIME nor returned CIM census is relabelled as the other precision/authority.",
+    "Recorded census durations are descriptive original synchronous-call intervals, not an identified Windows/product cause or proof that any ownership/read/witness may be removed. The original 10-second deadline, guards/actions/witnesses remain unchanged.",
+    "The only retained P08 image is before-crash; there is no after-Retry/Stop screenshot. Missing first/last DOM operand samples or unretained cleanup fields remain unknown.",
+    "The full1798 Git-to-CRLF source check is independent Native R2. The17 input freeze and8131 packaged payload manifest remain original hashed/source-checked records; unavailable executable/dependency payloads are not independently rebuilt or fully rearchived.",
+    "Step37 manual packaged native V2 PASS is separate from failed step38 P08, auto approval, P09, real-vendor authentication, Desktop journey and release. No source fix, timeout widening, rerun or local project execution occurred."
+  ],
+  "independentReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/independent-custody-source-review.json",
+    "bytes": 55527,
+    "blob": "88f73005c5f578ee64a15ebcdeba744f4f5113e8",
+    "sha256": "1db9d0a8fdb39dd65042f83aaff03d592dd1764782c9c650e883053c0fb8eaea"
+  }
+}

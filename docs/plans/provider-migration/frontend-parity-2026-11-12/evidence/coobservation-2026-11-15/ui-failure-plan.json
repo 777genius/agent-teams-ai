@@ -1,0 +1,363 @@
+{
+  "schemaVersion": 1,
+  "kind": "prospective-test-first-ui-readiness-and-original-linux-wrapper-cleanup",
+  "own": {
+    "branch": "fix/frontend-parity-coobservation-c714-20261115",
+    "parent": "d18acbe3596a3b7a6b7d3a27fee0eccc141a237c",
+    "tree": "5226ba0973aaf0ef9cad8355df26b33942bbf41d",
+    "priorR1": "c86340a68c188e15072acf72d5a774de4c5dbccb",
+    "prior13PublishedReadback": "root+pr_graph+provider_e2e complete; source only"
+  },
+  "paths": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "preimage": "85ff3d3927c2691fb1894d332cb3f27e8e36c831",
+      "role": "producer-after-semantic-red",
+      "currentPhysicalLines": 282,
+      "maxAdded": 35,
+      "maxDeleted": 3,
+      "maxPhysicalLines": 314,
+      "scope": "Only original openLaunch saved-model readiness: private serialized last-key and saturating0..3 count; exact original unique text/model/id/expanded selection, finite positive original control rectangle and no pending/running/paused own-dialog animation; three equal eligible returned samples, reset on invalid/changed samples. Actual existing waitRead one30000ms budget,100ms cadence and fourth isReady argument. Final original settings if/selector and controls complete bytes unchanged."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "preimage": "8e9884ea50b1aae54b50d6271367b495c1ca591e",
+      "role": "test-first",
+      "currentPhysicalLines": 1960,
+      "currentWholeCases": 53,
+      "maxAdded": 223,
+      "maxDeleted": 0,
+      "scope": "Keep entire existing file bytes/order/assertions, allowing at most3 added imports plus an additive≤220-line suffix. Actual unique source prefix from original saved-Team Launch click to just before const lead, actual createDesktopUiControls.waitRead, actual DOM expression, existing actual literal/record helpers. No copied readiness predicate, TS erasure, missing-export RED, real browser action, or global app-state test hook. Tests exercise initial premature matching frame, three timely identical samples; invalid/ambiguous/model/id/expanded/geometry/own-animation resets; finished/idle allowed; descendant spinner/preflight status not accessed; false-to-deadline timeout within original30000 and100ms. Existing actual final point/ownership/pending-read cutoff refusals remain exact."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "preimage": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+      "role": "producer-after-semantic-red",
+      "currentPhysicalLines": 690,
+      "maxAdded": 20,
+      "maxDeleted": 5,
+      "maxPhysicalLines": 710,
+      "scope": "Only isCapturedOriginalNodeZombie admits one additional Linux display form, exact [MainThread] <defunct>, while retaining original Node dev:mcp invocation, equal entire retained lstart text, safe positive group=original ChildProcess.pid, fresh leader pid/ppid/pgid=group/harness/group and Z state. Keep Darwin branches/forms, other platform refusals, all other bytes/functions/deadlines/census/physical cleanup. Comments may accurately describe this narrow extra form. No universal PID-reuse or natural-zero-exit claim. The exported predicate is used by exactly the unchanged original captured-app cleanup and owner-routing-epoch cleanup; the added Linux form can affect both callers under their existing full guards."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "preimage": "95bf3be7bf1dca7657af6ff9d22ac217742ca3b2",
+      "role": "test-first",
+      "currentPhysicalLines": 1028,
+      "currentWholeCases": 44,
+      "maxAdded": 263,
+      "maxDeleted": 0,
+      "scope": "Preserve complete selected13 union and all44 existing cases/mocks/assertions, allowing at most3 added imports plus≤260-line suffix. Actual predicate must fail original source on valid Linux tuple; actual unchanged finishDesktopOwnerRoutingEpoch must first refuse same tuple without signaling, then after repair use exactly existing one groupSIGTERM and retain final group/Host/port absence. Finite original ps/CDP/net/kill stubs, no actual OS signals or child/provider execution in added cases. Negative state/birth/child/group/parent/leader/invocation/display and final-absence debt cases; record action/query counts and existing deadline literals. No copied producer or simulated claim of real E2E. Caller fixtures mock and restore the Linux process.platform descriptor so the unchanged whole-file cases remain finite and meaningful on Darwin and Windows too; no platform skip or production injection."
+    }
+  ],
+  "preservedInputs": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "blob": "1e94339df46ef3bb963555fc3cc7253055766a78"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-owner-routing-epoch.ts",
+      "blob": "be0e7434575a22d4d15230aa997009f50695181c"
+    },
+    {
+      "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "blob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "blob": "43ab487464098fed0425ffd51441a38abc206f3b"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "blob": "865494ab5f5e45c5158fbf74ac858987fb322608"
+    }
+  ],
+  "historicalFailures": {
+    "frozenHead": "3a81d8bfb72b2f21a2bca1c0b1d8cf24fc61cc6d",
+    "pull": 1212,
+    "attempt": 1,
+    "installer": {
+      "artifact": 14199709945,
+      "zip": "6bad47d14c641af16a2839a8bd528a4f652d0acf",
+      "receipt": "38394e72b6e6b7086a4b91a0c398448592c86994",
+      "failure": "Original final point equality refused [512,384.75,BUTTON] versus [512,384.5,BUTTON], before settings press/release. Historical movement cause is unproved; new preliminary readiness cannot guarantee future immobility."
+    },
+    "crossTeam": {
+      "artifact": 14202042488,
+      "zip": "15513807bd1e29850f02400df0fcd327919f034a",
+      "receiptBytes": 20594144,
+      "receiptSha256": "e9f2789993ef3fc076218ab781eca8bd3d70295992f5e9da15dce057c7092231",
+      "receiptGit": "ce5bfd8b2faab9635cda3573c448e9e870b1463a",
+      "projection": "78ee0653a5fb9c440fb32cdc27559f4ec870c44a",
+      "failure": "Default-B epoch passed. Unavailable-A flow reached final snapshots/census and preQuitSentinel, then cleanup refused original wrapper [MainThread] <defunct> and retained4 group members. Final stat value was not recorded: no retrospective PASS or cause inference."
+    },
+    "index": "f63c60e73fd74ff75e5044c72a630936b037b3a2"
+  },
+  "dataEntries": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-failure-inputs.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5ac26325a57b11d171453857f6c5b5c8f24dd1cd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1212-installer.zip",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6bad47d14c641af16a2839a8bd528a4f652d0acf"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1212-cross-team.zip",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "15513807bd1e29850f02400df0fcd327919f034a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1212-failure-index.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f63c60e73fd74ff75e5044c72a630936b037b3a2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1212-installer-receipt.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "38394e72b6e6b7086a4b91a0c398448592c86994"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1212-cross-epoch.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "78ee0653a5fb9c440fb32cdc27559f4ec870c44a"
+    }
+  ],
+  "inputInventory": {
+    "blob": "5ac26325a57b11d171453857f6c5b5c8f24dd1cd",
+    "bytes": 2788471,
+    "sha256": "69d471b52e0592b84e7b47c46e93dcc4a4b1a007e80c632cb11f9eee290dbb5e",
+    "trackedNonDocs": 8798,
+    "compiledFiles": 1504,
+    "compiledRoots": [
+      "packages/legacy-agent-host/dist",
+      "packages/task-change-ledger/dist",
+      "agent-teams-controller/dist"
+    ],
+    "lastQualifiedFiveCompiledPinsExact": true,
+    "currentInstalledProviderFilesExact": 265,
+    "providerHead": "c79b81bf002eaac95436da71c7049d7f309906a9",
+    "qualification": "Current static byte inventory and prior qualified47d9 inputs; no new compilation. All versioned production sources for these compiled roots are unchanged between clean47d9 and published d18. Recheck all bytes immediately before and after each command; mismatch grants no rebuild."
+  },
+  "localMaterialization": {
+    "root": "/workspace/scratch/c714f5bce554/agent-teams-reconciled-local",
+    "actualGitHead": "47d9f29602bae778f20ae8cc133ca332e458e59a",
+    "initialStatus": "clean",
+    "publishedSource": "d18acbe3596a3b7a6b7d3a27fee0eccc141a237c",
+    "allowedPublishedOverlay": [
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+        "local": "077ad7ea54675a4782984fcb5399f9964d5ec5e6",
+        "published": "76480223b97320827c97a8469a11418f5ccb0206"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+        "local": "881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb",
+        "published": "bb5eb306bd81fdd5bdd69ccd9f10664d44d2c1c4"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "local": "b47e3a6e0227e2c3521a4e0124074ce6ec94bae8",
+        "published": "95bf3be7bf1dca7657af6ff9d22ac217742ca3b2"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "local": "d52680f4d848e58dee54f8a9a4beae9435c2b14c",
+        "published": "43ab487464098fed0425ffd51441a38abc206f3b"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+        "local": "7628e511b2f219ad27e517d4a96ecb7aec604131",
+        "published": "13229f20c93226ee5b3f4d07516d16f94b0d48d5"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+        "local": "74c3aaddba29d7309af436610f6a8b64c8c337e1",
+        "published": "7f224d52e429bbdecb173d65b470a2ac154de475"
+      },
+      {
+        "path": "src/features/agent-backend/main/adapters/output/projectTeamActivity.ts",
+        "local": "2f03dbc22891af7d294df53f61af1d3b6e79c0bd",
+        "published": "bfa65f8590566ec3139838d6a38cc40ffc2e5bda"
+      },
+      {
+        "path": "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
+        "local": "c30094a87db542547a5741bb94930a7dd99e4aaf",
+        "published": "fde63957a08c0b076bd50ae272115737c4a4af19"
+      },
+      {
+        "path": "src/renderer/components/ui/MentionableTextarea.tsx",
+        "local": "3589e26ff85efb370577bd2d8b404fb62bd63fdb",
+        "published": "94a360626de2ee67ceac964e3fd8529d345e3843"
+      },
+      {
+        "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+        "local": "8299f9f9589810c106c328840b2c0d3640113811",
+        "published": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1"
+      },
+      {
+        "path": "test/features/agent-backend/hostTaskActivity.test.ts",
+        "local": "66508376c5c12fe35cbedcbc6cba84a9f6720966",
+        "published": "294d5368e92a6f871a394206bc75a4177a59f666"
+      },
+      {
+        "path": "test/features/agent-backend/runtimeActivityFacade.test.ts",
+        "local": "3233fc10c6f598345f566e542c1f47b5acc18d33",
+        "published": "8aef5576630d01c091f1514bd2896ef415130d13"
+      },
+      {
+        "path": "test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx",
+        "local": "b7fd855c6a3964a56731ba8b86718fc64f6e91bd",
+        "published": "0f18886c763559877aff19f319e11575058af08a"
+      },
+      {
+        "path": "test/renderer/components/team/dialogs/TaskCommentInput.test.tsx",
+        "local": "896779479753aaa7c924e1273e4713b2d059e7b4",
+        "published": "4b81622262f5f690d1c5e17dfc289f27cbb80b70"
+      }
+    ],
+    "rule": "Only after published R1 and exact test-only R2/publication readback, materialize these14 already-published non-doc postimages plus the two reviewed new test postimages into this dedicated root. Keep git HEAD actual47d9; state truthfully that tracked executable/source inputs match the remote test-only tree while documentary checkout remains47d9. Verify all8798 non-doc path/mode/Git bytes against the exact published subject. No reset, checkout to unknown work, dependency reinstall or stale-worktree claim. For GREEN change only the two independently reviewed/published producer files, then repeat full byte preflight."
+  },
+  "execution": {
+    "executor": "root only; children remain read-only/immutable review/monitoring",
+    "node": {
+      "path": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+      "sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "priorVersion": "24.21.0"
+    },
+    "environment": {
+      "set": {
+        "AGENT_TEAMS_INSTALL_PROFILE": "node-ci",
+        "AGENT_BACKEND_TEST_NODE": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node"
+      },
+      "prependPath": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin",
+      "unset": [
+        "NODE_OPTIONS",
+        "NODE_PATH",
+        "NODE_V8_COVERAGE",
+        "GOMAXPROCS",
+        "GOMEMLIMIT",
+        "ELECTRON_RUN_AS_NODE",
+        "LEGACY_PROCESS_COLD_UI_GO",
+        "LEGACY_M19_PROVIDER_UI_GO",
+        "LEGACY_M19_ORIGINAL_HOST_CRASH_GO"
+      ],
+      "unsetAllPrefixes": [
+        "LEGACY_DESKTOP_"
+      ],
+      "rule": "Do not print inherited secrets; retain only allowlisted effective validation environment. Original finite suites preserve their declared ordinary temp-file/TEST effects; newly added cases stub all signals/net/provider actions."
+    },
+    "red": {
+      "maxAttempts": 1,
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "wholeFiles": true,
+      "outerWallLimitSeconds": 180,
+      "expected": "Actual new Linux semantic admission/caller refusal and saved-model premature-readiness assertion(s); every preexisting case must retain its original result. No producer after syntax/import/setup/unrelated failure, killed/cancelled/timeout, skipped/unreached target or missing raw evidence."
+    },
+    "green": {
+      "maxAttempts": 1,
+      "sameExactArgvAsRed": true,
+      "outerWallLimitSeconds": 180,
+      "requires": "Full independent original RED log/receipt/source-boundary acceptance, then exact producer R2/publication readback and byte preflight; all whole-file cases pass with original existing skips explicit."
+    },
+    "afterGreen": {
+      "maxAttemptsPerCommand": 1,
+      "commands": [
+        [
+          "pnpm",
+          "lint:fast:files",
+          "scripts/legacy-agent-host/desktop-backend-observations.ts",
+          "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ],
+        [
+          "pnpm",
+          "guard:source-file-size"
+        ],
+        [
+          "git",
+          "diff",
+          "--check",
+          "--",
+          "scripts/legacy-agent-host/desktop-backend-observations.ts",
+          "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ]
+      ],
+      "qualification": "Scoped lint/source cap/whitespace only, never workspace or script compiler qualification."
+    },
+    "prohibited": [
+      "any local build/compiler invocation or prior exhausted gate reset",
+      "local GUI/native/provider journey",
+      "real Claude/Codex including version",
+      "test name filtering, omitted operands, weakened old assertions, new skip/ignore/fixture replacement",
+      "automatic rerun after failed or incomplete allowed command"
+    ],
+    "receipt": "Capture exact argv/cwd/local actualHEAD/published subject/node hash/effective allowlisted environment/start/end/exit/signal/timeout, unaltered combined raw stdout/stderr bytes and SHA, runner source, complete before/after source and1504-dist inventory identities, current265 provider archive-member equality, temp/process cleanup observations. Preservation checks never promote an unknown outcome."
+  },
+  "phaseOrder": [
+    "Publish docs-only R1+plan+six evidence data files+append-only ownPlan29 over d18; commit then immediate leased push; independent full published readback before authoring tests or runner",
+    "Author only additive two-test candidates and concrete finite runner/preflight; full independent R2 before any application; publish test-only source commit with immediate push and independently bind full actual tree",
+    "Root alone materializes exact declared published non-doc view, checks input equality and runs the one whole-files RED invocation; freeze full raw evidence and independent semantic RED/source review before producer authoring",
+    "Only after accepted semantic RED, author the two bounded producer candidates; independent R2, publish/immediate push/readback; materialize only two files, full input preflight, run one same whole-files GREEN then declared scoped guards; freeze complete outcomes without retries",
+    "Publish exact RED/GREEN/evidence/source binding as documentary followups with immediate pushes; prepare one fresh fixed-head CI venue only after complete actual tree/routing/title/body/ref R2 and separately published action binding"
+  ],
+  "preservation": {
+    "allOtherNonDocs": "exact published d18",
+    "workflows": 42,
+    "sourceCap": 800,
+    "exceptions": 141,
+    "productionSourceFiles": 5020,
+    "originalProcessDeadlineMs": 15000,
+    "originalP08RetryMs": 10000,
+    "strictFinalClick": "unchanged deepEqual([x,y,tag]); no tolerance/rounding/new point/post-failure retry",
+    "waitReadLimit": "No new post-await cutoff claim; original wait checks before evaluate and final original action guards remain authoritative. Tolerated CDP-context errors do not prove uninterrupted identity.",
+    "linuxLimit": "Retained-child/parent/birth standard is preserved; separate ps/stat/census and second-resolution lstart do not establish an atomic kernel identity or universal PID reuse proof.",
+    "open": [
+      "P09 original selected-byte/same-path oracle",
+      "genuine M16 legacy owner donor/bridge",
+      "P11 resulting-source typed gates then A RED/B GREEN/C",
+      "original Windows Process15s and P08",
+      "actual resulting-source Installer/Cross UI"
+    ]
+  },
+  "futureCI": {
+    "base": "b3e3bc604e2053b70de75d3d5307f408a04920a4",
+    "baseRef": "ci/frontend-parity-observer-base-c714-20261116",
+    "unusedHeadRef": "ci/frontend-parity-read-boundaries-c714-20261116",
+    "draft": true,
+    "maintainerCanModify": false,
+    "fullUncappedPathBound": 1000,
+    "actualFinalHeadRequired": true,
+    "full42WorkflowAndExactTitleBodyReviewRequired": true,
+    "separatePublishedActionBindingRequired": true,
+    "frozenPulls": [
+      1206,
+      1207,
+      1208,
+      1211,
+      1212
+    ],
+    "noFrozenRunOrMetadataActions": true
+  },
+  "primaryReferences": [
+    "https://nodejs.org/download/release/v24.21.0/docs/api/child_process.html#subprocesskillsignal",
+    "https://man7.org/linux/man-pages/man1/ps.1.html",
+    "https://man7.org/linux/man-pages/man2/wait.2.html"
+  ]
+}

@@ -1,0 +1,655 @@
+{
+  "schema": "remaining-original-goal-acceptance-audit/v1",
+  "reviewedAtUtc": "2026-11-16T00:48:45.498371+00:00",
+  "reviewer": "migration_scope",
+  "result": "SOURCE_AND_EVIDENCE_LEDGER_COMPLETE; PRODUCT_ACCEPTANCE_STILL_IN_PROGRESS",
+  "head": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "tree": "e70ccffc6d55ad42c2249518bf142e2ed32ddf91",
+  "parents": [
+    "5fc28295461d18068f74a8ca9e2f4ab8ecda8663"
+  ],
+  "worktreeClean": true,
+  "currentCommitDocsOnlyChangedPaths": [
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/M-source-tree-request.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/Plan29-M-actual-and-9e-evidence-appendix.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/independent-M-docs-assembly-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/independent-M-docs-remote-tree-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/independent-M-immutable-source-tree-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/independent-M-published-docs-readback.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/independent-M-published-source-readback.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/inventory.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/native/9e542-README.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/native/9e542-bundle-metadata.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/native/9e542-inventory.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/native/9e542-native-evidence.zip",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/native/independent-completed-native-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/native/root-independent-bundle-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/original9e-General-0014.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/original9e-General-0020.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/root-M-docs-input-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/root-M-docs-remote-tree-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/root-M-published-docs-readback.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/root-M-published-source-readback.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/ui/README.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/ui/bundle-metadata.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/ui/inventory.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/ui/original-ui-evidence.zip",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-actual-and-9e-2026-11-16/ui/root-independent-bundle-review.json"
+  ],
+  "independentCurrentSourceReadback": true,
+  "originalGoalPreserved": true,
+  "noNewAcceptanceRule": true,
+  "currentMStaticScope": {
+    "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "run": 43780997620,
+    "job": 133017915233,
+    "completedAt": "2026-11-16T00:38:02Z",
+    "pass": 461,
+    "originalSkips": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "node": "24.21.0",
+    "freshHostBuild": true,
+    "hostTestTypes": true,
+    "notTeamTen": true,
+    "notWorkspaceOrBackendProjectTypes": true,
+    "notNativeOrDesktop": true,
+    "reviewScope": "Read and rehash full raw log/API and source definitions against retained Native audit; no execution."
+  },
+  "knownCurrentPrivacySourceGap": {
+    "helper": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+    "test": "0727339627757c3a96d54da2933eb7c1b60685f7",
+    "futureExcludedHelper": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+    "actualTeamRedReviewed": false,
+    "staticPredictionNotExecution": true
+  },
+  "p11": {
+    "requiredFeature": "live add/remove/restore; same original UI and physical/cold oracles",
+    "existingAllowedRoute": "offline-desktop-scenario/collaboration",
+    "finiteVariant": "mixed-v1",
+    "nativeQualification": false,
+    "oldGenuineV1V2Route": "ci.yml stage1-desktop, Ready/manual only; real Claude/Codex topology remains prohibited",
+    "v2RuntimeRestoreIsNotLiveRoster": true,
+    "boundedNextAnalysis": "Determine actual V2-specific required scope and concrete compatible finite harness; no candidate or execution authorized by this ledger"
+  },
+  "draftPolicy": {
+    "fullQualificationRefusal": "ci-feedback.mts:414, Draft feedback does not qualify for merge",
+    "notProductFailure": true,
+    "doesNotAuthorizeReady": true,
+    "noUniversalAllTerminalRequirement": true,
+    "queuesNotBlocker": true,
+    "producerMapping": {
+      "sourceDerivedExpectedPlan": {
+        "full": false,
+        "scope": "full",
+        "metadata": false,
+        "reuse": false,
+        "condition": "valid Draft synchronize event",
+        "observedCurrentGeneralPlan": false
+      },
+      "GeneralValidate": "full=true && scope=full: absent on that path",
+      "GeneralFourRootShards": "full=true && scope in full/source && reuse!=true: absent on that path",
+      "GeneralTypedLint": "full=true && scope=full && reuse!=true: absent on that path",
+      "GeneralRendererSourceValidation": "full=true && scope=source: absent on that path",
+      "GeneralFastFeedback": "full=false && metadata=false: actual full typecheck:workspace command and src-only fast lint",
+      "HostSafeFourShards": "independent Draft-safe job; explicit live/native exclusions remain unqualified",
+      "HostTeamStatic": "after full ten-file command; 93 path lint, full workspace, tracked backend test project, all three typed src scopes and MCP; not run when prior RED fails"
+    }
+  },
+  "p09": {
+    "selectedByteWriterScriptGapOpen": true,
+    "settledMechanismsNotResurveyed": true,
+    "section75_7PossibleFutureBoundaryDecisionOnly": true,
+    "noAutomaticOwnerBlocker": true
+  },
+  "requiredRemainingFamilies": [
+    "actual full Team semantic RED and exact conditional GREEN",
+    "fresh current install/build/toolchain joins for original Team command",
+    "full original Host/Process/management/retained suites",
+    "four safe frontend shards",
+    "whole workspace and full tracked backend-project types plus original broker contexts",
+    "93-path lint, original typed scopes and source-size/architecture guards",
+    "18 original Desktop lanes and current Logs/Thinking/standalone/Selection oracles",
+    "P11 live roster proof within allowed scope; V2-specific seam assessment",
+    "individual current Process/V2/native tuple results and cleanup",
+    "five current packaged tuple results including both Windows same-Main P08",
+    "P09 original selected-byte/writer/script proof or separately authorized exact boundary",
+    "final source/artifact/runtime/OS/scenario result ledger and original Draft/history constraints"
+  ],
+  "authority": [
+    {
+      "id": "handoff",
+      "path": "upload/chat-handoff-1794743119425.txt",
+      "source": "original-user-handoff",
+      "ranges": [
+        [
+          5,
+          9
+        ],
+        [
+          194,
+          207
+        ]
+      ],
+      "lines": 207,
+      "bytes": 41428,
+      "blob": "0faa7e8dd27adc51973a14f659d9ee1ecf90c382",
+      "sha256": "b3c4c0ebc3eb8e4fbeda943b5c78a537ee27cb1256f3ea43e55a490a068c3c40"
+    },
+    {
+      "id": "vision",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/README.md",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          118,
+          166
+        ],
+        [
+          195,
+          197
+        ],
+        [
+          239,
+          252
+        ]
+      ],
+      "lines": 259,
+      "bytes": 28605,
+      "blob": "06bdc52cfc184c24a24b91c2f9adc479c9575f9d",
+      "sha256": "3463ecfaccbb5d7918e59663c1b55815500cdc7354bb4962e1484afb1722f6e1"
+    },
+    {
+      "id": "owner_limits",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/completion-2026-11-13.md",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          204,
+          216
+        ]
+      ],
+      "lines": 533,
+      "bytes": 52191,
+      "blob": "b4388507ea00bb808461175b4163230fcb0cbe18",
+      "sha256": "92d375284b3b707df92dae22cb3d41308b1cf6b98bc3059d304f5cf6a1fc1a7e"
+    },
+    {
+      "id": "P10",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/10-acceptance-recovery.md",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          73,
+          90
+        ],
+        [
+          141,
+          180
+        ],
+        [
+          209,
+          234
+        ]
+      ],
+      "lines": 1551,
+      "bytes": 142154,
+      "blob": "69f6b93ff9a0bfddbbfc6fd783ce9d61dc06c80d",
+      "sha256": "44658f6a807d50ff720f247df692e4b30801d3e09c0bd14aa984c005a24d5c30"
+    },
+    {
+      "id": "P11",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/11-live-membership.md",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          194,
+          217
+        ],
+        [
+          238,
+          285
+        ],
+        [
+          291,
+          338
+        ]
+      ],
+      "lines": 471,
+      "bytes": 96787,
+      "blob": "34db5e8df6bd05286fa9387ee8db67c9c13e8dc1",
+      "sha256": "2fa155205ee26ca63dff0cd424255cb38deb95ae9a350eb0b96404e671bf02b0"
+    },
+    {
+      "id": "P09",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/09-cross-platform-processes.md",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          4223,
+          4231
+        ],
+        [
+          4277,
+          4288
+        ],
+        [
+          4305,
+          4325
+        ]
+      ],
+      "lines": 5497,
+      "bytes": 839900,
+      "blob": "3c97be7075f56945c48b8142e486b0a2f118c17e",
+      "sha256": "81c635659d4db41dab17b4d547a874aeffc737d3000d5f57ca204b171266ec4e"
+    },
+    {
+      "id": "P08_same_main",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/30-windows-same-main-retry-integration-2026-11-15.md",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          11,
+          37
+        ],
+        [
+          76,
+          84
+        ]
+      ],
+      "lines": 420,
+      "bytes": 120803,
+      "blob": "eb68d2643eb11527594d546d8a5088f48f8e2865",
+      "sha256": "d0828ee7c6a9f7444ed9aaec2035939957f87f39092515a198cc48520df637d0"
+    },
+    {
+      "id": "logs",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          142,
+          160
+        ],
+        [
+          431,
+          458
+        ]
+      ],
+      "lines": 694,
+      "bytes": 49788,
+      "blob": "27f455b058d999213277e396343016789163660f",
+      "sha256": "32cb9313cd505b9576662fc0453d2349f522b2ce0bb42092a2369b82b7539c05"
+    },
+    {
+      "id": "stderr",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          151,
+          176
+        ],
+        [
+          379,
+          429
+        ]
+      ],
+      "lines": 464,
+      "bytes": 28750,
+      "blob": "77cb678aef27ac3b744258e856deba479ea8c414",
+      "sha256": "1678842870b90126aef267c0bdb2e834254420d59d77c3c813dea310dd23b00f"
+    },
+    {
+      "id": "current_M",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          5433,
+          5526
+        ],
+        [
+          5636,
+          5652
+        ]
+      ],
+      "lines": 5652,
+      "bytes": 1278823,
+      "blob": "22f00c40d0da9b6b2b1354424270d78b1484af63",
+      "sha256": "c2d4bb45b780de5caa980a5455579d476feeee00032b645ce419deec673e050d"
+    },
+    {
+      "id": "agents",
+      "path": "AGENTS.md",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          23,
+          33
+        ],
+        [
+          44,
+          50
+        ],
+        [
+          74,
+          86
+        ]
+      ],
+      "lines": 93,
+      "bytes": 8999,
+      "blob": "0c8a4a63abf24c1510c934990a025ebc99c9e435",
+      "sha256": "9a8bc5d8906292ca6949a3e7c9b969d72061aba020d8064c7e799351084fd8a7"
+    },
+    {
+      "id": "guards",
+      "path": "AGENT_CRITICAL_GUARDRAILS.md",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          10,
+          18
+        ]
+      ],
+      "lines": 18,
+      "bytes": 2236,
+      "blob": "a9a087fa5216ede29c5900b3a10638fc1ec3e2f3",
+      "sha256": "90e009d02b8e4b96ddca344a186f5f145c51c1ab9f7c163e45c0e7f4e24798d3"
+    },
+    {
+      "id": "HostCI",
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          43,
+          58
+        ],
+        [
+          96,
+          213
+        ],
+        [
+          653,
+          676
+        ],
+        [
+          1234,
+          1312
+        ]
+      ],
+      "lines": 1312,
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+    },
+    {
+      "id": "ProcessCI",
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          45,
+          95
+        ],
+        [
+          107,
+          122
+        ],
+        [
+          185,
+          275
+        ]
+      ],
+      "lines": 392,
+      "bytes": 30399,
+      "blob": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+      "sha256": "a7e59eb17ee93d15ffad248322d79e536d9d9c0b02c83a30a31687fd6e618ce0"
+    },
+    {
+      "id": "V2CI",
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          82,
+          106
+        ],
+        [
+          140,
+          170
+        ],
+        [
+          570,
+          622
+        ]
+      ],
+      "lines": 622,
+      "bytes": 36013,
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14"
+    },
+    {
+      "id": "PackagedCI",
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          42,
+          78
+        ],
+        [
+          164,
+          178
+        ],
+        [
+          214,
+          260
+        ],
+        [
+          290,
+          313
+        ]
+      ],
+      "lines": 313,
+      "bytes": 19532,
+      "blob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+      "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f"
+    },
+    {
+      "id": "GeneralCI",
+      "path": ".github/workflows/ci.yml",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          59,
+          97
+        ],
+        [
+          110,
+          146
+        ],
+        [
+          186,
+          214
+        ],
+        [
+          291,
+          309
+        ],
+        [
+          495,
+          517
+        ],
+        [
+          1010,
+          1028
+        ],
+        [
+          1808,
+          1845
+        ],
+        [
+          2587,
+          2633
+        ]
+      ],
+      "lines": 2633,
+      "bytes": 175238,
+      "blob": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+      "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce"
+    },
+    {
+      "id": "GeneralPolicy",
+      "path": "scripts/ci/ci-feedback.mts",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          35,
+          80
+        ],
+        [
+          268,
+          274
+        ],
+        [
+          321,
+          334
+        ],
+        [
+          406,
+          414
+        ]
+      ],
+      "lines": 566,
+      "bytes": 19265,
+      "blob": "9d734783b4e273a4e4fbad27d4e51984646d436d",
+      "sha256": "c89f9b195d5efb183db154f87f3fee0c4e30345e4f24c6797b9a99e09311e40e"
+    },
+    {
+      "id": "CollaborationUI",
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          19,
+          39
+        ],
+        [
+          132,
+          176
+        ],
+        [
+          250,
+          343
+        ]
+      ],
+      "lines": 377,
+      "bytes": 34086,
+      "blob": "aff6e19ec4cf492841aa667442c1b7d71541c7c5",
+      "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f"
+    },
+    {
+      "id": "CollaborationFixture",
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          20,
+          74
+        ]
+      ],
+      "lines": 199,
+      "bytes": 16555,
+      "blob": "97e14385a298a38a9b81b8805dc3f6d2da66545c",
+      "sha256": "8340911817fb4228e8d948425a1f85796fba16d244b6763b04e307ed6f290713"
+    },
+    {
+      "id": "V2RuntimeNative",
+      "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [
+        [
+          407,
+          422
+        ]
+      ],
+      "lines": 499,
+      "bytes": 33259,
+      "blob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+      "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff"
+    },
+    {
+      "id": "package",
+      "path": "package.json",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [],
+      "lines": 580,
+      "bytes": 26839,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+    },
+    {
+      "id": "backend_project",
+      "path": "test/features/agent-backend/tsconfig.json",
+      "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "ranges": [],
+      "lines": 12,
+      "bytes": 379,
+      "blob": "de2814ddc27524ac335f9f6c174aace1c7b1387c",
+      "sha256": "4b6372a0f31b366a07f02aa7e70d106dcc98d3cacdbad9c57bb4856a88b74f79"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/static-windows-qualification-audit.json",
+      "bytes": 4997,
+      "blob": "d2df4ed720fb23f25d1641379ef73e1de3f4b273",
+      "sha256": "f7e9c65b18bf3b96c43cef7d7fb7a7661ed21e85c023edab15d708fe274d93a1"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-9e542/independent-completed-native-review.json",
+      "bytes": 74530,
+      "blob": "33c8d4c57aacd5ec57c272be9d6c9d3305a9d062",
+      "sha256": "a79accbb5ce83241150e9e76fa88455918bbd83a816e0d9942ee19450e57cd77"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/independent-published-source-review.json",
+      "bytes": 11633,
+      "blob": "bad33d62d4bd8e8cae625e6e48eff5bfa3badbe6",
+      "sha256": "2b33b753711ad10eca0b2322c220c9c1ab83e04a81b21d2e75e788ed8432a231"
+    }
+  ],
+  "report": {
+    "path": "/workspace/scratch/82d3f9ba6b85/remaining-goal-0660/acceptance-ledger-v2.md",
+    "bytes": 19979,
+    "blob": "fe4a7062e4406103f4b6260e83bd19c6c72149c4",
+    "sha256": "b1d52282a4e300bebf024f32919b6274f2af75132e1d3bffab9f50a87b777b88"
+  },
+  "executions": {
+    "project": false,
+    "compiler": false,
+    "install": false,
+    "node": false,
+    "provider": false,
+    "native": false,
+    "CIpoll": false,
+    "CIorRefMutation": false,
+    "sourceEdit": false
+  },
+  "limits": [
+    "No current whole-product pass is asserted.",
+    "Root owns original CI monitoring and conditional helper application.",
+    "Historical source-specific passes are not promoted to full current-head qualification.",
+    "This ledger is not a request for owner intervention and not a new R1."
+  ],
+  "supersedes": {
+    "path": "/workspace/scratch/82d3f9ba6b85/remaining-goal-0660/acceptance-ledger.json",
+    "bytes": 20158,
+    "blob": "568a86a8770636121dd4059ae811f8803c5dccb5",
+    "sha256": "3092d86e7dc0fe0e2ca0eb092b32ec2eac6f00d899d6f41bbeecf65ffb2e9fa3",
+    "reason": "Add exact General Draft producer conditions and separate existing Host producers; no source/execution or acceptance-rule change."
+  }
+}
