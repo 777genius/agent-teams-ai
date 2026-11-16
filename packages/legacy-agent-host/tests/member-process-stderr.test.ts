@@ -245,3 +245,65 @@ for (const alreadyDiscarded of [false, true]) {
     assert.ok(f.observations.some(value => value.kind === 'process-output' && value.text === 'TEST safe'));
   });
 }
+
+for (const [label, separator] of [['space', ' '], ['tab', '\t'], ['mixed', ' \t  ']] as const) {
+  test(`held whitespace values cannot leak after contextual syntax redaction (${label})`, async () => {
+    const f = fixture();
+    observeMemberProcessStderr(f.child, { ...f.context,
+      profile: { ...f.context.profile, environment: { API_KEY: 'TEST_HELD_PREFIX TEST_HELD_SUFFIX' } } }, []);
+    const output = `Bearer TEST_HELD_PREFIX${separator}TEST_HELD_SUFFIX\n`;
+    for (let at = 0; at < output.length; at += 7) f.child.stderr.write(output.slice(at, at + 7));
+    const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
+    const retained = JSON.stringify(f.observations);
+    assert.equal(retained.includes('TEST_HELD_SUFFIX'), false, 'the complete already-held value stays private');
+    assert.equal(retained.includes('TEST_HELD_PREFIX'), false);
+    assert.deepEqual(f.observations, [{ kind: 'process-output', stream: 'stderr', text: '[redacted]' }]);
+  });
+}
+
+test('safe diagnostics and unambiguous held-value context remain readable', async () => {
+  const f = fixture();
+  observeMemberProcessStderr(f.child, { ...f.context,
+    profile: { ...f.context.profile, environment: { API_KEY: 'TEST_HELD_PREFIX TEST_HELD_SUFFIX' } } }, []);
+  f.child.stderr.write('TEST ordinary public diagnostic\n');
+  f.child.stderr.write('prefix TEST_HELD_PREFIX TEST_HELD_SUFFIX suffix\n');
+  f.child.stderr.write('status password=TEST_UNHELD_VALUE tail\n');
+  const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
+  assert.deepEqual(f.observations, [
+    { kind: 'process-output', stream: 'stderr', text: 'TEST ordinary public diagnostic' },
+    { kind: 'process-output', stream: 'stderr', text: 'prefix [redacted] suffix' },
+    { kind: 'process-output', stream: 'stderr', text: 'status [redacted] tail' },
+  ]);
+});
+
+for (const folded of [false, true]) {
+  test('held escaped forms stay private after contextual whitespace normalization (' + folded + ')', async () => {
+    const f = fixture(), held = 'TEST_PREFIX  password=TEST_INNER TEST_SUFFIX\tTEST_TAIL';
+    observeMemberProcessStderr(f.child, { ...f.context,
+      profile: { ...f.context.profile, environment: { API_KEY: held } } }, []);
+    const escaped = JSON.stringify(held).slice(1, -1);
+    const output = 'Bearer ' + (folded ? escaped.replace(/\s+/g, ' ').trim() : escaped) + '\n';
+    for (let at = 0; at < output.length; at += 7) f.child.stderr.write(output.slice(at, at + 7));
+    const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
+    const retained = JSON.stringify(f.observations);
+    for (const canary of ['TEST_SUFFIX', 'TEST_PREFIX', 'TEST_INNER', 'TEST_TAIL'])
+      assert.equal(retained.includes(canary), false, 'the already-held escaped form stays private');
+    assert.deepEqual(f.observations, [{ kind: 'process-output', stream: 'stderr', text: '[redacted]' }]);
+  });
+}
+
+test('post-mask expansion preserves the oversized gap before contextual ambiguity refusal', async () => {
+  const f = fixture();
+  observeMemberProcessStderr(f.child, { ...f.context,
+    profile: { ...f.context.profile, environment: {
+      API_KEY: 'TEST_HELD_PREFIX TEST_HELD_SUFFIX', SHORT_TOKEN: 'q',
+    } } }, []);
+  const output = 'q '.repeat(3000) + 'Bearer TEST_HELD_PREFIX\tTEST_HELD_SUFFIX\n';
+  assert.ok(Buffer.byteLength(output) < 24 * 1024, 'the original framed input stays within its byte budget');
+  f.child.stderr.write(output + 'TEST safe diagnostic\n');
+  const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
+  assert.deepEqual(f.observations, [
+    { kind: 'gap', reason: 'oversized' },
+    { kind: 'process-output', stream: 'stderr', text: 'TEST safe diagnostic' },
+  ]);
+});
