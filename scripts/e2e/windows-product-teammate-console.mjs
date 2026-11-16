@@ -63,6 +63,7 @@ let attachLivenessDiagnostics = null;
 let addMemberIpcReceipt = null;
 let forceExitMember;
 let forceExitHeldTool;
+let forceExitPidEvidence = null;
 let hwndObserver;
 let hwndObserverLog = '';
 let hwndEvidence;
@@ -568,19 +569,39 @@ async function run() {
   });
   assert.equal(killedMain.status, 0, 'Actual Electron Main force-exit failed');
   let forceExitDescendantsRetired = false;
-  // Each Windows process lookup can itself take 15s. Bound elapsed time, not
-  // just retries, so a surviving descendant cannot consume the whole CI job.
+  // Sample both original PIDs on every iteration. Short-circuiting the teammate
+  // check hides whether a native tool or its parent survived a forced Main exit.
   const forceExitDeadline = Date.now() + 45_000;
   while (Date.now() < forceExitDeadline) {
-    if (!(await ownedStillAlive(forceExitMember)) &&
-        !(await ownedStillAlive(forceExitHeldTool))) {
+    const memberNow = await getProcess(forceExitMember.pid);
+    const toolNow = await getProcess(forceExitHeldTool.pid);
+    const memberAlive = memberNow?.creation === forceExitMember.creation;
+    const toolAlive = toolNow?.creation === forceExitHeldTool.creation;
+    forceExitPidEvidence = {
+      member: {
+        pid: forceExitMember.pid, originalBirthAlive: memberAlive,
+        reusedPid: Boolean(memberNow && !memberAlive),
+        commandStillOwned: memberAlive
+          ? memberNow.command.includes(forcedTeamName) : null,
+        parentPid: memberAlive ? memberNow.parent : null,
+      },
+      tool: {
+        pid: forceExitHeldTool.pid, originalBirthAlive: toolAlive,
+        reusedPid: Boolean(toolNow && !toolAlive),
+        commandStillPowerShell: toolAlive
+          ? toolNow.command.toLowerCase().includes('powershell.exe') : null,
+        parentPid: toolAlive ? toolNow.parent : null,
+      },
+    };
+    if (!memberAlive && !toolAlive) {
       forceExitDescendantsRetired = true;
       break;
     }
     await delay(300);
   }
   assert(forceExitDescendantsRetired,
-    'Original product teammate or live tool descendant survived forced Electron Main exit');
+    'Original product teammate or live tool descendant survived forced Electron Main exit: ' +
+      JSON.stringify(forceExitPidEvidence));
   const evidence = {
     schemaVersion: 1, success: true, platform: process.platform,
     modelBoundary: 'loopback synthetic HTTP; no paid model inference',
@@ -599,6 +620,7 @@ async function run() {
     forcedElectronMainPid: mainBirth.pid,
     forceExitTeammatePid: forceExitMember.pid,
     forceExitHeldToolPid: forceExitHeldTool.pid,
+    forceExitPidEvidence,
     screenshot: path.basename(screenshot), runtimeVersion: lock.version,
   };
   await writeFile(receiptPath, JSON.stringify(evidence, null, 2) + '\n');
@@ -639,6 +661,7 @@ try {
     toolResults: [...proofs.values()], usageImporterProcesses,
     heldPowerShellToolPid: heldTool?.pid ?? null,
     forceExitHeldToolPid: forceExitHeldTool?.pid ?? null,
+    forceExitPidEvidence,
     stopFailurePidEvidence,
     modelErrors: model?.errors ?? [],
     logTail: log.slice(-3500),
