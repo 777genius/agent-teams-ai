@@ -282,6 +282,54 @@ describe('native next prompt UX in the actual feature hook + row', () => {
     expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).not.toBeNull();
   });
 
+  it('rejects a delayed new-message offer after edits before canonical readback', () => {
+    const x = fixture();
+    const next = {
+      ...origin, messageId: 'TEST-human-message-B', inputId: 'TEST-input-B',
+      operationRef: 'TEST-operation-B', completedTurnRef: 'TEST-native-turn-B',
+      suggestionId: 'TEST-suggestion-B',
+    };
+    act(() => x.getHook()?.invalidateForSend());
+    x.input.draftText = 'New text after sending';
+    x.input.localEditCounter++;
+    x.render();
+    x.input.draftText = '';
+    x.input.localEditCounter++;
+    x.render();
+    // The offer can precede the exact message's canonical inbox readback.
+    x.emit(next);
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
+    x.input.latestDirectMessageId = next.messageId;
+    x.render();
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
+    // Arrival AFTER readback must also remain invalidated.
+    x.emit(next);
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
+    expect(x.onInsert).not.toHaveBeenCalled();
+    // A later independent human message remains eligible.
+    x.input.latestDirectMessageId = 'TEST-human-message-C';
+    x.render();
+    x.emit({ ...next, messageId: 'TEST-human-message-C',
+      inputId: 'TEST-input-C', operationRef: 'TEST-operation-C',
+      completedTurnRef: 'TEST-native-turn-C', suggestionId: 'TEST-suggestion-C' });
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).not.toBeNull();
+  });
+
+  it('keeps a legitimate early offer when no edit occurs during send readback', () => {
+    const x = fixture();
+    const next = {
+      ...origin, messageId: 'TEST-human-message-B', inputId: 'TEST-input-B',
+      operationRef: 'TEST-operation-B', completedTurnRef: 'TEST-native-turn-B',
+      suggestionId: 'TEST-suggestion-B',
+    };
+    act(() => x.getHook()?.invalidateForSend());
+    x.emit(next);
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).toBeNull();
+    x.input.latestDirectMessageId = next.messageId;
+    x.render();
+    expect(x.host.querySelector('[data-testid="native-next-prompt-row"]')).not.toBeNull();
+  });
+
   it('retains an offer arriving during transient draft hydration, without user invalidation', () => {
     const x = fixture(false);
     x.emit(origin);

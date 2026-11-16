@@ -72,7 +72,7 @@ export function useComposerNativeNextPrompt(input: {
         onInsert={() => { suggestion.insert(); }} onDismiss={suggestion.dismiss}
       />
     ) : null,
-    invalidate: suggestion.invalidate,
+    invalidate: suggestion.invalidateForSend,
     onCompositionStart: () => { composingRef.current = true; suggestion.invalidate(); },
     onCompositionEnd: () => { composingRef.current = false; },
     onValueChange: (value: string) => { suggestion.invalidate(); draft.setText(value); },

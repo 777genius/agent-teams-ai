@@ -37,6 +37,9 @@ export function useNativeNextPrompt(input: {
   // A user editing an empty composer can precede the provider's late offer.
   // Dismiss by the original human message, not just an arrived operation.
   const invalidatedMessageIdRef = useRef<string | null>(null);
+  // A send can precede its canonical inbox readback. Draft edits during
+  // that interval must invalidate the NEW human message, not the old ID.
+  const pendingSendRef = useRef<{ previousMessageId: string | null; editCounter: number } | null>(null);
   const conversationRef = 'direct:' + input.recipient.trim().toLowerCase();
 
   // An in-flight read must never resume insertion after the editor unmounts.
@@ -52,6 +55,7 @@ export function useNativeNextPrompt(input: {
     candidateEditCounterRef.current = null;
     dismissedOperationRef.current = null;
     invalidatedMessageIdRef.current = null;
+    pendingSendRef.current = null;
   }, [input.teamName, input.recipient, input.memberId]);
 
   useEffect(() => {
@@ -59,9 +63,22 @@ export function useNativeNextPrompt(input: {
     // Do not discard an early offer for the NEW message while its inbox
     // readback is still catching up: the pure display guard hides it until
     // the exact messageId becomes the latest.
-    if (invalidatedMessageIdRef.current !== input.latestDirectMessageId)
+    const pending = pendingSendRef.current;
+    if (pending && pending.previousMessageId !== input.latestDirectMessageId) {
+      if (pending.editCounter !== input.localEditCounter) {
+        invalidatedMessageIdRef.current = input.latestDirectMessageId;
+        validationEpochRef.current++;
+        acceptingRef.current = false;
+        candidateEditCounterRef.current = null;
+        setCandidate(null);
+      } else {
+        invalidatedMessageIdRef.current = null;
+      }
+      pendingSendRef.current = null;
+    } else if (invalidatedMessageIdRef.current !== input.latestDirectMessageId) {
       invalidatedMessageIdRef.current = null;
-  }, [input.latestDirectMessageId]);
+    }
+  }, [input.latestDirectMessageId, input.localEditCounter]);
 
   useEffect(() => {
     if (!input.editable) {
@@ -97,7 +114,11 @@ export function useNativeNextPrompt(input: {
   }, [conversationRef, input.memberId, input.teamName]);
 
   const visible = useMemo(() => {
+    const pending = pendingSendRef.current;
     if (!candidate || !input.memberId || !input.latestDirectMessageId ||
+        candidate.messageId === invalidatedMessageIdRef.current ||
+        (pending && pending.previousMessageId !== input.latestDirectMessageId &&
+          pending.editCounter !== input.localEditCounter) ||
         candidateEditCounterRef.current !== input.localEditCounter) return false;
     return canDisplayNativeNextPrompt(candidate, {
       ownerHandle: input.teamName,
@@ -199,6 +220,14 @@ export function useNativeNextPrompt(input: {
     setCandidate(null);
   }, [candidate, input.latestDirectMessageId]);
 
+  const invalidateForSend = useCallback(() => {
+    invalidate();
+    pendingSendRef.current = {
+      previousMessageId: latestInputRef.current.latestDirectMessageId,
+      editCounter: latestInputRef.current.localEditCounter,
+    };
+  }, [invalidate]);
+
   // The existing composer increments this counter on ANY local draft mutation,
   // including attachment/chip edits. Merely hiding a row while files are
   // attached would otherwise resurrect its stale offer when they are removed.
@@ -224,5 +253,5 @@ export function useNativeNextPrompt(input: {
   }, [input.teamName, input.recipient, input.memberId,
       input.latestDirectMessageId, input.localEditCounter, invalidate]);
 
-  return { candidate: visible ? candidate : null, visible, insert, dismiss, onTab, invalidate };
+  return { candidate: visible ? candidate : null, visible, insert, dismiss, onTab, invalidate, invalidateForSend };
 }
