@@ -1,0 +1,140 @@
+[
+  {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/08-windows-provider-runtime.md",
+    "gitBlob": "fb05c432887dd9db5dedab8d0e24544cf3ac842d",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": "packages/legacy-agent-host/tests/windows-job-custody.test.ts",
+    "gitBlob": "1ca246fe30e71394783be13dc49ccc1d9b864dbb",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": "packages/legacy-agent-host/tests/windows-job-custody.native.ts",
+    "gitBlob": "a224b47e942a337e823135d0cfca0fa11cd475bd",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+    "gitBlob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": "tools/owned-process-broker/nativeGateRawScenarios.ts",
+    "gitBlob": "2735e4128ad52cfcd31bdb26115bb2bc63bf2c0e",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": "tools/owned-process-broker/nativeRetainedHostGate.ts",
+    "gitBlob": "d7a56276a6baa63ee65a357a98fc52c7cfe03bdd",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+    "gitBlob": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": "test/features/agent-backend/capturedHostClient.test.ts",
+    "gitBlob": "272e7c3f6ca10d890148fa16080464b395535125",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": ".github/workflows/host-process-acceptance.yml",
+    "gitBlob": "93606e49aedfe84b6452aee487efdf2055f45524",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+    "gitBlob": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": "tools/owned-process-broker/vitest.config.ts",
+    "gitBlob": "cd03a73404a7b2548c15234743c24c1093b554af",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": "tools/owned-process-broker/protocol.test.ts",
+    "gitBlob": "89fe7152198d4eac2772e21222cd3b7b7be381d7",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+    "gitBlob": "1a202377edc9f57c62eb757e9fcdc8718479e3d1",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": "tools/owned-process-broker/nativeFacadeScenario.ts",
+    "gitBlob": "b897b076382fe16de41e1dfc5bb48131eff370f0",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": "tools/owned-process-broker/nativeCapturedScenario.ts",
+    "gitBlob": "81a609a0a779425e5d31918b9455ce164e45b902",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": ".github/workflows/sentry-owned-process-native.yml",
+    "gitBlob": "1188fa5b89d59b739d927082d1b6954a57181819",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": "scripts/legacy-agent-host/desktop-resume-ui-smoke.ts",
+    "gitBlob": "1a21e95f73196616ef79e60fa7877b8d79fa6595",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+    "gitBlob": "2784d674428177fe89ed87a7b5b8fc3182dd8a80",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+    "gitBlob": "dd53c5b6c019dbe034dcde5375f03123b9b3e10a",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": "scripts/legacy-agent-host/desktop-proof-mode.ts",
+    "gitBlob": "e2e7029c56de6343eb4ad2a2395044efd009ae0b",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub immutable fetch_file"
+  },
+  {
+    "path": ".github/workflows/ci.yml",
+    "gitBlob": "4e4554ec3330d0c06b0736e861348d7279511361",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub contents listing at immutable source SHA"
+  },
+  {
+    "path": ".github/workflows/electron-packaged-ci.yml",
+    "gitBlob": "8a39884bdf09fe22fe153c7a9fc3eae89dc749e8",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub contents listing at immutable source SHA"
+  },
+  {
+    "path": ".github/workflows/host-emulated-acceptance.yml",
+    "gitBlob": "4211a5b6de087018bdbf5a4ad41d488f16f61646",
+    "sourceHead": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "method": "official GitHub contents listing at immutable source SHA"
+  }
+]
