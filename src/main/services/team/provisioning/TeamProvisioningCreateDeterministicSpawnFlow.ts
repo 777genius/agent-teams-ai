@@ -48,7 +48,6 @@ import {
   type TeamRuntimeLaunchArgsPlan,
 } from './TeamProvisioningRuntimeLaunchSelection';
 import { scheduleProvisioningRunTimeout } from './TeamProvisioningTimeoutLifecycle';
-import { resolveWindowsTeamRuntimeLauncher } from './TeamProvisioningWindowsRuntimeLauncher';
 
 import type { GeminiRuntimeAuthState } from '../../runtime/geminiRuntimeAuth';
 import type { ProvisioningEnvResolution } from './TeamProvisioningEnvBuilder';
@@ -501,13 +500,10 @@ export async function runDeterministicCreateSpawnFlow<
       'Spawning Claude CLI process',
       `args=${spawnArgs.length} cwd=${request.cwd}`
     );
-    const ownedLaunch = resolveWindowsTeamRuntimeLauncher(claudePath, {
-      requireWrapper: process.env.AGENT_TEAMS_REQUIRE_TEAMMATE_WRAPPER === '1',
-    });
     await beginGatewayMemberLaunches(memberArgsByMember);
-    child = ports.spawnCli(ownedLaunch.binaryPath, spawnArgs, {
+    child = ports.spawnCli(claudePath, spawnArgs, {
       cwd: request.cwd,
-      env: { ...shellEnv, ...ownedLaunch.targetEnv },
+      env: { ...shellEnv },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
   } catch (error) {

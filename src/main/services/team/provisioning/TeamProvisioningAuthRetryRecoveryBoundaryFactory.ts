@@ -1,4 +1,3 @@
-import { spawnCli } from '@main/utils/childProcess';
 import * as fs from 'fs';
 
 import { readBootstrapRealTaskSubmissionState } from '../TeamBootstrapStateReader';
@@ -18,6 +17,7 @@ import {
 import { PREFLIGHT_AUTH_RETRY_DELAY_MS } from './TeamProvisioningProviderDiagnostics';
 import { type TeamProvisioningProviderRuntimeFacade } from './TeamProvisioningProviderRuntimeFacade';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
+import { spawnWindowsTeamRuntimeCli } from './TeamProvisioningWindowsRuntimeLauncher';
 
 export interface TeamProvisioningAuthRetryRecoveryBoundary<
   TRun extends TeamProvisioningAuthRetryRun,
@@ -92,7 +92,7 @@ export function createTeamProvisioningAuthRetryRecoveryBoundary<
               mcpConfigPath,
               options
             ),
-          spawnCli,
+          spawnCli: spawnWindowsTeamRuntimeCli,
           getStopAllTeamsGeneration: () => deps.service.getStopAllTeamsGeneration(),
           isStopAllTeamsGenerationChanged: (stopAllGenerationAtStart) =>
             deps.service.getStopAllTeamsGeneration() !== stopAllGenerationAtStart,

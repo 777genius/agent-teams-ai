@@ -2,7 +2,6 @@ import {
   listTmuxPaneRuntimeInfoForCurrentPlatform,
   sendKeysToTmuxPaneForCurrentPlatform,
 } from '@features/tmux-installer/main';
-import { spawnCli } from '@main/utils/childProcess';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
 import { getMemberColorByName } from '@shared/constants/memberColors';
@@ -61,7 +60,7 @@ import {
   matchesTeamMemberIdentity,
 } from './TeamProvisioningMemberIdentity';
 import { isMemberLifecycleOperationInProgressError } from './TeamProvisioningMemberLifecycleKeys';
-import { resolveWindowsTeamRuntimeLauncher } from './TeamProvisioningWindowsRuntimeLauncher';
+import { spawnWindowsTeamRuntimeCli } from './TeamProvisioningWindowsRuntimeLauncher';
 import { type MemberLifecycleOperationKind } from './TeamProvisioningMemberLifecycleOperationRunner';
 import { parseOptionalIsoMs } from './TeamProvisioningMemberSpawnStatusPolicy';
 import { buildDirectRestartPromptMessage } from './TeamProvisioningMessagePersistence';
@@ -968,13 +967,10 @@ export class TeamProvisioningMemberLifecycleController {
       this.assertRunStillCurrentAndAlive(input.run, input.teamName);
       const stdoutLog = fs.createWriteStream(runtimePaths.stdoutPath, { flags: 'a', mode: 0o600 });
       const stderrLog = fs.createWriteStream(runtimePaths.stderrPath, { flags: 'a', mode: 0o600 });
-      let child: ReturnType<typeof spawnCli>;
-      const ownedLaunch = resolveWindowsTeamRuntimeLauncher(claudePath, {
-        requireWrapper: process.env.AGENT_TEAMS_REQUIRE_TEAMMATE_WRAPPER === '1',
-      });
+      let child: ReturnType<typeof spawnWindowsTeamRuntimeCli>;
       try {
         await directGatewayArgs?.beginLaunch?.();
-        child = spawnCli(ownedLaunch.binaryPath, runtimeArgs, {
+        child = spawnWindowsTeamRuntimeCli(claudePath, runtimeArgs, {
           cwd,
           // Windows DETACHED_PROCESS leaves the teammate without any console, so every
           // shell/git child it spawns allocates a new visible console window.
@@ -986,7 +982,6 @@ export class TeamProvisioningMemberLifecycleController {
             [TEAMMATE_RUNTIME_ENV]: 'headless',
             [TEAMMATE_RUNTIME_EVENTS_ENV]: runtimePaths.eventsPath,
             [TEAMMATE_BOOTSTRAP_PROOF_TOKEN_ENV]: bootstrapProofToken,
-            ...ownedLaunch.targetEnv,
           },
           stdio: ['pipe', 'pipe', 'pipe'],
         });

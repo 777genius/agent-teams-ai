@@ -193,6 +193,7 @@ import {
   type TeamProvisioningVerificationProbePorts,
   type TeamProvisioningVerificationProbeServiceHost,
 } from './TeamProvisioningVerificationProbePortsFactory';
+import { spawnWindowsTeamRuntimeCli } from './TeamProvisioningWindowsRuntimeLauncher';
 
 import type { TeamRuntimeLaunchInput, TeamRuntimeMemberLaunchEvidence } from '../runtime';
 import type { TeamProvisioningServiceCompositionDeps } from './TeamProvisioningServiceCompositionDeps';
@@ -600,7 +601,7 @@ export function createTeamProvisioningServiceComposition(
     randomUUID,
     nowIso,
     logger,
-    spawnCli,
+    spawnCli: spawnWindowsTeamRuntimeCli,
     updateProgress,
     setTimeout: (callback, ms) => setTimeout(callback, ms),
     killTeamProcessAndWait,
@@ -615,7 +616,7 @@ export function createTeamProvisioningServiceComposition(
       createTeamProvisioningCreateDeterministicSpawnFlowDepsFromService(
         host.deterministicCreateSpawn,
         {
-          spawnCli,
+          spawnCli: spawnWindowsTeamRuntimeCli,
           updateProgress,
           killTeamProcessAndWait,
         }

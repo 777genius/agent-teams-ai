@@ -3,7 +3,6 @@ import {
   retainAuthRetryCleanupOwnership,
 } from './TeamProvisioningAuthRetryCleanupOwnership';
 import { scheduleProvisioningRunTimeout } from './TeamProvisioningTimeoutLifecycle';
-import { resolveWindowsTeamRuntimeLauncher } from './TeamProvisioningWindowsRuntimeLauncher';
 
 import type {
   AnthropicApiKeyHelperCleanupRetryOwner,
@@ -440,12 +439,9 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
         throw new Error('Team launch cancelled by app shutdown');
       }
     }
-    const ownedLaunch = resolveWindowsTeamRuntimeLauncher(ctx.claudePath, {
-      requireWrapper: process.env.AGENT_TEAMS_REQUIRE_TEAMMATE_WRAPPER === '1',
-    });
-    child = ports.spawnCli(ownedLaunch.binaryPath, ctx.args, {
+    child = ports.spawnCli(ctx.claudePath, ctx.args, {
       cwd: ctx.cwd,
-      env: { ...ctx.env, ...ownedLaunch.targetEnv },
+      env: { ...ctx.env },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
   } catch (error) {

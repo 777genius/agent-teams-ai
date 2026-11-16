@@ -51,7 +51,6 @@ import {
   type TeamRuntimeLaunchArgsPlanEnvResolutionLike,
 } from './TeamProvisioningRuntimeLaunchSelection';
 import { scheduleProvisioningRunTimeout } from './TeamProvisioningTimeoutLifecycle';
-import { resolveWindowsTeamRuntimeLauncher } from './TeamProvisioningWindowsRuntimeLauncher';
 
 import type { CrossProviderMemberArgsResult } from './TeamProvisioningEnvBuilder';
 import type { RuntimeLaunchLogger } from './TeamProvisioningRuntimeDiagnostics';
@@ -691,13 +690,10 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
       'Spawning Claude CLI process for team launch',
       `args=${finalLaunchArgs.length} cwd=${request.cwd}`
     );
-    const ownedLaunch = resolveWindowsTeamRuntimeLauncher(claudePath, {
-      requireWrapper: process.env.AGENT_TEAMS_REQUIRE_TEAMMATE_WRAPPER === '1',
-    });
     await beginGatewayMemberLaunches(crossProviderMemberArgsForLaunch.memberArgsByMember);
-    child = ports.spawnCli(ownedLaunch.binaryPath, finalLaunchArgs, {
+    child = ports.spawnCli(claudePath, finalLaunchArgs, {
       cwd: request.cwd,
-      env: { ...shellEnv, ...ownedLaunch.targetEnv },
+      env: { ...shellEnv },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
   } catch (error) {

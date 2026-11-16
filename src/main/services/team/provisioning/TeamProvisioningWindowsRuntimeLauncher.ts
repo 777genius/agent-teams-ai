@@ -1,8 +1,29 @@
+import type { SpawnOptions } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { spawnCli } from '@main/utils/childProcess';
+
 const WRAPPER_PATH = ['runtime', 'teammate-console', 'teammate.exe'] as const;
 const TARGET_ENV = 'AGENT_TEAMS_TEAMMATE_WRAPPER_TARGET';
+
+/**
+ * Infrastructure implementation of the existing team provisioning spawn port.
+ * No staged-resource filesystem lookup is performed in launch use cases.
+ */
+export function spawnWindowsTeamRuntimeCli(
+  binaryPath: string,
+  args: string[],
+  options: SpawnOptions
+): ReturnType<typeof spawnCli> {
+  const launch = resolveWindowsTeamRuntimeLauncher(binaryPath, {
+    requireWrapper: process.env.AGENT_TEAMS_REQUIRE_TEAMMATE_WRAPPER === '1',
+  });
+  return spawnCli(launch.binaryPath, args, {
+    ...options,
+    env: { ...options.env, ...launch.targetEnv },
+  });
+}
 
 export interface WindowsTeamRuntimeLaunch {
   binaryPath: string;
