@@ -80,6 +80,20 @@ function createRuntimeView(
   };
 }
 
+function captureViewLoadDiagnostics() {
+  const raw: string[] = [];
+  const debug = vi.spyOn(console, 'debug').mockImplementation((message: unknown) => {
+    if (typeof message === 'string' && message.startsWith('{"kind":"runtime-provider-view-load-v1",')) {
+      raw.push(message);
+    }
+  });
+  return {
+    raw,
+    rows: () => raw.map((message) => JSON.parse(message) as Record<string, unknown>),
+    restore: () => debug.mockRestore(),
+  };
+}
+
 function createOpenAiLocalProvider(): RuntimeProviderConnectionDto {
   return {
     providerId: 'openai',
@@ -2313,6 +2327,201 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.activeFormProviderId).toBeNull();
     expect(state?.setupFormLoading).toBe(false);
   });
+
+  it.each(['current', 'unmounted'] as const)(
+    'retains passive view-load observations while the original request is %s',
+    async (outcome) => {
+      const trace = captureViewLoadDiagnostics();
+      try {
+        let resolve!: (response: RuntimeProviderManagementViewResponse) => void;
+        const response = new Promise<RuntimeProviderManagementViewResponse>((done) => {
+          resolve = done;
+        });
+        const loadView = vi.fn(() => response);
+        const projectPath = '/tmp/TEST-private-view-project';
+        Object.defineProperty(window, 'electronAPI', {
+          configurable: true,
+          value: { runtimeProviderManagement: { loadView } } as unknown as ElectronAPI,
+        });
+        const root = createRoot(host);
+        const props = { enabled: true, loadViewOnEnable: false, projectPath };
+        await act(async () => {
+          root.render(React.createElement(ConfigurableHarness, props));
+        });
+        const refresh = actions!.refresh;
+        await act(async () => {
+          root.render(React.createElement(ConfigurableHarness, props));
+        });
+        expect(actions!.refresh).toBe(refresh);
+        let pending!: Promise<boolean>;
+        let settled = false;
+        await act(async () => {
+          pending = refresh();
+          void pending.then(() => { settled = true; });
+        });
+        expect(settled).toBe(false);
+        expect(loadView).toHaveBeenCalledTimes(1);
+        expect(loadView).toHaveBeenCalledWith(expect.objectContaining({ runtimeId: 'opencode', projectPath }));
+        expect(state?.loading).toBe(true);
+        expect(trace.rows().map((row) => row.phase)).toEqual(['start']);
+        const beforeUnmount = state;
+        if (outcome === 'unmounted') {
+          await act(async () => { root.unmount(); });
+        }
+        const view = {
+          ...createRuntimeView(),
+          projectPath,
+          defaultModel: 'TEST-private-view-model',
+        };
+        await act(async () => {
+          resolve({ schemaVersion: 1, runtimeId: 'opencode', view });
+          expect(await pending).toBe(outcome === 'current');
+        });
+        expect(settled).toBe(true);
+        expect(loadView).toHaveBeenCalledTimes(1);
+        const rows = trace.rows();
+        expect(new Set(rows.map((row) => row.owner)).size).toBe(1);
+        expect(new Set(rows.map((row) => row.request)).size).toBe(1);
+        expect(rows[0]!.owner).toBeGreaterThan(0);
+        expect(rows.find((row) => row.phase === 'response-checked')).toMatchObject({
+          sequenceCurrent: true,
+          contextCurrent: outcome === 'current',
+        });
+        if (outcome === 'current') {
+          expect(state?.view?.defaultModel).toBe(view.defaultModel);
+          expect(state?.loading).toBe(false);
+          expect(rows.find((row) => row.phase === 'view-set')).toMatchObject({
+            viewPresent: true,
+            inheritanceFields: 31,
+          });
+          expect(rows.at(-1)).toMatchObject({ phase: 'finished', loadingFalseSet: true });
+        } else {
+          expect(state).toBe(beforeUnmount);
+          expect(rows.some((row) => row.phase === 'view-set')).toBe(false);
+          expect(rows.at(-1)).toMatchObject({ phase: 'finished', loadingFalseSet: false });
+        }
+        expect(trace.raw.join('\n')).not.toContain('TEST-private');
+        expect(trace.raw.every((line) => Buffer.byteLength(line, 'utf8') <= 1024)).toBe(true);
+      } finally {
+        trace.restore();
+      }
+    }
+  );
+
+  it('keeps the original stale and silent-refresh behavior while retaining passive observations', async () => {
+    const trace = captureViewLoadDiagnostics();
+    try {
+      let resolve!: (response: RuntimeProviderManagementViewResponse) => void;
+      const first = new Promise<RuntimeProviderManagementViewResponse>((done) => {
+        resolve = done;
+      });
+      const currentView = { ...createRuntimeView(), defaultModel: 'TEST-current-silent-model' };
+      let calls = 0;
+      const loadView = vi.fn(() => {
+        calls++;
+        return calls === 1
+          ? first
+          : Promise.resolve({ schemaVersion: 1 as const, runtimeId: 'opencode' as const, view: currentView });
+      });
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: { runtimeProviderManagement: {
+          loadView,
+          loadProviderDirectory: vi.fn(async () => createEmptyDirectoryResponse()),
+        } } as unknown as ElectronAPI,
+      });
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(React.createElement(ConfigurableHarness, { enabled: true, loadViewOnEnable: false }));
+      });
+      let pending!: Promise<boolean>;
+      await act(async () => { pending = actions!.refresh(); });
+      expect(state?.loading).toBe(true);
+      await act(async () => { await actions!.refreshDirectory(); });
+      expect(loadView).toHaveBeenCalledTimes(2);
+      expect(state?.view?.defaultModel).toBe(currentView.defaultModel);
+      expect(state?.loading).toBe(true);
+      await act(async () => {
+        resolve({ schemaVersion: 1, runtimeId: 'opencode',
+          view: { ...createRuntimeView(), defaultModel: 'TEST-stale-model' } });
+        expect(await pending).toBe(false);
+      });
+      expect(state?.view?.defaultModel).toBe(currentView.defaultModel);
+      // Passive evidence does not select the separate loading-owner correction.
+      expect(state?.loading).toBe(true);
+      const rows = trace.rows();
+      expect(rows.find((row) => row.phase === 'response-checked' && row.silent === false)).toMatchObject({
+        sequenceCurrent: false, contextCurrent: null,
+      });
+      expect(rows.find((row) => row.phase === 'finished' && row.silent === true)).toMatchObject({
+        sequenceCurrent: null, contextCurrent: null, loadingFalseSet: false,
+      });
+      expect(new Set(rows.map((row) => row.owner)).size).toBe(1);
+      expect(new Set(rows.map((row) => row.request)).size).toBe(2);
+      expect(loadView).toHaveBeenCalledTimes(2);
+    } finally {
+      trace.restore();
+    }
+  });
+
+  it.each(['view', 'response-error', 'rejection'] as const)(
+    'preserves the original %s when diagnostic emission throws',
+    async (outcome) => {
+      const raw: string[] = [];
+      const diagnosticFailure = new Error('TEST-diagnostic-transport-failure');
+      const debug = vi.spyOn(console, 'debug').mockImplementation((message: unknown) => {
+        if (typeof message === 'string') raw.push(message);
+        throw diagnosticFailure;
+      });
+      try {
+        const realFailure = new Error('TEST-private-original-load-error');
+        const success: RuntimeProviderManagementViewResponse = {
+          schemaVersion: 1, runtimeId: 'opencode',
+          view: { ...createRuntimeView(), defaultModel: 'TEST-private-original-model' },
+        };
+        const failure: RuntimeProviderManagementViewResponse = {
+          schemaVersion: 1, runtimeId: 'opencode',
+          error: {
+            code: 'runtime-misconfigured', message: realFailure.message, recoverable: true,
+            diagnostics: {
+              summary: realFailure.message, likelyCause: 'TEST-private-original-cause',
+              binaryPath: '/tmp/TEST-private-original-binary', command: 'TEST-private-original-command',
+              projectPath: null, exitCode: null, stderrPreview: null, stdoutPreview: null, hints: [],
+            },
+          },
+        };
+        const loadView = vi.fn(() => outcome === 'rejection'
+          ? Promise.reject(realFailure)
+          : Promise.resolve(outcome === 'response-error' ? failure : success));
+        Object.defineProperty(window, 'electronAPI', {
+          configurable: true,
+          value: { runtimeProviderManagement: { loadView } } as unknown as ElectronAPI,
+        });
+        const root = createRoot(host);
+        await act(async () => {
+          root.render(React.createElement(ConfigurableHarness, { enabled: true, loadViewOnEnable: false }));
+        });
+        await act(async () => {
+          expect(await actions!.refresh()).toBe(outcome === 'view');
+        });
+        expect(loadView).toHaveBeenCalledTimes(1);
+        expect(state?.loading).toBe(false);
+        if (outcome === 'view') {
+          expect(state?.view?.defaultModel).toBe(success.view!.defaultModel);
+          expect(state?.error).toBeNull();
+        } else {
+          expect(state?.view).toBeNull();
+          expect(state?.error).toBe(realFailure.message);
+          expect(state?.errorDiagnostics).toBe(outcome === 'response-error' ? failure.error!.diagnostics : null);
+        }
+        expect(raw.length).toBeGreaterThan(0);
+        expect(raw.join('\n')).not.toContain('TEST-private');
+        expect(raw.join('\n')).not.toContain(diagnosticFailure.message);
+      } finally {
+        debug.mockRestore();
+      }
+    }
+  );
 
   it('ignores stale provider views after project context changes', async () => {
     let resolveProjectA:

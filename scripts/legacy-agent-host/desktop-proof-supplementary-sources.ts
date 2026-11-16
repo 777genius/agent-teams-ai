@@ -158,6 +158,7 @@ export const desktopProofSupplementarySources = [
   'src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts',
   'src/features/runtime-provider-management/renderer/index.ts',
   'src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts',
+  'src/features/runtime-provider-management/renderer/hooks/runtimeProviderViewRefresh.ts',
   'src/renderer/analytics/productAnalytics.ts',
   'packages/legacy-agent-host/src/adapters/providers/ClaudeAuthConversation.ts',
   'packages/legacy-agent-host/src/adapters/providers/claudeAuthStatus.ts',

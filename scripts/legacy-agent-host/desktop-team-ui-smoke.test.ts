@@ -30,9 +30,11 @@ function fixture(reads: ReturnType<typeof deferred<Record<string, unknown>>>[]) 
   const listeners = new Map<string, (value: unknown) => void>();
   const acknowledgments = reads.map(() => deferred<void>());
   let observations = 0, discovery = 0;
+  const commands: string[] = [];
   const cdp = {
     on(method: string, listener: (value: unknown) => void) { listeners.set(method, listener); },
     async send(method: string) {
+      commands.push(method);
       if (method === 'Runtime.enable') listeners.get('Runtime.executionContextCreated')?.({
         context: { id: 7, auxData: { isDefault: true, frameId: 'TEST-frame' } },
       });
@@ -55,7 +57,8 @@ function fixture(reads: ReturnType<typeof deferred<Record<string, unknown>>>[]) 
   const evidence: Record<string, unknown> = {};
   const start = (remainingMs: number) => attachRendererDiagnostics(cdp, 'http://localhost:5173/', evidence,
     { remainingMs, assertOwnedRenderer() {} }).then(() => readRendererBackendConnections(cdp));
-  return { start, acknowledgments, evidence, discovery: () => discovery };
+  return { start, acknowledgments, evidence, listeners, commands,
+    observations: () => observations, discovery: () => discovery };
 }
 
 test('captured UI discovery waits for Main admission and actual mount while early diagnostics remain active', { timeout: 5000 }, async () => {
@@ -83,6 +86,130 @@ test('the original remaining startup deadline rejects a pending snapshot without
   held.resolve(ready); await setImmediate(); assert.equal(f.discovery(), 0);
 });
 
+
+const viewLoadSample = {
+  kind: 'runtime-provider-view-load-v1', owner: 1, request: 1, phase: 'view-set', silent: false,
+  sequenceCurrent: true, contextCurrent: true, viewPresent: true,
+  inheritanceFields: 31, loadingFalseSet: null,
+};
+const viewLoadEvent = (value: unknown, contextId = 7) => ({
+  type: 'debug', executionContextId: contextId,
+  args: [{ type: 'string', value: typeof value === 'string' ? value : JSON.stringify(value) }],
+});
+
+test('view-load diagnostics retain and echo the same bounded current-document projection without new reads', { timeout: 5000 }, async t => {
+  const output: string[] = [];
+  t.mock.method(console, 'log', (value: unknown) => { output.push(String(value)); });
+  const readyRead = deferred<Record<string, unknown>>(), f = fixture([readyRead]);
+  const running = f.start(3000);
+  const emit = f.listeners.get('Runtime.consoleAPICalled');
+  assert.ok(emit, 'the passive listener precedes the original Runtime.enable');
+  emit(viewLoadEvent(viewLoadSample));
+  readyRead.resolve(ready);
+  await running;
+  const diagnostic = f.evidence.rendererDiagnostics as {
+    events: unknown[];
+    viewLoads: { events: Record<string, unknown>[]; overflow: boolean };
+  };
+  assert.deepEqual(diagnostic.viewLoads, { events: [], overflow: false },
+    'an event before the original document fence is not attributed to the current view');
+  emit(viewLoadEvent(viewLoadSample));
+  assert.equal(diagnostic.viewLoads.events.length, 1);
+  const retained = diagnostic.viewLoads.events[0]!;
+  const { monotonicMs, executionContextId, documentRevision, ...fields } = retained;
+  assert.equal(typeof monotonicMs, 'number'); assert.equal(executionContextId, 7);
+  assert.equal(typeof documentRevision, 'number');
+  assert.deepEqual(fields, viewLoadSample);
+  const canary = 'TEST-private-renderer-value';
+  const incomplete: Record<string, unknown> = { ...viewLoadSample };
+  delete incomplete.contextCurrent;
+  for (const invalid of [
+    { ...viewLoadSample, private: canary }, incomplete,
+    { ...viewLoadSample, owner: 0 }, { ...viewLoadSample, request: Number.MAX_SAFE_INTEGER + 1 },
+    { ...viewLoadSample, phase: canary }, { ...viewLoadSample, silent: null },
+    { ...viewLoadSample, contextCurrent: canary }, { ...viewLoadSample, viewPresent: 1 },
+    { ...viewLoadSample, inheritanceFields: 32 }, { ...viewLoadSample, inheritanceFields: 0.5 },
+    { ...viewLoadSample, loadingFalseSet: canary },
+    '{"kind":"runtime-provider-view-load-v1",',
+    JSON.stringify(viewLoadSample).padEnd(1025, ' '),
+  ]) assert.doesNotThrow(() => emit(viewLoadEvent(invalid)));
+  emit(viewLoadEvent(viewLoadSample, 999));
+  emit({ ...viewLoadEvent(viewLoadSample), type: 'log' });
+  emit({ ...viewLoadEvent(viewLoadSample), args: [{ type: 'object', value: canary }] });
+  emit({ ...viewLoadEvent(viewLoadSample), args: [
+    { type: 'string', value: JSON.stringify(viewLoadSample) }, { type: 'string', value: canary },
+  ] });
+  assert.doesNotThrow(() => emit(Object.defineProperty({}, 'type', {
+    get() { throw new Error(canary); },
+  })));
+  assert.equal(diagnostic.viewLoads.events.length, 1);
+  assert.equal(output.length, 1);
+  f.listeners.get('Log.entryAdded')!({
+    entry: { level: 'error', source: 'javascript', text: 'SyntaxError: TEST retained module error' },
+  });
+  const originalEvents = [...diagnostic.events];
+  for (let request = 2; request <= 97; request++) emit(viewLoadEvent({ ...viewLoadSample, request }));
+  assert.equal(diagnostic.viewLoads.events.length, 96);
+  assert.equal(diagnostic.viewLoads.overflow, true);
+  assert.deepEqual(diagnostic.events, originalEvents, 'view diagnostics do not consume the original module budget');
+  assert.equal(output.length, 96, 'the receipt and stdout share the same finite admission');
+  const echoes = output.map(line => JSON.parse(line) as { kind: string; observation: unknown });
+  assert.ok(echoes.every(row => row.kind === 'TEST_RENDERER_VIEW_LOAD'));
+  assert.deepEqual(echoes.map(row => row.observation), diagnostic.viewLoads.events);
+  assert.ok(echoes.every(row => !('receipt' in row) && !('status' in row)),
+    'the unchanged original final-receipt selector cannot treat a diagnostic as success');
+  const saved = JSON.parse(JSON.stringify(f.evidence)) as typeof f.evidence;
+  assert.deepEqual(saved.rendererDiagnostics, f.evidence.rendererDiagnostics);
+  assert.equal(JSON.stringify(saved).includes(canary), false);
+  assert.equal(output.join('\n').includes(canary), false);
+  assert.deepEqual(f.commands, ['Page.enable', 'Runtime.enable', 'Page.getFrameTree',
+    'Runtime.evaluate', 'Log.enable', 'Network.enable']);
+  assert.equal(f.observations(), 1); assert.equal(f.discovery(), 1);
+});
+
+for (const invalidation of ['navigation', 'cleared', 'destroyed'] as const) test(
+  `view-load diagnostics do not reuse the initial document fence after ${invalidation}`,
+  { timeout: 5000 }, async t => {
+    const output: string[] = [];
+    t.mock.method(console, 'log', (value: unknown) => { output.push(String(value)); });
+    const readyRead = deferred<Record<string, unknown>>(), f = fixture([readyRead]);
+    readyRead.resolve(ready);
+    await f.start(3000);
+    const emit = f.listeners.get('Runtime.consoleAPICalled')!;
+    emit(viewLoadEvent(viewLoadSample));
+    if (invalidation === 'navigation') f.listeners.get('Page.frameNavigated')!({
+      frame: { id: 'TEST-frame', url: 'http://localhost:5173/' },
+    });
+    else if (invalidation === 'cleared') f.listeners.get('Runtime.executionContextsCleared')!({});
+    else f.listeners.get('Runtime.executionContextDestroyed')!({ executionContextId: 7 });
+    // Even a reused default context ID in the same frame does not reopen the initial-document grant.
+    f.listeners.get('Runtime.executionContextCreated')!({
+      context: { id: 7, auxData: { isDefault: true, frameId: 'TEST-frame' } },
+    });
+    emit(viewLoadEvent({ ...viewLoadSample, request: 2 }));
+    const diagnostic = f.evidence.rendererDiagnostics as { viewLoads: { events: unknown[] } };
+    assert.equal(diagnostic.viewLoads.events.length, 1);
+    assert.equal(output.length, 1);
+    assert.equal(f.commands.length, 6); assert.equal(f.observations(), 1); assert.equal(f.discovery(), 1);
+  }
+);
+
+test('throwing diagnostic stdout preserves the retained row and the original startup refusal', { timeout: 5000 }, async t => {
+  let echoes = 0;
+  t.mock.method(console, 'log', () => { echoes++; throw new Error('TEST-diagnostic-stdout-failure'); });
+  const held = deferred<Record<string, unknown>>(), f = fixture([held]);
+  const pending = f.start(3000);
+  const refused = assert.rejects(pending, /Main startup refused before UI readiness/);
+  await f.acknowledgments[0]!.promise;
+  assert.doesNotThrow(() => f.listeners.get('Runtime.consoleAPICalled')!(viewLoadEvent(viewLoadSample)));
+  const diagnostic = f.evidence.rendererDiagnostics as { viewLoads: { events: unknown[] } };
+  assert.equal(diagnostic.viewLoads.events.length, 1);
+  assert.equal(echoes, 1);
+  held.resolve({ ...ready, errorPresent: true });
+  await refused;
+  assert.equal(f.discovery(), 0);
+  assert.equal(diagnostic.viewLoads.events.length, 1);
+});
 
 function readinessRuntime(expression: string, href: string, origin: string): Promise<Record<string, unknown>> {
   return Promise.resolve(runInNewContext(expression, {

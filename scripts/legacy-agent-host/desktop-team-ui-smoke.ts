@@ -240,12 +240,14 @@ export async function attachRendererDiagnostics(
   const deadline = performance.now() + startup.remainingMs;
   const origin = new URL(rendererUrl).origin;
   const events: unknown[] = [];
+  const viewLoads: { events: unknown[]; overflow: boolean } = { events: [], overflow: false };
   const startupEvidence: Record<string, unknown> = { status: 'WAITING', commands: [], contextEvents: [] };
-  evidence.rendererDiagnostics = { scope: 'bounded read-only module/load evidence', events, startup: startupEvidence };
+  evidence.rendererDiagnostics = { scope: 'bounded read-only module/load evidence', events, startup: startupEvidence, viewLoads };
   const commands = startupEvidence.commands as Record<string, unknown>[];
   const contextEvents = startupEvidence.contextEvents as Record<string, unknown>[];
   const contexts = new Map<number, unknown>();
   let mainFrameId: unknown, revision = 0;
+  let viewLoadDocumentRevision: number | undefined;
   const noteContext = (event: Record<string, unknown>): void => {
     if (contextEvents.length < 96) contextEvents.push({ monotonicMs: Math.round(performance.now()), ...event });
   };
@@ -336,6 +338,49 @@ export async function attachRendererDiagnostics(
     if (typeof id === 'number') contexts.delete(id);
     revision++; noteContext({ event: 'contextDestroyed', id });
   });
+  cdp.on('Runtime.consoleAPICalled', (value) => {
+    try {
+      const entry = record(value), contextId = entry.executionContextId;
+      if (entry.type !== 'debug' || typeof contextId !== 'number' ||
+          viewLoadDocumentRevision === undefined || revision !== viewLoadDocumentRevision ||
+          contextId !== startupEvidence.contextId || mainFrameId !== startupEvidence.frameId ||
+          contexts.get(contextId) !== mainFrameId || !Array.isArray(entry.args) || entry.args.length !== 1)
+        return;
+      const argument = record(entry.args[0]);
+      if (argument.type !== 'string' || typeof argument.value !== 'string') return;
+      const raw = argument.value;
+      if (raw.length > 1024 || !raw.startsWith('{"kind":"runtime-provider-view-load-v1",') ||
+          Buffer.byteLength(raw, 'utf8') > 1024) return;
+      const row = record(JSON.parse(raw) as unknown);
+      const keys = ['kind', 'owner', 'request', 'phase', 'silent', 'sequenceCurrent',
+        'contextCurrent', 'viewPresent', 'inheritanceFields', 'loadingFalseSet'];
+      if (Object.keys(row).length !== keys.length || keys.some(key => !Object.hasOwn(row, key)) ||
+          row.kind !== 'runtime-provider-view-load-v1' ||
+          typeof row.owner !== 'number' || !Number.isSafeInteger(row.owner) || row.owner <= 0 ||
+          typeof row.request !== 'number' || !Number.isSafeInteger(row.request) || row.request <= 0 ||
+          typeof row.phase !== 'string' || !['start', 'response-checked', 'response-error',
+            'view-set', 'error-checked', 'finished'].includes(row.phase) ||
+          typeof row.silent !== 'boolean' ||
+          ['sequenceCurrent', 'contextCurrent', 'viewPresent', 'loadingFalseSet'].some(
+            key => row[key] !== null && typeof row[key] !== 'boolean') ||
+          (row.inheritanceFields !== null && (typeof row.inheritanceFields !== 'number' ||
+            !Number.isInteger(row.inheritanceFields) || row.inheritanceFields < 0 || row.inheritanceFields > 31)))
+        return;
+      if (viewLoads.events.length >= 96) { viewLoads.overflow = true; return; }
+      const observation = {
+        monotonicMs: Math.round(performance.now()), executionContextId: contextId,
+        documentRevision: viewLoadDocumentRevision, kind: row.kind, owner: row.owner,
+        request: row.request, phase: row.phase, silent: row.silent,
+        sequenceCurrent: row.sequenceCurrent, contextCurrent: row.contextCurrent,
+        viewPresent: row.viewPresent, inheritanceFields: row.inheritanceFields,
+        loadingFalseSet: row.loadingFalseSet,
+      };
+      viewLoads.events.push(observation);
+      console.log(JSON.stringify({ kind: 'TEST_RENDERER_VIEW_LOAD', observation }));
+    } catch {
+      // Passive diagnostics cannot replace the original startup or UI failure.
+    }
+  });
   // Cold protocol subscriptions measured ~25s; every command still keeps CdpClient's original30s bound.
   await Promise.all([send('Page.enable'), send('Runtime.enable')]);
   const frame = record(record(record(await send('Page.getFrameTree')).frameTree).frame);
@@ -352,7 +397,8 @@ export async function attachRendererDiagnostics(
         if (revision === observedRevision && contexts.get(contextId) === mainFrameId && sameDocument(value.url) &&
             ['interactive', 'complete'].includes(String(value.readyState))) {
           startupEvidence.status = 'DOCUMENT_READY'; startupEvidence.contextId = contextId;
-          startupEvidence.frameId = mainFrameId; startupEvidence.readyState = value.readyState; break;
+          startupEvidence.frameId = mainFrameId; startupEvidence.readyState = value.readyState;
+          viewLoadDocumentRevision = observedRevision; break;
         }
       } catch (error) {
         if (!/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(String(error))) throw error;
