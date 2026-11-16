@@ -1,0 +1,58 @@
+{
+  "artifactId": 14192497850,
+  "sourceCommit": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "zipBytes": 371807,
+  "zipSha256": "3590f045331ac8574e26202b0d1ab1b71bf2c686fe15a71994922e4d6536e85f",
+  "crcVerified": true,
+  "safeUniqueMemberPaths": true,
+  "members": [
+    {
+      "path": "TEST-desktop-backend-OETNnU/host-profile.json",
+      "bytes": 2773,
+      "sha256": "8b61b199454a10027fb7492610c56642be0a5dec2a31787296a2e83eb3f6c604",
+      "gitBlobSha": "789bd29132eb78fd18d00540c7b7edffca2d5112"
+    },
+    {
+      "path": "TEST-desktop-backend-OETNnU/ui-seed-receipt.json",
+      "bytes": 2037,
+      "sha256": "a907de47351c603eebe5a1b397290dca5f137b17dfc377d0e4495074ec468023",
+      "gitBlobSha": "e3811829f891ba723f64ff253ddf7779898c15ac"
+    },
+    {
+      "path": "TEST-desktop-backend-OETNnU/desktop-descriptor.json",
+      "bytes": 2609,
+      "sha256": "7876dd96a7f3542fa6b6c24df8ec421c0e197ce6f79375355f266a5a5a8796ed",
+      "gitBlobSha": "570b7c3c7faffc4bbe80af13d5bf43770e512642"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-yhOWfK/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "gitBlobSha": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-yhOWfK/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "gitBlobSha": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517"
+    },
+    {
+      "path": "host-emulated-emulated-management-ui.log",
+      "bytes": 941,
+      "sha256": "86e625d2b23f666496d695af417dc4c9d01b7f0e9ddccbb51a0dcaaa7df3fc50",
+      "gitBlobSha": "45e771995ecf3c4aeac2dbe16f76fccf2132c753"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1803,
+      "sha256": "aaab9c39d5706e8396d3467fad7bdcc8683de9e27d913adbbdd60c7acbe8a1fd",
+      "gitBlobSha": "6218a821ec8019f2af2995aa2e37d21a9b65b8df"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "sha256": "7ccd093c07955cd92967ab7853ab6388370e5f82c6bf34be131fb2e14dd4e3ca",
+      "gitBlobSha": "9c00f50458131677451101011bac81e0e89a7dd9"
+    }
+  ]
+}

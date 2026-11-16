@@ -1,0 +1,28 @@
+{
+  "sourceHead": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "platform": "linux",
+  "architecture": "x64",
+  "nativeProviders": "forbidden",
+  "values": {
+    "LEGACY_DESKTOP_BACKEND_GO": "1",
+    "LEGACY_DESKTOP_EMULATED_ONLY": "1",
+    "LEGACY_DESKTOP_COREPACK_HOME": "/home/runner/work/_temp/TEST-emulated-ui-inputs-yhOWfK/cache",
+    "LEGACY_DESKTOP_NODE_SHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "LEGACY_DESKTOP_HOST_ENTRY_SHA256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+    "LEGACY_DESKTOP_PNPM_PATH": "/home/runner/work/_temp/TEST-emulated-ui-inputs-yhOWfK/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+    "LEGACY_DESKTOP_PNPM_SHA256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+    "LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+    "LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+    "LEGACY_LINUX_CHILD_EXEC_MANIFEST": "/home/runner/work/_temp/TEST-emulated-ui-inputs-yhOWfK/linux-child-exec/manifest.json",
+    "LEGACY_LINUX_CHILD_EXEC_SHA256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+  },
+  "linuxChildExec": {
+    "manifestPath": "/home/runner/work/_temp/TEST-emulated-ui-inputs-yhOWfK/linux-child-exec/manifest.json",
+    "manifestSha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+    "binarySha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+  },
+  "processLauncher": {
+    "manifestSha256": "942a64272a8f86959e2bf08f3e28eea353c8642be369dbfa4e3a5ac428dfbfe3",
+    "binarySha256": "2a8c086c5e454bf902def4803bf2d855717bd7f3162f51aaeca58b1a4581ae7a"
+  }
+}

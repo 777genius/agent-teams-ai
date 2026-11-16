@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "binding": {
+    "backendId": "TEST-desktop-owner-TEST-desktop-backend-OETNnU",
+    "teamId": "TEST-desktop-team",
+    "teamName": "test-desktop-backend"
+  },
+  "commandId": "TEST-ui-offline-seed",
+  "principalId": "TEST-human",
+  "fingerprint": "2b5e8e321db610c6545b62892680abb54b72e6e8408a5fc9fb1d74b7af836a07",
+  "command": {
+    "commandId": "TEST-ui-offline-seed",
+    "operation": "task.create",
+    "payload": {
+      "subject": "TEST persisted Host sidebar seed"
+    }
+  },
+  "effects": {
+    "taskId": "1ad727ea-c7f1-5763-a62c-796bb474607f",
+    "commentId": "22ab067e-7a84-5681-b1fa-4d8c20dc9988",
+    "messageId": "863411b4-91fb-52eb-84eb-7a08585a1f1f",
+    "deliveryId": "cd08f98a-b6d6-5614-a312-6cceaef62a48"
+  },
+  "createdAt": "2026-11-16T02:21:30.625Z",
+  "phase": "completed",
+  "authorityRevision": 1,
+  "taskPlanVersion": 1,
+  "taskPreimage": "ac5222339120bca1fccc0d947a2738da278bd90bd10d93d7a1d8084efb239f66",
+  "taskRecipients": [
+    {
+      "name": "alice"
+    }
+  ],
+  "result": {
+    "id": "1ad727ea-c7f1-5763-a62c-796bb474607f",
+    "displayId": "1ad727ea",
+    "subject": "TEST persisted Host sidebar seed",
+    "description": "TEST persisted Host sidebar seed",
+    "createdBy": "user",
+    "status": "pending",
+    "createdAt": "2026-11-16T02:21:30.625Z",
+    "updatedAt": "2026-11-16T02:21:30.625Z",
+    "historyEvents": [
+      {
+        "id": "b3e3e342-0b0a-4861-b5f5-35ca7f62236b",
+        "timestamp": "2026-11-16T02:21:30.625Z",
+        "type": "task_created",
+        "status": "pending",
+        "actor": "user"
+      }
+    ],
+    "blocks": [],
+    "blockedBy": [],
+    "reviewState": "none",
+    "creationCommand": {
+      "namespace": "legacy-agent-host",
+      "scopeKey": "test-desktop-backend",
+      "operation": "task.create",
+      "commandId": "1ad727ea-c7f1-5763-a62c-796bb474607f",
+      "payloadHash": "2b5e8e321db610c6545b62892680abb54b72e6e8408a5fc9fb1d74b7af836a07"
+    }
+  },
+  "taskHash": "881e90f7aa731b1eff69838dfe09f83c42d2b311f2f9b4162976a346ace79b62"
+}

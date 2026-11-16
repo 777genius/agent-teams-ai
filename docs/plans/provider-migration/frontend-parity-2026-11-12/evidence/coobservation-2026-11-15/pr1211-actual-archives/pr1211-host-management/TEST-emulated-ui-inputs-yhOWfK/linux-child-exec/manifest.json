@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "platform": "linux",
+  "architecture": "x64",
+  "protocol": "linux-child-exec-v1",
+  "kernelCapability": "close-range-v1",
+  "binary": "linux-child-exec",
+  "binarySha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+  "sourceSha256": "29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337",
+  "compilerSha256": "864711037b900acdb7a449cf48d912cefa935b527fb60c767ccb956779e66136",
+  "inspectorSha256": "2cd76fc8d9bdddc84a7eb1c4f0e80717a7475b95e047e1f67d2203a5f4ecdffd",
+  "buildKernelRelease": "7.0.0-1019-azure",
+  "linkInputs": [
+    {
+      "file": "/usr/bin/x86_64-linux-gnu-as",
+      "sha256": "1dc38597842d69589217d4dee742a3cf326acc8631ce72a4d3213c1880d9a458"
+    },
+    {
+      "file": "/usr/bin/x86_64-linux-gnu-ld.bfd",
+      "sha256": "25a16b3e77ce7c7c4b13063d64c2a1f1a3b77a8a13e0d25b445bc77d11a50d17"
+    },
+    {
+      "file": "/usr/lib/gcc/x86_64-linux-gnu/15/crtbeginT.o",
+      "sha256": "089358d91a597f00c262502678b0c15fcd0784880f9c90f1c5a06086ea9ce1ac"
+    },
+    {
+      "file": "/usr/lib/gcc/x86_64-linux-gnu/15/crtend.o",
+      "sha256": "b4b7d9001893f0baf4ebfbe12df8d5cf0dd7f69643a5caae04d956d1a443b246"
+    },
+    {
+      "file": "/usr/lib/gcc/x86_64-linux-gnu/15/libgcc.a",
+      "sha256": "4f837d5c34aca942996893ec9ae0ce46ce180550e90a73fa4167a56826505c66"
+    },
+    {
+      "file": "/usr/lib/gcc/x86_64-linux-gnu/15/libgcc_eh.a",
+      "sha256": "4a553d25ac3e35bd3b50c821b8e35e0d5c4c360f3de8d5f00ddfd13839f59dd6"
+    },
+    {
+      "file": "/usr/lib/x86_64-linux-gnu/crt1.o",
+      "sha256": "d6327b9ec9d9ceb6159e86f42225612cc951800fd8ab38f7e25e986a4e4a825b"
+    },
+    {
+      "file": "/usr/lib/x86_64-linux-gnu/crti.o",
+      "sha256": "077ccb6c68db1794da3ee262c4a16a3c6f8e902845dd0829110ad4b7065e5aa3"
+    },
+    {
+      "file": "/usr/lib/x86_64-linux-gnu/crtn.o",
+      "sha256": "a2266079f95b84ccc2162ebbf279bcd78858a748aa1882e0bdb912316c76a58f"
+    },
+    {
+      "file": "/usr/lib/x86_64-linux-gnu/libc.a",
+      "sha256": "9b3998f9a239b72a72245ce381c8df4dc24a7b027a2ca0c8cf2be3067bc6edc8"
+    },
+    {
+      "file": "/usr/libexec/gcc/x86_64-linux-gnu/15/cc1",
+      "sha256": "6fd98844a0914c3372829b512fefc6d35171d53cd2169cb29e0221922e317344"
+    },
+    {
+      "file": "/usr/libexec/gcc/x86_64-linux-gnu/15/collect2",
+      "sha256": "587940f4c645c0db8228c235a6121f1605d55ab6dfe3b016cc309a1b182b56a0"
+    }
+  ]
+}
