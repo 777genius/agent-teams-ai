@@ -1,4 +1,4 @@
-import { parseHostTeamSelectionKey } from '@features/agent-backend/contracts/teamSelection';
+import { parseHostTeamSelectionKey } from '@features/agent-backend/contracts';
 
 /**
  * Reuse the canonical Host selection-key contract. A 256-character decoded
