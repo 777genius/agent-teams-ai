@@ -233,6 +233,7 @@ import {
   TEAM_TOOL_APPROVAL_SETTINGS,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
+  TEAM_SET_HUMAN_ONLY_APPROVAL,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
   TEAM_UPDATE_MEMBER_ROLE,
   TEAM_UPDATE_TASK_FIELDS,
@@ -1048,6 +1049,9 @@ const electronAPI: ElectronAPI = {
     },
     updateKanban: async (teamName: string, taskId: string, patch: UpdateKanbanPatch) => {
       return invokeIpcWithResult<void>(TEAM_UPDATE_KANBAN, teamName, taskId, patch);
+    },
+    setHumanOnlyApproval: async (teamName: string, enabled: boolean) => {
+      return invokeIpcWithResult<void>(TEAM_SET_HUMAN_ONLY_APPROVAL, teamName, enabled);
     },
     updateKanbanColumnOrder: async (
       teamName: string,

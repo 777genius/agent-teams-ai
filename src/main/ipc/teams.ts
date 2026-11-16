@@ -115,6 +115,7 @@ import {
   TEAM_TOOL_APPROVAL_SETTINGS,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
+  TEAM_SET_HUMAN_ONLY_APPROVAL,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
   TEAM_UPDATE_MEMBER_ROLE,
   TEAM_UPDATE_TASK_FIELDS,
@@ -712,6 +713,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_GET_TASK, handleGetTask);
   ipcMain.handle(TEAM_REQUEST_REVIEW, handleRequestReview);
   ipcMain.handle(TEAM_UPDATE_KANBAN, handleUpdateKanban);
+  ipcMain.handle(TEAM_SET_HUMAN_ONLY_APPROVAL, handleSetHumanOnlyApproval);
   ipcMain.handle(TEAM_UPDATE_KANBAN_COLUMN_ORDER, handleUpdateKanbanColumnOrder);
   ipcMain.handle(TEAM_UPDATE_TASK_STATUS, handleUpdateTaskStatus);
   ipcMain.handle(TEAM_UPDATE_TASK_OWNER, handleUpdateTaskOwner);
@@ -804,6 +806,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_GET_TASK);
   ipcMain.removeHandler(TEAM_REQUEST_REVIEW);
   ipcMain.removeHandler(TEAM_UPDATE_KANBAN);
+  ipcMain.removeHandler(TEAM_SET_HUMAN_ONLY_APPROVAL);
   ipcMain.removeHandler(TEAM_UPDATE_KANBAN_COLUMN_ORDER);
   ipcMain.removeHandler(TEAM_UPDATE_TASK_STATUS);
   ipcMain.removeHandler(TEAM_UPDATE_TASK_OWNER);
@@ -3305,6 +3308,23 @@ async function handleGetTask(
 
   return wrapTeamHandler('getTask', () =>
     getTeamDataService().getTask(validatedTeamName.value!, validatedTaskId.value!)
+  );
+}
+
+async function handleSetHumanOnlyApproval(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  enabled: unknown
+): Promise<IpcResult<void>> {
+  const validatedTeam = validateTeamName(teamName);
+  if (!validatedTeam.valid) {
+    return { success: false, error: validatedTeam.error ?? 'Invalid teamName' };
+  }
+  if (typeof enabled !== 'boolean') {
+    return { success: false, error: 'humanOnlyApproval must be a boolean' };
+  }
+  return wrapTeamHandler('setHumanOnlyApproval', () =>
+    getTeamDataService().setHumanOnlyApproval(validatedTeam.value!, enabled)
   );
 }
 

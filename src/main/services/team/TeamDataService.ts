@@ -3990,6 +3990,10 @@ export class TeamDataService {
     return texts.length > MAX_LEAD_TEXTS ? texts.slice(-MAX_LEAD_TEXTS) : texts;
   }
 
+  async setHumanOnlyApproval(teamName: string, enabled: boolean): Promise<void> {
+    this.getTaskBoard(teamName).setHumanOnlyApproval(enabled);
+  }
+
   async updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {
     const taskBoard = this.getTaskBoard(teamName);
 
@@ -4006,6 +4010,13 @@ export class TeamDataService {
           ...(leadSessionId ? { leadSessionId } : {}),
         });
       } else {
+        // Only the desktop renderer's user action reaches this path. Agent tools
+        // have no updateKanban/setHumanOnlyApproval endpoint; controller locks
+        // and re-checks the policy before every approval mutation.
+        if ((taskBoard.getKanbanState() as KanbanState).humanOnlyApproval === true) {
+          taskBoard.approveAsHuman(taskId);
+          return;
+        }
         const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
         const workflowColumn = this.getControllerTaskWorkflowColumn(taskBoard, taskId);
         if (workflowColumn === undefined) {

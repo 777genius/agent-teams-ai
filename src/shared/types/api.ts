@@ -489,6 +489,7 @@ export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi {
   getTask: (teamName: string, taskId: string) => Promise<TeamTaskWithKanban | null>;
   requestReview: (teamName: string, taskId: string) => Promise<void>;
   updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) => Promise<void>;
+  setHumanOnlyApproval: (teamName: string, enabled: boolean) => Promise<void>;
   updateKanbanColumnOrder: (
     teamName: string,
     columnId: KanbanColumnId,
