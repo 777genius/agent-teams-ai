@@ -1,0 +1,353 @@
+{
+  "schemaVersion": 1,
+  "kind": "prospective-actual-source-conversation-test-first-candidate",
+  "preparedAtUtc": "2026-11-16 10:40:50 UTC",
+  "publishedR1": {
+    "commit": "f3fb3ead0315508901531e8f54b75f21518492a7",
+    "tree": "6abf080d423ceec5d5d957e1b55c874167f808af",
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-readiness-r1.json",
+    "bytes": 4987304,
+    "sha256": "54194ee7c6e6a8322335f0e7482441b60ebb85591468402e8115fb562cf5c8af",
+    "gitBlob": "c51f8f7b07877d997d24e22451d4972e655416de"
+  },
+  "priorActualPublishedReadback": {
+    "root": {
+      "commit": "f3fb3ead0315508901531e8f54b75f21518492a7",
+      "parent": "5e41fd21b03d67a1ac965096f693e9931185405c",
+      "tree": "6abf080d423ceec5d5d957e1b55c874167f808af",
+      "refMatches": true,
+      "leaves": 11565,
+      "source": 8798,
+      "workflows": 42,
+      "r1": {
+        "bytes": 4987304,
+        "sha256": "54194ee7c6e6a8322335f0e7482441b60ebb85591468402e8115fb562cf5c8af",
+        "gitBlob": "c51f8f7b07877d997d24e22451d4972e655416de"
+      },
+      "plan": {
+        "bytes": 2478934,
+        "sha256": "0d8ea732c0ce17bb3c656485cc55329a180fa5ad077cd65d5177d9c9f9cd8424",
+        "gitBlob": "6750b006b121cceeedc471e10699932f28832d7e"
+      },
+      "allActualPublishedBodiesExact": true,
+      "preimages": [
+        {
+          "name": "inputInventory",
+          "bytes": 2873822,
+          "sha256": "a6bc697e55d93b994391fed2ae4434ae50bd7163cd499d045ffeeeb74edf911b",
+          "gitBlob": "eab37daec1b7cc8e979d023b037de9b9e41ccf08",
+          "exact": true
+        },
+        {
+          "name": "originalInstallerRaw",
+          "bytes": 187431,
+          "sha256": "30b03b1d9949359baeef85927e4ad153bb689ecd345a7442c01d20c296d4633f",
+          "gitBlob": "8067cbf218e21c147fde958bfc732b0c0ce82f30",
+          "exact": true
+        },
+        {
+          "name": "originalInstallerReceipt",
+          "bytes": 814831,
+          "sha256": "f278c4ea6c776fc0ebb710909e59c69e962e78aea4343b191825862a4601f376",
+          "gitBlob": "8bb2d3a0777ddcd84818ef507274f1923e5f4ab6",
+          "exact": true
+        },
+        {
+          "name": "currentLinuxStage1Artifact",
+          "bytes": 468887,
+          "sha256": "888d1f2c8036121d030fe90181ae39390ec7b019611070d085713c126e91bb0f",
+          "gitBlob": "8d82c2a10a4ced6660461f2bbc5ae45ab29d225e",
+          "exact": true
+        },
+        {
+          "name": "reviewedPriorRunner",
+          "bytes": 19692,
+          "sha256": "5ac6bb60411196a2f6906f3a11abb0c81353fd4762e90dc5c5ab8a9680ca2758",
+          "gitBlob": "41060e08824dcefab62500097da2289b98a732d3",
+          "exact": true
+        },
+        {
+          "name": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "bytes": 28741,
+          "sha256": "9d5233b82df6a7dfa0d735b27c11f39f130824f3947c38896a0d052ca549cba4",
+          "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78",
+          "exact": true,
+          "treeExact": true,
+          "physicalLines": 493
+        },
+        {
+          "name": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "bytes": 24630,
+          "sha256": "20163a0e2b654c5ff3c778ffe4a3cd2138716172eb90e6aa5aa4fe6550864c43",
+          "gitBlob": "dcd0cc29a73a46a24126ec3552714fa1b057aaf4",
+          "exact": true,
+          "treeExact": true,
+          "physicalLines": 298
+        },
+        {
+          "name": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "bytes": 127790,
+          "sha256": "10803ce752a05140acbfa8270e97e782c452213f39589d52991a503e29db5c17",
+          "gitBlob": "3e5d5a5a765b503943bd72f68b2877311ee34479",
+          "exact": true,
+          "treeExact": true,
+          "physicalLines": 2099
+        }
+      ],
+      "testPostimagesAuthored": 0,
+      "runnerPostimagesAuthored": 0,
+      "producerPostimagesAuthored": 0,
+      "executions": 0
+    },
+    "graph": {
+      "accepted": true,
+      "commit": "f3fb3ead0315508901531e8f54b75f21518492a7",
+      "tree": "6abf080d423ceec5d5d957e1b55c874167f808af",
+      "parent": "5e41fd21b03d67a1ac965096f693e9931185405c",
+      "reviewer": "/root/pr_graph",
+      "leaves": 11565,
+      "fullR1AndPlanExact": true,
+      "source8798Unchanged": true,
+      "workflows42Unchanged": true
+    },
+    "guard": {
+      "accepted": true,
+      "reviewer": "/root/guard_review",
+      "commit": "f3fb3ead0315508901531e8f54b75f21518492a7",
+      "tree": "6abf080d423ceec5d5d957e1b55c874167f808af",
+      "fullR1AndPlanExact": true,
+      "leaves": 11565,
+      "nonDocs": 8798,
+      "workflows": 42
+    }
+  },
+  "parent": "f3fb3ead0315508901531e8f54b75f21518492a7",
+  "baseTree": "6abf080d423ceec5d5d957e1b55c874167f808af",
+  "selectedTest": {
+    "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "mode": "100644",
+    "preimage": {
+      "gitBlob": "3e5d5a5a765b503943bd72f68b2877311ee34479",
+      "bytes": 127790,
+      "sha256": "10803ce752a05140acbfa8270e97e782c452213f39589d52991a503e29db5c17",
+      "physicalLines": 2099,
+      "runtimeCases": 78
+    },
+    "postimage": {
+      "bytes": 136700,
+      "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+      "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985",
+      "physicalLines": 2238,
+      "runtimeCases": 97
+    },
+    "exactPreimagePrefix": true,
+    "addedPhysicalLines": 139,
+    "addedRuntimeCases": 19,
+    "appendIdentity": {
+      "bytes": 8910,
+      "sha256": "e1c52971337871d30c53a93c6f7a537f529fc1297a330edb150c3a3f1ec10f95",
+      "gitBlob": "74a180307f8d0cd975903de54d4fcb2ba264fa76"
+    },
+    "fullAppend": "\ntype ConversationPreviewState = {\n  content: string; centerY: number; count: number; width: number; disabled: boolean;\n  covered: boolean; duplicateHit: boolean; bodyText: string; neighborText: string;\n};\nfunction conversationPreviewFixture(t: import('node:test').TestContext,\n  onOwned: (state: ConversationPreviewState, check: number) => void = () => undefined) {\n  const selector = 'button[aria-label^=\"alice,\"]', label = 'TEST original conversation';\n  const state: ConversationPreviewState = { content: 'alice TEST boot ready', centerY: 178, count: 1,\n    width: 200, disabled: false, covered: false, duplicateHit: false, bodyText: '', neighborText: '' };\n  let now = 0, owned = 0, reads = 0, bodyReads = 0, front = 0;\n  const waits: number[] = [], expressions: string[] = [], events: Record<string, unknown>[] = [];\n  t.mock.method(Date, 'now', () => now);\n  t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {\n    assert.equal(delay, 100); waits.push(delay); now += delay; queueMicrotask(callback);\n    return 1 as unknown as NodeJS.Timeout;\n  });\n  const row = { get textContent() { return state.content; }, tagName: 'BUTTON',\n    getBoundingClientRect: () => ({ x: 69.5, y: state.centerY - 16, width: state.width, height: 32 }),\n    matches(actual: string) { assert.equal(actual, ':disabled'); return state.disabled; },\n    contains: () => false, getAttribute: () => null };\n  const duplicate = { ...row, textContent: 'alice TEST boot ready' };\n  const document = {\n    get body() { bodyReads++; return { textContent: state.content + state.bodyText + state.neighborText }; },\n    querySelectorAll(actual: string) {\n      assert.equal(actual, selector); return Array.from({ length: state.count }, (_, i) => i ? duplicate : row);\n    },\n    elementFromPoint: () => state.covered ? {} : state.duplicateHit ? duplicate : row,\n  };\n  const ui = createDesktopUiControls({\n    async evaluate(expression: string) {\n      reads++; expressions.push(expression);\n      return runInNewContext(expression, { document, innerWidth: 1000, innerHeight: 800,\n        getComputedStyle: () => ({ pointerEvents: 'auto' }) });\n    },\n    async send(method: string, params: Record<string, unknown> = {}) {\n      assert.ok(method === 'Page.bringToFront' || method === 'Input.dispatchMouseEvent');\n      if (method === 'Page.bringToFront') front++; else events.push({ ...params });\n      return {};\n    },\n  }, { assertOwnedRenderer() { onOwned(state, ++owned); }, step() {} });\n  return { state, events, expressions, waits,\n    run: (marker?: string) => Reflect.apply(ui.click, undefined, [selector, label, undefined, marker]) as Promise<void>,\n    counts: () => ({ now, owned, reads, bodyReads, front }) };\n}\n\ntest('original conversation waits for its own reply before one click at the hydrated coordinates', async t => {\n  const f = conversationPreviewFixture(t, (state, check) => {\n    if (check === 6) { state.content = 'alice TEST boot ready'; state.centerY = 186.5; }\n  });\n  f.state.content = 'alice You: TEST_UI_BOOT'; await f.run('TEST boot ready');\n  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]),\n    [['mouseMoved', 169.5, 186.5], ['mousePressed', 169.5, 186.5], ['mouseReleased', 169.5, 186.5]]);\n  assert.deepEqual(f.counts(), { now: 700, owned: 12, reads: 10, bodyReads: 0, front: 1 });\n  assert.deepEqual(f.waits, Array.from({ length: 7 }, () => 100));\n  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'same full predicate in every original phase');\n});\n\ntest('default conversation click retains its original final geometry refusal without a preview predicate', async t => {\n  const f = conversationPreviewFixture(t, (state, check) => { if (check === 6) state.centerY = 186.5; });\n  await assert.rejects(f.run(), /Original UI target moved after ownership check/);\n  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);\n  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, bodyReads: 0, front: 1 });\n});\n\nfor (const [label, invalid] of [\n  ['body-only reply', { content: 'alice You: TEST_UI_BOOT', bodyText: 'TEST boot ready' }],\n  ['neighbor-only reply', { content: 'alice You: TEST_UI_BOOT', neighborText: 'bob TEST boot ready' }],\n  ['different required reply', { content: 'alice TEST stream partial' }],\n  ['empty preview', { content: '' }], ['missing target', { count: 0 }], ['zero-size target', { width: 0 }],\n  ['disabled target', { disabled: true }], ['covered target', { covered: true }],\n  ['two eligible rows with only the second ready', { content: 'alice You: TEST_UI_BOOT', count: 2, duplicateHit: true }],\n] satisfies readonly (readonly [string, Partial<ConversationPreviewState>])[])\ntest('original conversation refuses ' + label + ' within its unchanged first read deadline', async t => {\n  const f = conversationPreviewFixture(t); Object.assign(f.state, invalid);\n  await assert.rejects(f.run('TEST boot ready'), /UI target read failed: TEST original conversation/);\n  assert.deepEqual(f.events, [], 'no hover or physical click on an ineligible original target');\n  assert.deepEqual(f.counts(), { now: 30_000, owned: 300, reads: 300, bodyReads: 0, front: 1 });\n  assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));\n  assert.ok(f.expressions.every(value => value === f.expressions[0]));\n});\n\ntest('original conversation serializes its required preview as literal data', async t => {\n  const marker = 'TEST \"quoted\" \\\\ \\u2028 </script> $' + '{notCode} ready';\n  const f = conversationPreviewFixture(t); f.state.content = 'alice ' + marker; await f.run(marker);\n  assert.deepEqual(f.events.map(({ type }) => type), ['mouseMoved', 'mousePressed', 'mouseReleased']);\n  assert.deepEqual(f.counts(), { now: 200, owned: 7, reads: 5, bodyReads: 0, front: 1 });\n});\n\ntest('original conversation rereads a revoked preview at unchanged final coordinates before input', async t => {\n  const f = conversationPreviewFixture(t, (state, check) => {\n    if (check === 6) state.content = 'alice You: TEST_UI_BOOT';\n  });\n  await assert.rejects(f.run('TEST boot ready'), /Original UI target unavailable after ownership check/);\n  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);\n  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, bodyReads: 0, front: 1 });\n  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'final direct read includes the readiness literal');\n});\n\nfor (const kind of ['owner', 'movement'] as const)\ntest('original conversation still refuses final ' + kind + ' despite a ready preview', async t => {\n  const refusal = new Error('TEST original renderer owner lost');\n  const f = conversationPreviewFixture(t, (state, check) => {\n    if (check !== 6) return;\n    if (kind === 'owner') throw refusal;\n    state.centerY = 186.5;\n  });\n  await assert.rejects(f.run('TEST boot ready'), error => {\n    if (kind === 'owner') assert.equal(error, refusal);\n    else assert.match(String(error), /Original UI target moved after ownership check/);\n    return true;\n  });\n  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);\n  assert.equal(f.counts().reads, kind === 'owner' ? 4 : 5);\n  assert.equal(f.counts().owned, 6);\n});\n\nfor (const memberName of ['alice', 'team-lead'])\nfor (const expectedReply of ['TEST boot ready', 'TEST stream partial'])\ntest('actual openChat forwards ' + expectedReply + ' for ' + memberName, async () => {\n  const { desktopJsLiteral } = await import('./desktop-ui-controls.ts');\n  const source = await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8');\n  const first = 'const openChat =', last = 'const assertSameLive =';\n  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);\n  const begin = source.indexOf(first), end = source.indexOf(last, begin); assert.ok(end > begin);\n  const actual = source.slice(begin, end).replace(/: Live\\b/g, '').replace(/: string\\b/g, '');\n  const calls: { method: string; args: unknown[] }[] = [];\n  const run = runInNewContext('(async () => { ' + actual + ' return openChat(live, expectedReply); })',\n    { live: { memberName }, expectedReply, literal: desktopJsLiteral, ui: {\n      async scrollTo(...args: unknown[]) { calls.push({ method: 'scrollTo', args }); },\n      async click(...args: unknown[]) { calls.push({ method: 'click', args }); },\n    } }) as () => Promise<void>;\n  await run();\n  const selector = 'button[aria-label^=' + desktopJsLiteral((memberName === 'team-lead' ? 'lead' : memberName) + ',') + ']';\n  assert.deepEqual(calls, [\n    { method: 'scrollTo', args: [selector, 'original lead conversation'] },\n    { method: 'click', args: [selector, 'open original lead conversation', undefined, expectedReply] },\n  ], 'one original scroll and one original click carrying the expected reply as data');\n});\n",
+    "caseCensus": [
+      {
+        "name": "original conversation waits for its own reply before one click at the hydrated coordinates",
+        "expectedOriginalOutcome": "semantic-fail",
+        "reason": "Original final geometry refusal prevents the required one click at hydrated186.5."
+      },
+      {
+        "name": "default conversation click retains its original final geometry refusal without a preview predicate",
+        "expectedOriginalOutcome": "pass",
+        "reason": "Original default behavior and strict guard remain."
+      },
+      {
+        "name": "original conversation refuses body-only reply within its unchanged first read deadline",
+        "expectedOriginalOutcome": "semantic-fail",
+        "reason": "Original click ignores the future preview marker; expected refusal is missing."
+      },
+      {
+        "name": "original conversation refuses neighbor-only reply within its unchanged first read deadline",
+        "expectedOriginalOutcome": "semantic-fail",
+        "reason": "Original click ignores the future preview marker; expected refusal is missing."
+      },
+      {
+        "name": "original conversation refuses different required reply within its unchanged first read deadline",
+        "expectedOriginalOutcome": "semantic-fail",
+        "reason": "Original click ignores the future preview marker; expected refusal is missing."
+      },
+      {
+        "name": "original conversation refuses empty preview within its unchanged first read deadline",
+        "expectedOriginalOutcome": "semantic-fail",
+        "reason": "Original click ignores the future preview marker; expected refusal is missing."
+      },
+      {
+        "name": "original conversation refuses missing target within its unchanged first read deadline",
+        "expectedOriginalOutcome": "pass",
+        "reason": "Existing eligibility/cardinality already refuses within the original phase."
+      },
+      {
+        "name": "original conversation refuses zero-size target within its unchanged first read deadline",
+        "expectedOriginalOutcome": "pass",
+        "reason": "Existing eligibility/cardinality already refuses within the original phase."
+      },
+      {
+        "name": "original conversation refuses disabled target within its unchanged first read deadline",
+        "expectedOriginalOutcome": "pass",
+        "reason": "Existing eligibility/cardinality already refuses within the original phase."
+      },
+      {
+        "name": "original conversation refuses covered target within its unchanged first read deadline",
+        "expectedOriginalOutcome": "pass",
+        "reason": "Existing eligibility/cardinality already refuses within the original phase."
+      },
+      {
+        "name": "original conversation refuses two eligible rows with only the second ready within its unchanged first read deadline",
+        "expectedOriginalOutcome": "pass",
+        "reason": "Existing eligibility/cardinality already refuses within the original phase."
+      },
+      {
+        "name": "original conversation serializes its required preview as literal data",
+        "expectedOriginalOutcome": "pass",
+        "reason": "Literal-data control; no injected code."
+      },
+      {
+        "name": "original conversation rereads a revoked preview at unchanged final coordinates before input",
+        "expectedOriginalOutcome": "semantic-fail",
+        "reason": "Old expression lacks the preview predicate and reaches input."
+      },
+      {
+        "name": "original conversation still refuses final owner despite a ready preview",
+        "expectedOriginalOutcome": "pass",
+        "reason": "Original owner or geometry refusal stays authoritative."
+      },
+      {
+        "name": "original conversation still refuses final movement despite a ready preview",
+        "expectedOriginalOutcome": "pass",
+        "reason": "Original owner or geometry refusal stays authoritative."
+      },
+      {
+        "name": "actual openChat forwards TEST boot ready for alice",
+        "expectedOriginalOutcome": "semantic-fail",
+        "reason": "Original real helper omits the expected fourth data argument."
+      },
+      {
+        "name": "actual openChat forwards TEST stream partial for alice",
+        "expectedOriginalOutcome": "semantic-fail",
+        "reason": "Original real helper omits the expected fourth data argument."
+      },
+      {
+        "name": "actual openChat forwards TEST boot ready for team-lead",
+        "expectedOriginalOutcome": "semantic-fail",
+        "reason": "Original real helper omits the expected fourth data argument."
+      },
+      {
+        "name": "actual openChat forwards TEST stream partial for team-lead",
+        "expectedOriginalOutcome": "semantic-fail",
+        "reason": "Original real helper omits the expected fourth data argument."
+      }
+    ],
+    "independentSemanticR2": {
+      "reviewer": "/root/guard_review",
+      "accepted": true,
+      "blob": "efd876b86db16cc4faf63a9ba8e309503ca7b985",
+      "bytes": 136700,
+      "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+      "wholeOldPrefix": true,
+      "oldCases": 78,
+      "newCases": 19,
+      "wholeCases": 97,
+      "addedLines": 139,
+      "expectedSemanticRedNewFail": 10,
+      "expectedSemanticRedNewPass": 9,
+      "expectationOnly": true,
+      "actualExecutions": 0
+    }
+  },
+  "runner": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-readiness-runner.py",
+    "bytes": 21625,
+    "sha256": "af30d41eb3940caab04d0c046f13c0b25268ac86e77cb69520a5a078733fb460",
+    "gitBlob": "7274eb96eb64ff45a89a375d3813c107325fd607",
+    "physicalLines": 409,
+    "baseline": {
+      "gitBlob": "41060e08824dcefab62500097da2289b98a732d3",
+      "bytes": 19692,
+      "sha256": "5ac6bb60411196a2f6906f3a11abb0c81353fd4762e90dc5c5ab8a9680ca2758",
+      "physicalLines": 375
+    },
+    "commandCount": 5,
+    "perCommandOuterSeconds": 180,
+    "independentR2": "Required before local use; candidate object alone grants no execution."
+  },
+  "inputs": {
+    "originalIndex": {
+      "bytes": 2788471,
+      "sha256": "69d471b52e0592b84e7b47c46e93dcc4a4b1a007e80c632cb11f9eee290dbb5e",
+      "gitBlob": "5ac26325a57b11d171453857f6c5b5c8f24dd1cd"
+    },
+    "fresh": {
+      "path": "/tmp/c714-ui-conversation-readonly-inputs.json",
+      "bytes": 2873822,
+      "sha256": "a6bc697e55d93b994391fed2ae4434ae50bd7163cd499d045ffeeeb74edf911b",
+      "gitBlob": "eab37daec1b7cc8e979d023b037de9b9e41ccf08",
+      "sourceRows": 8798,
+      "compiledRows": 1504,
+      "toolFiles": 6,
+      "allMatched": true
+    },
+    "priorGreenBinding": {
+      "gitBlob": "1c844a6c3908e2b26e5e2a6e9a91d949d6ce2af4",
+      "bytes": 1271203,
+      "sha256": "14f4b2e7e0f114368b661d02e032a2f184807747921de68e5c78e7e1283e8aa9"
+    },
+    "sourceRows": 8798,
+    "compiledRows": 1504,
+    "providerMembers": [
+      253,
+      12
+    ],
+    "tools": 6,
+    "generatedNeverExecutedWrapper": {
+      "bytes": 2779,
+      "sha256": "12946d6ff9b003145072f82fd42c8c4c373ae2b0879a597db42657af15650428",
+      "gitBlob": "5b4e14803805e176c1a5cdeab0a9c83fd81870f0"
+    }
+  },
+  "unselectedAuthoringSetup": {
+    "reason": "Data construction String.raw interpolated an undeclared fixture marker identifier before a test body was stored or a blob created.",
+    "sourceApplied": false,
+    "testExecuted": false,
+    "budgetConsumed": false
+  },
+  "expectedOriginalOutcome": {
+    "existingCases": {
+      "pass": 78
+    },
+    "newCases": {
+      "pass": 9,
+      "semanticFail": 10
+    },
+    "whole": {
+      "tests": 97,
+      "pass": 87,
+      "fail": 10
+    },
+    "qualification": "Static source-review expectation only, not a run result. Whole-file actual RED and independent full raw/receipt/cleanup review remain mandatory."
+  },
+  "producerSelection": {
+    "controls": "1e94339df46ef3bb963555fc3cc7253055766a78",
+    "selection": "dcd0cc29a73a46a24126ec3552714fa1b057aaf4",
+    "newProducerPostimages": 0
+  },
+  "execution": {
+    "localEnvironment": "Unavailable at continuation; same qualified environment is required.",
+    "materializationPerformed": false,
+    "redAttempts": 0,
+    "greenAttempts": 0,
+    "lintAttempts": 0,
+    "sourceSizeAttempts": 0,
+    "diffCheckAttempts": 0,
+    "alternateRuntimeSelected": false
+  },
+  "nextGate": "Complete independent runner/tree/input R2, immediate-push test-only publication and full actual published readback before creating the exact RED binding. Its subject commit/tree and all other fields require independent review before any materialization or run. No producer authoring/selection until actual semantic RED has been accepted."
+}

@@ -2097,3 +2097,142 @@ test('saved Launch exhausts its one original deadline with ' + label + ' and no 
   assert.equal(f.counts().reads, 300); assert.equal(f.counts().owned, 300); assert.equal(f.counts().queries, 300);
   assert.equal(f.counts().now, 30_000); assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));
 });
+
+type ConversationPreviewState = {
+  content: string; centerY: number; count: number; width: number; disabled: boolean;
+  covered: boolean; duplicateHit: boolean; bodyText: string; neighborText: string;
+};
+function conversationPreviewFixture(t: import('node:test').TestContext,
+  onOwned: (state: ConversationPreviewState, check: number) => void = () => undefined) {
+  const selector = 'button[aria-label^="alice,"]', label = 'TEST original conversation';
+  const state: ConversationPreviewState = { content: 'alice TEST boot ready', centerY: 178, count: 1,
+    width: 200, disabled: false, covered: false, duplicateHit: false, bodyText: '', neighborText: '' };
+  let now = 0, owned = 0, reads = 0, bodyReads = 0, front = 0;
+  const waits: number[] = [], expressions: string[] = [], events: Record<string, unknown>[] = [];
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {
+    assert.equal(delay, 100); waits.push(delay); now += delay; queueMicrotask(callback);
+    return 1 as unknown as NodeJS.Timeout;
+  });
+  const row = { get textContent() { return state.content; }, tagName: 'BUTTON',
+    getBoundingClientRect: () => ({ x: 69.5, y: state.centerY - 16, width: state.width, height: 32 }),
+    matches(actual: string) { assert.equal(actual, ':disabled'); return state.disabled; },
+    contains: () => false, getAttribute: () => null };
+  const duplicate = { ...row, textContent: 'alice TEST boot ready' };
+  const document = {
+    get body() { bodyReads++; return { textContent: state.content + state.bodyText + state.neighborText }; },
+    querySelectorAll(actual: string) {
+      assert.equal(actual, selector); return Array.from({ length: state.count }, (_, i) => i ? duplicate : row);
+    },
+    elementFromPoint: () => state.covered ? {} : state.duplicateHit ? duplicate : row,
+  };
+  const ui = createDesktopUiControls({
+    async evaluate(expression: string) {
+      reads++; expressions.push(expression);
+      return runInNewContext(expression, { document, innerWidth: 1000, innerHeight: 800,
+        getComputedStyle: () => ({ pointerEvents: 'auto' }) });
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      assert.ok(method === 'Page.bringToFront' || method === 'Input.dispatchMouseEvent');
+      if (method === 'Page.bringToFront') front++; else events.push({ ...params });
+      return {};
+    },
+  }, { assertOwnedRenderer() { onOwned(state, ++owned); }, step() {} });
+  return { state, events, expressions, waits,
+    run: (marker?: string) => Reflect.apply(ui.click, undefined, [selector, label, undefined, marker]) as Promise<void>,
+    counts: () => ({ now, owned, reads, bodyReads, front }) };
+}
+
+test('original conversation waits for its own reply before one click at the hydrated coordinates', async t => {
+  const f = conversationPreviewFixture(t, (state, check) => {
+    if (check === 6) { state.content = 'alice TEST boot ready'; state.centerY = 186.5; }
+  });
+  f.state.content = 'alice You: TEST_UI_BOOT'; await f.run('TEST boot ready');
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]),
+    [['mouseMoved', 169.5, 186.5], ['mousePressed', 169.5, 186.5], ['mouseReleased', 169.5, 186.5]]);
+  assert.deepEqual(f.counts(), { now: 700, owned: 12, reads: 10, bodyReads: 0, front: 1 });
+  assert.deepEqual(f.waits, Array.from({ length: 7 }, () => 100));
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'same full predicate in every original phase');
+});
+
+test('default conversation click retains its original final geometry refusal without a preview predicate', async t => {
+  const f = conversationPreviewFixture(t, (state, check) => { if (check === 6) state.centerY = 186.5; });
+  await assert.rejects(f.run(), /Original UI target moved after ownership check/);
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);
+  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, bodyReads: 0, front: 1 });
+});
+
+for (const [label, invalid] of [
+  ['body-only reply', { content: 'alice You: TEST_UI_BOOT', bodyText: 'TEST boot ready' }],
+  ['neighbor-only reply', { content: 'alice You: TEST_UI_BOOT', neighborText: 'bob TEST boot ready' }],
+  ['different required reply', { content: 'alice TEST stream partial' }],
+  ['empty preview', { content: '' }], ['missing target', { count: 0 }], ['zero-size target', { width: 0 }],
+  ['disabled target', { disabled: true }], ['covered target', { covered: true }],
+  ['two eligible rows with only the second ready', { content: 'alice You: TEST_UI_BOOT', count: 2, duplicateHit: true }],
+] satisfies readonly (readonly [string, Partial<ConversationPreviewState>])[])
+test('original conversation refuses ' + label + ' within its unchanged first read deadline', async t => {
+  const f = conversationPreviewFixture(t); Object.assign(f.state, invalid);
+  await assert.rejects(f.run('TEST boot ready'), /UI target read failed: TEST original conversation/);
+  assert.deepEqual(f.events, [], 'no hover or physical click on an ineligible original target');
+  assert.deepEqual(f.counts(), { now: 30_000, owned: 300, reads: 300, bodyReads: 0, front: 1 });
+  assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));
+  assert.ok(f.expressions.every(value => value === f.expressions[0]));
+});
+
+test('original conversation serializes its required preview as literal data', async t => {
+  const marker = 'TEST "quoted" \\ \u2028 </script> $' + '{notCode} ready';
+  const f = conversationPreviewFixture(t); f.state.content = 'alice ' + marker; await f.run(marker);
+  assert.deepEqual(f.events.map(({ type }) => type), ['mouseMoved', 'mousePressed', 'mouseReleased']);
+  assert.deepEqual(f.counts(), { now: 200, owned: 7, reads: 5, bodyReads: 0, front: 1 });
+});
+
+test('original conversation rereads a revoked preview at unchanged final coordinates before input', async t => {
+  const f = conversationPreviewFixture(t, (state, check) => {
+    if (check === 6) state.content = 'alice You: TEST_UI_BOOT';
+  });
+  await assert.rejects(f.run('TEST boot ready'), /Original UI target unavailable after ownership check/);
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);
+  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, bodyReads: 0, front: 1 });
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'final direct read includes the readiness literal');
+});
+
+for (const kind of ['owner', 'movement'] as const)
+test('original conversation still refuses final ' + kind + ' despite a ready preview', async t => {
+  const refusal = new Error('TEST original renderer owner lost');
+  const f = conversationPreviewFixture(t, (state, check) => {
+    if (check !== 6) return;
+    if (kind === 'owner') throw refusal;
+    state.centerY = 186.5;
+  });
+  await assert.rejects(f.run('TEST boot ready'), error => {
+    if (kind === 'owner') assert.equal(error, refusal);
+    else assert.match(String(error), /Original UI target moved after ownership check/);
+    return true;
+  });
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);
+  assert.equal(f.counts().reads, kind === 'owner' ? 4 : 5);
+  assert.equal(f.counts().owned, 6);
+});
+
+for (const memberName of ['alice', 'team-lead'])
+for (const expectedReply of ['TEST boot ready', 'TEST stream partial'])
+test('actual openChat forwards ' + expectedReply + ' for ' + memberName, async () => {
+  const { desktopJsLiteral } = await import('./desktop-ui-controls.ts');
+  const source = await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8');
+  const first = 'const openChat =', last = 'const assertSameLive =';
+  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);
+  const begin = source.indexOf(first), end = source.indexOf(last, begin); assert.ok(end > begin);
+  const actual = source.slice(begin, end).replace(/: Live\b/g, '').replace(/: string\b/g, '');
+  const calls: { method: string; args: unknown[] }[] = [];
+  const run = runInNewContext('(async () => { ' + actual + ' return openChat(live, expectedReply); })',
+    { live: { memberName }, expectedReply, literal: desktopJsLiteral, ui: {
+      async scrollTo(...args: unknown[]) { calls.push({ method: 'scrollTo', args }); },
+      async click(...args: unknown[]) { calls.push({ method: 'click', args }); },
+    } }) as () => Promise<void>;
+  await run();
+  const selector = 'button[aria-label^=' + desktopJsLiteral((memberName === 'team-lead' ? 'lead' : memberName) + ',') + ']';
+  assert.deepEqual(calls, [
+    { method: 'scrollTo', args: [selector, 'original lead conversation'] },
+    { method: 'click', args: [selector, 'open original lead conversation', undefined, expectedReply] },
+  ], 'one original scroll and one original click carrying the expected reply as data');
+});
