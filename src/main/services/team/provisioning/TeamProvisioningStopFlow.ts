@@ -232,7 +232,17 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   } catch {
     ports.logger.info('task_activity_interval_pause_deferred_until_stop');
   }
-  ports.stopPersistentTeamMembers(teamName);
+  // An owned Windows handle has its own awaited taskkill /T. Running the
+  // legacy process-table stop concurrently would race it and incorrectly
+  // turn a confirmed tree termination into a "process not found" failure.
+  const trackedStopRunId = ports.getTrackedRunId(teamName);
+  const trackedStopRun = trackedStopRunId ? ports.runs.get(trackedStopRunId) : undefined;
+  const fallbackStopRunId = ports.getAliveRunId(teamName);
+  const ownedWindowsMemberRun = trackedStopRun ??
+    (fallbackStopRunId ? ports.runs.get(fallbackStopRunId) : undefined);
+  const deferPersistentProcessScan =
+    process.platform === 'win32' && !!ownedWindowsMemberRun?.directMemberProcesses?.size;
+  if (!deferPersistentProcessScan) ports.stopPersistentTeamMembers(teamName);
   ports.openCodeRuntimeDeliveryAdvisory.cancelTeam(teamName);
   const stopRuntimeLanesForRun = async (targetRunId: string): Promise<void> => {
     const runtimeRun = ports.runtimeAdapterRunByTeam.get(teamName);
@@ -295,11 +305,17 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   }
   cancelRunLeadRelayCapture(run);
   if (run.processKilled || run.cancelRequested) {
-    await awaitAllOwnedProcessStops([
-      ports.killTeamProcessAndWait(run.child),
-      stopOriginalWindowsDirectMembers(run.directMemberProcesses),
-      stopRuntimeLanesForRun(run.runId),
-    ]);
+    try {
+      await awaitAllOwnedProcessStops([
+        ports.killTeamProcessAndWait(run.child),
+        stopOriginalWindowsDirectMembers(run.directMemberProcesses),
+        stopRuntimeLanesForRun(run.runId),
+      ]);
+    } finally {
+      // Always run orphan discovery after the owned tree settles, even on
+      // refusal; never mask a failed handle stop with a successful scan.
+      if (deferPersistentProcessScan) ports.stopPersistentTeamMembers(teamName);
+    }
     await (ports.cleanupRunOwnedAnthropicApiKeyHelper?.(run) ??
       cleanupRunOwnedAnthropicApiKeyHelper(run));
     ports.cleanupRun(run);
@@ -310,7 +326,15 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   const stopCurrentTeamProcess = ports.killTeamProcessAndWait(run.child);
   const stopCurrentRuntimeLanes = stopRuntimeLanesForRun(run.runId);
   const stopDirectMembers = stopOriginalWindowsDirectMembers(run.directMemberProcesses);
-  await awaitAllOwnedProcessStops([stopCurrentTeamProcess, stopCurrentRuntimeLanes, stopDirectMembers]);
+  try {
+    await awaitAllOwnedProcessStops([
+      stopCurrentTeamProcess,
+      stopCurrentRuntimeLanes,
+      stopDirectMembers,
+    ]);
+  } finally {
+    if (deferPersistentProcessScan) ports.stopPersistentTeamMembers(teamName);
+  }
   const progress = ports.updateProgress(run, 'disconnected', 'Team stopped by user');
   run.onProgress(progress);
   ports.logger.info(`[${teamName}] Process stopped (SIGKILL)`);

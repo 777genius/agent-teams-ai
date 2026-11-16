@@ -223,6 +223,39 @@ describe('team provisioning stop flow', () => {
     expect(bob.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
   });
 
+  it('defers legacy tree discovery until owned Windows member stops settle', async () => {
+    // Original handle is already exited; no native taskkill is invoked on the
+    // test host. Holding the lead stop proves dispatch is strictly serialized.
+    const bob = originalChild(8600, 'exit');
+    Object.defineProperty(bob.child, 'exitCode', { value: 0, configurable: true });
+    const run = Object.assign(makeRun('owned-win-run'), {
+      directMemberProcesses: new Set([bob.child]),
+    });
+    const ports = makePorts(
+      run.teamName,
+      new Map([[run.runId, run]]),
+      new Map([[run.teamName, run.runId]])
+    );
+    let releaseLead!: () => void;
+    ports.killTeamProcessAndWait.mockImplementation(
+      () => new Promise<void>((resolve) => { releaseLead = resolve; })
+    );
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+    if (!originalPlatform) throw new Error('process.platform descriptor missing');
+    Object.defineProperty(process, 'platform', { ...originalPlatform, value: 'win32' });
+    try {
+      const stopping = stopTeamFlow(run.teamName, ports);
+      await vi.waitFor(() => expect(ports.killTeamProcessAndWait).toHaveBeenCalled());
+      expect(ports.stopPersistentTeamMembers).not.toHaveBeenCalled();
+      releaseLead();
+      await stopping;
+      expect(ports.stopPersistentTeamMembers).toHaveBeenCalledExactlyOnceWith(run.teamName);
+      expect(ports.cleanupRun).toHaveBeenCalledWith(run);
+    } finally {
+      Object.defineProperty(process, 'platform', originalPlatform);
+    }
+  });
+
   it('does not alter non-Windows member Stop behavior', async () => {
     const bob = originalChild(8200, 'exit');
     await expect(stopOriginalWindowsDirectMembers(new Set([bob.child]), 'linux'))
