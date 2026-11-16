@@ -1759,7 +1759,7 @@ test('passive navigation preserves non-card events, the original ring bounds and
   pane.activeTabId = null; state.selectedTeamName = null; g.setState(state);
   const absent = g.emit().row; g.flush();
   assert.deepEqual(navigationPlain(absent.teamNavigation).before, { status: 'available', focusedPaneId: 'pane-1', activeTabId: null, activeTabType: null, activeTabTeamName: null, selectedTeamName: null });
-  pane.activeTabId = 'tab-A'; pane.tabs = [{ id: 'tab-A', type: 'dashboard', get teamName() { assert.fail('non-Team metadata is not read'); } }];
+  pane.activeTabId = 'tab-A'; pane.tabs = [{ id: 'tab-A', type: 'dashboard', get teamName() { return assert.fail('non-Team metadata is not read'); } }];
   const other = g.emit().row; g.flush();
   assert.deepEqual(navigationPlain(other.teamNavigation).before, { status: 'available', focusedPaneId: 'pane-1', activeTabId: 'tab-A', activeTabType: 'other', activeTabTeamName: null, selectedTeamName: null });
 });
