@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
@@ -18,6 +19,7 @@ import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { projectDesktopCodexLoginFailure } from './desktop-codex-login-ui-proof.ts';
 import { projectDesktopCodexInstallerFailure, projectDesktopSelectionTargetFailure } from './desktop-backend-failures.ts';
 import { projectDesktopEmulatedReadinessFailure, projectDesktopProofReceiptSummary, projectDesktopTaskBoardFailure } from './desktop-proof-evidence.ts';
+import { readNativeProviderArtifact } from '../../packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -1846,4 +1848,113 @@ test('passive navigation uses only the callable store own method and ignores unr
   g.window.__agentTeamsDevStore = new Proxy(g.store, { getOwnPropertyDescriptor() { throw new Error('TEST callable reflection'); } });
   const row = g.emit().row; g.flush(); assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' });
   assert.equal(Object.hasOwn(row, 'focusAfterDispatch'), true);
+});
+
+test('the selected provider receipt digest matches the actual manifest-selected archive bytes', async () => {
+  const repo = join(import.meta.dirname, '../..');
+  const manifest = JSON.parse(await readFile(join(repo, 'packages/legacy-agent-host/package.json'), 'utf8')) as {
+    dependencies: Record<string, unknown>;
+  };
+  const dependency = manifest.dependencies['@agent-teams/provider-implementations'];
+  assert.ok(typeof dependency === 'string' &&
+    /^file:\.\.\/\.\.\/vendor\/provider-migration\/[a-z0-9-]+\/agent-teams-provider-implementations-0\.0\.0\.tgz$/.test(dependency));
+  const path = dependency.slice('file:../../'.length);
+  const sha256 = createHash('sha256').update(await readFile(join(repo, path))).digest('hex');
+  assert.deepEqual(await readNativeProviderArtifact(repo), { path, sha256 });
+});
+
+test('provider receipt legacy, current and equal-dual implementation digests preserve manifest authority', async t => {
+  const repo = await mkdtemp(join(tmpdir(), 'TEST-provider-receipt-positive-'));
+  t.after(() => rm(repo, { recursive: true, force: true }));
+  const host = join(repo, 'packages/legacy-agent-host');
+  const vendor = join(repo, 'vendor/provider-migration/test-receipt');
+  await mkdir(host, { recursive: true }); await mkdir(vendor, { recursive: true });
+  const path = 'vendor/provider-migration/test-receipt/agent-teams-provider-implementations-0.0.0.tgz';
+  const sha256 = 'a1'.repeat(32), other = 'b2'.repeat(32);
+  await writeFile(join(host, 'package.json'), JSON.stringify({
+    dependencies: { '@agent-teams/provider-implementations': 'file:../../' + path },
+  }));
+  for (const implementation of [
+    { newSha256: sha256 },
+    { sha256, file: 'agent-teams-provider-implementations-0.0.0.tgz' },
+    { newSha256: sha256, sha256, oldSha256: other },
+    { newSha256: sha256, file: 'TEST-not-the-selected-archive.tgz', existingPath: 'TEST-unselected', oldSha256: other },
+  ]) {
+    await writeFile(join(vendor, 'source-receipt.json'), JSON.stringify({
+      packages: { 'provider-implementations': implementation, 'provider-session-contracts': { sha256: other } },
+    }));
+    assert.deepEqual(await readNativeProviderArtifact(repo), { path, sha256 });
+  }
+});
+
+test('every present provider implementation digest must be valid and both recognized fields must agree', async t => {
+  const repo = await mkdtemp(join(tmpdir(), 'TEST-provider-receipt-digest-'));
+  t.after(() => rm(repo, { recursive: true, force: true }));
+  const host = join(repo, 'packages/legacy-agent-host');
+  const vendor = join(repo, 'vendor/provider-migration/test-receipt');
+  await mkdir(host, { recursive: true }); await mkdir(vendor, { recursive: true });
+  const sha256 = 'a1'.repeat(32), other = 'b2'.repeat(32);
+  await writeFile(join(host, 'package.json'), JSON.stringify({ dependencies: {
+    '@agent-teams/provider-implementations': 'file:../../vendor/provider-migration/test-receipt/agent-teams-provider-implementations-0.0.0.tgz',
+  } }));
+  const refused: Record<string, unknown>[] = [{}, { oldSha256: sha256 }, { digest: sha256 },
+    { newSha256: sha256, sha256: other }];
+  for (const key of ['newSha256', 'sha256'] as const) {
+    const otherKey = key === 'newSha256' ? 'sha256' : 'newSha256';
+    for (const value of [null, '', 0, false, {}, [], 'A'.repeat(64), 'a'.repeat(63), 'a'.repeat(65), 'g'.repeat(64)]) {
+      refused.push({ [key]: value }, { [key]: value, [otherKey]: sha256 });
+    }
+  }
+  for (const implementation of refused) {
+    await writeFile(join(vendor, 'source-receipt.json'), JSON.stringify({
+      packages: { 'provider-implementations': implementation, 'provider-session-contracts': { sha256 } },
+    }));
+    await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ERR_ASSERTION' }, JSON.stringify(implementation));
+  }
+});
+
+test('provider receipt shape, package selection and original file or JSON errors remain strict', async t => {
+  const repo = await mkdtemp(join(tmpdir(), 'TEST-provider-receipt-shape-'));
+  t.after(() => rm(repo, { recursive: true, force: true }));
+  const host = join(repo, 'packages/legacy-agent-host');
+  const vendor = join(repo, 'vendor/provider-migration/test-receipt');
+  await mkdir(host, { recursive: true }); await mkdir(vendor, { recursive: true });
+  const manifestPath = join(host, 'package.json'), receiptPath = join(vendor, 'source-receipt.json');
+  const dependency = 'file:../../vendor/provider-migration/test-receipt/agent-teams-provider-implementations-0.0.0.tgz';
+  const sha256 = 'a1'.repeat(32);
+  const manifest = { dependencies: { '@agent-teams/provider-implementations': dependency } };
+  const receipt = { packages: { 'provider-implementations': { newSha256: sha256 } } };
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  for (const invalid of [null, [], {}, { packages: null }, { packages: [] }, { packages: {} },
+    { packages: { 'provider-implementations': null } }, { packages: { 'provider-implementations': [] } },
+    { packages: { 'provider-implementations': sha256 } },
+    { packages: { 'provider-session-contracts': { newSha256: sha256, sha256 } } },
+    { packages: { '@agent-teams/provider-implementations': { newSha256: sha256 } } },
+    { packages: { 'provider-implementations': { digest: sha256 } } }]) {
+    await writeFile(receiptPath, JSON.stringify(invalid));
+    await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ERR_ASSERTION' });
+  }
+  await writeFile(receiptPath, JSON.stringify(receipt));
+  const invalidManifests: unknown[] = [null, [], {}, { dependencies: null }, { dependencies: [] },
+    { dependencies: {} }, { dependencies: { '@agent-teams/provider-session-contracts': dependency } }];
+  for (const invalid of [null, 7, '', 'https://example.invalid/TEST.tgz', '/TEST/archive.tgz',
+    dependency.replace('test-receipt', '../test-receipt'), dependency.replace('test-receipt', 'TEST-receipt'),
+    dependency.replace('0.0.0.tgz', '1.0.0.tgz'), dependency.replace('provider-implementations', 'provider-session-contracts')]) {
+    invalidManifests.push({ dependencies: { '@agent-teams/provider-implementations': invalid } });
+  }
+  for (const invalid of invalidManifests) {
+    await writeFile(manifestPath, JSON.stringify(invalid));
+    await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ERR_ASSERTION' });
+  }
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  await writeFile(receiptPath, '{');
+  await assert.rejects(() => readNativeProviderArtifact(repo), SyntaxError);
+  await writeFile(receiptPath, JSON.stringify(receipt));
+  await writeFile(manifestPath, '{');
+  await assert.rejects(() => readNativeProviderArtifact(repo), SyntaxError);
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  await rm(receiptPath);
+  await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ENOENT', path: receiptPath });
+  await rm(manifestPath);
+  await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ENOENT', path: manifestPath });
 });
