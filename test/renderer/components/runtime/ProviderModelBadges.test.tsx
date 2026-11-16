@@ -641,6 +641,64 @@ describe('ProviderModelBadges', () => {
     }
   });
 
+  it('remeasures changed badge contents even when the previous list needed no trimming', () => {
+    const originalOffsetTop = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetTop');
+    let offsetTopReads = 0;
+    Object.defineProperty(HTMLElement.prototype, 'offsetTop', {
+      configurable: true,
+      get() {
+        offsetTopReads += 1;
+        const siblings = Array.from(this.parentElement?.children ?? []);
+        const index = Math.max(0, siblings.indexOf(this));
+        const narrowRows = siblings.some((item) => item.textContent?.includes('very-long-model'));
+        return Math.floor(index / (narrowRows ? 3 : 30)) * 20;
+      },
+    });
+
+    const models = Array.from({ length: 12 }, (_, index) => `model-${index + 1}`);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      act(() => {
+        root.render(
+          <ProviderModelBadges
+            providerId="opencode"
+            models={models}
+            collapseAfter={10}
+            maxCollapsedRows={1}
+          />
+        );
+      });
+      expect(host.textContent).toContain('+2 more');
+
+      offsetTopReads = 0;
+      act(() => {
+        root.render(
+          <ProviderModelBadges
+            providerId="opencode"
+            models={['very-long-model', ...models.slice(1)]}
+            collapseAfter={10}
+            maxCollapsedRows={1}
+          />
+        );
+      });
+
+      expect(offsetTopReads).toBeGreaterThan(0);
+      expect(host.textContent).toContain('+10 more');
+    } finally {
+      act(() => {
+        root.unmount();
+      });
+      if (originalOffsetTop) {
+        Object.defineProperty(HTMLElement.prototype, 'offsetTop', originalOffsetTop);
+      } else {
+        delete (HTMLElement.prototype as { offsetTop?: number }).offsetTop;
+      }
+    }
+  });
+
   it('does not restart row measurements for equivalent refreshed model arrays', () => {
     const originalOffsetTop = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetTop');
     let offsetTopReads = 0;

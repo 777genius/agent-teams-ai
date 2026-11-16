@@ -195,7 +195,7 @@ export const ProviderModelBadges = ({
     if (nextLimit !== collapsedLimit) {
       setCollapsedModelLimit(nextLimit);
     }
-  }, [collapsedLimit, expanded, maxCollapsedRows, measureTick, shouldCollapse]);
+  }, [collapsedLimit, expanded, maxCollapsedRows, measureTick, modelLayoutKey, shouldCollapse]);
 
   useLayoutEffect(() => {
     if (!shouldCollapse || expanded || !maxCollapsedRows || typeof ResizeObserver === 'undefined') {
