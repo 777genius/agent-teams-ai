@@ -1,0 +1,30 @@
+{
+  "source": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "runId": 43813731530,
+  "jobId": 133120929510,
+  "attempt": 1,
+  "artifactId": 14201916494,
+  "artifact": {
+    "path": "native-e1d-win-x64-133120929510/artifact-14201916494.zip",
+    "bytes": 15043,
+    "blob": "adf76542bf8ec1f143f3ddf9c26736490fe28fec",
+    "sha256": "b5d26672269fc6bbf7ab6e13adddf62b65bd5295de28590df44ebdc547d74e86"
+  },
+  "metadata": {
+    "path": "native-e1d-win-x64-133120929510/artifact-metadata.json",
+    "bytes": 917,
+    "blob": "1b84c8530d333485cab01446e5ef88b0e34558be",
+    "sha256": "a7d58769c7f6e6f0f8099f5f2f66ad5c08dfe2b2aba4fed051aa8c4070309c8d"
+  },
+  "crcAllPass": true,
+  "safePathsNoSymlinks": true,
+  "entryCount": 9,
+  "sourceHeadFile": {
+    "path": "native-e1d-win-x64-133120929510/archive/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+    "bytes": 41,
+    "blob": "64df2ac36d2400af7b971319a2274577c225275a",
+    "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681"
+  },
+  "directBinaryInspection": false,
+  "directTraceFileAvailable": false
+}

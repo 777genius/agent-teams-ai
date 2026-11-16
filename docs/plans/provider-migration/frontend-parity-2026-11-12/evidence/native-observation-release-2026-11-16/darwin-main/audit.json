@@ -1,0 +1,147 @@
+{
+  "source": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "run": 43813731530,
+  "job": 133120929324,
+  "attempt": 1,
+  "tuple": "darwin-x64",
+  "status": "FAIL",
+  "reviewedAtUtc": "2026-11-16T06:25:57.369492+00:00",
+  "firstFailedStep": 10,
+  "firstFailure": {
+    "file": "test/features/agent-backend/capturedHostClient.test.ts",
+    "line": 356,
+    "case": "holds Main reply bytes before native effect, expiry=true",
+    "message": "TEST native call never reached Main admission",
+    "known": "The outer TEST.blocked-native request resolved before the finite gate observed Main nativePending Map.set.",
+    "notRetained": [
+      "resolved request status/value",
+      "reverse-call emission/admission timestamps",
+      "which expiry/refusal branch completed the request"
+    ],
+    "notEstablished": "No production defect, exact scheduling cause or timeout fix is established."
+  },
+  "prerequisites": {
+    "checkout": "SUCCESS",
+    "node": "v24.21.0 actual darwin-x64",
+    "pnpm": "11.22.0 original Corepack/frozen install",
+    "controllerAndHostBuild": "SUCCESS"
+  },
+  "commands": {
+    "hostNode": {
+      "tests": 167,
+      "pass": 165,
+      "fail": 0,
+      "skip": 2,
+      "cancelled": 0,
+      "todo": 0,
+      "skipCases": [
+        "Linux builder refuses an existing or linked output leaf before any compiler dispatch",
+        "Linux original executable compares signed Node and unsigned native inode bits exactly"
+      ]
+    },
+    "protocolVitest": {
+      "files": 3,
+      "tests": 54,
+      "pass": 54
+    },
+    "mainVitest": {
+      "files": 8,
+      "filePass": 7,
+      "fileFail": 1,
+      "tests": 81,
+      "pass": 80,
+      "fail": 1,
+      "capturedHostClientCases": 33,
+      "capturedHostClientFail": 1
+    }
+  },
+  "sourceReferences": [
+    {
+      "path": "process-e1d-darwin-x64-133120929324/source-reference/test/features/agent-backend/capturedHostClient.test.ts",
+      "bytes": 51981,
+      "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+      "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f"
+    },
+    {
+      "path": "process-e1d-darwin-x64-133120929324/source-reference/test/features/agent-backend/fixtures/retainedNativeCustody.ts",
+      "bytes": 29798,
+      "blob": "c2a23405f8e90face1927707d741cd8f462e35b8",
+      "sha256": "84d8b7cb8ce39b73d713c5d819ebd3c3ae854fe6917257333809328106c474e7"
+    }
+  ],
+  "sourceSemantics": {
+    "fixtureDeadline": "expiry=true uses performance.now()+20; timeoutMs remains2000 and outer requestTimeoutMs3000.",
+    "queuedWitness": "The test replaces nativePending.set only observationally; its queued promise resolves on originalSet.call, so the missing witness is a real admission boundary.",
+    "unreachedAssertions": [
+      "expected unknown/refused status",
+      "zero write effects",
+      "independent control response/one effect count",
+      "after-release expiry effect count"
+    ],
+    "finally": "gate.restore and await transport.shutdown exist in finally; no returned shutdown receipt or explicit child-exit proof is recorded for the failed case."
+  },
+  "artifacts": {
+    "zip": {
+      "path": "process-e1d-darwin-x64-133120929324/artifact-14202660278.zip",
+      "bytes": 11052,
+      "blob": "b85149194d6ac77e819ef97ec216b12a4ed9862f",
+      "sha256": "2960ac3be2e4b1241d78a74a52600b55ff2fd42b2e3eddb0c7766b3a171df039"
+    },
+    "verification": {
+      "path": "process-e1d-darwin-x64-133120929324/artifact-verification.json",
+      "bytes": 755,
+      "blob": "ef64e60c3c87e9fad2f29787e20b38e3e0ffa321",
+      "sha256": "805884fd213893167764895cd3b5e66c8d215cebe6d2ca3272a45df50695c284"
+    },
+    "rawJobLog": {
+      "path": "process-e1d-darwin-x64-133120929324/job-133120929324.log",
+      "bytes": 99531,
+      "blob": "0a1daaf057b77571deaac25dffdbe70f86475744",
+      "sha256": "27e6fa59194a32898ca1761ccf4358e4f4ef1d1c14b1bc7f4e5806b9e0fc0eb1"
+    },
+    "sourceHead": {
+      "path": "process-e1d-darwin-x64-133120929324/archive/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "bytes": 41,
+      "blob": "64df2ac36d2400af7b971319a2274577c225275a",
+      "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681"
+    },
+    "members": [
+      {
+        "path": "process-e1d-darwin-x64-133120929324/archive/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+        "bytes": 20799,
+        "blob": "2a6e7df8e767ea97c7989415e0ec7d43ba68fa02",
+        "sha256": "fb385c2bcee56a31ede4bde2bd0d315deb9e38fb52ad3f4677cfcc70c585a20c"
+      },
+      {
+        "path": "process-e1d-darwin-x64-133120929324/archive/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+        "bytes": 772,
+        "blob": "9ff3a45e91cb855f0aab059687b0210f174ebcc2",
+        "sha256": "c15f61fc7d9a55696f91eb9129b17eeff7f8fe7cc4a6f870b140b4ffa920c48a"
+      },
+      {
+        "path": "process-e1d-darwin-x64-133120929324/archive/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+        "bytes": 12202,
+        "blob": "91c26284ce8066bcff47b789072912e94636c2a0",
+        "sha256": "ee75fec9a697cb348ad7207b23322bf5f5f65562680b2b2bb42b4e34d2ffeb07"
+      },
+      {
+        "path": "process-e1d-darwin-x64-133120929324/archive/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+        "bytes": 41,
+        "blob": "64df2ac36d2400af7b971319a2274577c225275a",
+        "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681"
+      }
+    ]
+  },
+  "unreachedPlatformGates": [
+    "original POSIX Node/shell lifecycle",
+    "pinned Electron process fixtures",
+    "original Codex/Claude/OpenCode source A/B TEST routes",
+    "completed-platform receipt/source check"
+  ],
+  "cleanupQualification": {
+    "nativeLifecycleReceiptPresent": false,
+    "mainHostNaturalExitQualified": false,
+    "archiveOnlyContainsContractLogsAndSourceHead": true
+  },
+  "actions": "Single job log and relevant artifact retrieval; inert source reading/hashing only. No project/native/GUI/provider execution, rerun, source mutation or clock change."
+}
