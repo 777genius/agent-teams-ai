@@ -223,7 +223,12 @@ jobs:
             scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts \
             tools/owned-process-broker/nativeGate.ts \
             tools/owned-process-broker/nativeGateDiagnostics.ts \
-            tools/owned-process-broker/nativeGateEvents.test.ts
+            tools/owned-process-broker/nativeGateEvents.test.ts \
+            packages/legacy-agent-host/src/adapters/providers/nativeLaunchEnvironment.ts \
+            packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts \
+            packages/legacy-agent-host/src/adapters/providers/OpenCodeManagementHost.ts \
+            packages/legacy-agent-host/src/owned-process/index.ts \
+            test/features/agent-backend/capturedWindowsSourceHistory.test.ts
           pnpm typecheck:workspace
           node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json
           pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main

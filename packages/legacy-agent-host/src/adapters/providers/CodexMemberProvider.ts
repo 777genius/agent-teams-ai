@@ -15,6 +15,7 @@ import {
 import { codexByteTransport } from './codexByteTransport.js';
 import { observeMemberProcessStderr } from './observeMemberProcessStderr.js';
 import { CapturedProcess } from './CapturedProcess.js';
+import { buildCodexMemberEnvironment, codexTeamTokenEnvironment as TEAM_TOKEN_ENV } from './nativeLaunchEnvironment.js';
 import { createTeamMcpTools } from '../../mcp/tools.js';
 
 import type { CodexDriverConfig } from '@agent-teams/provider-implementations/codex';
@@ -22,8 +23,6 @@ import type { DriverFactory, Session } from '@agent-teams/provider-session-contr
 import type { CapturedProcessPort } from './CapturedProcess.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
 import type { CodexMemberProfile } from '../../composition/runtimeProfile.js';
-
-const TEAM_TOKEN_ENV = 'LEGACY_AGENT_HOST_TEAM_MCP_TOKEN';
 
 /** Captured native flags only. RPC, native configuration acceptance and discovery belong to D. */
 export function codexLaunchArguments(context: MemberProviderContext): string[] {
@@ -95,10 +94,7 @@ export function createCodexMemberProvider(
   const captured = {
     ...profile,
     ...(extraArgs.length ? { extraArgs: [...extraArgs] } : {}),
-    environment: {
-      ...profile.environment,
-      [TEAM_TOKEN_ENV]: context.endpoint.bearerToken,
-    },
+    environment: buildCodexMemberEnvironment(profile.environment, context.endpoint.bearerToken),
   };
   const canAllocate = () => context.canAllocate() && capturedMcpSourceCurrent(profile);
   const canCapture = () =>

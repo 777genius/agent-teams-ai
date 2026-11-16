@@ -6,6 +6,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { OpenCodeClientFactory } from '@agent-teams/provider-implementations/opencode';
 
 import { CapturedProcess } from './CapturedProcess.js';
+import { buildOpenCodeManagementEnvironment } from './nativeLaunchEnvironment.js';
 import { runOpenCodeModelProbe } from './runOpenCodeModelProbe.js';
 import { closeCoordinationByDeadline } from './OpenCodeCoordinationEndpoint.js';
 import { assertCoordinationDeadline, openV1CoordinationSession, runNativeCoordination, readNativeCoordination } from './OpenCodeCoordinationProbe.js';
@@ -126,23 +127,12 @@ export class OpenCodeManagementHost {
       throw new OpenCodeManagementError('invalid-profile');
     }
     if (this.coordination) config = structuredClone(this.coordination.config);
-    const agents = config.agent === undefined ? {} : object(config.agent);
-    this.profile.environment = {
-      ...this.profile.environment,
-      OPENCODE_CONFIG_CONTENT: JSON.stringify({
-        ...config,
-        // Management conversations are explicit model probes and never execute tools.
-        permission: this.coordination ? config.permission : { '*': 'deny' },
-        // A private disabled agent witnesses this exact server's effective config.
-        // It is not a conversation or a Team member and never executes.
-        agent: {
-          ...agents,
-          [this.witnessAgent]: { prompt: this.witness, disable: true, hidden: true },
-        },
-      }),
-      OPENCODE_SERVER_USERNAME: 'opencode',
-      OPENCODE_SERVER_PASSWORD: this.password,
-    };
+    // Keep the original invalid-profile boundary before the pure environment assembly.
+    if (config.agent !== undefined) object(config.agent);
+    this.profile.environment = buildOpenCodeManagementEnvironment(this.profile.environment, config, {
+      password: this.password, witnessAgent: this.witnessAgent, witness: this.witness,
+      coordination: Boolean(this.coordination),
+    });
     this.custody = (
       options.createProcess ??
       ((selection, canAllocate) => new CapturedProcess(selection, canAllocate))

@@ -25,7 +25,7 @@ export function captureWindowsSourceAssociation(kind: WindowsOriginalSourceAssoc
     : { kind, accountBinding: profile.accountBinding, recipeIdentity };
 }
 
-/** Main binds the actual credential namespace to an eligible original recipe, not merely its image. */
+/** Source authority is bound here; complete environment membership is checked by the same admission. */
 export function matchesWindowsSourceAssociation(
   context: RuntimeSourceProcessContext,
   selected: RetainedRuntimeSourceSelection,
@@ -62,15 +62,5 @@ export function matchesWindowsSourceAssociation(
           runtimeSourceRecipeIdentity(recipe) !== origin.recipeIdentity) return false;
     } catch { return false; }
   }
-  const environment = new Map<string, string>();
-  for (const entry of spec.environment) {
-    const equals = entry.indexOf('='), key = entry.slice(0, equals).toUpperCase();
-    if (equals < 1 || environment.has(key)) return false;
-    environment.set(key, entry.slice(equals + 1));
-  }
-  const originalEnvironment = new Map(Object.entries(original.environment).map(([key, value]) => [key.toUpperCase(), value]));
-  const keys = original.provider === 'claude' ? ['HOME', 'CLAUDE_CONFIG_DIR'] :
-    original.provider === 'codex' ? ['HOME', 'CODEX_HOME'] :
-      ['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME'];
-  return keys.every(key => environment.get(key) === originalEnvironment.get(key));
+  return true;
 }

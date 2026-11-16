@@ -274,6 +274,8 @@ export const desktopProofSupplementarySources = [
   'packages/legacy-agent-host/src/composition/scheduledRunContracts.ts',
   'scripts/legacy-agent-host/desktop-live-membership-controlled.ts',
   'scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts',
+  'packages/legacy-agent-host/src/adapters/providers/nativeLaunchEnvironment.ts',
+  'src/features/agent-backend/main/infrastructure/matchesWindowsLaunchEnvironment.ts',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */

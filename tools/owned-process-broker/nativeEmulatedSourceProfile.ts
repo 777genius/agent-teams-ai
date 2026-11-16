@@ -130,7 +130,8 @@ if(argv.length===1&&argv[0]==='--version'){
     ...(provider === 'claude' ? { configNamespace: 'custom-directory', nativeTools: ['Read', 'Write', 'AskUserQuestion'], autoAllowedTools: [],
       nativeOptions: { permissionMode: 'default', settingSources: [], effort: 'low', fastMode: false } }
       : provider === 'codex' ? { protocolRevision: '0.162.0', nativeOptions: { approvalPolicy: 'on-request', sandbox: 'read-only' } }
-      : { protocolRevision: '1.19.4', endpoint: await endpoint(), nativeOptions: { providerId: 'test-provider', agent: 'build', toolApprovalMode: 'manual' } }),
+      : { protocolRevision: '1.19.4', mcpPolicyPlugin: { ...helpers[2]! },
+        endpoint: await endpoint(), nativeOptions: { providerId: 'test-provider', agent: 'build', toolApprovalMode: 'manual' } }),
     limits: { queuedInputs: 2, inputBytes: 65536, outputBytes: 1_000_000, outputEvents: 1500, pendingInteractions: 4, timeoutMs: 90000 },
   })));
   const management = providerManagementProfileSchema.parse({ provider, profileId: `TEST-source-${provider}-management`,

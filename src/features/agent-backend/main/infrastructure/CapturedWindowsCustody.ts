@@ -1,11 +1,13 @@
 import { createHash } from 'node:crypto';
-import { constants } from 'node:fs';
+import { constants, lstatSync, realpathSync } from 'node:fs';
 import { lstat, open, realpath, stat } from 'node:fs/promises';
+import { basename, dirname, join } from 'node:path';
 
 import {
   captureWindowsLauncher,
   matchesCapturedWindowsLauncher,
   nativeProcessProfileSchema,
+  readCapturedMcpBytes,
   readCapturedProfile,
   RetainedWindowsCustody,
   verifyStagedBroker,
@@ -15,9 +17,11 @@ import {
 import { bindMainWindowsRuntimeSources, CapturedWindowsRuntimeSources } from './CapturedWindowsRuntimeSources';
 import { captureWindowsSourceAssociation } from './capturedWindowsSourceAssociation';
 import { capturedHostProfileDigest } from './selectedHostProfile';
+import { captureWindowsEnvironmentRecipe, matchesWindowsLaunchEnvironment } from './matchesWindowsLaunchEnvironment';
 
 import type { SelectedWindowsProcessProfile, WindowsSourceLaunchSelection } from './CapturedWindowsRuntimeSources';
 import type { SelectedHostProfile } from './selectedHostProfile';
+import type { WindowsPolicyPlugin } from './matchesWindowsLaunchEnvironment';
 import type { RuntimeSourceGrant } from '@agent-teams/legacy-agent-host/runtime-sources';
 
 function unavailable(): never {
@@ -56,12 +60,24 @@ export function readMainWindowsCustodySource(profile: SelectedHostProfile) {
       const parsed = nativeProcessProfileSchema.parse(candidate);
       if (!parsed.windowsBroker || parsed.windowsBroker.arch !== process.arch) unavailable();
       const association = captureWindowsSourceAssociation(kind, member);
+      const environmentRecipe = captureWindowsEnvironmentRecipe(kind, member);
       selected.push({ ...structuredClone(parsed), provider: member.provider,
         ...(member.provider === 'opencode' && member.nativeGeneration === 'v1' ? { nativeGeneration: 'v1' } : {}),
-        ...(association ? { association } : {}) });
+        ...(association ? { association } : {}), ...(environmentRecipe ? { environmentRecipe } : {}) });
     }
   }
   return { path, sha256, source, selected };
+}
+
+/** One original shipped-artifact projection; custom wrappers use their existing explicit pin. */
+function captureDefaultPolicyPlugin(profile: SelectedHostProfile): WindowsPolicyPlugin | undefined {
+  try {
+    if (basename(profile.hostEntry) !== 'cli.js' || basename(dirname(profile.hostEntry)) !== 'dist' ||
+        realpathSync(profile.hostEntry) !== profile.hostEntry || !lstatSync(profile.hostEntry).isFile()) return;
+    const path = join(dirname(profile.hostEntry), 'adapters', 'providers', 'OpenCodeMcpPolicyPlugin.js');
+    const bytes = readCapturedMcpBytes(path, 64 * 1024);
+    return bytes ? Object.freeze({ path, sha256: createHash('sha256').update(bytes).digest('hex') }) : undefined;
+  } catch { return undefined; } // Only policy derivation needs this artifact; unrelated families stay available.
 }
 
 /** Original Main creates this physical owner once; recovery only re-reads its source. */
@@ -73,7 +89,13 @@ export function captureMainWindowsCustody(
   if (!captured) return;
   const { path, sha256, source, selected } = captured;
   const assertOriginal = () => { readCapturedProfile(path, sha256); };
-  const sources = sourceGrants.length ? new CapturedWindowsRuntimeSources(source, sourceGrants, selected, assertOriginal) : undefined;
+  const plugin = selected.some(value => {
+    const recipe = value.environmentRecipe;
+    return recipe && recipe.kind !== 'management' && recipe.profile.provider === 'opencode' &&
+      recipe.profile.protocolRevision === '1.19.4' && !recipe.profile.mcpPolicyPlugin;
+  }) ? captureDefaultPolicyPlugin(profile) : undefined;
+  const sources = sourceGrants.length
+    ? new CapturedWindowsRuntimeSources(source, sourceGrants, selected, assertOriginal, plugin) : undefined;
   const sourceBrokers = sources?.versionBrokers() ?? [];
   if (!selected.length && !sourceBrokers.length) unavailable();
   const recipes = selected.map(value => ({ profile: value, launcher: captureWindowsLauncher(value) }));
@@ -92,9 +114,13 @@ export function captureMainWindowsCustody(
       const originalRecipe = admission.runtimeSourceOrigin === undefined ? recipes.find(({ profile: value, launcher }) =>
         launcher.executable.sha256 === executableSha256 &&
         matchesCapturedWindowsLauncher(launcher, spec) && value.windowsBroker &&
-        windowsBrokerReference(value.windowsBroker) === windowsBrokerReference(broker)) : undefined;
+        windowsBrokerReference(value.windowsBroker) === windowsBrokerReference(broker) &&
+        matchesWindowsLaunchEnvironment(value, spec, plugin)) : undefined;
       const selectedRecipe: WindowsSourceLaunchSelection | undefined = originalRecipe
-        ? { ...originalRecipe, assertCurrent: assertOriginal }
+        ? { ...originalRecipe, assertCurrent: () => {
+          assertOriginal();
+          if (!matchesWindowsLaunchEnvironment(originalRecipe.profile, spec, plugin)) unavailable();
+        } }
         : sources?.select(spec, executableSha256, broker, admission);
       if (!selectedRecipe) unavailable();
       selectedRecipe.assertCurrent();

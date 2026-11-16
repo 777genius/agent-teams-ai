@@ -36,3 +36,20 @@ export { runtimeSourceProcessOriginSchema, runtimeSourceRecipeIdentity } from '.
 export type { RuntimeSourceProcessOrigin } from '../composition/runtimeSourceProcessOrigin.js';
 export { runtimeMemberProfileSchema } from '../composition/runtimeProfile.js';
 export { resolveRuntimeRecipe } from '../composition/runtimeRecipe.js';
+export { codexTeamTokenEnvironment, buildCodexMemberEnvironment, readOpenCodeLaunchConfig, openCodeMemberPrompt,
+  buildOpenCodeMemberConfiguration, buildOpenCodeMemberEnvironment,
+  buildOpenCodeManagementEnvironment, buildOpenCodeCoordinationEnvironment,
+  selectOpenCodeCoordinationProvider, buildOpenCodeCoordinationConfig,
+} from '../adapters/providers/nativeLaunchEnvironment.js';
+export type { NativeTeamEndpoint } from '../adapters/providers/nativeLaunchEnvironment.js';
+export { providerManagementProfileSchema } from '../management/profile.js';
+export type { ProviderManagementProfile, OpenCodeManagementProfile } from '../management/profile.js';
+export type { RuntimeMemberProfile, OpenCodeMemberProfile } from '../composition/runtimeProfile.js';
+export { capturedMcpServersSchema } from '../mcp-catalog/capturedServer.js';
+export { openCodeMcpServers, verifyOpenCodeMcpPolicyPlugin } from '../adapters/providers/openCodeMcpPolicy.js';
+export { readCapturedMcpBytes } from '../mcp-catalog/capturedFile.js';
+export { applyOpenCodeRuntimeSource } from '../composition/applyOpenCodeRuntimeSource.js';
+export { applyLaunchConfiguration } from '../composition/launchConfiguration.js';
+export { withOpenCodeModelLimits } from '../adapters/providers/withOpenCodeModelLimits.js';
+export { modelProbeLimitsSchema } from '../management/modelLimits.js';
+export { teamModelProbeProfile } from '../composition/teamLaunchModelProbe.js';

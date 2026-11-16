@@ -21,8 +21,10 @@ import { publishRuntimeSourceRequestSchema, refreshRuntimeConfigurationSchema,
   runtimeSourceGrantSchema } from '@agent-teams/legacy-agent-host/runtime-sources';
 
 import { matchesWindowsSourceAssociation } from './capturedWindowsSourceAssociation';
+import { applyWindowsEnvironmentSource, matchesWindowsLaunchEnvironment } from './matchesWindowsLaunchEnvironment';
 
 import type { WindowsOriginalSourceAssociation } from './capturedWindowsSourceAssociation';
+import type { WindowsEnvironmentRecipe, WindowsPolicyPlugin } from './matchesWindowsLaunchEnvironment';
 import type {
   CapturedWindowsLauncher,
   NativeProcessProfile,
@@ -38,6 +40,7 @@ export type SelectedWindowsProcessProfile = NativeProcessProfile & {
   provider: 'claude' | 'codex' | 'opencode';
   nativeGeneration?: 'v1';
   association?: WindowsOriginalSourceAssociation;
+  environmentRecipe?: WindowsEnvironmentRecipe;
 };
 export interface WindowsLaunchAdmission {
   capability: string;
@@ -92,10 +95,10 @@ export class CapturedWindowsRuntimeSources {
   private readonly grants: readonly RuntimeSourceGrant[];
   private readonly profiles: readonly SelectedWindowsProcessProfile[];
   private readonly pending = new Map<string, PendingSource>();
-  private readonly recipes = new Map<string, { profile: NativeProcessProfile; launcher: CapturedWindowsLauncher }>();
+  private readonly recipes = new Map<string, { profile: SelectedWindowsProcessProfile; launcher: CapturedWindowsLauncher }>();
 
   constructor(source: unknown, grants: readonly RuntimeSourceGrant[], profiles: readonly SelectedWindowsProcessProfile[],
-    private readonly assertOriginal: () => void) {
+    private readonly assertOriginal: () => void, private readonly plugin?: WindowsPolicyPlugin) {
     this.context = runtimeSourceProcessContextSchema.parse(source);
     if (grants.length > 256) unavailable();
     this.grants = structuredClone(grants.map(grant => runtimeSourceGrantSchema.parse(grant)));
@@ -210,17 +213,22 @@ export class CapturedWindowsRuntimeSources {
         const key = digest([record.revision, original]);
         let recipe = this.recipes.get(key);
         if (!recipe) {
-          const profile = { ...original, executable: { ...record.candidate.executable } };
-          try { recipe = { profile, launcher: captureWindowsLauncher(profile) }; }
+          try {
+            const profile = applyWindowsEnvironmentSource(original, record.candidate);
+            recipe = { profile, launcher: captureWindowsLauncher(profile) };
+          }
           catch { continue; } // Missing historical bytes do not substitute another source or block a different exact image.
           this.recipes.set(key, recipe);
         }
-        if (recipe.launcher.executable.sha256 !== sha256 || !matchesCapturedWindowsLauncher(recipe.launcher, spec)) continue;
+        if (recipe.launcher.executable.sha256 !== sha256 || !matchesCapturedWindowsLauncher(recipe.launcher, spec) ||
+            !matchesWindowsLaunchEnvironment(recipe.profile, spec, this.plugin)) continue;
+        const admitted = recipe;
         return { ...recipe, assertCurrent: () => {
           const fresh = readRetainedRuntimeSourceSelections(this.context, this.grants, this.assertOriginal);
           if (!fresh.some(value => value.record.revision === record.revision &&
             digest(value.seed) === digest(seed) &&
-            matchesWindowsSourceAssociation(this.context, value, original, spec, origin))) unavailable();
+            matchesWindowsSourceAssociation(this.context, value, original, spec, origin)) ||
+            !matchesWindowsLaunchEnvironment(admitted.profile, spec, this.plugin)) unavailable();
         } };
       }
     }

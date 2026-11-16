@@ -12,9 +12,10 @@ import {
 } from '@agent-teams/provider-implementations/opencode';
 
 import { CapturedProcess } from './CapturedProcess.js';
+import { readOpenCodeLaunchConfig, openCodeMemberPrompt, buildOpenCodeMemberConfiguration,
+  buildOpenCodeMemberEnvironment } from './nativeLaunchEnvironment.js';
 import { OwnedProcessFacade } from '../../owned-process/processFacade.js';
 import {
-  canonicalOpenCodeAgentPermission,
   requiredOpenCodeToolsAllowed,
 } from './openCodeAgentPolicy.js';
 import {
@@ -62,18 +63,9 @@ export function createOpenCodeMemberProvider(
   const evidence = context.opencodeEvidence;
   const profile = structuredClone(context.profile);
   const extraArgs = captureOpenCodeExtraArgs(profile.extraArgs);
-  const config =
-    profile.environment.OPENCODE_CONFIG_CONTENT === undefined
-      ? {}
-      : record(JSON.parse(profile.environment.OPENCODE_CONFIG_CONTENT) as unknown);
+  const config = readOpenCodeLaunchConfig(profile.environment);
   const agentName = profile.nativeOptions.agent;
-  const agents = config.agent === undefined ? {} : record(config.agent);
-  const agent = agents[agentName] === undefined ? {} : record(agents[agentName]);
-  if (agent.prompt !== undefined && typeof agent.prompt !== 'string')
-    throw new Error('Invalid OpenCode agent prompt');
-  const prompt = [context.instructions, agent.prompt, profile.nativeOptions.instructions]
-    .filter(Boolean)
-    .join('\n\n');
+  const prompt = openCodeMemberPrompt(profile, config, context.instructions);
   const capturedPolicy = profile.capturedMcpServers !== undefined;
   const plugin = capturedPolicy ? verifyOpenCodeMcpPolicyPlugin(profile) : undefined;
   const policyNonce = capturedPolicy ? randomBytes(32).toString('hex') : undefined;
@@ -90,81 +82,20 @@ export function createOpenCodeMemberProvider(
   ].join('/');
   const prefix =
     'legacy_host_team_' + createHash('sha256').update(bindingKey).digest('hex').slice(0, 16);
-  let serverName = Object.hasOwn(mcp, 'team') ? prefix : 'team';
-  for (let index = 1; Object.hasOwn(mcp, serverName); index++) serverName = `${prefix}_${index}`;
   const requiredToolNames = createTeamMcpTools(context.connection)
     .list()
     .map((tool) => tool.name);
-  const required = requiredToolNames.map((name) => `${serverName}_${name}`);
-  const permission = agent.permission === undefined ? {} : record(agent.permission);
-  const approvalMode = profile.nativeOptions.toolApprovalMode;
-  const selectedPermissions =
-    approvalMode === undefined
-      ? permission
-      : {
-          '*': approvalMode === 'manual' ? 'ask' : 'deny',
-          ...(approvalMode === 'manual'
-            ? {}
-            : Object.fromEntries(
-                [
-                  'read',
-                  'glob',
-                  'grep',
-                  'list',
-                  'lsp',
-                  'todoread',
-                  'todowrite',
-                  'edit',
-                  'bash',
-                ].map((name) => [name, 'allow'])
-              )),
-          task: { '*': 'deny' },
-          external_directory: 'deny',
-          doom_loop: 'deny',
-        };
-  const tools = agent.tools === undefined ? {} : record(agent.tools);
-  const effectiveAgent = {
-    ...Object.fromEntries(Object.entries(agent).filter(([key]) => key !== 'tools')),
-    prompt,
-    model: `${profile.nativeOptions.providerId}/${profile.model}`,
-    permission: canonicalOpenCodeAgentPermission(tools, selectedPermissions, required),
-  };
-  const plugins = config.plugin === undefined ? [] : config.plugin;
-  if (!Array.isArray(plugins)) throw new Error('Invalid OpenCode plugins');
-  const nativeConfig = {
-    ...config,
-    ...(plugin ? { plugin: [...plugins.filter((value) => value !== plugin), plugin] } : {}),
-    agent: { ...agents, [agentName]: effectiveAgent },
-    mcp: {
-      ...mcp,
-      [serverName]: {
-        type: 'remote',
-        url: context.endpoint.url,
-        headers: { Authorization: `Bearer ${context.endpoint.bearerToken}` },
-        oauth: false,
-        enabled: true,
-        timeout: profile.limits.timeoutMs,
-      },
-    },
-  };
+  const { serverName, required, effectiveAgent, nativeConfig } = buildOpenCodeMemberConfiguration(
+    profile, config, prompt, { mcp, prefix, endpoint: context.endpoint, requiredToolNames,
+      ...(plugin ? { plugin } : {}) });
   const expectedMcp = structuredClone(nativeConfig.mcp);
   if (policyNonce)
     record(record(expectedMcp[serverName]).headers)['X-Legacy-Mcp-Policy'] = policyNonce;
   const password = randomBytes(32).toString('base64url');
   const captured: OpenCodeMemberProfile = {
     ...profile,
-    environment: {
-      ...profile.environment,
-      OPENCODE_CONFIG_CONTENT: JSON.stringify(nativeConfig),
-      ...(policyNonce
-        ? {
-            LEGACY_AGENT_HOST_MCP_POLICY_NONCE: policyNonce,
-            LEGACY_AGENT_HOST_MCP_TEAM_SERVER: serverName,
-          }
-        : {}),
-      OPENCODE_SERVER_USERNAME: 'opencode',
-      OPENCODE_SERVER_PASSWORD: password,
-    },
+    environment: buildOpenCodeMemberEnvironment(profile.environment, nativeConfig, password,
+      policyNonce ? { nonce: policyNonce, serverName } : undefined),
   };
   // Validate every selected namespace before any process or native mutation.
   const verifyNamespaces = () => {
