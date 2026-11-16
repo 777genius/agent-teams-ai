@@ -1,0 +1,63 @@
+{
+  "kind": "PLAN69_INERT_FULL_PRESERVATION",
+  "status": "PASS_SOURCE_ONLY",
+  "checks": [
+    {
+      "name": "published plan exact",
+      "pass": true,
+      "detail": "Selection commit 3c9cae105ef748a931c2851cd0dddb0d097060df independently read back."
+    },
+    {
+      "name": "actual parent preimage exact",
+      "pass": true,
+      "detail": "Official target read back at same selection commit."
+    },
+    {
+      "name": "single existing call",
+      "pass": true,
+      "detail": "Only existing donor branch label open original creation."
+    },
+    {
+      "name": "single literal change complete forward",
+      "pass": true,
+      "detail": "Full file equality after exactly one selected selector replacement."
+    },
+    {
+      "name": "single literal change complete inverse",
+      "pass": true,
+      "detail": "Restores all 49,147 original bytes, including core/suffix actions, imports, awaits, guards and finally."
+    },
+    {
+      "name": "original line count preserved",
+      "pass": true,
+      "detail": "No formatting, source extraction, cap change or blank-line compression."
+    },
+    {
+      "name": "one scoped file only",
+      "pass": true,
+      "detail": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts"
+    },
+    {
+      "name": "one actual hunk and one replaced line",
+      "pass": true,
+      "detail": "+1/-1; source delta has no additional edits."
+    },
+    {
+      "name": "full patch forward replay",
+      "pass": true,
+      "detail": "Exact diff replay, no project tool execution."
+    },
+    {
+      "name": "full patch reverse replay",
+      "pass": true,
+      "detail": "Exact diff reverse replay."
+    }
+  ],
+  "checkCount": 10,
+  "patchHunks": 1,
+  "addedLines": 1,
+  "removedLines": 1,
+  "projectExecution": false,
+  "nativeOrProviderExecution": false,
+  "CIObservationOrMutation": false
+}

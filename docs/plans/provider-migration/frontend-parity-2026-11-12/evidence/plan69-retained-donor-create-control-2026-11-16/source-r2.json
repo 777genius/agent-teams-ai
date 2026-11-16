@@ -1,0 +1,133 @@
+{
+  "status": "ACCEPT_EXACT_SELECTED_SOURCE",
+  "reviewer": "root-independent-of-author",
+  "preparedParent": "3c9cae105ef748a931c2851cd0dddb0d097060df",
+  "selectedPlan": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/69-retained-donor-create-control-2026-11-16.md",
+    "blob": "ec8fc3c3f8bb9377a02e7222231243856556a5f7",
+    "sha256": "17ae879ba77b6dc9f0cbf6477dc370257bf194ff2dc7d646b5f239c1ecbd23d1",
+    "bytes": 7926,
+    "lines": 41
+  },
+  "source": {
+    "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+    "before": {
+      "blob": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db",
+      "sha256": "11e064039a9ff28261a2daf41c247d0f6a947e192af03541fc0974d49a0e15ef",
+      "bytes": 49147,
+      "lines": 727
+    },
+    "after": {
+      "blob": "f6e333d97af0ffab67b396306bb26d8a9edd6a28",
+      "sha256": "89fb61486d4cf808f11a78f950586a4ee7e18794f0fe1d7779f3aca3786fbc02",
+      "bytes": 49210,
+      "lines": 727
+    },
+    "addedLines": 1,
+    "removedLines": 1
+  },
+  "manifestSha256": "6592adb965022eae88b8300ad8994505b361c440b40fc77c07ea9774d2617824",
+  "patchSha256": "6ece283d9eb0b14a2889cd733773fbc8e193cba6b5c4ff3721bfe504db121021",
+  "prospectiveR2Sha256": "fbb156dc77b4daa9dd989a563e45d9e35dc5d7f9b51482d981d68859f39d821e",
+  "checks": [
+    {
+      "name": "one existing path selected",
+      "pass": true
+    },
+    {
+      "name": "before complete SHA256",
+      "pass": true
+    },
+    {
+      "name": "before complete Git blob",
+      "pass": true
+    },
+    {
+      "name": "before exact size",
+      "pass": true
+    },
+    {
+      "name": "before exact natural line count",
+      "pass": true
+    },
+    {
+      "name": "after complete SHA256",
+      "pass": true
+    },
+    {
+      "name": "after complete Git blob",
+      "pass": true
+    },
+    {
+      "name": "after exact size",
+      "pass": true
+    },
+    {
+      "name": "after exact natural line count",
+      "pass": true
+    },
+    {
+      "name": "old call occurs exactly once",
+      "pass": true
+    },
+    {
+      "name": "new call occurs exactly once",
+      "pass": true
+    },
+    {
+      "name": "full forward exact literal replacement",
+      "pass": true
+    },
+    {
+      "name": "full inverse exact literal replacement",
+      "pass": true
+    },
+    {
+      "name": "one physical call kept",
+      "pass": true
+    },
+    {
+      "name": "whole patch exact",
+      "pass": true
+    },
+    {
+      "name": "one hunk plus one minus one",
+      "pass": true
+    },
+    {
+      "name": "selected plan unchanged",
+      "pass": true
+    },
+    {
+      "name": "author preservation exact",
+      "pass": true
+    },
+    {
+      "name": "all source bytes other than selector unchanged",
+      "pass": true
+    },
+    {
+      "name": "under existing helper cap",
+      "pass": true
+    }
+  ],
+  "checkCount": 20,
+  "findings": [],
+  "reasoning": [
+    "Actual change is the exact selected one selector literal, inside the original donor branch and original call position. Immutable Header structure and duplicate EmptyState were independently inspected during prospective R2.",
+    "Full byte equality outside that literal proves preservation of all original call arguments, actions, budgets, source/archive inputs, custody and no-replay oracles. No workflow, roster, donor/product or shared-reader change.",
+    "Shared reader still performs exact text, unique positive target, hit/stability checks and one physical click. No first/nth or retry fallback."
+  ],
+  "execution": {
+    "project": false,
+    "tests": false,
+    "compiler": false,
+    "providers": false,
+    "GUI": false,
+    "CI": false
+  },
+  "limits": [
+    "Source-only review does not qualify B2 execution. Original resulting-source workflow and complete donor suffix remain required.",
+    "Root must independently bind selected plan and before leaf to current expected parent before publication."
+  ]
+}

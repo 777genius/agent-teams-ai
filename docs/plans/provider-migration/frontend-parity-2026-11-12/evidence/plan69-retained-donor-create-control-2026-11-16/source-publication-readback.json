@@ -1,0 +1,18 @@
+{
+  "commit": "c4e7a936a4c13eb944eb80763c66b8cd1993d16b",
+  "parent": "3c9cae105ef748a931c2851cd0dddb0d097060df",
+  "tree": "556d7624ab33db7a8f321e50994c8e8a19674b39",
+  "observedRef": "c4e7a936a4c13eb944eb80763c66b8cd1993d16b",
+  "leaves": 11243,
+  "wholeTreeVerified": true,
+  "files": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "mode": "100644",
+      "type": "blob",
+      "gitBlob": "f6e333d97af0ffab67b396306bb26d8a9edd6a28",
+      "beforeGitBlob": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db"
+    }
+  ],
+  "actualSourceR2Sha256": "a39497169730f40eb4e8766054ff21796c02d58fcade7f0d0c9fdcbfc8d8d2c1"
+}

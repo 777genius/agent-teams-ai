@@ -1,0 +1,357 @@
+{
+  "schemaVersion": 1,
+  "kind": "Plan70-independent-prospective-source-review",
+  "status": "ACCEPT_PROSPECTIVE_SCOPE_ONLY",
+  "reviewer": "installer_review",
+  "sourceRef": "b60f2d58cffd30129b0a96bccff643c3d30b3149",
+  "rootReportedUnchangedAt": "0ba71b0e24424af6867ccc32ab795bc4453c32c8",
+  "selectionState": "not selected; no afterimages authorized by this review",
+  "bindings": [
+    {
+      "path": "frontend-proposal/nested-scroll-proposal/plan.md",
+      "bytes": 10821,
+      "lines": 54,
+      "sha256": "69396e4ccb4d167d333cf64c7d22033b3a6d2224346fcd7ec6b9162bc22a1208",
+      "gitBlob": "61661bc95399364db94536924e55e182db2dacaa"
+    },
+    {
+      "path": "frontend-proposal/nested-scroll-proposal/review.json",
+      "bytes": 5187,
+      "lines": 182,
+      "sha256": "f358d79138362908fb336f7ca3d6124f0c29755d7882b9eebd078505d68e8936",
+      "gitBlob": "3db740871dc3b5dcb1006ba7d786998812f39baf"
+    },
+    {
+      "path": "frontend-proposal/nested-scroll-proposal/before/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 30733,
+      "lines": 548,
+      "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e",
+      "gitBlob": "1c11809c6458f829bd9bb6995aea2ad60b85511e"
+    },
+    {
+      "path": "frontend-proposal/nested-scroll-proposal/before/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 162195,
+      "lines": 2689,
+      "sha256": "e2c1fdbc87395de78a9faed0a1a9a50d1861e02d0bdb686e3530e20eb078fc02",
+      "gitBlob": "a67601fe1a6785b233aef6cacf494661100df472"
+    },
+    {
+      "path": "frontend-proposal/resume-75cf/review.json",
+      "bytes": 22487,
+      "lines": 632,
+      "sha256": "48583871ba79f81cd7fa925e65e8bb1628a4670b48619f736c37ac53297a39f8",
+      "gitBlob": "2f361c73a5f225284ff1b9bb21082f76735150f9"
+    },
+    {
+      "path": "desktop-v2-resume-75cf/extracted/TEST-desktop-backend-JCuHSv/desktop-backend-receipt.json",
+      "bytes": 841055,
+      "lines": 21412,
+      "sha256": "5a4514b7e309617ec78b3757b53e535d360b9a12823222fcee7538d4735b82b5",
+      "gitBlob": "299e88d304a62e259ea44b42c42ca5f33cf3b15c"
+    },
+    {
+      "path": "installer-proposal/windows-adjacent-census-review/review.json",
+      "bytes": 4226,
+      "lines": 72,
+      "sha256": "347d08067fd2a861101c1c5bd9c59bb67390a9caeef242d61b839b95c15b9c97",
+      "gitBlob": "9ecae597ab1e86c75b53c926b82e02fac805d5da"
+    },
+    {
+      "path": "w05-owner-loss-proposal/source/after/.github/workflows/host-emulated-acceptance.yml",
+      "bytes": 142538,
+      "lines": 1777,
+      "sha256": "2470e8c83d8e77eddb4d5156947c30fda993e5b3485b9fb238bc12d6e2be6839",
+      "gitBlob": "d132a5e37cec1e62120571606f3f272f56b9b4af"
+    },
+    {
+      "path": "p08-recovery-audit/source/scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "bytes": 52632,
+      "lines": 800,
+      "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a",
+      "gitBlob": "a8be2617b2c765091cecce789f028ef2bf67af60"
+    },
+    {
+      "path": "frontend-proposal/taskboard-75cf/source-cut/after/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "bytes": 22434,
+      "lines": 345,
+      "sha256": "651be27777eba7280304a791e52a088cec616e94b15d88734043c29c1adf234b",
+      "gitBlob": "e191694db8ccd8bbd2e05bcdbcacd8cb1703e23c"
+    }
+  ],
+  "checks": [
+    {
+      "check": "exact prospective document hash",
+      "pass": true
+    },
+    {
+      "check": "exact author R1 hash",
+      "pass": true
+    },
+    {
+      "check": "exact controls canonical preimage",
+      "pass": true
+    },
+    {
+      "check": "exact existing suite preimage",
+      "pass": true
+    },
+    {
+      "check": "no source afterimage exists in packet",
+      "pass": true
+    },
+    {
+      "check": "retained Resume receipt hash",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-ui-controls.ts exact original selectedSourceHashesBeforeApp",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-ui-controls.ts exact original selectedSourceHashesAfterFlow",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts exact original selectedSourceHashesBeforeApp",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts exact original selectedSourceHashesAfterFlow",
+      "pass": true
+    },
+    {
+      "check": "original Resume remains incomplete before model selection",
+      "pass": true
+    },
+    {
+      "check": "original report attribution is bounded",
+      "pass": true
+    },
+    {
+      "check": "original selector and exact count before geometry",
+      "pass": true
+    },
+    {
+      "check": "original empty intersection refuses before wheel",
+      "pass": true
+    },
+    {
+      "check": "original nearest owner is actual ancestor chain",
+      "pass": true
+    },
+    {
+      "check": "original overflow admission is preserved predicate",
+      "pass": true
+    },
+    {
+      "check": "selected correction only empty branch",
+      "pass": true
+    },
+    {
+      "check": "positive branch and zero-size refusal are explicit",
+      "pass": true
+    },
+    {
+      "check": "original disabled and center-hit behavior explicitly retained",
+      "pass": true
+    },
+    {
+      "check": "new owner restricted to original ancestors",
+      "pass": true
+    },
+    {
+      "check": "new clipping is both-axis and finite",
+      "pass": true
+    },
+    {
+      "check": "fixed non-scrollable clipping exclusion remains refusal",
+      "pass": true
+    },
+    {
+      "check": "multi-level scrollport exposure is stated",
+      "pass": true
+    },
+    {
+      "check": "actual wheel hit joins same original candidate",
+      "pass": true
+    },
+    {
+      "check": "foreign overlay/scroller and absent hit refuse",
+      "pass": true
+    },
+    {
+      "check": "no alternative point search or probe wheel",
+      "pass": true
+    },
+    {
+      "check": "direction capacity prevents intentional boundary chaining",
+      "pass": true
+    },
+    {
+      "check": "direction refers to exposed scrollport not hidden target content",
+      "pass": true
+    },
+    {
+      "check": "fallback never declares target visible",
+      "pass": true
+    },
+    {
+      "check": "no DOM/action/read framework enlargement",
+      "pass": true
+    },
+    {
+      "check": "outer guard is exactly before awaited waitRead",
+      "pass": true
+    },
+    {
+      "check": "inner guard before first evaluate has only synchronous clock prefix",
+      "pass": true
+    },
+    {
+      "check": "one earlier guard removal only; no cross-await removal",
+      "pass": true
+    },
+    {
+      "check": "expired read loop cannot perform original read",
+      "pass": true
+    },
+    {
+      "check": "original per-read inner guard persists through retries",
+      "pass": true
+    },
+    {
+      "check": "original scroll wheel/final-read budget",
+      "pass": true
+    },
+    {
+      "check": "original timing and clamp explicitly retained",
+      "pass": true
+    },
+    {
+      "check": "actual controls import and VM test seam exist",
+      "pass": true
+    },
+    {
+      "check": "original scroll cases test exact hit/no-hit and wheel outputs",
+      "pass": true
+    },
+    {
+      "check": "original native Date mock seam exists",
+      "pass": true
+    },
+    {
+      "check": "new tests execute actual generated DOM expression",
+      "pass": true
+    },
+    {
+      "check": "new progress geometry changes only upon recorded wheel",
+      "pass": true
+    },
+    {
+      "check": "new progress includes above-viewport direction",
+      "pass": true
+    },
+    {
+      "check": "new refusal cases cover count clip and wheel owner",
+      "pass": true
+    },
+    {
+      "check": "new ownership test has exact refusal before next read/action",
+      "pass": true
+    },
+    {
+      "check": "all old cases and assertions retained",
+      "pass": true
+    },
+    {
+      "check": "existing explicit fast-lint operand scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "pass": true
+    },
+    {
+      "check": "existing explicit fast-lint operand scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "pass": true
+    },
+    {
+      "check": "existing original test command includes suite",
+      "pass": true
+    },
+    {
+      "check": "existing roster contains controls",
+      "pass": true
+    },
+    {
+      "check": "existing supplementary roster contains suite",
+      "pass": true
+    },
+    {
+      "check": "no workflow/roster/production/new-file selected",
+      "pass": true
+    },
+    {
+      "check": "independent guard assessment is unchanged",
+      "pass": true
+    },
+    {
+      "check": "no ARM Retry or timing success claim",
+      "pass": true
+    },
+    {
+      "check": "published selection and actual-source review still required",
+      "pass": true
+    },
+    {
+      "check": "source/execution qualification remains negative",
+      "pass": true
+    }
+  ],
+  "inertChecksPassed": 56,
+  "blockingFindings": [],
+  "assessment": [
+    {
+      "topic": "Reachability",
+      "finding": "The original nearest-scrollport empty intersection returns null before any wheel. The selected fallback is restricted to that formerly dead branch and can only expose an original ancestor scrollport within the existing wheel loop."
+    },
+    {
+      "topic": "Wheel ownership",
+      "finding": "Candidate viewport/ancestor clipping, original-chain membership, one center hit joined to the same nearest vertical owner, direction capacity and visible:false prevent the fallback from authorizing an unrelated wheel or treating exposure as target readiness. Conservative center refusal may leave some geometries unsupported; the plan does not authorize alternate-point search."
+    },
+    {
+      "topic": "Guard adjacency",
+      "finding": "The earlier scrollTo guard and later waitRead guard are separated only by synchronous argument/deadline construction. Retaining the later per-read guard preserves admission before every original DOM read. This is not a new post-evaluate/pre-wheel guard, and the report does not claim one. No existing cross-await guard is removed."
+    },
+    {
+      "topic": "Regression seam",
+      "finding": "The existing suite imports actual controls and evaluates the real generated expression in a finite VM DOM. Existing exact center-hit/no-hit and CDP-command assertions provide a meaningful preservation boundary. New geometry changes must be driven by the recorded wheel, not an artificial helper result."
+    },
+    {
+      "topic": "Proof closure",
+      "finding": "Both exact preimages occur in the original Resume receipt before/after source vectors. Existing selected workflow retains the explicit lint/test operands and the established common/supplementary roster already includes the two paths. No new proof-roster path is required for this cut."
+    }
+  ],
+  "actualSourceReviewObligations": [
+    "Verify the entire original positive viewport branch remains byte-identical, including disabled default controls, optional center hit, exact coordinates and absence of extra hit tests.",
+    "Verify a hit on the candidate itself resolves to that candidate, and a descendant hit resolves through actual parents rather than an unrelated or foreign nested owner.",
+    "Verify every exposed candidate is clipped on the relevant axes by all its clipping ancestors; fixed intervening clips cannot be bypassed.",
+    "Verify multi-level traversal changes its exposure target to the relevant intervening scrollport; above/below direction follows that scrollport, not hidden target contents.",
+    "Verify the only removed guard is the proved adjacent outer scrollTo guard; every original waitRead retry and next wheel-loop iteration remains guarded.",
+    "Verify finite-DOM tests observe actual expressions and inputs, preserve every old assertion, and release fake Date state in all paths."
+  ],
+  "qualificationLimits": [
+    "No original successful Resume, packaged Windows, or other resulting-head runtime proof is established.",
+    "Original ancestor geometry and matched count are not retained for every historical read; exclusive historical causation remains unproven.",
+    "No guaranteed recovery inside the original Windows 10-second phase is claimed, and the separate ARM Retry click failure is not attributed to scrollTo.",
+    "Current exact source leaves must be rebound by root at selection/publication; source afterimages require their own independent R2 and ordinary canonical CI."
+  ],
+  "execution": {
+    "project": false,
+    "test": false,
+    "compiler": false,
+    "linter": false,
+    "provider": false,
+    "native": false,
+    "gui": false,
+    "ci": false,
+    "remoteMutation": false,
+    "sourceAfterimagesCreated": false
+  }
+}

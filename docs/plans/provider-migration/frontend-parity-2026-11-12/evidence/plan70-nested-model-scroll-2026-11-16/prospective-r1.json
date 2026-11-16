@@ -1,0 +1,182 @@
+{
+  "kind": "nested-scroll-prospective-r1",
+  "status": "PROSPECTIVE_SOURCE_ONLY",
+  "sourceRef": "b60f2d58cffd30129b0a96bccff643c3d30b3149",
+  "preservedByRootPublication": "0ba71b0e24424af6867ccc32ab795bc4453c32c8",
+  "plan": {
+    "path": "frontend-proposal/nested-scroll-proposal/plan.md",
+    "bytes": 10821,
+    "lines": 54,
+    "sha256": "69396e4ccb4d167d333cf64c7d22033b3a6d2224346fcd7ec6b9162bc22a1208",
+    "gitBlob": "61661bc95399364db94536924e55e182db2dacaa"
+  },
+  "files": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "before": {
+        "path": "frontend-proposal/nested-scroll-proposal/before/scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 30733,
+        "lines": 548,
+        "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e",
+        "gitBlob": "1c11809c6458f829bd9bb6995aea2ad60b85511e"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "before": {
+        "path": "frontend-proposal/nested-scroll-proposal/before/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "bytes": 162195,
+        "lines": 2689,
+        "sha256": "e2c1fdbc87395de78a9faed0a1a9a50d1861e02d0bdb686e3530e20eb078fc02",
+        "gitBlob": "a67601fe1a6785b233aef6cacf494661100df472"
+      }
+    }
+  ],
+  "originalFailureReport": {
+    "path": "frontend-proposal/resume-75cf/review.json",
+    "bytes": 22487,
+    "lines": 632,
+    "sha256": "48583871ba79f81cd7fa925e65e8bb1628a4670b48619f736c37ac53297a39f8",
+    "gitBlob": "2f361c73a5f225284ff1b9bb21082f76735150f9"
+  },
+  "independentGuardSource": "installer_review message bound to controls blob1c11809c6458f829bd9bb6995aea2ad60b85511e; no await between outer440 and per-read190",
+  "checks": [
+    {
+      "check": "scripts/legacy-agent-host/desktop-ui-controls.ts: official b60 exact source binding",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts: official b60 exact source binding",
+      "pass": true
+    },
+    {
+      "check": "two source paths only",
+      "pass": true
+    },
+    {
+      "check": "afterimages absent",
+      "pass": true
+    },
+    {
+      "check": "original empty viewport branch before wheel",
+      "pass": true
+    },
+    {
+      "check": "exact target and text admission retained in plan",
+      "pass": true
+    },
+    {
+      "check": "ordinary visible branch unchanged explicitly",
+      "pass": true
+    },
+    {
+      "check": "new fallback constrained to source ancestor chain",
+      "pass": true
+    },
+    {
+      "check": "clipping in both axes explicitly required",
+      "pass": true
+    },
+    {
+      "check": "non-scrollable clipping barrier refusal required",
+      "pass": true
+    },
+    {
+      "check": "new wheel actual owner hit join required",
+      "pass": true
+    },
+    {
+      "check": "foreign hit and alternate probe refusal",
+      "pass": true
+    },
+    {
+      "check": "new fallback cannot satisfy target readiness",
+      "pass": true
+    },
+    {
+      "check": "new wheel direction uses scrollport not hidden content",
+      "pass": true
+    },
+    {
+      "check": "original read guard retained",
+      "pass": true
+    },
+    {
+      "check": "outer guard adjacent synchronously to waitRead",
+      "pass": true
+    },
+    {
+      "check": "only synchronous clock operations precede inner guard",
+      "pass": true
+    },
+    {
+      "check": "explicit separate adjacent dedup justification",
+      "pass": true
+    },
+    {
+      "check": "no cross-await removal proposed",
+      "pass": true
+    },
+    {
+      "check": "no ARM Retry success claim",
+      "pass": true
+    },
+    {
+      "check": "existing real VM seam present",
+      "pass": true
+    },
+    {
+      "check": "existing no-extra-hit assertion present",
+      "pass": true
+    },
+    {
+      "check": "existing guard cutoff tests remain referenced",
+      "pass": true
+    },
+    {
+      "check": "original max wheel bound present",
+      "pass": true
+    },
+    {
+      "check": "original final read retained",
+      "pass": true
+    },
+    {
+      "check": "original clocks/cadences explicitly preserved",
+      "pass": true
+    },
+    {
+      "check": "original clamp explicitly retained",
+      "pass": true
+    },
+    {
+      "check": "no CDP read/action enlargement proposed",
+      "pass": true
+    },
+    {
+      "check": "bounded historical attribution",
+      "pass": true
+    },
+    {
+      "check": "prospective only, root selection required",
+      "pass": true
+    }
+  ],
+  "inertChecksPassed": 30,
+  "afterimages": false,
+  "execution": {
+    "project": false,
+    "compiler": false,
+    "test": false,
+    "provider": false,
+    "gui": false,
+    "ci": false,
+    "remoteMutation": false
+  },
+  "limits": [
+    "Exact implementation and its own independent source R2 still required after published selection.",
+    "No new successful native Resume/packaged/CI qualification.",
+    "Historical ancestor and matched-count timing not retained; source defect is demonstrated, exclusive timing attribution is not.",
+    "Ordinary scroll path and all current tests must be preserved."
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "kind": "PLAN69_FROZEN_ONE_PATH_SOURCE",
+  "status": "FROZEN_AWAITING_ROOT_ACTUAL_R2",
+  "preparedParent": "3c9cae105ef748a931c2851cd0dddb0d097060df",
+  "selectedPlan": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/69-retained-donor-create-control-2026-11-16.md",
+    "blob": "ec8fc3c3f8bb9377a02e7222231243856556a5f7",
+    "sha256": "17ae879ba77b6dc9f0cbf6477dc370257bf194ff2dc7d646b5f239c1ecbd23d1",
+    "bytes": 7926,
+    "lines": 41
+  },
+  "files": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "before": {
+        "blob": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db",
+        "sha256": "11e064039a9ff28261a2daf41c247d0f6a947e192af03541fc0974d49a0e15ef",
+        "bytes": 49147,
+        "lines": 727
+      },
+      "after": {
+        "blob": "f6e333d97af0ffab67b396306bb26d8a9edd6a28",
+        "sha256": "89fb61486d4cf808f11a78f950586a4ee7e18794f0fe1d7779f3aca3786fbc02",
+        "bytes": 49210,
+        "lines": 727
+      },
+      "addedLines": 1,
+      "removedLines": 1
+    }
+  ],
+  "patch": {
+    "path": "source.patch",
+    "bytes": 822,
+    "sha256": "6ece283d9eb0b14a2889cd733773fbc8e193cba6b5c4ff3721bfe504db121021"
+  },
+  "preservationProof": {
+    "path": "preservation-proof.json",
+    "bytes": 1862,
+    "sha256": "b20eca3651958e03583581345d8c92f8e487ee27737d2d1d184e099b56a6c687",
+    "checkCount": 10
+  },
+  "sourceScopeFiles": 1,
+  "testChanges": 0,
+  "workflowChanges": 0,
+  "productionChanges": 0,
+  "localProjectExecution": false,
+  "remoteMutation": false,
+  "CIObservation": false
+}

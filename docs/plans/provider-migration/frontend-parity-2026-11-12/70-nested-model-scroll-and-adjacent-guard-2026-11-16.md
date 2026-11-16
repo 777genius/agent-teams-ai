@@ -1,0 +1,54 @@
+# Existing scrollTo — nested reachability and adjacent guard
+
+Status: **prospective, not selected**. No source afterimage or execution is authorized by this document. Root reserves the publication number after reviewing this exact proposal and independent R2. The scope is two existing TEST paths, with two independently justified corrections in one existing scroll helper.
+
+## 1. Evidence and exact scope
+
+The original Darwin ARM64 V2 Resume75cf flow fails at `desktop-launch-ui-smoke.ts:362`, before its TEST-model selection/Launch/Resume actions. After expanding the original lead model row it sends no wheel. The original final DOM already contains TEST-model at y936.296875 and its default row at y818.296875; screenshot dimensions are1024×681. The model list is inside the existing nested fixed-height overflow-auto grid. `scrollTo` selects the nearest scrolling ancestor and returns null before any input when that ancestor has an empty viewport intersection. It never reaches the visible outer scroll owner in that state.
+
+This is a constructible source reachability defect. The original receipt does not retain the exact ancestor rectangle and selector count during every read, so this proposal does not claim exclusive historical causation. It does not address the distinct later live-membership missing-model result, pending model-probe cleanup, or the unrelated PNG CDP timeout. Original Resume R1 is `frontend-proposal/resume-75cf/r1.md` SHA256 `3f891ba0033f0b9d252b4aa33034f2bfa7a65ab507e101e9ef10651cd4328f6f`; its original evidence/hash join is `review.json` SHA256 `48583871ba79f81cd7fa925e65e8bb1628a4670b48619f736c37ac53297a39f8`.
+
+| Existing source path | Exact before Git blob | SHA256 | Bytes / lines |
+| --- | --- | --- | --- |
+| `scripts/legacy-agent-host/desktop-ui-controls.ts` | `1c11809c6458f829bd9bb6995aea2ad60b85511e` | `eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e` |30733 /548 |
+| `scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts` | `a67601fe1a6785b233aef6cacf494661100df472` | `e2c1fdbc87395de78a9faed0a1a9a50d1861e02d0bdb686e3530e20eb078fc02` |162195 /2689 |
+
+Both complete preimages were fetched at immutable `b60f2d58cffd30129b0a96bccff643c3d30b3149` and match the original75cf receipt pins. Root subsequently published67/68 and confirms no overlap with these paths; rebind the two exact leaves at selection and publication. The existing TEST suite size baseline is preserved; the helper stays naturally below800 lines without extraction. Both paths already occur in the original common proof closure and explicit fast-lint/test command. No workflow, source-roster, production UI or new file is selected.
+
+## 2. Correction A: only the empty nearest-viewport branch
+
+Preserve the exact selector, optional text filter, one-match requirement, original target rectangle and original nearest scroll-ancestor lookup. Zero-size targets still return null. When the nearest scrollport has a positive viewport interval, retain the entire original return path: the same coordinates/delta, default disabled-control behavior and optional target-center hit test, with no extra hit-test calls. This correction is restricted to the currently dead `bottom <= top` branch.
+
+Within that branch, use only the original target's actual ancestor chain. The aim is to expose its original inner scrollport so the next iteration can use the unchanged inner path. Starting above that scrollport, find the first original vertically scrollable ancestor that can currently receive the wheel. Use the existing overflow predicate (`scrollHeight > clientHeight` plus computed `overflowY` auto/scroll); do not choose an unrelated element, dialog by name, or a global fallback. If there is no original scrollable owner, return null.
+
+For this new branch only, intersect each candidate's rectangle with the viewport and all of its clipping ancestors, respecting the horizontal/vertical axes of auto/scroll/hidden/clip overflow. Require finite positive exposed area. Intervening non-scrollable clipping ancestors must not completely exclude the nested scrollport that the candidate would expose; if they do, return null because an outer vertical wheel cannot remove that fixed relative clip. If an intervening scrollable owner is itself offscreen, the next outer owner may first expose that scrollport; the unchanged bounded loop then re-evaluates the full original target. Do not synthesize visibility through a clipping ancestor.
+
+Choose one point at the center of the candidate's exposed intersection. In the same original DOM evaluation, require `elementFromPoint` to hit the candidate or its descendant, and require that hit's nearest vertically scrollable owner to be exactly this candidate. An overlay outside it, a foreign nested scroller or a missing hit must return null; do not search alternate points or dispatch a probe wheel. Require that this owner has scroll range in the intended direction, so the new wheel cannot intentionally fall through to another container at its boundary.
+
+Compute the new wheel's direction toward the scrollport being exposed, using its geometric center rather than the possibly clipped target content's center. This handles an inner scrollport above as well as below the viewport. Retain the original ±600 delta clamp. A valid fallback returns only `{visible:false,x,y,delta}` through the existing read result; it can never satisfy target readiness. The next original loop iteration reads the original target again and either uses its unchanged inner branch or continues within the existing bound.
+
+All of this is a local DOM-read calculation inside the existing `cdp.evaluate` expression. It adds no extra CDP evaluation, polling owner, selector, input action, DOM mutation, `scrollIntoView`, `scrollTop` assignment, JS-dispatched event or focus operation. No generic geometry module or navigation framework is introduced. The meaningful new checks apply only to the new outer-scroll path; they are not a broad rewrite of ordinary scrolling or click eligibility.
+
+## 3. Correction B: one adjacent duplicate ownership check
+
+Independently of Resume, the same original helper calls `options.assertOwnedRenderer()` at line440 and immediately invokes `waitRead` at442. Its argument construction is synchronous. `waitRead` performs only synchronous deadline/clock work at188–189, then calls the same guard at190 before its first `cdp.evaluate`/await at192. There is no asynchronous or renderer/native/input boundary between the two guards. Remove only the earlier outer line440; retain the later guard before every original read, including every wait retry and every new wheel-loop iteration.
+
+This is not guard caching or a wider admission relaxation. Do not remove any guard separated from another by an await, action or renderer/native boundary, and do not change `waitRead`, click/hover/drag/keyboard owners or the post-read click guard. If the read deadline is already exhausted, no read or action occurs. The source proof comes from independent installer review of exact blob `1c11809c`; its Windows captured CRLF form hashes to `bea04398b4e5c72a1a0a891c109951f8812bf1a2cb9c4b0c6d7c9cc081201b81`, while this proposal edits the canonical LF blob above. The redundant call contributes work in packaged scroll phases, but no timing success or explanation of the ARM Retry click failure is claimed.
+
+## 4. Existing behavioral regression seam
+
+Use the existing `createDesktopUiControls` import and `runInNewContext` seam in `desktop-team-ui-smoke.test.ts`. Its present scroll cases execute the actual generated expression against finite DOM objects and observe exact CDP commands. Retain every original case, especially visible-inner/default behavior, disabled-control handling, optional-center-hit coordinates, original no-extra-hit assertions, click final ownership and cutoff refusals. Append only narrow cases in this suite; no new test framework, browser or native process is needed.
+
+The minimum new coverage is:
+
+- **Nested progress:** a unique target whose original inner scrollport is offscreen but whose original outer owner is exposed. Execute the actual generated expression and the original loop. The finite CDP fixture updates geometry only when the corresponding recorded wheel arrives; verify outer then inner ownership as needed, bounded wheel count, unchanged selector/text, no click and no premature visible result. Include an above-viewport variant so direction follows the nested scrollport rather than clipped target content.
+- **Refusal:** the same target with a fully clipped reachable branch, a foreign overlay at the proposed point, or a different nested scroll owner at that point produces no wheel. Missing and duplicate targets keep the original exact-count refusal. Use the existing Node fake-Date API to expire the unchanged read deadline after the first observation, without changing production timing or waiting a real30 seconds.
+- **Fresh ownership after deduplication:** record guard/read/action order and show one guard immediately before each original read. When ownership changes after one original wheel/await, the next waitRead guard throws the exact refusal before another evaluate/input. Do not manufacture a new guard or modify existing tests to accept missing cross-await checks.
+
+Small test-local finite DOM objects may share construction within these appended cases. They model only this existing DOM/CDP seam; they must not fake the helper's return or replace the real generated expression. The original suite and all old assertions remain byte-identical apart from necessary imports, which are not currently expected.
+
+## 5. Budgets, validation and delivery
+
+Retain default12 wheel events, the accepted1..32 explicit bound, the one final visibility read after the last permitted wheel, original30-second waitRead deadlines, original100ms poll/wheel cadence and ±600 clamp. No retry of an uncertain input or business mutation is added; only the existing wheel loop can make newly reachable progress. All original journey selectors, model/permission assertions, Launch/Stop/Quit sequence, source pins, native custody checks and CI job caps remain unchanged.
+
+After root publishes selection, prepare exactly these two before/after files, full reversible diff, hash manifest and preservation/source R1. Independent actual-source R2 must inspect the complete expression, old branch preservation, clipping/hit routing, guard adjacency and real test assertions before root publishes with a fresh expected-parent update. Local work remains inert text/hash review only: no project, test, compiler, provider, GUI or CI execution, no remote mutation, no genuine Claude/Codex and no Ready/default/release change. Original failed receipts remain failed; resulting-source original CI and E2E are still required.
