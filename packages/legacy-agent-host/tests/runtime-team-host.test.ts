@@ -3987,3 +3987,230 @@ test('full original Process verifier accepts only authority-bound no-dispatch ev
     assert.throws(() => run(unknown), { code: 'ERR_ASSERTION' }, 'cleanup never promotes the original ' + field + ' failure');
   }
 });
+
+
+test('original exit projection is preserved beside a bounded source-bound Codex await ledger', () => {
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceProfile.ts', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const start = 'const projectionLedger = ${JSON.stringify(runtimeProjectionLedger)};\n';
+  const end = 'await import(${JSON.stringify(pathToFileURL(cli).href)});';
+  assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
+  const program = source.slice(source.indexOf(start) + start.length, source.indexOf(end));
+  const phaseName = 'agent-teams.legacy-host.codex-readiness', viewName = 'agent-teams.legacy-host.runtime-projection';
+  const nullRecord = (fields: Record<string, unknown>) => Object.assign(Object.create(null) as Record<string, unknown>, fields);
+  const event = (overrides: Record<string, unknown> = {}) => nullRecord({ schemaVersion: 1, bindingDigest: 'a'.repeat(64),
+    sourceId: 'b'.repeat(64), sourceRevision: 'c'.repeat(64), sequence: 1, invocation: 1,
+    operation: 'readiness', phase: 'before-await', result: null, ...overrides });
+  const view = (digest = 'd'.repeat(64)) => nullRecord({ viewDigest: digest, bindingMatches: true,
+    recordReady: false, providerReady: null, ownerCurrent: null, nativeReady: false });
+  const create = (fault: 'none' | 'write' | 'serialize' | 'subscribe' = 'none') => {
+    const subscribers = new Map<string, ((value: unknown) => void)[]>(), exits: (() => void)[] = [], writes = new Map<string, string>();
+    const calls: string[] = [];
+    runInNewContext(program, { assert, Buffer, projectionLedger: 'TEST-projection',
+      JSON: { parse: JSON.parse, stringify(value: unknown) {
+        if (fault === 'serialize' && value && typeof value === 'object' && Object.hasOwn(value, 'schemaVersion'))
+          throw new Error('PRIVATE-serialization');
+        return JSON.stringify(value);
+      } },
+      channel(name: string) {
+        assert.ok(name === phaseName || name === viewName);
+        return { subscribe(callback: (value: unknown) => void) {
+          calls.push(name);
+          if (fault === 'subscribe' && name === phaseName) throw new Error('PRIVATE-subscription');
+          subscribers.set(name, [...(subscribers.get(name) ?? []), callback]);
+        } };
+      },
+      process: { once(name: string, callback: () => void) { assert.equal(name, 'exit'); exits.push(callback); } },
+      writeFileSync(path: string, raw: string, options: unknown) {
+        assert.ok(path === 'TEST-projection' || path === 'TEST-projection.codex-readiness');
+        assert.equal(JSON.stringify(options), '{"mode":384,"flag":"wx"}');
+        if (fault === 'write' && path.endsWith('.codex-readiness')) throw new Error('PRIVATE-write');
+        assert.equal(writes.has(path), false, 'one exit write per ledger'); writes.set(path, raw);
+      } });
+    return { calls, writes, exits,
+      emit(name: string, value: unknown) { for (const callback of subscribers.get(name) ?? []) assert.doesNotThrow(() => callback(value)); },
+      finish() { for (const callback of exits) assert.doesNotThrow(callback); },
+    };
+  };
+  const baseline = create(); baseline.emit(viewName, view());
+  assert.equal(baseline.writes.size, 0); baseline.finish();
+  const originalRaw = baseline.writes.get('TEST-projection'); assert.ok(originalRaw);
+  assert.ok(Buffer.byteLength(originalRaw) <= 512);
+  assert.deepEqual(JSON.parse(originalRaw), { status: 'observed', rows: [['d'.repeat(64), true, false, null, null, false]] });
+  assert.ok(baseline.writes.has('TEST-projection.codex-readiness'),
+    'the original successful exit must also retain the separate Codex boundary ledger');
+  assert.equal(baseline.exits.length, 2); assert.equal(baseline.calls.filter(name => name === phaseName).length, 1);
+  assert.equal(baseline.calls.filter(name => name === viewName).length, 2);
+  const decode = (f: ReturnType<typeof create>) => JSON.parse(f.writes.get('TEST-projection.codex-readiness')!) as Record<string, unknown>;
+  assert.deepEqual(decode(baseline), { schemaVersion: 1, status: 'observed', contexts: [], events: [], views: [['d'.repeat(64), 0]] });
+  const unknown = { schemaVersion: 1, status: 'unknown', reason: 'invalid-overflow-or-observer-failure' };
+  const run = (values: unknown[], views = [view()]) => {
+    const f = create(); for (const value of values) f.emit(phaseName, value);
+    for (const value of views) f.emit(viewName, value);
+    f.finish(); assert.ok(Buffer.byteLength(f.writes.get('TEST-projection.codex-readiness')!) <= 8192);
+    assert.doesNotMatch(f.writes.get('TEST-projection.codex-readiness')!, /PRIVATE-|TEST-/); return f;
+  };
+  const valid = [event({ operation: 'open' }), event({ sequence: 2, invocation: 2, operation: 'catalog' }),
+    event({ sequence: 3, invocation: 2, operation: 'catalog', phase: 'after-await' }),
+    event({ sequence: 4, invocation: 2, operation: 'catalog', phase: 'returned', result: true }),
+    event({ sequence: 5, operation: 'open', phase: 'after-await' }),
+    event({ sequence: 6, invocation: 3 }), event({ sequence: 7, invocation: 3, phase: 'after-await' }),
+    event({ sequence: 8, invocation: 3, phase: 'returned', result: false })];
+  const good = run(valid), ledger = decode(good);
+  assert.deepEqual(ledger, { schemaVersion: 1, status: 'observed',
+    contexts: [['a'.repeat(64), 'b'.repeat(64), 'c'.repeat(64)]],
+    events: valid.map(row => [0, row.sequence, row.invocation, row.operation, row.phase, row.result]),
+    views: [['d'.repeat(64), 8]] });
+  const repeated = create(); repeated.emit(phaseName, valid[0]); repeated.emit(viewName, view());
+  for (const row of valid.slice(1)) repeated.emit(phaseName, row);
+  repeated.emit(viewName, view()); repeated.finish(); assert.deepEqual(decode(repeated), ledger);
+  for (const phases of [['before-await', 'threw'], ['before-await', 'after-await', 'threw']])
+    assert.equal(decode(run(phases.map((phase, index) => event({ sequence: index + 1, phase })))).status, 'observed');
+  let getterCalls = 0;
+  const getter = Object.defineProperty(event(), 'result', { get() { getterCalls++; throw new Error('PRIVATE-getter'); } });
+  const symbol = event(); Object.defineProperty(symbol, Symbol('PRIVATE-symbol'), { value: true });
+  const invalid = [null, [], event({ extra: 'PRIVATE-extra' }), event({ sequence: 2 }), event({ invocation: 2 }),
+    event({ result: false }), event({ operation: 'foreign' }), event({ phase: 'after-await' }), event({ sourceId: 'bad' }), getter, symbol,
+    new Proxy(Object.create(null) as Record<string, unknown>, { ownKeys() { throw new Error('PRIVATE-reflection'); } }),
+    nullRecord({ schemaVersion: 1, bindingDigest: 'a'.repeat(64), sourceId: 'b'.repeat(64), sourceRevision: 'c'.repeat(64), limit: true })];
+  for (const value of invalid) assert.deepEqual(decode(run([value, ...valid])), unknown);
+  assert.equal(getterCalls, 0);
+  for (const values of [[valid[0], valid[0]], [valid[0], event({ sequence: 3, phase: 'after-await' })],
+    [valid[0], event({ sequence: 2, operation: 'catalog', phase: 'after-await' })],
+    [...valid, event({ sequence: 9, invocation: 3, phase: 'returned', result: false })]])
+    assert.deepEqual(decode(run(values)), unknown);
+  const accessorView = Object.defineProperty(view(), 'recordReady', { get() { getterCalls++; return false; } });
+  for (const value of [accessorView, nullRecord({ ...view(), extra: true }), nullRecord({ ...view(), providerReady: true }),
+    nullRecord({ ...view(), nativeReady: true })]) {
+    const f = create(); f.emit(viewName, value); f.finish(); assert.deepEqual(decode(f), unknown);
+  }
+  assert.equal(getterCalls, 0);
+  const wide: Record<string, unknown>[] = [];
+  for (const digit of 'abcd') for (let invocation = 1; invocation <= 8; invocation++)
+    for (const [offset, phase] of ['before-await', 'after-await'].entries())
+      wide.push(event({ bindingDigest: digit.repeat(64), sourceId: 'b'.repeat(64), sourceRevision: 'c'.repeat(64),
+        sequence: (invocation - 1) * 2 + offset + 1, invocation, operation: 'open', phase }));
+  const atLimit = run(wide, [...'def0'].map(digit => view(digit.repeat(64))));
+  assert.equal((decode(atLimit).contexts as unknown[]).length, 4); assert.equal((decode(atLimit).events as unknown[]).length, 64);
+  assert.equal((decode(atLimit).views as unknown[]).length, 4);
+  assert.deepEqual(decode(run([...wide, event({ sequence: 17, invocation: 9, operation: 'open' })])), unknown);
+  assert.deepEqual(decode(run([...'abcde'].map(digit => event({ bindingDigest: digit.repeat(64) })))), unknown);
+  assert.deepEqual(decode(run(valid, [...'def01'].map(digit => view(digit.repeat(64))))), unknown);
+  const sixteen = Array.from({ length: 16 }, (_, index) => event({ sequence: index + 1, invocation: index + 1, operation: 'open' }));
+  assert.equal(decode(run(sixteen)).status, 'observed');
+  assert.deepEqual(decode(run([...sixteen, event({ sequence: 17, invocation: 17, operation: 'open' })])), unknown);
+  // Independent primitive widths conservatively bound every valid history; this is not a claimed executable sequence.
+  const width = { schemaVersion: 1, status: 'observed',
+    contexts: Array.from({ length: 4 }, () => ['f'.repeat(64), 'f'.repeat(64), 'f'.repeat(64)]),
+    events: Array.from({ length: 64 }, () => [3, 64, 16, 'readiness', 'before-await', false]),
+    views: Array.from({ length: 4 }, () => ['f'.repeat(64), 64]) };
+  assert.equal(Buffer.byteLength(JSON.stringify(width)), 3925); assert.ok(Buffer.byteLength(JSON.stringify(width)) < 8192);
+  for (const fault of ['write', 'serialize', 'subscribe'] as const) {
+    const f = create(fault); f.emit(viewName, view()); f.finish();
+    assert.equal(f.writes.get('TEST-projection'), originalRaw, 'failed new diagnostics preserve the original writer');
+    const raw = f.writes.get('TEST-projection.codex-readiness');
+    if (raw !== undefined) assert.deepEqual(JSON.parse(raw), unknown);
+  }
+
+  // Only reached after the old-source semantic failure above. Execute the actual new export, never a copied validator.
+  const readerSource = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceReadiness.ts', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const exportStart = 'export function readEmulatedCodexReadinessObservation(';
+  assert.equal(readerSource.split(exportStart).length, 2);
+  let readerProgram = readerSource.slice(readerSource.indexOf(exportStart));
+  for (const [before, after] of [[exportStart, 'function readEmulatedCodexReadinessObservation('],
+    ['options: Record<string, unknown>', 'options'], ['value: unknown', 'value']] as const) {
+    assert.equal(readerProgram.split(before).length, 2); readerProgram = readerProgram.replace(before, after);
+  }
+  const root = mkdtempSync(join(tmpdir(), 'TEST-codex-phase-reader-')), path = join(root, 'projection.codex-readiness');
+  let serializationFails = false;
+  let stats = 0, reads = 0, ioFault: 'none' | 'stat' | 'read' | 'symlink' | 'oversize' = 'none';
+  const namespace = runInNewContext(readerProgram + '\n({ readEmulatedCodexReadinessObservation });', { assert, Buffer, Object, Array,
+    JSON: { parse: JSON.parse, stringify(value: unknown) { if (serializationFails) throw new Error('PRIVATE-serialization'); return JSON.stringify(value); } },
+    lstatSync(file: string) {
+      stats++; assert.equal(file, path);
+      if (ioFault === 'stat') throw new Error('PRIVATE-stat');
+      if (ioFault === 'symlink' || ioFault === 'oversize')
+        return { isFile: () => true, isSymbolicLink: () => ioFault === 'symlink', size: ioFault === 'oversize' ? 8193 : 1 };
+      return lstatSync(file);
+    },
+    readFileSync(file: string, encoding: 'utf8') {
+      reads++; assert.equal(file, path); assert.equal(encoding, 'utf8');
+      if (ioFault === 'read') throw new Error('PRIVATE-read');
+      return readFileSync(file, encoding);
+    },
+  }) as { readEmulatedCodexReadinessObservation(options: Record<string, unknown>): unknown };
+  const base = () => ({ provider: 'codex', ledgerPath: path, epochs: [{ mainEpoch: 'TEST-main', projectionHostExit: 'confirmed' }],
+    runtimeProjection: { status: 'observed', atomicWithFailure: false, ...view() }, lastRuntimeViewDigest: 'd'.repeat(64),
+    lastLaunchReadiness: { launchId: 'TEST-launch', source: { sourceId: 'b'.repeat(64), revision: 'c'.repeat(64) },
+      lastRuntimeRead: { viewDigest: 'd'.repeat(64) } },
+    diagnosticLaunches: [{ launchId: 'TEST-launch', source: { sourceId: 'b'.repeat(64), revision: 'c'.repeat(64) },
+      bindingDigests: ['a'.repeat(64)] }] });
+  const refused = { status: 'unknown', reason: 'missing-invalid-overflow-conflicting-or-unjoined' };
+  const read = (options: Record<string, unknown>, raw = JSON.stringify(ledger)) => {
+    stats = 0; reads = 0; writeFileSync(path, raw);
+    const result = namespace.readEmulatedCodexReadinessObservation(options);
+    const copied = JSON.parse(JSON.stringify(result)) as Record<string, unknown>;
+    assert.ok(Buffer.byteLength(JSON.stringify(copied)) <= 8192); assert.doesNotMatch(JSON.stringify(copied), /PRIVATE-|stack|argv|token/);
+    return copied;
+  };
+  try {
+    const accepted = read(base());
+    assert.equal(stats, 1); assert.equal(reads, 1);
+    assert.deepEqual(accepted, { schemaVersion: 1, status: 'observed', atomicWithFailure: false,
+      samplePoint: 'last-original-projection-with-matching-view-digest',
+      source: { sourceId: 'b'.repeat(64), revision: 'c'.repeat(64) }, bindingDigest: 'a'.repeat(64), viewDigest: 'd'.repeat(64),
+      mainEpoch: 'TEST-main', launchId: 'TEST-launch', observedEventCount: 8,
+      events: valid.map(row => [row.sequence, row.invocation, row.operation, row.phase, row.result]) });
+    const before = { ...ledger, views: [['d'.repeat(64), 1]] };
+    assert.deepEqual(read(base(), JSON.stringify(before)).events, [[1, 1, 'open', 'before-await', null]]);
+    const zero = { ...ledger, views: [['d'.repeat(64), 0]] };
+    assert.deepEqual(read(base(), JSON.stringify(zero)).events, [], 'zero observed callbacks does not invent a pending native call');
+    const invalidInputs = [
+      { ...base(), provider: 'opencode' }, { ...base(), epochs: [] }, { ...base(), epochs: [...base().epochs, ...base().epochs] },
+      { ...base(), epochs: [{ mainEpoch: 'TEST-main', projectionHostExit: 'unknown' }] },
+      { ...base(), epochs: [{ mainEpoch: 'TEST-main' }] }, { ...base(), runtimeProjection: { status: 'unknown' } },
+      { ...base(), runtimeProjection: { ...base().runtimeProjection, bindingMatches: false } },
+      { ...base(), lastRuntimeViewDigest: 'e'.repeat(64) }, { ...base(), lastLaunchReadiness: {} },
+      { ...base(), runtimeProjection: { ...base().runtimeProjection, viewDigest: 'e'.repeat(64) } },
+      { ...base(), runtimeProjection: { ...base().runtimeProjection, nativeReady: true } },
+      { ...base(), diagnosticLaunches: [] }, { ...base(), diagnosticLaunches: [...base().diagnosticLaunches, ...base().diagnosticLaunches] },
+      { ...base(), diagnosticLaunches: [{ ...base().diagnosticLaunches[0], launchId: 'FOREIGN' }] },
+      { ...base(), diagnosticLaunches: [{ ...base().diagnosticLaunches[0], source: { sourceId: 'f'.repeat(64), revision: 'c'.repeat(64) } }] },
+      { ...base(), epochs: [{ mainEpoch: '', projectionHostExit: 'confirmed' }] },
+      { ...base(), lastLaunchReadiness: { ...base().lastLaunchReadiness, launchId: 'x'.repeat(257) } },
+    ];
+    for (const input of invalidInputs) {
+      assert.deepEqual(read(input), refused); assert.equal(stats, 0, 'ineligible inputs must not touch the new file'); assert.equal(reads, 0);
+    }
+    for (const fault of ['stat', 'read', 'symlink', 'oversize'] as const) {
+      ioFault = fault; assert.deepEqual(read(base()), refused); assert.equal(stats, 1); assert.equal(reads, fault === 'read' ? 1 : 0);
+    }
+    ioFault = 'none';
+    const badLedgers = [null, [], { ...ledger, extra: true }, { ...ledger, status: 'unknown' },
+      { ...ledger, contexts: [] }, { ...ledger, contexts: [...(ledger.contexts as unknown[]), ...(ledger.contexts as unknown[])] },
+      { ...ledger, contexts: [['f'.repeat(64), 'b'.repeat(64), 'c'.repeat(64)]] },
+      { ...ledger, contexts: [['a'.repeat(64), 'f'.repeat(64), 'c'.repeat(64)]] },
+      { ...ledger, contexts: [['a'.repeat(64), 'b'.repeat(64), 'f'.repeat(64)]] },
+      { ...ledger, views: [['e'.repeat(64), 8]] }, { ...ledger, views: [['d'.repeat(64), 9]] },
+      { ...ledger, views: [['d'.repeat(64), 8], ['d'.repeat(64), 8]] },
+      { ...ledger, events: [[0, 2, 1, 'readiness', 'before-await', null]] },
+      { ...ledger, events: [[0, 1, 1, 'readiness', 'returned', true]] },
+      { ...ledger, events: [[4, 1, 1, 'readiness', 'before-await', null]] },
+      { ...ledger, events: [[0, 1, 17, 'readiness', 'before-await', null]] },
+      { ...ledger, events: [[0, 1, 1, 'readiness', 'before-await', false]] },
+      { ...ledger, contexts: Array.from({ length: 5 }, (_, index) => [String(index).repeat(64), 'b'.repeat(64), 'c'.repeat(64)]) }];
+    for (const invalid of badLedgers) assert.deepEqual(read(base(), JSON.stringify(invalid)), refused);
+    assert.deepEqual(read(base(), '{'), refused); assert.deepEqual(read(base(), ' '.repeat(8193)), refused);
+    rmSync(path); stats = 0; reads = 0;
+    assert.deepEqual(JSON.parse(JSON.stringify(namespace.readEmulatedCodexReadinessObservation(base()))), refused);
+    assert.equal(stats, 1); assert.equal(reads, 0);
+    const foreign = ['f'.repeat(64), 'e'.repeat(64), '0'.repeat(64)];
+    const mixed = { ...ledger, contexts: [foreign, ...(ledger.contexts as unknown[])], views: [['d'.repeat(64), 2]],
+      events: [[0, 1, 1, 'catalog', 'before-await', null], ...valid.map(row => [1, row.sequence, row.invocation, row.operation, row.phase, row.result])] };
+    const selected = read(base(), JSON.stringify(mixed)); assert.equal(selected.observedEventCount, 2);
+    assert.deepEqual(selected.events, [[1, 1, 'open', 'before-await', null]], 'cut off by original global ordinal before filtering the selected source');
+    serializationFails = true; assert.deepEqual(read(base()), refused); serializationFails = false;
+    const widest = base(); widest.epochs[0]!.mainEpoch = '\u0001'.repeat(256);
+    widest.lastLaunchReadiness.launchId = '\u0001'.repeat(256); widest.diagnosticLaunches[0]!.launchId = widest.lastLaunchReadiness.launchId;
+    assert.equal(read(widest).status, 'observed'); assert.ok(Buffer.byteLength(JSON.stringify(read(widest))) <= 8192);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
