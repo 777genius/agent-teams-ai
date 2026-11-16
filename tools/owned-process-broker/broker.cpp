@@ -494,6 +494,10 @@ int main() {
         if(!confirmed||stopBusy) { failure(frame.id,creation,ERROR_INVALID_STATE); continue; }
         if(job&&!CloseHandle(job)) { failure(frame.id,creation,GetLastError()); continue; }
         job=nullptr; releaseAccepted=true;
+#ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
+        // Complete the acquired TEST prefix before either successful release exit can run.
+        if(!debug_service_test::flushBreakpointObservations()) abandon(wire::WriteFailure);
+#endif
         std::vector<uint8_t> releasedFacts;
 #ifdef OWNED_PROCESS_TEST_RELEASE_CONTENTION
         if(releaseContentionEnabled) {

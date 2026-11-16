@@ -353,7 +353,13 @@ describe('captured legacy host client over real subprocess stdio', () => {
     try {
       const requested = transport.request('TEST.blocked-native', {expire,payload:'x'.repeat(1024*1024-2048)});
       await Promise.race([gate.blocked, requested.then(()=>{ throw new Error('TEST missing original write barrier'); })]);
-      await Promise.race([gate.queued, requested.then(()=>{ throw new Error('TEST native call never reached Main admission'); })]);
+      await Promise.race([gate.queued, requested.then((reply) => {
+        const replyStatus = typeof reply === 'object' && reply !== null && !Array.isArray(reply)
+          ? reply.status : undefined;
+        const status = replyStatus === 'completed' || replyStatus === 'refused' || replyStatus === 'unknown'
+          ? replyStatus : 'invalid';
+        throw new Error(`TEST native call never reached Main admission; status=${status}`);
+      })]);
       if (expire) expect(await requested).toMatchObject({status:expect.stringMatching(/^(unknown|refused)$/u)});
       expect(effects).toBe(0);
       expect(await transport.request('TEST.control', undefined, {control:true}))

@@ -4,6 +4,7 @@
 #include "serviceDebugLoop.h"
 #include "protocol.h"
 #include <io.h>
+#include <atomic>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -18,20 +19,18 @@ inline ULONGLONG admissionDeadline=0;
 // Optional TEST-only child observations: 15 records and one reserved overflow record.
 // The existing admission thread copies already retained identity and decisions only.
 inline DWORD breakpointRows[16][8]{};
-inline DWORD breakpointCount=0;
+inline std::atomic<DWORD> breakpointCount{0};
 inline HANDLE breakpointOutput=nullptr;
 inline void observeBreakpoint(const owned_service::Scope& child,const EXCEPTION_DEBUG_INFO& event,bool accepted) noexcept {
-  if(!breakpointOutput||breakpointCount>=16) return;
-  auto& row=breakpointRows[breakpointCount];
-  row[0]=breakpointCount==15?2:1; row[1]=breakpointCount+1;
+  const DWORD index=breakpointCount.load(std::memory_order_relaxed);
+  if(!breakpointOutput||index>=16) return;
+  auto& row=breakpointRows[index];
+  row[0]=index==15?2:1; row[1]=index+1;
   if(row[0]==1) {
     row[2]=child.pid; row[3]=static_cast<DWORD>(child.birth); row[4]=static_cast<DWORD>(child.birth>>32);
     row[5]=event.ExceptionRecord.ExceptionCode; row[6]=event.dwFirstChance; row[7]=accepted?1:0;
   }
-  ++breakpointCount;
-  DWORD written=0;
-  WriteFile(breakpointOutput,row,static_cast<DWORD>(sizeof(row)),&written,nullptr);
-  // Best effort before the original continuation; partial output remains unqualified.
+  breakpointCount.store(index+1,std::memory_order_release);
 }
 inline void configureBreakpointObservations() {
   wchar_t expected[2]{};
@@ -42,6 +41,13 @@ inline void configureBreakpointObservations() {
   if(breakpointOutput==INVALID_HANDLE_VALUE||GetFileType(breakpointOutput)!=FILE_TYPE_DISK)
     throw DWORD{ERROR_INVALID_HANDLE};
   scopes.setTestBreakpointObserver(observeBreakpoint);
+}
+inline bool flushBreakpointObservations() noexcept {
+  const DWORD count=breakpointCount.load(std::memory_order_acquire);
+  if(!breakpointOutput||!count) return true;
+  const DWORD requested=static_cast<DWORD>(count*sizeof(breakpointRows[0]));
+  DWORD written=0;
+  return WriteFile(breakpointOutput,breakpointRows,requested,&written,nullptr)&&written==requested;
 }
 inline void checkAdmissionDeadline() {
   if(GetTickCount64()>=admissionDeadline) throw DWORD{WAIT_TIMEOUT};
