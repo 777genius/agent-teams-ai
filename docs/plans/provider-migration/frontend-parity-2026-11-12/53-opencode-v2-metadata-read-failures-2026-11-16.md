@@ -67,3 +67,47 @@ The complete six-file current-base readback is `base24df-bindings.json`, 189057 
 The focused diagnostic suite will have six cases: the five original cases plus one emitter/decoder/privacy roundtrip. It does not execute `OpenCodeV2ManagementHost.read` or its native `observeFailure` integration. Original recovery/error-identity/FIFO/cleanup checks and resulting-head native/Desktop CI remain required; none has been executed by this inert packet.
 
 The repository destination is `docs/plans/provider-migration/frontend-parity-2026-11-12/53-opencode-v2-metadata-read-failures-2026-11-16.md`. Publish this document as a doc-only commit first. Read back its complete actual bytes and ancestry and obtain independent actual document R2 before publishing the six-source child. Preserve every incoming change and current useful original job; a stale-base or changed-preimage guard requires rebind and review, not a force update.
+
+## Prospective R1 addendum — closed metadata failures in the existing lifecycle consumer
+
+Status: **INERT SOURCE PROPOSAL; no source application or project execution**. This appendix belongs to the existing Plan53 and preserves its complete `9976d507d19007fe1e98f60f9c7e304ebefe32f8` prefix. The canonical parent, full resulting Plan, documentation tree/publication/readback, and independent R2 are bound by root immediately before any application. Current root-reported `5f300` is documentation-only after `0d24`; all three selected preimages below are unchanged.
+
+### Concrete source defect and selected boundary
+
+Published Plan53 emits a closed `read-failed` metadata diagnostic without PID or native start identity. The existing Main projection adds captured Host PID under the same `Host:OpenCodeMetadata` namespace. Exact helper `31160` reads that line for the selected Host, then asserts seven lifecycle keys before inspecting stage. The new ten-key failure record therefore makes a later lineage read fail, including after an otherwise successful recovery. Independent report `3986719c9a26aa79ae3c6d515a57ab9b855034a9` preserves the full source trace. This is a source-proven observation/consumer incompatibility; no new resulting-source CI result or historical Settings cause is claimed.
+
+The selected change is one branch before the unchanged lifecycle assertion. Only a matching captured-Host record whose stage is `read-failed` and whose exact ten keys/values match the current closed producer/Main protocol is validated separately and excluded from lifecycle events. Validate 64-character lowercase hexadecimal profile/provider hashes, directory iff providerHash is null, all 13 allowed read stages, the 19 existing reason codes plus `unknown`, safe integral elapsed 0..3,600,000, boolean deadline and boolean-or-null aborted. Missing/extra/unknown/invalid matching-Host records still throw. Other-Host filtering stays byte-exact. No raw error, path, key, stack, PID or start identity is introduced.
+
+A valid failure neither creates a profile partition/PID/birth nor retires an already-ready child. The original ready/released/cleanup-unknown protocol, exact seven-key check, original Host/profile/owner/physical birth comparisons, immutable lifecycle prefixes, 128-lifecycle-event cap, 4 MiB combined log bound and physical absence/cleanup oracles remain byte-exact. A failure alone cannot satisfy the existing nonempty lifecycle requirement. It is never release or custody evidence.
+
+### Exact three existing source paths
+
+| Path | Before Git blob | Proposed Git blob | Bytes | Lines |
+| --- | --- | --- | ---: | ---: |
+| scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts | 31160baa614a4ecd5cc17fb2078561cad371c06c | 79c288d8cd5f6dc432177a2047ce517f174d11b4 | 17725 | 320 |
+| scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts | 13229f20c93226ee5b3f4d07516d16f94b0d48d5 | cb02a91e7876b4a9367f3d6b763f56fbe566dd7f | 25809 | 381 |
+| .github/workflows/host-emulated-acceptance.yml | ff94e1d92c82a644a302ef61e64246f919f04d83 | a1513210012356a5178620b1f370bd1daf0de9d9 | 106650 | 1374 |
+
+No production provider/Main/renderer source is changed by this corrective cut. The existing helper gains 21 lines; every other helper byte is preserved. The already-run management-records suite retains all seven old cases and appends two actual-parser cases. Required imports add only filesystem/temp helpers and the existing lineage functions. No new module, abstraction, suite, runner or dependency is introduced. The workflow adds only the missing helper operand to existing scoped fast lint 130→131; the test operand was already present.
+
+### Meaningful existing-suite coverage
+
+The new positive case writes the real private app-log framing and calls actual `captureDesktopSourceMetadataLineage` and `assertDesktopMetadataLineageReleased` with constructed original physical facts. It verifies: valid pre-ready and already-ready failures are excluded; an existing ready child remains live and physically required; a failure-only log supplies no custody; cleanup-unknown still refuses; only the matching original released event plus physical absence establishes release; a remaining original PID still refuses. A failure from a different hashed profile does not create a partition.
+
+The negative case supplies malformed failure keys/values, unknown stages, lifecycle-shaped failures and malformed ordinary lifecycle rows through the same actual parser; these must refuse. This prevents a broad `stage === read-failed` skip from passing. It is not a copy of the parser implementation. The first new case is predicted to fail semantically against `31160` at the old exact-key assertion; the negative case preserves refusal. These are predictions only. No local RED/GREEN/test/type/lint/native execution has occurred, and no test count is promoted to observed CI. The inspected lifecycle suite `1e2653` is retained as a reference only and is not modified or newly scheduled.
+
+### Original finite validation and source closure
+
+Use the existing full eight-file Node command unchanged, after its original checkout/install/toolchain and fresh Host/ledger prerequisites:
+
+```sh
+node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts
+```
+
+The existing `pnpm typecheck:workspace` already invokes `typecheck:legacy-host-scripts`; original strict `538fdfe23d7aa6bac6f18a483d5d364aef644a39` includes `scripts/legacy-agent-host/**/*.ts`. Preserve the original dedicated agent-backend types and typed Main/renderer/features/MCP lint commands, scoped 131-operand fast lint and original UI/verifier/native acceptance. Exact full lint argv and unchanged commands are in validation.json. Do not add a separate CI cycle or manual Actions invocation. Root applies only after prospective documentation publication/full readback and independent source/R1 R2; resulting-source original CI owns runtime qualification.
+
+The actual helper is already captured exactly once by integrated roster `083522612dd93e77dbb0e79c966103b03a71fe87`, imported by primary roster `a8be2617b2c765091cecce789f028ef2bf67af60`. No roster edit is needed. The existing test stays in its original full-eight/lint route; original source/context capture remains unchanged.
+
+### Costs and limits
+
+The branch consumes the row already read and parsed by the existing log reader. It adds fixed-field validation and bounded temporary arrays for a valid or rejected failure record; this has real CPU/allocation cost. It adds no file-read call site, polling loop, clock read, timer, wait, retry, native action, admission authority, timeout extension or cleanup action. Existing 4 MiB log reading and lifecycle limits remain. Tests create temporary log fixtures only; synthetic process facts do not establish real process custody. Plan53's added producer failure-path clocks/serialization without channel subscribers remain separately acknowledged. Historical a07 Models wait preceded shutdown and the late renderer response-error; this correction does not identify or repair that historical cause.
