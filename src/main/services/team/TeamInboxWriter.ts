@@ -10,6 +10,7 @@ import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
 import { resolveInboxPath } from './teamInboxPath';
 import { MAX_INBOX_FILE_BYTES } from './TeamInboxReader';
 import { pickTeamInboxWorkSyncFields } from './teamInboxWorkSyncFields';
+import { INBOX_WRITE_ATTEMPTS, waitForTransientInboxWrite } from './transientInboxWriteRetry';
 
 import type {
   AttachmentMeta,
@@ -239,70 +240,74 @@ export class TeamInboxWriter {
         if (await shouldAbortWrite()) {
           return;
         }
-        for (let attempt = 0; attempt < 3; attempt++) {
-          const list = await this.readInbox(inboxPath);
-          if (await shouldAbortWrite()) {
-            return;
-          }
-          const explicitDuplicateIndex = explicitMessageId
-            ? this.findExplicitMessageIdDuplicateIndex(list, explicitMessageId)
-            : -1;
-          const matchedExplicitMessageId = explicitDuplicateIndex >= 0;
-          const duplicateIndex = matchedExplicitMessageId
-            ? explicitDuplicateIndex
-            : this.findRuntimeDeliveryDuplicateIndex(list, payload);
-          if (duplicateIndex >= 0) {
-            const duplicate = list[duplicateIndex];
-            if (matchedExplicitMessageId) {
-              this.assertMatchingExplicitMessagePayload(duplicate, payload, messageId);
+        for (let attempt = 0; attempt < INBOX_WRITE_ATTEMPTS; attempt++) {
+          try {
+            const list = await this.readInbox(inboxPath);
+            if (await shouldAbortWrite()) {
+              return;
             }
-            const merged = this.mergeTaskRefs(duplicate.taskRefs, payload.taskRefs);
-            resultMessageId = duplicate.messageId ?? messageId;
-            resultDeduplicated = true;
-            if (merged.changed) {
-              list[duplicateIndex] = {
-                ...duplicate,
-                taskRefs: merged.taskRefs,
-              };
-              if (await shouldAbortWrite()) {
-                return;
+            const explicitDuplicateIndex = explicitMessageId
+              ? this.findExplicitMessageIdDuplicateIndex(list, explicitMessageId)
+              : -1;
+            const matchedExplicitMessageId = explicitDuplicateIndex >= 0;
+            const duplicateIndex = matchedExplicitMessageId
+              ? explicitDuplicateIndex
+              : this.findRuntimeDeliveryDuplicateIndex(list, payload);
+            if (duplicateIndex >= 0) {
+              const duplicate = list[duplicateIndex];
+              if (matchedExplicitMessageId) {
+                this.assertMatchingExplicitMessagePayload(duplicate, payload, messageId);
               }
-              if ((await writeInboxList(list)) === 'aborted') {
-                return;
+              const merged = this.mergeTaskRefs(duplicate.taskRefs, payload.taskRefs);
+              resultMessageId = duplicate.messageId ?? messageId;
+              resultDeduplicated = true;
+              if (merged.changed) {
+                list[duplicateIndex] = {
+                  ...duplicate,
+                  taskRefs: merged.taskRefs,
+                };
+                if (await shouldAbortWrite()) {
+                  return;
+                }
+                if ((await writeInboxList(list)) === 'aborted') {
+                  return;
+                }
+                const written = await this.readInbox(inboxPath);
+                const writtenDuplicateIndex = matchedExplicitMessageId
+                  ? this.findExplicitMessageIdDuplicateIndex(written, messageId)
+                  : this.findRuntimeDeliveryDuplicateIndex(written, payload);
+                const writtenDuplicate =
+                  writtenDuplicateIndex >= 0 ? written[writtenDuplicateIndex] : null;
+                if (
+                  writtenDuplicate &&
+                  this.taskRefsIncludeAll(writtenDuplicate.taskRefs, payload.taskRefs ?? [])
+                ) {
+                  return;
+                }
+                await new Promise((resolve) => setTimeout(resolve, 10 * 2 ** attempt));
+                continue;
               }
-              const written = await this.readInbox(inboxPath);
-              const writtenDuplicateIndex = matchedExplicitMessageId
-                ? this.findExplicitMessageIdDuplicateIndex(written, messageId)
-                : this.findRuntimeDeliveryDuplicateIndex(written, payload);
-              const writtenDuplicate =
-                writtenDuplicateIndex >= 0 ? written[writtenDuplicateIndex] : null;
-              if (
-                writtenDuplicate &&
-                this.taskRefsIncludeAll(writtenDuplicate.taskRefs, payload.taskRefs ?? [])
-              ) {
-                return;
-              }
-              await new Promise((resolve) => setTimeout(resolve, 10 * 2 ** attempt));
-              continue;
+              return;
             }
-            return;
+            list.push(payload);
+            if (await shouldAbortWrite()) {
+              return;
+            }
+            if ((await writeInboxList(list)) === 'aborted') {
+              return;
+            }
+            const written = await this.readInbox(inboxPath);
+            if (
+              written.some(
+                (msg) => msg != null && typeof msg === 'object' && msg.messageId === messageId
+              )
+            ) {
+              return;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 10 * 2 ** attempt));
+          } catch (error) {
+            if (!(await waitForTransientInboxWrite(error, attempt))) throw error;
           }
-          list.push(payload);
-          if (await shouldAbortWrite()) {
-            return;
-          }
-          if ((await writeInboxList(list)) === 'aborted') {
-            return;
-          }
-          const written = await this.readInbox(inboxPath);
-          if (
-            written.some(
-              (msg) => msg != null && typeof msg === 'object' && msg.messageId === messageId
-            )
-          ) {
-            return;
-          }
-          await new Promise((resolve) => setTimeout(resolve, 10 * 2 ** attempt));
         }
         throw new Error('Failed to verify inbox write');
       });

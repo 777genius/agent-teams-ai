@@ -8,6 +8,7 @@ const hoisted = vi.hoisted(() => {
   let idCounter = 0;
   let dropWrites = 0;
   let failWrites = 0;
+  let failTransientWrites = 0;
   let failReadAfterWrite = 0;
   let pendingReadFailures = 0;
   const fileLockTails = new Map<string, Promise<void>>();
@@ -38,6 +39,12 @@ const hoisted = vi.hoisted(() => {
       options?: { beforeCommit?: () => Promise<void> }
     ) => {
       await options?.beforeCommit?.();
+      if (failTransientWrites > 0) {
+        failTransientWrites -= 1;
+        const error = new Error('EPERM: simulated sharing violation') as NodeJS.ErrnoException;
+        error.code = 'EPERM';
+        throw error;
+      }
       if (failWrites > 0) {
         failWrites -= 1;
         const error = new Error('EIO') as NodeJS.ErrnoException;
@@ -104,11 +111,15 @@ const hoisted = vi.hoisted(() => {
     setFailWrites: (count: number) => {
       failWrites = count;
     },
+    setFailTransientWrites: (count: number) => {
+      failTransientWrites = count;
+    },
     setFailReadAfterWrite: (count: number) => {
       failReadAfterWrite = count;
     },
     resetFailures: () => {
       failWrites = 0;
+      failTransientWrites = 0;
       failReadAfterWrite = 0;
       pendingReadFailures = 0;
       fileLockTails.clear();
@@ -291,6 +302,48 @@ describe('TeamInboxWriter', () => {
 
     expect(typeof result.messageId).toBe('string');
     expect(hoisted.atomicWrite).toHaveBeenCalledTimes(3);
+  });
+
+  it('rereads inbox after transient EPERM and preserves concurrent content', async () => {
+    hoisted.atomicWrite.mockImplementationOnce(async (_path, _data, options) => {
+      await options?.beforeCommit?.();
+      hoisted.files.set(inboxPath, JSON.stringify([{
+        from: 'native', text: 'other message', read: false,
+        messageId: 'native-1', timestamp: '2026-11-16T12:00:00.000Z',
+      }]));
+      const error = new Error('EPERM: native inbox holds a handle') as NodeJS.ErrnoException;
+      error.code = 'EPERM';
+      throw error;
+    });
+    const sent = await writer.sendMessage('my-team', {
+      member: 'alice', text: 'own message',
+    });
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as
+      Array<{ messageId: string; text: string }>;
+    expect(hoisted.atomicWrite).toHaveBeenCalledTimes(2);
+    expect(persisted.map((row) => row.text)).toEqual(['other message', 'own message']);
+    expect(persisted[1]?.messageId).toBe(sent.messageId);
+  });
+
+  it('recovers from transient inbox rename errors without duplicates', async () => {
+    hoisted.setFailTransientWrites(2);
+    const sent = await writer.sendMessage('my-team', {
+      member: 'alice', text: 'safe retry',
+    });
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as
+      Array<{ messageId: string }>;
+    expect(hoisted.atomicWrite).toHaveBeenCalledTimes(3);
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]?.messageId).toBe(sent.messageId);
+  });
+
+  it('fails closed on persistent inbox EPERM', async () => {
+    hoisted.setFailTransientWrites(5);
+    await expect(writer.sendMessage('my-team', {
+      member: 'alice', text: 'must not be reported delivered',
+    })).rejects.toMatchObject({ code: 'EPERM' });
+    expect(hoisted.atomicWrite).toHaveBeenCalledTimes(3);
+    expect(hoisted.files.has(inboxPath)).toBe(false);
   });
 
   it('throws after retries when verify keeps failing', async () => {
