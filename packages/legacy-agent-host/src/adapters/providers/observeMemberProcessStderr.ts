@@ -12,7 +12,7 @@ const MAX_LINE_BYTES = 24 * 1024;
 const privateName = (name: string) => /api[_-]?key|auth|token|secret|password|credential|cookie|private[_-]?key/i.test(name);
 const normalize = (value: string) => stripRuntimeDiagnosticAnsi(value).replace(/\0/g, '\uFFFD');
 type StderrContext = Pick<MemberProviderContext, 'observeProcessOutput'> & {
-  endpoint: Pick<MemberProviderContext['endpoint'], 'bearerToken'> & Partial<Pick<MemberProviderContext['endpoint'], 'url'>>;
+  endpoint?: Pick<MemberProviderContext['endpoint'], 'bearerToken'> & Partial<Pick<MemberProviderContext['endpoint'], 'url'>>;
   profile: Pick<MemberProviderContext['profile'], 'environment' | 'capturedMcpServers'>;
 };
 
@@ -23,7 +23,8 @@ function redactSyntax(value: string): string {
 }
 
 function privateValues(context: StderrContext, args: readonly string[]): string[] {
-  const values = [context.endpoint.bearerToken, ...(context.endpoint.url ? [context.endpoint.url] : [])];
+  const values = context.endpoint
+    ? [context.endpoint.bearerToken, ...(context.endpoint.url ? [context.endpoint.url] : [])] : [];
   const assignments = (source: Readonly<Record<string, string>> | undefined): void => {
     for (const [key, value] of Object.entries(source ?? {})) {
       if (privateName(key)) values.push(value);

@@ -306,6 +306,12 @@ test('model probe claims before native work and returns original result without 
     await syntheticLocalReadiness(mode);
 });
 
+test('typed Thinking cannot replace the original coordination answer or bypass provenance and budgets', async () => {
+  for (const mode of ['valid-thinking', 'thinking-only', 'thinking-foreign-session',
+    'thinking-foreign-input', 'thinking-foreign-operation', 'thinking-oversized', 'thinking-count'] as const)
+    await syntheticCoordination(mode);
+});
+
 test('cancel retains auth namespace until physical close and a late model response cannot publish success', async (t) => {
   const f = fixture({ blockClose: true });
   t.after(f.cleanup);
@@ -512,7 +518,9 @@ test('model limit identity is durable: changed limits conflict and invalid bound
 
 type SyntheticCoordinationMode = 'valid' | 'text-json' | 'second-first' | 'wrong-nonce' |
   'duplicate' | 'duplicate-message' | 'wrong-message' | 'result-before-tool' |
-  'foreign-session' | 'foreign-input' | 'revoked' | 'cancelled' | 'foreign-token';
+  'foreign-session' | 'foreign-input' | 'revoked' | 'cancelled' | 'foreign-token' |
+  'valid-thinking' | 'thinking-only' | 'thinking-foreign-session' | 'thinking-foreign-input' |
+  'thinking-foreign-operation' | 'thinking-oversized' | 'thinking-count';
 
 /** Explicit synthetic Session events exercise the proof gate; this is not native qualification. */
 async function syntheticCoordination(mode: SyntheticCoordinationMode) {
@@ -557,6 +565,23 @@ async function syntheticCoordination(mode: SyntheticCoordinationMode) {
         assert.ok(submitted);
         const bound = { sessionRef: mode === 'foreign-session' ? 'foreign' : driver.sessionRef,
           inputId: mode === 'foreign-input' ? 'foreign' : submitted.inputId, operationRef: submitted.operationRef };
+        if (mode === 'valid-thinking' || mode.startsWith('thinking-')) {
+          const count = mode === 'thinking-count' ? 129 : 1;
+          const thinking: Event = {
+            ...bound,
+            sessionRef: mode === 'thinking-foreign-session' ? 'foreign' : bound.sessionRef,
+            inputId: mode === 'thinking-foreign-input' ? 'foreign' : bound.inputId,
+            operationRef: mode === 'thinking-foreign-operation' ? 'foreign' : bound.operationRef,
+            kind: 'thinking', messageRef: 't', block: 0, phase: 'snapshot',
+            text: mode === 'thinking-oversized' ? 'x'.repeat(32768)
+              : mode === 'thinking-count' ? '' : 'TEST reasoning',
+          };
+          const bytes = Buffer.byteLength(JSON.stringify(thinking));
+          if (mode === 'thinking-count') assert.ok(bytes * count < 32768, 'event-count refusal must not be a byte-budget refusal');
+          if (mode === 'thinking-oversized') assert.ok(bytes > 32768);
+          for (let index = 0; index < count; index++) yield thinking;
+          if (mode === 'valid-thinking') yield { ...thinking, phase: 'complete' };
+        }
         if (mode === 'text-json') {
           yield { ...bound, kind: 'text', messageRef: 'message-text', block: 0, phase: 'complete',
             text: '{"tool":"coordination_task_briefing","then":"coordination_message_send"}' };
@@ -590,7 +615,8 @@ async function syntheticCoordination(mode: SyntheticCoordinationMode) {
         const second = await client.callTool({ name: 'message_send', arguments: input });
         yield { ...bound, kind: 'tool-result', toolRef: secondRef,
           isError: second.isError === true, content: second.content };
-        yield { ...bound, kind: 'text', messageRef: 'message-3', block: 0, phase: 'complete', text: 'OK' };
+        if (mode !== 'thinking-only')
+          yield { ...bound, kind: 'text', messageRef: 'message-3', block: 0, phase: 'complete', text: 'OK' };
         yield { ...bound, kind: 'result', outcome: 'succeeded' };
       },
       respondToInteraction() { throw new Error('TEST no permission authority in inert coordination'); },
@@ -602,9 +628,11 @@ async function syntheticCoordination(mode: SyntheticCoordinationMode) {
     const work = runNativeCoordination(driver, 'TEST-native-session', endpoint, 'e'.repeat(64),
       abort.signal, deadline, () => current);
     if (mode === 'revoked' || mode === 'cancelled') await assert.rejects(work);
-    else assert.equal(await work, mode === 'valid');
+    else assert.equal(await work, mode === 'valid' || mode === 'valid-thinking');
     assert.equal(submissions, 1);
-    assert.equal(endpoint.completed('TEST-native-session'), mode === 'valid');
+    assert.equal(endpoint.completed('TEST-native-session'),
+      mode === 'valid' || mode === 'valid-thinking' || mode === 'thinking-only',
+      'completed MCP effects do not replace the required actual answer');
     assert.equal(endpoint.completed('TEST-foreign-session'), false);
   } finally {
     await client.close();

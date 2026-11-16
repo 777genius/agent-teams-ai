@@ -149,7 +149,62 @@ jobs:
             test/features/agent-backend/runtimeActivityFacade.test.ts \
             test/renderer/store/teamRuntimeRunAdoption.test.ts \
             test/renderer/store/teamSlice.test.ts \
-            tools/owned-process-broker/nativeWindowsAppGate.mjs
+            tools/owned-process-broker/nativeWindowsAppGate.mjs \
+            packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts \
+            packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts \
+            packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts \
+            packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts \
+            packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts \
+            packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts \
+            packages/legacy-agent-host/src/composition/HostScheduledRuns.ts \
+            packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts \
+            packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts \
+            packages/legacy-agent-host/src/composition/readTeamActivity.ts \
+            packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts \
+            packages/legacy-agent-host/src/composition/scheduledRunProjection.ts \
+            packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts \
+            packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts \
+            packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts \
+            packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts \
+            packages/legacy-agent-host/src/runtime/RuntimeOwner.ts \
+            packages/legacy-agent-host/src/runtime/activityContracts.ts \
+            packages/legacy-agent-host/src/runtime/normalizeActivity.ts \
+            packages/legacy-agent-host/src/runtime/providerActivityContracts.ts \
+            packages/legacy-agent-host/tests/captured-claude-process.test.ts \
+            packages/legacy-agent-host/tests/codex-member-provider.test.ts \
+            packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts \
+            packages/legacy-agent-host/tests/management-model-probe.test.ts \
+            packages/legacy-agent-host/tests/member-process-stderr.test.ts \
+            packages/legacy-agent-host/tests/member-provider-authority.test.ts \
+            packages/legacy-agent-host/tests/native-claude-host.native.ts \
+            packages/legacy-agent-host/tests/native-codex-team.native.ts \
+            packages/legacy-agent-host/tests/owned-process-facade.test.ts \
+            packages/legacy-agent-host/tests/runtime-activity.test.ts \
+            packages/legacy-agent-host/tests/runtime-team-host.test.ts \
+            packages/legacy-agent-host/tests/scheduled-run-host.test.ts \
+            packages/legacy-agent-host/tests/team-activity-read.test.ts \
+            scripts/legacy-agent-host/desktop-activity-ui-smoke.ts \
+            src/features/agent-backend/contracts/operations.ts \
+            src/features/agent-backend/main/adapters/output/projectBackendResult.ts \
+            src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts \
+            src/features/agent-backend/renderer/createHostTaskActivityApi.ts \
+            src/renderer/components/team/ClaudeLogsPanel.tsx \
+            src/renderer/components/team/ClaudeLogsSection.tsx \
+            src/renderer/components/team/members/HostMemberActivityLog.tsx \
+            src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx \
+            src/renderer/components/team/members/MemberLogsTab.tsx \
+            src/shared/types/teamActivity.ts \
+            src/shared/utils/diagnosticsRedaction.ts \
+            src/shared/utils/redactDiagnosticAssignments.ts \
+            src/shared/utils/runtimeDiagnosticText.ts \
+            test/features/agent-backend/hostTaskActivity.test.ts \
+            test/renderer/components/team/ClaudeLogsSection.test.ts \
+            test/renderer/components/team/members/MemberLogsPolling.test.ts \
+            test/renderer/components/team/members/hostLogStatsTabs.test.tsx \
+            test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx \
+            tools/owned-process-broker/fixtures/claudeProviderPeer.mjs \
+            tools/owned-process-broker/fixtures/providerDesktopPeer.mjs \
+            tools/owned-process-broker/nativeDebugServiceScenario.ts
           pnpm typecheck:workspace
           node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json
           pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main

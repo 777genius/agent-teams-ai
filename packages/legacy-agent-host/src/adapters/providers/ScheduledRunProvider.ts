@@ -6,6 +6,7 @@ import { capturedNativeProcessFactory } from './capturedNativeProcessFactory.js'
 import { ClaudeSubagentLogProjection } from './ClaudeSubagentLogProjection.js';
 import { codexByteTransport } from './codexByteTransport.js';
 import { codexExternalMcpPolicy } from './codexMcpPolicy.js';
+import { observeMemberProcessStderr } from './observeMemberProcessStderr.js';
 import { readCodexMcpCatalog } from './readCodexMcpCatalog.js';
 import type { ClaudeConfig, ClaudeSubagentPort } from '@agent-teams/provider-implementations/claude';
 import type { DriverFactory, OpenConfig, Session } from '@agent-teams/provider-session-contracts';
@@ -14,6 +15,7 @@ import type { ProcessCustody } from '../../composition/processCustody.js';
 import type { RuntimeBinding } from '../../runtime/contracts.js';
 import type { HostWindowsLaunch } from '../../owned-process/HostWindowsLaunch.js';
 import type { RuntimeSourceProcessOrigin } from '../../composition/runtimeSourceProcessOrigin.js';
+import type { RuntimeProcessOutput } from '../../runtime/providerActivityContracts.js';
 
 export interface ScheduledRunProviderContext {
   profile: RuntimeMemberProfile;
@@ -24,6 +26,7 @@ export interface ScheduledRunProviderContext {
   processCustody?: ProcessCustody;
   retainedWindowsLaunch?: HostWindowsLaunch;
   processOrigin?: RuntimeSourceProcessOrigin;
+  observeProcessOutput?: (observation: RuntimeProcessOutput) => void;
   isCurrent(): boolean;
   onProgress(): void;
 }
@@ -79,7 +82,11 @@ export function createScheduledRunProvider(context: ScheduledRunProviderContext)
       mcpServers: externalMcp,
       requiredTools: {}, limits: { ...profile.limits }, probe: async () => current(),
       sessionExists: async () => false,
-      custody: { launch: custody.launch, confirmStopped: () => custody.confirmStopped() },
+      custody: { launch: value => {
+        const child = custody.launch(value);
+        observeMemberProcessStderr(child, context, value.args);
+        return child;
+      }, confirmStopped: () => custody.confirmStopped() },
     };
     factory = createClaudeDriverFactory({ capabilities: ['session.conversation', ...(context.subagents ? ['session.subagents'] : [])],
       resolveConfiguration: async value => {
@@ -102,9 +109,10 @@ export function createScheduledRunProvider(context: ScheduledRunProviderContext)
         if (allocated || !selected(value) || !(await verifyMcpCatalog())) return undefined;
         if (!selected(value)) return undefined;
         allocated = true;
-        const child = custody.launch({ command: profile.executable.path, cwd: profile.cwd,
-          args: [...(policy ? codexMcpPolicyArgs(policy) : []), 'app-server', '--listen', 'stdio://',
-            ...captureCodexExtraArgs(profile.extraArgs)] });
+        const args = [...(policy ? codexMcpPolicyArgs(policy) : []), 'app-server', '--listen', 'stdio://',
+          ...captureCodexExtraArgs(profile.extraArgs)];
+        const child = custody.launch({ command: profile.executable.path, cwd: profile.cwd, args });
+        observeMemberProcessStderr(child, context, args);
         return {
           binding: { tenantId: value.tenantId, projectId: value.projectId,
             sessionId: value.sessionId, generation: value.generation },

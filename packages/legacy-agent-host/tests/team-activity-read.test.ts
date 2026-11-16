@@ -188,6 +188,14 @@ test('actual normalized content/tool/usage/compaction facts remain scoped to ori
   assert.equal(stats.outputTokens, 7);
   assert.equal(stats.costUsd, 0.02, 'duplicate cumulative reports are not double-counted');
   assert.equal(stats.compactions, 1);
+  const snapshot = f.options.runtime.readActivitySnapshot.bind(f.options.runtime);
+  f.options.runtime.readActivitySnapshot = binding => ({ ...snapshot(binding),
+    logProjection: { thinking: [], stderr: [], truncated: true } });
+  const unchanged = readTeamActivity(f.options, { taskId: f.taskId });
+  assert.deepEqual(unchanged, logs, 'internal schedule-log trimming does not enter Team Logs');
+  const { computedAt: _originalClock, ...originalStats } = stats;
+  const { computedAt: _unchangedClock, ...unchangedStats } = summarizeTeamActivity('alice', unchanged);
+  assert.deepEqual(unchangedStats, originalStats, 'retained Stats cost stays known');
   f.connection.revoke('human');
   assert.throws(() => readTeamActivity(f.options, { taskId: f.taskId }), { code: 'forbidden' });
   assert.throws(() => f.owner.readTaskInputCause('human', f.intent), { code: 'forbidden' });
