@@ -1434,12 +1434,14 @@ export class TeamGraphAdapter {
     }
   }
 
-  static #mapReviewState(state: string | undefined): 'none' | 'review' | 'needsFix' | 'approved' {
+  static #mapReviewState(state: string | undefined): 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved' {
     switch (state) {
       case 'review':
         return 'review';
       case 'needsFix':
         return 'needsFix';
+      case 'reviewed':
+        return 'reviewed';
       case 'approved':
         return 'approved';
       default:

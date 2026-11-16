@@ -184,7 +184,7 @@ export interface GraphNode {
   /** Task status for pill coloring */
   taskStatus?: 'pending' | 'in_progress' | 'completed' | 'deleted';
   /** Review state overlay */
-  reviewState?: 'none' | 'review' | 'needsFix' | 'approved';
+  reviewState?: 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved';
   /** Reviewer shown as a compact handoff chip for active review cycles */
   reviewerName?: string | null;
   /** Reviewer chip mode */
