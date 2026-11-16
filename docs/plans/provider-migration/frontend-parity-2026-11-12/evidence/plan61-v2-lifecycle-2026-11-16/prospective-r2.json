@@ -1,0 +1,496 @@
+{
+  "kind": "PLAN61_INDEPENDENT_PROSPECTIVE_R2",
+  "reviewer": "/root/native_gaps",
+  "decision": "ACCEPT_PROSPECTIVE_PLAN_ONLY",
+  "blockingFindings": [],
+  "plan": {
+    "path": "/workspace/scratch/20ba97c23d57/v2-lifecycle-proposal/plan.md",
+    "sha256": "2084afb4deb74f5d98a20ff1bd1cca7398c17e883b54086c131198e33c6d8692",
+    "gitBlob": "f745e392df009585e2ad10bf6209d33f36be23a2",
+    "bytes": 21679,
+    "lines": 113
+  },
+  "sourceBindingsManifest": {
+    "path": "/workspace/scratch/20ba97c23d57/v2-lifecycle-proposal/source-bindings.json",
+    "sha256": "4a71eee2d826619e75230d9cda2b0cc6e50f26160630a786e3cc186d166a3836"
+  },
+  "historicalSourceBindings": {
+    "path": "/workspace/scratch/20ba97c23d57/frontend-proposal/v2-four-rows-r1/rebound55-source-bindings.json",
+    "sha256": "a9739054471e875b9c4099c4b08d278b86da2922041c55f0e5450d5efede05e4",
+    "officialHead": "209aab743e0da2a8bce68b708281ebcb826c2570",
+    "files": 19
+  },
+  "workflow": {
+    "path": "/workspace/scratch/20ba97c23d57/v2-lifecycle-proposal/before/.github/workflows/host-emulated-acceptance.yml",
+    "repositoryPath": ".github/workflows/host-emulated-acceptance.yml",
+    "gitBlob": "4211a5b6de087018bdbf5a4ad41d488f16f61646",
+    "sha256": "e30db362721a07c03ca00ad5dbb4cb0da2297e92337089ad3fbfda1b4bbf180c",
+    "bytes": 123074,
+    "lines": 1562,
+    "officialReadAt": "ac03d91bcd4d5678c653e09624978fffdc8f2784",
+    "unchangedByReportedPublishedSource": "fc100017fa5861611f5257527b1512b4c4ca5b46",
+    "laterRootReportedDocOnlyParent": "f141f2f6",
+    "publicationParentMustBeRechecked": true
+  },
+  "scope": {
+    "sourcePaths": [
+      ".github/workflows/host-emulated-acceptance.yml"
+    ],
+    "existingNativeJourney": "opencode-v2-review",
+    "addedNativeJourneys": [
+      "opencode-v2-quit-active",
+      "opencode-v2-quit-pending-open",
+      "opencode-v2-resume",
+      "opencode-v2-chat-attachments"
+    ],
+    "platform": "darwin-arm64",
+    "runner": "macos-15",
+    "lintOperandsUnchanged": 132,
+    "artifactPrefixUnchanged": 72,
+    "artifactAdditions": [
+      "desktop-readback-receipt.json",
+      "desktop-readback-app.log",
+      "cold-resume-epoch1-bundles/**",
+      "hoststore/teams/test-desktop-backend/.host-owner/launches/*.json",
+      "workspace/native-effect.txt",
+      "providers/opencode-v2/data/agent-teams-v2-*/opencode.sqlite",
+      "providers/opencode-v2/data/agent-teams-v2-*/opencode.sqlite-wal",
+      "providers/opencode-v2/data/agent-teams-v2-*/opencode.sqlite-shm"
+    ],
+    "artifactTotal": 80,
+    "sourceAfterimagesReviewed": false
+  },
+  "findings": [
+    {
+      "topic": "Scope and current source",
+      "decision": "ACCEPT",
+      "facts": "One existing Host Emulated workflow is sufficient. The frozen current preimage is the independently fetched Plan60 blob4211a5b6, with132 lint and72 artifact operands. Plan59 only changes unrelated general CI/staging sources; root must recheck the actual publication parent. All18 retained helper/dependency bytes match the prior official209a records; this review does not claim a new remote fetch of every dependency. The eight journey helpers already occur in the declared proof roster. No helper, product, test, public API or new framework is selected."
+    },
+    {
+      "topic": "Closed selection and no genuine Claude/Codex",
+      "decision": "ACCEPT",
+      "sources": [
+        "desktop-proof-mode.ts:222-232,330-342",
+        "desktop-proof-fixture.ts:139-206",
+        "desktop-backend-fixture.ts:99-100",
+        "desktop-backend-smoke.ts:110-126"
+      ],
+      "facts": "The four new explicit Darwin ARM64 rows select the existing OpenCode V2 lifecycle modes. The existing V2 fixture and model switch exclude genuine Claude/Codex. Empty Quit selector is invalid; the plan correctly requires absence except pending-open warm, and clears it for cold. All modes stay outside general Ready/full-qualification activation."
+    },
+    {
+      "topic": "Reuse and guard preservation",
+      "decision": "ACCEPT",
+      "facts": "The four existing Review steps can be shared through closed static descriptors and one proof-owner switch. Existing Review/common assertions,132 lint operands and unrelated management Settings/C8 bytes remain required exact preservation gates. One original warm invocation and only selected original external cold invocation occur; Resume already owns its two epochs. Receipt/log data never selects a mode or path. This is a document-level design approval; actual afterimage preservation must be independently reviewed."
+    },
+    {
+      "topic": "Compiled epoch identity",
+      "decision": "ACCEPT",
+      "sources": [
+        "desktop-captured-app.ts:557-565,680-694,711-768",
+        "desktop-backend-observations.ts:428-441"
+      ],
+      "facts": "The top-level compiled array and firstEpoch array refer to the first epoch. Original code copies those exact files to cold-resume-epoch1-bundles, records the first pins and verifies copied bytes. compiledBundleHashes recursively accepts this directory and emits relative .js/.cjs hashes, so it is an existing suitable data reader. SecondEpoch pins bind current dist. firstEpoch has no status field; first normal cleanup, writer release, distinct app group/Host PID and checkpoint/history witness are the real boundary."
+    },
+    {
+      "topic": "Quit and pending custody",
+      "decision": "ACCEPT",
+      "sources": [
+        "desktop-native-quit-ui-smoke.ts:148-156,165-206,305-346,370-427",
+        "desktop-backend-smoke.ts:317-342,617,682-700"
+      ],
+      "facts": "Both Quit routes reach the common Quit/finally, so quitRequested=true is required for every outer receipt. Active input unknown or terminal cancelled/failed and queued cancelled without dispatch remain the original oracle. Pending-open legitimately permits held/unknown open-unknown debt despite physical absence; the plan preserves that disjunction and does not erase unresolved custody. Cold Quit has no nativeInputsReplayed/originalReceiptSha256 fields; environment/cold metadata joins provide the actual warm SHA binding."
+    },
+    {
+      "topic": "Checkpoint Resume",
+      "decision": "ACCEPT",
+      "sources": [
+        "desktop-resume-ui-smoke.ts:51-59,285-330",
+        "desktop-resume-records.ts:98-138",
+        "desktop-captured-app.ts:711-768"
+      ],
+      "facts": "The original route has one explicit Resume, one continuation and second Stop. It checks two released generations, same native session, original history prefix,11 observations, final detached/released restoration and recovery snapshot. History SHA covers bounded ordered native-session serialization, not whole SQLite bytes. The plan does not add a fresh Launch or transfer this positive to full Windows W07."
+    },
+    {
+      "topic": "PNG journey",
+      "decision": "ACCEPT",
+      "sources": [
+        "desktop-native-chat-attachments-ui.ts:20-44,106-132,197-211",
+        "desktop-composer-ui-smoke.ts:159-185,203-281"
+      ],
+      "facts": "The selected V2 branch permits one PNG file input and returns before text Download logic. The original model verifies three second-turn requests carry the prepared image hash. Original helper checks preview2x1/SHA, attachment references without path/base64 exposure, two Sends, completed native Task, ONE/TWO effect, durable native image history and Stop before Quit. The plan preserves those actions and their original deadlines."
+    },
+    {
+      "topic": "Metadata and no replay",
+      "decision": "ACCEPT",
+      "sources": [
+        "desktop-opencode-v2-cold-metadata.ts:98-141,149-193,373-386",
+        "desktop-opencode-metadata-lineage.ts:existing assertDesktopMetadataLineageRetained"
+      ],
+      "facts": "Warm Review, warm Quit/PNG, first Resume Host, second Resume Host and cold readback have different existing proof owners. The plan correctly uses those owners, including ready/opening rather than invented PASS and firstMetadataAbsentBeforeSecondSpawn rather than the generic final flag. The one read-only cold metadata child is separate from zero Runtime allocation, and its original lineage/physical closure remain required."
+    },
+    {
+      "topic": "Artifacts and budgets",
+      "decision": "ACCEPT",
+      "facts": "The exact eight additions produce80 unique artifact operands with72 unchanged prefix; selected SQLite namespace is bounded and WAL/SHM may be absent. Original screenshot globs cover all selected names. No native input rehash claim is inferred from Codex-only selectedNativeInputHashes arrays. Existing45-minute row/5-minute aggregate and native/UI/cleanup deadlines remain unchanged; no guaranteed fit or runtime acceptance is claimed."
+    }
+  ],
+  "checks": [
+    {
+      "check": "frozen_plan_exact_bytes_hash_lines_blob",
+      "pass": true
+    },
+    {
+      "check": "frozen_source_binding_manifest_exact",
+      "pass": true
+    },
+    {
+      "check": "historical_19_source_binding_manifest_exact",
+      "pass": true
+    },
+    {
+      "check": "current_workflow_exact_preimage",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:.github/workflows/host-emulated-acceptance.yml",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:scripts/legacy-agent-host/desktop-captured-app.ts",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:scripts/legacy-agent-host/desktop-composer-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:scripts/legacy-agent-host/desktop-launch-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:scripts/legacy-agent-host/desktop-native-chat-attachments-ui.ts",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:scripts/legacy-agent-host/desktop-resume-records.ts",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:scripts/legacy-agent-host/desktop-resume-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:scripts/legacy-agent-host/desktop-readback-fixture.ts",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:scripts/legacy-agent-host/desktop-proof-mode.ts",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:scripts/legacy-agent-host/desktop-proof-fixture.ts",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:scripts/legacy-agent-host/desktop-opencode-v2-cold-metadata.ts",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:scripts/legacy-agent-host/desktop-opencode-v2-fixture.ts",
+      "pass": true
+    },
+    {
+      "check": "pinned_source_bytes:scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+      "pass": true
+    },
+    {
+      "check": "18_retained_dependency_bindings_exact_19_source_subset",
+      "pass": true
+    },
+    {
+      "check": "lint_original_unique_count",
+      "pass": true
+    },
+    {
+      "check": "lint_original_operands_in_preimage_order",
+      "pass": true
+    },
+    {
+      "check": "artifacts_original_unique_count",
+      "pass": true
+    },
+    {
+      "check": "artifacts_original_operands_in_preimage_order",
+      "pass": true
+    },
+    {
+      "check": "eight_selected_artifact_additions_yield_80_unique",
+      "pass": true
+    },
+    {
+      "check": "existing_declared_proof_pin:desktop-captured-app.ts",
+      "pass": true
+    },
+    {
+      "check": "existing_declared_proof_pin:desktop-composer-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "check": "existing_declared_proof_pin:desktop-launch-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "check": "existing_declared_proof_pin:desktop-native-chat-attachments-ui.ts",
+      "pass": true
+    },
+    {
+      "check": "existing_declared_proof_pin:desktop-native-quit-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "check": "existing_declared_proof_pin:desktop-native-stop-fixture.ts",
+      "pass": true
+    },
+    {
+      "check": "existing_declared_proof_pin:desktop-resume-records.ts",
+      "pass": true
+    },
+    {
+      "check": "existing_declared_proof_pin:desktop-resume-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "check": "prospective_only_no_source_afterimage_or_execution_claim",
+      "pass": true
+    },
+    {
+      "check": "one_workflow_only",
+      "pass": true
+    },
+    {
+      "check": "no_runtime_execution_authorization",
+      "pass": true
+    },
+    {
+      "check": "original_deadlines_preserved",
+      "pass": true
+    },
+    {
+      "check": "first_epoch_has_no_status",
+      "pass": true
+    },
+    {
+      "check": "pending_debt_preserved",
+      "pass": true
+    },
+    {
+      "check": "all_outer_quit_markers_required",
+      "pass": true
+    },
+    {
+      "check": "no_genuine_claude_codex",
+      "pass": true
+    },
+    {
+      "check": "main_stage1_limits_preserved",
+      "pass": true
+    }
+  ],
+  "checkSummary": {
+    "total": 46,
+    "passed": 46,
+    "failed": 0
+  },
+  "sourceByteBindings": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "localPath": "/workspace/scratch/20ba97c23d57/frontend-proposal/plan55-implementation/after/.github/workflows/host-emulated-acceptance.yml",
+      "gitBlob": "3774658a0ab266686930fbe7e28ecb9e26711ebf",
+      "sha256": "eea6e7d63b0e60b05008f7fe9dcfcb6bde27d7488a8b8ae883dfc2bf0207e14b",
+      "bytes": 123003,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/.github/workflows/host-emulated-acceptance.yml"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "localPath": "/workspace/scratch/20ba97c23d57/frontend-proposal/v2-four-rows-r1/source/scripts/legacy-agent-host/desktop-captured-app.ts",
+      "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+      "bytes": 49613,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/scripts/legacy-agent-host/desktop-captured-app.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-composer-ui-smoke.ts",
+      "localPath": "/workspace/scratch/20ba97c23d57/frontend-proposal/v2-four-rows-r1/source/scripts/legacy-agent-host/desktop-composer-ui-smoke.ts",
+      "gitBlob": "6f82097909474e95a34608338753251cb9c087c2",
+      "sha256": "c4eb94a344b80dc11c4124dcf515ef31bb249f13907258652d7368ec5a551d8e",
+      "bytes": 13165,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/scripts/legacy-agent-host/desktop-composer-ui-smoke.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-launch-ui-smoke.ts",
+      "localPath": "/workspace/scratch/20ba97c23d57/frontend-proposal/v2-four-rows-r1/source/scripts/legacy-agent-host/desktop-launch-ui-smoke.ts",
+      "gitBlob": "cf7d2eb9f7b8c1f1397980f7f0feef2e310efdfb",
+      "sha256": "b1ab72d21f81e777a9698b9491ad735bb6a7eaf228c6abfef30bcfe4debde34e",
+      "bytes": 38999,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/scripts/legacy-agent-host/desktop-launch-ui-smoke.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-chat-attachments-ui.ts",
+      "localPath": "/workspace/scratch/20ba97c23d57/frontend-proposal/v2-four-rows-r1/source/scripts/legacy-agent-host/desktop-native-chat-attachments-ui.ts",
+      "gitBlob": "428fad07141d46553b261864ce9985bd746aa17a",
+      "sha256": "776df02aeb4d8c8eec24d302475075625d2479f6e4c095ffd020000405c9fd91",
+      "bytes": 12210,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/scripts/legacy-agent-host/desktop-native-chat-attachments-ui.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+      "localPath": "/workspace/scratch/20ba97c23d57/frontend-proposal/v2-four-rows-r1/source/scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+      "gitBlob": "4415bad7752c91a0c0fbad789f5c712908643425",
+      "sha256": "4f3c5460147352c8bbc472bac0e74ae54c646425d23ffb3a97bc0a8d9886b40e",
+      "bytes": 20245,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "localPath": "/workspace/scratch/20ba97c23d57/frontend-proposal/v2-four-rows-r1/source/scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "gitBlob": "d2f58f7dd6ce6b05ff6200fabe67a4945f94a506",
+      "sha256": "2b954cec0846e30f530ae615e63ac05ae9a3969e0338e5d2ab03ec80a62a0f0d",
+      "bytes": 29580,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/scripts/legacy-agent-host/desktop-native-stop-fixture.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-resume-records.ts",
+      "localPath": "/workspace/scratch/20ba97c23d57/frontend-proposal/v2-four-rows-r1/source/scripts/legacy-agent-host/desktop-resume-records.ts",
+      "gitBlob": "0ca117bd5e84ae6368278a3a0a1cda40b5ec680b",
+      "sha256": "fe69bc8ed0208727811e53fbf7f1c92de27732181db6afb63de96d49f6a174ff",
+      "bytes": 11685,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/scripts/legacy-agent-host/desktop-resume-records.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-resume-ui-smoke.ts",
+      "localPath": "/workspace/scratch/20ba97c23d57/frontend-proposal/v2-four-rows-r1/source/scripts/legacy-agent-host/desktop-resume-ui-smoke.ts",
+      "gitBlob": "1a21e95f73196616ef79e60fa7877b8d79fa6595",
+      "sha256": "cec4ff07707568bd3ecadfe4993d7838435c4962a682b1ab67dffbc28c03d8c8",
+      "bytes": 27683,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/scripts/legacy-agent-host/desktop-resume-ui-smoke.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "localPath": "/workspace/scratch/20ba97c23d57/native-proposal/v2-review-r1/source/scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "gitBlob": "9c724c3895e467bc1db062e5015ded70c30e65e4",
+      "sha256": "bbd6647969c1ab0ae125b6a5e0685ca0f112dca05661a6c04b37c4fbee56a33e",
+      "bytes": 55757,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/scripts/legacy-agent-host/desktop-backend-smoke.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-readback-fixture.ts",
+      "localPath": "/workspace/scratch/20ba97c23d57/native-proposal/v2-review-r1/source/scripts/legacy-agent-host/desktop-readback-fixture.ts",
+      "gitBlob": "c50bb37b63a707ab771eda478e336483c8850931",
+      "sha256": "eb37cc1698fe78acaa0a1a4e68339ee621e157d710117ee83c5f1a52950cae30",
+      "bytes": 13099,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/scripts/legacy-agent-host/desktop-readback-fixture.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-mode.ts",
+      "localPath": "/workspace/scratch/20ba97c23d57/native-proposal/v2-review-r1/source/scripts/legacy-agent-host/desktop-proof-mode.ts",
+      "gitBlob": "e2e7029c56de6343eb4ad2a2395044efd009ae0b",
+      "sha256": "e96f15e68a59f991034d68ca37b0125d4c798cd06eb34d58ceeb2f3e537966de",
+      "bytes": 26007,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/scripts/legacy-agent-host/desktop-proof-mode.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-fixture.ts",
+      "localPath": "/workspace/scratch/20ba97c23d57/native-proposal/v2-review-r1/source/scripts/legacy-agent-host/desktop-proof-fixture.ts",
+      "gitBlob": "4f26fd0f9654dd40f4591c5078a5cf7dc119e769",
+      "sha256": "6c75fec75d81407cec6d1552d4a6a3a87ccac3145cdaa0aca7fb0187308f8db0",
+      "bytes": 11248,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/scripts/legacy-agent-host/desktop-proof-fixture.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-cold-metadata.ts",
+      "localPath": "/workspace/scratch/20ba97c23d57/native-proposal/v2-review-r1/source/scripts/legacy-agent-host/desktop-opencode-v2-cold-metadata.ts",
+      "gitBlob": "2859c6944113e57c71fc726b30c3d866022414aa",
+      "sha256": "86772cbc3a3d99005226ab8c7d6819d4d8eaa702afbab3fadc71fd6d45922f1c",
+      "bytes": 20613,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/scripts/legacy-agent-host/desktop-opencode-v2-cold-metadata.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "localPath": "/workspace/scratch/20ba97c23d57/native-proposal/v2-review-r1/source/scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+      "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+      "bytes": 26258,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/scripts/legacy-agent-host/desktop-proof-evidence.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "localPath": "/workspace/scratch/20ba97c23d57/native-proposal/v2-review-r1/source/scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "gitBlob": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587",
+      "sha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+      "bytes": 33737,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/scripts/legacy-agent-host/desktop-backend-fixture.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "localPath": "/workspace/scratch/20ba97c23d57/native-proposal/v2-review-r1/source/scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "gitBlob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+      "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23",
+      "bytes": 33173,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/scripts/legacy-agent-host/desktop-backend-observations.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-fixture.ts",
+      "localPath": "/workspace/scratch/20ba97c23d57/native-proposal/v2-review-r1/source/scripts/legacy-agent-host/desktop-opencode-v2-fixture.ts",
+      "gitBlob": "9d6a158fe27134c6f0559ea058f2ecfa5ad478d1",
+      "sha256": "22a46aa137e87c4f1a282aae5518e9aada69ce8b947169457d3aadde3b2ace1d",
+      "bytes": 7577,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/scripts/legacy-agent-host/desktop-opencode-v2-fixture.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+      "localPath": "/workspace/scratch/20ba97c23d57/incoming-lineage-53/after/scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+      "gitBlob": "79c288d8cd5f6dc432177a2047ce517f174d11b4",
+      "sha256": "fac4d4bf3d7b662efe23f921f05d5a76277f294ace34de3053c3447d0dd4347f",
+      "bytes": 17725,
+      "officialReadUrl": "https://github.com/777genius/agent-teams-ai/blob/209aab743e0da2a8bce68b708281ebcb826c2570/scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts"
+    }
+  ],
+  "rosterByteBinding": {
+    "path": "/workspace/scratch/20ba97c23d57/native-proposal/v2-review-r1/source/scripts/legacy-agent-host/desktop-proof-sources.ts",
+    "gitBlob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+    "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a",
+    "eightHelpersPresent": true
+  },
+  "limits": [
+    "This is independent prospective document/source review only. No workflow afterimage exists in this review and no actual source delta is approved by it.",
+    "No project/compiler/test/provider/native/GUI execution, CI polling/dispatch/rerun, remote publication or Git mutation was performed.",
+    "No actual runtime qualification or timely-fit claim follows from source inspection. Future positive results are exact-head and Darwin ARM64 lane scoped.",
+    "Original19 official source binding records are retained; current workflow is independently fetched at immutable ac03. Current preservation of the18 dependencies through fc100/f141 is root-reported full-tree evidence, not a claimed fresh fetch here.",
+    "Before source publication review full exact preimage/postimage, closed mappings, absent optional selectors, shared assertions,132 lint preservation and72-to80 artifact prefix. Root must verify actual parent and publish/read back selection first.",
+    "No genuine Claude/Codex, P08 same-Main Retry, P09 mutable-byte decision, full Windows W07 fresh Launch, M13, Ready/full Stage1, release/default activation or Stage2 qualification is inferred."
+  ]
+}
