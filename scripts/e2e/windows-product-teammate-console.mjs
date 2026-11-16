@@ -38,6 +38,7 @@ const hwndStop = path.join(receiptDir, 'hwnd-stop.txt');
 const hwndProof = path.join(receiptDir, 'window-observation.json');
 const usageCcusageMarker = path.join(receiptDir, 'usage-ccusage-process.json');
 const usageTokscaleMarker = path.join(receiptDir, 'usage-tokscale-process.json');
+const heldToolPidPath = path.join(receiptDir, 'owned-held-powershell.pid');
 const usageProcessScript = [
   "const fs = require('node:fs')",
   "fs.writeFileSync(process.argv[1], JSON.stringify({pid:process.pid,source:process.argv[2]}))",
@@ -64,6 +65,7 @@ let hwndObserver;
 let hwndObserverLog = '';
 let hwndEvidence;
 let usageImporterProcesses = [];
+let heldTool;
 let log = '';
 let phase = 'setup';
 let protocolFailure = null;
@@ -81,7 +83,7 @@ function contentText(value) {
 function modelToolDecision(body) {
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const requestText = messages.filter(m => m?.role === 'user').map(m => contentText(m.content)).join('\n');
-  const directive = [...requestText.matchAll(/WIN_NATIVE_TOOL:(cmd|git|powershell):([0-9a-f-]{36})/g)].at(-1);
+  const directive = [...requestText.matchAll(/WIN_NATIVE_TOOL:(cmd|git|powershell|hold):([0-9a-f-]{36})/g)].at(-1);
   if (!directive) return undefined;
   const kind = directive[1], token = directive[2], key = kind + ':' + token;
   if (!expected.has(key)) return { id: 'unowned-request-' + token, text: 'No owned test action' };
@@ -94,6 +96,9 @@ function modelToolDecision(body) {
       .map(part => ({ text: contentText(part.content), isError: part.is_error === true }));
   }).at(-1);
   if (result !== undefined) {
+    // Stop deliberately cancels the held tool; it is qualified by its original
+    // native PID retirement, not by a normal tool_result from the model.
+    if (kind === 'hold') return { id: 'held_' + token.replaceAll('-', ''), text: 'Held tool finished.' };
     if (result.isError) {
       protocolFailure = 'Real ' + kind + ' Bash tool returned an error';
       return { id: 'failed_' + token.replaceAll('-', ''), text: 'Tool failed.' };
@@ -115,8 +120,16 @@ function modelToolDecision(body) {
   const bash = names.find(n => /^(?:Bash|bash|shell|functions\.shell)$/.test(n));
   assert(bash, 'Native runtime did not expose a Bash/shell tool to teammate');
   const marker = expected.get(key);
+  // Run the held real PowerShell as a descendant of the app-owned teammate.
+  // EncodedCommand avoids quoting or Git Bash path rewriting of the TEST marker.
+  const heldScript = "$ErrorActionPreference='Stop';" +
+    "[System.IO.File]::WriteAllText('" + heldToolPidPath.replaceAll("'", "''") +
+    "',[string]$PID);Start-Sleep -Seconds 120";
   // Git Bash/MSYS translates native /c into a drive path; //c reaches cmd.exe as /c.
-  const command = kind === 'cmd'
+  const command = kind === 'hold'
+    ? 'powershell.exe -NoProfile -NonInteractive -EncodedCommand ' +
+      Buffer.from(heldScript, 'utf16le').toString('base64')
+    : kind === 'cmd'
     ? 'cmd.exe //d //c echo ' + marker
     : kind === 'git'
       ? 'git.exe --version && echo ' + marker
@@ -425,6 +438,34 @@ async function run() {
     await wait('owned ' + ownedChild.source + ' importer process retired', async () =>
       (await getProcess(ownedChild.pid)) === null, 20_000);
   }
+  // Stop during a live native tool call to prove the /T path retires the
+  // original tool descendant, not only Bob's process after idle tool calls.
+  phase = 'native-held-tool-before-product-stop';
+  await rm(heldToolPidPath, { force: true });
+  const holdToken = randomUUID(), holdKey = 'hold:' + holdToken;
+  expected.set(holdKey, 'WIN_HOLD_' + holdToken);
+  await api(`window.electronAPI.teams.sendMessage(${literal(teamName)},
+    ${literal({ member: 'bob', from: 'user', text: 'WIN_NATIVE_TOOL:' + holdKey })})`);
+  heldTool = await wait('original live PowerShell descendant of Bob', async () => {
+    const marker = await readFile(heldToolPidPath, 'utf8').catch(error => {
+      if (error?.code === 'ENOENT') return '';
+      throw error;
+    });
+    if (!/^\d+$/.test(marker.trim())) return false;
+    const pid = Number(marker.trim());
+    if (!Number.isSafeInteger(pid) || pid <= 0) return false;
+    const observed = await getProcess(pid);
+    if (!observed?.command?.toLowerCase().includes('powershell.exe')) return false;
+    let parent = observed.parent;
+    for (let depth = 0; depth < 8 && Number.isSafeInteger(parent) && parent > 0; depth++) {
+      if (parent === originalMember.pid) return observed;
+      const ancestor = await getProcess(parent);
+      if (!ancestor) return false;
+      parent = ancestor.parent;
+    }
+    return false;
+  }, 60_000);
+  assert(await ownedStillAlive(heldTool), 'Real held PowerShell exited before product Stop');
   await writeFile(hwndStop, 'stop');
   hwndEvidence = await wait('owned native HWND observer evidence', async () => {
     try { return JSON.parse(await readFile(hwndProof, 'utf8')); }
@@ -444,6 +485,8 @@ async function run() {
   await wait('both original teammate PIDs retired after product Stop', async () =>
     !(await ownedStillAlive(originalMember)) &&
       !(await ownedStillAlive(initialMember)), 30_000);
+  await wait('original active PowerShell tool PID retired after product Stop', async () =>
+    !(await ownedStillAlive(heldTool)), 30_000);
   const focus = await mainInspector.evaluate('globalThis.__winProductFocus');
   assert(focus.pid > 0 && Number.isSafeInteger(focus.blur));
   assert.equal(focus.before, true, 'Electron window did not own focus before tools');
@@ -499,6 +542,7 @@ async function run() {
     appManagedAddedTeammatePid: originalMember.pid,
     originalTeammatePid: originalMember.pid, originalTeammateBirth: originalMember.creation,
     toolResults: [...proofs.values()], usageImporterProcesses, electronFocus: focus,
+    heldPowerShellToolPid: heldTool.pid, heldToolRetiredAfterStop: true,
     actualConsoleWindowsEnumerated: true,
     visibleConsoleWindowsObserved: hwndEvidence.unexpectedNewConsoleWindows.length,
     foregroundOtherPidSamples: hwndEvidence.foregroundOtherPidSamples,
@@ -522,6 +566,7 @@ try {
     ? await Promise.all([
         ['alice', initialMember],
         ['bob', originalMember],
+        ['held-powerShell-tool', heldTool],
       ].filter(([, identity]) => Boolean(identity)).map(async ([member, identity]) => {
         try {
           const observed = await getProcess(identity.pid);
@@ -542,6 +587,7 @@ try {
     teamAliveBeforeAttach,
     addMemberIpcReceipt,
     toolResults: [...proofs.values()], usageImporterProcesses,
+    heldPowerShellToolPid: heldTool?.pid ?? null,
     stopFailurePidEvidence,
     modelErrors: model?.errors ?? [],
     logTail: log.slice(-3500),
@@ -567,6 +613,7 @@ try {
     { identity: mainBirth, marker: 'electron.exe' },
     { identity: initialMember, marker: teamName },
     { identity: originalMember, marker: teamName },
+    { identity: heldTool, marker: 'powershell.exe' },
     { identity: forceExitMember, marker: teamName + '-force' },
   ]) {
     if (!identity) continue;
