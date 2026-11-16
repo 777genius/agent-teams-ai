@@ -1536,6 +1536,7 @@ export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
   sendCrossTeamMessage: (request: CrossTeamSendRequest) => Promise<CrossTeamSendResult | null>;
   requestReview: (teamName: string, taskId: string) => Promise<void>;
   updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) => Promise<void>;
+  setHumanOnlyApproval: (teamName: string, enabled: boolean) => Promise<void>;
   updateKanbanColumnOrder: (
     teamName: string,
     columnId: KanbanColumnId,
@@ -3574,6 +3575,19 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       set({
         reviewActionError: mapReviewError(error),
       });
+      throw error;
+    }
+  },
+
+  setHumanOnlyApproval: async (teamName: string, enabled: boolean) => {
+    try {
+      set({ reviewActionError: null });
+      await unwrapIpc('team:setHumanOnlyApproval', () =>
+        api.teams.setHumanOnlyApproval(teamName, enabled)
+      );
+      await get().refreshTeamData(teamName);
+    } catch (error) {
+      set({ reviewActionError: mapReviewError(error) });
       throw error;
     }
   },

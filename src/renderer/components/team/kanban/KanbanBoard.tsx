@@ -6,6 +6,9 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
+import {
+  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger,
+} from '@renderer/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useResizableColumns } from '@renderer/hooks/useResizableColumns';
 import { cn } from '@renderer/lib/utils';
@@ -19,6 +22,7 @@ import {
   PlayCircle,
   Plus,
   ShieldCheck,
+  Settings2,
   Trash2,
 } from 'lucide-react';
 
@@ -87,6 +91,7 @@ interface KanbanBoardProps {
   onSortChange: (sort: KanbanSortState) => void;
   onRequestReview: (taskId: string) => void;
   onApprove: (taskId: string) => void;
+  onHumanOnlyApprovalChange?: (enabled: boolean) => Promise<void>;
   onRequestChanges: (taskId: string) => void;
   onMoveBackToDone: (taskId: string) => void;
   onStartTask: (taskId: string) => void;
@@ -250,6 +255,7 @@ const SortableKanbanTaskCard = ({
   hasLiveTaskLogs,
   onRequestReview,
   onApprove,
+  onHumanOnlyApprovalChange,
   onRequestChanges,
   onMoveBackToDone,
   onStartTask,
@@ -346,6 +352,45 @@ export const KanbanBoard = memo(function KanbanBoard({
   const [visibleTaskLimitsByColumn, setVisibleTaskLimitsByColumn] = useState<
     Partial<Record<KanbanColumnId, number>>
   >({});
+  const [approvalPolicyPending, setApprovalPolicyPending] = useState(false);
+  const approvalSettingsAccessory = useMemo(() => {
+    if (!onHumanOnlyApprovalChange) return null;
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label="Approved column settings"
+            title="Approved column settings"
+            className="kanban-grid-no-drag h-6 w-6 p-0 text-[var(--color-text-muted)]"
+            disabled={approvalPolicyPending}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <Settings2 size={13} />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuCheckboxItem
+            checked={kanbanState.humanOnlyApproval === true}
+            disabled={approvalPolicyPending}
+            onSelect={(event) => event.preventDefault()}
+            onCheckedChange={(checked) => {
+              setApprovalPolicyPending(true);
+              void onHumanOnlyApprovalChange(checked === true)
+                .catch(() => {
+                  // Store reports the failure; the controlled checkbox stays persisted.
+                })
+                .finally(() => setApprovalPolicyPending(false));
+            }}
+          >
+            Require human approval
+          </DropdownMenuCheckboxItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }, [approvalPolicyPending, kanbanState.humanOnlyApproval, onHumanOnlyApprovalChange]);
   const hasReviewers = kanbanState.reviewers.length > 0;
   const enableTaskSorting =
     viewMode === 'columns' && !!onColumnOrderChange && sort.field === 'manual';
@@ -741,6 +786,7 @@ export const KanbanBoard = memo(function KanbanBoard({
           count: columnTasks.length,
           icon: accent.icon,
           accentColor: accent.accentColor,
+          headerAccessory: column.id === 'approved' ? approvalSettingsAccessory : undefined,
           content: renderCards(column.id, columnTasks),
           showAddButton: columnSupportsAddButton(column.id, onAddTask),
           skeletonCards: renderableColumnTasks(column.id, columnTasks).map((task) => ({
@@ -754,6 +800,7 @@ export const KanbanBoard = memo(function KanbanBoard({
       visibleColumns,
       groupedOrdered,
       renderCards,
+      approvalSettingsAccessory,
       onAddTask,
       renderableColumnTasks,
       kanbanState,
@@ -849,6 +896,7 @@ export const KanbanBoard = memo(function KanbanBoard({
                     count={columnTasks.length}
                     icon={accent.icon}
                     accentColor={accent.accentColor}
+                    headerAccessory={column.id === 'approved' ? approvalSettingsAccessory : undefined}
                     bodyClassName="max-h-none overflow-visible"
                   >
                     {renderCards(column.id, columnTasks, true)}

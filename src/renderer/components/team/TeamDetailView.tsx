@@ -1453,6 +1453,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     initTabUIState,
     selectTeam,
     updateKanban,
+    setHumanOnlyApproval,
     updateKanbanColumnOrder,
     updateTaskStatus,
     updateTaskOwner,
@@ -1502,6 +1503,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       initTabUIState: s.initTabUIState,
       selectTeam: s.selectTeam,
       updateKanban: s.updateKanban,
+      setHumanOnlyApproval: s.setHumanOnlyApproval,
       updateKanbanColumnOrder: s.updateKanbanColumnOrder,
       updateTaskStatus: s.updateTaskStatus,
       updateTaskOwner: s.updateTaskOwner,
@@ -2470,6 +2472,11 @@ export const TeamDetailView = memo(function TeamDetailView({
     [teamName, updateKanban]
   );
 
+  const handleHumanOnlyApprovalChange = useCallback(
+    (enabled: boolean) => setHumanOnlyApproval(teamName, enabled),
+    [setHumanOnlyApproval, teamName]
+  );
+
   const handleRequestChanges = useCallback((taskId: string) => {
     setRequestChangesTaskId(taskId);
   }, []);
@@ -3230,6 +3237,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                   }
                   onRequestReview={handleRequestReview}
                   onApprove={handleApproveTask}
+                  onHumanOnlyApprovalChange={handleHumanOnlyApprovalChange}
                   onRequestChanges={handleRequestChanges}
                   onMoveBackToDone={handleMoveBackToDone}
                   onStartTask={handleStartTask}
