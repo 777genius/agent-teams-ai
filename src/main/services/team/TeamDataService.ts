@@ -4014,7 +4014,9 @@ export class TeamDataService {
         // Only the desktop renderer's user action reaches this path. Agent tools
         // have no updateKanban/setHumanOnlyApproval endpoint; controller locks
         // and re-checks the policy before every approval mutation.
-        if ((taskBoard.getKanbanState?.() as KanbanState | null)?.humanOnlyApproval === true) {
+        const task = taskBoard.getTask(taskId) as TeamTask;
+        if ((taskBoard.getKanbanState?.() as KanbanState | null)?.humanOnlyApproval === true ||
+            getReviewStateFromTask(task) === 'reviewed') {
           taskBoard.approveAsHuman(taskId);
           return;
         }
@@ -4037,8 +4039,8 @@ export class TeamDataService {
     }
 
     if (patch.op === 'request_changes' &&
-        (taskBoard.getKanbanState?.() as KanbanState | null)?.humanOnlyApproval === true &&
-        (taskBoard.getTask(taskId) as TeamTask).reviewState === 'reviewed') {
+        (getReviewStateFromTask(taskBoard.getTask(taskId) as TeamTask) === 'reviewed' ||
+          (taskBoard.getKanbanState?.() as KanbanState | null)?.humanOnlyApproval === true)) {
       taskBoard.requestChangesAsHuman(taskId, {
         comment: patch.comment?.trim() || 'User requested changes.',
         ...(patch.taskRefs?.length ? { taskRefs: patch.taskRefs } : {}),

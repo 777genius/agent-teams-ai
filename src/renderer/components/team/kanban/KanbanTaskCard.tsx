@@ -755,7 +755,7 @@ export const KanbanTaskCard = memo(
           taskId={task.id}
           columnId={columnId}
           isReviewManual={isReviewManual}
-          canRejectReviewed={humanOnlyApproval && columnId === 'done' && task.reviewState === 'reviewed'}
+          canRejectReviewed={columnId === 'done' && task.reviewState === 'reviewed'}
           onRequestReview={onRequestReview}
           onApprove={onApprove}
           onRequestChanges={onRequestChanges}

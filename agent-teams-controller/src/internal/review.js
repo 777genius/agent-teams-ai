@@ -574,14 +574,15 @@ function completeReview(context, taskId, flags = {}) {
  */
 function approveAsHuman(context, taskId) {
   const result = withTeamBoardLock(context.paths, () => {
-    if (kanban.getKanbanState(context).humanOnlyApproval !== true) {
-      throw new Error('Human-only approval policy is not enabled');
-    }
+    const policyEnabled = kanban.getKanbanState(context).humanOnlyApproval === true;
     const task = tasks.getTask(context, taskId);
     if (task.status !== 'completed') {
       throw new Error(`Task #${task.displayId || task.id} must be completed before human approval`);
     }
     const prevReviewState = getEffectiveReviewState(context, task);
+    if (!policyEnabled && prevReviewState !== 'reviewed') {
+      throw new Error('Human-only approval policy is not enabled');
+    }
     if (prevReviewState === 'approved') {
       return { task: task, alreadyApproved: true };
     }

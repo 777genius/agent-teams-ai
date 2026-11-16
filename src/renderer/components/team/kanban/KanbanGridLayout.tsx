@@ -368,6 +368,7 @@ const LoadedKanbanGridLayout = ({
                 count={column.count}
                 icon={column.icon}
                 accentColor={column.accentColor}
+                headerAccessory={column.headerAccessory}
                 className="flex h-full min-h-0 flex-col"
                 headerClassName="shrink-0"
                 bodyClassName="kanban-grid-no-drag min-h-0 max-h-none flex-1"
