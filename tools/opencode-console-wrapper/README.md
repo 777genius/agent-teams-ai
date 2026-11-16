@@ -26,8 +26,11 @@ descendants inherit, so nothing flashes. The wrapper:
 - puts the real host in a kill-on-job-close job object, so the whole process tree
   dies with the wrapper rather than outliving it.
 
-Job creation, configuration and assignment must succeed before the suspended
-child resumes. A failure exits `112` and terminates only that invocation's owned
+Job creation and configuration must succeed before process creation. The Job
+is assigned atomically at `CreateProcessW` through `PROC_THREAD_ATTRIBUTE_JOB_LIST`
+(Windows 10+), alongside the restricted inheritable-handle list. This closes
+the suspended-target orphan gap if the wrapper is killed immediately after
+process creation. The child's thread resumes only after creation succeeds. A failure exits `112` and terminates only that invocation's owned
 child. The packaged Windows workflow compiles `WrapperNativeFixture.cs` and
 checks a real unrelated inheritable loopback socket is excluded, stdio and exit
 code survive, and terminating the fixture-owned wrapper drains its child tree.
