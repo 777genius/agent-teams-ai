@@ -4607,3 +4607,55 @@ Publish/read back this documentation-only amendment before the one-line test app
 Then the previously approved GREEN changes remain exactly the five selected production bodies plus the selected Task-test correction. Build the resulting canonical Host, run all five Host and four app files, strict11/16-root projects, original script compiler, scoped15-path lint, original guards, actual pure roster exports, source/index and265-member dependency postflight exactly as the original scheduled R1 prescribes. There is no further automatic retry or source fix in this amendment.
 
 Full refined17-path patch SHA256 `87d641215e2025a80c0fe60a2d0c0ba306680f22e615e9c8a541d0e175795d98`. Unchanged command manifest SHA256 `28dd7cd3866133ae4ce755d5135998404d2b360bce2a03455f9551882e8ed632`, Host configd3f58336 and appcaa12040 retain their full original reviewed bytes/options. Preserve previous source manifests, candidates, raw logs and preflight separately; this one-line refinement does not rewrite the earlier prospective or failed evidence. No private package/link/hoist change, full compiler retry, native/GUI/vendor execution, workflow action, product deadline change or acceptance exception. All previously recorded Draft/base/P08/P09/I386/M16/full-resulting-source gates remain.
+
+
+## Prospective R1 amendment: preserve the finite stderr assertion without array type narrowing
+
+Parent `0ddd7ba7602a0b2d1ed740fe5655d58dd34badd0`, tree `b740a31824c178eb76e78a3f464115126f74bf04`; full918427-byte Plan was read back and independently Git-blob checked before the prior two-path application. The refined RED tree `d18bbf875ddb21ca22be9b2dad44fbeba4913211` differed from5f9e only by that published Plan and one assertion.
+
+### Actual completed source qualification
+
+The same five complete Host files now finished at00:19:50UTC in18.480seconds:83cases,72PASS/11FAIL,0cancelled/skipped/todo,exit1,not timed out. Raw22398B/SHA256 `98c66f77f4441cbe4b6a345d1eddabaddb6795efa5c2244e373087afb35a8256`. The failures are two standalone adapters lacking stderr observations, one premature synthetic gap caught by the new assertion, two missing Runtime logProjection/budget results, and six scheduled Thinking/stderr/callback boundaries. Later assertions in any failed case are not claimed executed. The earlier180-second killed command and old Task1PASS/1FAIL remain separate, unchanged NONPASS evidence.
+
+GREEN tree `1f2791b4460a869e2ef5e887546d3206ad4106c7` changed exactly the five approved executable production bodies and existing Task test from this RED. All17 selected after-images and original dependency/index boundaries matched. Its canonical Host/ledger build passed; all83 Host cases then passed, including final-tail sanitation, original provider child capture, no-endpoint startup failure, authority replacement/Host-seal refusal, UTF-8 limits, neighboring schedules, cancellation and cold replay. All four application files passed33cases (14SmartSchedules,5parser,2Task,12actual Main facade). These are116 distinct cases on that source, not an additional count when repeated; the parser inventory alone does not prove Thinking.
+
+| Original GREEN command | Exit | Seconds | Raw bytes | Raw SHA256 |
+| --- | ---: | ---: | ---: | --- |
+| green-app-tests | 0 | 21.028 | 1029 | `672f720516a00daa54f902d1b7071609b8036924a81751c5189143914dd9a95d` |
+| green-app-types | 0 | 4.749 | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| green-host-build | 0 | 12.681 | 182 | `d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789` |
+| green-host-tests | 0 | 22.847 | 11321 | `78a8de7da23be88eca12250e4dfede0673c1f9a437a23f0c03d59ee94b2f6d55` |
+| green-host-types | 1 | 3.09 | 266 | `5987235b8c13829b0d2f110997fcde42bb8202efe8c31d4473d89f6e3c0ae623` |
+| green-lint | 0 | 8.172 | 1083 | `d1065f74884aae80aaac6ea51f36f931123e5796520eca489cc63d44ab47c291` |
+| green-provisioning | 0 | 7.366 | 245 | `7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c` |
+| green-script-types | 0 | 6.655 | 97 | `497757da33976a6244e18944dec8185b370f08467b2b5ad675446e3ca3c3b015` |
+| green-source-size | 0 | 6.299 | 249 | `242bb192077481ababdc21e7a9ea9d7b01411efa6a91f2b541d3ae13ce3c2181` |
+
+App strict16roots and the original complete scripts compiler passed. Scoped15-path fast lint passed without warnings. Original guards retained5019production files,141frozen exceptions,800-line limit and provisioning22/50/31/62/154. Actual imports of only the four copied pure roster modules yielded1754→1757 ordinary and1795→1798 Windows paths, exactly three scheduled additions; every previous path/order, Process/Retry and root800lines were preserved. This is source-roster verification, not Desktop E2E.
+
+The postflight at00:22:38UTC confirmed unchanged1f2791 source, normal indexSHA256161fc5143f7e03fc593d16afa0d4bb588e230fb3667602302bc7019f225fe92a, all253+12 original archive members, five dependency edges and both ignored Host links. Original SDK canUseTool and KaTeX warnings remain in the raw test logs.
+
+### Exact remaining compiler failure and one equivalent assertion
+
+Strict selected11-root Host types failed with exactly two TS2339 diagnostics at member-process-stderr.test.ts72: kind and text do not exist on never. The installed node:assert/strict deepEqual alias has the assertion signature deepStrictEqual<T>(actual,expected):asserts actual is T; the newly added empty literal narrows the existing mutable observations array to never[], and opaque stream callbacks do not widen it. This is a test typing error. Retain its exit1/3.090-second/266-byte receipt and raw hash above as FAIL.
+
+Replace only the one new assertion at its original position before stderr writes:
+
+```diff
+-assert.deepEqual(f.observations, [], 'no diagnostic is synthesized before original stderr arrives');
++assert.equal(f.observations.length, 0, 'no diagnostic is synthesized before original stderr arrives');
+```
+
+The fixture creates an ordinary empty array and only appends observations through its callback. Both assertions require no observation before original data. The old erroneous helper appends one gap and still fails finitely (1 !== 0); the corrected helper continues through all existing canary/stdout/tail/UTF-8/cleanup assertions. The length check does not narrow element types. No cast, type suppression, option/declaration change, fake clock, drain, timeout, skip or production change is introduced.
+
+Exact preimage `2fdf5fd36b188a5fd9ec50193815d25880512dd4` → after `c568716b48e79bfe6ec0455052f14b5af4ffc9cf`,14347B/248lines/SHA256 `b4f64c50e8f7d051e0cf301b433fad6cf101c10782dcdcca1426acb582582c9a`. The inverse one-line replacement restores the complete preimage. All other16 candidate images and all original preimages remain unchanged. Both independent source reviews approved the exact line and hashes before application.
+
+### Prospective bounded validation of the correction
+
+After exact R2 and documentation publication/full readback, apply only the new Plan and this one test line to1f2791. Freeze the resulting tree and prove the two-path difference; keep all17 selected image checks and original dependency/index evidence. Reuse the completed1f2791 Host build explicitly for identical executable sources and retain its original sourceTree/receipt; do not invent a fresh build.
+
+Execute once each: (1) the entire member-process-stderr.test.ts with pinned Node --test --test-concurrency=1, (2) the identical original11-root strict Host configuration, and (3) the existing lint:fast:files command restricted to that one changed file. These checks resolve the precise assertion/type/lint risk. Keep the completed83/33 and app types/scripts/guards/roster evidence bound to1f2791, whose production and app inputs remain byte-identical; do not relabel them as fresh runs or repeat unrelated suites. No additional behavioral RED replay is needed for equivalent empty-array cardinality; the actual strict TS2339 refusal is retained as the compiler RED.
+
+Use unchanged Node24.21.0, TypeScript7.0.2, app pnpm11.25.0, original environment unsets, coherent private dependency closure and180-second local process-group cap. Original11-root configd3f58336 and16-root configcaa12040 keep their complete bytes/options. New bounded command manifest SHA256 `3160cb4946aaf09fb15b986a61cd48538b719d78645f4af084f0e84568c4223c`; complete final17-path candidate patch SHA256 `79ebb1b7d79c9dca4404a83bbef427542a8c7f5ecbbb72c0d516451962ae6bbf`. No source correction or new check was applied/executed while preparing this proposal.
+
+All original15-second product gates, source/authority/cleanup assertions, resulting-source full CI/typed lint/Desktop/native/packaged/P08/P09/fullI386/genuine donor/M16 obligations remain. Do not promote the Draft, change its base, merge/release/default-activate or start Stage2. This test-only correction cannot close those external gates.
