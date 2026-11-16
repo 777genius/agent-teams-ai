@@ -1,0 +1,2161 @@
+{
+  "schemaVersion": 1,
+  "review": "independent original M0660 Collaboration evidence R2",
+  "reviewer": "native_failures",
+  "verdict": "APPROVE scope-limited original finite-peer Collaboration evidence and corrected v2 prose",
+  "reviewedAtUtc": "2026-11-16T02:22:47.297049+00:00",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "jobId": 133017916023,
+  "canonicalInputs": {
+    "checkpoint-collaboration-v2.json": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/checkpoint-collaboration-v2.json",
+      "bytes": 19121,
+      "blob": "46c9f31e147404d415dee1c3afa21fc51ca5299f",
+      "sha256": "e031634990c0b4bd3bd36aceb0bbdc0d96d954591b10231033fdee1a792a4af2"
+    },
+    "audit-v2.json": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/audit-v2.json",
+      "bytes": 73798,
+      "blob": "d6e726a6673d46a4dbfc8106f56721acb1df09f3",
+      "sha256": "fa322b541395d38e7a90d3de4aa7065de2ee65da3ccab2a7aec82fb444798fbc"
+    },
+    "Plan29-collaboration-appendix-v2.md": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/Plan29-collaboration-appendix-v2.md",
+      "bytes": 7705,
+      "blob": "5dea81733d0c100ca894488b29baaa8ad613715d",
+      "sha256": "14f41e30a8bf088e96869335595a2d6803ac121518cc4bffdc699877d60e842a"
+    }
+  },
+  "priorFrozenInputs": {
+    "checkpoint-collaboration.json": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/checkpoint-collaboration.json",
+      "bytes": 17754,
+      "blob": "4ec69591887fb6a2c4783986726e159f0233d675",
+      "sha256": "76a0d6663e9492d9b4b797f83fd32241a470c8e83df0e9ebbc3bbd4762ec0be6"
+    },
+    "audit.json": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/audit.json",
+      "bytes": 70873,
+      "blob": "0a1d56e3e05a10a8f63041bb995c68e99a609502",
+      "sha256": "eedf19eff5470d6983fb10db123ab5f08332cea6116e2309461d5784dc10f7d3"
+    },
+    "Plan29-collaboration-appendix.md": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/Plan29-collaboration-appendix.md",
+      "bytes": 6870,
+      "blob": "b5f801fd7e5e7f7b93258c2f313e33ce0c04acac",
+      "sha256": "f956e6d08569d115bc56c3cd9a845241d702a577ed3514a236734047f1811910"
+    }
+  },
+  "byteAndSourceFoundation": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/independent-collaboration-byte-source-data.json",
+    "bytes": 37121,
+    "blob": "b89bc62af9353bc42edb909c66f045014ae60928",
+    "sha256": "45145cd7b601f49beacb638d125bb1e7b5ef345a090f64db193e3baae8152e3b",
+    "data": {
+      "kind": "independent-original-byte-source-join; not standalone qualification",
+      "verifiedAtUtc": "2026-11-16T02:16:18.533977+00:00",
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "payloads": [
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/job-133017916023.log",
+          "bytes": 181311,
+          "blob": "f71a175d26edb1726336519590e1928043abb163",
+          "sha256": "c9892d877a242e037ce3963494d30b6b2451f0c8d0db9a73b9abcceae5c1f155"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/artifact-14191567899.zip",
+          "bytes": 1646654,
+          "blob": "82e24692ea7234b89389500601bd46b18bbfcb10",
+          "sha256": "c43ec6168b096d4b6520e73f20be2411d693603497997c2428976e7ee48f46be"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/archive-audit.json",
+          "bytes": 13103,
+          "blob": "ee3127f57621a28f416510aef2eecc7ec37e87d1",
+          "sha256": "93a6f78543aab272237213622427b702160eb5237cb595f74d3dda4c6ff24df5"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/desktop-backend-receipt.json",
+          "bytes": 1012298,
+          "blob": "574f8dbc0679d75a45d498ff71e1d874c4fdbb50",
+          "sha256": "daa2d1405c791f8a41aac1b3e3fbac6e72f398ffe909c95dd4b24b2a93b5b82a"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-effects.json",
+          "bytes": 27680,
+          "blob": "b6a815ae16f8653105ee107088de5a906be91fb3",
+          "sha256": "8ea157ade6688d6c38cfe32fbc28506d8ddee1da85b0b05889fd177c359c44a6"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/audit.json",
+          "bytes": 70873,
+          "blob": "0a1d56e3e05a10a8f63041bb995c68e99a609502",
+          "sha256": "eedf19eff5470d6983fb10db123ab5f08332cea6116e2309461d5784dc10f7d3"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/Plan29-collaboration-appendix.md",
+          "bytes": 6870,
+          "blob": "b5f801fd7e5e7f7b93258c2f313e33ce0c04acac",
+          "sha256": "f956e6d08569d115bc56c3cd9a845241d702a577ed3514a236734047f1811910"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-artifacts-0203.json",
+          "bytes": 15080,
+          "blob": "4a9b4ebd7f7a1410184b5d5df605e574984c67a5",
+          "sha256": "a0ab504afd23015acb2d8677eb0a7be34ee6deb5ce6e9b7a2497f97605a46e49"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0203.json",
+          "bytes": 184637,
+          "blob": "6e46a30c12b354171499b3d07089b1801d32eab7",
+          "sha256": "487fba5cb804d01f5d6cf2c8a82f338535c4c23eb7a98c02d0564791bc7c6bc9"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+          "bytes": 583301,
+          "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+          "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-claude-scope/effects.ndjson",
+          "bytes": 7015,
+          "blob": "894b3cb61af228a3bb6a1f1a0702ea942b5e8ad5",
+          "sha256": "db810f03d55d91fdf7be95bf450c3cbe42ce5c62db912ef228ca001ba2507e6a"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-codex-scope/effects.ndjson",
+          "bytes": 7265,
+          "blob": "7913d4b8220ca0dac76b04f8caad51887346990f",
+          "sha256": "52a0143f0abce35e362089e820e586e5501e903afbdee33392ba05ae72f12b69"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-opencode-scope/effects.ndjson",
+          "bytes": 6546,
+          "blob": "aa842473bff516f87cdada2cac9af68546da1de8",
+          "sha256": "d4c24add6e7f9da58eb205e1bcda47d11afaa97598305d189a5522486f537488"
+        }
+      ],
+      "archive": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/artifact-14191567899.zip",
+        "bytes": 1646654,
+        "blob": "82e24692ea7234b89389500601bd46b18bbfcb10",
+        "sha256": "c43ec6168b096d4b6520e73f20be2411d693603497997c2428976e7ee48f46be"
+      },
+      "members": [
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/TEST-peer-claude-scope/config/projects/TEST-desktop-peer/06964c8f-336d-4acb-a6c7-8df5e8f73e8b.jsonl",
+          "crc32": "be0b22da",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-claude-scope/config/projects/TEST-desktop-peer/06964c8f-336d-4acb-a6c7-8df5e8f73e8b.jsonl",
+          "bytes": 6055,
+          "blob": "ad94a9703e3b68ab72341d4d3510b7b307ba9d55",
+          "sha256": "43fa2492a3923d54c5b7f3a75e67da04d320be2a14d4a887ca949c8f1c68a63a",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/TEST-peer-claude-scope/effects.ndjson",
+          "crc32": "51c5e0ef",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-claude-scope/effects.ndjson",
+          "bytes": 7015,
+          "blob": "894b3cb61af228a3bb6a1f1a0702ea942b5e8ad5",
+          "sha256": "db810f03d55d91fdf7be95bf450c3cbe42ce5c62db912ef228ca001ba2507e6a",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/TEST-peer-codex-scope/effects.ndjson",
+          "crc32": "893e6d48",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-codex-scope/effects.ndjson",
+          "bytes": 7265,
+          "blob": "7913d4b8220ca0dac76b04f8caad51887346990f",
+          "sha256": "52a0143f0abce35e362089e820e586e5501e903afbdee33392ba05ae72f12b69",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/TEST-peer-opencode-scope/effects.ndjson",
+          "crc32": "5e5535b2",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-opencode-scope/effects.ndjson",
+          "bytes": 6546,
+          "blob": "aa842473bff516f87cdada2cac9af68546da1de8",
+          "sha256": "d4c24add6e7f9da58eb205e1bcda47d11afaa97598305d189a5522486f537488",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/desktop-app.log",
+          "crc32": "5316c6bf",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/desktop-app.log",
+          "bytes": 32323,
+          "blob": "8017a34e1cc382ed9d08753ce74867d06f00e2c2",
+          "sha256": "4493ab10ea95568cbf291a9745e1b4bada860bab19901418ce3e131aa45d94d9",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/desktop-backend-receipt.json",
+          "crc32": "8334ba77",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/desktop-backend-receipt.json",
+          "bytes": 1012298,
+          "blob": "574f8dbc0679d75a45d498ff71e1d874c4fdbb50",
+          "sha256": "daa2d1405c791f8a41aac1b3e3fbac6e72f398ffe909c95dd4b24b2a93b5b82a",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/desktop-descriptor.json",
+          "crc32": "8cb59a07",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/desktop-descriptor.json",
+          "bytes": 3885,
+          "blob": "b681e07119d4c441573626a3b47a4e4e7772d2fe",
+          "sha256": "0b312c437a699442cf71db9a048b4543c49427089a3923abe71fb1658de0eec1",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/home/Downloads/TEST-native-chat.txt",
+          "crc32": "ea753fb5",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/home/Downloads/TEST-native-chat.txt",
+          "bytes": 40,
+          "blob": "24474d0f8059dcf4bb5a180e883687d2913a25cc",
+          "sha256": "55af81cd5ddf9f9313ee38f2929d75f1f15429edd697b9196cf2d70e996d81af",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/host-profile.json",
+          "crc32": "44754c80",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/host-profile.json",
+          "bytes": 20027,
+          "blob": "70d9780f233ce5cf693014f648683dd041a9555c",
+          "sha256": "e1a44b871d1afe20994c965dd60705f125f24161ef7887fdc7b083abd354e157",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/hoststore/management-commands/3f76ff3a4ae2fe3db24fc1d577a2d7966f533a5f6e8b48683475469af8e5135b.json",
+          "crc32": "f61860cd",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/hoststore/management-commands/3f76ff3a4ae2fe3db24fc1d577a2d7966f533a5f6e8b48683475469af8e5135b.json",
+          "bytes": 904,
+          "blob": "912002f66f185b2682f06bb7f22c27c3121746b1",
+          "sha256": "ec97157e215265bc32b7046b214b02c6cbb73b7a4d4f46d366454f554b7ba59e",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/hoststore/management-commands/71122803dadd7cbb7bf872c000692d296ca770667a83fdede3a58365c9a9e2a3.json",
+          "crc32": "01b01a27",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/hoststore/management-commands/71122803dadd7cbb7bf872c000692d296ca770667a83fdede3a58365c9a9e2a3.json",
+          "bytes": 5826,
+          "blob": "b0badddb29eaf066ef28d5df83cf632092bd1177",
+          "sha256": "9a698fb87643c3136870716dea8a006cacb6c2d927d3ab3fe116412e7d598329",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/hoststore/management-commands/77999557b985a49272d1cc7e3ff12298e87d42f07d001b6167a32276ab82fd8f.json",
+          "crc32": "26142e13",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/hoststore/management-commands/77999557b985a49272d1cc7e3ff12298e87d42f07d001b6167a32276ab82fd8f.json",
+          "bytes": 5826,
+          "blob": "62c52c018e7d3c58c2559b2dfb853b03fb316434",
+          "sha256": "6963b270285b9ae5a0d5f13e38d481bf8a2dfabf0ea8f3dc6eadaf12804ed5b8",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/hoststore/management-commands/d0b663d60aae8ca23181c4d5a203b5332e505a92a2fa61eb98d22322bdbead26.json",
+          "crc32": "3470733d",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/hoststore/management-commands/d0b663d60aae8ca23181c4d5a203b5332e505a92a2fa61eb98d22322bdbead26.json",
+          "bytes": 956,
+          "blob": "35a8527c3d4ea1a3c4fee20a78f30c37da7c12a9",
+          "sha256": "bc4114576d9bf2f07b8076718915cfe7c048ba4183804ab4af7fc1cf50bb7c3a",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/hoststore/runtime-checkpoints/cp1-1e8dd3557302ce7c4df15a629eaa5761b580acf570bf9887722607c85bab9068.json",
+          "crc32": "ed841872",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/hoststore/runtime-checkpoints/cp1-1e8dd3557302ce7c4df15a629eaa5761b580acf570bf9887722607c85bab9068.json",
+          "bytes": 2030,
+          "blob": "8d9fb5bb90ddd967fcc647178705d5009fa69eef",
+          "sha256": "b9ab47429d619adbc290c24814782dc90ac95e30a44c009676a2602cf5ffabc1",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/hoststore/runtime-checkpoints/cp1-8d13aac3084ac8262ffdd5235ef51e714d4f350b3fcc6b992a63132899ac7ecf.json",
+          "crc32": "a382ffaa",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/hoststore/runtime-checkpoints/cp1-8d13aac3084ac8262ffdd5235ef51e714d4f350b3fcc6b992a63132899ac7ecf.json",
+          "bytes": 1780,
+          "blob": "ebf0f69ac05a478c33e9d5dff9cab9daa32d4307",
+          "sha256": "de5d676756372b2513b2fde17cb71362c28a4eb473efbc03b4fd52ce6def90c0",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/hoststore/runtime-checkpoints/cp1-a16ea3d040da3546f7d397f5a065e65d4ee8ad982ce2c1762d17253d5a1895a6.json",
+          "crc32": "a2121903",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/hoststore/runtime-checkpoints/cp1-a16ea3d040da3546f7d397f5a065e65d4ee8ad982ce2c1762d17253d5a1895a6.json",
+          "bytes": 2220,
+          "blob": "4fcf58815d10cf34897ffcb36b9b16841e4c7d35",
+          "sha256": "320ac8dd1f87e16a6aa29021c0680868e716121b453bbfc0fae952f1a26cc45e",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/hoststore/runtime-checkpoints/cp1-e45b48793e74fd76a558f2709fcd2a1f81d13d9d7e74898dc6402e4e54662f22.json",
+          "crc32": "36ae9ff0",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/hoststore/runtime-checkpoints/cp1-e45b48793e74fd76a558f2709fcd2a1f81d13d9d7e74898dc6402e4e54662f22.json",
+          "bytes": 2242,
+          "blob": "78cc2569ad5f957f68e9989c283bf271d6a09240",
+          "sha256": "9565a1d11cad1f0638db2ac9bfd59509941c67ef54481aa4ac79137b0a51977f",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/hoststore/teams/test-desktop-backend/group-chat-reactions.json",
+          "crc32": "41c6d75a",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/hoststore/teams/test-desktop-backend/group-chat-reactions.json",
+          "bytes": 1251,
+          "blob": "bd86b4461b49185b2833dd5f4204416d7ab371bf",
+          "sha256": "48f74723a6e31832c1447e37c79a4b24137156513a1c74ce8735201f8319c1c6",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/hoststore/teams/test-desktop-backend/group-chats.json",
+          "crc32": "6f4c59fd",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/hoststore/teams/test-desktop-backend/group-chats.json",
+          "bytes": 361,
+          "blob": "d132f401aa7df9fb7dec471cfb797a031bbe0c21",
+          "sha256": "3a4f78da6e4a97cac2fb972c9277b1b6fd256f5f5b7c46ff15c567356211ea26",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+          "crc32": "e6531098",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+          "bytes": 2545,
+          "blob": "1e30f6bead0dcadf31c725652aa310b6ffa900d8",
+          "sha256": "520945d0a1dc5bcefda6149e53c305588367829a0dd4c7aeacd512286464c623",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/hoststore/teams/test-desktop-backend/inboxes/bob.json",
+          "crc32": "a12fd4c9",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/hoststore/teams/test-desktop-backend/inboxes/bob.json",
+          "bytes": 1004,
+          "blob": "1d2f7926bcf9ddda031346c86970f4922fa16023",
+          "sha256": "3cdd881d35f942f8b1f4a8dfda3bea6726c25811970f5d4b0daa0a28a9147e70",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/hoststore/teams/test-desktop-backend/inboxes/carol.json",
+          "crc32": "e26bb3be",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/hoststore/teams/test-desktop-backend/inboxes/carol.json",
+          "bytes": 1439,
+          "blob": "3946a6745cd2f55bb5089b6f98515f1557977003",
+          "sha256": "f31a66df49992a81d7e72703203e9c33cec6a55b39a78eaf6164903a1961c51e",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/hoststore/teams/test-desktop-backend/inboxes/user.json",
+          "crc32": "747467d8",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/hoststore/teams/test-desktop-backend/inboxes/user.json",
+          "bytes": 2653,
+          "blob": "4c7f4fa4a39f93f3ed462a08e8c395fb6c9d5780",
+          "sha256": "467a6e07b3d818689add5da649a29094bf4932bd4b486a26bd68a6e98a43eb02",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/native-chat-attachment-inputs/TEST-native-chat.png",
+          "crc32": "fe7e0434",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/native-chat-attachment-inputs/TEST-native-chat.png",
+          "bytes": 71,
+          "blob": "8d79cc731a6bbfd43247473d7ef6d2c0e9519994",
+          "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/native-chat-attachment-inputs/TEST-native-chat.prepared.png",
+          "crc32": "42e2a4e9",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/native-chat-attachment-inputs/TEST-native-chat.prepared.png",
+          "bytes": 90,
+          "blob": "2b125a946b4ac2a055673d204de647b43fd73cf2",
+          "sha256": "43d614f0bc1b36ec2da1effa16b34498a3a62922caff5fd38238990423c50d49",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/sentinel-invocations.ndjson",
+          "crc32": "9fc3bdb4",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/sentinel-invocations.ndjson",
+          "bytes": 96,
+          "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+          "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/native-chat-attachment-inputs/TEST-native-chat.txt",
+          "crc32": "ea753fb5",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/native-chat-attachment-inputs/TEST-native-chat.txt",
+          "bytes": 40,
+          "blob": "24474d0f8059dcf4bb5a180e883687d2913a25cc",
+          "sha256": "55af81cd5ddf9f9313ee38f2929d75f1f15429edd697b9196cf2d70e996d81af",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/ui-emulated-collaboration-attachments.png",
+          "crc32": "a90ef6a9",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-attachments.png",
+          "bytes": 126473,
+          "blob": "93648e34416793e839a4587bfc0580c5d2ecb56d",
+          "sha256": "662ca3f71f6b15aac207af1be4587ed12ed0cfd512817119ac6b6d8ed2d36bea",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/ui-emulated-collaboration-direct.png",
+          "crc32": "79c3a70d",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-direct.png",
+          "bytes": 113790,
+          "blob": "5b8e33396798283ae315613cafe21cc825a75312",
+          "sha256": "a6350dd1e9a741751380fbf78fe91f8b5538b84f88a84d267addeebb83c45863",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/ui-emulated-collaboration-effects.json",
+          "crc32": "0f756cb4",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-effects.json",
+          "bytes": 27680,
+          "blob": "b6a815ae16f8653105ee107088de5a906be91fb3",
+          "sha256": "8ea157ade6688d6c38cfe32fbc28506d8ddee1da85b0b05889fd177c359c44a6",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/ui-emulated-collaboration-group.png",
+          "crc32": "533530f3",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-group.png",
+          "bytes": 112220,
+          "blob": "d9e5e0138a96ed09e91b8b48dfbbabac683a1c8d",
+          "sha256": "595abf15371e643a2f4e1f435757c2d42d02546840cd9d233fbf51afd879fb3f",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/ui-emulated-collaboration-launch.png",
+          "crc32": "536c349c",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-launch.png",
+          "bytes": 107832,
+          "blob": "daedfbe11c77933f3c43daf49ffd3666e9eb517f",
+          "sha256": "846c3c1bc1f53548559a6099988f54d61d433e9254d32ceb638863fc5d5498d3",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/ui-emulated-collaboration-member-logs.png",
+          "crc32": "cd7a8571",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-member-logs.png",
+          "bytes": 168193,
+          "blob": "dfdfe9c34c5f2f6c77c7c341f6720512ee646574",
+          "sha256": "f7cb036459d5fd1e432d1448c0492c53a567cc9d2976bec35cd3c99acf4228e8",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/ui-emulated-collaboration-reloaded.png",
+          "crc32": "8b89217d",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-reloaded.png",
+          "bytes": 113653,
+          "blob": "8106fffd94eb199d52f223c6623dd6d2b19c70a3",
+          "sha256": "f629e6e8d439391aff6a4ecdc155b46e52b10ca2c02dc12803f5c47c8a10e491",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/ui-emulated-collaboration-restored.png",
+          "crc32": "ad5f845d",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-restored.png",
+          "bytes": 156228,
+          "blob": "a2aa09a09706da25d48bee61ccf31b2eaa786ca8",
+          "sha256": "c59f9d00660fee933cb0c470027dd8c7a4b716e3db8a67c4674407d21db231c7",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/ui-emulated-collaboration-stopped.png",
+          "crc32": "beb5a6e8",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-stopped.png",
+          "bytes": 151461,
+          "blob": "2db965066919cd558884953f04fab5a468e5a37a",
+          "sha256": "0bf1b7142e0c9114add3d63a52b9ee6b850ec46a35d48ed80e40a4417ce34cbc",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-desktop-backend-mL97kT/ui-seed-receipt.json",
+          "crc32": "3a2bd622",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-seed-receipt.json",
+          "bytes": 2685,
+          "blob": "ac015a708a0be36f5d637bda15c6a8a1baa0c26d",
+          "sha256": "b28476d60da25dadc5b1d565f644fb743dd923c7132ea7b5d77cd5ae61145008",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-emulated-ui-inputs-J9ojCG/linux-child-exec/linux-child-exec",
+          "crc32": "ed0ca14b",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-emulated-ui-inputs-J9ojCG/linux-child-exec/linux-child-exec",
+          "bytes": 790608,
+          "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+          "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "TEST-emulated-ui-inputs-J9ojCG/linux-child-exec/manifest.json",
+          "crc32": "e06f2443",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-emulated-ui-inputs-J9ojCG/linux-child-exec/manifest.json",
+          "bytes": 2408,
+          "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+          "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "host-emulated-emulated-collaboration-ui.log",
+          "crc32": "7381fccc",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/host-emulated-emulated-collaboration-ui.log",
+          "bytes": 225,
+          "blob": "1cd294a12379826cd10b872f2fd0c7eb69b8d47f",
+          "sha256": "6be7cd071f9d3da2a199c30c4250b3fd4a449d808fd028634f8765eb26b0023d",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "host-emulated-linux-child-exec-selection.json",
+          "crc32": "2a864bf2",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/host-emulated-linux-child-exec-selection.json",
+          "bytes": 271,
+          "blob": "eceac80eedc549cbd81927dda591ba58386f9049",
+          "sha256": "e6dc29ecefb4d7200712f83a1f062b9095a2a7cfafcfa0aa953686025343dd1d",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "host-emulated-inputs.json",
+          "crc32": "d2292f1e",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/host-emulated-inputs.json",
+          "bytes": 1803,
+          "blob": "c52a4beb66028b4c8255af3fe7c59f6f2000df4a",
+          "sha256": "de4b6e5c73cee230eba5cc8aa9e77e4832850fc791d24f570702e30a6d116b43",
+          "extractedBytesEqual": true
+        },
+        {
+          "memberPath": "host-emulated-summary.json",
+          "crc32": "83b4e501",
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/host-emulated-summary.json",
+          "bytes": 1058,
+          "blob": "b57a41da562a608dee2f8b8f3891c871f97c109d",
+          "sha256": "052ea15b9754101b086e75d52846b2fcc0f8454a80c1bf11049369383df559a3",
+          "extractedBytesEqual": true
+        }
+      ],
+      "sourceRowCount": 1757,
+      "sourceByteCount": 20308016,
+      "sourceRowsCanonicalSha256": "d4efb3a4be65658dcf52164a250a6b87c5cbe7ea2709bf69cb10f6b84910e222",
+      "sourceAll1757MatchGitLf": true,
+      "sharedOrdered1757": true,
+      "sourceCensusReference": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+        "bytes": 583301,
+        "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+        "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+      },
+      "relevantSourceLeaves": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "gitBlob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+          "gitBytes": 25052,
+          "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7",
+          "preEqualsPost": true,
+          "recordedEqualsGitLfBytes": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-native-chat-attachments-ui.ts",
+          "gitBlob": "428fad07141d46553b261864ce9985bd746aa17a",
+          "gitBytes": 12210,
+          "sha256": "776df02aeb4d8c8eec24d302475075625d2479f6e4c095ffd020000405c9fd91",
+          "preEqualsPost": true,
+          "recordedEqualsGitLfBytes": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+          "gitBlob": "97e14385a298a38a9b81b8805dc3f6d2da66545c",
+          "gitBytes": 16555,
+          "sha256": "8340911817fb4228e8d948425a1f85796fba16d244b6763b04e307ed6f290713",
+          "preEqualsPost": true,
+          "recordedEqualsGitLfBytes": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-records.ts",
+          "gitBlob": "c73049b7a3d7fb946b3804d365bae83b4efce430",
+          "gitBytes": 13266,
+          "sha256": "b3c42f1dcd906c5392350bddd9bb96746fed50e79ca79eb3c73bdac0b27b3c50",
+          "preEqualsPost": true,
+          "recordedEqualsGitLfBytes": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+          "gitBlob": "aff6e19ec4cf492841aa667442c1b7d71541c7c5",
+          "gitBytes": 34086,
+          "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f",
+          "preEqualsPost": true,
+          "recordedEqualsGitLfBytes": true
+        }
+      ],
+      "artifact": {
+        "id": 14191567899,
+        "name": "host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-collaboration",
+        "size_in_bytes": 1646654,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14191567899",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14191567899/zip",
+        "expired": false,
+        "created_at": "2026-11-16T01:58:13Z",
+        "expires_at": "2026-11-30T01:58:11Z",
+        "updated_at": "2026-11-16T01:58:13Z",
+        "digest": "sha256:c43ec6168b096d4b6520e73f20be2411d693603497997c2428976e7ee48f46be",
+        "workflow_run": {
+          "id": 43780997237,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+        }
+      },
+      "terminalJob": {
+        "id": 133017916023,
+        "name": "Offline Host Desktop (linux-x64, collaboration)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43780997237,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Verify original checkout and runner tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Prepare private Linux display",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Install frozen workspace and Electron",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Build existing Desktop prerequisites and verify admission",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Verify original Runtime and Team conversation contracts",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 9
+          },
+          {
+            "name": "Verify complete workspace types and original typed lint scopes",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 10
+          },
+          {
+            "name": "Capture package-manager and Host inputs without vendor executables",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Capture original controlled Linux process input without a provider",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 12
+          },
+          {
+            "name": "Exercise ordinary Team controls and renderer reload",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 13
+          },
+          {
+            "name": "Exercise ordinary Taskboard controls and persistence",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 14
+          },
+          {
+            "name": "Exercise original Skills and cross-Team controls",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 15
+          },
+          {
+            "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 16
+          },
+          {
+            "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 18
+          },
+          {
+            "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 19
+          },
+          {
+            "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20
+          },
+          {
+            "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21
+          },
+          {
+            "name": "Exercise original Review after a cold Host and app restart",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 22
+          },
+          {
+            "name": "Exercise saved next-launch selection while the original Team remains live",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 23
+          },
+          {
+            "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 24
+          },
+          {
+            "name": "Exercise stock Codex Update while the original Team retains its captured source",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 25
+          },
+          {
+            "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 26
+          },
+          {
+            "name": "Prepare exact OpenCode V2 Bun and engine graph",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 27
+          },
+          {
+            "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 28
+          },
+          {
+            "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 29
+          },
+          {
+            "name": "Verify exact source, original screenshots, receipts and cleanup",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 30
+          },
+          {
+            "name": "Preserve original Desktop evidence, including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 31
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 60
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 61
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 62
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 63
+          }
+        ]
+      },
+      "fullOriginalLogLines": 1768,
+      "metrics": {
+        "tests": [
+          115,
+          7
+        ],
+        "pass": [
+          115,
+          7
+        ],
+        "fail": [
+          0,
+          0
+        ],
+        "skipped": [
+          0,
+          0
+        ],
+        "cancelled": [
+          0,
+          0
+        ],
+        "todo": [
+          0,
+          0
+        ],
+        "duration_ms": [
+          10664.6017,
+          260.065534
+        ]
+      },
+      "originalLogErrors": [],
+      "originalLogWarnings": [
+        "2026-11-16T01:58:14.2975781Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+      ],
+      "checkpoint": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/checkpoint-collaboration.json",
+        "bytes": 17754,
+        "blob": "4ec69591887fb6a2c4783986726e159f0233d675",
+        "sha256": "76a0d6663e9492d9b4b797f83fd32241a470c8e83df0e9ebbc3bbd4762ec0be6"
+      },
+      "audit": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/audit.json",
+        "bytes": 70873,
+        "blob": "0a1d56e3e05a10a8f63041bb995c68e99a609502",
+        "sha256": "eedf19eff5470d6983fb10db123ab5f08332cea6116e2309461d5784dc10f7d3"
+      },
+      "appendix": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/Plan29-collaboration-appendix.md",
+        "bytes": 6870,
+        "blob": "b5f801fd7e5e7f7b93258c2f313e33ce0c04acac",
+        "sha256": "f956e6d08569d115bc56c3cd9a845241d702a577ed3514a236734047f1811910"
+      }
+    }
+  },
+  "additionalIndependentJoins": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/independent-collaboration-semantic-joins.json",
+    "bytes": 4434,
+    "blob": "2ac278e2f32085f29b62f0085caff58c80f8120f",
+    "sha256": "ce48bc0aaf0be5f682bedb4df260f3022f8edcb6ff369736621b5c1f90277f73",
+    "data": {
+      "status": "all independent joins passed",
+      "v2Payloads": 15,
+      "attachmentsBytes": [
+        71,
+        90,
+        40
+      ],
+      "logicalMessages": 2,
+      "groupPhysicalDeliveryAckInboxJoins": 3,
+      "runtimeCheckpointJoins": [
+        {
+          "path": "hoststore/runtime-checkpoints/cp1-1e8dd3557302ce7c4df15a629eaa5761b580acf570bf9887722607c85bab9068.json",
+          "sourceBinding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+            "teamId": "TEST-desktop-team",
+            "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+            "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+            "generation": "live-4ae702ce408a55432b4efd9a4c6d6f5180395bd84abde5bf4bd0444316750383"
+          },
+          "sourceSessionRef": "f75b1e9b-a20a-500d-9ed0-27728b3980ec",
+          "completedOperations": 2,
+          "opaqueNotReplayed": true
+        },
+        {
+          "path": "hoststore/runtime-checkpoints/cp1-8d13aac3084ac8262ffdd5235ef51e714d4f350b3fcc6b992a63132899ac7ecf.json",
+          "sourceBinding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+            "teamId": "TEST-desktop-team",
+            "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+            "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+            "generation": "live-411859c0f0196c209a2bcf926141862e26c496e4f5c8ab966b7a13527ab68c0a"
+          },
+          "sourceSessionRef": "6d2bb3a4-c149-5894-a1b5-3d7ad1eba134",
+          "completedOperations": 1,
+          "opaqueNotReplayed": true
+        },
+        {
+          "path": "hoststore/runtime-checkpoints/cp1-a16ea3d040da3546f7d397f5a065e65d4ee8ad982ce2c1762d17253d5a1895a6.json",
+          "sourceBinding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+            "teamId": "TEST-desktop-team",
+            "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+            "memberId": "bob-id",
+            "generation": "capture-71d7863e-1daa-5ea6-9d21-44ca8b7f32e5"
+          },
+          "sourceSessionRef": "d21238e8-e81d-5aa4-ba88-07a35e8fc01c",
+          "completedOperations": 2,
+          "opaqueNotReplayed": true
+        },
+        {
+          "path": "hoststore/runtime-checkpoints/cp1-e45b48793e74fd76a558f2709fcd2a1f81d13d9d7e74898dc6402e4e54662f22.json",
+          "sourceBinding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+            "teamId": "TEST-desktop-team",
+            "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+            "memberId": "alice-id",
+            "generation": "capture-659fbb5e-c3ce-59d3-84e9-620755839f91"
+          },
+          "sourceSessionRef": "1b2ebfae-4643-51a9-a7dc-d19fc8122515",
+          "completedOperations": 3,
+          "opaqueNotReplayed": true
+        }
+      ],
+      "managementClosedRows": [
+        {
+          "commandId": "team-preflight-913cf13b8161ac8a604bbe2caf77d80e1416b576ae0a3e3ade23e0004849b032",
+          "kind": "model.probe",
+          "phase": "completed",
+          "ok": true,
+          "purpose": null,
+          "resourceHeld": false
+        },
+        {
+          "commandId": "live-model-ed96b974ff903e7914f336a8af0a8e2ff82afbc2ac4070d9a2acf0f2b6299e4c",
+          "kind": "model.probe",
+          "phase": "completed",
+          "ok": true,
+          "purpose": "native-local-readiness-v1",
+          "resourceHeld": false
+        },
+        {
+          "commandId": "live-model-314b93b2a460d29f70b3d25bb61093ac61458d4a70b963f9b9dfdbe64d887477",
+          "kind": "model.probe",
+          "phase": "completed",
+          "ok": true,
+          "purpose": "native-local-readiness-v1",
+          "resourceHeld": false
+        },
+        {
+          "commandId": "team-preflight-a29603f8c929084499bb1d18af5d0311c098e0716ba576d51d0063b95dd665e3",
+          "kind": "model.probe",
+          "phase": "completed",
+          "ok": true,
+          "purpose": null,
+          "resourceHeld": false
+        }
+      ],
+      "oneAttemptLabels": {
+        "launch original two-member team once": 1,
+        "add original Carol once": 1,
+        "send original direct message once": 2,
+        "send original attachments once": 1,
+        "expand original sent attachment message once": 1,
+        "download original sent file once": 1,
+        "create original group once": 1,
+        "send original directed group once": 1,
+        "request original Carol removal once": 1,
+        "confirm original Carol removal once": 1,
+        "restore original Carol once": 1,
+        "stop original whole team once": 1
+      },
+      "summaryScreenshotCount": 7,
+      "allActualUiPngCount": 8,
+      "traceBlob": "b3d2ec4b410de5df6d63075955fa8f89fc7c9b88",
+      "traceRecordLines": [
+        89,
+        240,
+        249
+      ],
+      "auditV2ChangedTopKeys": [
+        "limits"
+      ],
+      "auditV2AddedTopKeys": [
+        "precisionV2"
+      ]
+    }
+  },
+  "currentV2PayloadsAllRehashed": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/job-133017916023.log",
+      "bytes": 181311,
+      "blob": "f71a175d26edb1726336519590e1928043abb163",
+      "sha256": "c9892d877a242e037ce3963494d30b6b2451f0c8d0db9a73b9abcceae5c1f155"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/artifact-14191567899.zip",
+      "bytes": 1646654,
+      "blob": "82e24692ea7234b89389500601bd46b18bbfcb10",
+      "sha256": "c43ec6168b096d4b6520e73f20be2411d693603497997c2428976e7ee48f46be"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/archive-audit.json",
+      "bytes": 13103,
+      "blob": "ee3127f57621a28f416510aef2eecc7ec37e87d1",
+      "sha256": "93a6f78543aab272237213622427b702160eb5237cb595f74d3dda4c6ff24df5"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/desktop-backend-receipt.json",
+      "bytes": 1012298,
+      "blob": "574f8dbc0679d75a45d498ff71e1d874c4fdbb50",
+      "sha256": "daa2d1405c791f8a41aac1b3e3fbac6e72f398ffe909c95dd4b24b2a93b5b82a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-effects.json",
+      "bytes": 27680,
+      "blob": "b6a815ae16f8653105ee107088de5a906be91fb3",
+      "sha256": "8ea157ade6688d6c38cfe32fbc28506d8ddee1da85b0b05889fd177c359c44a6"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/audit.json",
+      "bytes": 70873,
+      "blob": "0a1d56e3e05a10a8f63041bb995c68e99a609502",
+      "sha256": "eedf19eff5470d6983fb10db123ab5f08332cea6116e2309461d5784dc10f7d3"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/Plan29-collaboration-appendix.md",
+      "bytes": 6870,
+      "blob": "b5f801fd7e5e7f7b93258c2f313e33ce0c04acac",
+      "sha256": "f956e6d08569d115bc56c3cd9a845241d702a577ed3514a236734047f1811910"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-artifacts-0203.json",
+      "bytes": 15080,
+      "blob": "4a9b4ebd7f7a1410184b5d5df605e574984c67a5",
+      "sha256": "a0ab504afd23015acb2d8677eb0a7be34ee6deb5ce6e9b7a2497f97605a46e49"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0203.json",
+      "bytes": 184637,
+      "blob": "6e46a30c12b354171499b3d07089b1801d32eab7",
+      "sha256": "487fba5cb804d01f5d6cf2c8a82f338535c4c23eb7a98c02d0564791bc7c6bc9"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-claude-scope/effects.ndjson",
+      "bytes": 7015,
+      "blob": "894b3cb61af228a3bb6a1f1a0702ea942b5e8ad5",
+      "sha256": "db810f03d55d91fdf7be95bf450c3cbe42ce5c62db912ef228ca001ba2507e6a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-codex-scope/effects.ndjson",
+      "bytes": 7265,
+      "blob": "7913d4b8220ca0dac76b04f8caad51887346990f",
+      "sha256": "52a0143f0abce35e362089e820e586e5501e903afbdee33392ba05ae72f12b69"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-opencode-scope/effects.ndjson",
+      "bytes": 6546,
+      "blob": "aa842473bff516f87cdada2cac9af68546da1de8",
+      "sha256": "d4c24add6e7f9da58eb205e1bcda47d11afaa97598305d189a5522486f537488"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/audit-v2.json",
+      "bytes": 73798,
+      "blob": "d6e726a6673d46a4dbfc8106f56721acb1df09f3",
+      "sha256": "fa322b541395d38e7a90d3de4aa7065de2ee65da3ccab2a7aec82fb444798fbc"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/Plan29-collaboration-appendix-v2.md",
+      "bytes": 7705,
+      "blob": "5dea81733d0c100ca894488b29baaa8ad613715d",
+      "sha256": "14f41e30a8bf088e96869335595a2d6803ac121518cc4bffdc699877d60e842a"
+    }
+  ],
+  "currentV2PayloadCount": 15,
+  "fullOriginalSourceRead": [
+    "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+    "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+    "scripts/legacy-agent-host/desktop-emulated-collaboration-records.ts",
+    "scripts/legacy-agent-host/desktop-native-chat-attachments-ui.ts",
+    "src/main/utils/testChildProcessTrace.ts"
+  ],
+  "originalPrerequisites": {
+    "node": "24.21.0",
+    "summaries": {
+      "tests": [
+        "115",
+        "7"
+      ],
+      "pass": [
+        "115",
+        "7"
+      ],
+      "fail": [
+        "0",
+        "0"
+      ],
+      "skipped": [
+        "0",
+        "0"
+      ],
+      "duration_ms": [
+        "10664.6017",
+        "260.065534"
+      ]
+    },
+    "commands": [
+      "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "node --test test/scripts/installDependenciesWithRetry.test.mjs"
+    ],
+    "TeamContracts": "The original ten-file Team contract step is not run by this Collaboration lane."
+  },
+  "bundleLimits": "Actual source, pinned original install/build and fourteen bundle identities retained. No independent bundle rebuild or unarchived finite-wrapper executable identity is claimed by this review.",
+  "finiteProviderScope": {
+    "provider": "claude",
+    "providers": [
+      "claude",
+      "codex",
+      "opencode"
+    ],
+    "sources": [
+      {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+        "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87"
+      },
+      {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/providerPeer.mjs",
+        "sha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd"
+      },
+      {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+        "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a"
+      },
+      {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/providerCollaboration.mjs",
+        "sha256": "c82248007e55ae6d28608d965d72f93dadf9993cec28f294524464fe111b5ee9"
+      },
+      {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/adapters/providers/OpenCodeMcpPolicyPlugin.js",
+        "sha256": "64d2db6a0a14d6214e37e2f81a6e9b3afffd9f901f37bcd351026f98bf64f02b"
+      }
+    ],
+    "executables": [
+      {
+        "provider": "claude",
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-mL97kT/bin/TEST-claude-collaboration",
+        "sha256": "780cd2cebee75560d49e563e511bf990231d1ba0cdd8021f13066862b4da25ac"
+      },
+      {
+        "provider": "codex",
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-mL97kT/bin/TEST-codex-collaboration.mjs",
+        "sha256": "6624963126f57aa819339cfdaaf60a0cc185736ffa312fc6a56be84c10a72c62"
+      },
+      {
+        "provider": "opencode",
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-mL97kT/bin/TEST-opencode-collaboration.mjs",
+        "sha256": "f53d33d751a91e3444d8326218e2247327fc9c1eb18b945ab102ae9714799e1e"
+      }
+    ],
+    "protocolRevisions": {
+      "claude": "sdk-0.3.305",
+      "codex": "0.162.0",
+      "opencode": "1.19.4"
+    },
+    "runtimeConfigured": true,
+    "managementConfigured": true,
+    "vendorsAllowed": false,
+    "collaborationVariant": "mixed-v1"
+  },
+  "membership": {
+    "initial": {
+      "capture": {
+        "commandId": "capture:launch:roster:41c87ac3-9779-4418-97b0-2e98c0f76290",
+        "configurationRevision": "2a8739d1c074268e0031481408f79f8d92947ef3f8136699d285bfa0348d65b1",
+        "launchId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+        "members": [
+          {
+            "memberId": "alice-id",
+            "principalId": "agent:c5a594f5-09ef-536d-a080-ec576a385d4f",
+            "delivery": {
+              "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+              "teamId": "TEST-desktop-team",
+              "teamName": "test-desktop-backend",
+              "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+              "memberId": "alice-id",
+              "generation": "capture-659fbb5e-c3ce-59d3-84e9-620755839f91"
+            }
+          },
+          {
+            "memberId": "bob-id",
+            "principalId": "agent:04f729e0-93bc-55ac-82c9-e9392868fc8d",
+            "delivery": {
+              "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+              "teamId": "TEST-desktop-team",
+              "teamName": "test-desktop-backend",
+              "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+              "memberId": "bob-id",
+              "generation": "capture-71d7863e-1daa-5ea6-9d21-44ca8b7f32e5"
+            }
+          }
+        ],
+        "principalId": "TEST-human",
+        "fingerprint": "0b894c17a97a63da8e49a75b7d820cc8ec8aba47678e22c2d8ede5c3ece73d2c"
+      },
+      "sessions": [
+        {
+          "binding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+            "teamId": "TEST-desktop-team",
+            "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+            "memberId": "bob-id",
+            "generation": "capture-71d7863e-1daa-5ea6-9d21-44ca8b7f32e5"
+          },
+          "phase": "allocated",
+          "custody": "owned",
+          "nativeReady": true,
+          "sessionRef": "d21238e8-e81d-5aa4-ba88-07a35e8fc01c",
+          "configuration": {
+            "tenantId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+            "projectId": "TEST-project-TEST-desktop-backend-mL97kT",
+            "sessionId": "d21238e8-e81d-5aa4-ba88-07a35e8fc01c",
+            "generation": 2,
+            "configRevision": "capture-fa12d5cb487f3af7392fd7a2c5a5d6fbadaf5281416e64ad5e384e2e0f6364d1",
+            "requiredCapabilities": [
+              "text",
+              "tools"
+            ]
+          },
+          "inputs": []
+        },
+        {
+          "binding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+            "teamId": "TEST-desktop-team",
+            "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+            "memberId": "alice-id",
+            "generation": "capture-659fbb5e-c3ce-59d3-84e9-620755839f91"
+          },
+          "phase": "allocated",
+          "custody": "owned",
+          "nativeReady": true,
+          "sessionRef": "1b2ebfae-4643-51a9-a7dc-d19fc8122515",
+          "configuration": {
+            "tenantId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+            "projectId": "TEST-project-TEST-desktop-backend-mL97kT",
+            "sessionId": "1b2ebfae-4643-51a9-a7dc-d19fc8122515",
+            "generation": 2,
+            "configRevision": "capture-8943528978787a984fffb56aa343ac0f4827f33f757db488a2f0afc570bbd3e1",
+            "requiredCapabilities": [
+              "session.conversation"
+            ]
+          },
+          "inputs": [
+            {
+              "inputId": "ed51a934-471e-50df-9344-ae265fd35485",
+              "phase": "terminal",
+              "terminal": "succeeded"
+            }
+          ]
+        }
+      ],
+      "physical": [
+        [
+          "claude",
+          {
+            "pid": 6137,
+            "parentPid": 4858,
+            "groupId": 6137,
+            "birth": "Mon Nov 16 01:55:49 2026",
+            "command": "MainThread"
+          }
+        ],
+        [
+          "codex",
+          {
+            "pid": 6149,
+            "parentPid": 4858,
+            "groupId": 6149,
+            "birth": "Mon Nov 16 01:55:49 2026",
+            "command": "MainThread"
+          }
+        ]
+      ]
+    },
+    "membership": {
+      "added": {
+        "commandId": "5931ec3b-d10e-4cdb-a409-97d5d80e4971",
+        "phase": "completed",
+        "kind": "add",
+        "launchId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+        "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+        "session": {
+          "binding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+            "teamId": "TEST-desktop-team",
+            "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+            "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+            "generation": "live-4ae702ce408a55432b4efd9a4c6d6f5180395bd84abde5bf4bd0444316750383"
+          },
+          "phase": "allocated",
+          "custody": "owned",
+          "nativeReady": true,
+          "sessionRef": "f75b1e9b-a20a-500d-9ed0-27728b3980ec",
+          "configuration": {
+            "tenantId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+            "projectId": "TEST-project-TEST-desktop-backend-mL97kT",
+            "sessionId": "f75b1e9b-a20a-500d-9ed0-27728b3980ec",
+            "generation": 2,
+            "configRevision": "live-cb5ee2c6bb1c1a3b47c96907bb62f6ca00f85a70504e1af0f620fc68cd05c184",
+            "requiredCapabilities": [
+              "text",
+              "tools"
+            ]
+          },
+          "inputs": []
+        },
+        "selection": {
+          "principalId": "agent:584dc045-fbbc-53ff-abeb-f2962e117c2c",
+          "delivery": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+            "teamId": "TEST-desktop-team",
+            "teamName": "test-desktop-backend",
+            "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+            "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+            "generation": "live-4ae702ce408a55432b4efd9a4c6d6f5180395bd84abde5bf4bd0444316750383"
+          },
+          "configurationDigest": "42addd674744a4468be38f1ea5b29711b2ac6059b5dc3e311bf0eaa15266c588"
+        },
+        "physical": {
+          "pid": 6648,
+          "parentPid": 4858,
+          "groupId": 6648,
+          "birth": "Mon Nov 16 01:56:02 2026",
+          "command": "MainThread"
+        },
+        "nativeSession": {
+          "event": "collaboration-session",
+          "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+          "sessionId": "ses_TESTdesktop6648",
+          "provider": "opencode",
+          "role": "runtime",
+          "pid": 6648
+        }
+      },
+      "removed": {
+        "commandId": "8f91e592-9a3a-49fc-822b-3fdc21255d13",
+        "phase": "completed",
+        "kind": "remove",
+        "launchId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+        "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+        "session": {
+          "binding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+            "teamId": "TEST-desktop-team",
+            "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+            "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+            "generation": "live-4ae702ce408a55432b4efd9a4c6d6f5180395bd84abde5bf4bd0444316750383"
+          },
+          "phase": "closed",
+          "custody": "released",
+          "nativeReady": false,
+          "sessionRef": "f75b1e9b-a20a-500d-9ed0-27728b3980ec",
+          "configuration": {
+            "tenantId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+            "projectId": "TEST-project-TEST-desktop-backend-mL97kT",
+            "sessionId": "f75b1e9b-a20a-500d-9ed0-27728b3980ec",
+            "generation": 2,
+            "configRevision": "live-cb5ee2c6bb1c1a3b47c96907bb62f6ca00f85a70504e1af0f620fc68cd05c184",
+            "requiredCapabilities": [
+              "text",
+              "tools"
+            ]
+          },
+          "inputs": [
+            {
+              "inputId": "3b97145f-b440-51db-a175-c96544ccf15c",
+              "phase": "terminal",
+              "terminal": "succeeded"
+            },
+            {
+              "inputId": "967c8de1-dd1c-53ca-ade2-247366f2dd51",
+              "phase": "terminal",
+              "terminal": "succeeded"
+            }
+          ]
+        },
+        "oldGrant": {
+          "principalId": "agent:584dc045-fbbc-53ff-abeb-f2962e117c2c",
+          "memberName": "carol",
+          "permissions": [
+            "read",
+            "task.write",
+            "message.write",
+            "process.write"
+          ],
+          "revision": 2,
+          "revoked": true
+        },
+        "originalProcessAbsent": true
+      },
+      "restored": {
+        "commandId": "8e7db335-282b-4f09-8121-3d18dc5ba9f4",
+        "phase": "completed",
+        "kind": "restore",
+        "launchId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+        "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+        "session": {
+          "binding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+            "teamId": "TEST-desktop-team",
+            "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+            "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+            "generation": "live-411859c0f0196c209a2bcf926141862e26c496e4f5c8ab966b7a13527ab68c0a"
+          },
+          "phase": "allocated",
+          "custody": "owned",
+          "nativeReady": true,
+          "sessionRef": "6d2bb3a4-c149-5894-a1b5-3d7ad1eba134",
+          "configuration": {
+            "tenantId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+            "projectId": "TEST-project-TEST-desktop-backend-mL97kT",
+            "sessionId": "6d2bb3a4-c149-5894-a1b5-3d7ad1eba134",
+            "generation": 3,
+            "configRevision": "live-58659588f24d86d906c4ab80b6607228234bd813b687bad0a5ebcb1357844d37",
+            "requiredCapabilities": [
+              "text",
+              "tools"
+            ]
+          },
+          "inputs": []
+        },
+        "selection": {
+          "principalId": "agent:cc5ce96f-595c-579d-b770-09eabf9b3d56",
+          "delivery": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+            "teamId": "TEST-desktop-team",
+            "teamName": "test-desktop-backend",
+            "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+            "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+            "generation": "live-411859c0f0196c209a2bcf926141862e26c496e4f5c8ab966b7a13527ab68c0a"
+          },
+          "configurationDigest": "bc27e623afffe37ff4eaf9df0d67dbe0f1390e660566ad80fe655c6c0266db4a"
+        },
+        "physical": {
+          "pid": 8763,
+          "parentPid": 4858,
+          "groupId": 8763,
+          "birth": "Mon Nov 16 01:57:05 2026",
+          "command": "MainThread"
+        },
+        "nativeSession": {
+          "event": "collaboration-session",
+          "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+          "sessionId": "ses_TESTdesktop8763",
+          "provider": "opencode",
+          "role": "runtime",
+          "pid": 8763
+        }
+      }
+    },
+    "oneAttemptJournalCount": 119,
+    "oneAttemptLabels": {
+      "launch original two-member team once": 1,
+      "add original Carol once": 1,
+      "send original direct message once": 2,
+      "send original attachments once": 1,
+      "expand original sent attachment message once": 1,
+      "download original sent file once": 1,
+      "create original group once": 1,
+      "send original directed group once": 1,
+      "request original Carol removal once": 1,
+      "confirm original Carol removal once": 1,
+      "restore original Carol once": 1,
+      "stop original whole team once": 1
+    },
+    "unaffectedInitialPeers": "Original source checks binding/input/physical identity across each live roster change; no new action or replay by reviewer."
+  },
+  "attachments": {
+    "proof": {
+      "status": "PASS",
+      "files": [
+        {
+          "filename": "TEST-native-chat.png",
+          "mimeType": "image/png",
+          "size": 71,
+          "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6"
+        },
+        {
+          "filename": "TEST-native-chat.txt",
+          "mimeType": "text/plain",
+          "size": 40,
+          "sha256": "55af81cd5ddf9f9313ee38f2929d75f1f15429edd697b9196cf2d70e996d81af"
+        }
+      ],
+      "preparedImage": {
+        "filename": "TEST-native-chat.prepared.png",
+        "originalFilename": "TEST-native-chat.png",
+        "mimeType": "image/png",
+        "size": 90,
+        "sha256": "43d614f0bc1b36ec2da1effa16b34498a3a62922caff5fd38238990423c50d49",
+        "width": 2,
+        "height": 1,
+        "source": "existing Composer pending image before Send"
+      },
+      "nativeInference": "Pinned SDK with finite TEST peer; no vendor executable or inference",
+      "execution": "finite-protocol-peer",
+      "sentMessage": {
+        "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-mL97kT",
+        "messageId": "a0b7b8eb-cc23-4036-9bff-43fec03c999c",
+        "from": "user",
+        "to": "alice",
+        "text": "TEST_UI_COLLAB_ATTACH",
+        "expanded": true,
+        "attachments": [
+          {
+            "id": "45457586-7d77-437c-b096-f00aed3f688d",
+            "filename": "TEST-native-chat.png",
+            "mimeType": "image/png",
+            "size": 90
+          },
+          {
+            "id": "1669991f-5a8c-4491-b3ed-43c1de68687a",
+            "filename": "TEST-native-chat.txt",
+            "mimeType": "text/plain",
+            "size": 40
+          }
+        ]
+      },
+      "preview": {
+        "sha256": "43d614f0bc1b36ec2da1effa16b34498a3a62922caff5fd38238990423c50d49",
+        "width": 2,
+        "height": 1
+      },
+      "download": {
+        "filename": "TEST-native-chat.txt",
+        "sha256": "55af81cd5ddf9f9313ee38f2929d75f1f15429edd697b9196cf2d70e996d81af",
+        "size": 40
+      },
+      "finiteReadback": {
+        "previewRetained": true,
+        "downloadedBytesRetained": true,
+        "downloadClicks": 0
+      }
+    },
+    "observedBytes": {
+      "provider": "claude",
+      "role": "runtime",
+      "pid": 6137,
+      "event": "collaboration-attachments",
+      "marker": "TEST_UI_COLLAB_ATTACH",
+      "inputId": "fc82df8c-05ac-437a-b435-262ec69e8430",
+      "memberName": "alice",
+      "image": {
+        "sha256": "43d614f0bc1b36ec2da1effa16b34498a3a62922caff5fd38238990423c50d49",
+        "size": 90,
+        "mimeType": "image/png"
+      },
+      "document": {
+        "sha256": "55af81cd5ddf9f9313ee38f2929d75f1f15429edd697b9196cf2d70e996d81af",
+        "size": 40,
+        "mimeType": "text/plain"
+      }
+    },
+    "initialDownloadAttempts": 1,
+    "reloadDownloadAttempts": 0
+  },
+  "group": {
+    "logicalCount": 2,
+    "sendCount": 2,
+    "completedSendReceipts": true,
+    "threePhysicalInputsTerminalSucceeded": true,
+    "threePhysicalMessageAckAndArchivedInboxJoins": true,
+    "archivedGroupsAndReactionsExact": true,
+    "groupAttachmentsRemainUnavailable": true
+  },
+  "memberLogs": {
+    "memberId": "bob-id",
+    "binding": {
+      "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+      "teamId": "TEST-desktop-team",
+      "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+      "memberId": "bob-id",
+      "generation": "capture-71d7863e-1daa-5ea6-9d21-44ca8b7f32e5"
+    },
+    "eventId": "3c868402bd87963f61781eadd9e815caa197aba2f63a3d0950b54ffc409d61a6:14",
+    "sequence": 14,
+    "text": "TEST group reply sent",
+    "screenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-member-logs.png",
+      "sha256": "f7cb036459d5fd1e432d1448c0492c53a567cc9d2976bec35cd3c99acf4228e8"
+    }
+  },
+  "stop": {
+    "sourceLines": [
+      328,
+      355
+    ],
+    "actionCount": 1,
+    "originalMonotonicBudgetMs": 75000,
+    "pollPauseAtMostMs": 100,
+    "guards": "Before each read: current cutoff, original renderer ownership and effects; after read: same cutoff. Original action never repeated. Four closed/released generations and all eight original inputs terminal/succeeded precede fresh process absence plus current canonical Team Offline/enabled Launch/no progress-diagnostics conjunction.",
+    "sessions": [
+      {
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "teamId": "TEST-desktop-team",
+          "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+          "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+          "generation": "live-4ae702ce408a55432b4efd9a4c6d6f5180395bd84abde5bf4bd0444316750383"
+        },
+        "phase": "closed",
+        "custody": "released",
+        "nativeReady": false,
+        "sessionRef": "f75b1e9b-a20a-500d-9ed0-27728b3980ec",
+        "configuration": {
+          "tenantId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "projectId": "TEST-project-TEST-desktop-backend-mL97kT",
+          "sessionId": "f75b1e9b-a20a-500d-9ed0-27728b3980ec",
+          "generation": 2,
+          "configRevision": "live-cb5ee2c6bb1c1a3b47c96907bb62f6ca00f85a70504e1af0f620fc68cd05c184",
+          "requiredCapabilities": [
+            "text",
+            "tools"
+          ]
+        },
+        "inputs": [
+          {
+            "inputId": "3b97145f-b440-51db-a175-c96544ccf15c",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "inputId": "967c8de1-dd1c-53ca-ade2-247366f2dd51",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ]
+      },
+      {
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "teamId": "TEST-desktop-team",
+          "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+          "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+          "generation": "live-411859c0f0196c209a2bcf926141862e26c496e4f5c8ab966b7a13527ab68c0a"
+        },
+        "phase": "closed",
+        "custody": "released",
+        "nativeReady": false,
+        "sessionRef": "6d2bb3a4-c149-5894-a1b5-3d7ad1eba134",
+        "configuration": {
+          "tenantId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "projectId": "TEST-project-TEST-desktop-backend-mL97kT",
+          "sessionId": "6d2bb3a4-c149-5894-a1b5-3d7ad1eba134",
+          "generation": 3,
+          "configRevision": "live-58659588f24d86d906c4ab80b6607228234bd813b687bad0a5ebcb1357844d37",
+          "requiredCapabilities": [
+            "text",
+            "tools"
+          ]
+        },
+        "inputs": [
+          {
+            "inputId": "282be76d-eafd-5f06-ab8b-1ab18dab18bf",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ]
+      },
+      {
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "teamId": "TEST-desktop-team",
+          "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+          "memberId": "bob-id",
+          "generation": "capture-71d7863e-1daa-5ea6-9d21-44ca8b7f32e5"
+        },
+        "phase": "closed",
+        "custody": "released",
+        "nativeReady": false,
+        "sessionRef": "d21238e8-e81d-5aa4-ba88-07a35e8fc01c",
+        "configuration": {
+          "tenantId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "projectId": "TEST-project-TEST-desktop-backend-mL97kT",
+          "sessionId": "d21238e8-e81d-5aa4-ba88-07a35e8fc01c",
+          "generation": 2,
+          "configRevision": "capture-fa12d5cb487f3af7392fd7a2c5a5d6fbadaf5281416e64ad5e384e2e0f6364d1",
+          "requiredCapabilities": [
+            "text",
+            "tools"
+          ]
+        },
+        "inputs": [
+          {
+            "inputId": "5d67df04-c27f-5fd8-977c-aac6e57b45b5",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "inputId": "8ebad2ce-9f10-52cf-a67b-8454ef315766",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ]
+      },
+      {
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "teamId": "TEST-desktop-team",
+          "runId": "5d884aed-358a-5e26-bdd9-8b182ecaa514",
+          "memberId": "alice-id",
+          "generation": "capture-659fbb5e-c3ce-59d3-84e9-620755839f91"
+        },
+        "phase": "closed",
+        "custody": "released",
+        "nativeReady": false,
+        "sessionRef": "1b2ebfae-4643-51a9-a7dc-d19fc8122515",
+        "configuration": {
+          "tenantId": "TEST-desktop-owner-TEST-desktop-backend-mL97kT",
+          "projectId": "TEST-project-TEST-desktop-backend-mL97kT",
+          "sessionId": "1b2ebfae-4643-51a9-a7dc-d19fc8122515",
+          "generation": 2,
+          "configRevision": "capture-8943528978787a984fffb56aa343ac0f4827f33f757db488a2f0afc570bbd3e1",
+          "requiredCapabilities": [
+            "session.conversation"
+          ]
+        },
+        "inputs": [
+          {
+            "inputId": "ed51a934-471e-50df-9344-ae265fd35485",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "inputId": "292c3617-b546-5a2f-891f-97ce7c313033",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "inputId": "1c2f78b5-6942-56e8-bce9-1315653c4732",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ]
+      }
+    ],
+    "originalBirths": [
+      {
+        "pid": 6137,
+        "parentPid": 4858,
+        "groupId": 6137,
+        "birth": "Mon Nov 16 01:55:49 2026",
+        "command": "MainThread"
+      },
+      {
+        "pid": 6149,
+        "parentPid": 4858,
+        "groupId": 6149,
+        "birth": "Mon Nov 16 01:55:49 2026",
+        "command": "MainThread"
+      },
+      {
+        "pid": 6648,
+        "parentPid": 4858,
+        "groupId": 6648,
+        "birth": "Mon Nov 16 01:56:02 2026",
+        "command": "MainThread"
+      },
+      {
+        "pid": 8763,
+        "parentPid": 4858,
+        "groupId": 8763,
+        "birth": "Mon Nov 16 01:57:05 2026",
+        "command": "MainThread"
+      }
+    ],
+    "originalProcessesAbsent": true,
+    "acceptedDomOperandAndTimeNotSeparatelySerialized": true,
+    "notAtomicAcrossOsAndDom": true
+  },
+  "reload": {
+    "proof": {
+      "historyRetained": true,
+      "noEffects": true,
+      "screenshot": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-reloaded.png",
+        "sha256": "f629e6e8d439391aff6a4ecdc155b46e52b10ca2c02dc12803f5c47c8a10e491"
+      }
+    },
+    "sourceLines": [
+      356,
+      373
+    ],
+    "scope": "Original before/after snapshots compare owner, commands, sessions, launch, groups, reactions, model probes and selected input/call/session/connected/MCP events; already downloaded attachment bytes read back without an extra Download. Does not assert absence of every OS/internal observation."
+  },
+  "effects": {
+    "providerCounts": {
+      "claude": {
+        "rows": 27,
+        "events": {
+          "launch": 5,
+          "started": 5,
+          "initialized": 5,
+          "input": 4,
+          "terminal": 4,
+          "mcp-connected": 1,
+          "collaboration-attachments": 1,
+          "collaboration-call": 1,
+          "collaboration-group": 1
+        }
+      },
+      "codex": {
+        "rows": 57,
+        "events": {
+          "launch": 20,
+          "exit": 13,
+          "input": 3,
+          "terminal": 3,
+          "mcp-catalog": 7,
+          "managed-configuration-read": 5,
+          "connected": 1,
+          "collaboration-call": 4,
+          "collaboration-group": 1
+        }
+      },
+      "opencode": {
+        "rows": 30,
+        "events": {
+          "launch": 5,
+          "input": 5,
+          "terminal": 5,
+          "exit": 5,
+          "policy-configured": 2,
+          "connected": 2,
+          "collaboration-session": 2,
+          "collaboration-call": 3,
+          "collaboration-group": 1
+        }
+      }
+    },
+    "proofRows": 113,
+    "finalRawRows": 114,
+    "rawExactlyFinalCleanup": true,
+    "proofExactlyStandaloneEffectsFile": true,
+    "onlyExtraRow": {
+      "event": "exit",
+      "code": 0,
+      "provider": "opencode",
+      "role": "management",
+      "pid": 5665
+    },
+    "allOriginalPeerPidCount": 30,
+    "allPeerPidsAbsent": true,
+    "explicitExitRows": 18,
+    "allExplicitExitCodesZero": true,
+    "absenceNotThirtyNaturalExits": true
+  },
+  "cleanup": {
+    "dedicatedReceipt": {
+      "processGroup": 4485,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "hostChild": {
+      "pid": 4858,
+      "ppid": 4614,
+      "pgid": 4485,
+      "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+      "observedBeforeShutdown": true
+    },
+    "originalRequestedQuitExit": {
+      "initialExitCode": null,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [
+      {
+        "pid": 4559,
+        "ppid": 1,
+        "pgid": 4485
+      }
+    ],
+    "originalExitedGroup": {
+      "settled": true,
+      "reason": "original-natural-exit-and-fresh-absence",
+      "initialMembers": [
+        {
+          "pid": 4559,
+          "ppid": 1,
+          "pgid": 4485
+        }
+      ],
+      "remaining": [],
+      "capturedHostAbsent": true,
+      "capturedDescendantsAbsent": true,
+      "appExitCode": 0,
+      "appSignalCode": null
+    },
+    "peers": {
+      "originalPeerPids": [
+        5665,
+        5645,
+        5873,
+        5986,
+        6137,
+        9989,
+        5652,
+        5889,
+        5898,
+        5906,
+        5930,
+        6101,
+        6114,
+        6130,
+        6149,
+        6161,
+        6190,
+        6202,
+        6356,
+        6572,
+        6820,
+        7002,
+        7045,
+        7187,
+        7829,
+        9995,
+        6552,
+        6648,
+        8603,
+        8763
+      ],
+      "remaining": [],
+      "absent": true
+    },
+    "sentinel": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": 1,
+      "postQuitOrCleanupInvocations": [],
+      "refusedInvocations": [],
+      "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+    }
+  },
+  "hostExitPrecisionCorrection": {
+    "originalV1Frozen": true,
+    "v2OnlyChangedAuditTopKeys": [
+      "limits"
+    ],
+    "v2AddedAuditTopKeys": [
+      "precisionV2"
+    ],
+    "evidence": {
+      "previousFrozenAudit": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/audit.json",
+        "bytes": 70873,
+        "blob": "0a1d56e3e05a10a8f63041bb995c68e99a609502",
+        "sha256": "eedf19eff5470d6983fb10db123ab5f08332cea6116e2309461d5784dc10f7d3"
+      },
+      "reason": "Narrow the prior blanket missing-Host-exit claim after independent review found the original passive Main callback. Original receipt field remains verbatim.",
+      "originalAppLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/desktop-app.log",
+        "bytes": 32323,
+        "blob": "8017a34e1cc382ed9d08753ce74867d06f00e2c2",
+        "sha256": "4493ab10ea95568cbf291a9745e1b4bada860bab19901418ce3e131aa45d94d9"
+      },
+      "sameCapturedHostPid": 4858,
+      "records": [
+        {
+          "line": 89,
+          "record": {
+            "mainPid": 4614,
+            "event": "async-spawn",
+            "pid": 4858,
+            "requestedCommand": "linux-child-exec",
+            "linuxChildExecTarget": "node",
+            "versionOnly": false,
+            "observedBirth": {
+              "startTicks": "19925",
+              "parentPid": 4614,
+              "processGroupId": 4485
+            },
+            "atomic": false,
+            "observedAtMs": 1794794092364
+          }
+        },
+        {
+          "line": 240,
+          "record": {
+            "mainPid": 4614,
+            "event": "async-exit",
+            "pid": 4858,
+            "status": 0,
+            "signal": null,
+            "observedAtMs": 1794794289728
+          }
+        },
+        {
+          "line": 249,
+          "record": {
+            "mainPid": 4614,
+            "event": "trace-summary",
+            "rows": 32,
+            "droppedObservations": 0,
+            "observedChildren": 14,
+            "unobservedChildren": 0,
+            "observationFailures": 0,
+            "limited": false,
+            "coverage": "node-async-and-unix-process-table-only"
+          }
+        }
+      ],
+      "source": {
+        "path": "src/main/utils/testChildProcessTrace.ts",
+        "blob": "b3d2ec4b410de5df6d63075955fa8f89fc7c9b88",
+        "sha256": "bff51a48a14cc0d77f8c7233c034c1bbe0eb79b0f5f5270c9540faf70e6472eb",
+        "semantics": "originalPid is captured in the ChildProcess spawn closure and reused by its original once(exit) callback; protected observational path, non-atomic birth observation, node-async-and-unix-process-table-only."
+      },
+      "limit": "The dedicated receipt/Main-owned transport field exposes no separate Host exit code; the original passive Main child trace separately reports captured Host PID4858 exit0/null. This bounded callback is not a new custody certificate or atomic executable proof."
+    },
+    "independentAssessment": "Corrected v2 distinguishes missing dedicated Main-owned-transport field from original bounded passive Main callback. Existing source captures originalPid on original ChildProcess spawn and emits that same closure PID at original exit, reporting captured Host4858 exit0/null. Initial birth is explicitly non-atomic; requested target is not an executable attestation. Trace does not establish new custody, signaling authority or process-history completeness."
+  },
+  "images": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-launch.png",
+      "bytes": 107832,
+      "blob": "daedfbe11c77933f3c43daf49ffd3666e9eb517f",
+      "sha256": "846c3c1bc1f53548559a6099988f54d61d433e9254d32ceb638863fc5d5498d3",
+      "independentlyOpened": true,
+      "observation": "Actual view: two-member roster and joined status, Alice boot ready."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-direct.png",
+      "bytes": 113790,
+      "blob": "5b8e33396798283ae315613cafe21cc825a75312",
+      "sha256": "a6350dd1e9a741751380fbf78fe91f8b5538b84f88a84d267addeebb83c45863",
+      "independentlyOpened": true,
+      "observation": "Actual view: Carol reply and all-two-teammates-joined banner; bob Delivering remains visible."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-attachments.png",
+      "bytes": 126473,
+      "blob": "93648e34416793e839a4587bfc0580c5d2ecb56d",
+      "sha256": "662ca3f71f6b15aac207af1be4587ed12ed0cfd512817119ac6b6d8ed2d36bea",
+      "independentlyOpened": true,
+      "observation": "Actual view: expanded prepared image/text attachment and reply; bob Delivering remains visible."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-group.png",
+      "bytes": 112220,
+      "blob": "d9e5e0138a96ed09e91b8b48dfbbabac683a1c8d",
+      "sha256": "595abf15371e643a2f4e1f435757c2d42d02546840cd9d233fbf51afd879fb3f",
+      "independentlyOpened": true,
+      "observation": "Actual view: group reply, acknowledgement, three members."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-member-logs.png",
+      "bytes": 168193,
+      "blob": "dfdfe9c34c5f2f6c77c7c341f6720512ee646574",
+      "sha256": "f7cb036459d5fd1e432d1448c0492c53a567cc9d2976bec35cd3c99acf4228e8",
+      "independentlyOpened": true,
+      "observation": "Actual view: Bob selected, captured generation header and expanded TEST group reply sent output."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-restored.png",
+      "bytes": 156228,
+      "blob": "a2aa09a09706da25d48bee61ccf31b2eaa786ca8",
+      "sha256": "c59f9d00660fee933cb0c470027dd8c7a4b716e3db8a67c4674407d21db231c7",
+      "independentlyOpened": true,
+      "observation": "Actual view: restored Carol reply and all-two-teammates-joined status."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-stopped.png",
+      "bytes": 151461,
+      "blob": "2db965066919cd558884953f04fab5a468e5a37a",
+      "sha256": "0bf1b7142e0c9114add3d63a52b9ee6b850ec46a35d48ed80e40a4417ce34cbc",
+      "independentlyOpened": true,
+      "observation": "Actual view: Offline and enabled Launch, no old progress block; Logs retains Host read crossed a mutation boundary above prior content."
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-reloaded.png",
+      "bytes": 113653,
+      "blob": "8106fffd94eb199d52f223c6623dd6d2b19c70a3",
+      "sha256": "f629e6e8d439391aff6a4ecdc155b46e52b10ca2c02dc12803f5c47c8a10e491",
+      "independentlyOpened": true,
+      "observation": "Actual view: Offline/Launch and retained group history, no old progress block; Send disabled without a compatible Runtime."
+    }
+  ],
+  "attachmentPngsIntegrityCheckedOnly": 2,
+  "summaryScreenshotListCount": 7,
+  "memberLogsEighthUiImageRetainedInReceiptAndArchive": true,
+  "qualifications": [
+    "Original CI SUCCESS is source0660 finite mixed-v1 Collaboration only: saved launch/live Add-Remove-Restore, direct communication, attachments, group send/ACK/reply, selected-member Logs, one Stop and read-only reload.",
+    "All1757 ordered before/after source pins equal exact Git-LF source0660,20,308,016 bytes. This is declared source coverage, not independent executable replay.",
+    "Full original job and both prerequisite command result blocks checked:115PASS and7PASS, noFAIL/SKIP/cancel. The ten-file Team/privacy contract and its later type/lint step are skipped in this lane; no privacy GREEN follows.",
+    "Original finite peers only; no reviewer execution or real Claude/Codex executable, version or provider inference. Actual protocol revisions and nativeQualification:false/vendorsAllowed:false remain explicit.",
+    "Both75s Stop conjunction and existing60s reply/joined observations remain as source executed by the completed journey. Saved images/receipts do not give an atomic DOM/kernel timeline or expose every accepted predicate operand.",
+    "Stopped Logs visibly includes Host read crossed a mutation boundary; direct/attachment frames show bob Delivering. No error-free-screen, universal idle or error-duration claim.",
+    "All30 peer PIDs absent is separate from18 explicit natural zero exits; initial remaining4559/PPID1/PGID4485 identity/cause is not inferred. Later captured group/Host/descendant absence is retained.",
+    "This result does not qualify P08/P09, V2 live roster, real-provider native compatibility, pending one-helper privacy GREEN, other Desktop campaigns, overall merge or release."
+  ],
+  "performedActions": [
+    "Read archived original logs, APIs, JSON and source",
+    "Pure Python SHA/Git-blob/ZIP-CRC and semantic joins",
+    "Read-only Git show/cat-file",
+    "Opened eight original PNGs",
+    "Wrote only separate scratch review/support JSON"
+  ],
+  "notPerformed": [
+    "No project tests, compilers, lint, installs or bootstrap",
+    "No native/provider or desktop execution, clicks or signals",
+    "No CI rerun, dispatch or cancellation",
+    "No source, workflow, Plan, ref or GitHub mutation",
+    "No changes to v5/current publication package"
+  ],
+  "outstandingRequiredCorrections": []
+}

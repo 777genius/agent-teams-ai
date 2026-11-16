@@ -1,0 +1,108 @@
+{
+  "schema": "root-actual-one-helper-published-source-R2/v1",
+  "reviewedAtUTC": "2026-11-16T02:26:54.791045+00:00",
+  "verdict": "APPROVE exact separate one-helper actual publication; GREEN still requires original CI",
+  "head": "6ff83bb45af88f660d8b124e7467664ad2ddd590",
+  "soleParent": "9ead131e41ba806ce3ab47d3ad28feacc5fbd911",
+  "tree": "f7cd0a34bcbfba5a6fe30aa559a22dbbde2b2227",
+  "sourceManifest": {
+    "bytes": 5152,
+    "blob": "24f809ac0c85de68bb2023783f356be6b42b991f",
+    "sha256": "15ce758c1bcebb9cdbd99dd34431c986ecc85347bc1eddc7772cf7f6a0f4be67"
+  },
+  "publicationReceipt": {
+    "bytes": 142870,
+    "blob": "b2a3db2aa182fde8e7f51f089ac6002e130cd7be",
+    "sha256": "58673e1bf7c2db11cfa24c2b4c84e919a0084f720e4aad2e1c37a2b29b0de298"
+  },
+  "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+  "preimage": {
+    "bytes": 7855,
+    "blob": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+    "sha256": "df315063bd119870f52b932daf72880ac4ea40340e023049a236fed79e505c37"
+  },
+  "actualHelper": {
+    "bytes": 8310,
+    "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+    "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7"
+  },
+  "added": 8,
+  "deleted": 1,
+  "helperPhysicalLines": 172,
+  "actualWholeTreeLeafMapMatches": true,
+  "leafCount": 10244,
+  "allOther10243ParentLeavesExact": true,
+  "allDocumentationLeavesUnchanged": true,
+  "actualPublishedPrerequisites": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/team-contracts/job-133017916079.log",
+      "bytes": 123603,
+      "blob": "a077622804d499d0a8ca20465aa6d7eba62b2b5c",
+      "sha256": "8a07b50c59d8d8a7507c9b5279cae5cfe50f28895f90474a12518eddc8f7b27b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/team-contracts/root-independent-RED-review.json",
+      "bytes": 68631,
+      "blob": "1de904e8979598412383012fb3468c2be0b90ec5",
+      "sha256": "8373abbaf6e027e563e5b08df9c1cb102ea1a26142325eaa5a0251caa36b607e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/m-privacy-one-helper-green-r1/R1-appendix.md",
+      "bytes": 8897,
+      "blob": "10c30b4146f8bd63152e9ba9533fb9d12fa6bc4f",
+      "sha256": "0b1e0b4482bd08bd86418c92a2d533f7c476ed28ee63716fd7205aa62f8e5495"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/m-privacy-one-helper-green-r1/independent-current-composition-review.json",
+      "bytes": 13360,
+      "blob": "fd440ca50d0b776edea3506f0705e7ef7c06bde4",
+      "sha256": "b312f947048d69212273b7a622d1301eeb086c4f44b8195253ee8975a2b2b0c3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/m-privacy-one-helper-green-r1/independent-source-r1-review.json",
+      "bytes": 8215,
+      "blob": "7bd700a2bfc148a56961e23271e03e446549fba5",
+      "sha256": "1a58db582c4b18776b619f9d34f9c680448756a1683d09a44124051d53d2c054"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/m-privacy-one-helper-green-r1/candidate-metadata.json",
+      "bytes": 3918,
+      "blob": "a1511df8732b4776ed8b5afffb5505d624b11028",
+      "sha256": "eab54b9b329d4f96f5a70dc57adb7a14b3fb7f971609d568f497385c02f3a9d4"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/m-privacy-one-helper-green-r1/observeMemberProcessStderr.ts",
+      "bytes": 8310,
+      "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/m-privacy-one-helper-green-r1/candidate.patch",
+      "bytes": 1081,
+      "blob": "958de68314a85da4ef85237c3af79d72d3d623d1",
+      "sha256": "1de755555f8fa3963abab4f0dd744456b96f4db3191e0f40eac19093ab555196"
+    }
+  ],
+  "nonDocumentationLeaves": 8798,
+  "nonDocumentationMapSha256": "d3ed00695b2d09d3bcd38d41830ddde5670908c858a600bae03c757dc00bc397",
+  "unchanged24CaseTest": {
+    "mode": "100644",
+    "type": "blob",
+    "sha": "0727339627757c3a96d54da2933eb7c1b60685f7"
+  },
+  "unchangedWholeCommandAnd93LintWorkflow": {
+    "mode": "100644",
+    "type": "blob",
+    "sha": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6"
+  },
+  "primaryStill0660AtPostpushRead": true,
+  "draftAndBaseRetained": true,
+  "futureGREENObserved": false,
+  "noOtherCandidateApplied": true,
+  "projectExecution": false,
+  "ciStateChanged": false,
+  "limits": [
+    "This is exact source/route readback, not 177/177 or24/24 runtime qualification.",
+    "Useful original current-cohort evidence and independent actual source R2 remain required before primary promotion. Current native/packaged/Desktop failures and scope flags remain separate."
+  ]
+}
