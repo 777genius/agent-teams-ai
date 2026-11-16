@@ -247,8 +247,11 @@ describe('human-only review approval', () => {
     expect(events(task.id, 'review_changes_requested').at(-1)).toMatchObject({
       from: 'reviewed', to: 'needsFix', actor: 'user',
     });
-    expect(() => board.requestChangesAsHuman(task.id, { comment: 'Again' }))
-      .toThrow(/Human rejection requires/);
+    const commentsBeforeRetry = board.getTask(task.id).comments.length;
+    expect(board.requestChangesAsHuman(task.id, { comment: 'Again' }))
+      .toMatchObject({ status: 'pending', reviewState: 'needsFix' });
+    expect(events(task.id, 'review_changes_requested')).toHaveLength(1);
+    expect(board.getTask(task.id).comments).toHaveLength(commentsBeforeRetry);
   });
 
   it('rejects stale or missing reviewer rejection tokens without changing the board', () => {
