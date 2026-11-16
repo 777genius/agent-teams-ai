@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import {
   isCodexAccountSnapshotPending,
@@ -6,6 +6,7 @@ import {
   mergeCodexProviderStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
+import { useConservativeNow } from '@renderer/hooks/useConservativeNow';
 import { useStore } from '@renderer/store';
 import {
   createLoadingMultimodelCliStatus,
@@ -25,26 +26,6 @@ export interface EffectiveCliProviderStatusSnapshot {
   providerStatus: CliProviderStatus | null;
   loading: boolean;
   codexSnapshotPending: boolean;
-}
-
-interface ConservativeClockSnapshot {
-  source: unknown;
-  now: number;
-}
-
-/** Revalidates each source before paint without reading the clock during render. */
-function useConservativeNow(source: unknown): readonly [number, (now: number) => void] {
-  const [snapshot, publishSnapshot] = useReducer(
-    (_current: ConservativeClockSnapshot, next: ConservativeClockSnapshot) => next,
-    { source: null, now: Number.POSITIVE_INFINITY }
-  );
-  const publishNow = useCallback((now: number) => publishSnapshot({ source, now }), [source]);
-
-  useLayoutEffect(() => {
-    publishNow(Date.now());
-  }, [publishNow]);
-
-  return [Object.is(snapshot.source, source) ? snapshot.now : Number.POSITIVE_INFINITY, publishNow];
 }
 
 export { hasEffectiveProviderLaunchAuthority } from '@renderer/utils/providerReadiness';

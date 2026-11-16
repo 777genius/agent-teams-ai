@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { shouldMaskCodexNegativeBootstrapState } from '@renderer/components/runtime/providerConnectionUi';
+import { useConservativeNow } from '@renderer/hooks/useConservativeNow';
 import { cn } from '@renderer/lib/utils';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { filterMainScreenCliProviders } from '@renderer/utils/geminiUiFreeze';
@@ -134,7 +135,7 @@ function useProviderActivityDisplay({
     [sourceStatus?.providers]
   );
 
-  const providerStates = useMemo<ProviderActivityState[]>(() => {
+  const readProviderStates = useCallback((now: number): ProviderActivityState[] => {
     const visibleProviders = filterMainScreenCliProviders(renderCliStatus?.providers ?? []).filter(
       (provider) => !providerIdSet || providerIdSet.has(provider.providerId)
     );
@@ -149,7 +150,8 @@ function useProviderActivityDisplay({
           provider.providerId,
           provider,
           !overridden && cliProviderStatusLoading[provider.providerId] === true,
-          openCodePreparationEvidence
+          openCodePreparationEvidence,
+          now
         ) ||
         (provider.providerId === 'codex' && codexSnapshotPending) ||
         shouldMaskCodexNegativeBootstrapState(sourceProvider, provider, {
@@ -157,7 +159,7 @@ function useProviderActivityDisplay({
         });
       const scopedOpenCodeReady =
         provider.providerId === 'opencode' &&
-        hasSettledOpenCodeScopedPreparation(provider, openCodePreparationEvidence);
+        hasSettledOpenCodeScopedPreparation(provider, openCodePreparationEvidence, now);
 
       return {
         provider,
@@ -165,8 +167,8 @@ function useProviderActivityDisplay({
         error:
           !loading &&
           !scopedOpenCodeReady &&
-          hasCapturedTeamReadiness?.(provider.providerId, Date.now()) !== true &&
-          !hasEffectiveProviderLaunchAuthority(provider),
+          hasCapturedTeamReadiness?.(provider.providerId, now) !== true &&
+          !hasEffectiveProviderLaunchAuthority(provider, now),
       };
     });
   }, [
@@ -180,6 +182,11 @@ function useProviderActivityDisplay({
     sourceProviderMap,
     providerStatusOverride,
   ]);
+  const [authorityNow] = useConservativeNow(readProviderStates);
+  const providerStates = useMemo(
+    () => readProviderStates(authorityNow),
+    [authorityNow, readProviderStates]
+  );
 
   const visibleProviderIds = useMemo(
     () => providerStates.map((state) => state.provider.providerId),

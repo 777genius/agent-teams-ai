@@ -175,6 +175,9 @@ export const desktopProofSupplementarySources = [
   // Integrated Desktop runtime helper closure.
   'src/renderer/components/team/dialogs/useTeamModelProviderStatus.ts',
   'src/renderer/components/common/ProviderActivityStatusStrip.tsx',
+  'src/renderer/hooks/useConservativeNow.ts',
+  'src/renderer/hooks/useEffectiveCliProviderStatus.ts',
+  'src/renderer/utils/teamProviderRuntimeStatusLoading.ts',
   'src/renderer/utils/providerReadiness.ts',
   'test/renderer/components/common/ProviderActivityStatusStrip.test.ts',
   'src/renderer/components/team/messages/useComposerTextarea.ts',

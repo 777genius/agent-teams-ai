@@ -6,6 +6,7 @@ import { hasCapturedTeamLaunchReadiness } from '@renderer/components/team/dialog
 import { getPendingProviderPreflightIds } from '@renderer/components/team/dialogs/optionalProviderPreflight';
 import { createLaunchGuard } from '@renderer/components/team/dialogs/providerLaunchAuthority';
 import { ProviderLaunchAuthorityNotice } from '@renderer/components/team/dialogs/ProviderLaunchAuthorityNotice';
+import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -273,6 +274,7 @@ describe('ProviderActivityStatusStrip', () => {
     'preparation',
     'selection',
     'expired',
+    'expired-stable-predicate',
     'closed',
     'text-only',
     'failed',
@@ -324,6 +326,7 @@ describe('ProviderActivityStatusStrip', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
+    let providerLoading: Partial<Record<CliProviderId, boolean>> = {};
     const render = async (loading = false) => {
       await act(async () => {
         root.render(
@@ -331,9 +334,13 @@ describe('ProviderActivityStatusStrip', () => {
             cliStatus,
             sourceCliStatus: cliStatus,
             cliStatusLoading: false,
-            cliProviderStatusLoading: {},
+            cliProviderStatusLoading:
+              scenario === 'expired-stable-predicate' ? providerLoading : {},
             multimodelEnabled: true,
-            hasCapturedTeamReadiness: (providerId, at) => permits(providerId, at),
+            hasCapturedTeamReadiness:
+              scenario === 'expired-stable-predicate'
+                ? permits
+                : (providerId, at) => permits(providerId, at),
             forceLoadingProviderIds: loading ? ['codex'] : undefined,
             showReadyProviders: true,
             readyStatusText: 'Ready',
@@ -368,6 +375,10 @@ describe('ProviderActivityStatusStrip', () => {
           break;
         case 'expired':
           clock.mockReturnValue(proof.expiresAt);
+          break;
+        case 'expired-stable-predicate':
+          clock.mockReturnValue(proof.expiresAt);
+          providerLoading = { codex: false };
           break;
         case 'closed':
           scope.open = false;
@@ -438,6 +449,26 @@ describe('ProviderActivityStatusStrip', () => {
         },
       ],
     };
+    const evidence = {
+      selectedModels: ['openrouter/auto'],
+      scopedStatusBySourceId: new Map([['openrouter', scopedProvider]]),
+    };
+    const staleAt = Date.parse(scopedProvider.modelCatalog.staleAt);
+    const clock = vi.spyOn(Date, 'now').mockImplementation(() => {
+      throw new Error('Explicit scoped readiness must use the supplied clock');
+    });
+    try {
+      expect(
+        isTeamProviderRuntimeStatusLoading('opencode', passiveProvider, false, evidence, staleAt - 1)
+      ).toBe(false);
+      for (const now of [staleAt, Number.POSITIVE_INFINITY, Number.NaN]) {
+        expect(
+          isTeamProviderRuntimeStatusLoading('opencode', passiveProvider, false, evidence, now)
+        ).toBe(true);
+      }
+    } finally {
+      clock.mockRestore();
+    }
     const host = document.createElement('div');
     let root!: ReturnType<typeof createRoot>;
 
@@ -445,10 +476,7 @@ describe('ProviderActivityStatusStrip', () => {
       root = renderStrip(host, {
         cliStatus: createMultimodelStatus([passiveProvider]),
         providerStatusOverride: passiveProvider,
-        openCodePreparationEvidence: {
-          selectedModels: ['openrouter/auto'],
-          scopedStatusBySourceId: new Map([['openrouter', scopedProvider]]),
-        },
+        openCodePreparationEvidence: evidence,
         showReadyProviders: true,
         readyStatusText: 'Ready',
       });

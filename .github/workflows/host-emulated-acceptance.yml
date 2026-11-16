@@ -176,6 +176,9 @@ jobs:
             src/features/agent-backend/renderer/createHostTeamProvisioning.ts \
             src/features/agent-backend/renderer/index.ts \
             src/renderer/components/common/ProviderActivityStatusStrip.tsx \
+            src/renderer/hooks/useConservativeNow.ts \
+            src/renderer/hooks/useEffectiveCliProviderStatus.ts \
+            src/renderer/utils/teamProviderRuntimeStatusLoading.ts \
             src/renderer/components/team/dialogs/LaunchTeamDialog.tsx \
             test/renderer/components/common/ProviderActivityStatusStrip.test.ts \
             src/renderer/store/slices/teamSlice.ts \
