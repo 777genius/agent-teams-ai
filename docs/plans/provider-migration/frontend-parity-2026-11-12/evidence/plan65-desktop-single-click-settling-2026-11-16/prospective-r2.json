@@ -1,0 +1,190 @@
+{
+  "kind": "INDEPENDENT_PROSPECTIVE_PLAN65_R2",
+  "reviewer": "/root/p09_review",
+  "verdict": "GO_PROSPECTIVE_DOCUMENTARY_AND_BOUNDED_SELECTION_ONLY",
+  "blockingFindings": [],
+  "scope": "Exact final Plan65/R1 and two writable preimages plus three unchanged references. No afterimage, source publication or execution qualification is approved by this prospective report.",
+  "base": {
+    "commit": "5a49d66c4ab90e18906f5121deb898a72a154c0b",
+    "tree": "a6e8d6393dc8c4b3f9ed6f5af90b1c0999bd925a",
+    "officialPacket": {
+      "path": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/actual-source/official-packet.json",
+      "bytes": 3913886,
+      "physicalLines": 1,
+      "gitBlob": "499a852708b6c989664cf4a9b0a16adcaf41d68c",
+      "sha256": "2a47d77163f7f52f7cb602042d3f2e6ab4f4448d5bcf9c33eb95e9225f985adc"
+    },
+    "recursiveEntries": 12842,
+    "leafCount": 11139,
+    "truncated": false,
+    "independentMerkle": "All11139 leaf tuples reconstructed to the exact root; all1703 returned subtree hashes independently agree. Every selected/reference body joins mode100644 at this actual base.",
+    "closedPriorSourceGate": {
+      "path": "/tmp/e2e-original-artifacts/reviews/plan64-windows-readiness-cleanup/actual-source/independent-actual-source-r2.json",
+      "bytes": 10082,
+      "physicalLines": 224,
+      "gitBlob": "48221a5046cf1126d6ad4fa33413970544d175e7",
+      "sha256": "704332bc3a14f2f1bd3e5121dc9b9775e6f8fb5cdb52c0628a9b41938a0ab96f"
+    },
+    "priorGateLimit": "Prior Plan64 actual source gate is reused for its already closed scope; this review does not requalify Plan64 runtime behavior."
+  },
+  "documents": {
+    "plan": {
+      "path": "/tmp/e2e-original-artifacts/reviews/plan65-desktop-single-click-settling/plan.md",
+      "bytes": 9087,
+      "physicalLines": 48,
+      "gitBlob": "2a7225baa3a2e91d86fed40551c528565ee1441e",
+      "sha256": "43aeb137ca02690b5281983c303dd0cc37df3dd8c3cfe66c60e28a09b1803394"
+    },
+    "rootR1": {
+      "path": "/tmp/e2e-original-artifacts/reviews/plan65-desktop-single-click-settling/prospective-r1.json",
+      "bytes": 3922,
+      "physicalLines": 67,
+      "gitBlob": "edc8fa077426636ff71ed5950586352c79bd3c86",
+      "sha256": "e8de2ccae45735b8782763681ab17353cb3bf8ebcf12c9a6c80839644f171700"
+    },
+    "preimageBindings": {
+      "path": "/tmp/e2e-original-artifacts/reviews/plan65-desktop-single-click-settling/preimage-bindings.json",
+      "bytes": 2232,
+      "physicalLines": 47,
+      "gitBlob": "fc92e852cf0361084fa834d746636c04369fef15",
+      "sha256": "3ace7a5aff6aa72e2bfbb45347c8ece1277a919545d9a96c43d9d9da6b531d97"
+    },
+    "readExtent": "Complete plan48lines, complete rootR1 and complete binding list read; all displayed content identities recomputed."
+  },
+  "boundBodies": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "writable": true,
+      "bytes": 30733,
+      "physicalLines": 548,
+      "gitBlob": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+      "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "writable": true,
+      "bytes": 162195,
+      "physicalLines": 2689,
+      "gitBlob": "a67601fe1a6785b233aef6cacf494661100df472",
+      "sha256": "e2c1fdbc87395de78a9faed0a1a9a50d1861e02d0bdb686e3530e20eb078fc02"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "writable": false,
+      "bytes": 36207,
+      "physicalLines": 798,
+      "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c",
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+      "writable": false,
+      "bytes": 8576,
+      "physicalLines": 162,
+      "gitBlob": "db4d98b333e1fb1103c82cf7851a252c0ecff3a5",
+      "sha256": "4e62a8eee6a03074e05bf75f17c8cdfb2b717cd99f923d188a0ffe7f3db54e6a"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "writable": false,
+      "bytes": 141880,
+      "physicalLines": 1768,
+      "gitBlob": "af1abdb8c2309b4122d50ba9bdfa745a896344de",
+      "sha256": "7e2add679b6b13ed9cc08cc57575e835c3a93a62f52ede4a352571f614ca2134"
+    }
+  ],
+  "sourceReviewReuse": {
+    "originalReview": {
+      "path": "/tmp/e2e-original-artifacts/reviews/75-taskboard-final-motion-r2/read-only-findings.json",
+      "bytes": 22127,
+      "physicalLines": 440,
+      "gitBlob": "7ad73b4696b04b79678c760154f89dfa685a3df1",
+      "sha256": "b623dd50dfca0289662074ea3608a49eee6a41d51dbfc7bf319f49c5b23905d2"
+    },
+    "extent": "Previously full548-line controls source and affected existing test/caller seams were read in the exact current Taskboard audit. All five packet bodies are byte-identical to those selected originals/references and independently hash-joined to actual5a49. No unrelated2689-line test/caller whole-body semantic reread is claimed.",
+    "ownerScope": "clickExpression238-409, waitRead182-205, generated eligible target207-237; shared motion/error diagnostic behavior fully examined.",
+    "testScope": [
+      "738-764 ordinary settling",
+      "792-808 continuous movement",
+      "1319-1350 final unavailable/moved branches",
+      "1404-1446 pending-final owner/cutoff rejection",
+      "2087-2128 geometry final-motion refusal",
+      "2130-2208 unavailable/accessor/throwing-stdout",
+      "2210-2286 actual generated DOM eligibility"
+    ],
+    "callerScope": "Taskboard449-474 preserves canonical clarification check/receipt then original Close; failure is before the Close press. Cross137 forwards the original journey."
+  },
+  "selectionChecks": [
+    {
+      "claim": "Only two existing writable files",
+      "result": "PASS",
+      "reason": "Controls1c11809c and Team testa67601fe are exact preimages. Caller3f1ce46f/crossdb4d98b3/workflowaf1abdb8 are reference-only. No new framework/module/API/product/package/roster/workflow scope is selected."
+    },
+    {
+      "claim": "One shared original observation allowance",
+      "result": "PASS",
+      "reason": "The original upper envelope is two initial completed point observations plus15 stability observations and one final. Selected16remaining after initial/hover consumes one for each subsequent stability or final invocation and reserves a final sample. Failed motion never replenishes allowance; at most15 original100ms stability delays remain."
+    },
+    {
+      "claim": "Budget terminology is precise",
+      "result": "PASS",
+      "reason": "Plan explicitly distinguishes completed point-sample invocations from underlying CDP evaluations and hard wall time. The existing30s waitRead retry behavior remains. No additional clock, new timeout or late-acceptance exception is selected."
+    },
+    {
+      "claim": "Only coordinate motion may continue",
+      "result": "PASS",
+      "reason": "New baseline requires available exact same tag, finite numeric old/new x/y and actual coordinate change. It also requires at least3 observations still available for two new equal samples and their complete final lookup. Original exact comparison is preserved without tolerance."
+    },
+    {
+      "claim": "Owner/cutoff and transport remain authoritative",
+      "result": "PASS",
+      "reason": "Awaited CDP work and owner callbacks remain outside a broad retry catch. After the final await, the owner/cutoff guard must run before baseline adoption/continuation and immediately before any eventual press. Unavailable-first refusal is preserved. Exact owner/transport Error identity is explicitly required."
+    },
+    {
+      "claim": "One physical action sequence",
+      "result": "PASS",
+      "reason": "Page.bringToFront, one initial hover and same complete target expression remain. Continued work is read-only; there is no second hover/scroll/action or uncertain-effect replay. Press/release remains exactly one pair after final eligibility/coordinates/owner checks."
+    },
+    {
+      "claim": "Passive trace does not become authority",
+      "result": "PASS",
+      "reason": "Existing18-sample cap, own-data projection, closed fields, privacy and throwing-stdout protection are preserved. One terminal failure record at most; successful settling emits no failure diagnostic. Optional animation/font fields do not authorize the click."
+    },
+    {
+      "claim": "Finite source and original coverage",
+      "result": "PASS",
+      "reason": "Current controls548 physical lines is below the existing800 ordinary limit; future source must remain below it without packing/extraction/exception. Both paths appear exactly once in the133 unique fast-lint operands; original node --test includes the Team test. No missing operand or new suite was identified."
+    }
+  ],
+  "regressionSelectionReview": {
+    "ordinaryAndContinuousMotion": "Keep ordinary settling and continuously moving no-click cases. Original always-moving path remains finite and cannot gain a physical input.",
+    "changedExistingMotionExpectations": "The two historical tests intentionally encode immediate final-motion refusal. Plan transparently changes them rather than claiming unchanged assertions: moved-once1319 becomes a bounded recovery positive; fifth-point-only motion2087 becomes repeated late-motion exhaustion negative.",
+    "transientPositive": "Same expression and exact one hover; changed final point supplies only a new baseline, then two fresh equal samples and a complete exact final lookup precede one press/release at the new point. A once-only final shift can use8 total observations in the current fixture.",
+    "boundedNegative": "Finite scripted final motion must exhaust the shared allowance without input, preserve closed trace/private-text exclusion and one failure record. The test should exercise final changes after stability; it must not copy the production loop or raise18.",
+    "retainedUnavailability": "Unavailable branch remains the immediate5-observation failure. Existing accessor/throwing-stdout and generated-expression tests remain unchanged to protect refusal identity, diagnostic getter avoidance and ordinary5-observation eligibility.",
+    "pendingAuthority": "Retain same-point owner/cutoff cases and extend the existing deferred final-read seam with moved coordinates. No additional target read or physical input after the exact authority Error.",
+    "transport": "A small same-suite final evaluate rejection case is justified if absent: exact Error identity/no continued read/no press. This specifically protects the new continuation catch boundary.",
+    "optionalTableNegatives": "Same existing refusal table may include tag/nonfinite cases only to protect the explicitly selected coordinate-only path. No new application mock architecture or broad test survey is selected."
+  },
+  "evidenceAndCausality": {
+    "historicalBinding": "Plan raw194804/SHA8e3749..., artifact14276860896/868196/SHAf15cfa..., receipt968210/SHA39a812..., and original finding22127/SHAb623dd... match the held current75 actual evidence.",
+    "proven": "Final same available BUTTON changed y167.125→171.125 after two stable samples; controls372 refused before any Close press. Actual raw962 is the journey failure; earlier controlled geometry lines are passing negatives.",
+    "notProven": "Neither layout cause nor eventual settling in that historical run is established. The plan correctly leaves the rest of Taskboard incomplete and does not convert app exit0/empty cleanup into a separate Host/native result.",
+    "scopeLimits": "No P09/Plan40 owner-choice change, M16/native mixed Resume qualification, Windows W01 prerequisite bypass or producer archive adoption follows from this plan."
+  },
+  "mandatoryNextGates": [
+    "Publish this exact selection document and independently read back actual commit/tree/body preservation before producing source afterimages.",
+    "Rebind two source preimages and three references to the actual documentary parent; do not overwrite incoming work.",
+    "Review future complete before/after bodies, strict forward/inverse patch, finite allowance/error semantics, selected tests and physical-line bound; require separate independent source R2.",
+    "Publish/read back exact source child and unrelated-leaf preservation. Resulting-head original automatic compilation/lint/safe suite and original Desktop journeys remain required; old passing refusal tests do not qualify the new behavior."
+  ],
+  "operations": {
+    "sourceAfterimages": 0,
+    "projectImportsOrExecution": 0,
+    "compilerTestsLintInstall": 0,
+    "providerNativeGuiExecution": 0,
+    "ciPollsOrDownloads": 0,
+    "gitOrApiMutations": 0,
+    "activity": "Read held immutable packets/source/evidence; pure data hashing/Merkle/counts; wrote this scratch review only."
+  }
+}
