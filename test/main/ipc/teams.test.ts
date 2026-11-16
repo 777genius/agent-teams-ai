@@ -268,6 +268,7 @@ import {
   TEAM_TOOL_APPROVAL_SETTINGS,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
+  TEAM_SET_HUMAN_ONLY_APPROVAL,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
   TEAM_UPDATE_MEMBER_ROLE,
   TEAM_UPDATE_TASK_FIELDS,
@@ -376,6 +377,7 @@ const TEAM_HANDLER_KEYS = [
   TEAM_TOOL_APPROVAL_SETTINGS,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
+  TEAM_SET_HUMAN_ONLY_APPROVAL,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
   TEAM_UPDATE_MEMBER_ROLE,
   TEAM_UPDATE_TASK_FIELDS,
@@ -574,6 +576,7 @@ describe('ipc teams handlers', () => {
     createTask: vi.fn(() => resolved({ id: '1', subject: 'Test', status: 'pending' })),
     requestReview: vi.fn(() => resolvedUndefined()),
     updateKanban: vi.fn(() => resolvedUndefined()),
+    setHumanOnlyApproval: vi.fn(() => resolvedUndefined()),
     updateKanbanColumnOrder: vi.fn(() => resolvedUndefined()),
     updateTaskStatus: vi.fn(() => resolvedUndefined()),
     startTask: vi.fn(() => resolvedUndefined()),
@@ -988,6 +991,19 @@ describe('ipc teams handlers', () => {
     setClaudeBasePathOverride(null);
     setAppDataBasePath(null);
     fs.rmSync(attachmentTestRoot, { recursive: true, force: true });
+  });
+
+  it('routes the approval policy only through the validated desktop IPC channel', async () => {
+    const setter = handlers.get(TEAM_SET_HUMAN_ONLY_APPROVAL)!;
+    expect(await setter({} as never, 'my-team', true)).toMatchObject({ success: true });
+    expect(service.setHumanOnlyApproval).toHaveBeenCalledWith('my-team', true);
+    expect(await setter({} as never, 'my-team', false)).toMatchObject({ success: true });
+    expect(service.setHumanOnlyApproval).toHaveBeenCalledWith('my-team', false);
+    vi.mocked(service.setHumanOnlyApproval).mockClear();
+    expect(await setter({} as never, '../outside', true)).toMatchObject({ success: false });
+    expect(await setter({} as never, 'my-team', 'true')).toMatchObject({ success: false });
+    expect(await setter({} as never, 'my-team', 1)).toMatchObject({ success: false });
+    expect(service.setHumanOnlyApproval).not.toHaveBeenCalled();
   });
 
   it('registers all expected handlers', () => {

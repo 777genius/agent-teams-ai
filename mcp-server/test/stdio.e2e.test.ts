@@ -348,6 +348,7 @@ describe('agent-teams-mcp stdio e2e', () => {
       expect(toolNames).toContain('task_briefing');
       expect(toolNames).toContain('member_briefing');
       expect(toolNames).toContain('review_approve');
+      expect(toolNames).toContain('review_complete');
       expect(toolNames).toContain('lead_briefing');
       expect(taskListTool?.description).toContain(
         'Use it to browse, filter, and drill into inventory, not as a primary working queue.'
@@ -1958,6 +1959,85 @@ describe('agent-teams-mcp stdio e2e', () => {
         blockedBy: [dependencyTask.id],
         status: 'pending',
       });
+    } finally {
+      await client.close();
+    }
+  });
+
+  it('enforces cycle-bound human-only approval through real stdio MCP', async () => {
+    const teamName = 'stdio-human-only-team';
+    await writeTeamConfig(claudeDir, teamName);
+    await writeFile(
+      path.join(claudeDir, 'teams', teamName, 'kanban-state.json'),
+      JSON.stringify({ teamName, reviewers: ['bob'], tasks: {}, humanOnlyApproval: true })
+    );
+    const client = new McpStdIoClient(serverPath, workspaceRoot);
+    const context = { claudeDir, teamName };
+    const errorText = (response: unknown): string => {
+      const value = response as {
+        error?: { message?: string };
+        result?: { content?: Array<{ text?: string }> };
+      };
+      return value.error?.message ?? value.result?.content?.[0]?.text ?? '';
+    };
+    try {
+      await client.initialize();
+      const listed = (await client.listTools()) as {
+        result?: { tools?: Array<{ name: string }> };
+      };
+      expect(listed.result?.tools?.map((tool) => tool.name)).toContain('review_complete');
+      const task = parseJsonToolResult((await client.callTool(
+        'task_create', { ...context, subject: 'Human review MCP E2E', owner: 'alice' }, 210
+      ) as { result: unknown }).result);
+      await client.callTool('task_complete', { ...context, taskId: task.id, actor: 'alice' }, 211);
+      await client.callTool('review_request', {
+        ...context, taskId: task.id, from: 'team-lead', reviewer: 'bob',
+      }, 212);
+      const persisted = JSON.parse(await readFile(
+        path.join(claudeDir, 'tasks', teamName, `${task.id}.json`), 'utf8'
+      ));
+      const cycle = persisted.historyEvents.find(
+        (event: { type: string }) => event.type === 'review_requested'
+      ).id as string;
+      const started = parseJsonToolResult((await client.callTool(
+        'review_start', { ...context, taskId: task.id, from: 'bob' }, 213
+      ) as { result: unknown }).result);
+      expect(started.reviewRequestId).toBe(cycle);
+
+      for (const actor of ['bob', 'user']) {
+        const rejected = await client.callTool(
+          'review_approve', { ...context, taskId: task.id, from: actor }, 214
+        );
+        expect(errorText(rejected)).toContain('Human approval required');
+      }
+      const bypass = await client.callTool(
+        'kanban_set_column', { ...context, taskId: task.id, column: 'approved' }, 215
+      );
+      expect(errorText(bypass)).toContain('must already be approved');
+      const stale = await client.callTool('review_complete', {
+        ...context, taskId: task.id, from: 'bob', expectedReviewRequestId: 'stale',
+      }, 216);
+      expect(errorText(stale)).toContain('Stale review request');
+
+      const completed = parseJsonToolResult((await client.callTool('review_complete', {
+        ...context, taskId: task.id, from: 'bob', expectedReviewRequestId: cycle,
+      }, 217) as { result: unknown }).result);
+      expect(completed).toMatchObject({
+        ok: true, column: 'done', reviewState: 'reviewed', alreadyCompleted: false,
+      });
+      const duplicate = parseJsonToolResult((await client.callTool('review_complete', {
+        ...context, taskId: task.id, from: 'bob', expectedReviewRequestId: cycle,
+      }, 218) as { result: unknown }).result);
+      expect(duplicate.alreadyCompleted).toBe(true);
+      const observed = parseJsonToolResult((await client.callTool(
+        'task_get', { ...context, taskId: task.id }, 219
+      ) as { result: unknown }).result);
+      expect(observed.reviewState).toBe('reviewed');
+      const kanban = parseJsonToolResult((await client.callTool(
+        'kanban_get', context, 220
+      ) as { result: unknown }).result);
+      expect(kanban.tasks[task.id]).toBeUndefined();
+      expect(kanban.humanOnlyApproval).toBe(true);
     } finally {
       await client.close();
     }

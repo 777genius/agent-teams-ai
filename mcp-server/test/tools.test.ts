@@ -274,6 +274,16 @@ describe('agent-teams-mcp tools', () => {
     }
   );
 
+  it('requires the original review request ID and never exposes human acceptance tools', () => {
+    const schema = getTool('review_complete').parameters;
+    expect(schema?.safeParse({ teamName: 'fixture', taskId: 'task-1' }).success).toBe(false);
+    expect(schema?.safeParse({
+      teamName: 'fixture', taskId: 'task-1', expectedReviewRequestId: 'event-1', from: 'bob',
+    }).success).toBe(true);
+    expect([...tools.keys()]).not.toContain('review_approve_as_human');
+    expect([...tools.keys()]).not.toContain('set_human_only_approval');
+  });
+
   it('registers the full expected MCP tool surface', () => {
     expect([...tools.keys()].sort()).toEqual([...AGENT_TEAMS_REGISTERED_TOOL_NAMES].sort());
   });
