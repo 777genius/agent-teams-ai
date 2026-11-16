@@ -59,6 +59,27 @@ jobs:
           - lane: opencode-v2-review
             runner: macos-15
             platform: darwin-arm64
+            v2Mode: native-review-ui
+            v2ReadbackMode: native-review-readback-ui
+          - lane: opencode-v2-quit-active
+            runner: macos-15
+            platform: darwin-arm64
+            v2Mode: native-quit-ui
+            v2ReadbackMode: native-quit-readback-ui
+          - lane: opencode-v2-quit-pending-open
+            runner: macos-15
+            platform: darwin-arm64
+            v2Mode: native-quit-ui
+            v2ReadbackMode: native-quit-readback-ui
+          - lane: opencode-v2-resume
+            runner: macos-15
+            platform: darwin-arm64
+            v2Mode: native-resume-ui
+          - lane: opencode-v2-chat-attachments
+            runner: macos-15
+            platform: darwin-arm64
+            v2Mode: native-conversation-ui
+            v2ReadbackMode: native-readback-ui
     defaults:
       run:
         shell: bash
@@ -307,7 +328,7 @@ jobs:
           for (const [key, value] of Object.entries(values)) appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
           writeFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), JSON.stringify({
             sourceHead: process.env.HOST_EMULATED_SOURCE_HEAD, platform: process.platform,
-            architecture: process.arch, nativeProviders: ['opencode-v2-management', 'opencode-v2-review'].includes(process.env.HOST_EMULATED_LANE) ? 'OpenCode V2 with finite localhost model only' : 'forbidden',
+            architecture: process.arch, nativeProviders: ['opencode-v2-management', 'opencode-v2-review', 'opencode-v2-quit-active', 'opencode-v2-quit-pending-open', 'opencode-v2-resume', 'opencode-v2-chat-attachments'].includes(process.env.HOST_EMULATED_LANE) ? 'OpenCode V2 with finite localhost model only' : 'forbidden',
             values, linuxChildExec, processLauncher,
           }, null, 2), { mode: 0o600 });
           NODE
@@ -502,12 +523,12 @@ jobs:
           node scripts/legacy-agent-host/desktop-backend-smoke.ts \
             2>&1 | tee "$RUNNER_TEMP/host-emulated-emulated-installer-ui.log"
       - name: Stage checksum-pinned OpenCode base without executing the legacy CLI
-        if: contains(fromJSON('["opencode-v2-management", "opencode-v2-review"]'), matrix.lane)
+        if: contains(fromJSON('["opencode-v2-management", "opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane)
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/stage-runtime.mjs --platform "$HOST_EMULATED_PLATFORM"
       - name: Prepare exact OpenCode V2 Bun and engine graph
-        if: contains(fromJSON('["opencode-v2-management", "opencode-v2-review"]'), matrix.lane)
+        if: contains(fromJSON('["opencode-v2-management", "opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane)
         env:
           OPENCODE_V2_TEST_PLATFORM: ${{ env.HOST_EMULATED_PLATFORM }}
           OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -542,18 +563,29 @@ jobs:
       - name: Verify original V2 membership receipts and physical cleanup
         if: ${{ !cancelled() && steps.inputs.outcome == 'success' && matrix.lane == 'opencode-v2-management' }}
         run: node scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts
-      - name: Exercise original OpenCode V2 native Review controls
-        if: matrix.lane == 'opencode-v2-review'
+      - name: Exercise original OpenCode V2 native Desktop journey
+        if: contains(fromJSON('["opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane)
         env:
-          LEGACY_DESKTOP_PROOF_MODE: native-review-ui
+          LEGACY_DESKTOP_PROOF_MODE: ${{ matrix.v2Mode }}
           LEGACY_DESKTOP_OPENCODE_GENERATION: v2
+          HOST_EMULATED_V2_READBACK_MODE: ${{ matrix.v2ReadbackMode }}
         run: |
           set -euo pipefail
-          unset LEGACY_DESKTOP_EMULATED_ONLY
+          unset LEGACY_DESKTOP_EMULATED_ONLY LEGACY_DESKTOP_QUIT_SCENARIO LEGACY_DESKTOP_RESUME_PROVIDER LEGACY_DESKTOP_CHAT_ATTACHMENTS
+          case "$HOST_EMULATED_LANE:$LEGACY_DESKTOP_PROOF_MODE:$HOST_EMULATED_V2_READBACK_MODE" in
+            opencode-v2-review:native-review-ui:native-review-readback-ui|opencode-v2-quit-active:native-quit-ui:native-quit-readback-ui) ;;
+            opencode-v2-quit-pending-open:native-quit-ui:native-quit-readback-ui) export LEGACY_DESKTOP_QUIT_SCENARIO=pending-open ;;
+            opencode-v2-resume:native-resume-ui:) export LEGACY_DESKTOP_RESUME_PROVIDER=opencode ;;
+            opencode-v2-chat-attachments:native-conversation-ui:native-readback-ui) export LEGACY_DESKTOP_CHAT_ATTACHMENTS=1 ;;
+            *) printf 'Unsupported original V2 journey selection\n' >&2; exit 1 ;;
+          esac
           node scripts/legacy-agent-host/desktop-backend-smoke.ts \
-            2>&1 | tee "$RUNNER_TEMP/host-emulated-opencode-v2-review-ui.log"
-      - name: Capture original successful V2 Review receipt for cold readback
-        if: matrix.lane == 'opencode-v2-review'
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-$HOST_EMULATED_LANE-ui.log"
+      - name: Capture original successful V2 journey receipt and compiled epochs
+        if: contains(fromJSON('["opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane)
+        env:
+          HOST_EMULATED_V2_MODE: ${{ matrix.v2Mode }}
+          HOST_EMULATED_V2_READBACK_MODE: ${{ matrix.v2ReadbackMode }}
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
@@ -565,40 +597,66 @@ jobs:
           import { compiledBundleHashes } from './scripts/legacy-agent-host/desktop-backend-observations.ts';
           import { captureDesktopSourceHashes } from './scripts/legacy-agent-host/desktop-source-freeze.ts';
           import { desktopProofSources } from './scripts/legacy-agent-host/desktop-proof-sources.ts';
+          const lane = process.env.HOST_EMULATED_LANE, mode = process.env.HOST_EMULATED_V2_MODE;
           const inputs = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), 'utf8'));
           assert.equal(inputs.sourceHead, process.env.HOST_EMULATED_SOURCE_HEAD);
           assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), inputs.sourceHead);
           assert.equal(execFileSync('git', ['status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim(), '');
-          const prepared = readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-opencode-v2-review-ui.log'), 'utf8')
+          const prepared = readFileSync(join(process.env.RUNNER_TEMP, `host-emulated-${lane}-ui.log`), 'utf8')
             .split('\n').flatMap(line => { try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; } catch { return []; } });
-          assert.equal(prepared.length, 1, 'one original native Review attempt');
+          assert.equal(prepared.length, 1, 'one original native journey attempt');
           const path = realpathSync(prepared[0].receipt), root = dirname(path);
           assert.equal(path, prepared[0].receipt); assert.equal(basename(path), 'desktop-backend-receipt.json');
           assert.equal(dirname(root), realpathSync(process.env.RUNNER_TEMP));
           assert.match(basename(root), /^TEST-desktop-backend-[A-Za-z0-9]+$/);
           assert.ok(!/[\r\n\0]/.test(root));
           const bytes = readFileSync(path), receipt = JSON.parse(bytes.toString('utf8'));
-          assert.equal(receipt.root, root); assert.equal(receipt.mode, 'native-review-ui'); assert.equal(receipt.status, 'PASS');
-          assert.equal(receipt.nativeReviewUiProof?.status, 'PASS');
+          assert.equal(receipt.root, root); assert.equal(receipt.mode, mode); assert.equal(receipt.status, 'PASS');
+          if (mode === 'native-review-ui') assert.equal(receipt.nativeReviewUiProof?.status, 'PASS');
+          else if (mode === 'native-quit-ui') assert.equal(receipt.nativeQuitUiProof?.status, 'PASS');
+          else if (mode === 'native-resume-ui') {
+            assert.equal(receipt.launchDialogProof?.status, 'PASS');
+            assert.equal(receipt.coldResumeBoundary?.status, 'PASS');
+            assert.equal(receipt.resumeDialogProof?.status, 'PASS');
+          } else {
+            assert.equal(mode, 'native-conversation-ui');
+            assert.equal(receipt.conversationUiProof?.status, 'PASS');
+            assert.equal(receipt.nativeChatAttachments?.status, 'PASS');
+          }
           assert.deepEqual(receipt.selectedSourceHashesBeforeApp, await captureDesktopSourceHashes(process.cwd(), desktopProofSources));
           assert.deepEqual(receipt.selectedSourceHashesAfterFlow, receipt.selectedSourceHashesBeforeApp);
-          // Verify this epoch before cold startup can rebuild the same output paths.
-          assert.deepEqual(receipt.compiledBundleHashesAfterStartup, await compiledBundleHashes(join(process.cwd(), 'dist-electron')));
-          appendFileSync(process.env.GITHUB_ENV, 'LEGACY_DESKTOP_READBACK_ROOT=' + root + '\n');
-          appendFileSync(process.env.GITHUB_ENV, 'LEGACY_DESKTOP_READBACK_RECEIPT_SHA256=' + createHash('sha256').update(bytes).digest('hex') + '\n');
+          if (mode === 'native-resume-ui') {
+            const boundary = receipt.coldResumeBoundary, snapshot = boundary.epoch1BundleSnapshot;
+            assert.equal(snapshot.directory, join(root, 'cold-resume-epoch1-bundles'));
+            assert.equal(realpathSync(snapshot.directory), snapshot.directory);
+            assert.deepEqual(receipt.compiledBundleHashesAfterStartup, boundary.firstEpoch.compiledBundleHashesAfterStartup);
+            assert.deepEqual(snapshot.files, receipt.compiledBundleHashesAfterStartup);
+            assert.deepEqual(await compiledBundleHashes(snapshot.directory), snapshot.files);
+            assert.deepEqual(boundary.secondEpoch.compiledBundleHashesAfterStartup, await compiledBundleHashes(join(process.cwd(), 'dist-electron')));
+          } else {
+            // Verify this epoch before cold startup can rebuild the same output paths.
+            assert.deepEqual(receipt.compiledBundleHashesAfterStartup, await compiledBundleHashes(join(process.cwd(), 'dist-electron')));
+          }
+          if (process.env.HOST_EMULATED_V2_READBACK_MODE) {
+            appendFileSync(process.env.GITHUB_ENV, 'LEGACY_DESKTOP_READBACK_ROOT=' + root + '\n');
+            appendFileSync(process.env.GITHUB_ENV, 'LEGACY_DESKTOP_READBACK_RECEIPT_SHA256=' + createHash('sha256').update(bytes).digest('hex') + '\n');
+          }
           NODE
-      - name: Read original V2 Review after cold app and Host restart
-        if: matrix.lane == 'opencode-v2-review'
+      - name: Read original V2 journey after cold app and Host restart
+        if: contains(fromJSON('["opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane) && matrix.v2ReadbackMode != ''
         env:
-          LEGACY_DESKTOP_PROOF_MODE: native-review-readback-ui
+          LEGACY_DESKTOP_PROOF_MODE: ${{ matrix.v2ReadbackMode }}
           LEGACY_DESKTOP_OPENCODE_GENERATION: v2
         run: |
           set -euo pipefail
-          unset LEGACY_DESKTOP_EMULATED_ONLY
+          unset LEGACY_DESKTOP_EMULATED_ONLY LEGACY_DESKTOP_QUIT_SCENARIO LEGACY_DESKTOP_RESUME_PROVIDER LEGACY_DESKTOP_CHAT_ATTACHMENTS
           node scripts/legacy-agent-host/desktop-backend-smoke.ts \
-            2>&1 | tee "$RUNNER_TEMP/host-emulated-opencode-v2-review-readback-ui.log"
-      - name: Verify original V2 Review receipts, source binding and cleanup
-        if: ${{ !cancelled() && steps.inputs.outcome == 'success' && matrix.lane == 'opencode-v2-review' }}
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-$HOST_EMULATED_LANE-readback-ui.log"
+      - name: Verify original V2 journey receipts, source binding and cleanup
+        if: ${{ !cancelled() && steps.inputs.outcome == 'success' && contains(fromJSON('["opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane) }}
+        env:
+          HOST_EMULATED_V2_MODE: ${{ matrix.v2Mode }}
+          HOST_EMULATED_V2_READBACK_MODE: ${{ matrix.v2ReadbackMode }}
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
@@ -612,6 +670,18 @@ jobs:
           import { desktopProofSources } from './scripts/legacy-agent-host/desktop-proof-sources.ts';
           import { assertDesktopMetadataLineageRetained } from './scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts';
           const sha = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          const lane = process.env.HOST_EMULATED_LANE;
+          const routes = {
+            'opencode-v2-review': ['native-review-ui', 'native-review-readback-ui'],
+            'opencode-v2-quit-active': ['native-quit-ui', 'native-quit-readback-ui'],
+            'opencode-v2-quit-pending-open': ['native-quit-ui', 'native-quit-readback-ui'],
+            'opencode-v2-resume': ['native-resume-ui', ''],
+            'opencode-v2-chat-attachments': ['native-conversation-ui', 'native-readback-ui'],
+          };
+          assert.ok(Object.hasOwn(routes, lane), 'one closed original V2 journey');
+          const [mode, coldMode] = routes[lane];
+          assert.equal(process.env.HOST_EMULATED_V2_MODE, mode);
+          assert.equal(process.env.HOST_EMULATED_V2_READBACK_MODE ?? '', coldMode);
           const inputs = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), 'utf8'));
           const native = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-opencode-v2-inputs.json'), 'utf8'));
           assert.equal(inputs.sourceHead, process.env.HOST_EMULATED_SOURCE_HEAD);
@@ -635,11 +705,15 @@ jobs:
             assert.equal(receipt.root, root); assert.equal(receipt.mode, mode); assert.equal(receipt.status, 'PASS');
             return { path, root, receipt, sha256: sha(path) };
           }
-          const warm = read('native-review-ui', 'desktop-backend-receipt.json', 'host-emulated-opencode-v2-review-ui.log');
-          const cold = read('native-review-readback-ui', 'desktop-native-review-readback-receipt.json', 'host-emulated-opencode-v2-review-readback-ui.log');
-          assert.equal(cold.root, warm.root); assert.equal(cold.root, process.env.LEGACY_DESKTOP_READBACK_ROOT);
-          assert.equal(warm.sha256, process.env.LEGACY_DESKTOP_READBACK_RECEIPT_SHA256);
-          for (const { root, receipt } of [warm, cold]) {
+          const warm = read(mode, 'desktop-backend-receipt.json', `host-emulated-${lane}-ui.log`);
+          const cold = coldMode ? read(coldMode, mode === 'native-review-ui' ? 'desktop-native-review-readback-receipt.json'
+            : 'desktop-readback-receipt.json', `host-emulated-${lane}-readback-ui.log`) : undefined;
+          if (cold) {
+            assert.equal(cold.root, warm.root); assert.equal(cold.root, process.env.LEGACY_DESKTOP_READBACK_ROOT);
+            assert.equal(warm.sha256, process.env.LEGACY_DESKTOP_READBACK_RECEIPT_SHA256);
+          }
+          const epochs = cold ? [warm, cold] : [warm];
+          for (const { root, receipt } of epochs) {
             for (const key of ['failure', 'sourceFreezeFailure', 'nativeInputFreezeFailure', 'sentinelCensusFailure', 'logCleanupFailure', 'metadataObservationFailure'])
               assert.equal(receipt[key], undefined, key);
             assert.equal(receipt.quitRequested, true);
@@ -675,45 +749,168 @@ jobs:
             assert.deepEqual(census.refusedInvocations, census.invocations.filter(row => row.allowed !== true));
           }
           // The warm step checked its own compiled epoch; do not compare two builds to each other.
-          assert.deepEqual(cold.receipt.compiledBundleHashesAfterStartup, await compiledBundleHashes(join(process.cwd(), 'dist-electron')));
-          const review = warm.receipt.nativeReviewUiProof, readback = cold.receipt.nativeReviewReadbackProof;
+          if (cold) assert.deepEqual(cold.receipt.compiledBundleHashesAfterStartup, await compiledBundleHashes(join(process.cwd(), 'dist-electron')));
+          const screenshots = [], metadataOwners = [];
           assert.equal(warm.receipt.nativeProvider, 'opencode'); assert.equal(warm.receipt.nativeGeneration, 'v2');
-          assert.equal(review.status, 'PASS'); assert.equal(review.provider, 'opencode-v2'); assert.equal(review.version, '2.1.4');
-          assert.equal(review.events.length, 1); assert.equal(review.events[0].nativeCaptureProof.kind, 'opencode-update-patch-v2');
-          assert.equal(review.stop.releasedBeforeReview, true); assert.equal(review.originalEventsUnchanged, true);
-          assert.equal(review.nativeModelObservations.length, 6);
-          assert.deepEqual(review.nativeModelObservations, warm.receipt.model.observations); assert.deepEqual(warm.receipt.model.failures, []);
-          assert.equal(readback.status, 'PASS'); assert.equal(readback.originalReceiptSha256, warm.sha256);
-          assert.equal(readback.taskId, review.taskId); assert.equal(readback.fileSha256, review.fileSha256);
-          assert.equal(readback.nativeInputsReplayed, 0); assert.equal(readback.nativeAllocations, 0);
-          assert.equal(readback.nativeAllocationScope, 'Runtime sessions'); assert.equal(readback.metadataProcessCount, 1);
-          for (const key of ['runtimeRecordUnchanged', 'nativeEventsUnchanged', 'reviewDecisionsUnchanged']) assert.equal(readback[key], true);
-          const metadata = cold.receipt.coldOpenCodeMetadata;
-          assert.equal(metadata.sourceSha256, warm.sha256); assert.equal(metadata.profileSha256, warm.receipt.pins.profileSha256);
-          assert.equal(metadata.executableSha256, native.bun.sha256);
-          assert.equal(metadata.metadataProcessCount, 1); assert.equal(metadata.nativeRuntimeAllocations, 0);
-          assert.equal(metadata.captured.children.length, 1);
-          for (const [proof, retained] of [[review, review.metadataAfterStop], [metadata, metadata.metadataAfterReadback]]) {
-            assert.equal(proof.metadataAbsentBeforeHarnessCleanup, true);
+          if (mode === 'native-review-ui') {
+            const review = warm.receipt.nativeReviewUiProof, readback = cold.receipt.nativeReviewReadbackProof;
+            assert.equal(review.status, 'PASS'); assert.equal(review.provider, 'opencode-v2'); assert.equal(review.version, '2.1.4');
+            assert.equal(review.events.length, 1); assert.equal(review.events[0].nativeCaptureProof.kind, 'opencode-update-patch-v2');
+            assert.equal(review.stop.releasedBeforeReview, true); assert.equal(review.originalEventsUnchanged, true);
+            assert.equal(review.nativeModelObservations.length, 6);
+            assert.deepEqual(review.nativeModelObservations, warm.receipt.model.observations); assert.deepEqual(warm.receipt.model.failures, []);
+            assert.equal(readback.status, 'PASS'); assert.equal(readback.originalReceiptSha256, warm.sha256);
+            assert.equal(readback.taskId, review.taskId); assert.equal(readback.fileSha256, review.fileSha256);
+            assert.equal(readback.nativeInputsReplayed, 0); assert.equal(readback.nativeAllocations, 0);
+            assert.equal(readback.nativeAllocationScope, 'Runtime sessions'); assert.equal(readback.metadataProcessCount, 1);
+            for (const key of ['runtimeRecordUnchanged', 'nativeEventsUnchanged', 'reviewDecisionsUnchanged']) assert.equal(readback[key], true);
+            metadataOwners.push([review, review.metadataAfterStop, review.metadataAbsentBeforeHarnessCleanup]);
+            screenshots.push([review.screenshot, 'ui-native-v2-review-history.png'], [readback.screenshot, 'ui-native-review-host-restarted.png']);
+          } else if (mode === 'native-quit-ui') {
+            const pending = lane === 'opencode-v2-quit-pending-open';
+            const setup = warm.receipt.nativeSetup, proof = warm.receipt.nativeQuitUiProof, readback = cold.receipt.nativeQuitReadback;
+            assert.equal(setup.status, pending ? 'opening' : 'ready'); assert.equal(proof.status, 'PASS');
+            assert.equal(proof.scenario, pending ? 'pending-open' : undefined);
+            const before = proof.beforeQuit, after = proof.afterQuit;
+            assert.equal(before.observations, pending ? 0 : 1); assert.equal(after.observations, before.observations);
+            assert.equal(warm.receipt.model.observations.length, before.observations); assert.deepEqual(warm.receipt.model.failures, []);
+            assert.equal(after.session.sealed, true); assert.equal(after.session.nativeReady, false);
+            const released = after.session.phase === 'closed' && after.session.custody === 'released';
+            const held = pending && after.session.phase === 'held' && after.session.custody === 'unknown' && after.session.diagnostic === 'open-unknown';
+            assert.ok(released || held, 'original confirmed close or retained pending-open uncertainty');
+            assert.equal(after.runtimeOutcome, held ? 'held-unknown' : 'closed-released'); assert.equal(after.debtRetained, held);
+            assert.deepEqual(after.product, before.product);
+            for (const key of ['nativeChildrenAbsent', 'originalGroupAbsentBeforeHarnessCleanup', 'writerLockReleased']) assert.equal(after[key], true);
+            if (pending) {
+              assert.equal(before.session.phase, 'opening'); assert.equal(before.session.nativeReady, false); assert.equal(before.session.sealed, false);
+              assert.deepEqual(before.session.inputs, []); assert.deepEqual(before.session.interactions, []);
+              assert.deepEqual(after.session.inputs, []); assert.deepEqual(after.session.interactions, []);
+              assert.equal(setup.nativeChildren.length, 1);
+            } else {
+              assert.equal(before.messageIds.length, 2); assert.equal(new Set(before.messageIds).size, 2);
+              assert.equal(before.session.inputs.length, 2); assert.equal(after.session.inputs.length, 2);
+              after.session.inputs.forEach((input, index) => {
+                for (const key of ['intent', 'operationRef', 'fingerprint']) assert.deepEqual(input[key], before.session.inputs[index][key]);
+              });
+              const active = after.session.inputs[0];
+              assert.ok(active.phase === 'unknown' || (active.phase === 'terminal' && ['cancelled', 'failed'].includes(active.terminal)));
+              assert.equal(after.session.inputs[1].phase, 'cancelled');
+            }
+            assert.equal(readback.status, 'PASS');
+            for (const key of ['sessionUnchanged', 'productUnchanged', 'unchangedThroughSecondQuit']) assert.equal(readback[key], true);
+            assert.equal(readback.nativeAllocations, 0); assert.equal(readback.metadataProcessCount, 1);
+            metadataOwners.push([setup, setup.metadataAtRuntimeObservation, setup.metadataAbsentBeforeHarnessCleanup]);
+            screenshots.push([proof.screenshot, pending ? 'ui-native-pending-open-before-quit.png' : 'ui-native-before-quit.png'],
+              [readback.screenshot, 'ui-native-quit-readback.png']);
+          } else if (mode === 'native-resume-ui') {
+            const receipt = warm.receipt, boundary = receipt.coldResumeBoundary;
+            const launch = receipt.launchDialogProof, resumed = receipt.resumeDialogProof, selected = receipt.resumeNativeProfile;
+            assert.equal(receipt.resumeProvider, 'opencode');
+            for (const proof of [launch, boundary, resumed]) { assert.equal(proof.status, 'PASS'); assert.equal(proof.provider, 'opencode'); }
+            assert.equal(selected.provider, 'opencode'); assert.equal(selected.nativeGeneration, 'v2'); assert.equal(selected.version, '2.1.4');
+            const profile = JSON.parse(readFileSync(receipt.paths.profile, 'utf8'));
+            assert.equal(profile.runtime.members.length, 1);
+            const member = profile.runtime.members[0];
+            assert.equal(member.provider, 'opencode'); assert.equal(member.nativeGeneration, 'v2'); assert.equal(member.protocolRevision, '2.1.4');
+            assert.equal(selected.memberId, member.memberId); assert.equal(selected.model, member.model);
+            assert.equal(selected.executableSha256, native.bun.sha256); assert.equal(selected.executableSha256, member.executable.sha256);
+            assert.equal(selected.engineManifestSha256, member.embedded.manifestSha256); assert.match(selected.engineManifestSha256, /^[a-f0-9]{64}$/);
+            assert.equal(launch.settingsRetainedAfterColdStartup, true); assert.equal(launch.stop.releasedBeforeQuit, true);
+            assert.equal(boundary.firstQuit.attempted, true); assert.ok(['acknowledged', 'unconfirmed'].includes(boundary.firstQuit.reply));
+            const first = boundary.firstEpoch, second = boundary.secondEpoch, snapshot = boundary.epoch1BundleSnapshot;
+            assert.equal(second.status, 'PASS'); assert.equal(second.checkpointAndHistoryUnchanged, true);
+            assert.equal(snapshot.directory, join(warm.root, 'cold-resume-epoch1-bundles')); assert.equal(realpathSync(snapshot.directory), snapshot.directory);
+            assert.deepEqual(receipt.compiledBundleHashesAfterStartup, first.compiledBundleHashesAfterStartup);
+            assert.deepEqual(snapshot.files, receipt.compiledBundleHashesAfterStartup);
+            assert.deepEqual(await compiledBundleHashes(snapshot.directory), snapshot.files);
+            assert.deepEqual(second.compiledBundleHashesAfterStartup, await compiledBundleHashes(join(process.cwd(), 'dist-electron')));
+            assert.ok(first.app.processGroup > 0 && second.app.processGroup > 0); assert.notEqual(first.app.processGroup, second.app.processGroup);
+            assert.ok(first.host.pid > 0 && second.host.pid > 0); assert.notEqual(first.host.pid, second.host.pid);
+            for (const cleanup of [boundary.firstCleanup, boundary.secondCleanup]) {
+              assert.equal(cleanup.appExitCode, 0); assert.equal(cleanup.appSignalCode, null); assert.deepEqual(cleanup.remaining, []);
+              assert.equal(cleanup.capturedHostAbsent, true); assert.equal(cleanup.cleanupFailure, undefined);
+            }
+            assert.equal(boundary.firstCleanup.writerLockReleased, true);
+            assert.equal(boundary.secondCleanup.processGroup, second.app.processGroup);
+            for (const key of ['processGroup', 'remaining', 'appExitCode', 'appSignalCode', 'capturedHostAbsent'])
+              assert.deepEqual(boundary.secondCleanup[key], receipt.cleanup[key]);
+            assert.equal(receipt.model.observations.length, 11); assert.deepEqual(receipt.model.failures, []);
+            assert.equal(resumed.phase, 'second-checkpoint-released'); assert.equal(resumed.secondStop.releasedBeforeQuit, true);
+            assert.equal(resumed.sessionsAfterSecondStop.length, 2);
+            assert.equal(new Set(resumed.sessionsAfterSecondStop.map(session => session.binding.generation)).size, 2);
+            for (const session of resumed.sessionsAfterSecondStop) { assert.equal(session.phase, 'closed'); assert.equal(session.custody, 'released'); }
+            assert.equal(resumed.source.nativeSession, resumed.secondStop.nativeSession); assert.equal(resumed.secondStop.originalHistoryPrefixRetained, true);
+            assert.equal(resumed.finalRestorations.restorations.length, 1);
+            const restoration = resumed.finalRestorations.restorations[0];
+            assert.equal(restoration.phase, 'closed'); assert.equal(restoration.custody, 'released'); assert.equal(restoration.attached, false);
+            assert.ok(resumed.recoverySnapshot); assert.equal(resumed.recoverySnapshotFailure, undefined);
+            metadataOwners.push([launch, launch.metadataAfterStop, boundary.firstMetadataAbsentBeforeSecondSpawn],
+              [resumed, resumed.metadataAfterSecondStop, resumed.metadataAbsentBeforeHarnessCleanup]);
+            screenshots.push([launch.screenshot, 'ui-original-launch-native.png'], [resumed.screenshot, 'ui-original-resume-native.png']);
+          } else {
+            assert.equal(mode, 'native-conversation-ui');
+            const conversation = warm.receipt.conversationUiProof, attachments = warm.receipt.nativeChatAttachments;
+            const readback = cold.receipt.savedNativeReadback, savedAttachments = cold.receipt.nativeChatAttachments;
+            assert.equal(conversation.status, 'PASS'); assert.equal(conversation.nativeGeneration, 'v2'); assert.equal(conversation.nativeInputs, 2);
+            assert.equal(conversation.incomingIds.length, 2); assert.equal(new Set(conversation.incomingIds).size, 2);
+            assert.equal(conversation.custody, 'released'); assert.equal(conversation.nativeChildAbsentBeforeQuit, true);
+            assert.equal(attachments.status, 'PASS'); assert.equal(attachments.files.length, 1);
+            assert.equal(attachments.files[0].mimeType, 'image/png'); assert.equal(attachments.preparedImage.mimeType, 'image/png');
+            assert.equal(attachments.preparedImage.originalFilename, attachments.files[0].filename);
+            assert.equal(attachments.preparedImage.width, 2); assert.equal(attachments.preparedImage.height, 1);
+            assert.deepEqual(attachments.preview, { sha256: attachments.preparedImage.sha256, width: 2, height: 1 });
+            for (const file of [attachments.files[0], attachments.preparedImage]) {
+              assert.equal(basename(file.filename), file.filename);
+              const path = join(warm.root, 'native-chat-attachment-inputs', file.filename), bytes = readFileSync(path);
+              assert.equal(realpathSync(path), path); assert.equal(bytes.length, file.size); assert.equal(sha(path), file.sha256);
+              assert.equal(bytes.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+            }
+            assert.equal(attachments.sentMessage.messageId, conversation.incomingIds[1]); assert.equal(attachments.sentMessage.expanded, true);
+            assert.equal(attachments.sentMessage.attachments.length, 1);
+            const sent = attachments.sentMessage.attachments[0];
+            assert.equal(sent.filename, attachments.files[0].filename); assert.equal(sent.mimeType, 'image/png'); assert.equal(sent.size, attachments.preparedImage.size);
+            assert.match(attachments.nativeHistory.sha256, /^[a-f0-9]{64}$/);
+            const images = warm.receipt.model.observations.filter(row => row.turn === 'OPENCODE_TEAM_TWO');
+            assert.equal(images.length, 3); assert.ok(images.every(row => row.nativeImage?.nativeSha256 === attachments.preparedImage.sha256));
+            assert.deepEqual(warm.receipt.model.failures, []);
+            assert.equal(readback.status, 'PASS'); assert.equal(readback.nativeInputsReplayed, 0); assert.equal(readback.nativeAllocations, 0);
+            assert.equal(readback.metadataProcessCount, 1); assert.equal(readback.runtimeRecordUnchanged, true);
+            assert.equal(readback.runtimeAllocationScope, 'Runtime session children; the original read-only metadata child is counted separately');
+            assert.equal(savedAttachments.status, 'PASS');
+            for (const key of ['files', 'preparedImage', 'preview', 'sentMessage', 'nativeHistory']) assert.deepEqual(savedAttachments[key], attachments[key]);
+            const setup = warm.receipt.nativeSetup;
+            assert.equal(setup.status, 'ready');
+            metadataOwners.push([setup, setup.metadataAtRuntimeObservation, setup.metadataAbsentBeforeHarnessCleanup]);
+            screenshots.push([warm.receipt.conversationScreenshot, 'ui-native-replies.png'], [readback.screenshot, 'ui-native-readback.png']);
+          }
+          if (cold) {
+            const metadata = cold.receipt.coldOpenCodeMetadata;
+            assert.equal(metadata.sourceSha256, warm.sha256); assert.equal(metadata.profileSha256, warm.receipt.pins.profileSha256);
+            assert.equal(metadata.executableSha256, native.bun.sha256);
+            assert.equal(metadata.metadataProcessCount, 1); assert.equal(metadata.nativeRuntimeAllocations, 0);
+            assert.equal(metadata.captured.children.length, 1);
+            metadataOwners.push([metadata, metadata.metadataAfterReadback, metadata.metadataAbsentBeforeHarnessCleanup]);
+          }
+          for (const [proof, retained, absent] of metadataOwners) {
+            assert.equal(absent, true);
             assert.ok(proof.metadataAtHostClose.events.length > 0);
             assertDesktopMetadataLineageRetained(retained.metadataLineage, proof.metadataAtHostClose);
           }
-          for (const [proof, filename] of [[review, 'ui-native-v2-review-history.png'], [readback, 'ui-native-review-host-restarted.png']]) {
-            const screenshot = proof.screenshot;
+          for (const [screenshot, filename] of screenshots) {
             assert.equal(realpathSync(screenshot.path), join(warm.root, filename));
             assert.equal(readFileSync(screenshot.path).subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
             assert.equal(sha(screenshot.path), screenshot.sha256);
           }
-          writeFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-opencode-v2-review-summary.json'), JSON.stringify({
-            status: 'PASS', lane: 'opencode-v2-review', sourceHead: inputs.sourceHead, platform: 'darwin-arm64',
-            completed: [warm, cold].map(({ path, sha256, receipt }) => ({ receipt: path, sha256, mode: receipt.mode })),
+          writeFileSync(join(process.env.RUNNER_TEMP, `host-emulated-${lane}-summary.json`), JSON.stringify({
+            status: 'PASS', lane, sourceHead: inputs.sourceHead, platform: 'darwin-arm64',
+            completed: epochs.map(({ path, sha256, receipt }) => ({ receipt: path, sha256, mode: receipt.mode })),
             nativeProviders: inputs.nativeProviders, vendorAuthQualified: false, fullMixedQualified: false,
             fullStage1Qualified: false, fullM13Qualified: false, releaseQualified: false,
             visualReview: 'original warm and cold screenshots retained for independent inspection',
           }, null, 2));
           NODE
       - name: Verify exact source, original screenshots, receipts and cleanup
-        if: ${{ !cancelled() && steps.inputs.outcome == 'success' && !contains(fromJSON('["opencode-v2-management", "opencode-v2-review"]'), matrix.lane) }}
+        if: ${{ !cancelled() && steps.inputs.outcome == 'success' && !contains(fromJSON('["opencode-v2-management", "opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane) }}
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
@@ -1406,7 +1603,7 @@ jobs:
           name: host-emulated-${{ matrix.platform || 'linux-x64' }}-${{ github.event.pull_request.head.sha || github.sha }}-${{ matrix.lane }}
           retention-days: 14
           if-no-files-found: warn
-          include-hidden-files: ${{ contains(fromJSON('["opencode-v2-management", "opencode-v2-review"]'), matrix.lane) }}
+          include-hidden-files: ${{ contains(fromJSON('["opencode-v2-management", "opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane) }}
           path: |
             ${{ runner.temp }}/host-emulated-*.json
             ${{ runner.temp }}/host-emulated-*.log
@@ -1480,6 +1677,14 @@ jobs:
             ${{ runner.temp }}/TEST-desktop-backend-*/workspace/native-review.ts
             ${{ runner.temp }}/TEST-desktop-backend-*/workspace/.git/index
             ${{ runner.temp }}/TEST-desktop-backend-*/workspace/pre-existing-untracked.txt
+            ${{ runner.temp }}/TEST-desktop-backend-*/desktop-readback-receipt.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/desktop-readback-app.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/cold-resume-epoch1-bundles/**
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-desktop-backend/.host-owner/launches/*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/workspace/native-effect.txt
+            ${{ runner.temp }}/TEST-desktop-backend-*/providers/opencode-v2/data/agent-teams-v2-*/opencode.sqlite
+            ${{ runner.temp }}/TEST-desktop-backend-*/providers/opencode-v2/data/agent-teams-v2-*/opencode.sqlite-wal
+            ${{ runner.temp }}/TEST-desktop-backend-*/providers/opencode-v2/data/agent-teams-v2-*/opencode.sqlite-shm
 
   offline-frontend-tests:
     name: Offline frontend tests (${{ matrix.shard }}/4)
