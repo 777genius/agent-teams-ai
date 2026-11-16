@@ -2470,7 +2470,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     (settings: ReviewFlowSettings) => setReviewFlowSettings(teamName, settings),
     [setReviewFlowSettings, teamName]
   );
-
   const handleRequestChanges = useCallback((taskId: string) => {
     setRequestChangesTaskId(taskId);
   }, []);

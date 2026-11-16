@@ -822,7 +822,6 @@ async function leadBriefing(context) {
 function listTaskInventory(context, filters = {}) {
     return agenda.listTaskInventory(context.paths, context.teamName, filters);
 }
-
 function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessagingProtocol('native'), humanApproval = false) {
     const reviewDecisionTool = humanApproval ? 'review_complete' : 'review_approve';
     const reviewDecisionResult = humanApproval ? 'DONE (awaiting human acceptance)' : 'APPROVED';

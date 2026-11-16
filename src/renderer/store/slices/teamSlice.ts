@@ -3586,7 +3586,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       throw error;
     }
   },
-
   updateKanbanColumnOrder: async (
     teamName: string,
     columnId: KanbanColumnId,

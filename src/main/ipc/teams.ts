@@ -125,11 +125,7 @@ import {
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
 } from '@preload/constants/ipcChannels';
 import { wrapAgentBlock } from '@shared/constants/agentBlocks';
-import {
-  isReviewFlow,
-  KANBAN_COLUMN_IDS,
-  MAX_REVIEW_FLOW_PROMPT_LENGTH,
-} from '@shared/constants/kanban';
+import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import {
   parseTeamMemberRestartResult,
@@ -203,6 +199,7 @@ import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStor
 import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService';
 
 import { waitForOpenCodeRuntimeRelayForUi } from './teams/openCodeRuntimeDeliveryRelayUi';
+import { parseReviewFlowSettings } from './teams/reviewFlowSettings';
 import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
 import { createMessagesPageHandler } from './teams/teamMessagesPageHandler';
 import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
@@ -286,7 +283,6 @@ import type {
   OpenCodeRuntimeDeliveryStatus,
   QueuedUserMessagesSnapshot,
   RetryFailedOpenCodeSecondaryLanesResult,
-  ReviewFlowSettings,
   SendMessageRequest,
   SendMessageResult,
   TaskAttachmentMeta,
@@ -3316,34 +3312,6 @@ async function handleGetTask(
   );
 }
 
-function parseReviewFlowSettings(
-  value: unknown
-): { ok: true; settings: ReviewFlowSettings } | { ok: false; error: string } {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return { ok: false, error: 'settings must be an object' };
-  }
-  const { reviewFlow, reviewFlowPrompt } = value as Record<string, unknown>;
-  const settings: ReviewFlowSettings = {};
-  if (reviewFlow !== undefined) {
-    if (!isReviewFlow(reviewFlow)) return { ok: false, error: 'reviewFlow is not supported' };
-    settings.reviewFlow = reviewFlow;
-  }
-  if (reviewFlowPrompt !== undefined) {
-    if (typeof reviewFlowPrompt !== 'string') {
-      return { ok: false, error: 'reviewFlowPrompt must be a string' };
-    }
-    if (reviewFlowPrompt.trim().length > MAX_REVIEW_FLOW_PROMPT_LENGTH) {
-      return {
-        ok: false,
-        error: `reviewFlowPrompt must be at most ${MAX_REVIEW_FLOW_PROMPT_LENGTH} characters`,
-      };
-    }
-    settings.reviewFlowPrompt = reviewFlowPrompt;
-  }
-  if (Object.keys(settings).length === 0) return { ok: false, error: 'settings are empty' };
-  return { ok: true, settings };
-}
-
 async function handleSetReviewFlowSettings(
   _event: IpcMainInvokeEvent,
   teamName: unknown,
@@ -3361,7 +3329,6 @@ async function handleSetReviewFlowSettings(
     getTeamDataService().setReviewFlowSettings(validatedTeam.value!, parsed.settings)
   );
 }
-
 async function handleUpdateKanban(
   _event: IpcMainInvokeEvent,
   teamName: unknown,
