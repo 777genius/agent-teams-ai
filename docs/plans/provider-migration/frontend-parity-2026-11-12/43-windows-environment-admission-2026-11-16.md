@@ -83,3 +83,15 @@ Compatibility R2 accepts this plan; it is not source approval or execution evide
 The existing a07 in-flight receipts are preserved; they cannot be transferred to a new source child. Constructor source review does not qualify native or packaged behavior, and this cut does not resolve separate P09 source-writer semantics.
 
 Source-bound review: the original [review finding](https://github.com/777genius/agent-teams-ai/pull/1192#discussion_r4568683096), all production/test preimages above, the existing runtime MCP capture/schema, source/model transforms and original constructor/test seams were independently checked at `a07e2d68ece77d08e152d7b0de1eb4b85d72ca06`. The selected provider archive was verified as SHA256 `9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41`. Independent compatibility R2 report SHA256: `32c6b452891f8bd1c84e72d2b3b8649f4b1d7dd90398fd418d7eed62e39d6d4d`. Source review has not executed providers or tests and does not qualify a future source child.
+
+## Existing CI operand coverage
+
+The original Host Team lane already runs complete typed lint for `src/features`, so that scope covers the new Main matcher. Its separate fast-lint command enumerates 108 Host/test/harness files and does not automatically discover the newly extracted Host helper. Extend only `.github/workflows/host-emulated-acceptance.yml`, preimage `bdafbc763a97fee129c0ee576beddf402b4faf4a`, by appending the following five affected paths to that same command:
+
+- `packages/legacy-agent-host/src/adapters/providers/nativeLaunchEnvironment.ts`
+- `packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts`
+- `packages/legacy-agent-host/src/adapters/providers/OpenCodeManagementHost.ts`
+- `packages/legacy-agent-host/src/owned-process/index.ts`
+- `test/features/agent-backend/capturedWindowsSourceHistory.test.ts`
+
+The changed Codex/Coordination/Selection paths are already in the original operand list. Append `test/features/agent-backend/capturedWindowsSourcePending.test.ts` only if that planned existing test is actually changed. Preserve every original operand in its original order, all commands, full typechecks/typed lint, steps, selectors, jobs, failure conditions and deadlines. This is one additional validation-only path; the eight existing production paths and two planned pure helpers are unchanged. Independent source R2 must verify the exact operand-only diff before publication. No manual CI action is selected.
