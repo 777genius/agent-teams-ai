@@ -152,6 +152,7 @@ declare module 'agent-teams-controller' {
     approveReview(taskId: string, flags?: Record<string, unknown>): unknown;
     completeReview(taskId: string, flags?: Record<string, unknown>): unknown;
     approveAsHuman(taskId: string): unknown;
+    requestChangesAsHuman(taskId: string, flags?: Record<string, unknown>): unknown;
     requestChanges(taskId: string, flags?: Record<string, unknown>): unknown;
     startReview(taskId: string, flags?: Record<string, unknown>): unknown;
   }

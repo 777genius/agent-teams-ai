@@ -201,7 +201,8 @@ function resolveCurrentCycleReviewer(task, roster, options = {}) {
       };
     }
 
-    if (event.type === 'review_approved' || event.type === 'review_changes_requested') {
+    if (event.type === 'review_approved' || event.type === 'review_completed' ||
+        event.type === 'human_approved' || event.type === 'review_changes_requested') {
       break;
     }
 

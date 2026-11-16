@@ -97,6 +97,24 @@ describe('human-only review approval', () => {
       .toThrow(/Stale review request/);
   });
 
+  it('lets only the trusted human path request changes from reviewed Done', () => {
+    const task = board.createTask({ subject: 'Human rejects AI review', owner: 'bob' });
+    board.completeTask(task.id, 'bob');
+    board.setHumanOnlyApproval(true);
+    board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+    const cycle = events(task.id, 'review_requested')[0].id;
+    board.completeReview(task.id, { from: 'alice', expectedReviewRequestId: cycle });
+    expect(() => board.requestChanges(task.id, { from: 'alice', comment: 'Fix this' }))
+      .toThrow(/must be in review/);
+    const changed = board.requestChangesAsHuman(task.id, { comment: 'Needs a fix' });
+    expect(changed).toMatchObject({ status: 'pending', reviewState: 'needsFix' });
+    expect(events(task.id, 'review_changes_requested').at(-1)).toMatchObject({
+      from: 'reviewed', to: 'needsFix', actor: 'user',
+    });
+    expect(() => board.requestChangesAsHuman(task.id, { comment: 'Again' }))
+      .toThrow(/Human rejection requires/);
+  });
+
   it('preserves settings through kanban writes and fails closed for corrupt stored policy', () => {
     board.addReviewer('alice');
     board.setHumanOnlyApproval(true);
@@ -110,13 +128,14 @@ describe('human-only review approval', () => {
     expect(() => board.setHumanOnlyApproval(false)).toThrow(/policy is corrupt/);
   });
 
-  it('does not allow AI-only completion when the opt-in is off', () => {
+  it('allows explicit AI-only completion when default policy is off', () => {
     const task = board.createTask({ subject: 'Normal policy task', owner: 'bob' });
     board.completeTask(task.id, 'bob');
     board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
     const cycle = events(task.id, 'review_requested')[0].id;
-    expect(() => board.completeReview(task.id, { from: 'alice', expectedReviewRequestId: cycle }))
-      .toThrow(/requires human-only approval policy/);
-    expect(board.getTask(task.id).reviewState).toBe('review');
+    expect(board.completeReview(task.id, { from: 'alice', expectedReviewRequestId: cycle })).toMatchObject({
+      ok: true, column: 'done', reviewState: 'reviewed',
+    });
+    expect(board.getTask(task.id).reviewState).toBe('reviewed');
   });
 });

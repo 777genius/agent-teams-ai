@@ -499,9 +499,6 @@ function completeReview(context, taskId, flags = {}) {
     const expectedId = typeof flags.expectedReviewRequestId === 'string'
       ? flags.expectedReviewRequestId.trim() : '';
     if (!expectedId) throw new Error('review_complete requires expectedReviewRequestId');
-    if (kanban.getKanbanState(context).humanOnlyApproval !== true) {
-      throw new Error('review_complete requires human-only approval policy');
-    }
     const request = getLatestReviewRequestEvent(task);
     if (!request || request.id !== expectedId) {
       throw new Error(`Stale review request for task #${task.displayId || task.id}; review_complete rejected`);
@@ -539,7 +536,8 @@ function completeReview(context, taskId, flags = {}) {
       ok: true, taskId: task.id, displayId: task.displayId, column: 'done',
       reviewState: 'reviewed', reviewRequestId: expectedId, alreadyCompleted: false,
     }, task: tasks.getTask(context, task.id), actor, note,
-    leadSessionId: resolveLeadSessionId(context, flags) };
+    leadSessionId: resolveLeadSessionId(context, flags),
+    humanOnlyApproval: kanban.getKanbanState(context).humanOnlyApproval === true };
   });
   if (result.duplicate) return result.payload;
   try {
@@ -554,7 +552,7 @@ function completeReview(context, taskId, flags = {}) {
     messages.sendMessage(context, {
       to: runtimeHelpers.inferLeadName(context.paths),
       from: result.actor,
-      text: `AI review completed for task #${result.task.displayId || result.task.id}. The task is in Done awaiting human acceptance.\n\n${result.note}`,
+      text: `AI review completed for task #${result.task.displayId || result.task.id}. The task is in Done${result.humanOnlyApproval ? ' awaiting human acceptance' : ''}.\n\n${result.note}`,
       summary: `AI review completed #${result.task.displayId || result.task.id}`,
       source: 'system_notification',
       ...(result.leadSessionId ? { leadSessionId: result.leadSessionId } : {}),
@@ -719,22 +717,38 @@ function approveReview(context, taskId, flags = {}) {
 }
 
 function requestChanges(context, taskId, flags = {}) {
+  return requestChangesWithAuthority(context, taskId, flags, false);
+}
+
+// Trusted desktop user path. No MCP/CLI/public HTTP tool exposes this method.
+function requestChangesAsHuman(context, taskId, flags = {}) {
+  return requestChangesWithAuthority(context, taskId, flags, true);
+}
+
+function requestChangesWithAuthority(context, taskId, flags, fromHuman) {
   const { task, from, comment, leadSessionId } = withTeamBoardLock(context.paths, () => {
     const currentTask = tasks.getTask(context, taskId);
     if (!currentTask.owner) {
       throw new Error(`No owner found for task ${String(taskId)}`);
     }
 
-    const nextFrom = getReviewDecisionActor(context, currentTask, flags, 'request changes');
+    if (fromHuman) {
+      if (kanban.getKanbanState(context).humanOnlyApproval !== true ||
+          currentTask.status !== 'completed' ||
+          getEffectiveReviewState(context, currentTask) !== 'reviewed') {
+        throw new Error('Human rejection requires a reviewed Done task and human-only policy');
+      }
+    }
+    const nextFrom = fromHuman
+      ? 'user'
+      : getReviewDecisionActor(context, currentTask, flags, 'request changes');
     const nextComment =
       typeof flags.comment === 'string' && flags.comment.trim()
         ? flags.comment.trim()
         : 'Reviewer requested changes.';
-    const prevReviewState = assertReviewTransitionAllowed(
-      context,
-      currentTask,
-      'requesting changes'
-    );
+    const prevReviewState = fromHuman
+      ? 'reviewed'
+      : assertReviewTransitionAllowed(context, currentTask, 'requesting changes');
     const timestamp = new Date().toISOString();
 
     tasks.updateTask(context, currentTask.id, (t) => {
@@ -760,7 +774,7 @@ function requestChanges(context, taskId, flags = {}) {
     });
     tasks.addTaskComment(context, currentTask.id, {
       text: nextComment,
-      from: nextFrom,
+      from: fromHuman ? runtimeHelpers.inferLeadName(context.paths) : nextFrom,
       type: 'review_request',
       ...(Array.isArray(flags.taskRefs) ? { taskRefs: flags.taskRefs } : {}),
       notifyOwner: false,
@@ -775,7 +789,7 @@ function requestChanges(context, taskId, flags = {}) {
   });
 
   try {
-    messages.sendMessage(context, {
+    (fromHuman ? messages.sendTrustedMessage : messages.sendMessage)(context, {
       to: task.owner,
       from,
       text:
@@ -799,5 +813,6 @@ module.exports = {
   completeReview,
   requestReview,
   requestChanges,
+  requestChangesAsHuman,
   startReview,
 };

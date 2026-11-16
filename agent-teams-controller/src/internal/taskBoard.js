@@ -170,6 +170,10 @@ function requestChanges(context, taskId, flags) {
   return review.requestChanges(context, taskId, flags);
 }
 
+function requestChangesAsHuman(context, taskId, flags) {
+  return review.requestChangesAsHuman(context, taskId, flags);
+}
+
 module.exports = {
   addReviewer,
   addTaskAttachmentMeta,
@@ -196,6 +200,7 @@ module.exports = {
   removeTaskAttachment,
   reconcileTaskCreation,
   requestChanges,
+  requestChangesAsHuman,
   requestReview,
   resolveTaskActor,
   resolveTaskId,

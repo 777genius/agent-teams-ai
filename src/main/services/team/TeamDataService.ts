@@ -4036,6 +4036,15 @@ export class TeamDataService {
       return;
     }
 
+    if (patch.op === 'request_changes' &&
+        (taskBoard.getKanbanState?.() as KanbanState | null)?.humanOnlyApproval === true &&
+        (taskBoard.getTask(taskId) as TeamTask).reviewState === 'reviewed') {
+      taskBoard.requestChangesAsHuman(taskId, {
+        comment: patch.comment?.trim() || 'User requested changes.',
+        ...(patch.taskRefs?.length ? { taskRefs: patch.taskRefs } : {}),
+      });
+      return;
+    }
     const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
     taskBoard.requestChanges(taskId, {
       from: leadName,
