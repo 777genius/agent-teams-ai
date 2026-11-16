@@ -63,6 +63,27 @@ function readEvents(root: string, hostPid: number): DesktopMetadataEvent[] {
     assert.ok(match, 'closed metadata diagnostic framing');
     const value = object(JSON.parse(match[1]!));
     if (value.hostPid !== hostPid) continue;
+    if (value.stage === 'read-failed') {
+      assert.deepEqual(Object.keys(value).sort(), ['aborted', 'deadlineExpired', 'elapsedMs', 'hostPid',
+        'mode', 'profileHash', 'providerHash', 'readStage', 'reason', 'stage']);
+      assert.ok(hash(value.profileHash));
+      assert.ok(value.mode === 'directory' || value.mode === 'provider');
+      assert.ok(value.providerHash === null || hash(value.providerHash));
+      assert.equal(value.mode === 'directory', value.providerHash === null);
+      assert.ok(typeof value.readStage === 'string' && ['admission', 'native-client', 'identity',
+        'plugins', 'permissions', 'mcp', 'credential', 'directory', 'activation-wait', 'current',
+        'projection', 'dispose', 'result-current'].includes(value.readStage));
+      assert.ok(typeof value.reason === 'string' && ['held', 'conflict', 'invalid', 'busy', 'deadline',
+        'cleanup_unknown', 'transport_failure', 'authority_mismatch', 'disposed', 'http_failure',
+        'media_type', 'body_limit', 'frame_limit', 'invalid_response', 'invalid_native_catalog',
+        'native_catalog_binding_mismatch', 'capabilities_pending', 'unqualified_version', 'ABORT_ERR',
+        'unknown'].includes(value.reason));
+      assert.ok(typeof value.elapsedMs === 'number' && Number.isSafeInteger(value.elapsedMs) &&
+        value.elapsedMs >= 0 && value.elapsedMs <= 3_600_000);
+      assert.equal(typeof value.deadlineExpired, 'boolean');
+      assert.ok(value.aborted === null || typeof value.aborted === 'boolean');
+      continue; // A read failure has no native birth or lifecycle/cleanup authority.
+    }
     assert.deepEqual(Object.keys(value).sort(), ['hostPid', 'mode', 'pid', 'profileHash', 'providerHash', 'stage', 'startIdentityHash']);
     assert.ok(hash(value.profileHash));
     assert.ok(value.mode === 'directory' || value.mode === 'provider');

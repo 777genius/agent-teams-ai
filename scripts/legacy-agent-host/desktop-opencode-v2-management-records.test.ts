@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { test } from 'node:test';
 import { runInNewContext } from 'node:vm';
@@ -13,6 +14,7 @@ import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/ide
 import { assertDesktopV2ManagementSourceHistory, bindDesktopV2ManagementReceipt,
   captureDesktopV2ManagementAuthority, readDesktopV2ManagementPublication } from './desktop-opencode-v2-management-records.ts';
 import { desktopJsLiteral } from './desktop-ui-controls.ts';
+import { captureDesktopSourceMetadataLineage, assertDesktopMetadataLineageReleased } from './desktop-opencode-metadata-lineage.ts';
 import type { StoredRuntimeSourceCommand } from '../../packages/legacy-agent-host/dist/management/commandRecords.js';
 import type { PublishRuntimeSource } from '../../packages/legacy-agent-host/dist/composition/runtimeSourceContracts.js';
 
@@ -303,4 +305,77 @@ test('original V2 default intent joins its selected saving row within the same r
   const ordinary = setup('project-test'); await ordinary.run();
   assert.equal(ordinary.state.clicks, 1); assert.equal(ordinary.state.reads, 0); assert.equal(ordinary.state.pauses, 0);
   assert.equal(ordinary.state.finishes, 1); assert.equal(ordinary.effects.length, 1);
+});
+
+test('metadata read failures cannot acquire or retire an original native lifecycle', async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-metadata-observation-')));
+  try {
+    const host = { pid: 10, parentPid: 1, groupId: 10, birth: 'TEST-host', command: '/TEST/node' };
+    const child = { pid: 11, parentPid: 10, groupId: 11, birth: 'TEST-child', command: '/TEST/bun' };
+    const ready = { hostPid: host.pid, profileHash: 'a'.repeat(64), mode: 'directory', providerHash: null,
+      pid: child.pid, startIdentityHash: 'b'.repeat(64), stage: 'ready' };
+    const preReadyFailure = { hostPid: host.pid, profileHash: 'c'.repeat(64), mode: 'directory', providerHash: null,
+      stage: 'read-failed', readStage: 'native-client', reason: 'unknown', elapsedMs: 0,
+      deadlineExpired: false, aborted: null };
+    const liveFailure = { ...preReadyFailure, profileHash: ready.profileHash, mode: 'provider', providerHash: 'd'.repeat(64),
+      readStage: 'directory', reason: 'transport_failure', elapsedMs: 3_600_000, deadlineExpired: true, aborted: true };
+    const captured = { host, children: [child] };
+    const directory = join(root, 'userData/logs'); await mkdir(directory, { recursive: true });
+    const write = (rows: readonly unknown[]) => writeFile(join(directory, 'app-errors.ndjson'),
+      rows.map(row => JSON.stringify({ namespace: 'Host:OpenCodeMetadata',
+        message: 'OpenCode metadata stage ' + JSON.stringify(row) })).join('\n') + '\n');
+    await write([ready]);
+    const options = { root, host, profileHashes: [ready.profileHash], executable: child.command };
+    const original = captureDesktopSourceMetadataLineage({ ...options, observed: [child] });
+    await write([preReadyFailure, ready, liveFailure]);
+    assert.deepEqual(captureDesktopSourceMetadataLineage({ ...options, observed: [child], original }), original,
+      'closed read failures neither create another profile/partition nor retire the already-ready original child');
+    assert.throws(() => captureDesktopSourceMetadataLineage({ ...options, observed: [], original }),
+      /original ready is physically present/);
+    const partition = original.partitions[0]; assert.ok(partition);
+    const owned = { ...captured, metadataLineage: partition };
+    assert.throws(() => assertDesktopMetadataLineageReleased(root, owned, []), /confirmed close/);
+    await write([preReadyFailure]);
+    assert.throws(() => captureDesktopSourceMetadataLineage({ ...options, observed: [] }),
+      /finite original metadata lifecycle observations/, 'a pre-ready failure cannot synthesize custody');
+    await write([ready, liveFailure, { ...ready, stage: 'cleanup-unknown' }]);
+    assert.throws(() => assertDesktopMetadataLineageReleased(root, owned, []), /unknown cleanup/);
+    const released = { ...ready, stage: 'released' };
+    await write([preReadyFailure, ready, liveFailure, released, { ...liveFailure, aborted: false }]);
+    const closed = assertDesktopMetadataLineageReleased(root, owned, []);
+    assert.deepEqual(closed.events, [ready, released]);
+    assert.deepEqual(closed.births, [child]);
+    assert.throws(() => assertDesktopMetadataLineageReleased(root, owned, [{ pid: child.pid }]), /metadata PID/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('metadata observation separation still refuses malformed diagnostics and unknown lifecycle rows', async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-metadata-closed-shape-')));
+  try {
+    const host = { pid: 10, parentPid: 1, groupId: 10, birth: 'TEST-host', command: '/TEST/node' };
+    const child = { pid: 11, parentPid: 10, groupId: 11, birth: 'TEST-child', command: '/TEST/bun' };
+    const ready = { hostPid: host.pid, profileHash: 'a'.repeat(64), mode: 'directory', providerHash: null,
+      pid: child.pid, startIdentityHash: 'b'.repeat(64), stage: 'ready' };
+    const failure = { hostPid: host.pid, profileHash: ready.profileHash, mode: 'directory', providerHash: null,
+      stage: 'read-failed', readStage: 'native-client', reason: 'held', elapsedMs: 1,
+      deadlineExpired: false, aborted: null };
+    const directory = join(root, 'userData/logs'); await mkdir(directory, { recursive: true });
+    for (const invalid of [
+      { ...failure, extra: 'TEST-private' }, { ...failure, pid: child.pid },
+      { ...failure, startIdentityHash: ready.startIdentityHash }, { ...failure, aborted: undefined },
+      { ...failure, readStage: 'unknown-stage' }, { ...failure, reason: 'TEST-private-reason' },
+      { ...failure, profileHash: 'TEST-invalid' }, { ...failure, mode: 'provider' },
+      { ...failure, providerHash: 'd'.repeat(64) }, { ...failure, elapsedMs: -1 },
+      { ...failure, elapsedMs: 3_600_001 }, { ...failure, elapsedMs: 0.5 },
+      { ...failure, elapsedMs: null }, { ...failure, deadlineExpired: 1 }, { ...failure, aborted: 1 },
+      { ...failure, stage: 'unknown' }, { ...failure, stage: 'released' },
+      { ...ready, extra: true }, { ...ready, startIdentityHash: undefined }, { ...ready, pid: 1 },
+    ]) {
+      await writeFile(join(directory, 'app-errors.ndjson'), [ready, invalid].map(row => JSON.stringify({
+        namespace: 'Host:OpenCodeMetadata', message: 'OpenCode metadata stage ' + JSON.stringify(row),
+      })).join('\n') + '\n');
+      assert.throws(() => captureDesktopSourceMetadataLineage({ root, host, profileHashes: [ready.profileHash],
+        observed: [child], executable: child.command }));
+    }
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
