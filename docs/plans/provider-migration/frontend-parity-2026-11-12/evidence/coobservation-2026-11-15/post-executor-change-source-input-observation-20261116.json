@@ -1,0 +1,391 @@
+{
+  "kind": "post-executor-change-read-only-source-and-input-observation",
+  "at": "2026-11-16T23:45:13.791528+00:00",
+  "method": "Complete bytes of available nine selected sources and eight selected input files read and hashed as data only; no import/evaluation/primary or native tool execution. This is a returned-environment observation, not an original attempt boundary.",
+  "rows": [
+    {
+      "kind": "source",
+      "path": "/workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "relative": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "expected": {
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      "lexists": true,
+      "mode": 420,
+      "regular": true,
+      "symlink": false,
+      "actual": {
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      "matchesExpected": true
+    },
+    {
+      "kind": "source",
+      "path": "/workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "relative": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "expected": {
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+      },
+      "lexists": true,
+      "mode": 420,
+      "regular": true,
+      "symlink": false,
+      "actual": {
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+      },
+      "matchesExpected": true
+    },
+    {
+      "kind": "source",
+      "path": "/workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "relative": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "expected": {
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      "lexists": true,
+      "mode": 420,
+      "regular": true,
+      "symlink": false,
+      "actual": {
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      "matchesExpected": true
+    },
+    {
+      "kind": "source",
+      "path": "/workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "relative": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "expected": {
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      "lexists": true,
+      "mode": 420,
+      "regular": true,
+      "symlink": false,
+      "actual": {
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      "matchesExpected": true
+    },
+    {
+      "kind": "source",
+      "path": "/workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "relative": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "expected": {
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+      },
+      "lexists": true,
+      "mode": 420,
+      "regular": true,
+      "symlink": false,
+      "actual": {
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+      },
+      "matchesExpected": true
+    },
+    {
+      "kind": "source",
+      "path": "/workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "relative": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "expected": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "lexists": true,
+      "mode": 420,
+      "regular": true,
+      "symlink": false,
+      "actual": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "matchesExpected": true
+    },
+    {
+      "kind": "source",
+      "path": "/workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "relative": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "expected": {
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      "lexists": true,
+      "mode": 420,
+      "regular": true,
+      "symlink": false,
+      "actual": {
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      "matchesExpected": true
+    },
+    {
+      "kind": "source",
+      "path": "/workspace/scratch/c714-fresh-20261116/source/src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "relative": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "expected": {
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      },
+      "lexists": true,
+      "mode": 420,
+      "regular": true,
+      "symlink": false,
+      "actual": {
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      },
+      "matchesExpected": true
+    },
+    {
+      "kind": "source",
+      "path": "/workspace/scratch/c714-fresh-20261116/source/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "relative": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "expected": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      },
+      "lexists": true,
+      "mode": 420,
+      "regular": true,
+      "symlink": false,
+      "actual": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      },
+      "matchesExpected": true
+    },
+    {
+      "kind": "control-input",
+      "name": "setupBinding",
+      "path": "/tmp/c714-fresh-bootstrap-review/binding.json",
+      "expected": {
+        "bytes": 2790411,
+        "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+        "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+      },
+      "lexists": false
+    },
+    {
+      "kind": "control-input",
+      "name": "sourceFull",
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/source-restore-source-after.json",
+      "expected": {
+        "bytes": 3451167,
+        "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+        "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+      },
+      "lexists": true,
+      "mode": 420,
+      "regular": true,
+      "symlink": false,
+      "actual": {
+        "bytes": 3451167,
+        "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+        "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+      },
+      "matchesExpected": true
+    },
+    {
+      "kind": "control-input",
+      "name": "sourceNonDoc",
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-source-after.json",
+      "expected": {
+        "bytes": 2478318,
+        "sha256": "59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751",
+        "gitBlob": "51bf0d0962e07fcc7843fcd65c3202ec9133a607"
+      },
+      "lexists": true,
+      "mode": 420,
+      "regular": true,
+      "symlink": false,
+      "actual": {
+        "bytes": 2478318,
+        "sha256": "59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751",
+        "gitBlob": "51bf0d0962e07fcc7843fcd65c3202ec9133a607"
+      },
+      "matchesExpected": true
+    },
+    {
+      "kind": "control-input",
+      "name": "dependencies",
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json",
+      "expected": {
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "lexists": true,
+      "mode": 420,
+      "regular": true,
+      "symlink": false,
+      "actual": {
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "matchesExpected": true
+    },
+    {
+      "kind": "control-input",
+      "name": "compiled",
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-compiled-after.json",
+      "expected": {
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      },
+      "lexists": true,
+      "mode": 420,
+      "regular": true,
+      "symlink": false,
+      "actual": {
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      },
+      "matchesExpected": true
+    },
+    {
+      "kind": "control-input",
+      "name": "pnpm",
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/pnpm-inventory.json",
+      "expected": {
+        "bytes": 253936,
+        "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+        "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c"
+      },
+      "lexists": true,
+      "mode": 420,
+      "regular": true,
+      "symlink": false,
+      "actual": {
+        "bytes": 253936,
+        "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+        "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c"
+      },
+      "matchesExpected": true
+    },
+    {
+      "kind": "control-input",
+      "name": "currentBoundary",
+      "path": "/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json",
+      "expected": {
+        "bytes": 3654,
+        "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+        "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+      },
+      "lexists": false
+    },
+    {
+      "kind": "control-input",
+      "name": "providers",
+      "path": "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json",
+      "expected": {
+        "bytes": 789090,
+        "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+        "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+      },
+      "lexists": false
+    }
+  ],
+  "directories": [
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/source",
+      "lexists": true,
+      "directory": true,
+      "symlink": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/toolchain",
+      "lexists": true,
+      "directory": true,
+      "symlink": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/bin",
+      "lexists": true,
+      "directory": true,
+      "symlink": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence",
+      "lexists": true,
+      "directory": true,
+      "symlink": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/tmp",
+      "lexists": true,
+      "directory": true,
+      "symlink": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/store",
+      "lexists": true,
+      "directory": true,
+      "symlink": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/cache",
+      "lexists": true,
+      "directory": true,
+      "symlink": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/state",
+      "lexists": true,
+      "directory": true,
+      "symlink": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/config",
+      "lexists": true,
+      "directory": true,
+      "symlink": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/data",
+      "lexists": true,
+      "directory": true,
+      "symlink": false
+    }
+  ],
+  "gitHeadFile": {
+    "path": "/workspace/scratch/c714-fresh-20261116/source/.git/HEAD",
+    "exists": true,
+    "content": "c5ff4fc283e58d486c58147b4dfb00144ca10d34\n"
+  },
+  "originalAttemptClassification": "UNKNOWN/INCOMPLETE/SPENT",
+  "originalExecutorContinuity": null,
+  "originalCleanupQualified": false,
+  "freshFullSourceOrRuntimeCensusQualified": false
+}

@@ -231,3 +231,11 @@ Runner 7a79af4f and full binding a5c9e9c3 are accepted by Guard 4f347c09 (177 ch
 Only six expected renderer titles change. Whole 139/85 tests, 139 Node names, other 79 renderer names, exact current nine-row vector, all clocks and full boundaries remain unchanged. RED rematerialization is forbidden; the original runner/binding/f542 receipt join the fresh 13-control census as historical evidence. Original outer2 stays REFUSED/SPENT. GREEN keeps its own producer-materialization gate.
 
 No new staging/runtime/producer change yet. Next: complete actual control-publication root and independent readbacks, exclusive staging, then one complete fresh corrected RED. Producer authorship remains closed until that RED is accepted and published/read back. Native/platform/GUI/integration/canonical typecheck/build and whole E2E remain open.
+
+## Corrected RED is UNKNOWN/INCOMPLETE/SPENT after executor transport loss
+
+After accepted c9c68e21 actual publication readbacks (root8128188e / independent56ae7620), the exact staged pair was invoked once as session54393. One initial empty running response and one empty poll were observed; the following poll failed with transport disconnection/executor-key change. There is no observed final supervisor outer or fresh complete phase package. Envelope df4e4cae is retained with root e483e532, Guard80a17fef and semanticff3ed051. No Node139/renderer85 result or producer gate is accepted. The older original outer2 remains separately REFUSED/SPENT; neither invocation can be replayed or partially resumed.
+
+Returned-environment read-only observations0988f7b0/7063e491 find all nine selected source bodies exact, five baseline input files exact, three bootstrap input files absent and all12 renderer absence paths plus original906d/f7/f542 paths absent. They do not prove old process termination/cleanup or fresh whole-input preservation. Recommendations10c383eb identify retained immutable data for a possible separately reviewed recovery; no new scope or attempt is selected yet.
+
+Next: complete actual readbacks of this incomplete outcome, then select and review a distinct recovery scope. Full fresh source/dependency/compiled/provider/tool/env/cache boundaries and exact whole139/85 results with observed outer remain required. Producer authorship and whole E2E remain open.

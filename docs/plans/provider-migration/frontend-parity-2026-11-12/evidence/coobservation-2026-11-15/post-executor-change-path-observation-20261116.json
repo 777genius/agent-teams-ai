@@ -1,0 +1,70 @@
+{
+  "kind": "post-executor-change-bounded-path-absence-observation",
+  "at": "2026-11-16T23:49:14.708617+00:00",
+  "rows": [
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.vite-temp",
+      "lexists": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.vite",
+      "lexists": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/source/.env",
+      "lexists": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/source/.env.local",
+      "lexists": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/source/.env.test",
+      "lexists": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/source/.env.test.local",
+      "lexists": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/source/vitest.workspace.ts",
+      "lexists": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/source/vitest.workspace.js",
+      "lexists": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/source/vitest.workspace.mjs",
+      "lexists": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/source/vitest.workspace.json",
+      "lexists": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/rollup.linux-x64-gnu.node",
+      "lexists": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/downloaded-@esbuild-linux-x64-esbuild",
+      "lexists": false
+    },
+    {
+      "path": "/tmp/c714-combined139-85-controls/combined-runner.py",
+      "lexists": false
+    },
+    {
+      "path": "/tmp/c714-combined139-85-controls/red-binding.json",
+      "lexists": false
+    },
+    {
+      "path": "/tmp/c714-combined139-85-evidence/materialize-tests/phase-receipt.json",
+      "lexists": false
+    }
+  ],
+  "sourceWrites": 0,
+  "targetExecution": false,
+  "oldProcessOrCleanupQualified": false,
+  "newFullRuntimeBoundaryQualified": false
+}

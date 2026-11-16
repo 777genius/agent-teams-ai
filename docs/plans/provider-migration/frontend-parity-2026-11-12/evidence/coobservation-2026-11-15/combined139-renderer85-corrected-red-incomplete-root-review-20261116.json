@@ -1,0 +1,168 @@
+{
+  "schemaVersion": 1,
+  "kind": "corrected-red-incomplete-root-accounting-review",
+  "reviewer": "root",
+  "at": "2026-11-16 23:48:52 UTC",
+  "verdict": "Complete available incomplete-attempt envelope and bounded returned-environment observation retained; corrected RED remains UNKNOWN/INCOMPLETE/SPENT.",
+  "envelope": {
+    "bytes": 14209,
+    "sha256": "ca765d1710162c77bad581e09b7eb2f7856bec93ee36c77463ce4f7f72266ec4",
+    "gitBlob": "df4e4caeb8a2602942a5cb95b140101c595c3f47"
+  },
+  "physicalDataObservation": {
+    "bytes": 13750,
+    "sha256": "7a217af0f942da5789b6d65962f7c8b3ccd830be96e31f6f3965ae162b9e2e6b",
+    "gitBlob": "0988f7b08ae156529fc7cbc9b37c9d82f405164e"
+  },
+  "independentReviews": {
+    "guard": {
+      "bytes": 9251,
+      "sha256": "4f902f51c54b9d0a6db2bb99cc6d267bab21e962d13ec30a4c4ef6762384ce34",
+      "gitBlob": "80a17feff65625c696d35aaee26e3614544cff23"
+    },
+    "semantic": {
+      "bytes": 10310,
+      "sha256": "fb97e622ad21ff840bc781d4ad23a1a3624d2fc4c71d06e22645ded36da21d09",
+      "gitBlob": "ff3ed051ca16e886c0d60248294c99c71643d7ad"
+    }
+  },
+  "controlPublication": "c9c68e2137ce99ecfa0f3f71922ac055dbc2f5b1",
+  "controlPublicationActual": {
+    "root": {
+      "bytes": 27142,
+      "sha256": "9045fcbfa24ab3b7060624445e680c318d2d5cd37a64ed5f29462f57af28773a",
+      "gitBlob": "8128188ec78d691fec7d0830ed0276d6cf508a1d"
+    },
+    "independent": {
+      "bytes": 65662,
+      "sha256": "4f4641cc66df94e83c76f92e8a0f076a6ed0dd5e6bb71bc2905139d0b3405ac0",
+      "gitBlob": "56ae76204bfeaa2afd613a2cb41e2ddc1f1f3d16"
+    }
+  },
+  "classification": "UNKNOWN/INCOMPLETE/SPENT",
+  "observedFinalOuter": null,
+  "oneInvocation": 54393,
+  "knownTranscript": {
+    "initialToolResult": {
+      "chunk_id": "d8e2b3",
+      "wall_time_seconds": 1.000974029,
+      "session_id": 54393,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "completedPolls": [
+      {
+        "chunk_id": "d29052",
+        "wall_time_seconds": 30.000618673,
+        "session_id": 54393,
+        "original_token_count": 0,
+        "output": ""
+      }
+    ],
+    "failedPoll": {
+      "tool": "write_stdin",
+      "request": {
+        "session_id": 54393,
+        "chars": "",
+        "yield_time_ms": 30000,
+        "max_output_tokens": 10000
+      },
+      "reportedToolWallSeconds": 20.6,
+      "error": "write_stdin failed: Unified exec process failed: exec-server transport disconnected; failed to resume exec-server session: exec-server protocol error: executor key changed during session recovery",
+      "returnedProcessExitCode": null,
+      "returnedFinalToolResult": null,
+      "qualification": "The tool wall time is not the primary or package elapsed time. No final process status was returned."
+    }
+  },
+  "checks": [
+    {
+      "name": "Full retained exact incomplete envelope rehashed",
+      "passed": true
+    },
+    {
+      "name": "Once-only exact captured54393 launch and one completed empty poll",
+      "passed": true
+    },
+    {
+      "name": "Failedpoll has exact same session and no finalstatus",
+      "passed": true
+    },
+    {
+      "name": "All fresh outcomes and oldexecutor custody stay unknown",
+      "passed": true
+    },
+    {
+      "name": "Incomplete attempt spent without replay/resume/transfer",
+      "passed": true
+    },
+    {
+      "name": "No acceptedRED/GREEN or producer authority",
+      "passed": true
+    },
+    {
+      "name": "Original olderouter2 independently remainsrefused/spent",
+      "passed": true
+    },
+    {
+      "name": "Controlpublication accepted separately, exactgate/staging/launch subjects",
+      "passed": true
+    },
+    {
+      "name": "All21 independentguard envelope checks accepted exactsubject",
+      "passed": true
+    },
+    {
+      "name": "All28 independentsemantic accounting checks accepted exactsubject",
+      "passed": true
+    },
+    {
+      "name": "Postincident ls2 is distinct data-onlycommand notsupervisorouter",
+      "passed": true
+    },
+    {
+      "name": "Returned environment fullnine selected source bodies exact",
+      "passed": true
+    },
+    {
+      "name": "Returned environment exactlyfive existinginput bodies match",
+      "passed": true
+    },
+    {
+      "name": "Exactlythree old temporary input paths absent",
+      "passed": true
+    },
+    {
+      "name": "Returned ROOTten dirs exist unaliased and HEADfileC5 exact",
+      "passed": true
+    },
+    {
+      "name": "Returned data read is no originalboundary/custody/cleanup qualification",
+      "passed": true
+    }
+  ],
+  "checkCount": 16,
+  "failedChecks": [],
+  "returnedEnvironmentFacts": {
+    "nineSelectedSourcesExact": true,
+    "threeProducersStillPreimages": true,
+    "fiveExistingBaselineInputFilesExact": true,
+    "threeTemporaryInputFilesAbsent": [
+      "/tmp/c714-fresh-bootstrap-review/binding.json",
+      "/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json",
+      "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json"
+    ],
+    "allTenRootDirectoriesExist": true,
+    "headFileC5": true
+  },
+  "limits": [
+    "Current selected nine file identities are a data-only returned-environment observation. They do not establish the full8798 source census,122773 physical dependency rows,1454 compiled rows, provider/tool/env currentness or any old runtime boundary.",
+    "Five existing matching input files are immutable baseline evidence, not physical current payload census.",
+    "The original process namespace, final exit and captured cleanup remain unknown. Missing/tmp paths and the listing exit2 do not prove cleanup or termination.",
+    "No fresh primary stage can be labelledPASS,FAIL,SKIP,CANCELLED orUNREACHED from this envelope; all are unobserved.",
+    "No same-attempt restart, partial resume, prior-primary transfer or producer authority. Future recovery remains separately selected/reviewed only after full incomplete-outcome publication/readbacks."
+  ],
+  "newRecoveryScopeSelected": false,
+  "producerAuthorshipGateOpened": false,
+  "producerPostimagesAuthored": false,
+  "wholeE2EQualified": false
+}

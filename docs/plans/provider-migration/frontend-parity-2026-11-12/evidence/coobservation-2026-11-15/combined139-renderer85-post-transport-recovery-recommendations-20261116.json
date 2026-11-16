@@ -1,0 +1,561 @@
+{
+  "schemaVersion": 1,
+  "kind": "corrected-red-transport-loss-read-only-recovery-feasibility-recommendations",
+  "reviewer": "/root/corrected_r2_binding",
+  "at": "2026-11-16 23:50:54 UTC",
+  "verdict": "Narrow separately selected recovery is data-feasible, subject to complete new physical admission and all independent gates; this report selects no scope and authorizes no execution",
+  "basis": {
+    "incidentEnvelope": {
+      "bytes": 14209,
+      "sha256": "ca765d1710162c77bad581e09b7eb2f7856bec93ee36c77463ce4f7f72266ec4",
+      "gitBlob": "df4e4caeb8a2602942a5cb95b140101c595c3f47"
+    },
+    "returnedEnvironmentDataObservation": {
+      "bytes": 13750,
+      "sha256": "7a217af0f942da5789b6d65962f7c8b3ccd830be96e31f6f3965ae162b9e2e6b",
+      "gitBlob": "0988f7b08ae156529fc7cbc9b37c9d82f405164e"
+    },
+    "exactSpentControls": {
+      "runner": {
+        "bytes": 94938,
+        "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+        "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+      },
+      "binding": {
+        "bytes": 5856749,
+        "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+        "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+      },
+      "r1": {
+        "bytes": 99012,
+        "sha256": "0efc555482f0088cb2d45a8efd07039ccfcf089b67d5cca7f46ff30cbe71378c",
+        "gitBlob": "2fbac18b3ce8f6703b1e328b266e25954f45ddb8"
+      }
+    },
+    "acceptedControlPublication": "c9c68e2137ce99ecfa0f3f71922ac055dbc2f5b1",
+    "controlActualReadbacks": {
+      "root": {
+        "bytes": 27142,
+        "sha256": "9045fcbfa24ab3b7060624445e680c318d2d5cd37a64ed5f29462f57af28773a",
+        "gitBlob": "8128188ec78d691fec7d0830ed0276d6cf508a1d"
+      },
+      "independent": {
+        "bytes": 65662,
+        "sha256": "4f4641cc66df94e83c76f92e8a0f076a6ed0dd5e6bb71bc2905139d0b3405ac0",
+        "gitBlob": "56ae76204bfeaa2afd613a2cb41e2ddc1f1f3d16"
+      }
+    },
+    "additionalReturnedPathObservation": {
+      "bytes": 2135,
+      "sha256": "d3be601285716e140c0ec98b596ae2e59ba1d286cfbedb4c739a526628cd1b53",
+      "gitBlob": "7063e49185bd288bf32ccd9ca6aead6388679c37"
+    }
+  },
+  "method": "Read-only full Git blob retrieval and pure JavaScript JSON/string/hash operations. Root physical findings are evaluated from its full retained report. No shell, target imports/evaluation, source/control/postimage/proposal authorship, staging, ref/CI action or runtime by reviewer. A bare recommendation report is the only write.",
+  "permanentHistory": {
+    "original64038": "observed outer2; REFUSED/SPENT",
+    "corrected54393": "UNKNOWN/INCOMPLETE/SPENT; no observed outer, full phase result, current input boundaries or captured cleanup",
+    "materialization10639": "Historical accepted source-only outer0 remains evidence of its original completed scope; it is not current runtime or failed-executor custody evidence",
+    "impossibleClaims": [
+      "No current absence of a temporary path, new process listing or changed executor key proves termination or cleanup in the old executor namespace.",
+      "No fresh observation can manufacture the lost original outer exit or missing before/after package receipts.",
+      "No reconstructed file can recover original device/inode/directory ownership continuity; the old recorded inode values are historical.",
+      "No old Node/renderer aggregate or historical full manifest can be substituted for either freshly observed suite or fresh physical boundary.",
+      "A copied old receipt must retain its old scope, path facts, identities and source-only false/null fields; it must never be relabelled as a new run or new materialization."
+    ]
+  },
+  "observedCurrentFacts": {
+    "sourceRows": 9,
+    "sourceBytes": 604208,
+    "sourceAllMatchSelectedVector": true,
+    "allThreeProducersRemainPreimages": true,
+    "whole139And85TestsRemainExact": true,
+    "inputRows": 8,
+    "survivingEvidenceFiles": [
+      {
+        "name": "sourceFull",
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/source-restore-source-after.json",
+        "identity": {
+          "bytes": 3451167,
+          "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+          "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+        }
+      },
+      {
+        "name": "sourceNonDoc",
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-source-after.json",
+        "identity": {
+          "bytes": 2478318,
+          "sha256": "59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751",
+          "gitBlob": "51bf0d0962e07fcc7843fcd65c3202ec9133a607"
+        }
+      },
+      {
+        "name": "dependencies",
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json",
+        "identity": {
+          "bytes": 39168001,
+          "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+          "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+        }
+      },
+      {
+        "name": "compiled",
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-compiled-after.json",
+        "identity": {
+          "bytes": 400300,
+          "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+          "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+        }
+      },
+      {
+        "name": "pnpm",
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/pnpm-inventory.json",
+        "identity": {
+          "bytes": 253936,
+          "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+          "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c"
+        }
+      }
+    ],
+    "missingEvidenceFiles": [
+      {
+        "name": "setupBinding",
+        "path": "/tmp/c714-fresh-bootstrap-review/binding.json",
+        "identity": {
+          "bytes": 2790411,
+          "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+          "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+        }
+      },
+      {
+        "name": "currentBoundary",
+        "path": "/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json",
+        "identity": {
+          "bytes": 3654,
+          "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+          "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+        }
+      },
+      {
+        "name": "providers",
+        "path": "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json",
+        "identity": {
+          "bytes": 789090,
+          "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+          "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+        }
+      }
+    ],
+    "workspaceDirectories": 10,
+    "headFile": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+    "qualification": "This proves only the complete bytes root actually read. The surviving39,168,001-byte dependency manifest is an expected baseline file, not a fresh census of the physical1.39GB dependency payload. HEAD text does not prove the full current tree/index. No current whole-input or old-process custody qualification follows.",
+    "additionalBoundedAbsence": {
+      "report": {
+        "bytes": 2135,
+        "sha256": "d3be601285716e140c0ec98b596ae2e59ba1d286cfbedb4c739a526628cd1b53",
+        "gitBlob": "7063e49185bd288bf32ccd9ca6aead6388679c37"
+      },
+      "observedAt": "2026-11-16T23:49:14.708617+00:00",
+      "rendererAbsentPaths": [
+        "/workspace/scratch/c714-fresh-20261116/source/node_modules/.vite-temp",
+        "/workspace/scratch/c714-fresh-20261116/source/node_modules/.vite",
+        "/workspace/scratch/c714-fresh-20261116/source/.env",
+        "/workspace/scratch/c714-fresh-20261116/source/.env.local",
+        "/workspace/scratch/c714-fresh-20261116/source/.env.test",
+        "/workspace/scratch/c714-fresh-20261116/source/.env.test.local",
+        "/workspace/scratch/c714-fresh-20261116/source/vitest.workspace.ts",
+        "/workspace/scratch/c714-fresh-20261116/source/vitest.workspace.js",
+        "/workspace/scratch/c714-fresh-20261116/source/vitest.workspace.mjs",
+        "/workspace/scratch/c714-fresh-20261116/source/vitest.workspace.json",
+        "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/rollup.linux-x64-gnu.node",
+        "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/downloaded-@esbuild-linux-x64-esbuild"
+      ],
+      "originalHistoricalPaths": [
+        "/tmp/c714-combined139-85-controls/combined-runner.py",
+        "/tmp/c714-combined139-85-controls/red-binding.json",
+        "/tmp/c714-combined139-85-evidence/materialize-tests/phase-receipt.json"
+      ],
+      "all15Absent": true,
+      "qualification": "Current returned-environment path absence only; not old-process termination, old cleanup or a new full runtime-input boundary."
+    }
+  },
+  "retainedDataAvailability": {
+    "missingInputs": [
+      {
+        "name": "setupBinding",
+        "identity": {
+          "bytes": 2790411,
+          "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+          "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+        },
+        "oldPath": "/tmp/c714-fresh-bootstrap-review/binding.json",
+        "publishedPaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-fresh-bootstrap-binding-20261116.json"
+        ],
+        "fullyReadRehashed": true,
+        "possibleFutureUse": "Exact retained data replica at a newly selected owned path only; not proof of original inode, directory, process or current physical payload."
+      },
+      {
+        "name": "currentBoundary",
+        "identity": {
+          "bytes": 3654,
+          "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+          "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+        },
+        "oldPath": "/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json",
+        "publishedPaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-fresh-current-input-boundary-20261116.json"
+        ],
+        "fullyReadRehashed": true,
+        "possibleFutureUse": "Exact retained data replica at a newly selected owned path only; not proof of original inode, directory, process or current physical payload."
+      },
+      {
+        "name": "providers",
+        "identity": {
+          "bytes": 789090,
+          "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+          "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+        },
+        "oldPath": "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json",
+        "publishedPaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-provider-archives-fresh-review-20261116.json"
+        ],
+        "fullyReadRehashed": true,
+        "possibleFutureUse": "Exact retained data replica at a newly selected owned path only; not proof of original inode, directory, process or current physical payload."
+      }
+    ],
+    "additionalBaselineBodies": [
+      {
+        "input": "sourceFull",
+        "pin": {
+          "bytes": 3451167,
+          "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+          "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+        },
+        "container": {
+          "bytes": 3741214,
+          "sha256": "02677dff135a550015d02e50e23d8092b9db02abe241e750e83f8f70017397c3",
+          "gitBlob": "96c42804f1c4d616d5aa2fadb99c5d27578ed17b"
+        },
+        "field": "literal.content"
+      },
+      {
+        "input": "sourceNonDoc",
+        "pin": {
+          "bytes": 2478318,
+          "sha256": "59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751",
+          "gitBlob": "51bf0d0962e07fcc7843fcd65c3202ec9133a607"
+        },
+        "container": {
+          "bytes": 3741214,
+          "sha256": "02677dff135a550015d02e50e23d8092b9db02abe241e750e83f8f70017397c3",
+          "gitBlob": "96c42804f1c4d616d5aa2fadb99c5d27578ed17b"
+        },
+        "field": "derived operation from literal.content"
+      },
+      {
+        "input": "compiled",
+        "pin": {
+          "bytes": 400300,
+          "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+          "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+        },
+        "container": {
+          "bytes": 2572284,
+          "sha256": "22fe3985fc1fa3708a4c0387ecbb955c687d653538e11ba1fed1a64d19633652",
+          "gitBlob": "5192e6e0290dd5beaf486a3315b984759fef96bd"
+        },
+        "field": "literals[host-build-compiled-after.json].content"
+      },
+      {
+        "input": "pnpm",
+        "pin": {
+          "bytes": 253936,
+          "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+          "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c"
+        },
+        "container": {
+          "bytes": 2572284,
+          "sha256": "22fe3985fc1fa3708a4c0387ecbb955c687d653538e11ba1fed1a64d19633652",
+          "gitBlob": "5192e6e0290dd5beaf486a3315b984759fef96bd"
+        },
+        "field": "literals[pnpm-inventory.json].content"
+      }
+    ],
+    "dependencies": {
+      "identity": {
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "partitions": [
+        {
+          "part": 1,
+          "identity": {
+            "bytes": 4326013,
+            "sha256": "78b5d2718cb8d11b44bfff74d83d29bedf28f5c6cdf74ba5fda2ae5a78cd751c",
+            "gitBlob": "bc970c1035aa7804b9fd6f50e45204fb466ba02f"
+          },
+          "rowStart": 0,
+          "rowEndExclusive": 31000
+        },
+        {
+          "part": 2,
+          "identity": {
+            "bytes": 4141629,
+            "sha256": "867bad8dc5bea19cfabd3e5e33748228e3a119129b8be4ff72f43fea8c4b3abb",
+            "gitBlob": "36e809c267f130aa696632f14f9f25d32b13bea3"
+          },
+          "rowStart": 31000,
+          "rowEndExclusive": 62000
+        },
+        {
+          "part": 3,
+          "identity": {
+            "bytes": 4204973,
+            "sha256": "1c63baf237ccf2485bb8787b50f9a243953c431f490cb970f55567d9543ebd76",
+            "gitBlob": "ec99ecaf06e8a2f013944e66983c5e771b9f86a5"
+          },
+          "rowStart": 62000,
+          "rowEndExclusive": 93000
+        },
+        {
+          "part": 4,
+          "identity": {
+            "bytes": 4167930,
+            "sha256": "b1c98bd7747f44ca2ff26d35c8dd3dec845bc52a47e0f85b42a4ca7560b358b0",
+            "gitBlob": "93491c2c85d205867ce5f25363d0c33d0c8f3420"
+          },
+          "rowStart": 93000,
+          "rowEndExclusive": 122773
+        }
+      ],
+      "fullPriorReconstructionProof": {
+        "bytes": 7124,
+        "sha256": "f0eb74dad52bee46558440be43df46ef0e7f399a89db8d96b5ce99b1fdaa29b9",
+        "gitBlob": "f64c0246f31578ceecb7fb0bd5df830b2f7fc547"
+      },
+      "fullPriorRootJoin": {
+        "bytes": 4424,
+        "sha256": "b31f4015b0aafdb66e95300237eacb619f59d0e542dbdc2d8a81b91f53881fde",
+        "gitBlob": "5dfb4f3f78080a8c0890173e683a11d266d2ee55"
+      },
+      "currentRecommendationScope": "Both full prior proof bodies read and rehashed; exact four partition objects found in accepted complete docs tree. This recommendation did not rerun the39MB reconstruction or claim it is a fresh physical boundary."
+    },
+    "originalHistoricalAdmission": {
+      "runner": {
+        "bytes": 89953,
+        "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+        "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+      },
+      "binding": {
+        "bytes": 4898503,
+        "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+        "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+      },
+      "receipt": {
+        "bytes": 92391,
+        "sha256": "3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d",
+        "gitBlob": "f542dde38b84f533e5658aeafe5a06642c1dcca9"
+      },
+      "receiptContainer": {
+        "bytes": 195085,
+        "sha256": "eaedc299cc59cab8b9291c1b253dc7ea2ac9233e51172715bf10a5892a080cf6",
+        "gitBlob": "bc87216a3f4cee41f3bfa97cca4a3cdfb8a85fd3"
+      },
+      "receiptMember": "literalFiles[name=phase-receipt.json].body",
+      "fullyReadExactBodies": true,
+      "oldPathAvailability": "Additional root data report7063e491 confirms all three original906d/f7/f542 temporary paths absent in the returned environment. Exact historical bytes remain retained. Future copies must be explicitly reconstructed immutable data under a new reviewed contract; no original path/inode/custody continuity can be claimed."
+    },
+    "payloadLimitation": "Manifests preserve exact expected path/mode/bytes/hash/link identities; they do not contain every physical dependency, compiled, toolchain or binary-cache payload. A missing runtime payload cannot be re-created from its hash or admitted by copying the manifest."
+  },
+  "minimumProspectiveSequence": [
+    {
+      "step": 1,
+      "recommendation": "Retain the incomplete launch/poll/transport envelope and both current data observations, obtain complete independent reviews, publish and immediately push the incomplete outcome, then complete root and independent actual readbacks. Keep both prior attempted scopes permanently spent."
+    },
+    {
+      "step": 2,
+      "recommendation": "Only after that gate, explicitly select a separate isolated prospective recovery R1. Bind the incident, current source facts, retained immutable data provenance, new exclusive control/evidence/replica locations, source-free reconstruction allowance, full unchanged139/85 semantic contract and original clocks/noReplay. A new directory by itself never grants a fresh attempt."
+    },
+    {
+      "step": 3,
+      "recommendation": "For the three missing bootstrap inputs, select exact bytes from37bd/f8dd/aea9 at new owned read-only control-data paths. For lost historical runner/binding/f542, either select exact immutable replicas at new historical-data paths or fully bound inline data. Mark them as replicas with new physical ownership, while preserving all original content identities, original accepted publication/outer chain and source-only scope. Do not recreate old paths and call them original files."
+    },
+    {
+      "step": 4,
+      "recommendation": "Independently review and publish exact minimal descendant controls before staging. Review all necessary global path/R1/provenance-admission changes explicitly; do not change the52 existing function bodies, semantic parsers, correct85 names, tests, source producers, clocks, G1–G4, signal/capture/cleanup or full census. All selected new replica files/inline bodies must be bound in full controls before and after the package."
+    },
+    {
+      "step": 5,
+      "recommendation": "After full actual control readbacks, root alone may exclusively stage exact0700/0600 new controls and explicitly selected replicas. Keep source/tests unchanged; test materialization stays forbidden. Establish new-process/session/output ownership for the new scope without claiming old-session quiescence. Prefer a new workspace-backed evidence location with durable pre-launch intent retention; persistence improves recoverability only and cannot supply a missing outer result."
+    },
+    {
+      "step": 6,
+      "recommendation": "Before any new primary, perform complete fresh physical admission of every original boundary. Any mismatch or missing payload is refused and retained; do not silently reinstall, rebuild, delete old debt, drop cache rows, change environment policy or reinterpret a failed preflight as permission to retry. If replacement bootstrap becomes necessary, it needs its own explicit independent scope and gates."
+    },
+    {
+      "step": 7,
+      "recommendation": "Only an explicitly selected complete fresh package may run. Run unchanged Node139 and renderer85 in the original ordered single package with exact semantic/lifecycle checks, no filters/retries; retain full fresh after boundary, raw/start/final/semantic/cleanup evidence and separately observed outer. Only independently accepted new RED plus publication/readbacks may open producer authorship. An interruption or another unknown outcome spends that new scope as originally specified."
+    }
+  ],
+  "requiredFreshPhysicalObligations": [
+    {
+      "area": "Source and Git",
+      "required": "All8798 source rows against C5 plus exactly current six physical overlays/nine bound rows; full C5 HEAD/tree/index11567 and all42 workflows, modes/link rules and full source bytes. The complete139/85 tests and all three producer preimages must match. Nine selected rows alone are insufficient."
+    },
+    {
+      "area": "Dependencies",
+      "required": "Fresh complete enumeration/full byte-and-link hashing of122773 rows:117336 regular/5437 links. Compare the whole actual manifest against the pinned baseline, not stat caches or counts; preserve all paths and directory traversal/ownership/error behavior."
+    },
+    {
+      "area": "Compiled/provider",
+      "required": "Fresh complete1454 compiled rows and original provider archives plus253D/12SPI regular members, installed links/extra-member rules and exact SDK/MCP/Zod closure. Historical archive metadata or installed-directory existence does not qualify payload bytes."
+    },
+    {
+      "area": "Tools/pnpm",
+      "required": "Full exact pinned Node24.22.1, Python3.12, Git, dash and pnpm11.22.0 launcher/package/archive inventory identities and configurations. Directory existence is insufficient. No real Claude/Codex invocation, including version commands."
+    },
+    {
+      "area": "Environment/config",
+      "required": "New same-process capture and strict existing transport-amendment admission, exact ordinary/package key relationships and bounded variable proxy-port allowance, unchanged fixed values, absent config files, sanitized child environment and renderer raw/effective/static/native-route pins. Do not print secret values or assignHOME/CODEX_HOME to force a match."
+    },
+    {
+      "area": "Bootstrap cache and residue",
+      "required": "Fresh full-byte read of all original seven cache files totaling2,225,548B with exact paths/modes/identities, while keeping compile cache disabled. Inspect complete currently visible temp/cache and renderer .vite-temp/.vite predicates. No full cache payload copy was identified in the evidence reviewed; hashes alone cannot recreate missing payload. Unexpected old residue must be retained/reviewed under its real ownership, not deleted as though it belonged to the new attempt."
+    },
+    {
+      "area": "New controls and lifecycle",
+      "required": "Complete before/after census includes exact new runner, binding, all eight admitted input bodies and every selected historical replica. New captured process/session ownership, immutable start/raw/final receipts, absolute180-second primary and30-second metadata clocks, final signal refusal, G1–G4 and physical surviving-owned-file capture remain mandatory. No older success, missing directory or current empty process list proves old cleanup."
+    }
+  ],
+  "remainingUncertainties": [
+    "Current physical completeness of dependency/compiled/provider/tool/pnpm payloads, seven cache files, full source/index/workflow inventory, current config/env/native route and complete temp/cache inventory beyond the12 observed absent renderer paths are not established by the limited returned-environment observations. These observations do not replace fresh package preflight or postflight.",
+    "Original executor namespace continuity, old process termination and old physical cleanup remain UNKNOWN permanently for the lost invocation.",
+    "If any required physical payload differs or is missing, the narrow exact-input recovery may not be feasible without an explicitly reviewed replacement bootstrap; this report selects neither option."
+  ],
+  "checks": [
+    {
+      "name": "Exact complete incident envelope",
+      "passed": true
+    },
+    {
+      "name": "Exact complete returned-environment observation",
+      "passed": true
+    },
+    {
+      "name": "One spent invocation with no observed outer or completed fresh result",
+      "passed": true
+    },
+    {
+      "name": "Lost original boundary/custody/cleanup remains unknown",
+      "passed": true
+    },
+    {
+      "name": "No replay/resume/transfer or producer admission",
+      "passed": true
+    },
+    {
+      "name": "Complete nine observed selected source rows match binding",
+      "passed": true
+    },
+    {
+      "name": "Observed current producers remain exact selected preimages",
+      "passed": true
+    },
+    {
+      "name": "Exactly eight input rows and five complete surviving evidence bodies",
+      "passed": true
+    },
+    {
+      "name": "Exactly three missing temporary input bodies",
+      "passed": true
+    },
+    {
+      "name": "Ten returned workspace roots regular directories and no symlinks",
+      "passed": true
+    },
+    {
+      "name": "HEAD file only records expected C5",
+      "passed": true
+    },
+    {
+      "name": "Complete missing input body is retained setupBinding",
+      "passed": true
+    },
+    {
+      "name": "Complete missing input body is retained currentBoundary",
+      "passed": true
+    },
+    {
+      "name": "Complete missing input body is retained providers",
+      "passed": true
+    },
+    {
+      "name": "Retained complete baseline body matches sourceFull",
+      "passed": true
+    },
+    {
+      "name": "Retained complete baseline body matches sourceNonDoc",
+      "passed": true
+    },
+    {
+      "name": "Retained complete baseline body matches compiled",
+      "passed": true
+    },
+    {
+      "name": "Retained complete baseline body matches pnpm",
+      "passed": true
+    },
+    {
+      "name": "Exact original historical runner/binding/receipt bytes retained",
+      "passed": true
+    },
+    {
+      "name": "Prior lossless dependency proof matches selected baseline",
+      "passed": true
+    },
+    {
+      "name": "All four dependency partitions remain in actual published docs tree",
+      "passed": true
+    },
+    {
+      "name": "Historical seven-cache-file obligation is explicit",
+      "passed": true
+    },
+    {
+      "name": "Exact full additional path observation fetched and rehashed",
+      "passed": true
+    },
+    {
+      "name": "All12 admitted renderer absence paths and original3 historical paths absent in returned environment only",
+      "passed": true
+    },
+    {
+      "name": "Additional absence observation makes no old custody or fresh full-boundary claim",
+      "passed": true
+    }
+  ],
+  "checkCount": 25,
+  "failedChecks": [],
+  "disposition": {
+    "recommendationsOnly": true,
+    "newScopeSelected": false,
+    "newR1OrControlProposalAuthored": false,
+    "runnerBindingOrSourcePostimagesAuthored": false,
+    "newAttemptGranted": false,
+    "runtimeExecuted": false,
+    "originalUnknownAccepted": false,
+    "producerAuthorshipGateOpened": false,
+    "wholeE2EQualified": false
+  },
+  "draftAmendment": {
+    "supersedesUnpublishedRecommendation": {
+      "bytes": 24895,
+      "sha256": "85f8e409c1017ff672511341c3d0bbd035967ae541cd4dfb110998f4a0a36861",
+      "gitBlob": "8aacaee17830dd3c970882c80a808d28df4f829e"
+    },
+    "reason": "A later bounded root data observation establishes all12 admitted renderer paths and all3 original historical control/receipt paths absent in the returned environment. Replace only the previous unknown path-availability statement and add the exact evidence; no scope or execution selected."
+  }
+}

@@ -1,0 +1,251 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-corrected-red-incomplete-semantic-envelope-review",
+  "reviewer": "/root/corrected_r2_semantic",
+  "at": "2026-11-16 23:45:59 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "bytes": 14209,
+    "sha256": "ca765d1710162c77bad581e09b7eb2f7856bec93ee36c77463ce4f7f72266ec4",
+    "gitBlob": "df4e4caeb8a2602942a5cb95b140101c595c3f47"
+  },
+  "verdict": "ACCEPTED for retention as the complete available UNKNOWN/INCOMPLETE/SPENT launch/poll/error envelope. The corrected RED package is NOT ACCEPTED; no semantic primary outcome or producer gate follows.",
+  "envelopeAccountingAccepted": true,
+  "correctedRedAccepted": false,
+  "scope": "Full exact retained envelope plus both complete control-publication actual readback reports. No live executor/source reads, runtime, process intervention, ref/CI/source mutation, or replay.",
+  "fullReads": [
+    {
+      "role": "incompleteEnvelope",
+      "bytes": 14209,
+      "sha256": "ca765d1710162c77bad581e09b7eb2f7856bec93ee36c77463ce4f7f72266ec4",
+      "gitBlob": "df4e4caeb8a2602942a5cb95b140101c595c3f47"
+    },
+    {
+      "role": "controlPublicationRootActual",
+      "bytes": 27142,
+      "sha256": "9045fcbfa24ab3b7060624445e680c318d2d5cd37a64ed5f29462f57af28773a",
+      "gitBlob": "8128188ec78d691fec7d0830ed0276d6cf508a1d"
+    },
+    {
+      "role": "controlPublicationIndependentActual",
+      "bytes": 65662,
+      "sha256": "4f4641cc66df94e83c76f92e8a0f076a6ed0dd5e6bb71bc2905139d0b3405ac0",
+      "gitBlob": "56ae76204bfeaa2afd613a2cb41e2ddc1f1f3d16"
+    }
+  ],
+  "controlPair": {
+    "runner": {
+      "bytes": 94938,
+      "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+      "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+    },
+    "binding": {
+      "bytes": 5856749,
+      "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+      "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+    },
+    "publication": "c9c68e2137ce99ecfa0f3f71922ac055dbc2f5b1"
+  },
+  "priorSemanticR2": {
+    "bytes": 68522,
+    "sha256": "1e36d41e920cd47e4df65ca15b89208010dadb3b66ccf6074951932eec57c80b",
+    "gitBlob": "ecfeea25b954547564439477e3fd11f38876293f",
+    "qualification": "Prior exact static control review; no runtime-result transfer."
+  },
+  "knownObservations": {
+    "session": 54393,
+    "observedLaunches": 1,
+    "initialOutput": "",
+    "completedPolls": 1,
+    "completedPollOutput": "",
+    "failedPollError": "write_stdin failed: Unified exec process failed: exec-server transport disconnected; failed to resume exec-server session: exec-server protocol error: executor key changed during session recovery",
+    "observedSupervisorOuterExit": null,
+    "freshPrimaryResults": [],
+    "freshPhaseReceiptRead": false,
+    "freshBeforeBoundaryRead": false,
+    "freshAfterBoundaryRead": false,
+    "completeRuntimeInputPreservation": null,
+    "capturedCleanupObserved": false,
+    "processTermination": null,
+    "originalExecutorContinuity": null
+  },
+  "semanticFindings": [
+    {
+      "topic": "Available trace",
+      "finding": "The fully retained initial tool response and one completed poll identify the same running session54393 and empty output. The next poll fails with executor-key-change/transport-disconnect and supplies no final process status. The recorded20.6-second tool wall duration establishes no primary/package elapsed duration or deadline outcome."
+    },
+    {
+      "topic": "Semantic results",
+      "finding": "No fresh Node raw/receipt/semantic body, renderer raw/JSON/receipt/semantic body, phase receipt or complete runtime boundary was recovered in this envelope. The139/85 and134P5F/82P3F figures occur only under expectedButUnobserved. No pass, fail, skipped, cancelled, unhandled-output, exact-name/site/message or branch-coverage result can be assigned to this invocation. Stages are unobserved, not proved unreached."
+    },
+    {
+      "topic": "Independent outer observation",
+      "finding": "Observed final supervisor exit remains null. Neither prospective control acceptance nor any hypothetical or later-discovered internal successful receipt can replace the separately observed final outer requirement. The post-incident ls exit2 belongs only to the directory-inspection command and is not a supervisor result."
+    },
+    {
+      "topic": "Post-incident environment",
+      "finding": "The retained ls response establishes only that three named /tmp paths were absent and the source-directory path existed in the returned environment. Neither absence nor metadata return proves continuity with the old process namespace, process termination, captured group quiescence, physical cleanup, or current source/dependency/input preservation."
+    },
+    {
+      "topic": "Prelaunch custody",
+      "finding": "Both complete actual control-publication reports hash to the selected pins and record accepted publication with49/50 passing checks. The envelope preserves their historical closed gate, exclusive0700/0600 staging, exact controls and once-only launch argv in order. Their prelaunch false runtime flags are historical snapshots, not claims that no code ran after the later launch."
+    },
+    {
+      "topic": "Disposition",
+      "finding": "UNKNOWN/INCOMPLETE/SPENT is the supported classification for the corrected attempt. It remains unreplayed and cannot open the producer gate. The older combined outer2 remains separately REFUSED/SPENT; no primary result, old large input body, static review or aggregate count transfers into the lost invocation. No source-code regression or successful test result is established by the transport failure alone."
+    }
+  ],
+  "checks": [
+    {
+      "name": "Full exact incomplete envelope identity",
+      "passed": true
+    },
+    {
+      "name": "Exact already-reviewed runner/binding pair",
+      "passed": true
+    },
+    {
+      "name": "Complete actual control-publication readback root49checks",
+      "passed": true
+    },
+    {
+      "name": "Complete actual control-publication readback independent50checks",
+      "passed": true
+    },
+    {
+      "name": "Exact publication root/tree and gate copies",
+      "passed": true
+    },
+    {
+      "name": "Staging duplicated literally within launch intent",
+      "passed": true
+    },
+    {
+      "name": "Exclusive staging0700root0600twofiles",
+      "passed": true
+    },
+    {
+      "name": "Exact staged pair identities",
+      "passed": true
+    },
+    {
+      "name": "Staging did not materialize tests or execute runtime",
+      "passed": true
+    },
+    {
+      "name": "Gate/staging precede single launch intent",
+      "passed": true
+    },
+    {
+      "name": "Exact corrected RED argv",
+      "passed": true
+    },
+    {
+      "name": "Single observed running session54393",
+      "passed": true
+    },
+    {
+      "name": "Only completed poll is empty still-running response",
+      "passed": true
+    },
+    {
+      "name": "Failed poll matches same session and returned no final status",
+      "passed": true
+    },
+    {
+      "name": "Tool wall duration not primary/package timing",
+      "passed": true
+    },
+    {
+      "name": "No observed final outer or final tool result",
+      "passed": true
+    },
+    {
+      "name": "No fresh primary observation or phase receipt",
+      "passed": true
+    },
+    {
+      "name": "Neither complete fresh boundary observed",
+      "passed": true
+    },
+    {
+      "name": "Cleanup/termination/custody remain unproved",
+      "passed": true
+    },
+    {
+      "name": "Expected139/85 counts explicitly unobserved",
+      "passed": true
+    },
+    {
+      "name": "Post-incident ls2 is distinct from unknown supervisor outer",
+      "passed": true
+    },
+    {
+      "name": "Missing three paths and source directory observation correctly bounded",
+      "passed": true
+    },
+    {
+      "name": "Returned metadata does not establish old executor continuity",
+      "passed": true
+    },
+    {
+      "name": "New attempt UNKNOWN/INCOMPLETE/SPENT unreplayed",
+      "passed": true
+    },
+    {
+      "name": "No historical primary transfer and no new package acceptance",
+      "passed": true
+    },
+    {
+      "name": "Producer gate and postimages remain closed",
+      "passed": true
+    },
+    {
+      "name": "Original earlier outer2 remains separately refused/spent",
+      "passed": true
+    },
+    {
+      "name": "Future recovery must be separately selected; no replay/resume",
+      "passed": true
+    }
+  ],
+  "checkCount": 28,
+  "failedChecks": [],
+  "unresolvedAccountingIssues": [],
+  "unresolvedRuntimeObligations": [
+    "Fresh Node139 and renderer85 exact primary outputs/results and semantic admission are unknown.",
+    "Fresh complete before/after source, dependency, compiled, provider, tool, environment and control boundaries are unknown.",
+    "Final supervisor outer, process termination, captured-session quiescence and physical cleanup are unknown.",
+    "Current source/runtime environment identity after executor replacement is not established by directory existence."
+  ],
+  "disposition": {
+    "classification": "UNKNOWN/INCOMPLETE/SPENT",
+    "attemptSpent": true,
+    "replayed": false,
+    "partialResume": false,
+    "acceptedCombinedRed": null,
+    "acceptedCombinedGreen": null,
+    "producerAuthorshipGateOpened": false,
+    "producerPostimagesAuthored": false,
+    "historicalPrimaryTransfer": false,
+    "originalEarlierAttempt": {
+      "outerExit": 2,
+      "classification": "REFUSED/SPENT",
+      "replayed": false,
+      "retrospectivelyAccepted": false
+    },
+    "newRecoveryScopeSelected": false,
+    "wholeE2EQualified": false
+  },
+  "next": "Publish and fully read back this incomplete outcome with its exact known envelope and independent reviews. No current result acceptance or producer authorship follows. Any future work requires a separately selected and reviewed prospective recovery scope; the lost invocation cannot be resumed, replayed, or repaired into success.",
+  "reviewerActions": {
+    "fullGitBlobReads": 3,
+    "dataOnlyHashAndJsonChecks": true,
+    "shellCommands": 0,
+    "targetEvaluations": 0,
+    "runtimeCommands": 0,
+    "processKills": 0,
+    "sourceRefOrCiChanges": 0,
+    "mutation": "Retained this bare report blob only."
+  }
+}

@@ -1,0 +1,210 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-corrected-red-incomplete-envelope-guard-review",
+  "reviewer": "/root/corrected_r2_guard",
+  "at": "2026-11-16 23:45:34 UTC",
+  "verdict": "ACCEPTED_AS_COMPLETE_AVAILABLE_INCOMPLETE_ATTEMPT_ENVELOPE_ONLY",
+  "runtimeClassification": "UNKNOWN/INCOMPLETE/SPENT",
+  "envelope": {
+    "bytes": 14209,
+    "sha256": "ca765d1710162c77bad581e09b7eb2f7856bec93ee36c77463ce4f7f72266ec4",
+    "gitBlob": "df4e4caeb8a2602942a5cb95b140101c595c3f47"
+  },
+  "controlPublication": "c9c68e2137ce99ecfa0f3f71922ac055dbc2f5b1",
+  "selectedControls": {
+    "runner": {
+      "bytes": 94938,
+      "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+      "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+    },
+    "binding": {
+      "bytes": 5856749,
+      "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+      "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+    }
+  },
+  "controlPublicationReadbacks": {
+    "root": {
+      "bytes": 27142,
+      "sha256": "9045fcbfa24ab3b7060624445e680c318d2d5cd37a64ed5f29462f57af28773a",
+      "gitBlob": "8128188ec78d691fec7d0830ed0276d6cf508a1d"
+    },
+    "independent": {
+      "bytes": 65662,
+      "sha256": "4f4641cc66df94e83c76f92e8a0f076a6ed0dd5e6bb71bc2905139d0b3405ac0",
+      "gitBlob": "56ae76204bfeaa2afd613a2cb41e2ddc1f1f3d16"
+    }
+  },
+  "method": {
+    "completeEnvelopeReadAndHash": true,
+    "completePublicationReportBodiesReadAndHash": true,
+    "exactPriorR2SubjectBodiesPreviouslyFullyReadAndHash": true,
+    "dataOnly": true,
+    "physicalCurrentRuntimeEvidenceRead": false,
+    "targetRuntimeOrShellExecuted": false,
+    "sourceRefCiMutated": false
+  },
+  "observedEvidence": {
+    "sessionId": 54393,
+    "invocationCount": 1,
+    "initial": {
+      "chunk_id": "d8e2b3",
+      "wall_time_seconds": 1.000974029,
+      "session_id": 54393,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "completedPolls": [
+      {
+        "chunk_id": "d29052",
+        "wall_time_seconds": 30.000618673,
+        "session_id": 54393,
+        "original_token_count": 0,
+        "output": ""
+      }
+    ],
+    "failedPoll": {
+      "tool": "write_stdin",
+      "request": {
+        "session_id": 54393,
+        "chars": "",
+        "yield_time_ms": 30000,
+        "max_output_tokens": 10000
+      },
+      "reportedToolWallSeconds": 20.6,
+      "error": "write_stdin failed: Unified exec process failed: exec-server transport disconnected; failed to resume exec-server session: exec-server protocol error: executor key changed during session recovery",
+      "returnedProcessExitCode": null,
+      "returnedFinalToolResult": null,
+      "qualification": "The tool wall time is not the primary or package elapsed time. No final process status was returned."
+    },
+    "postIncidentDirectoryObservation": {
+      "order": 3,
+      "source": "read-only exec_command after metadata returned",
+      "command": "ls -ld /tmp/c714-combined139-85-corrected-controls /tmp/c714-combined139-85-corrected-evidence /tmp/c714-combined-r2-authoring-20261116 /workspace/scratch/c714-fresh-20261116/source",
+      "toolResult": {
+        "chunk_id": "330864",
+        "wall_time_seconds": 0.000029696,
+        "exit_code": 2,
+        "original_token_count": 90,
+        "output": "ls: cannot access '/tmp/c714-combined139-85-corrected-controls': No such file or directory\nls: cannot access '/tmp/c714-combined139-85-corrected-evidence': No such file or directory\nls: cannot access '/tmp/c714-combined-r2-authoring-20261116': No such file or directory\ndrwxr-xr-x 20 agent agent 4096 Nov 16 17:39 /workspace/scratch/c714-fresh-20261116/source\n"
+      },
+      "qualification": "Post-incident directory observation only. Missing paths in the returned environment do not prove the old process stopped or that its physical cleanup succeeded."
+    }
+  },
+  "findings": [
+    "The exact publication gate and retained exclusive staging precede the once-only launch and bind the previously approved7a79/a5c9 pair. The duplicated gate/staging records are chronological snapshots; their runtimeExecuted=false and controlsStaged=false fields are prelaunch facts, not claims about the later unknown process.",
+    "The initial result and one completed poll only establish a captured54393 session with empty returned output. Neither contains a final exit code. The failed poll reports transport disconnection/executor key change and returns no final process result. Its20.6s wall time does not establish package or primary elapsed time.",
+    "The following environment metadata and directory listing do not establish continuity with the old executor. Missing three/tmp directories in the returned environment establish neither old-process termination nor successful captured cleanup. The listing exit2 is not a supervisor outer result.",
+    "No fresh primary result, phase receipt, complete preflight/postflight boundary, captured-group quiescence or input preservation was observed. The correct result remains UNKNOWN/INCOMPLETE/SPENT with null final outer and null current acceptance; neither suite may be markedPASS,FAIL,UNREACHED or completed from this envelope alone.",
+    "Historical full large bodies were independently reconstructed/read/rehashed for retention preparation only. All5 unique bodies totaling45,067,495B remain old evidence and prove no current phase boundary, process custody, cleanup or new test outcome.",
+    "The earlier original combined outer2 remains separately REFUSED/SPENT. No historical primary transfer, replay, partial resume, producer postimage authority or automatic recovery follows from this interrupted corrected invocation."
+  ],
+  "checks": [
+    {
+      "name": "Complete envelope exact retained14209-byte identity",
+      "passed": true
+    },
+    {
+      "name": "Publication root report full exact identity and all49checks accepted",
+      "passed": true
+    },
+    {
+      "name": "Publication independent report full exact identity and all50checks accepted",
+      "passed": true
+    },
+    {
+      "name": "Both actual reports join exact c9c68e publication tree/docs",
+      "passed": true
+    },
+    {
+      "name": "Selected runner and binding exact previously approved subjects",
+      "passed": true
+    },
+    {
+      "name": "All historical gate snapshots equal",
+      "passed": true
+    },
+    {
+      "name": "Staging exact exclusive0700 root0600 files",
+      "passed": true
+    },
+    {
+      "name": "Staged file paths and full bytes match selected controls",
+      "passed": true
+    },
+    {
+      "name": "Staging claims confined to prelaunch no source/test/runtime",
+      "passed": true
+    },
+    {
+      "name": "Gate precedes staging precedes launch",
+      "passed": true
+    },
+    {
+      "name": "Exact one selected run red argv and binding SHA",
+      "passed": true
+    },
+    {
+      "name": "Same54393 captured initial and firstpoll session no exit",
+      "passed": true
+    },
+    {
+      "name": "Failedpoll exact same session and transport error no returned finalstatus",
+      "passed": true
+    },
+    {
+      "name": "Runtime unknowns remain null and freshobservations empty",
+      "passed": true
+    },
+    {
+      "name": "Environmentreturn is only newmetadata and data-only directorylisting",
+      "passed": true
+    },
+    {
+      "name": "Three absentpath observations do not become process/cleanup facts",
+      "passed": true
+    },
+    {
+      "name": "Exact UNKNOWN/INCOMPLETE/SPENT disposition no replay/resume/transfer",
+      "passed": true
+    },
+    {
+      "name": "No RED/GREEN acceptance and no producer gate or authorship",
+      "passed": true
+    },
+    {
+      "name": "Earlier original outer2 remains distinct REFUSED/SPENT",
+      "passed": true
+    },
+    {
+      "name": "Old large-body preparation explicitly excluded from fresh runtime proof",
+      "passed": true
+    },
+    {
+      "name": "No future recovery chosen by available envelope",
+      "passed": true
+    }
+  ],
+  "checkCount": 21,
+  "failedChecks": [],
+  "disposition": {
+    "retainAndPublishAvailableIncompleteEnvelope": true,
+    "attemptSpent": true,
+    "replayAllowed": false,
+    "partialResumeAllowed": false,
+    "acceptedCombinedRed": null,
+    "acceptedCombinedGreen": null,
+    "producerAuthorshipGateOpened": false,
+    "processTermination": null,
+    "capturedCleanup": null,
+    "freshInputPreservation": null,
+    "futureRecoverySelectedByThisReview": false
+  },
+  "limitations": [
+    "This accepts the accuracy and completeness of the available retained launch/poll/error envelope, not a runtime package.",
+    "No raw/current phase files or final outer were recovered or independently inspected.",
+    "The new environment's directory listing is solely the exact retained root observation; this reviewer did not run a shell or inspect physical paths.",
+    "No GUI/native/vendor/platform, canonical typing/build or whole E2E qualification."
+  ],
+  "next": "Publish the incomplete outcome and exact control actual readbacks, immediately push, then complete root and independent actual publication readbacks. Any later recovery needs a separately selected and reviewed prospective scope; this invocation remains spent."
+}

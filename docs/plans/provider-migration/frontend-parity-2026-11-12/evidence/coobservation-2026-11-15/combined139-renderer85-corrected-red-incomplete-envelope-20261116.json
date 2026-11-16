@@ -1,0 +1,340 @@
+{
+  "schemaVersion": 1,
+  "kind": "corrected-combined-red-incomplete-transport-envelope",
+  "at": "2026-11-16 23:44:12 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "controlPublication": "c9c68e2137ce99ecfa0f3f71922ac055dbc2f5b1",
+  "publicationGate": {
+    "kind": "corrected-control-publication-gate-closed",
+    "at": "2026-11-16 23:39:18 UTC",
+    "commit": "c9c68e2137ce99ecfa0f3f71922ac055dbc2f5b1",
+    "tree": "9834d68de991e0acc3612210f98ee314112e23c0",
+    "docsTree": "76abc28d7426e2aaf15045862a9b24ebeeed9daf",
+    "runner": {
+      "bytes": 94938,
+      "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+      "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+    },
+    "binding": {
+      "bytes": 5856749,
+      "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+      "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+    },
+    "root": {
+      "bytes": 27142,
+      "sha256": "9045fcbfa24ab3b7060624445e680c318d2d5cd37a64ed5f29462f57af28773a",
+      "gitBlob": "8128188ec78d691fec7d0830ed0276d6cf508a1d"
+    },
+    "independent": {
+      "bytes": 65662,
+      "sha256": "4f4641cc66df94e83c76f92e8a0f076a6ed0dd5e6bb71bc2905139d0b3405ac0",
+      "gitBlob": "56ae76204bfeaa2afd613a2cb41e2ddc1f1f3d16"
+    },
+    "rootReadFullIndependent": true,
+    "independentReadFullRoot": true,
+    "allowed": "Exclusive0700/0600 staging of exact pair, followed by one complete fresh corrected RED; no test rematerialization. Producer postimages still require accepted new RED and publication/readbacks.",
+    "controlsStaged": false,
+    "runtimeExecuted": false,
+    "producerPostimagesAuthored": false,
+    "originalRefusedAttempt": "outer2 REFUSED/SPENT"
+  },
+  "staging": {
+    "kind": "exclusive-corrected-combined-controls-staging",
+    "at": "2026-11-16T23:39:19.108718+00:00",
+    "publicationGate": {
+      "kind": "corrected-control-publication-gate-closed",
+      "at": "2026-11-16 23:39:18 UTC",
+      "commit": "c9c68e2137ce99ecfa0f3f71922ac055dbc2f5b1",
+      "tree": "9834d68de991e0acc3612210f98ee314112e23c0",
+      "docsTree": "76abc28d7426e2aaf15045862a9b24ebeeed9daf",
+      "runner": {
+        "bytes": 94938,
+        "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+        "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+      },
+      "binding": {
+        "bytes": 5856749,
+        "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+        "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+      },
+      "root": {
+        "bytes": 27142,
+        "sha256": "9045fcbfa24ab3b7060624445e680c318d2d5cd37a64ed5f29462f57af28773a",
+        "gitBlob": "8128188ec78d691fec7d0830ed0276d6cf508a1d"
+      },
+      "independent": {
+        "bytes": 65662,
+        "sha256": "4f4641cc66df94e83c76f92e8a0f076a6ed0dd5e6bb71bc2905139d0b3405ac0",
+        "gitBlob": "56ae76204bfeaa2afd613a2cb41e2ddc1f1f3d16"
+      },
+      "rootReadFullIndependent": true,
+      "independentReadFullRoot": true,
+      "allowed": "Exclusive0700/0600 staging of exact pair, followed by one complete fresh corrected RED; no test rematerialization. Producer postimages still require accepted new RED and publication/readbacks.",
+      "controlsStaged": false,
+      "runtimeExecuted": false,
+      "producerPostimagesAuthored": false,
+      "originalRefusedAttempt": "outer2 REFUSED/SPENT"
+    },
+    "root": {
+      "path": "/tmp/c714-combined139-85-corrected-controls",
+      "mode": 448,
+      "device": 39,
+      "inode": 3132934,
+      "uid": 1000
+    },
+    "files": [
+      {
+        "path": "/tmp/c714-combined139-85-corrected-controls/combined-runner.py",
+        "mode": 384,
+        "device": 39,
+        "inode": 3132935,
+        "uid": 1000,
+        "bytes": 94938,
+        "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+        "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+      },
+      {
+        "path": "/tmp/c714-combined139-85-corrected-controls/red-binding.json",
+        "mode": 384,
+        "device": 39,
+        "inode": 3132936,
+        "uid": 1000,
+        "bytes": 5856749,
+        "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+        "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+      }
+    ],
+    "sourceWrites": 0,
+    "testRematerialization": false,
+    "runtimeEvaluated": false,
+    "evidenceRootAbsent": true
+  },
+  "launchIntent": {
+    "kind": "once-only-corrected-combined-red-launch-intent",
+    "at": "2026-11-16 23:39:43 UTC",
+    "selectedAttempt": 1,
+    "noRetry": true,
+    "publicationGate": {
+      "kind": "corrected-control-publication-gate-closed",
+      "at": "2026-11-16 23:39:18 UTC",
+      "commit": "c9c68e2137ce99ecfa0f3f71922ac055dbc2f5b1",
+      "tree": "9834d68de991e0acc3612210f98ee314112e23c0",
+      "docsTree": "76abc28d7426e2aaf15045862a9b24ebeeed9daf",
+      "runner": {
+        "bytes": 94938,
+        "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+        "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+      },
+      "binding": {
+        "bytes": 5856749,
+        "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+        "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+      },
+      "root": {
+        "bytes": 27142,
+        "sha256": "9045fcbfa24ab3b7060624445e680c318d2d5cd37a64ed5f29462f57af28773a",
+        "gitBlob": "8128188ec78d691fec7d0830ed0276d6cf508a1d"
+      },
+      "independent": {
+        "bytes": 65662,
+        "sha256": "4f4641cc66df94e83c76f92e8a0f076a6ed0dd5e6bb71bc2905139d0b3405ac0",
+        "gitBlob": "56ae76204bfeaa2afd613a2cb41e2ddc1f1f3d16"
+      },
+      "rootReadFullIndependent": true,
+      "independentReadFullRoot": true,
+      "allowed": "Exclusive0700/0600 staging of exact pair, followed by one complete fresh corrected RED; no test rematerialization. Producer postimages still require accepted new RED and publication/readbacks.",
+      "controlsStaged": false,
+      "runtimeExecuted": false,
+      "producerPostimagesAuthored": false,
+      "originalRefusedAttempt": "outer2 REFUSED/SPENT"
+    },
+    "staging": {
+      "kind": "exclusive-corrected-combined-controls-staging",
+      "at": "2026-11-16T23:39:19.108718+00:00",
+      "publicationGate": {
+        "kind": "corrected-control-publication-gate-closed",
+        "at": "2026-11-16 23:39:18 UTC",
+        "commit": "c9c68e2137ce99ecfa0f3f71922ac055dbc2f5b1",
+        "tree": "9834d68de991e0acc3612210f98ee314112e23c0",
+        "docsTree": "76abc28d7426e2aaf15045862a9b24ebeeed9daf",
+        "runner": {
+          "bytes": 94938,
+          "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+          "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+        },
+        "binding": {
+          "bytes": 5856749,
+          "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+          "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+        },
+        "root": {
+          "bytes": 27142,
+          "sha256": "9045fcbfa24ab3b7060624445e680c318d2d5cd37a64ed5f29462f57af28773a",
+          "gitBlob": "8128188ec78d691fec7d0830ed0276d6cf508a1d"
+        },
+        "independent": {
+          "bytes": 65662,
+          "sha256": "4f4641cc66df94e83c76f92e8a0f076a6ed0dd5e6bb71bc2905139d0b3405ac0",
+          "gitBlob": "56ae76204bfeaa2afd613a2cb41e2ddc1f1f3d16"
+        },
+        "rootReadFullIndependent": true,
+        "independentReadFullRoot": true,
+        "allowed": "Exclusive0700/0600 staging of exact pair, followed by one complete fresh corrected RED; no test rematerialization. Producer postimages still require accepted new RED and publication/readbacks.",
+        "controlsStaged": false,
+        "runtimeExecuted": false,
+        "producerPostimagesAuthored": false,
+        "originalRefusedAttempt": "outer2 REFUSED/SPENT"
+      },
+      "root": {
+        "path": "/tmp/c714-combined139-85-corrected-controls",
+        "mode": 448,
+        "device": 39,
+        "inode": 3132934,
+        "uid": 1000
+      },
+      "files": [
+        {
+          "path": "/tmp/c714-combined139-85-corrected-controls/combined-runner.py",
+          "mode": 384,
+          "device": 39,
+          "inode": 3132935,
+          "uid": 1000,
+          "bytes": 94938,
+          "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+          "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+        },
+        {
+          "path": "/tmp/c714-combined139-85-corrected-controls/red-binding.json",
+          "mode": 384,
+          "device": 39,
+          "inode": 3132936,
+          "uid": 1000,
+          "bytes": 5856749,
+          "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+          "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+        }
+      ],
+      "sourceWrites": 0,
+      "testRematerialization": false,
+      "runtimeEvaluated": false,
+      "evidenceRootAbsent": true
+    },
+    "argv": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+      "/tmp/c714-combined139-85-corrected-controls/combined-runner.py",
+      "/tmp/c714-combined139-85-corrected-controls/red-binding.json",
+      "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+      "run",
+      "red"
+    ],
+    "expectedButUnobserved": {
+      "node": {
+        "cases": 139,
+        "pass": 134,
+        "fail": 5
+      },
+      "renderer": {
+        "cases": 85,
+        "pass": 82,
+        "fail": 3
+      }
+    },
+    "scope": "One complete fresh before/after runtime-input package; original180s per-primary/30s metadata; full census and captured physical cleanup; no real Claude/Codex; no test rematerialization."
+  },
+  "initialToolResult": {
+    "chunk_id": "d8e2b3",
+    "wall_time_seconds": 1.000974029,
+    "session_id": 54393,
+    "original_token_count": 0,
+    "output": ""
+  },
+  "completedPolls": [
+    {
+      "chunk_id": "d29052",
+      "wall_time_seconds": 30.000618673,
+      "session_id": 54393,
+      "original_token_count": 0,
+      "output": ""
+    }
+  ],
+  "failedPoll": {
+    "tool": "write_stdin",
+    "request": {
+      "session_id": 54393,
+      "chars": "",
+      "yield_time_ms": 30000,
+      "max_output_tokens": 10000
+    },
+    "reportedToolWallSeconds": 20.6,
+    "error": "write_stdin failed: Unified exec process failed: exec-server transport disconnected; failed to resume exec-server session: exec-server protocol error: executor key changed during session recovery",
+    "returnedProcessExitCode": null,
+    "returnedFinalToolResult": null,
+    "qualification": "The tool wall time is not the primary or package elapsed time. No final process status was returned."
+  },
+  "environmentObservations": [
+    {
+      "order": 1,
+      "source": "user environment_context",
+      "status": "unavailable",
+      "environmentId": "ccarenv_b64_Y2NhcmVudl82YWQzMjM1ZjRlNjg4MTkxODlkMjFjMWFkNzRiM2VkMQ"
+    },
+    {
+      "order": 2,
+      "source": "subsequent user environment_context",
+      "status": "workspace metadata returned",
+      "cwd": "/workspace/scratch/c714f5bce554",
+      "qualification": "This does not establish continuity with the original executor or its process namespace."
+    },
+    {
+      "order": 3,
+      "source": "read-only exec_command after metadata returned",
+      "command": "ls -ld /tmp/c714-combined139-85-corrected-controls /tmp/c714-combined139-85-corrected-evidence /tmp/c714-combined-r2-authoring-20261116 /workspace/scratch/c714-fresh-20261116/source",
+      "toolResult": {
+        "chunk_id": "330864",
+        "wall_time_seconds": 0.000029696,
+        "exit_code": 2,
+        "original_token_count": 90,
+        "output": "ls: cannot access '/tmp/c714-combined139-85-corrected-controls': No such file or directory\nls: cannot access '/tmp/c714-combined139-85-corrected-evidence': No such file or directory\nls: cannot access '/tmp/c714-combined-r2-authoring-20261116': No such file or directory\ndrwxr-xr-x 20 agent agent 4096 Nov 16 17:39 /workspace/scratch/c714-fresh-20261116/source\n"
+      },
+      "qualification": "Post-incident directory observation only. Missing paths in the returned environment do not prove the old process stopped or that its physical cleanup succeeded."
+    }
+  ],
+  "observations": {
+    "sessionId": 54393,
+    "invocationCount": 1,
+    "observedOuterExit": null,
+    "finalToolResult": null,
+    "freshPrimaryResultsObserved": [],
+    "freshPhaseReceiptRead": false,
+    "freshBeforeBoundaryRead": false,
+    "freshAfterBoundaryRead": false,
+    "capturedCleanupObserved": false,
+    "completeRuntimeInputPreservation": null,
+    "processTermination": null,
+    "originalExecutorContinuity": null
+  },
+  "classification": "UNKNOWN/INCOMPLETE/SPENT",
+  "attemptSpent": true,
+  "replayed": false,
+  "partialResume": false,
+  "historicalPrimaryTransfer": false,
+  "acceptedCombinedRed": null,
+  "acceptedCombinedGreen": null,
+  "producerAuthorshipGateOpened": false,
+  "producerPostimagesAuthored": false,
+  "testRematerialized": false,
+  "originalEarlierCombinedAttempt": {
+    "outerExit": 2,
+    "classification": "REFUSED/SPENT",
+    "replayed": false,
+    "retrospectivelyAccepted": false
+  },
+  "disposition": "Retain and independently review this complete available launch/poll/error envelope, then publish and fully read back the incomplete outcome. No current package success or producer gate follows. Any future work requires an explicitly selected and reviewed separate prospective recovery scope; this invocation cannot be replayed, resumed or repaired into success.",
+  "limits": [
+    "No fresh Node139 or renderer85 outcome is claimed.",
+    "No complete preflight/postflight, output/custody, captured group quiescence or physical cleanup is claimed for the lost invocation.",
+    "The historical 45,067,495-byte large-body reconstruction prepared by a reviewer remains immutable old evidence and cannot substitute for any new runtime boundary.",
+    "No CI/native/provider/GUI/platform, canonical typecheck/build or whole E2E qualification."
+  ]
+}
