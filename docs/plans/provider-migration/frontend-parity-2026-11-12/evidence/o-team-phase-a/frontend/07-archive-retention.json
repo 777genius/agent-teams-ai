@@ -1,0 +1,29 @@
+{
+  "artifactId": 14200400568,
+  "sourceHead": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "officialSize": 312491,
+  "officialDigest": "sha256:ef4f5494608347f10c98b9dfc23569c5f3ae4d515a55cd72e9e7d84198daa4de",
+  "zipBytes": 312491,
+  "gitBlob": "a0cacf496525a63b30c5b25c17ea59ba37e8ea6c",
+  "sha256": "ef4f5494608347f10c98b9dfc23569c5f3ae4d515a55cd72e9e7d84198daa4de",
+  "memberCount": 2,
+  "members": [
+    {
+      "path": "host-offline-tests-2.json",
+      "bytes": 2384446,
+      "gitBlob": "8be445a82537782c6eebff60c97ea88f42ac0d12",
+      "sha256": "64634becb2d23de2564f54f8a08d060b6ef6a0f6bf7a9d1b9545d03cf023b8b9",
+      "crc32": "ab421c81"
+    },
+    {
+      "path": "host-offline-tests-2.log",
+      "bytes": 106799,
+      "gitBlob": "84fa3d14ecdd73356059b0748c13adcbff2a2e16",
+      "sha256": "b8a4b90ab8a57cfddaf4075ceb296218bccbcdd4b82638348084d3d2aa08cfed",
+      "crc32": "b8d22489"
+    }
+  ],
+  "safePaths": true,
+  "crcAll": true,
+  "roundTripAll": true
+}

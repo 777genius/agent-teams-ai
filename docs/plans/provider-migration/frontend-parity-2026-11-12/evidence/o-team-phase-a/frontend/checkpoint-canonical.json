@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "runId": 43807841778,
+  "scope": "complete original four frontend shards; separate from Team/Desktop/native qualification",
+  "counts": {
+    "filesTotal": 2162,
+    "filesPassed": 2155,
+    "filesWhollySkipped": 7,
+    "assertionsTotal": 25860,
+    "assertionsPassed": 25822,
+    "assertionsSkipped": 38,
+    "assertionsFailed": 0
+  },
+  "payloads": [
+    {
+      "path": "ci-o-953fd8/frontend-shard-1/job-133102584783.log",
+      "bytes": 167136,
+      "gitBlob": "29a1d75091e14efe207603634866a310dc0f3f8f",
+      "sha256": "7a9aae646c17cc452214b32455abce7d165c4dbc6f8dba196ae5c1bcd220e97d"
+    },
+    {
+      "path": "ci-o-953fd8/frontend-shard-1/original-job-133102584783-response.json",
+      "bytes": 205998,
+      "gitBlob": "ab60d3f93981da0cbf81d125ca37fc610eb00c76",
+      "sha256": "e56ff66ff335445dffe760a2d0a1ac0819824546588d16c7869b2ddfefba31c6"
+    },
+    {
+      "path": "ci-o-953fd8/frontend-shard-1/artifact-14200345716.zip",
+      "bytes": 294636,
+      "gitBlob": "b2d7eac2bc345514665c95df19ff913416b4932f",
+      "sha256": "03a46132f92cd810b7027c9c01eb237db48841fb7d60defec9095e4bc95d1dfe"
+    },
+    {
+      "path": "ci-o-953fd8/frontend-shard-1/archive-retention.json",
+      "bytes": 1015,
+      "gitBlob": "2c7c30a64c01fe1c26c7567c486c2a2c16bedb08",
+      "sha256": "29eb120a18208e361bc0b8c6aa47ed7e4e87f25e2a186e0d56f9a08ec1f299c7"
+    },
+    {
+      "path": "ci-o-953fd8/frontend-shard-2/job-133102584755.log",
+      "bytes": 181412,
+      "gitBlob": "16cf4d34cf368050c1aea84fb54e1cc860834cd9",
+      "sha256": "b43cfa03347f9c7a4f8fc3529f2059439c5029d10e214d72d6eed4c18d5f72ed"
+    },
+    {
+      "path": "ci-o-953fd8/frontend-shard-2/original-job-133102584755-response.json",
+      "bytes": 222783,
+      "gitBlob": "92000b9e353eeb1749ed2ea4ee34a9eddefd91bd",
+      "sha256": "b1ee8284a13340bf1c0fd3b151877e9bfc986a1a000afe4b5c4b2a0bdd7daebc"
+    },
+    {
+      "path": "ci-o-953fd8/frontend-shard-2/artifact-14200400568.zip",
+      "bytes": 312491,
+      "gitBlob": "a0cacf496525a63b30c5b25c17ea59ba37e8ea6c",
+      "sha256": "ef4f5494608347f10c98b9dfc23569c5f3ae4d515a55cd72e9e7d84198daa4de"
+    },
+    {
+      "path": "ci-o-953fd8/frontend-shard-2/archive-retention.json",
+      "bytes": 974,
+      "gitBlob": "c38078b8ef825a86981179bf0e2ac800ca54f65f",
+      "sha256": "1bf1a351e480f8d36dd5244eb997fbcf7d8a9f5b7717b34b06788f63db0f9311"
+    },
+    {
+      "path": "ci-o-953fd8/frontend-shard-3/job-133102584566.log",
+      "bytes": 165441,
+      "gitBlob": "ed5bd12e977521358a92603d3a4ea89746d375e1",
+      "sha256": "0301f37e0384a4b370885052ec503953d80cf2057697aaec22ce8ec0a827a6b6"
+    },
+    {
+      "path": "ci-o-953fd8/frontend-shard-3/original-job-133102584566-response.json",
+      "bytes": 203156,
+      "gitBlob": "e15ee06f97e8af6931c200c2b67e390446310c88",
+      "sha256": "acdb34b100cafb5520e07fecc3fbf8edb636eb01af2c5f53098e32d2f723499f"
+    },
+    {
+      "path": "ci-o-953fd8/frontend-shard-3/artifact-14199184344.zip",
+      "bytes": 297015,
+      "gitBlob": "60281987bfff3f5228982b102cf9ce6989309467",
+      "sha256": "0e7ecbf78bb78e95ca178f590fb3b11848b93f395da663fb16151163b319506f"
+    },
+    {
+      "path": "ci-o-953fd8/frontend-shard-3/archive-retention.json",
+      "bytes": 1015,
+      "gitBlob": "524bb225b881a0b98f02029b39f6bde14bf61be2",
+      "sha256": "bdca25987d72feb90bf39ca80db2e9fcfb8fded860bbe53c6d52259d998e9455"
+    },
+    {
+      "path": "ci-o-953fd8/frontend-shard-4/job-133102584855.log",
+      "bytes": 190094,
+      "gitBlob": "1f9b07523b5f31110ffc7e7925f730f9d3661314",
+      "sha256": "5acfb9d2e00bf990c20379db12676633ad71cd9d28c4acba87e4d32f0de3b391"
+    },
+    {
+      "path": "ci-o-953fd8/frontend-shard-4/original-job-133102584855-response.json",
+      "bytes": 233837,
+      "gitBlob": "afd9d1f81f4dc3f42c903a882b6811f1d31decee",
+      "sha256": "9f0126651ea8b317f136dbaade0c099a88241bf55e91d0bb4129beeb6c1d39cb"
+    },
+    {
+      "path": "ci-o-953fd8/frontend-shard-4/artifact-14200641934.zip",
+      "bytes": 317444,
+      "gitBlob": "4158fa0739558f2db7078f9cc3bd6a17bb00c82f",
+      "sha256": "49ca02feab1796982f7f43edb76a36cccd15901af2eca5bef748c40f645b4bd0"
+    },
+    {
+      "path": "ci-o-953fd8/frontend-shard-4/archive-retention.json",
+      "bytes": 1189,
+      "gitBlob": "ae7a430652912b1a5f25d50ae87f8b08e442c73b",
+      "sha256": "5cb2704f4253b5c5c2e58b11654a54d5dc1e7e6b8c915c720bc22b6c39a92a37"
+    },
+    {
+      "path": "ci-o-953fd8/official-host-artifacts-0540.json",
+      "bytes": 6649,
+      "gitBlob": "06b5c6f8b3d95e8d297a3932984fb0aa71da7a6b",
+      "sha256": "3f767e0fb5a8ba9d9fe2a7060e7e4e4f8774fa13ba637f761ea6b025a31f2cd8"
+    },
+    {
+      "path": "ci-o-953fd8/owned-api-jobs-0538.json",
+      "bytes": 63347,
+      "gitBlob": "8833a16724d31979c75f0b15e66531ff713fe494",
+      "sha256": "85a2e190f9aaf77e017876fefffef1d6d2d7902e1debc18d528d59ac6eb1a04e"
+    },
+    {
+      "path": "ci-o-953fd8/frontend-all-shards/audit.json",
+      "bytes": 626545,
+      "gitBlob": "f1e8d10bbf8955e40717ba767fe0a3a9c744fefd",
+      "sha256": "2f29bc7e1d35586605f413b6cbb4b0341029e0b42ac7eaa61d746bce0bba3f40"
+    },
+    {
+      "path": "ci-o-953fd8/frontend-all-shards/Plan29-appendix.md",
+      "bytes": 3563,
+      "gitBlob": "98a5a953f3fa4b959688d7c3b387c6c47d65fea8",
+      "sha256": "f6a74824903633cf801362efdb017753059887b03092faef871f0e2e81e2ec28"
+    }
+  ],
+  "recoverableArchiveMembers": 8,
+  "nativeQualified": false,
+  "releaseQualified": false,
+  "signedUrlsIncluded": false
+}

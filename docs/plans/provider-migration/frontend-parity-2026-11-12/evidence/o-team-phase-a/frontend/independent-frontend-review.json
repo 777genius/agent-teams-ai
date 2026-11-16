@@ -1,0 +1,1433 @@
+{
+  "kind": "INDEPENDENT_ORIGINAL_O_ALL_FOUR_FRONTEND_SHARDS_R2",
+  "verdict": "APPROVE complete current-source frontend evidence with skips and exclusions intact",
+  "reviewer": "/root/native_failures",
+  "reviewedAtUtc": "2026-11-16T05:45:30.987232+00:00",
+  "sourceHead": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "sourceTree": "6080d832338dd7f0cf0e7e6522b2413e70f26668",
+  "runId": 43807841778,
+  "authorCheckpoint": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-all-shards/checkpoint.json",
+    "bytes": 5569,
+    "gitBlob": "a4e1672f8536891cc0c08fdc91ed7ece25a0fb0b",
+    "sha256": "d1cd5e589ef035f2adce4d2317f2e290a09646629ad11a938394f924b15a88a6"
+  },
+  "authorAudit": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-all-shards/audit.json",
+    "bytes": 626545,
+    "gitBlob": "f1e8d10bbf8955e40717ba767fe0a3a9c744fefd",
+    "sha256": "2f29bc7e1d35586605f413b6cbb4b0341029e0b42ac7eaa61d746bce0bba3f40"
+  },
+  "authorAppendix": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-all-shards/Plan29-appendix.md",
+    "bytes": 3563,
+    "gitBlob": "98a5a953f3fa4b959688d7c3b387c6c47d65fea8",
+    "sha256": "f6a74824903633cf801362efdb017753059887b03092faef871f0e2e81e2ec28"
+  },
+  "all20PayloadsReopenedExact": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-1/job-133102584783.log",
+      "bytes": 167136,
+      "gitBlob": "29a1d75091e14efe207603634866a310dc0f3f8f",
+      "sha256": "7a9aae646c17cc452214b32455abce7d165c4dbc6f8dba196ae5c1bcd220e97d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-1/original-job-133102584783-response.json",
+      "bytes": 205998,
+      "gitBlob": "ab60d3f93981da0cbf81d125ca37fc610eb00c76",
+      "sha256": "e56ff66ff335445dffe760a2d0a1ac0819824546588d16c7869b2ddfefba31c6"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-1/artifact-14200345716.zip",
+      "bytes": 294636,
+      "gitBlob": "b2d7eac2bc345514665c95df19ff913416b4932f",
+      "sha256": "03a46132f92cd810b7027c9c01eb237db48841fb7d60defec9095e4bc95d1dfe"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-1/archive-retention.json",
+      "bytes": 1015,
+      "gitBlob": "2c7c30a64c01fe1c26c7567c486c2a2c16bedb08",
+      "sha256": "29eb120a18208e361bc0b8c6aa47ed7e4e87f25e2a186e0d56f9a08ec1f299c7"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-2/job-133102584755.log",
+      "bytes": 181412,
+      "gitBlob": "16cf4d34cf368050c1aea84fb54e1cc860834cd9",
+      "sha256": "b43cfa03347f9c7a4f8fc3529f2059439c5029d10e214d72d6eed4c18d5f72ed"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-2/original-job-133102584755-response.json",
+      "bytes": 222783,
+      "gitBlob": "92000b9e353eeb1749ed2ea4ee34a9eddefd91bd",
+      "sha256": "b1ee8284a13340bf1c0fd3b151877e9bfc986a1a000afe4b5c4b2a0bdd7daebc"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-2/artifact-14200400568.zip",
+      "bytes": 312491,
+      "gitBlob": "a0cacf496525a63b30c5b25c17ea59ba37e8ea6c",
+      "sha256": "ef4f5494608347f10c98b9dfc23569c5f3ae4d515a55cd72e9e7d84198daa4de"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-2/archive-retention.json",
+      "bytes": 974,
+      "gitBlob": "c38078b8ef825a86981179bf0e2ac800ca54f65f",
+      "sha256": "1bf1a351e480f8d36dd5244eb997fbcf7d8a9f5b7717b34b06788f63db0f9311"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-3/job-133102584566.log",
+      "bytes": 165441,
+      "gitBlob": "ed5bd12e977521358a92603d3a4ea89746d375e1",
+      "sha256": "0301f37e0384a4b370885052ec503953d80cf2057697aaec22ce8ec0a827a6b6"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-3/original-job-133102584566-response.json",
+      "bytes": 203156,
+      "gitBlob": "e15ee06f97e8af6931c200c2b67e390446310c88",
+      "sha256": "acdb34b100cafb5520e07fecc3fbf8edb636eb01af2c5f53098e32d2f723499f"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-3/artifact-14199184344.zip",
+      "bytes": 297015,
+      "gitBlob": "60281987bfff3f5228982b102cf9ce6989309467",
+      "sha256": "0e7ecbf78bb78e95ca178f590fb3b11848b93f395da663fb16151163b319506f"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-3/archive-retention.json",
+      "bytes": 1015,
+      "gitBlob": "524bb225b881a0b98f02029b39f6bde14bf61be2",
+      "sha256": "bdca25987d72feb90bf39ca80db2e9fcfb8fded860bbe53c6d52259d998e9455"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-4/job-133102584855.log",
+      "bytes": 190094,
+      "gitBlob": "1f9b07523b5f31110ffc7e7925f730f9d3661314",
+      "sha256": "5acfb9d2e00bf990c20379db12676633ad71cd9d28c4acba87e4d32f0de3b391"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-4/original-job-133102584855-response.json",
+      "bytes": 233837,
+      "gitBlob": "afd9d1f81f4dc3f42c903a882b6811f1d31decee",
+      "sha256": "9f0126651ea8b317f136dbaade0c099a88241bf55e91d0bb4129beeb6c1d39cb"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-4/artifact-14200641934.zip",
+      "bytes": 317444,
+      "gitBlob": "4158fa0739558f2db7078f9cc3bd6a17bb00c82f",
+      "sha256": "49ca02feab1796982f7f43edb76a36cccd15901af2eca5bef748c40f645b4bd0"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-4/archive-retention.json",
+      "bytes": 1189,
+      "gitBlob": "ae7a430652912b1a5f25d50ae87f8b08e442c73b",
+      "sha256": "5cb2704f4253b5c5c2e58b11654a54d5dc1e7e6b8c915c720bc22b6c39a92a37"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/official-host-artifacts-0540.json",
+      "bytes": 6649,
+      "gitBlob": "06b5c6f8b3d95e8d297a3932984fb0aa71da7a6b",
+      "sha256": "3f767e0fb5a8ba9d9fe2a7060e7e4e4f8774fa13ba637f761ea6b025a31f2cd8"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/owned-api-jobs-0538.json",
+      "bytes": 63347,
+      "gitBlob": "8833a16724d31979c75f0b15e66531ff713fe494",
+      "sha256": "85a2e190f9aaf77e017876fefffef1d6d2d7902e1debc18d528d59ac6eb1a04e"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-all-shards/audit.json",
+      "bytes": 626545,
+      "gitBlob": "f1e8d10bbf8955e40717ba767fe0a3a9c744fefd",
+      "sha256": "2f29bc7e1d35586605f413b6cbb4b0341029e0b42ac7eaa61d746bce0bba3f40"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-all-shards/Plan29-appendix.md",
+      "bytes": 3563,
+      "gitBlob": "98a5a953f3fa4b959688d7c3b387c6c47d65fea8",
+      "sha256": "f6a74824903633cf801362efdb017753059887b03092faef871f0e2e81e2ec28"
+    }
+  ],
+  "payloadBytes": 3495740,
+  "allFourFullOriginalMcpRawTeeJsonApiJoins": true,
+  "allFourOfficialArchivesEightSafeUniqueCrcMembersExtractedByteExact": true,
+  "counts": {
+    "filesTotal": 2162,
+    "filesPassed": 2155,
+    "filesWhollySkipped": 7,
+    "assertionsTotal": 25860,
+    "assertionsPassed": 25822,
+    "assertionsSkipped": 38,
+    "assertionsFailed": 0
+  },
+  "allAssertionsRecounted": true,
+  "all2162TestSourcesReopenedAndHashed": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-all-shards/independent-frontend-source-proof.json",
+    "bytes": 604517,
+    "gitBlob": "f8553b2e50a27e3ec5a25d2d33a5ac1217cba713",
+    "sha256": "86d65c4b238c9e7daf0d27ce991c9e7f88e10edfd99e1da7d89c5d69281862e0"
+  },
+  "pairwiseDisjointReportedFilePaths": true,
+  "shards": [
+    {
+      "shard": 1,
+      "jobId": 133102584783,
+      "artifactId": 14200345716,
+      "officialJob": {
+        "id": 133102584783,
+        "name": "Offline frontend tests (1/4)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43807841778,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Verify source and capture the original Host test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Prepare original test prerequisites",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run the complete safe frontend shard",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Preserve original test results, including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Post Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19
+          }
+        ]
+      },
+      "officialArtifact": {
+        "id": 14200345716,
+        "name": "host-offline-tests-953fd8a94dc97bcfe89a7a808043dc11843e19d8-1",
+        "size_in_bytes": 294636,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14200345716",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14200345716/zip",
+        "expired": false,
+        "created_at": "2026-11-16T05:21:25Z",
+        "expires_at": "2026-11-30T05:21:24Z",
+        "updated_at": "2026-11-16T05:21:25Z",
+        "digest": "sha256:03a46132f92cd810b7027c9c01eb237db48841fb7d60defec9095e4bc95d1dfe",
+        "workflow_run": {
+          "id": 43807841778,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        }
+      },
+      "rawLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-1/job-133102584783.log",
+        "bytes": 167136,
+        "gitBlob": "29a1d75091e14efe207603634866a310dc0f3f8f",
+        "sha256": "7a9aae646c17cc452214b32455abce7d165c4dbc6f8dba196ae5c1bcd220e97d"
+      },
+      "originalMcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-1/original-job-133102584783-response.json",
+        "bytes": 205998,
+        "gitBlob": "ab60d3f93981da0cbf81d125ca37fc610eb00c76",
+        "sha256": "e56ff66ff335445dffe760a2d0a1ac0819824546588d16c7869b2ddfefba31c6"
+      },
+      "originalZip": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-1/artifact-14200345716.zip",
+        "bytes": 294636,
+        "gitBlob": "b2d7eac2bc345514665c95df19ff913416b4932f",
+        "sha256": "03a46132f92cd810b7027c9c01eb237db48841fb7d60defec9095e4bc95d1dfe"
+      },
+      "originalResultJson": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-1/extracted/host-offline-tests-1.json",
+        "bytes": 2167989,
+        "gitBlob": "c2e37908e709dd463ab081d6380ec5ffc065ace1",
+        "sha256": "6c2409b9fd090ffc89468714268b128c4bc6643ec240bb41566229200c5888f9"
+      },
+      "originalTee": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-1/extracted/host-offline-tests-1.log",
+        "bytes": 97466,
+        "gitBlob": "404a8ddebed92c4f7f11c35f00b64eb51d18cf79",
+        "sha256": "8d22335947c05293b184b1f7fcf6233670d7669d05224a0de0251cd765fe2f8e"
+      },
+      "members": [
+        {
+          "member": "host-offline-tests-1.log",
+          "crc32": 407577342,
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-1/extracted/host-offline-tests-1.log",
+          "bytes": 97466,
+          "gitBlob": "404a8ddebed92c4f7f11c35f00b64eb51d18cf79",
+          "sha256": "8d22335947c05293b184b1f7fcf6233670d7669d05224a0de0251cd765fe2f8e"
+        },
+        {
+          "member": "host-offline-tests-1.json",
+          "crc32": 1760385539,
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-1/extracted/host-offline-tests-1.json",
+          "bytes": 2167989,
+          "gitBlob": "c2e37908e709dd463ab081d6380ec5ffc065ace1",
+          "sha256": "6c2409b9fd090ffc89468714268b128c4bc6643ec240bb41566229200c5888f9"
+        }
+      ],
+      "counts": {
+        "filesTotal": 541,
+        "filesPassed": 541,
+        "filesWhollySkipped": 0,
+        "assertionsTotal": 6228,
+        "assertionsPassed": 6222,
+        "assertionsSkipped": 6,
+        "assertionsFailed": 0
+      },
+      "summaryRows": [
+        " Test Files  541 passed (541)",
+        "      Tests  6222 passed | 6 skipped (6228)",
+        "   Duration  279.95s (transform 25.45s, setup 10.46s, collect 237.62s, tests 155.71s, environment 77.89s, prepare 24.05s)"
+      ],
+      "originalCommand": [
+        "pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" \\",
+        "  --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' \\",
+        "  --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" \\",
+        "  2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\""
+      ],
+      "sourceRuntimeInstallEvidence": [
+        {
+          "line": 113,
+          "value": "953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        },
+        {
+          "line": 120,
+          "value": "[command]/usr/bin/git checkout --progress --force 953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        },
+        {
+          "line": 141,
+          "value": "953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        },
+        {
+          "line": 259,
+          "value": "node: v26.12.1"
+        },
+        {
+          "line": 322,
+          "value": "Lockfile is up to date, resolution step is skipped"
+        },
+        {
+          "line": 543,
+          "value": "Done in 6.9s using pnpm v11.22.0"
+        },
+        {
+          "line": 584,
+          "value": " RUN  v3.2.6 /home/runner/work/agent-teams-ai/agent-teams-ai"
+        }
+      ],
+      "fullMcpUtf8EqualsRaw": true,
+      "allTeeBytesJoinedAfterOnlyTimestampRemoval": true,
+      "everyAssertionRecountedAndFailureArraysEmpty": true,
+      "assertionArrayDigest": "3584471383e62bf97d17a82bf7a2c26bebb79b8af73abb821f5c0ea9098e8378",
+      "filePathsAndBlobsExactlyEqualAuthor": true,
+      "nestedSuiteCounters": {
+        "numTotalTestSuites": 1356,
+        "numPassedTestSuites": 1356,
+        "numFailedTestSuites": 0,
+        "numPendingTestSuites": 0,
+        "numTotalTests": 6228,
+        "numPassedTests": 6222,
+        "numFailedTests": 0,
+        "numPendingTests": 6,
+        "numTodoTests": 0
+      }
+    },
+    {
+      "shard": 2,
+      "jobId": 133102584755,
+      "artifactId": 14200400568,
+      "officialJob": {
+        "id": 133102584755,
+        "name": "Offline frontend tests (2/4)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43807841778,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Verify source and capture the original Host test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Prepare original test prerequisites",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run the complete safe frontend shard",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Preserve original test results, including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Post Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19
+          }
+        ]
+      },
+      "officialArtifact": {
+        "id": 14200400568,
+        "name": "host-offline-tests-953fd8a94dc97bcfe89a7a808043dc11843e19d8-2",
+        "size_in_bytes": 312491,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14200400568",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14200400568/zip",
+        "expired": false,
+        "created_at": "2026-11-16T05:22:33Z",
+        "expires_at": "2026-11-30T05:22:32Z",
+        "updated_at": "2026-11-16T05:22:33Z",
+        "digest": "sha256:ef4f5494608347f10c98b9dfc23569c5f3ae4d515a55cd72e9e7d84198daa4de",
+        "workflow_run": {
+          "id": 43807841778,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        }
+      },
+      "rawLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-2/job-133102584755.log",
+        "bytes": 181412,
+        "gitBlob": "16cf4d34cf368050c1aea84fb54e1cc860834cd9",
+        "sha256": "b43cfa03347f9c7a4f8fc3529f2059439c5029d10e214d72d6eed4c18d5f72ed"
+      },
+      "originalMcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-2/original-job-133102584755-response.json",
+        "bytes": 222783,
+        "gitBlob": "92000b9e353eeb1749ed2ea4ee34a9eddefd91bd",
+        "sha256": "b1ee8284a13340bf1c0fd3b151877e9bfc986a1a000afe4b5c4b2a0bdd7daebc"
+      },
+      "originalZip": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-2/artifact-14200400568.zip",
+        "bytes": 312491,
+        "gitBlob": "a0cacf496525a63b30c5b25c17ea59ba37e8ea6c",
+        "sha256": "ef4f5494608347f10c98b9dfc23569c5f3ae4d515a55cd72e9e7d84198daa4de"
+      },
+      "originalResultJson": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-2/extracted/host-offline-tests-2.json",
+        "bytes": 2384446,
+        "gitBlob": "8be445a82537782c6eebff60c97ea88f42ac0d12",
+        "sha256": "64634becb2d23de2564f54f8a08d060b6ef6a0f6bf7a9d1b9545d03cf023b8b9"
+      },
+      "originalTee": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-2/extracted/host-offline-tests-2.log",
+        "bytes": 106799,
+        "gitBlob": "84fa3d14ecdd73356059b0748c13adcbff2a2e16",
+        "sha256": "b8a4b90ab8a57cfddaf4075ceb296218bccbcdd4b82638348084d3d2aa08cfed"
+      },
+      "members": [
+        {
+          "member": "host-offline-tests-2.json",
+          "crc32": 2873236609,
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-2/extracted/host-offline-tests-2.json",
+          "bytes": 2384446,
+          "gitBlob": "8be445a82537782c6eebff60c97ea88f42ac0d12",
+          "sha256": "64634becb2d23de2564f54f8a08d060b6ef6a0f6bf7a9d1b9545d03cf023b8b9"
+        },
+        {
+          "member": "host-offline-tests-2.log",
+          "crc32": 3100779657,
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-2/extracted/host-offline-tests-2.log",
+          "bytes": 106799,
+          "gitBlob": "84fa3d14ecdd73356059b0748c13adcbff2a2e16",
+          "sha256": "b8a4b90ab8a57cfddaf4075ceb296218bccbcdd4b82638348084d3d2aa08cfed"
+        }
+      ],
+      "counts": {
+        "filesTotal": 541,
+        "filesPassed": 539,
+        "filesWhollySkipped": 2,
+        "assertionsTotal": 6748,
+        "assertionsPassed": 6730,
+        "assertionsSkipped": 18,
+        "assertionsFailed": 0
+      },
+      "summaryRows": [
+        " Test Files  539 passed | 2 skipped (541)",
+        "      Tests  6730 passed | 18 skipped (6748)",
+        "   Duration  389.56s (transform 34.68s, setup 25.21s, collect 296.26s, tests 222.80s, environment 121.10s, prepare 37.26s)"
+      ],
+      "originalCommand": [
+        "pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" \\",
+        "  --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' \\",
+        "  --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" \\",
+        "  2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\""
+      ],
+      "sourceRuntimeInstallEvidence": [
+        {
+          "line": 113,
+          "value": "953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        },
+        {
+          "line": 120,
+          "value": "[command]/usr/bin/git checkout --progress --force 953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        },
+        {
+          "line": 183,
+          "value": "953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        },
+        {
+          "line": 301,
+          "value": "node: v26.12.1"
+        },
+        {
+          "line": 362,
+          "value": "Lockfile is up to date, resolution step is skipped"
+        },
+        {
+          "line": 586,
+          "value": "Done in 11.9s using pnpm v11.22.0"
+        },
+        {
+          "line": 627,
+          "value": " RUN  v3.2.6 /home/runner/work/agent-teams-ai/agent-teams-ai"
+        }
+      ],
+      "fullMcpUtf8EqualsRaw": true,
+      "allTeeBytesJoinedAfterOnlyTimestampRemoval": true,
+      "everyAssertionRecountedAndFailureArraysEmpty": true,
+      "assertionArrayDigest": "4b3b882607fb11c541d8a25b1b5a2c729750365c7b6957496461bac16753b1f0",
+      "filePathsAndBlobsExactlyEqualAuthor": true,
+      "nestedSuiteCounters": {
+        "numTotalTestSuites": 1292,
+        "numPassedTestSuites": 1292,
+        "numFailedTestSuites": 0,
+        "numPendingTestSuites": 0,
+        "numTotalTests": 6748,
+        "numPassedTests": 6730,
+        "numFailedTests": 0,
+        "numPendingTests": 18,
+        "numTodoTests": 0
+      }
+    },
+    {
+      "shard": 3,
+      "jobId": 133102584566,
+      "artifactId": 14199184344,
+      "officialJob": {
+        "id": 133102584566,
+        "name": "Offline frontend tests (3/4)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43807841778,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Verify source and capture the original Host test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Prepare original test prerequisites",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run the complete safe frontend shard",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Preserve original test results, including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Post Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19
+          }
+        ]
+      },
+      "officialArtifact": {
+        "id": 14199184344,
+        "name": "host-offline-tests-953fd8a94dc97bcfe89a7a808043dc11843e19d8-3",
+        "size_in_bytes": 297015,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14199184344",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14199184344/zip",
+        "expired": false,
+        "created_at": "2026-11-16T05:17:53Z",
+        "expires_at": "2026-11-30T05:17:51Z",
+        "updated_at": "2026-11-16T05:17:53Z",
+        "digest": "sha256:0e7ecbf78bb78e95ca178f590fb3b11848b93f395da663fb16151163b319506f",
+        "workflow_run": {
+          "id": 43807841778,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        }
+      },
+      "rawLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-3/job-133102584566.log",
+        "bytes": 165441,
+        "gitBlob": "ed5bd12e977521358a92603d3a4ea89746d375e1",
+        "sha256": "0301f37e0384a4b370885052ec503953d80cf2057697aaec22ce8ec0a827a6b6"
+      },
+      "originalMcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-3/original-job-133102584566-response.json",
+        "bytes": 203156,
+        "gitBlob": "e15ee06f97e8af6931c200c2b67e390446310c88",
+        "sha256": "acdb34b100cafb5520e07fecc3fbf8edb636eb01af2c5f53098e32d2f723499f"
+      },
+      "originalZip": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-3/artifact-14199184344.zip",
+        "bytes": 297015,
+        "gitBlob": "60281987bfff3f5228982b102cf9ce6989309467",
+        "sha256": "0e7ecbf78bb78e95ca178f590fb3b11848b93f395da663fb16151163b319506f"
+      },
+      "originalResultJson": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-3/extracted/host-offline-tests-3.json",
+        "bytes": 2189203,
+        "gitBlob": "5a497d4738faf2a7230a586f7ca0238a8aa1b1e4",
+        "sha256": "7194aaf0f1d28693b98e8549c721f06fae29998bb18c11cebb2f8331c1728712"
+      },
+      "originalTee": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-3/extracted/host-offline-tests-3.log",
+        "bytes": 93537,
+        "gitBlob": "01b25a28c9dc949640746a4baf601c1106eda096",
+        "sha256": "5f40eee876eb3e1d953c33823dff32d196583ac9212606be3be4db1ab1a7997f"
+      },
+      "members": [
+        {
+          "member": "host-offline-tests-3.json",
+          "crc32": 2478708992,
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-3/extracted/host-offline-tests-3.json",
+          "bytes": 2189203,
+          "gitBlob": "5a497d4738faf2a7230a586f7ca0238a8aa1b1e4",
+          "sha256": "7194aaf0f1d28693b98e8549c721f06fae29998bb18c11cebb2f8331c1728712"
+        },
+        {
+          "member": "host-offline-tests-3.log",
+          "crc32": 2504733761,
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-3/extracted/host-offline-tests-3.log",
+          "bytes": 93537,
+          "gitBlob": "01b25a28c9dc949640746a4baf601c1106eda096",
+          "sha256": "5f40eee876eb3e1d953c33823dff32d196583ac9212606be3be4db1ab1a7997f"
+        }
+      ],
+      "counts": {
+        "filesTotal": 541,
+        "filesPassed": 538,
+        "filesWhollySkipped": 3,
+        "assertionsTotal": 6263,
+        "assertionsPassed": 6256,
+        "assertionsSkipped": 7,
+        "assertionsFailed": 0
+      },
+      "summaryRows": [
+        " Test Files  538 passed | 3 skipped (541)",
+        "      Tests  6256 passed | 7 skipped (6263)",
+        "   Duration  368.26s (transform 33.38s, setup 19.00s, collect 313.06s, tests 161.39s, environment 127.66s, prepare 37.49s)"
+      ],
+      "originalCommand": [
+        "pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" \\",
+        "  --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' \\",
+        "  --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" \\",
+        "  2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\""
+      ],
+      "sourceRuntimeInstallEvidence": [
+        {
+          "line": 113,
+          "value": "953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        },
+        {
+          "line": 120,
+          "value": "[command]/usr/bin/git checkout --progress --force 953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        },
+        {
+          "line": 183,
+          "value": "953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        },
+        {
+          "line": 301,
+          "value": "node: v26.12.1"
+        },
+        {
+          "line": 365,
+          "value": "Lockfile is up to date, resolution step is skipped"
+        },
+        {
+          "line": 589,
+          "value": "Done in 11.4s using pnpm v11.22.0"
+        },
+        {
+          "line": 630,
+          "value": " RUN  v3.2.6 /home/runner/work/agent-teams-ai/agent-teams-ai"
+        }
+      ],
+      "fullMcpUtf8EqualsRaw": true,
+      "allTeeBytesJoinedAfterOnlyTimestampRemoval": true,
+      "everyAssertionRecountedAndFailureArraysEmpty": true,
+      "assertionArrayDigest": "f08eedbe5df3afe4e36e81f5fe3cd0641521731ff264dd557cc213cf04b737c0",
+      "filePathsAndBlobsExactlyEqualAuthor": true,
+      "nestedSuiteCounters": {
+        "numTotalTestSuites": 1316,
+        "numPassedTestSuites": 1316,
+        "numFailedTestSuites": 0,
+        "numPendingTestSuites": 0,
+        "numTotalTests": 6263,
+        "numPassedTests": 6256,
+        "numFailedTests": 0,
+        "numPendingTests": 7,
+        "numTodoTests": 0
+      }
+    },
+    {
+      "shard": 4,
+      "jobId": 133102584855,
+      "artifactId": 14200641934,
+      "officialJob": {
+        "id": 133102584855,
+        "name": "Offline frontend tests (4/4)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43807841778,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Verify source and capture the original Host test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Prepare original test prerequisites",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run the complete safe frontend shard",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Preserve original test results, including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Post Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19
+          }
+        ]
+      },
+      "officialArtifact": {
+        "id": 14200641934,
+        "name": "host-offline-tests-953fd8a94dc97bcfe89a7a808043dc11843e19d8-4",
+        "size_in_bytes": 317444,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14200641934",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14200641934/zip",
+        "expired": false,
+        "created_at": "2026-11-16T05:37:43Z",
+        "expires_at": "2026-11-30T05:37:43Z",
+        "updated_at": "2026-11-16T05:37:43Z",
+        "digest": "sha256:49ca02feab1796982f7f43edb76a36cccd15901af2eca5bef748c40f645b4bd0",
+        "workflow_run": {
+          "id": 43807841778,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        }
+      },
+      "rawLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-4/job-133102584855.log",
+        "bytes": 190094,
+        "gitBlob": "1f9b07523b5f31110ffc7e7925f730f9d3661314",
+        "sha256": "5acfb9d2e00bf990c20379db12676633ad71cd9d28c4acba87e4d32f0de3b391"
+      },
+      "originalMcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-4/original-job-133102584855-response.json",
+        "bytes": 233837,
+        "gitBlob": "afd9d1f81f4dc3f42c903a882b6811f1d31decee",
+        "sha256": "9f0126651ea8b317f136dbaade0c099a88241bf55e91d0bb4129beeb6c1d39cb"
+      },
+      "originalZip": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-4/artifact-14200641934.zip",
+        "bytes": 317444,
+        "gitBlob": "4158fa0739558f2db7078f9cc3bd6a17bb00c82f",
+        "sha256": "49ca02feab1796982f7f43edb76a36cccd15901af2eca5bef748c40f645b4bd0"
+      },
+      "originalResultJson": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-4/extracted/host-offline-tests-4.json",
+        "bytes": 2329752,
+        "gitBlob": "d641a6b4c02a655f3ffdb6882befe7f3e4ae2813",
+        "sha256": "623d558849c509b35de45812892b3725c2abbd420ee344dda43073cfc6e2c96b"
+      },
+      "originalTee": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-4/extracted/host-offline-tests-4.log",
+        "bytes": 116538,
+        "gitBlob": "fd7a28b22e8b905d6407ac9987b051ebc0bd1261",
+        "sha256": "3fd8cf0c7e2b4bccb1d2115938f2895af501aed9a7fe867e9184348326b6f573"
+      },
+      "members": [
+        {
+          "member": "host-offline-tests-4.json",
+          "crc32": 2302671058,
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-4/extracted/host-offline-tests-4.json",
+          "bytes": 2329752,
+          "gitBlob": "d641a6b4c02a655f3ffdb6882befe7f3e4ae2813",
+          "sha256": "623d558849c509b35de45812892b3725c2abbd420ee344dda43073cfc6e2c96b"
+        },
+        {
+          "member": "host-offline-tests-4.log",
+          "crc32": 696348908,
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-4/extracted/host-offline-tests-4.log",
+          "bytes": 116538,
+          "gitBlob": "fd7a28b22e8b905d6407ac9987b051ebc0bd1261",
+          "sha256": "3fd8cf0c7e2b4bccb1d2115938f2895af501aed9a7fe867e9184348326b6f573"
+        }
+      ],
+      "counts": {
+        "filesTotal": 539,
+        "filesPassed": 537,
+        "filesWhollySkipped": 2,
+        "assertionsTotal": 6621,
+        "assertionsPassed": 6614,
+        "assertionsSkipped": 7,
+        "assertionsFailed": 0
+      },
+      "summaryRows": [
+        " Test Files  537 passed | 2 skipped (539)",
+        "      Tests  6614 passed | 7 skipped (6621)",
+        "   Duration  315.31s (transform 30.18s, setup 13.72s, collect 258.53s, tests 196.38s, environment 79.41s, prepare 24.93s)"
+      ],
+      "originalCommand": [
+        "pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" \\",
+        "  --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' \\",
+        "  --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" \\",
+        "  2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\""
+      ],
+      "sourceRuntimeInstallEvidence": [
+        {
+          "line": 113,
+          "value": "953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        },
+        {
+          "line": 120,
+          "value": "[command]/usr/bin/git checkout --progress --force 953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        },
+        {
+          "line": 141,
+          "value": "953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        },
+        {
+          "line": 259,
+          "value": "node: v26.12.1"
+        },
+        {
+          "line": 321,
+          "value": "Lockfile is up to date, resolution step is skipped"
+        },
+        {
+          "line": 545,
+          "value": "Done in 10.6s using pnpm v11.22.0"
+        },
+        {
+          "line": 586,
+          "value": " RUN  v3.2.6 /home/runner/work/agent-teams-ai/agent-teams-ai"
+        }
+      ],
+      "fullMcpUtf8EqualsRaw": true,
+      "allTeeBytesJoinedAfterOnlyTimestampRemoval": true,
+      "everyAssertionRecountedAndFailureArraysEmpty": true,
+      "assertionArrayDigest": "12fd1655a6bdb6445eea37c7ded21241d2b4503b92bb3f03605523f33a23a26a",
+      "filePathsAndBlobsExactlyEqualAuthor": true,
+      "nestedSuiteCounters": {
+        "numTotalTestSuites": 1349,
+        "numPassedTestSuites": 1349,
+        "numFailedTestSuites": 0,
+        "numPendingTestSuites": 0,
+        "numTotalTests": 6621,
+        "numPassedTests": 6614,
+        "numFailedTests": 0,
+        "numPendingTests": 7,
+        "numTodoTests": 0
+      }
+    }
+  ],
+  "all38SkippedAssertions": [
+    {
+      "path": "test/scripts/opencodeNativeTestNode.test.ts",
+      "name": "TEST Node dependency staging without execution accepts a real inherited-ACL-style Windows metadata transition on the owned fake copy",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/ipc/review.test.ts",
+      "name": "review IPC path confinement authorizes a saved case-only rename path through its published transaction target",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "name": "actual app client / packaged Windows runtime (Unavailable: actual Windows execution is required) backfills empty, attributed history, and duplicate replay: ascii",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "name": "actual app client / packaged Windows runtime (Unavailable: actual Windows execution is required) backfills empty, attributed history, and duplicate replay: spaces",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "name": "actual app client / packaged Windows runtime (Unavailable: actual Windows execution is required) backfills empty, attributed history, and duplicate replay: unicode",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeTaskLogStreamSource.fixture-e2e.test.ts",
+      "name": "OpenCodeTaskLogStreamSource real OpenCode fixture e2e reads native persistence through the actual SDK read-only reader and projector without preparing a profile",
+      "status": "skipped"
+    },
+    {
+      "path": "test/scripts/opencodeNativeRealTaskPrompt.test.ts",
+      "name": "cross-shell Windows verifier invocation executes the unchanged verifier in PowerShell and cmd",
+      "status": "skipped"
+    },
+    {
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "name": "applyElectronDevPathOverrides uses absolute APPDATA when Electron cannot return appData before ready on Windows",
+      "status": "skipped"
+    },
+    {
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "name": "applyElectronDevPathOverrides uses regular APPDATA when userData is unavailable before Windows Electron ready",
+      "status": "skipped"
+    },
+    {
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "name": "applyElectronDevPathOverrides rejects a case-only alias of a nonexistent legacy profile",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/ReviewFileTransaction.safe-e2e.test.ts",
+      "name": "review file transaction safe E2E classifies a published equal-content case-only Undo using its owned inode",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "name": "Windows CLI shell fallback round trip preserves adversarial argv through execCli for a spaced non-ASCII executable path",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "name": "Windows CLI shell fallback round trip preserves adversarial argv through spawnCli for a spaced non-ASCII executable path",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "name": "Windows CLI shell fallback round trip preserves adversarial argv through a batch launcher that forwards %*",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "name": "Windows CLI shell fallback round trip preserves safe argv through batch parameter modifiers",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "name": "Windows CLI shell fallback round trip rejects shell syntax before a batch launcher can reparse positional arguments",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "name": "shellEnv actual installed shells zsh reads real login and interactive startup exports with exact edge values",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "name": "shellEnv actual installed shells zsh ignores startup banners and accepts a completed dump before a failing real logout",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "name": "shellEnv actual installed shells zsh falls back from a failing real login profile to the real interactive rc",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "name": "shellEnv actual installed shells zsh keeps its framing independent of an rc-defined printf function",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "name": "shellEnv actual installed shells zsh keeps its framing independent of an rc-defined printf alias",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts",
+      "name": "OpenCode nvm-windows runtime resolution safe e2e selects the native OpenCode executable behind an nvm cmd shim",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+      "name": "Team runtime memory safe e2e reports RSS for a bootstrap-confirmed Anthropic teammate discovered from the real process table",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+      "name": "Team runtime memory safe e2e reports RSS for a real Anthropic teammate CLI process",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/windowsProcessProbe.integration.test.ts",
+      "name": "real Windows process identity readers observes this Node process through both table transports and its birth reader",
+      "status": "skipped"
+    },
+    {
+      "path": "test/features/member-work-sync/main/JsonMemberWorkSyncReportJournal.test.ts",
+      "name": "strict JSON report journal returns commit_unknown if a Windows retry cannot sync the existing journal file",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/runtime/AnthropicAutoShellEnv.safe-e2e.test.ts",
+      "name": "Anthropic Auto GUI shell safe e2e uses the native runtime to authenticate a cold shell configuration and infer with both models",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeReviewPickup.live.tmp.test.ts",
+      "name": "OpenCode review pickup live e2e delivers review pickup when the current unread review request is still in the foreground inbox",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/ReviewApplierService.test.ts",
+      "name": "ReviewApplierService ledger canonical-equivalent rename keeps the sole inode on a real temporary filesystem",
+      "status": "skipped"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.ollama-live.test.ts",
+      "name": "OpenCodeLocalProviderConnector live Ollama probes, configures into a sandbox, and keeps the catalog model after an empty overlay",
+      "status": "skipped"
+    },
+    {
+      "path": "src/main/services/infrastructure/codexAppServer/__tests__/CodexBinaryResolver.real.test.ts",
+      "name": "CodexBinaryResolver live local Codex smoke resolves and versions the current local Codex binary",
+      "status": "skipped"
+    },
+    {
+      "path": "test/scripts/fixtures/opencodeProofBoundary.test.ts",
+      "name": "preserves wrapper ownership across real Vitest setup",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "name": "tmux installer macOS host e2e resolves the current host as native macOS",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "name": "tmux installer macOS host e2e chooses Homebrew as the macOS install strategy on this machine",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "name": "tmux installer macOS host e2e finds the real tmux binary on this macOS host",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "name": "tmux installer macOS host e2e reports tmux as runtime-ready for the live macOS host path",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "name": "tmux installer macOS host e2e keeps the current platform on the tmux runtime path",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "name": "tmux installer macOS host e2e runs a real isolated tmux session on macOS and executes a shell command in it",
+      "status": "skipped"
+    }
+  ],
+  "sevenWhollySkippedFiles": [
+    "test/main/utils/childProcess.windows.test.ts",
+    "test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+    "test/main/utils/windowsProcessProbe.integration.test.ts",
+    "test/main/services/team/OpenCodeReviewPickup.live.tmp.test.ts",
+    "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.ollama-live.test.ts",
+    "test/scripts/fixtures/opencodeProofBoundary.test.ts",
+    "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts"
+  ],
+  "guardSourceReview": {
+    "previousIndependentGuardReport": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/frontend-all-shards/independent-skip-source-review.json",
+      "bytes": 61944,
+      "gitBlob": "d150760c64a8b89c3a45927dbf713c826b906396",
+      "sha256": "075a80490cd42f308e676300022e5a00793aee5b84bcc71a9424128f6800c3e4"
+    },
+    "all20CurrentGitBodiesExactlyEqualIndependentlyReviewedMAndN": true,
+    "everyGuardLineRejoined": true,
+    "unexecutedVendorBoundary": {
+      "liveCodexBody": "SKIPPED: the opt-in live resolver and resolveVersion calls did not execute as a passing assertion. Passing synthetic neighbors deliberately run an owned shell fixture reporting99.0.0; fake-version work is not real Codex qualification.",
+      "liveClaudeBodies": "SKIPPED: real Anthropic CLI RSS and native runtime inference did not execute as passing assertions. Other skipped RSS uses Node, while nine passing Auto-shell cases use a generated Node runtime/local HTTP fixture.",
+      "moduleRegistrationAndHooks": "Reviewed test/setup.ts and live-file registration/critical helper/resolver boundaries. Global setup performs filesystem/sandbox/mock work, not a global no-spawn guard. it.skip/describe.skip does not universally suppress module imports, registration or neighboring passed tests.",
+      "scopeLimit": "No complete runner/process census or all transitive imports audited here. This report does not certify zero real-vendor processes anywhere across25822 passed assertions/all prerequisites, and promotes no skipped/live/excluded/native test to PASS."
+    }
+  },
+  "originalModels80ActualPassed": {
+    "source": {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 180091,
+      "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+    },
+    "shard": 2,
+    "assertionNames": [
+      "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'connect' (null, full=false)",
+      "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=false)",
+      "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=true)",
+      "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'forget' (null, full=false)",
+      "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=false)",
+      "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=true)",
+      "useRuntimeProviderManagement skips unsupported shared directory reads after connect without a refresh warning",
+      "useRuntimeProviderManagement skips unsupported shared directory reads after forget without a refresh warning",
+      "useRuntimeProviderManagement cancels all active probe attempts when startConnect closes the picker",
+      "useRuntimeProviderManagement cancels all active probe attempts when startReconnect closes the picker",
+      "useRuntimeProviderManagement cancels all active probe attempts when closeModelPicker closes the picker",
+      "useRuntimeProviderManagement cancels all active probe attempts when switchProvider closes the picker",
+      "useRuntimeProviderManagement stops only one probe and ignores its late response after immediate restart",
+      "useRuntimeProviderManagement keeps the probe running when stop is rejected",
+      "useRuntimeProviderManagement uses a clicked model as the app default for new teams without a global success banner",
+      "useRuntimeProviderManagement opens only the public GitHub device-login URL from OAuth progress",
+      "useRuntimeProviderManagement passes projectPath to the runtime provider management API",
+      "useRuntimeProviderManagement defers the full managed view until explicitly requested",
+      "useRuntimeProviderManagement opens a deep-linked provider setup after the directory row is ready",
+      "useRuntimeProviderManagement reloads a requested Models view when native runtime identity settles",
+      "useRuntimeProviderManagement reopens a pending deep-linked Connect when native runtime identity settles",
+      "useRuntimeProviderManagement hydrates the full provider directory without a catalog refresh",
+      "useRuntimeProviderManagement keeps summary providers when the full catalog comes back empty",
+      "useRuntimeProviderManagement paints same-scope curated cache while summary IPC is pending and retains errors",
+      "useRuntimeProviderManagement never emits a previous-project provider in the transition render",
+      "useRuntimeProviderManagement does not project cached summary credentials into another project or global scope",
+      "useRuntimeProviderManagement recovers directory support when a newer OpenCode runtime replaces an unsupported one",
+      "useRuntimeProviderManagement ignores a pre-mutation directory response without changing the project",
+      "useRuntimeProviderManagement masks cached rows and ignores pending responses when the OpenCode binary changes",
+      "useRuntimeProviderManagement reopens a cached full catalog without flashing the 16-provider summary",
+      "useRuntimeProviderManagement does not replace the cached full catalog with search results",
+      "useRuntimeProviderManagement reuses setup while preserving the connected auth method for reconnect",
+      "useRuntimeProviderManagement keeps provider search local until full-catalog search is explicitly requested",
+      "useRuntimeProviderManagement clears structured errors and stale provider state when disabled",
+      "useRuntimeProviderManagement ignores pending directory and setup-form responses after being disabled",
+      "useRuntimeProviderManagement ignores stale provider views after project context changes",
+      "useRuntimeProviderManagement reissues a requested view after temporary project-context hydration",
+      "useRuntimeProviderManagement restarts provider directory loading when project context changes while loading",
+      "useRuntimeProviderManagement drops stale model probe results after project context changes",
+      "useRuntimeProviderManagement drops stale set-default responses after project context changes",
+      "useRuntimeProviderManagement clears pending provider save state after project context changes",
+      "useRuntimeProviderManagement refreshes view and catalog after forgetting managed auth while local auth remains",
+      "useRuntimeProviderManagement refreshes the view and catalog after a confirmed connection",
+      "useRuntimeProviderManagement keeps provider data visible during catalog refresh",
+      "useRuntimeProviderManagement lazy-loads provider directory and ignores stale search responses",
+      "useRuntimeProviderManagement keeps the API key draft when provider connect fails",
+      "useRuntimeProviderManagement explains Copilot model access separately from GitHub authentication",
+      "useRuntimeProviderManagement keeps setup form diagnostics available when submit is attempted after form load failure",
+      "useRuntimeProviderManagement submits a supported setup form without a secret as a null API key",
+      "useRuntimeProviderManagement keeps OpenCode API connect pending beyond the old UI deadline: late-success",
+      "useRuntimeProviderManagement keeps OpenCode API connect pending beyond the old UI deadline: timeout",
+      "useRuntimeProviderManagement keeps setup open when the backend does not confirm a connected provider",
+      "useRuntimeProviderManagement keeps the actual API credential hint when xAI refresh fails after connect",
+      "useRuntimeProviderManagement refreshes provider status after a cancelled OAuth child settles",
+      "useRuntimeProviderManagement preserves the full slow model-picker allowance: complete",
+      "useRuntimeProviderManagement preserves the full slow model-picker allowance: timeout",
+      "useRuntimeProviderManagement clears model loading when switching from model picker to setup form",
+      "useRuntimeProviderManagement debounces provider model search and groups superseded picker requests",
+      "useRuntimeProviderManagement keeps Test results across a debounced catalog search reload",
+      "useRuntimeProviderManagement appends paged provider models without duplicates",
+      "useRuntimeProviderManagement tracks concurrent model probes independently",
+      "useRuntimeProviderManagement drops stale model probe results after leaving the model picker",
+      "useRuntimeProviderManagement refreshes global provider status after a current model test (ok=true)",
+      "useRuntimeProviderManagement refreshes global provider status after a current model test (ok=false)",
+      "useRuntimeProviderManagement records an empty model test response as a row failure and refreshes provider status",
+      "useRuntimeProviderManagement preserves successful model verification when its global status refresh rejects",
+      "useRuntimeProviderManagement does not refresh global status from a model test after project change",
+      "useRuntimeProviderManagement does not refresh global status from a model test after unmount",
+      "useRuntimeProviderManagement keeps failed model probes scoped to the model result instead of a global success banner",
+      "useRuntimeProviderManagement keeps structured runtime endpoint diagnostics on the model result",
+      "useRuntimeProviderManagement keeps the model-test UI watchdog outside the runtime probe transport budget",
+      "useRuntimeProviderManagement promotes structured model probe failures to the global diagnostics alert state",
+      "useRuntimeProviderManagement keeps successful model probes scoped to the model card instead of a global success banner",
+      "useRuntimeProviderManagement saves a default without probing or fabricating verified model state",
+      "useRuntimeProviderManagement keeps the effective project default selected when an all-projects default is shadowed",
+      "useRuntimeProviderManagement preserves project-scoped access evidence after a neutral all-projects probe",
+      "useRuntimeProviderManagement does not clear a project override before the bundled runtime supports scoped defaults",
+      "useRuntimeProviderManagement clears a valid project override with a compatible bundled runtime",
+      "useRuntimeProviderManagement keeps the clear-project watchdog beyond the 300-second main-process timeout",
+      "useRuntimeProviderManagement does not clear project B while its view is still refreshing after switching from A"
+    ],
+    "count": 80
+  },
+  "configAndCommandUnchangedFromN": true,
+  "actualRuntime": {
+    "frontendNode": "26.12.1",
+    "capturedHostNode": "24.21.0",
+    "pnpm": "11.22.0",
+    "Vitest": "3.2.6",
+    "originalDefaultTestTimeoutMs": 15000
+  },
+  "originalCliExclusions": [
+    "**/*.live.test.*",
+    "**/*.live-e2e.test.*",
+    "**/*.native.test.*"
+  ],
+  "currentExcludedFileCount": 34,
+  "proseReadInFullAndMatchesOriginalRecords": true,
+  "findings": [],
+  "limits": [
+    "Source953 exact original four jobs; no replacement/narrowing/replay. These original frontend assertions do not execute the dormant Models overlap regressions or P11/Cross proposals.",
+    "All38 skips are skipped, not passed; all three CLI exclusion patterns remain unqualified. Original observed guard branch is established, but individual false operands of compound environment/filesystem conditions are not invented.",
+    "Fresh Git file identity and complete original JSON recount are not a semantic review of every one of25822 test bodies or transitive implementation imports.",
+    "Reviewed skipped live Codex resolver/version and real Claude native/RSS bodies are unexecuted. Passing synthetic neighbors and finite local fixtures are separate; this does not certify zero real-vendor processes anywhere in the entire runner without a complete process census.",
+    "Nested JSON suite totals are not physical file counts. Actual physical testResults and original reporter summaries support2155passed/7whollyskipped files.",
+    "Frontend Node26.12.1 is separate from captured Host Node24.21.0. No overall native/Desktop/provider/auth/release/default-activation or merge qualification follows.",
+    "No project test/compiler/lint/install/provider/native actor or CI replay/source/ref mutation executed by this reviewer. Only existing original files, ZIP/JSON and immutable Git bytes were read."
+  ]
+}

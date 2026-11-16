@@ -1,0 +1,256 @@
+{
+  "sourceHead": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "artifactId": 14200707054,
+  "archive": {
+    "file": "artifact-14200707054.zip",
+    "bytes": 1142588,
+    "blob": "f8362aa5dfb8db40e2fddd45b1405a715ae75d9b",
+    "sha256": "f0d62b1f88564a500072569a4b2c1d373ffe36fc0db18b6f4332e7d944abd3ee"
+  },
+  "officialMetadata": "../official-host-artifacts-0546.json",
+  "officialDigestEqual": true,
+  "allSafeUniquePaths": true,
+  "allCRCsValid": true,
+  "members": [
+    {
+      "name": "TEST-desktop-backend-87C2oK/TEST-codex-install/registry.ndjson",
+      "crc32": "c6f43bd4",
+      "bytes": 1663,
+      "blob": "2b93887af95d65ed9470e4ae05f7a8b1ed07d87b",
+      "sha256": "16afe0437813e00365e3f15209cb5e1ebf944bd463a40b018f483c06e2026a62"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/TEST-codex-install/invocations.ndjson",
+      "crc32": "3410ee15",
+      "bytes": 15724,
+      "blob": "391beeb541e44f5848c8d3dd52f2404dd20ad20b",
+      "sha256": "056b65d141ce135ef964466eb569039bae23aaca91b3daa70979c88f1d1e659f"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/TEST-peer-codex-scope/effects.ndjson",
+      "crc32": "45d825d6",
+      "bytes": 16215,
+      "blob": "70c17a4b12bfc1a6d5960b7e9e06470734573aa8",
+      "sha256": "6a4d847b9b8a08767e73b79b49ca1c8503e29287dda2eb316712319e64d87a7b"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/desktop-app.log",
+      "crc32": "924c4726",
+      "bytes": 21025,
+      "blob": "05096c85987a3709e139bb1c4b993a851de57e86",
+      "sha256": "e58a6263d9933918d6220fe6ef99f7a8ec1e5efc5ae4ebc076b0e36803526509"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/desktop-backend-receipt.json",
+      "crc32": "c719143c",
+      "bytes": 846452,
+      "blob": "b6d5f337750d4f57e4412837b431f0eebbbbb57e",
+      "sha256": "2aeb2b0ddc743d9ddaeedff29ae008bf9d313f917f970112630305bd36b4d446"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/host-profile.json",
+      "crc32": "0c0dd690",
+      "bytes": 7471,
+      "blob": "742b9b46c23cccfa1970c8dd362f7c178969e128",
+      "sha256": "3a72ea3bb6eb9cb33795a2bb7d209609296fc9d73e5c0e18646df0ba3c23c7ba"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/desktop-descriptor.json",
+      "crc32": "edfc11f5",
+      "bytes": 2664,
+      "blob": "06b69595f2ae4ec9d00fae8d7008ec8177d4390a",
+      "sha256": "aa46521f6382de3c0ca5d50b3bd103b8f21bdddadb0d2a1ae3606e0e7ccacdf5"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/hoststore/management-commands/41dc348c56d1ce957568790efe6a4747736fa91c00bbdc917c8dcabb085bbdbd.json",
+      "crc32": "d1dfbf67",
+      "bytes": 904,
+      "blob": "364f5d4ee7a94188201948c76fce58819e0d2cee",
+      "sha256": "f055f9522cef1d3f417ea93fd8c54ce70317fd94e7e26f77b0e1d9ccc8fc0de3"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/hoststore/management-commands/44643ab296496c6b4f012684b5a0ca3838343312f5973be9f0fb859e76bb7d58.json",
+      "crc32": "e2d32aac",
+      "bytes": 923,
+      "blob": "e94caaa8d0378fba8131f3d6b102989d7665c79a",
+      "sha256": "6e1308e4459d14a384604bbd441df5476cd8d29765dfc591b2b25a870ece1b0d"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/hoststore/management-commands/60066e5b60aedb058e9e533c61a702ec80ce900bd8c727928b6816c51ede1b04.json",
+      "crc32": "4035ef25",
+      "bytes": 2297,
+      "blob": "ee3ec2612af51bcb86e392d083abc135dcdb2826",
+      "sha256": "ffad4058a7e3d5e4df9ed65ba8f62549f040544da6b88986e7dc34870efb42bc"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/hoststore/management-commands/6488c9909fcb821ac54bc41f5f8c965b65703c33924c263bea2b087a32af07a1.json",
+      "crc32": "1e20c7a3",
+      "bytes": 929,
+      "blob": "25894c23b6b43591429a947925270e7fdf85dafd",
+      "sha256": "fc8fe6645c763997b3dfe80281ea6615c84ae1be1a7bc052eae9f7f6f1b1fba7"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/hoststore/runtime-checkpoints/cp1-2acebd7ba077bd61f79352f150943036eb8174120cffa420d657a96ae61d462c.json",
+      "crc32": "342f3bb1",
+      "bytes": 2319,
+      "blob": "dde7a1707937e45ed91970b6581bfc224257bb86",
+      "sha256": "384089a8418d99b82c8aaa9a0ea940260b07792794b6ef6c9e6aa9190694ab41"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/hoststore/runtime-checkpoints/cp1-3c88a625e81591557e61f751d2c0971edd62ea9a84f27c25ecc1e97dfc0e5455.json",
+      "crc32": "a128abc5",
+      "bytes": 1895,
+      "blob": "d01251716570fa61bcea392d0ffc4c3834c6fd86",
+      "sha256": "6022d3e8daf93430a80e02f0c377996cf15d9a132ec07857486415a9a0d4be30"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/hoststore/runtime-sources/index.json",
+      "crc32": "f6e912a1",
+      "bytes": 1687,
+      "blob": "de723feec0300c79b22bcd4858a568fa61e3bc44",
+      "sha256": "bf94124bdb524c17257f0cc0017294c38322e247b92049578ecfa2d3781e3ea0"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+      "crc32": "db4ac1f5",
+      "bytes": 453,
+      "blob": "1d1753a1d68fb18410a82b1f61ab984877ae8071",
+      "sha256": "082b62ef00615db345d45138934adb28c81db29e07e7ea3808d094a1eb51b701"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/sentinel-invocations.ndjson",
+      "crc32": "9fc3bdb4",
+      "bytes": 96,
+      "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/hoststore/teams/test-selection-next-team/inboxes/team-lead.json",
+      "crc32": "33faac71",
+      "bytes": 202,
+      "blob": "1cfb0bb2695b38ad2478765a3d3bed0c1fca9f8b",
+      "sha256": "6b0b82f5feb6e955fe7765e8415b18024a59277efa88948b71e7015c5e13d024"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/ui-emulated-selection-a-launch.png",
+      "crc32": "7c5ff1a5",
+      "bytes": 88524,
+      "blob": "f252ce46b73583d11ee9d9f9c9219e8b809fe91b",
+      "sha256": "46256e32f631306005e15b91e47024f5b1ce8fc2d8bf3de548e7be9e6b09ed12"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/ui-emulated-selection-a-survived.png",
+      "crc32": "253c7f41",
+      "bytes": 103900,
+      "blob": "d1b07e267a4aa30d28a2d7edb9a6e03f1252a670",
+      "sha256": "5d538eed5eb8f41fc38616fb905670cb0df7d0e582924dbd27ad96489d7f14ec"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/ui-emulated-selection-b-launch.png",
+      "crc32": "da1f4efc",
+      "bytes": 84687,
+      "blob": "fbf7dcc5e0fbdd773b1a6d933ab80d09c82ae791",
+      "sha256": "68b64c96f4d3b7be3835a75e77ffcd90256b551c96471ea6d408f34f787dc138"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/ui-emulated-selection-completed.png",
+      "crc32": "24e47bea",
+      "bytes": 108401,
+      "blob": "277d539cc0e49026e02fcddb865c4c99b201cbaf",
+      "sha256": "2b3d1df3a7bad31449d50afdfc4ac12ed5463813cef54b7542b75c9a1df92a60"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/ui-emulated-selection-effects.json",
+      "crc32": "101cb9ab",
+      "bytes": 22971,
+      "blob": "d75e6c19a80e53217145d73e4948ba4bf5515913",
+      "sha256": "8c727ea909b74d2961693e4979d81e6d7289fef689afccaa2f8ef70bbc414635"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/ui-emulated-selection-installer-before.png",
+      "crc32": "f4ea2d9b",
+      "bytes": 70093,
+      "blob": "5984ce068bb3c7088fad6c6e3c939ec66e82b514",
+      "sha256": "2789327fc9d5f94bfc26ba528b9ba56678f02fd2910850a9fb6f0a6e9e4cf179"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/ui-emulated-selection-installer-ready.png",
+      "crc32": "3cef5db3",
+      "bytes": 67212,
+      "blob": "df9c3e2307873e30af904733afaca97f657c0c29",
+      "sha256": "919045d00a866fcd6dd48ebf867c5041ea0b9432db4757093d135d9ebedf3c6f"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/ui-emulated-selection-installer-settings-dialog.png",
+      "crc32": "5205996f",
+      "bytes": 91558,
+      "blob": "5a4326f77fab729a3d0ef3de193d5f51d002e838",
+      "sha256": "343cca845370f5b6682734b71ce0caf72dc698ea81d7eab7050bbc5bc4564f76"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/ui-emulated-selection-installer-settings-page.png",
+      "crc32": "0adc40ff",
+      "bytes": 87005,
+      "blob": "f902d760f46b61019eb1e2253605fb71125c02f9",
+      "sha256": "4821d32b89c15b05aa5ea8656f4168f3f78ab7099c06fef7d368be5fd81dec1a"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/ui-emulated-selection-reloaded.png",
+      "crc32": "5c2217e3",
+      "bytes": 76063,
+      "blob": "33901f773bb218e793e7d212dd89df6161b02846",
+      "sha256": "d294c9ccced945c09ddab2eab1db4c586b4d9de92d7fa86646478fbe79b1ab9d"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/ui-seed-receipt.json",
+      "crc32": "66a422e0",
+      "bytes": 2335,
+      "blob": "3426b4fccca76ea9b4a992b677a5f4a23df7a3c8",
+      "sha256": "26fe2e380484b72a4cf3baf195dda872d485918e3c93db857dad402074ed41d8"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/ui-emulated-selection-selected.png",
+      "crc32": "4c24863c",
+      "bytes": 70761,
+      "blob": "74baba4d63df18724035aeff060c67fc264c0639",
+      "sha256": "8850aabc1c06e4a177f23696417ec311c8f6ddec3f93efe9c9dea88194a5ca33"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/ui-emulated-selection-stopped.png",
+      "crc32": "284483a2",
+      "bytes": 95172,
+      "blob": "b20015e12fa4d416afe083d35be1823cfe74a6c5",
+      "sha256": "1fbf485f40f6ec61551ffc76e17d3bb9c244708530a5900495ea5559f17acd87"
+    },
+    {
+      "name": "TEST-desktop-backend-87C2oK/userData/data/runtimes/codex/current.json",
+      "crc32": "80c035c4",
+      "bytes": 502,
+      "blob": "ee0a86d5605b6411069945dc4c08b43c6b97f937",
+      "sha256": "d38efa5e0f2398c24ed7441940e606064b28069484e2c668af6063041d0911ff"
+    },
+    {
+      "name": "host-emulated-emulated-installer-ui.log",
+      "crc32": "fe029509",
+      "bytes": 227,
+      "blob": "5ceb62410e78a5054d321deac14f8101eb04d9d3",
+      "sha256": "0c03dbf6c253ca89755da497fc9f1b50aab32f5211a5ac04d8384343efcf0423"
+    },
+    {
+      "name": "host-emulated-inputs.json",
+      "crc32": "90bfecc0",
+      "bytes": 1055,
+      "blob": "7bf318b53aefc6917bbb69b63b617fa388860258",
+      "sha256": "c9ee08570e7acff4d35e477bba2868e53baed6c7c20d3b7af24ef09779f5c036"
+    },
+    {
+      "name": "host-emulated-summary.json",
+      "crc32": "181edb20",
+      "bytes": 1355,
+      "blob": "23eba56a3bd196be4d6bee25d3dbade38fbddd5c",
+      "sha256": "f08f5f0f754a8c33b92a9ab8a04ae887bdff28cc74ac42e2cdfc3054d4e21f27"
+    }
+  ],
+  "executedArtifact": false,
+  "visualReview": "not yet performed"
+}

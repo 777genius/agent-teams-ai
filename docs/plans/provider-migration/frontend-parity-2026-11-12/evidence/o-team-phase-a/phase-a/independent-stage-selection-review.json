@@ -1,0 +1,127 @@
+{
+  "schema": "independent-phase-A-current-prerequisite-and-selection-review-v1",
+  "reviewer": "migration_scope",
+  "reviewedAtUTC": "2026-11-16T05:44:50.971098+00:00",
+  "result": "APPROVE exact selection text and prerequisite attribution; publication manifest/tree not yet reviewed",
+  "selection": {
+    "path": "phase-a-composition-8a/root-stage-selection.md",
+    "bytes": 4294,
+    "blob": "e22b118863a2de1dccd329a07cc8e746cba26a68",
+    "sha256": "0e16968ef0188e2b428c487cfae297e3033b1b9678ca31e5929a2263559981d1"
+  },
+  "sourceCompositionPriorIndependentReview": {
+    "path": "phase-a-composition-8a-independent-review.json",
+    "bytes": 32718,
+    "blob": "820b01f3e773beaeb13f7d58d07d1910cdcdaa29",
+    "sha256": "ecf37e3b8fd8890bfe38e14dfe9fb9f1201885fd7888b263566ba414aa9cd3f7"
+  },
+  "actualOIndependentGateReview": {
+    "path": "ci-o-953fd8/team/independent-team-gate-review.json",
+    "bytes": 141243,
+    "blob": "d3b305bf5171ef4824774d4004afc4a5f6d2cf34",
+    "sha256": "23e64b4ac2f1c6803bf8ac5c85eaff376319a0957513a3553fb1df2dbc351e7f"
+  },
+  "actualOIndependentCompleteReview": {
+    "path": "ci-o-953fd8/team/independent-team-complete-review.json",
+    "bytes": 63859,
+    "blob": "dd09ec7be717e7e3a77714873a4d86bfedf032d0",
+    "sha256": "5aafc6524e57258a6b63d5c62f1576aaf82d17d8a2644d4615e232a3f31f0a84"
+  },
+  "canonicalAuthorV2": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/team/Plan29-appendix-v2.md",
+    "bytes": 6824,
+    "gitBlob": "9e70f4a78c7e52f66023168026a33e2e1621371a",
+    "sha256": "d60b501f4cf030a9ddb818d9d7b84eb92a0096a6f3228fece7f877503183cbee"
+  },
+  "base": "8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2",
+  "originalResultSource": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "fullBaseLeafCount": 10922,
+  "nonDocumentationCount": 8798,
+  "freshAllNonDocumentationLeavesEqual": true,
+  "nonDocumentationMapSha256": "8a6dbb7ecf9104b2ad570c2ae2c75f333fc28a34cae493b93d4973fd9c2c11ab",
+  "basePlanPrefix": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "bytes": 1671412,
+    "blob": "a5e9add789857cd3d88f6ae8d33eefee6a4c190a",
+    "sha256": "9a42c3986e94a63e0c8bfc148606fb05bc03b5f996fca8f38b3c4d6632212595"
+  },
+  "actualPrerequisite": {
+    "original177And24Actual": true,
+    "workspaceTypesAndDedicatedBackendTypesCompleted": true,
+    "typedMainRendererFeaturesMcpCompleted": true,
+    "fast93OrderedSourceInputs": true,
+    "retainedWarnings": [
+      5,
+      3338,
+      1416,
+      1483,
+      4
+    ],
+    "allErrorsZero": true,
+    "silentCompilerCompletionByOriginalFailClosedSerialContinuation": true,
+    "noInventedPerCompilerDuration": true,
+    "helper": {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "bytes": 8310,
+      "gitBlob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7",
+      "lines": 172
+    },
+    "renderer": {
+      "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "bytes": 8707,
+      "gitBlob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+      "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10",
+      "lines": 264
+    },
+    "stderrTest": {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "bytes": 16103,
+      "gitBlob": "0727339627757c3a96d54da2933eb7c1b60685f7",
+      "sha256": "2a738fca4120ae3361483abd948f7746d2025f32012b189e695085845bc3e191",
+      "lines": 277
+    },
+    "selected1757HostSubset": 586,
+    "separateFullTrackedHostSourceCount": 619,
+    "sourceCensusNotFullInstalledOutputCensus": true
+  },
+  "selectionOrderPreserved": [
+    "Actual original O prerequisite now closed, only for source953; 8a has exact same8798 non-doc leaves.",
+    "Publish exact Models analysis/v1 correction/current composition/actual original proof; independent actual published bytes and fresh expected-parent/source guards remain required.",
+    "Apply only two existing test-file replacements; no production/workflow/configuration/roster/cap change.",
+    "Use two unchanged independent original CI venues; Models six failure/four control and P11 three failure/one control remain predictions, not execution.",
+    "Preserve both actual semantic RED venues before source advance that could cancel useful opposite work; setup/build/type/import/cancellation/timeout cannot substitute.",
+    "Each later correction/composed B needs fresh exactR1/R2 and published ordering; P11 C remains deferred."
+  ],
+  "publisherSourceOnlyInspection": {
+    "identity": {
+      "path": "stage-o-team-and-phase-a-plan/prepare.py",
+      "bytes": 7992,
+      "blob": "7425e66c5067244044480c6b896b965b8f0ff8c7",
+      "sha256": "488de67d76fdc2c3c9255ba18e69e5ba93ccaeeeed33ffc4bcd7d272686766c1"
+    },
+    "executed": false,
+    "baseExpected": "8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2",
+    "fullPrefixRequired": true,
+    "newFilesExclusiveWrites": true,
+    "allNonDocsIdentityAssertion": true,
+    "allPriorLeavesOtherThanPlanPreservedAssertion": true,
+    "pureTreeHashPresent": true,
+    "maximumRelativePathCharacters": 216,
+    "remainingChecksAtFreeze": [
+      "Final exact input set and all original-to-copy identity mappings.",
+      "Preview .ts.txt/.yml.txt placements without application or project-source inclusion.",
+      "Every ZIP member recovery and canonical versus historical/RAW labels.",
+      "Exact complete Plan prefix and every appendix/bridge offset.",
+      "Full leaf map/Merkle and fresh route/expected-parent before publication."
+    ]
+  },
+  "findings": [],
+  "limits": [
+    "This is an exact source/order/prerequisite join using already independent original semantic reports, not a duplicate new Team UI/native execution audit.",
+    "No nonexistent/unfrozen publication manifest, input set or tree approved; no permission inferred to run builder.",
+    "No future A actualRED or resulting-sourceGREEN claim, no old O result transferred to new test source.",
+    "Original UI artifact/useful executing cohort preservation and Draft/base/no realvendor/no localproject execution restrictions remain.",
+    "No source, ref, CI, fetch, project/compiler/test/provider/native execution occurred; only read-only Git/evidence and this exclusive scratch report write."
+  ]
+}

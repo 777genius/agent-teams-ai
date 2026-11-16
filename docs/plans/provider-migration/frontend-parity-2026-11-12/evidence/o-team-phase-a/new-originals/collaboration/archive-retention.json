@@ -1,0 +1,130 @@
+{
+  "sourceHead": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "artifactId": 14200807020,
+  "archive": {
+    "file": "artifact-14200807020.zip",
+    "bytes": 698291,
+    "blob": "13ed6559fc7191a08e510a1bb4c0f705b68c9c20",
+    "sha256": "1d2e1cb5f82d2f1931ff9a0b2413ceab125bba896210fe9aa0bd337d319a12f1"
+  },
+  "officialMetadata": "../official-host-artifacts-0546.json",
+  "officialDigestEqual": true,
+  "allSafeUniquePaths": true,
+  "allCRCsValid": true,
+  "members": [
+    {
+      "name": "TEST-desktop-backend-B318HS/TEST-peer-codex-scope/effects.ndjson",
+      "crc32": "40d08db1",
+      "bytes": 1115,
+      "blob": "dc67f631592b8928a3b9d0f53860cc6d9fc531b5",
+      "sha256": "eb4a160c0c14687967553f45c8e6049b10432ee893e0863e28780884876f7024"
+    },
+    {
+      "name": "TEST-desktop-backend-B318HS/TEST-peer-opencode-scope/effects.ndjson",
+      "crc32": "90ed9119",
+      "bytes": 177,
+      "blob": "7282ba46d600ef3d83399b4903f1a7f0c887ef41",
+      "sha256": "9290e490e01b70a44e242ebbdd51b3c217ecfa8acffb4b9ca62e4b46940cfc97"
+    },
+    {
+      "name": "TEST-desktop-backend-B318HS/TEST-peer-claude-scope/effects.ndjson",
+      "crc32": "ac46de82",
+      "bytes": 1006,
+      "blob": "e43deb99fb4e22922f4ff808b463e50395521184",
+      "sha256": "bef20597025588fd2b95d5f5818947ae5690891d7b3cc151c46041affba0c8fb"
+    },
+    {
+      "name": "TEST-desktop-backend-B318HS/desktop-app.log",
+      "crc32": "17039492",
+      "bytes": 15694,
+      "blob": "aefd9efc39edc7837ebb0335f6abb359747abb76",
+      "sha256": "720dce48b2617f0ea86ff0862ef6b21543f218bd0bbc23cf3bf3fcf8b24e5458"
+    },
+    {
+      "name": "TEST-desktop-backend-B318HS/desktop-backend-receipt.json",
+      "crc32": "dc63cddf",
+      "bytes": 762773,
+      "blob": "5ca78dce9d2e080f1f4f348c962ba657aff7cfd3",
+      "sha256": "f19ba9b1090433cfce9b43495a441c37b39cf5a15c1f87c1a792a09c33df15f4"
+    },
+    {
+      "name": "TEST-desktop-backend-B318HS/desktop-descriptor.json",
+      "crc32": "bf8f9277",
+      "bytes": 3885,
+      "blob": "e97f516b07989df77c09e1dc39a9db4225382672",
+      "sha256": "1e747a109514c407d2ae0b0f270bdafea57b34c7c94dfea3feefcd160a527dde"
+    },
+    {
+      "name": "TEST-desktop-backend-B318HS/host-profile.json",
+      "crc32": "39ad0535",
+      "bytes": 20027,
+      "blob": "2447162418a72584083e4d30f086ca74cb3782fe",
+      "sha256": "01a1fe425213bfb577fc09e3c1c74d31b59b8dd8d15e46dcf4d723813cfec36e"
+    },
+    {
+      "name": "TEST-desktop-backend-B318HS/hoststore/management-commands/72461480b8851ec319addfaa03165f8bd35274e1212c396d6c25fa67f14b31c6.json",
+      "crc32": "c7e1e146",
+      "bytes": 904,
+      "blob": "5c46ee65b2fb7cf3c2e28b949c773c9c64d906bb",
+      "sha256": "6b6526079bd217980615c5f226f7ba2d32561d31d2882899ff9dd3c53b85d6a5"
+    },
+    {
+      "name": "TEST-desktop-backend-B318HS/sentinel-invocations.ndjson",
+      "crc32": "9fc3bdb4",
+      "bytes": 96,
+      "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+    },
+    {
+      "name": "TEST-desktop-backend-B318HS/ui-failure.png",
+      "crc32": "d206ab26",
+      "bytes": 131831,
+      "blob": "23882b5c9e0ca0423915970a746962588f07f7aa",
+      "sha256": "8ee14a1676791088c7ba970ee7fa92ad866c5b38dd825878797155e6c7579358"
+    },
+    {
+      "name": "TEST-desktop-backend-B318HS/ui-seed-receipt.json",
+      "crc32": "964d7e79",
+      "bytes": 2685,
+      "blob": "f2bce6397230808ae18138ff7f3095eb09f4bfc7",
+      "sha256": "2820e5b73ce27f5e2be390e1e01726ffd35b07bad7dba34506f2902c80c209d0"
+    },
+    {
+      "name": "TEST-emulated-ui-inputs-u8pBR3/linux-child-exec/linux-child-exec",
+      "crc32": "ed0ca14b",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    {
+      "name": "TEST-emulated-ui-inputs-u8pBR3/linux-child-exec/manifest.json",
+      "crc32": "e06f2443",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+    },
+    {
+      "name": "host-emulated-emulated-collaboration-ui.log",
+      "crc32": "9ea263eb",
+      "bytes": 1308,
+      "blob": "e412b92ca7ea457b4b01df6df723a3e4f784ee8e",
+      "sha256": "27e5cd7a2da974162210cb42ed9f82407c222e2b1acf712a93919e9871e289de"
+    },
+    {
+      "name": "host-emulated-inputs.json",
+      "crc32": "b27fdfe4",
+      "bytes": 1803,
+      "blob": "be554b7fb2ac978cb93e0d433afc09cb249e23d2",
+      "sha256": "348aa6baaff41f79d1266e9571f8c3b5b31ceeb9501b074a22558b7a29d01619"
+    },
+    {
+      "name": "host-emulated-linux-child-exec-selection.json",
+      "crc32": "b75db11f",
+      "bytes": 271,
+      "blob": "30738ce9b173b2c4b191b230335028651911983b",
+      "sha256": "8e2c783015121ac50fffb10661e3b0d168281b599c3517e780d679e593cc5018"
+    }
+  ],
+  "executedArtifact": false,
+  "visualReview": "not yet performed"
+}

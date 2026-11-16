@@ -1,0 +1,3142 @@
+{
+  "kind": "INDEPENDENT_O_TEAM_ORIGINAL_GATE_REVIEW",
+  "verdict": "APPROVE original177/stderr24 and all declared static gates, with retained warnings",
+  "reviewer": "/root/native_failures",
+  "reviewedAtUtc": "2026-11-16T05:36:41.216430+00:00",
+  "sourceHead": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "jobId": 133102584776,
+  "runId": 43807841778,
+  "originalLog": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/team/job-133102584776.log",
+    "bytes": 2709130,
+    "gitBlob": "1f92fa0fa07758dac89699f9121d238828c0d897",
+    "sha256": "534facece8bba5cbaffe7a52bb05c8a70ee6787a4a182058ccd3e46b11645c17"
+  },
+  "originalMcpResponse": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/team/original-job-133102584776-response.json",
+    "bytes": 2736193,
+    "gitBlob": "206dab85a2778bc2695f3d02f197fab0878ccb18",
+    "sha256": "a4b998f1cb197beb20594c2eef8f8f84062c8a4576092f33807cc5e22e2b43e3"
+  },
+  "fullMcpUtf8Equality": true,
+  "terminalJobApi": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/owned-api-jobs-0532.json",
+    "bytes": 45695,
+    "gitBlob": "23fde90e8313b5433cb846e8d09ed20195770766",
+    "sha256": "55da7e35c3623f1edfe76e3faf00ea786102ccc6035c70053f57e3c7908fce3e"
+  },
+  "terminalJob": {
+    "id": 133102584776,
+    "name": "Offline Host Desktop (linux-x64, team)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43807841778,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Verify original checkout and runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Prepare private Linux display",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Install frozen workspace and Electron",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build existing Desktop prerequisites and verify admission",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Verify original Runtime and Team conversation contracts",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Capture package-manager and Host inputs without vendor executables",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Capture original controlled Linux process input without a provider",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Exercise ordinary Team controls and renderer reload",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13
+      },
+      {
+        "name": "Exercise ordinary Taskboard controls and persistence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Exercise original Skills and cross-Team controls",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15
+      },
+      {
+        "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Exercise original Review after a cold Host and app restart",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Exercise saved next-launch selection while the original Team remains live",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 24
+      },
+      {
+        "name": "Exercise stock Codex Update while the original Team retains its captured source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 25
+      },
+      {
+        "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 26
+      },
+      {
+        "name": "Prepare exact OpenCode V2 Bun and engine graph",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 27
+      },
+      {
+        "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 28
+      },
+      {
+        "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 29
+      },
+      {
+        "name": "Verify exact source, original screenshots, receipts and cleanup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 30
+      },
+      {
+        "name": "Preserve original Desktop evidence, including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 60
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 61
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 62
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 63
+      }
+    ]
+  },
+  "sourceProof": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/team/independent-team-source-proof.json",
+    "bytes": 704762,
+    "gitBlob": "38f18d03625be488906e95bf8fc8c7e4b77f0a84",
+    "sha256": "3c445f29b1f7a2a971f8da4ca267aa6dffa258b66f96b8ee76f0e064917ad23f"
+  },
+  "helper": {
+    "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+    "bytes": 8310,
+    "gitBlob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+    "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7",
+    "lines": 172
+  },
+  "renderer": {
+    "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+    "bytes": 8707,
+    "gitBlob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+    "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10",
+    "lines": 264
+  },
+  "stderrTest": {
+    "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+    "bytes": 16103,
+    "gitBlob": "0727339627757c3a96d54da2933eb7c1b60685f7",
+    "sha256": "2a738fca4120ae3361483abd948f7746d2025f32012b189e695085845bc3e191",
+    "lines": 277
+  },
+  "freshSelectedPinCount": 1757,
+  "freshTrackedHostSourceCount": 619,
+  "selectedHostSourceCount": 586,
+  "NComparison": {
+    "helperAndStderrTestsByteIdentical": true,
+    "rendererOnlyRemovedSelectedNonNullAssertion": true,
+    "independentOResultsNotTransferredFromN": true
+  },
+  "runtimeAndInstall": {
+    "node": "24.21.0",
+    "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "pnpm": "11.22.0",
+    "installProfile": "node-ci",
+    "nativeCompilerAlias": "typescript7.0.2",
+    "sourceDeclaredFrozenLockInstallObserved": true,
+    "lockfileUpToDateResolutionSkippedObserved": true,
+    "sourcePinnedProviderArchives": [
+      {
+        "archive": {
+          "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+          "bytes": 185996,
+          "gitBlob": "7130609dd29851148c9e2106e2764b75982739b1",
+          "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+          "lines": 1462
+        },
+        "members": [
+          {
+            "path": "package/LICENSE",
+            "bytes": 11357,
+            "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/account-login.js",
+            "bytes": 2325,
+            "sha256": "d5557f12fbb90566a75accedb46fc1fa8a70fdf36671971fc8295f79b303b11e"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/app-server.js",
+            "bytes": 15631,
+            "sha256": "1cd138784adfe4015e941006510c876f26cf5012d9bb9463140fde97fefb2616"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/approval-request.js",
+            "bytes": 7473,
+            "sha256": "dafe31dbad1f82d68ed9c73c6d441b015e8ae5fac6ab1e10c6e9a6cdcadd9d9e"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/approval-response.js",
+            "bytes": 2032,
+            "sha256": "206ae9a1f85c7e25c3c118d10b6612d9977dc4e8f8838b3461c4912cb5578a92"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/provider-session-io/attachments.js",
+            "bytes": 7455,
+            "sha256": "ad8d5e6be22ad4b443d0fb6e151434e51e1c2346a3eee9caa1f8a9ae95471a2b"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/bound-session.js",
+            "bytes": 2897,
+            "sha256": "1b873dcfdf5cad8db93fa18aca2bf115758cee5831fa6bfeb1206078dd790393"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/canonical-message-types.js",
+            "bytes": 11,
+            "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/capture.js",
+            "bytes": 28084,
+            "sha256": "d8341e183e75388d5bc47e1914f41273d213bd0f94f9ee7339fae82c95ca61cb"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/catalog-operations.js",
+            "bytes": 1977,
+            "sha256": "014ade27d0fd1a6b26d9a5372e3333b7d635e8b42a70541af242a4da2fbada7d"
+          },
+          {
+            "path": "package/dist/features/native-prompt-suggestions/adapters/claude-sdk.js",
+            "bytes": 610,
+            "sha256": "9bf0d5d04b87e2e9c904c2921551c0059343ea707d152c4a270dcf382e0f72af"
+          },
+          {
+            "path": "package/dist/claude.js",
+            "bytes": 473,
+            "sha256": "051dd54c08fe710e2ec217538eee87c91adf1e4a2431e89842210000f41abb6a"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/client-types.js",
+            "bytes": 11,
+            "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/contracts/codex-approval.js",
+            "bytes": 11,
+            "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/contracts/codex-events.js",
+            "bytes": 11,
+            "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+          },
+          {
+            "path": "package/dist/features/native-prompt-suggestions/adapters/codex-sample.js",
+            "bytes": 1302,
+            "sha256": "121a0c892c1e7b76e363f26ae042a09c9035da7adec0809ac4f26130153752a8"
+          },
+          {
+            "path": "package/dist/codex.js",
+            "bytes": 1265,
+            "sha256": "6d84de0e4e4645834aeb036f6e9b4cd15ed908ce7726dd6e8b4bb313df96da65"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/commands.js",
+            "bytes": 5395,
+            "sha256": "9db2db8af5c372c42a8f4b1684c8abca3efa1281eb338111f52b47c967f6da57"
+          },
+          {
+            "path": "package/dist/composition.js",
+            "bytes": 188,
+            "sha256": "57fad57b8282b0e014002c80f70d8056c941a0ca06969584accf493075e10a28"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/config.js",
+            "bytes": 10245,
+            "sha256": "b8c08abf2fae5349aee07b04f93bc60fbb0c3742ee725822198fba2abbbcd3e7"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/connection-notifications.js",
+            "bytes": 2698,
+            "sha256": "e213e68307001675388f2d5c990efff22ba3cccd29a5b86e8bef4035b05b97fc"
+          },
+          {
+            "path": "package/dist/features/native-prompt-suggestions/contracts.js",
+            "bytes": 11,
+            "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-config.js",
+            "bytes": 10069,
+            "sha256": "75912d243cf293162dcd2edf66102a68d4da03f02082f7a51f94dc0fc02944c8"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-factory.js",
+            "bytes": 3144,
+            "sha256": "708f3427816e4ba07fcf7d5bcb9f5b6d42fb0c419074fb448b9e19bb51d9d6a2"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-interactions.js",
+            "bytes": 4515,
+            "sha256": "9ed5171c8171fdfa6e21009398af51ab746c56b05794ea00db496b15dede6332"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-output.js",
+            "bytes": 1373,
+            "sha256": "e324f9b3b936977c5bc711d8cc2efe6248af00b67639c56a0bea61def85fcad3"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/driver-protocol.js",
+            "bytes": 11,
+            "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-session.js",
+            "bytes": 21029,
+            "sha256": "720e7a0c93d06c5694750ddf759bc3cf1d09f2df23079de96cf166461e4d68bc"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/driver-session.js",
+            "bytes": 16934,
+            "sha256": "eba608d275608d85369cce4f0a641583c008504fa00345dbc808b633abbe07f7"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/exec-jsonl.js",
+            "bytes": 15795,
+            "sha256": "2461b176f69309f662c8a61338f98a55833402d86a98555f73ca3c3a84faf360"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/provider-session-io/extra-argv.js",
+            "bytes": 5683,
+            "sha256": "80c8b67e3e032c294671d27e260f114fad4bbf1713f08b2103dc5c91d11f0b3e"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/factory.js",
+            "bytes": 2433,
+            "sha256": "3536d93e6875096195dfd03dce11e156a8009ff5bdaf75c2498b9f4f2d89f390"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/http-request.js",
+            "bytes": 4211,
+            "sha256": "f28c52f69def572b4ecb1ede2b16592f4b6887406476df56da8e389c3ce51d4e"
+          },
+          {
+            "path": "package/dist/features/native-prompt-suggestions/index.js",
+            "bytes": 381,
+            "sha256": "ae3c9d901b16743a1770c5b5d49f226f199610762af437b2aafce2ab015ff341"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/index.js",
+            "bytes": 11,
+            "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+          },
+          {
+            "path": "package/dist/index.js",
+            "bytes": 11,
+            "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/input-window-capture.js",
+            "bytes": 7608,
+            "sha256": "2ad19494ac921d09a13f5e12d985aeb70506bbbf366e4d41c1cc96ff447d707e"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/input-window-capture.js",
+            "bytes": 6381,
+            "sha256": "22f5b230d4c806b82c5b8ef5b6635edc256d00b46eb79160dc560d1aab62b56a"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/interactions.js",
+            "bytes": 4467,
+            "sha256": "e37b1a35a3212e89e42c1a59ec6fe45edfecc9345ac86a6c9734e8b3e1aa1b48"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/internal.js",
+            "bytes": 3577,
+            "sha256": "42096f9552dd6a326b2886e47f1e5054a3a6105079e772b9c636e1a0c6670ccb"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/provider-session-io/io.js",
+            "bytes": 2107,
+            "sha256": "71871dc78923a98462515981862f9ea8d3a105b4385501026fe9f4917278a2a2"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog-probe.js",
+            "bytes": 4361,
+            "sha256": "8443a7935d15e7507c894e229a300bf5bfb6b4f01fd002fdb101343bb0612eb4"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog.js",
+            "bytes": 4870,
+            "sha256": "2997cd8af95c16e07010bf20839e8337a1e7d401571d35555dd6283102fe356e"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-policy.js",
+            "bytes": 4951,
+            "sha256": "2c47d11da65b7a5603a99a474bf0f96e283bcdd6f0c7e65a76b79db371d8a264"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-status.js",
+            "bytes": 8102,
+            "sha256": "db63509d2f5fbeb4e26e0bd600cbcd0b7c8e70ff926e0b8cb8fafa9f1af0c8e9"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/metadata.js",
+            "bytes": 5056,
+            "sha256": "e2d385711e29639271b961c993b68431152e4f14733c99d46b37dfe502796f68"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/metadata.js",
+            "bytes": 4954,
+            "sha256": "183e7b8e46300b9cd1aed157d64137730de7aa1f1b7ed020ad12d95fcda098e9"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/model-options.js",
+            "bytes": 1001,
+            "sha256": "90ba2bac87fa4e991c3ee04b3d06610ee2325f53415ade6298c9d703e302786e"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/model-probe-config.js",
+            "bytes": 1762,
+            "sha256": "6e83f4ea69e4eae79d36f22ee064c186b62834dd1603237613ff89af0537b36e"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/model-probe.js",
+            "bytes": 9388,
+            "sha256": "5dab5e13899144ec2c52817f368a0b1da795014caed086154267c6be3b654952"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/model-probe.js",
+            "bytes": 12966,
+            "sha256": "ea460de2348dea659081265796c570f8f1d036bd56da2c0d84ee01b9621c5fe2"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/native-management-config.js",
+            "bytes": 1235,
+            "sha256": "d2543cfb273fc4352fd9ba677cc83d5f0fbd74f2e2ee15161d6c77bd7aea2c62"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/provider-session-io/native-path.js",
+            "bytes": 865,
+            "sha256": "ec0c213b115e310d41d3855ce23554754b55e37a7c75d9ee76de2814a615525b"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/normalize.js",
+            "bytes": 6441,
+            "sha256": "2ce47fffe1ab96d25211c77e14d59466ab180fc59f96eb6a92974fc9f05df814"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/notification-items.js",
+            "bytes": 4498,
+            "sha256": "2d034281c3c0e444ad114905c3eb75649a2e642aff7f0e3b42cd03780032c69f"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/notification-mapper.js",
+            "bytes": 6507,
+            "sha256": "b8a0a6c6d7944cc97fcff3f45cec59053f1279763ba9ddcde565da81dc6cd91c"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/open-session.js",
+            "bytes": 3392,
+            "sha256": "427307e3178f1025347c5b632e4beb99de8837edc20d29fd20799ce19d0e109b"
+          },
+          {
+            "path": "package/dist/opencode.js",
+            "bytes": 2068,
+            "sha256": "b47254c4297fffa117eb6993418d84f68a3ea45b8e53c8751347788943b861e9"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeBoundedHttpResponse.js",
+            "bytes": 4842,
+            "sha256": "7bc2e8933f06f469afddd29e8bdb1991844374ccb358172a5c72dbca3a2fc368"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeClientFactory.js",
+            "bytes": 1023,
+            "sha256": "5ef6c6d4f192e2abc12676244f5bda5c5715645e734f24acfdcbf2d964d0cfbd"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeClientRequestContext.js",
+            "bytes": 11,
+            "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeMessageIds.js",
+            "bytes": 3507,
+            "sha256": "a12bc7ecb17cba1d4dbac1af16cebecd30ff1c1ee6239de30b6eed76b0bfb356"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeSseEventStream.js",
+            "bytes": 7367,
+            "sha256": "0d9db39ce9f4280813fa2e3ad19ae0653996b4be61ae9a357417571282298407"
+          },
+          {
+            "path": "package/dist/features/native-prompt-suggestions/core/policy.js",
+            "bytes": 1727,
+            "sha256": "fabee6d29e46a7333b9a9c91d228e2138cec06341dfa7addae229208c3c8d150"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/primitives.js",
+            "bytes": 53,
+            "sha256": "fc388c5441e94093dbddc9aac2a9f25d00900e734d2dc0052c6e973fca86475d"
+          },
+          {
+            "path": "package/dist/prompt-suggestions.js",
+            "bytes": 405,
+            "sha256": "c4b71d45e2ccaefc1a4cca08d825b15db5236c37424a91a56103885898d64799"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/query-path.js",
+            "bytes": 378,
+            "sha256": "f4a054e3c7564dd0bf28af633b87e65551693afbc2cccc105f35e5db5ddf64fb"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/rate-limits.js",
+            "bytes": 1904,
+            "sha256": "77a488b3adafc414a8e0453e92f13c478c0a3b24845921561b231f979e4d76dd"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/request-limits.js",
+            "bytes": 756,
+            "sha256": "af51114056b8a6125523a95661628a853e065287993c6d63bd8952a8c9cb14d6"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/rpc-client.js",
+            "bytes": 9006,
+            "sha256": "34b4ac1c25271b9f5f4a6a165108b57134df46347be9574443bd7f5aabcdf264"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/rpc-types.js",
+            "bytes": 855,
+            "sha256": "cca6b6ff55cf3e219fd4c08a0966ebb516ccf761d0ca6c04248d17314ce8cb77"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/session-binding-codec.js",
+            "bytes": 3272,
+            "sha256": "ff91c31b9ac03a843b6631b5bf682cc9528241841a3f76319a738ea1f8310c38"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/session-binding-types.js",
+            "bytes": 11,
+            "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/session-bindings.js",
+            "bytes": 3587,
+            "sha256": "a0cc99fb675ffcf8e860341628ef215f171a545591421ae8331020f6b95977f3"
+          },
+          {
+            "path": "package/dist/session-io.js",
+            "bytes": 103,
+            "sha256": "e6d4922408a4c73412f91e02530a97d296221ddf47829a173df923d42a20c1fa"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/session-operations.js",
+            "bytes": 4374,
+            "sha256": "5dd57b3444a223417082567656b2345c5a1f49f5481e120670b9b66172dee523"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/session-types.js",
+            "bytes": 850,
+            "sha256": "8858cbbb8bdb83eca9db24c89024aac666fbab18139d72c9369c128371e88a8b"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/session.js",
+            "bytes": 36612,
+            "sha256": "985655ec0a5c99f32b33782591f4400791f886f44aa1b63c48c42d0767c84728"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/subagents.js",
+            "bytes": 15975,
+            "sha256": "1340dc4c757c4683ffa8cc22f1df75d4bc9a841487b42b1a2e701ba5a02d1825"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/terminal-proof.js",
+            "bytes": 6527,
+            "sha256": "a1a7bcd30946cbc27250d4f320c852c4106dd77e10589237b0b89f8ca4a5653b"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/thread-session.js",
+            "bytes": 11167,
+            "sha256": "adee075b39c242b5a617f22fc67e4a3bd39115a740690917817109de8cafe776"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/tool-binding.js",
+            "bytes": 3042,
+            "sha256": "a82ee88763d9c033d007d7c957d04c495ed4b3192c74c3d3aa06bb39deee5d91"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/types.js",
+            "bytes": 11,
+            "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/user-questions.js",
+            "bytes": 7624,
+            "sha256": "5b2b07db2fec7a89041ef9337adae66ccc38039e6c693f193eae9bb96dfbabab"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-backend.js",
+            "bytes": 5945,
+            "sha256": "c1421536d4a825cd70b16f571ef10a9319afc651f283c1cbdfc155ebdd5582cd"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-config.js",
+            "bytes": 2622,
+            "sha256": "3d1fcf5b158d071ec4e191833c6c9885b6aa9f16e53de6358857823c78b63671"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-cut.js",
+            "bytes": 8244,
+            "sha256": "cc35b52ddac285274a006c3f774d1bdf790b7889246d9d6af08a5bf7933a500b"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-factory.js",
+            "bytes": 3545,
+            "sha256": "abfb59476452808383a4a40658fb655d02459f5006ef284d59c20adcd24b41e1"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-output.js",
+            "bytes": 1892,
+            "sha256": "03a4e48d50e9c5e8b061686cbc1cd27af5b74bfcec3a1dec627aedaec2c5cf89"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-wire.js",
+            "bytes": 6652,
+            "sha256": "a7e2b507cd10c9b8030741dd56c9995446008c2a8afbc5e178ebbf6c9f58e79f"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-native-read.js",
+            "bytes": 2779,
+            "sha256": "88958c8367f29a6d61ed92f395c61b34b9b0bc542c6f831ca17eaf1edb1702d8"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-permission-normalizer.js",
+            "bytes": 1914,
+            "sha256": "64efa765e4baf7ff4ad99dbde57e8b2beebb022d543fb9abb122ecdc4cebabe0"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-transcript-projector.js",
+            "bytes": 8635,
+            "sha256": "d516f585975e965401f17c4db3a26081d2d92bc8979ddcd5ef2f28a8b4c8890c"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-assistant-projection.js",
+            "bytes": 7604,
+            "sha256": "ca6a0c7795a3ebe98f93d3ec29003c89f4db9bf9d956122c9c7691b805488c44"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-attachments.js",
+            "bytes": 3092,
+            "sha256": "e41c34efe783dfcce1d93114b81e2422b3671ef7d74929c9504255288f29a2b7"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-bounded-await.js",
+            "bytes": 739,
+            "sha256": "13e7088437799b4f424a3c3db91ea545266399694652a0b64784c5bdb89be506"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-canonical-json.js",
+            "bytes": 3633,
+            "sha256": "2663f31b6844618883e834cd11bf87ecdc9d23236289ed087b23a5fa161e3404"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-control-transport.js",
+            "bytes": 15272,
+            "sha256": "7d0ccaa0fe81a1438452d46fdbf349d61dedd68b95479f83207ea77edb68d9b7"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-binding.js",
+            "bytes": 664,
+            "sha256": "972f26a073563f44ba38d8548a19f9ccd3a0b15810d3d2e5914ac1114c6d193f"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-client.js",
+            "bytes": 7443,
+            "sha256": "34d14c30787e5fad11722aa9e207eda7ec5174637ef917af21aa36458851af99"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-wire.js",
+            "bytes": 11279,
+            "sha256": "38721308fe447772321c249bbbc7313fd9082d7e9b5c65968f5aead530044b67"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-cut-codecs.js",
+            "bytes": 6078,
+            "sha256": "72b1f6b8007fc27d04a40a1d20782f8b856f32be73121a36d229b55998733435"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-backend.js",
+            "bytes": 4496,
+            "sha256": "08ac2e50660d6cde38c3068ee5f299cf2197091782ab88b76e8a05bffe933fc3"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-config.js",
+            "bytes": 7510,
+            "sha256": "79ec4f8d60a375f6f129bae14934b6ad6696d10be7653c984fa8cfda4da1ebb6"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-factory.js",
+            "bytes": 3313,
+            "sha256": "0fa0d9b250dc2e4ae284876aed6864845d34b60460e34040007918bdcfce7ee2"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-native.js",
+            "bytes": 11517,
+            "sha256": "36d56ce01cccbf3e29bfddab14b0470b59abb783a253b775e7e924ec5fda2db8"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-output.js",
+            "bytes": 2325,
+            "sha256": "5d44d9596042625d446b474f3272136ee41ef7a0f2d02d9920e775b48bc4d6cb"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-session.js",
+            "bytes": 1002,
+            "sha256": "1d5a74bfdc4a62a468c267ce1b5406cd851782ee9f9c625d0734c8cef64634ad"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-execution-transport.js",
+            "bytes": 18899,
+            "sha256": "837879f06134b994247136c5e6346962a20bab069eb2054a64757fb72eea942f"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-failures.js",
+            "bytes": 1627,
+            "sha256": "a9ba44e693ad54b925f8f1abe3ff070a4836f8248e4aa1c03e6264caba0d5e67"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-input-validation.js",
+            "bytes": 6578,
+            "sha256": "132f69e63080bae15efb0500d4507344a61622671bd2de8f78fa1c65e19adf3b"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-json-budget.js",
+            "bytes": 2294,
+            "sha256": "1514c7d316a0b4221fda7f532ed8d6c9e64ff4c3e276699d053f2a06cee107cd"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-loopback-endpoint.js",
+            "bytes": 500,
+            "sha256": "61c5991ccd11f97d8c5dff67e7e5bd411df6a12483fe920c4bcd1014787e7b67"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-byte-view.js",
+            "bytes": 1283,
+            "sha256": "2c44239ef8c55cbe9b0661f24f168c5f527c35ee6e28c71ca9473d4fff4f43c6"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.js",
+            "bytes": 17158,
+            "sha256": "0716d338a425a0498a04e66376c280f23149dbd3a4b7a714bcc95db5f2d7c469"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-identifiers.js",
+            "bytes": 752,
+            "sha256": "5e7eaa7f942e17695d37ea1a35abd989141c2127cdada0f1c87f0bcb96d32aee"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-catalog.js",
+            "bytes": 4581,
+            "sha256": "fafe154567074993e8505b3c5dce9a0a9dc5368c41382e5a3c499766d6a09d6e"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-directory.js",
+            "bytes": 2594,
+            "sha256": "f7428d119ebabbdae77c7fa101f8cecee376eb611063c12640a281f13e16c86a"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-session-client.js",
+            "bytes": 8535,
+            "sha256": "7876f55d85ed25994a124f7a6307af2d1c0033510b2ec9dda7145a015279f42c"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-projection-helpers.js",
+            "bytes": 2973,
+            "sha256": "dba974e9f7691d4ebb33a9e7dee8b844319bf03cdee1d69caed4e862a594e183"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-projection-types.js",
+            "bytes": 11,
+            "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-protocol-version.js",
+            "bytes": 285,
+            "sha256": "346bf94bbfc8474c1cc94038e95f8efc01131cd8d57b816e0dbde0a3e2d79b40"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-request-admission.js",
+            "bytes": 2030,
+            "sha256": "0032b2b343bbedbf6a6405a1d4a0700fb52cc7e9f5b694c97892277e44e1fbdb"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-session-control.js",
+            "bytes": 6935,
+            "sha256": "51bb35aeaee64d2d146ba7e837b420d1ac9f3e857809eb59b6300dd2cb49063b"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-turn-projection.js",
+            "bytes": 7766,
+            "sha256": "cc3420b66e48d3ac2f09b3c5128bd79fd54f640f0396145c0baf39b0fb630a08"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/wire-frames.js",
+            "bytes": 3432,
+            "sha256": "3381cd9e28b7249a1d166dd7361f281c8dc3cc461958eeb94aca3fa759634f59"
+          },
+          {
+            "path": "package/package.json",
+            "bytes": 2342,
+            "sha256": "352e52211f8ab50b0c3133babd7dc54c574b588811a69c2701d26afd22e72472"
+          },
+          {
+            "path": "package/README.md",
+            "bytes": 1168,
+            "sha256": "8c3404eedacc82e94aa0498ebf4cc427b931da526a0efba8f65d922a01a718a5"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/account-login.d.ts",
+            "bytes": 1334,
+            "sha256": "c7bb0689505643125f91db123ac79f738fafab95468eec377a1113e0a368165f"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/app-server.d.ts",
+            "bytes": 5943,
+            "sha256": "20a6ffb298fb03042e409ef326b19bb577f35cccf7b363989ce09e6c1d61e815"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/approval-request.d.ts",
+            "bytes": 395,
+            "sha256": "fdbb32a1d1ac02f18f850da4583f3ccc0775251215ebc5e798ac49b7c8b9352e"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/approval-response.d.ts",
+            "bytes": 1199,
+            "sha256": "5e3739383403ec0b8115c620acc3e7d0cc59758bbeba04ded0c8cc902b89ea1a"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/provider-session-io/attachments.d.ts",
+            "bytes": 2166,
+            "sha256": "201ecdd555abab6b021f1f0654cb03222c1dfb9e44da7ee05b170bff5192caf9"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/bound-session.d.ts",
+            "bytes": 762,
+            "sha256": "9516c6f43ea617797e27b26bd6ff30015f1e31893bde1087d2d393f61731710f"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/canonical-message-types.d.ts",
+            "bytes": 2220,
+            "sha256": "11743a9305965d89ca97ec4905497fb4329e419b66288594f1cd9c960f6d06d5"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/capture.d.ts",
+            "bytes": 4635,
+            "sha256": "35d2f9448e3b612a18e9afe08086d7fb806af651bdd0aea340a1a072186e810b"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/catalog-operations.d.ts",
+            "bytes": 450,
+            "sha256": "6c0d24db9490a887c19429496b05ea8731b0c187a9308ab48230db99e08718a7"
+          },
+          {
+            "path": "package/dist/features/native-prompt-suggestions/adapters/claude-sdk.d.ts",
+            "bytes": 372,
+            "sha256": "798fc87bc61519fc5428a8cf263d6045f2cec6085890d118d62ac663f27b15cf"
+          },
+          {
+            "path": "package/dist/claude.d.ts",
+            "bytes": 1391,
+            "sha256": "d6b7b163fda17f744bb1a476ed7c64836e4caca04260bbd5a29b665e29735f22"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/client-types.d.ts",
+            "bytes": 3487,
+            "sha256": "b40a5dc2e6a8422f9a386d1a81aeb7e12856c990b06154af9771128982255546"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/contracts/codex-approval.d.ts",
+            "bytes": 974,
+            "sha256": "861548c592b89fd5484bb68d4172710a01cfa7546f1026cd53fec3847448dfca"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/contracts/codex-events.d.ts",
+            "bytes": 1347,
+            "sha256": "02a4ea18ec9694170c28bb36201df5141f594f9f1e771e1d362561539fd07a5b"
+          },
+          {
+            "path": "package/dist/features/native-prompt-suggestions/adapters/codex-sample.d.ts",
+            "bytes": 889,
+            "sha256": "ac969d3a15e8ad7cc2709dff3ceaf7c7706dba43d93297659371f6d2821118aa"
+          },
+          {
+            "path": "package/dist/codex.d.ts",
+            "bytes": 3532,
+            "sha256": "a62f45eea9fb0088722b6ae63edff5ba2f3626a75d3b270e880d4e4cf0c12362"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/commands.d.ts",
+            "bytes": 1940,
+            "sha256": "c66795b3e2c2044f0b45e9f0c65bff1e49b912667ff500f0eac337ce5eaed918"
+          },
+          {
+            "path": "package/dist/composition.d.ts",
+            "bytes": 345,
+            "sha256": "9d51402d45c213e4a8421640f930963d09aedd842892d51a7b9e1f0503cb5733"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/config.d.ts",
+            "bytes": 4341,
+            "sha256": "61db99a45f15c13e8b79eca23f1fb0db4922dee75f8efbf8175b916eb83da035"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/connection-notifications.d.ts",
+            "bytes": 878,
+            "sha256": "f250728f37290684bbdfd292d8e92c368dd87c97f6b2eb01c515321fc3d0157a"
+          },
+          {
+            "path": "package/dist/features/native-prompt-suggestions/contracts.d.ts",
+            "bytes": 944,
+            "sha256": "f06593a3d859af127567e011a3f93dfe187744eece768e39f31c7d139fe12cef"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-config.d.ts",
+            "bytes": 3018,
+            "sha256": "dc0266e4bd912875cf61ff1ac5c532b3533075d50a7e0ab41760b21617a5fcc2"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-factory.d.ts",
+            "bytes": 615,
+            "sha256": "ab798f1bd786d6b33bc09d0c6aa0d6b4bd487714cee4e62f54a416231a351926"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-interactions.d.ts",
+            "bytes": 806,
+            "sha256": "57e832eb7b2720992fbffd2b36adff57778a2c5da21cda44979f62afe7033859"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-output.d.ts",
+            "bytes": 342,
+            "sha256": "75a9ecd55505da199463354fd5925cfa284359e26710ea64f8578fc0b6ccf0e5"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/driver-protocol.d.ts",
+            "bytes": 1723,
+            "sha256": "21d9072d29fea8cc880cf4a646e08e100e6ac4901262b7d67871d8ea1fc5afb6"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-session.d.ts",
+            "bytes": 1940,
+            "sha256": "39e829d97ebd56613c39324cdcc02e936e418cf83f2133adcf9296d0baa0b782"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/driver-session.d.ts",
+            "bytes": 1923,
+            "sha256": "53fa37d5268022d4806df794117f45facf440e5b54aa6055d6e2785de32a5dcc"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/exec-jsonl.d.ts",
+            "bytes": 426,
+            "sha256": "c06b4bfc1f874663ff69329c2d17c58caf32e8d3e445cf3b2cbdfc52f83d9928"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/provider-session-io/extra-argv.d.ts",
+            "bytes": 283,
+            "sha256": "acd722cad0730f543038cc7508b326314a8f9957dfb14aab81082e2b2282f6ef"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/factory.d.ts",
+            "bytes": 1224,
+            "sha256": "05208a31a45d8b823217f0d8981296c19a18a28472aa78550f9917f4b501eb96"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/http-request.d.ts",
+            "bytes": 527,
+            "sha256": "7bb6526aee6aadec09b8376531bb3431866c098abc0cf01f3c74a504c18984b3"
+          },
+          {
+            "path": "package/dist/features/native-prompt-suggestions/index.d.ts",
+            "bytes": 514,
+            "sha256": "1a1b6ede4ca82f4351a3794fcbd272565d2645441b57002c90fd6c3053316cba"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/index.d.ts",
+            "bytes": 300,
+            "sha256": "1281ec3430dc50ad9d379f79656c11a8cd79b18030ed811d779680b4c7c6ec9b"
+          },
+          {
+            "path": "package/dist/index.d.ts",
+            "bytes": 271,
+            "sha256": "8416c97b6138d2c0b99f3828945f8ca2b073a2e9ab8ddc8cadfe7ec281238904"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/input-window-capture.d.ts",
+            "bytes": 2557,
+            "sha256": "569a5a1ee2ff2d9ec038c2960f0a13fa7ef90414bcd348d53ddd1fa5cf3d33f4"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/input-window-capture.d.ts",
+            "bytes": 2909,
+            "sha256": "1d2574fed7e71f9d0f0d99a7574f2861e230deb9f44bb8b9dc74551b4c699049"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/interactions.d.ts",
+            "bytes": 602,
+            "sha256": "0eea93a5fd74a4b0da8c5add40992a8994825451567e6a7ab99d69d69176d2f3"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/internal.d.ts",
+            "bytes": 8805,
+            "sha256": "fa01cf688cc56795615e97c8d0247ce34149b2300f37210e7c6ac658814a8dd8"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/provider-session-io/io.d.ts",
+            "bytes": 734,
+            "sha256": "4cfdc811acf4b505d16ddae5af3971c922e58deef86699be4cc4d28fca5cb092"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog-probe.d.ts",
+            "bytes": 1154,
+            "sha256": "c5e12daa2255df9104ebe802a602d024c4cfa20dbe80263416af43855561b839"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog.d.ts",
+            "bytes": 858,
+            "sha256": "d71ebc2aafd560c90bd915ad309a03a3f88d76d6a8f1e955a95a0209a3bdf4a2"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-policy.d.ts",
+            "bytes": 2101,
+            "sha256": "0059efd658851f892ee9a5144715cbcf3e54a03fc5b5691955f2907c7ca3342e"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-status.d.ts",
+            "bytes": 1866,
+            "sha256": "1bbbf92c8fe1f7693945785393d4b502b1d6ca4d39af9b8f4b0c1b7bfaf919f9"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/metadata.d.ts",
+            "bytes": 2024,
+            "sha256": "e639d1f743398de38e75a26d0a183500b93f7f8660e809f83372faff003b458a"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/metadata.d.ts",
+            "bytes": 2107,
+            "sha256": "845e9470131a791ac2c4ce4099ab32afb5ac03a252a4393f51d930b442e49504"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/model-options.d.ts",
+            "bytes": 412,
+            "sha256": "b709a5fcfd3f9a383cd22c29e5ca7b1548c5c0f9914163c8ddf5bc615e0b3af5"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/model-probe-config.d.ts",
+            "bytes": 939,
+            "sha256": "f6c557eb3316de1418af909ba712ad78f7bd13746fcb7127f70a9fed767cd611"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/model-probe.d.ts",
+            "bytes": 944,
+            "sha256": "2b0c9d421900849a64908f0f5000d3f136fffbdd07353147eacfc62b1d52f563"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/model-probe.d.ts",
+            "bytes": 301,
+            "sha256": "12e735d3ebff0ffea284735df41b3071757028b7fc3937921b12502fcba96931"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/native-management-config.d.ts",
+            "bytes": 1613,
+            "sha256": "7cfe2380a6ca8d89e52e07caa66cada770e8bebdf7a9156a239bb9bf1ffbb355"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/provider-session-io/native-path.d.ts",
+            "bytes": 205,
+            "sha256": "9b9dd6222d8a3dfed067d9585f88f687c363a47b95f3f5eb7c39d9032f6bfbdb"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/normalize.d.ts",
+            "bytes": 772,
+            "sha256": "14e82c5bf7fbcc428e07922eae56ea983985eb8b8581a53ae4f9adabe6fcf590"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/notification-items.d.ts",
+            "bytes": 321,
+            "sha256": "4450f3fea3364c0a65d5bf6800f1fe691af986798d6808e7b8ef13ae801d74a6"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/notification-mapper.d.ts",
+            "bytes": 1080,
+            "sha256": "d2ca062b7aa9591799d4b43d0a55aef233699037ca6fb6eb0467c5145c9a8ee6"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/open-session.d.ts",
+            "bytes": 1186,
+            "sha256": "5d4664f2537093b81b0abc81e8693bafcefb002b7a4ae86f64298bef69646ccb"
+          },
+          {
+            "path": "package/dist/opencode.d.ts",
+            "bytes": 4337,
+            "sha256": "0188b0aceb959fb63334ec5b83d2ed94aae51b0a1fa64041f083a6dad7c98ada"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeBoundedHttpResponse.d.ts",
+            "bytes": 355,
+            "sha256": "8d3eda2fed0ef5aaa164e2f31cfc5f6a7035b49633fc24003707b5c11f8a7e55"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeClientFactory.d.ts",
+            "bytes": 705,
+            "sha256": "5f7d63e1acbe01a24e46b4fb537060e69c80faf726402ef223788cfaa9457c2a"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeClientRequestContext.d.ts",
+            "bytes": 234,
+            "sha256": "e25a83fc12057b1ea81a52d170db59227f7c2a22172543ca4a846a58446a62af"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeMessageIds.d.ts",
+            "bytes": 632,
+            "sha256": "5317e9df15090465fabec2816019c1ef7a97f8cc36995591fbc3f6b5a99ebb7d"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeSseEventStream.d.ts",
+            "bytes": 1553,
+            "sha256": "dd30a53b3d53217f0e83b1a201b71cab5007834015fa2636dcb9a167c29c5637"
+          },
+          {
+            "path": "package/dist/features/native-prompt-suggestions/core/policy.d.ts",
+            "bytes": 1003,
+            "sha256": "610384470297dbabe012f73c7a43d6e394975884db8f8a7066998ba3152f6b65"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/primitives.d.ts",
+            "bytes": 144,
+            "sha256": "9e2685ec48ec5b63df205452da0af318e50d2e4862a4a98e1ddc674983bcb81f"
+          },
+          {
+            "path": "package/dist/prompt-suggestions.d.ts",
+            "bytes": 569,
+            "sha256": "94afbcfc1c8ae7ab5876332f6d8970a58c8e90c7fd1bc88031c28424368d5fc9"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/query-path.d.ts",
+            "bytes": 112,
+            "sha256": "1d00dd6a80433eb412854eb0e4b42731c5494b7eb657ec580d872d9dd245be32"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/rate-limits.d.ts",
+            "bytes": 767,
+            "sha256": "68cd8d8e19600b91f977a1c8ed622396453d38f4d0203f321f1bb720755bb93d"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/request-limits.d.ts",
+            "bytes": 433,
+            "sha256": "4c1f92477fe66da280accf22ff21a5d293e383788acea3a3c14c700ffef367a0"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/rpc-client.d.ts",
+            "bytes": 1188,
+            "sha256": "9867853461f77842c70b052512baf80b277f78037624518ae5daa1b0b2704d77"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/rpc-types.d.ts",
+            "bytes": 1785,
+            "sha256": "8960d392ae89695e18e42ccb6a47c603efd337a6d9ba5dcda1a8a4bc8232c753"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/session-binding-codec.d.ts",
+            "bytes": 832,
+            "sha256": "132de4ab613c6b332c421ba0b76921ed90af0ce5bea893e019abcc9d10f7fcc7"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/session-binding-types.d.ts",
+            "bytes": 1112,
+            "sha256": "8ec86ac1ce41c27f5a78dbbc88112786c7c36df5a49fe2ccc3a5c145d70e5af0"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/session-bindings.d.ts",
+            "bytes": 539,
+            "sha256": "42adaf6f8b819ea196554cec362d8acc0a80bc368e7b6fb507e938d7245a3ef2"
+          },
+          {
+            "path": "package/dist/session-io.d.ts",
+            "bytes": 103,
+            "sha256": "5124c3472289156e0662b65de49c7ca9a5f031f92d8b097f01bdbec667f64218"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/session-operations.d.ts",
+            "bytes": 593,
+            "sha256": "35666891e3e9805cbf8fa628a96fe6db76d50fa1b33645af56061f0eb312e5b2"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/session-types.d.ts",
+            "bytes": 1932,
+            "sha256": "05805188422543c9c39cccbd9b8005a101939e14ba79c02cdda0c4c9f686faa2"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/session.d.ts",
+            "bytes": 2971,
+            "sha256": "e9e5769f9401f215a3d7b26c610e445e8e01d0394646405d33ab982458fc0aa0"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/subagents.d.ts",
+            "bytes": 3350,
+            "sha256": "45b0798bfdebdf36d9dbe4d632237421966f8ad1dad70a6a9c91d9037457c1c7"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/terminal-proof.d.ts",
+            "bytes": 2130,
+            "sha256": "7c41ab23fce0fe4fe71160aa0df4a43ba4a18868021d92173e22720b27f3cad0"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/thread-session.d.ts",
+            "bytes": 1650,
+            "sha256": "d03f46352f5f8edf50b61d8c1a57bed2895b9499af13df09beb39806fc2e4b60"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/tool-binding.d.ts",
+            "bytes": 993,
+            "sha256": "76a49eeff85e436faa903bce019048e54607ca47d01875154b9a52ca1920a30d"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/types.d.ts",
+            "bytes": 3925,
+            "sha256": "420cbd3b7637d27a749f6345f5045c03f6ca474460c1b7f3327678d98dd9bbd6"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/user-questions.d.ts",
+            "bytes": 1136,
+            "sha256": "a636eed6a9113fcc7ca6d29a05cbab22394b01bfb89e6a4d0edaa93cf1cd9e49"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-backend.d.ts",
+            "bytes": 245,
+            "sha256": "076b478891bb7a7d6fd93481cd467cd096081c974f6193f8e4fcdc98889d017d"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-config.d.ts",
+            "bytes": 1327,
+            "sha256": "a7066748096ba01e9aa895179eef4f6df23a972bddb3c7afb1fc28ba2f055cd7"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-cut.d.ts",
+            "bytes": 871,
+            "sha256": "518b4629d9a333bbd3d52d857e07aff368d5cc45cbe62c8a7e7340d83344f57f"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-factory.d.ts",
+            "bytes": 802,
+            "sha256": "b99d0fe24db5c5d77692cb9cdb217d2ef9955a3e05d0cf93782d18e755099549"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-output.d.ts",
+            "bytes": 363,
+            "sha256": "498433eaee5077ad243235e96d70f3883ed0fc2a11528370e3ce72df84b8606b"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-wire.d.ts",
+            "bytes": 547,
+            "sha256": "87ed5cb611a8449e0589c6b8374359765ec58f367ce3098d89e35544f599fe8e"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-native-read.d.ts",
+            "bytes": 403,
+            "sha256": "1411e8f420691c68c69d119c218bae05fd28605677bc4a9ae13dd7b9994f9efe"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-permission-normalizer.d.ts",
+            "bytes": 535,
+            "sha256": "e65f3757edd14a88e916f5500dd69a0490f7d7318df49562ec44dc00f6b41a7b"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-transcript-projector.d.ts",
+            "bytes": 594,
+            "sha256": "7244253952a99d1c9e68f3c7ef4a64f298b2c06a9b787aa1f8c228e280d16c37"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-assistant-projection.d.ts",
+            "bytes": 1011,
+            "sha256": "dd87b3fb98fefa0ccd7871b7413bf5420f7b9912b229aad576cacd4adff6a0b3"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-attachments.d.ts",
+            "bytes": 582,
+            "sha256": "b999ff38cd292258a657f9f7fa0a8e7d4ac06c264015fd1bb441b471748e0cf6"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-bounded-await.d.ts",
+            "bytes": 198,
+            "sha256": "eb5b605ac35517ba9f2c29340ba5d49273ef0a8f54d3eb50da7b4d970b5a8549"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-canonical-json.d.ts",
+            "bytes": 337,
+            "sha256": "f22412490dfb9bd1196ec9f28a26190c0e914ede8e875493a2021ee393d6cb1c"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-control-transport.d.ts",
+            "bytes": 609,
+            "sha256": "efc2360574a702fe44d8e123f26c8ca78b6500140f54b7047bc6db48bad435f5"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-binding.d.ts",
+            "bytes": 300,
+            "sha256": "1ba865d2bb7ca5d1a00446f4f87a3337591313a2d05199ff385c9140e521795d"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-client.d.ts",
+            "bytes": 1961,
+            "sha256": "574cdc50ddf2292bffb3317755d8e67d161b3ea6d4ad7291fcfa8c69b8abed53"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-wire.d.ts",
+            "bytes": 929,
+            "sha256": "4184b7cbd0f59912218ab77c3c4d657f567a4eeb81bc8159fa6ae2ca37a1cc9f"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-cut-codecs.d.ts",
+            "bytes": 838,
+            "sha256": "4f7c271aa1a014fa96596a5c1a31a9e7fd63a5bdcd2ef7d749e1087c144cfa27"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-backend.d.ts",
+            "bytes": 245,
+            "sha256": "578b262dec201cc0bbe2beeb7e9f8bc7198e97dfde4bcaac6a76d4f353ddbae8"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-config.d.ts",
+            "bytes": 1975,
+            "sha256": "551f8816bc01ab4becbf3d2095efc6f3f5bb76c299ba1215bfd991471c83608d"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-factory.d.ts",
+            "bytes": 700,
+            "sha256": "2a19594a3660d712f199d7d3971c8722085926af6b6c50cf29e98f0cef9a62fa"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-native.d.ts",
+            "bytes": 1489,
+            "sha256": "523376266c5953aec5d7ec1eefb992d862275efcc1aee0d346e9247c439545a0"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-output.d.ts",
+            "bytes": 546,
+            "sha256": "3ee24a5452f1b38866a3d3757b55733c303c0ac9309b2f2fc04a4193ff6fef73"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-session.d.ts",
+            "bytes": 232,
+            "sha256": "07da64bc44653f3ccbaef9c8a80743da54a9611a0e38577f2377d9b317a92900"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-execution-transport.d.ts",
+            "bytes": 2522,
+            "sha256": "32233454e24bd7bf1ebe77a5090a5f6386e1cdda1b9a01f4e20f9dae3316b7a7"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-failures.d.ts",
+            "bytes": 836,
+            "sha256": "81b4def4faaabed6d17d9b882eded96a5e98f1c188f7de391b48ac945a187be6"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-input-validation.d.ts",
+            "bytes": 554,
+            "sha256": "40913b3102297332d759879f670520e5a4244e1ae83f999a3f5f7da00827baca"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-json-budget.d.ts",
+            "bytes": 173,
+            "sha256": "9c5c9d4ad2499c8b983dbbf7e604f8611ffc1fc5956a2fff7ace65e9c3a7cf42"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-loopback-endpoint.d.ts",
+            "bytes": 339,
+            "sha256": "c0472a01d30669d0685a79c153ff870c9a82ba849224f51bfce0083e530d17e3"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-byte-view.d.ts",
+            "bytes": 77,
+            "sha256": "af25bc294e5cef19954de797cd15dc3990058f1d8b9405046d571d214727f728"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.d.ts",
+            "bytes": 836,
+            "sha256": "4506cf2ed583f91f6472b7143e43d5514e80e1296a0bc1ea0b574d59e8301aa6"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-identifiers.d.ts",
+            "bytes": 225,
+            "sha256": "1de1d29e2cb85fc482355bfbfa25fe39b02873e87afd08712a3de3b3f57ad55e"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-catalog.d.ts",
+            "bytes": 1484,
+            "sha256": "580f3d9e383b6bd35a8e2f8cc1eda7cb3cea9571e87393b85dc6e45cd4caf3d2"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-directory.d.ts",
+            "bytes": 895,
+            "sha256": "416631579799a674424744afed60f4157bdb12c4de28fbb94459f7d3f173dad2"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-session-client.d.ts",
+            "bytes": 3313,
+            "sha256": "a7dcb9baccefc22133b5f7e414582e8fc18dacb366031c84f8854db0df194c84"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-projection-helpers.d.ts",
+            "bytes": 882,
+            "sha256": "e57cac3b3f970edaf9d20e07df56ba888b1994ecc337a42c8b0565069eac77e4"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-projection-types.d.ts",
+            "bytes": 1719,
+            "sha256": "04c870698d31294d1ea6e0ab20087e5375671378cfc73cfa2d7262d34003c54c"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-protocol-version.d.ts",
+            "bytes": 336,
+            "sha256": "936db88ddb70677c0d31e4f042356c8a44d83a3ac9905be9b373c03e7fc956a7"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-request-admission.d.ts",
+            "bytes": 414,
+            "sha256": "1ec58a224a97d7633e62a0f12d3c5fe587a11c1accbc33a41d919efcbfba1bf9"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-session-control.d.ts",
+            "bytes": 1038,
+            "sha256": "c1c146deb4fe10284d6a4a6c110d4298c871a370d0540bb7755c6416635a5a0a"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-turn-projection.d.ts",
+            "bytes": 286,
+            "sha256": "a40c24b1967186085ebeee3407600cee361aaeacf81d05e258a4910fb0aa5168"
+          },
+          {
+            "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/wire-frames.d.ts",
+            "bytes": 732,
+            "sha256": "ec179b29fd288c394b90096118cef3d610396f53b951187d074f279536596796"
+          }
+        ],
+        "memberCount": 253,
+        "pureArchiveReadOnly": true
+      },
+      {
+        "archive": {
+          "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+          "bytes": 6230,
+          "gitBlob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+          "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+          "lines": 52
+        },
+        "members": [
+          {
+            "path": "package/LICENSE",
+            "bytes": 11357,
+            "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+          },
+          {
+            "path": "package/dist/composition.js",
+            "bytes": 11,
+            "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+          },
+          {
+            "path": "package/dist/features/provider-session-contracts/index.js",
+            "bytes": 11,
+            "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+          },
+          {
+            "path": "package/dist/index.js",
+            "bytes": 11,
+            "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+          },
+          {
+            "path": "package/dist/features/provider-session-contracts/internal.js",
+            "bytes": 11,
+            "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+          },
+          {
+            "path": "package/dist/features/provider-session-contracts/contracts/session.js",
+            "bytes": 11,
+            "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+          },
+          {
+            "path": "package/package.json",
+            "bytes": 1016,
+            "sha256": "17efb3c7a5ad50fe1a3480067aafff75e7495e0c580cf7200143ea69c556dc31"
+          },
+          {
+            "path": "package/dist/composition.d.ts",
+            "bytes": 230,
+            "sha256": "25441d5a764fbd55a76a93eef2923fe69e90be73410792684f558ca6595e48ee"
+          },
+          {
+            "path": "package/dist/features/provider-session-contracts/index.d.ts",
+            "bytes": 203,
+            "sha256": "c714c6a7b30b90a44e90b681333eb027397a4575c4d469ffbbc2b37d0da07f38"
+          },
+          {
+            "path": "package/dist/index.d.ts",
+            "bytes": 227,
+            "sha256": "1f60811b9b3128596cf2f7496062c312c0c5f4657eced42949cbd3ba1c9ebe2f"
+          },
+          {
+            "path": "package/dist/features/provider-session-contracts/internal.d.ts",
+            "bytes": 203,
+            "sha256": "c714c6a7b30b90a44e90b681333eb027397a4575c4d469ffbbc2b37d0da07f38"
+          },
+          {
+            "path": "package/dist/features/provider-session-contracts/contracts/session.d.ts",
+            "bytes": 4862,
+            "sha256": "84b4f5ff9982e02ee466051e80bfb94d6041cf31646be646c7948158d101d5a6"
+          }
+        ],
+        "memberCount": 12,
+        "pureArchiveReadOnly": true
+      }
+    ],
+    "installedFullNodeModulesOrFreshAllBuildProductsArchived": false
+  },
+  "freshBuildAndContracts": {
+    "originalPrerequisiteCommand": "pnpm --filter @agent-teams/legacy-agent-host build",
+    "originalPretypecheckRebuildObserved": true,
+    "ledgerBuildObservedBeforeHost": true,
+    "stderrImportsOriginalBuiltDist": true,
+    "nodeReporterCounts": {
+      "tests": [
+        115,
+        7,
+        177
+      ],
+      "pass": [
+        115,
+        7,
+        177
+      ],
+      "fail": [
+        0,
+        0,
+        0
+      ],
+      "cancelled": [
+        0,
+        0,
+        0
+      ],
+      "skipped": [
+        0,
+        0,
+        0
+      ],
+      "duration_ms": [
+        9378.95931,
+        227.142753,
+        94540.600709
+      ]
+    },
+    "originalFullTenArgv": [
+      "node",
+      "--test",
+      "--test-concurrency=1",
+      "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "packages/legacy-agent-host/tests/team-snapshot.test.ts",
+      "packages/legacy-agent-host/tests/team-product-changes.test.ts",
+      "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+      "packages/legacy-agent-host/tests/owned-process-facade.test.ts"
+    ],
+    "all177OriginalPassedCases": [
+      {
+        "line": 865,
+        "name": "the original finite captured child retains sanitized stderr and excludes its stdout protocol",
+        "durationMs": 30.983293,
+        "outcome": "PASS"
+      },
+      {
+        "line": 871,
+        "name": "original Claude SDK child stderr reaches the member observer before failed startup and flushes its final tail",
+        "durationMs": 56.387393,
+        "outcome": "PASS"
+      },
+      {
+        "line": 872,
+        "name": "original standalone claude child retains startup stderr and its closing tail without an endpoint",
+        "durationMs": 32.241036,
+        "outcome": "PASS"
+      },
+      {
+        "line": 873,
+        "name": "original standalone codex child retains startup stderr and its closing tail without an endpoint",
+        "durationMs": 47.124186,
+        "outcome": "PASS"
+      },
+      {
+        "line": 874,
+        "name": "captured native executable is pinned again at launch and sealing forbids late allocation",
+        "durationMs": 2.436919,
+        "outcome": "PASS"
+      },
+      {
+        "line": 875,
+        "name": "captured launch rejects exact inode changes hidden by numeric file metadata before spawning",
+        "durationMs": 2.79595,
+        "outcome": "PASS"
+      },
+      {
+        "line": 876,
+        "name": "captured launch rejects exact mtime changes hidden by numeric file metadata before spawning",
+        "durationMs": 1.60008,
+        "outcome": "PASS"
+      },
+      {
+        "line": 877,
+        "name": "captured launch rejects exact ctime changes hidden by numeric file metadata before spawning",
+        "durationMs": 1.721659,
+        "outcome": "PASS"
+      },
+      {
+        "line": 878,
+        "name": "custody closes its live original process group, preserving a neighboring process",
+        "durationMs": 1592.482539,
+        "outcome": "PASS"
+      },
+      {
+        "line": 880,
+        "name": "custody holds an unverified group after parent exit until TEST descendants leave naturally",
+        "durationMs": 3620.417909,
+        "outcome": "PASS"
+      },
+      {
+        "line": 882,
+        "name": "an exited original cannot signal a positively probed replacement group",
+        "durationMs": 3541.78985,
+        "outcome": "PASS"
+      },
+      {
+        "line": 883,
+        "name": "captured launch revalidates selected cwd before any process allocation",
+        "durationMs": 2.08011,
+        "outcome": "PASS"
+      },
+      {
+        "line": 884,
+        "name": "Codex observes only original stderr before initialization completes and retains the final tail",
+        "durationMs": 35.788777,
+        "outcome": "PASS"
+      },
+      {
+        "line": 885,
+        "name": "Codex profile is a finite private union and requires captured namespace paths",
+        "durationMs": 10.666058,
+        "outcome": "PASS"
+      },
+      {
+        "line": 886,
+        "name": "Codex profile enforces native 1 MiB ceiling before allocation and preserves Claude bounds",
+        "durationMs": 6.841297,
+        "outcome": "PASS"
+      },
+      {
+        "line": 887,
+        "name": "Codex 0.162.0 enforces tuple eligibility before selected-config tools, attributed inputs and exact interrupt",
+        "durationMs": 17.631919,
+        "outcome": "PASS"
+      },
+      {
+        "line": 888,
+        "name": "Codex 0.169.0 enforces tuple eligibility before selected-config tools, attributed inputs and exact interrupt",
+        "durationMs": 2.908786,
+        "outcome": "PASS"
+      },
+      {
+        "line": 889,
+        "name": "Codex missingTools setup failure cleans captured handles before throwing",
+        "durationMs": 7.690584,
+        "outcome": "PASS"
+      },
+      {
+        "line": 890,
+        "name": "Codex failInitialize setup failure cleans captured handles before throwing",
+        "durationMs": 8.601873,
+        "outcome": "PASS"
+      },
+      {
+        "line": 891,
+        "name": "Codex checkpoint setup failure cleans captured handles before throwing",
+        "durationMs": 8.156584,
+        "outcome": "PASS"
+      },
+      {
+        "line": 892,
+        "name": "seal or lost allocation authority prevents a Codex process allocation",
+        "durationMs": 12.151678,
+        "outcome": "PASS"
+      },
+      {
+        "line": 893,
+        "name": "Host Codex adapter awaits its captured original-input baseline and terminal observer through real public D",
+        "durationMs": 9.95109,
+        "outcome": "PASS"
+      },
+      {
+        "line": 894,
+        "name": "captured Codex options preserve none across each input and true-only Fast config",
+        "durationMs": 10.902408,
+        "outcome": "PASS"
+      },
+      {
+        "line": 895,
+        "name": "captured Codex options preserve minimal across each input and true-only Fast config",
+        "durationMs": 17.752849,
+        "outcome": "PASS"
+      },
+      {
+        "line": 896,
+        "name": "captured Codex options preserve ultra across each input and true-only Fast config",
+        "durationMs": 9.022375,
+        "outcome": "PASS"
+      },
+      {
+        "line": 897,
+        "name": "captured Codex options preserve TEST-future-native-effort across each input and true-only Fast config",
+        "durationMs": 7.614892,
+        "outcome": "PASS"
+      },
+      {
+        "line": 898,
+        "name": "Codex Default/absent options preserve the captured recipe; explicit false adds no native Fast override",
+        "durationMs": 11.431031,
+        "outcome": "PASS"
+      },
+      {
+        "line": 899,
+        "name": "managed Codex 0.162.0 appOnly enforces tuple eligibility and retained-thread restore across Host endpoint rotation",
+        "durationMs": 29.230238,
+        "outcome": "PASS"
+      },
+      {
+        "line": 900,
+        "name": "managed Codex 0.162.0 inherited enforces tuple eligibility and retained-thread restore across Host endpoint rotation",
+        "durationMs": 24.044162,
+        "outcome": "PASS"
+      },
+      {
+        "line": 901,
+        "name": "managed Codex 0.169.0 appOnly enforces tuple eligibility and retained-thread restore across Host endpoint rotation",
+        "durationMs": 2.277512,
+        "outcome": "PASS"
+      },
+      {
+        "line": 902,
+        "name": "managed Codex 0.169.0 inherited enforces tuple eligibility and retained-thread restore across Host endpoint rotation",
+        "durationMs": 2.18193,
+        "outcome": "PASS"
+      },
+      {
+        "line": 903,
+        "name": "captured appOnly launches veto original plugin names and exact native gate precedes thread allocation",
+        "durationMs": 22.541367,
+        "outcome": "PASS"
+      },
+      {
+        "line": 904,
+        "name": "changed original native census refuses before app-server allocation and without a thread",
+        "durationMs": 5.459371,
+        "outcome": "PASS"
+      },
+      {
+        "line": 905,
+        "name": "new captured selection without original native census refuses before process custody",
+        "durationMs": 1.762099,
+        "outcome": "PASS"
+      },
+      {
+        "line": 906,
+        "name": "captured Codex argv reaches only the selected app-server launch, preserving managed flags",
+        "durationMs": 10.526361,
+        "outcome": "PASS"
+      },
+      {
+        "line": 907,
+        "name": "captured Codex managed aliases and positional prompts refuse before custody allocation",
+        "durationMs": 6.123074,
+        "outcome": "PASS"
+      },
+      {
+        "line": 908,
+        "name": "original stderr captures startup and tail while redacting selected values across UTF-8 chunks",
+        "durationMs": 9.988475,
+        "outcome": "PASS"
+      },
+      {
+        "line": 909,
+        "name": "standalone stderr uses selected private values without a Team endpoint",
+        "durationMs": 1.478959,
+        "outcome": "PASS"
+      },
+      {
+        "line": 910,
+        "name": "invalid UTF-8 and NUL are readable diagnostics, including a final incomplete sequence",
+        "durationMs": 1.046319,
+        "outcome": "PASS"
+      },
+      {
+        "line": 911,
+        "name": "decoded UTF-8 and NUL expansion cannot exceed the retained text byte limit",
+        "durationMs": 3.912131,
+        "outcome": "PASS"
+      },
+      {
+        "line": 912,
+        "name": "oversized lines discard their complete suffix and preserve a multiline dump opener",
+        "durationMs": 1.292603,
+        "outcome": "PASS"
+      },
+      {
+        "line": 913,
+        "name": "dump continuations stay suppressed through ordinary newlines and oversized fragments",
+        "durationMs": 0.982634,
+        "outcome": "PASS"
+      },
+      {
+        "line": 914,
+        "name": "observer errors and reentrant close cannot change stream outcomes or duplicate a tail",
+        "durationMs": 0.804741,
+        "outcome": "PASS"
+      },
+      {
+        "line": 915,
+        "name": "a bounded escape-heavy line remains subject to the existing serialized journal limit",
+        "durationMs": 2.343799,
+        "outcome": "PASS"
+      },
+      {
+        "line": 916,
+        "name": "held escaped, URI and whitespace-normalized values and quoted assignments cannot leave secret suffixes",
+        "durationMs": 2.371911,
+        "outcome": "PASS"
+      },
+      {
+        "line": 917,
+        "name": "overlapping held values are masked in one pass: ABABAB",
+        "durationMs": 0.801176,
+        "outcome": "PASS"
+      },
+      {
+        "line": 918,
+        "name": "overlapping held values are masked in one pass: a",
+        "durationMs": 0.608481,
+        "outcome": "PASS"
+      },
+      {
+        "line": 919,
+        "name": "long split ANSI does not lose a dump opener before flush",
+        "durationMs": 0.760616,
+        "outcome": "PASS"
+      },
+      {
+        "line": 920,
+        "name": "long split ANSI does not lose a dump opener before discard",
+        "durationMs": 1.247256,
+        "outcome": "PASS"
+      },
+      {
+        "line": 921,
+        "name": "dump detection continues through already discarded oversized fragments",
+        "durationMs": 1.010275,
+        "outcome": "PASS"
+      },
+      {
+        "line": 922,
+        "name": "a short held value cannot destroy sensitive syntax before classification: s",
+        "durationMs": 0.564515,
+        "outcome": "PASS"
+      },
+      {
+        "line": 923,
+        "name": "a short held value cannot destroy sensitive syntax before classification: a",
+        "durationMs": 0.401745,
+        "outcome": "PASS"
+      },
+      {
+        "line": 924,
+        "name": "a short held value cannot destroy sensitive syntax before classification: h",
+        "durationMs": 0.405901,
+        "outcome": "PASS"
+      },
+      {
+        "line": 925,
+        "name": "syntax redaction cannot expose fragments of a transformed held value",
+        "durationMs": 0.744542,
+        "outcome": "PASS"
+      },
+      {
+        "line": 926,
+        "name": "an ANSI prefix larger than the line budget remains fail-closed (false)",
+        "durationMs": 1.261027,
+        "outcome": "PASS"
+      },
+      {
+        "line": 927,
+        "name": "an ANSI prefix larger than the line budget remains fail-closed (true)",
+        "durationMs": 0.982084,
+        "outcome": "PASS"
+      },
+      {
+        "line": 928,
+        "name": "held whitespace values cannot leak after contextual syntax redaction (space)",
+        "durationMs": 0.6145,
+        "outcome": "PASS"
+      },
+      {
+        "line": 929,
+        "name": "held whitespace values cannot leak after contextual syntax redaction (tab)",
+        "durationMs": 0.468494,
+        "outcome": "PASS"
+      },
+      {
+        "line": 930,
+        "name": "held whitespace values cannot leak after contextual syntax redaction (mixed)",
+        "durationMs": 0.649692,
+        "outcome": "PASS"
+      },
+      {
+        "line": 931,
+        "name": "safe diagnostics and unambiguous held-value context remain readable",
+        "durationMs": 0.725364,
+        "outcome": "PASS"
+      },
+      {
+        "line": 932,
+        "name": "closed provider authority reads one fresh state with three namespace traversals and keeps original refusals",
+        "durationMs": 146.646655,
+        "outcome": "PASS"
+      },
+      {
+        "line": 934,
+        "name": "restored provider authority binds the complete open request and keeps current fences",
+        "durationMs": 80.918391,
+        "outcome": "PASS"
+      },
+      {
+        "line": 935,
+        "name": "restored native input keeps the full checkpoint-bearing request identity",
+        "durationMs": 54.896131,
+        "outcome": "PASS"
+      },
+      {
+        "line": 936,
+        "name": "only validated legacy roster applicability can fall back after all common authority checks",
+        "durationMs": 80.343399,
+        "outcome": "PASS"
+      },
+      {
+        "line": 937,
+        "name": "both live workAllowed reads remain independent and final namespace validation refuses a late alias",
+        "durationMs": 223.506447,
+        "outcome": "PASS"
+      },
+      {
+        "line": 938,
+        "name": "closed currentness follows an original additive roster receipt without replacing an existing member",
+        "durationMs": 38.494913,
+        "outcome": "PASS"
+      },
+      {
+        "line": 939,
+        "name": "immutable provider entries and denied or unexpected aggregate results cannot enter fallback",
+        "durationMs": 72.848525,
+        "outcome": "PASS"
+      },
+      {
+        "line": 940,
+        "name": "a prepared original lifecycle command refuses currentness before its state publication",
+        "durationMs": 51.92329,
+        "outcome": "PASS"
+      },
+      {
+        "line": 941,
+        "name": "original factory stderr survives failed opening and cold read but cannot follow revoked or replaced sources",
+        "durationMs": 128.418863,
+        "outcome": "PASS"
+      },
+      {
+        "line": 942,
+        "name": "early SDK write and EOF wait for native owner installation and resume, with backpressure",
+        "durationMs": 5.494574,
+        "outcome": "PASS"
+      },
+      {
+        "line": 943,
+        "name": "abort-during-prepare never resumes native code or flushes queued input",
+        "durationMs": 2.293354,
+        "outcome": "PASS"
+      },
+      {
+        "line": 944,
+        "name": "authority-loss-during-install never resumes native code or flushes queued input",
+        "durationMs": 1.092417,
+        "outcome": "PASS"
+      },
+      {
+        "line": 945,
+        "name": "target exit before resume acknowledgement preserves its native code and final stdout/stderr",
+        "durationMs": 3.329519,
+        "outcome": "PASS"
+      },
+      {
+        "line": 946,
+        "name": "prepare/control failure requests original cleanup once and never invents target termination",
+        "durationMs": 1.734307,
+        "outcome": "PASS"
+      },
+      {
+        "line": 947,
+        "name": "conversation materialization keeps 150 distinct original replies across mixed-ring eviction without nontext or poll IO",
+        "durationMs": 4531.660921,
+        "outcome": "PASS"
+      },
+      {
+        "line": 948,
+        "name": "conversation failure never rewrites terminal facts or accepts an older publication as current",
+        "durationMs": 26.899979,
+        "outcome": "PASS"
+      },
+      {
+        "line": 949,
+        "name": "legacy conversation reads use only dated original input events and never migrate or invent timestamps",
+        "durationMs": 22.756746,
+        "outcome": "PASS"
+      },
+      {
+        "line": 950,
+        "name": "conversation corrupt, missing, oversized and foreign derived records hold under the original member read grant",
+        "durationMs": 70.315856,
+        "outcome": "PASS"
+      },
+      {
+        "line": 951,
+        "name": "conversation missing original state refuses retained observations without decoding large files or resetting authority",
+        "durationMs": 20.759549,
+        "outcome": "PASS"
+      },
+      {
+        "line": 952,
+        "name": "conversation rows require the original input, operation and delivery fingerprint after cold read",
+        "durationMs": 17.230435,
+        "outcome": "PASS"
+      },
+      {
+        "line": 953,
+        "name": "conversation finite FD read refuses symlink without adopting replacement bytes",
+        "durationMs": 15.939264,
+        "outcome": "PASS"
+      },
+      {
+        "line": 954,
+        "name": "conversation finite FD read refuses before-open without adopting replacement bytes",
+        "durationMs": 15.903581,
+        "outcome": "PASS"
+      },
+      {
+        "line": 955,
+        "name": "conversation finite FD read refuses after-open without adopting replacement bytes",
+        "durationMs": 16.779227,
+        "outcome": "PASS"
+      },
+      {
+        "line": 956,
+        "name": "conversation finite FD read refuses symlink-before-open without adopting replacement bytes",
+        "durationMs": 15.191958,
+        "outcome": "PASS"
+      },
+      {
+        "line": 957,
+        "name": "conversation finite FD read refuses disappeared-before-open without adopting replacement bytes",
+        "durationMs": 15.333237,
+        "outcome": "PASS"
+      },
+      {
+        "line": 958,
+        "name": "conversation fresh empty marker refuses a nonempty retained file instead of adopting it",
+        "durationMs": 15.143136,
+        "outcome": "PASS"
+      },
+      {
+        "line": 959,
+        "name": "conversation equal text remains input-distinct, existing blocks may clear, and 65 blocks survive count retention",
+        "durationMs": 3220.73691,
+        "outcome": "PASS"
+      },
+      {
+        "line": 960,
+        "name": "conversation partial storage ports remain explicitly unsupported and cannot publish an unchecked marker",
+        "durationMs": 15.920468,
+        "outcome": "PASS"
+      },
+      {
+        "line": 961,
+        "name": "conversation exact reserved-envelope budget retains the reply and one extra byte reports loss without evicting it",
+        "durationMs": 1253.22505,
+        "outcome": "PASS"
+      },
+      {
+        "line": 962,
+        "name": "snapshot and replay share a fence/cursor; persisted text/tools/usage/interaction state survives restart with explicit incarnation gap",
+        "durationMs": 99.601324,
+        "outcome": "PASS"
+      },
+      {
+        "line": 963,
+        "name": "bounded retention/paging gives explicit gap and cannot return a future or another member cursor",
+        "durationMs": 53.518337,
+        "outcome": "PASS"
+      },
+      {
+        "line": 964,
+        "name": "wrong native/session/input/operation attribution is never assigned to this member or a neighboring input",
+        "durationMs": 28.042693,
+        "outcome": "PASS"
+      },
+      {
+        "line": 965,
+        "name": "oversized/unsupported projection data cannot abort later permission and terminal/control persistence",
+        "durationMs": 32.406373,
+        "outcome": "PASS"
+      },
+      {
+        "line": 966,
+        "name": "projection write failure exposes a gap while observer continues to durable terminal and later observations",
+        "durationMs": 18.545554,
+        "outcome": "PASS"
+      },
+      {
+        "line": 967,
+        "name": "projection corrupt is HOLD rather than a reset cursor and cannot stop terminal persistence",
+        "durationMs": 15.342191,
+        "outcome": "PASS"
+      },
+      {
+        "line": 968,
+        "name": "projection digest is HOLD rather than a reset cursor and cannot stop terminal persistence",
+        "durationMs": 15.015989,
+        "outcome": "PASS"
+      },
+      {
+        "line": 969,
+        "name": "projection missing is HOLD rather than a reset cursor and cannot stop terminal persistence",
+        "durationMs": 16.600675,
+        "outcome": "PASS"
+      },
+      {
+        "line": 970,
+        "name": "projection symlink is HOLD rather than a reset cursor and cannot stop terminal persistence",
+        "durationMs": 16.54345,
+        "outcome": "PASS"
+      },
+      {
+        "line": 971,
+        "name": "projection oversize is HOLD rather than a reset cursor and cannot stop terminal persistence",
+        "durationMs": 14.441879,
+        "outcome": "PASS"
+      },
+      {
+        "line": 972,
+        "name": "current read grant gates snapshots/replay and a consumer without event storage stays explicitly unsupported",
+        "durationMs": 15.775503,
+        "outcome": "PASS"
+      },
+      {
+        "line": 973,
+        "name": "bounded feed pages replay each retained event once and snapshot marks a truncated latest view",
+        "durationMs": 1331.804995,
+        "outcome": "PASS"
+      },
+      {
+        "line": 974,
+        "name": "open/checkpoint/control/seal/reconcile state mutations advance the same cursor without a second business log",
+        "durationMs": 45.693683,
+        "outcome": "PASS"
+      },
+      {
+        "line": 975,
+        "name": "event namespace symlink is rejected without touching external files or blocking terminal facts",
+        "durationMs": 15.943812,
+        "outcome": "PASS"
+      },
+      {
+        "line": 976,
+        "name": "enabling projections on an existing unprojected session preserves an explicit historical gap",
+        "durationMs": 10.949679,
+        "outcome": "PASS"
+      },
+      {
+        "line": 977,
+        "name": "private child activity shares the original Runtime input/fence and snapshot without settling root control or accepting foreign provenance",
+        "durationMs": 23.234284,
+        "outcome": "PASS"
+      },
+      {
+        "line": 978,
+        "name": "original process diagnostics keep config and incarnation fences and survive only unreleased closing",
+        "durationMs": 29.910618,
+        "outcome": "PASS"
+      },
+      {
+        "line": 979,
+        "name": "process diagnostics use the existing serialized event budget and storage degradation without changing control",
+        "durationMs": 20.153894,
+        "outcome": "PASS"
+      },
+      {
+        "line": 980,
+        "name": "distinct Thinking retains original attribution without becoming text, conversation or state",
+        "durationMs": 35.634691,
+        "outcome": "PASS"
+      },
+      {
+        "line": 981,
+        "name": "scheduled log projection is one read of original Thinking identities and unattributed stderr, including cold recovery",
+        "durationMs": 48.104551,
+        "outcome": "PASS"
+      },
+      {
+        "line": 982,
+        "name": "auxiliary log trimming shares the existing byte budget without changing original groups or their completeness",
+        "durationMs": 151.657686,
+        "outcome": "PASS"
+      },
+      {
+        "line": 983,
+        "name": "ordinary lead replies replace their original signed conversation row without inbox writes or product feed churn",
+        "durationMs": 504.536831,
+        "outcome": "PASS"
+      },
+      {
+        "line": 984,
+        "name": "never-opened lead and an original no-allocation Skip retain an empty conversation without creating Runtime state",
+        "durationMs": 353.670125,
+        "outcome": "PASS"
+      },
+      {
+        "line": 985,
+        "name": "ordinary long replies preserve 30 KiB snapshots and 300 KiB Unicode through signed fragments and cold reads",
+        "durationMs": 971.07325,
+        "outcome": "PASS"
+      },
+      {
+        "line": 986,
+        "name": "task recovery never returns a prior receipt for a changed command with unavailable attachments",
+        "durationMs": 178.656711,
+        "outcome": "PASS"
+      },
+      {
+        "line": 987,
+        "name": "mixed Host boots V2 Session SPI profile without invoking V1 management registration",
+        "durationMs": 1854.96525,
+        "outcome": "PASS"
+      },
+      {
+        "line": 988,
+        "name": "two captured teams may share an original run ID without sharing launch ownership",
+        "durationMs": 445.804328,
+        "outcome": "PASS"
+      },
+      {
+        "line": 989,
+        "name": "cold unavailable Team history retains original resources while an independent Team still captures and runs",
+        "durationMs": 1566.451772,
+        "outcome": "PASS"
+      },
+      {
+        "line": 990,
+        "name": "a superseded unstarted capture cannot inject its prompt into a newer launch with the same product revision",
+        "durationMs": 376.222225,
+        "outcome": "PASS"
+      },
+      {
+        "line": 991,
+        "name": "saved configuration captures fresh native identities, preserves historical launches and replays after cold restart",
+        "durationMs": 576.998163,
+        "outcome": "PASS"
+      },
+      {
+        "line": 992,
+        "name": "capture rejects stale product sources, missing recipes and protected args before native allocation",
+        "durationMs": 252.043756,
+        "outcome": "PASS"
+      },
+      {
+        "line": 993,
+        "name": "NDJSON saved roster edits preserve product APIs across stale runtime capture/restart without allocation",
+        "durationMs": 122.408699,
+        "outcome": "PASS"
+      },
+      {
+        "line": 994,
+        "name": "NDJSON roster replacement refuses live allocation, then saves only after confirmed stop",
+        "durationMs": 3332.337516,
+        "outcome": "PASS"
+      },
+      {
+        "line": 995,
+        "name": "captured-run OpenCode live Add reaches its original model probe and preserves failed-probe refusal",
+        "durationMs": 1691.228463,
+        "outcome": "PASS"
+      },
+      {
+        "line": 996,
+        "name": "NDJSON unknown native cleanup keeps the saved roster and its original grants bound",
+        "durationMs": 862.097611,
+        "outcome": "PASS"
+      },
+      {
+        "line": 997,
+        "name": "stopped fresh capture admits its exact probe profile and cold replay retains the original check",
+        "durationMs": 336.600116,
+        "outcome": "PASS"
+      },
+      {
+        "line": 998,
+        "name": "Team model preflight requires current control authority and exact launch selection before any provider allocation",
+        "durationMs": 151.81019,
+        "outcome": "PASS"
+      },
+      {
+        "line": 999,
+        "name": "NDJSON human messages auto-admit once and terminal events pump the next input without dispatch RPC",
+        "durationMs": 277.334942,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1000,
+        "name": "member HTTP MCP and Desktop transport share canonical Tasks and enforce member/scope authority",
+        "durationMs": 263.818772,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1001,
+        "name": "runtime projections redact private provider identities; missing human control and revoked member grants refuse allocation",
+        "durationMs": 341.583064,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1002,
+        "name": "dispose seals a pending provider open before late allocation and retains unknown custody as cleanup debt",
+        "durationMs": 84.205198,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1003,
+        "name": "pending open cleanup precedes readiness: late-driver",
+        "durationMs": 78.173378,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1004,
+        "name": "pending open cleanup precedes readiness: unknown-driver",
+        "durationMs": 195.867099,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1005,
+        "name": "pending open cleanup precedes readiness: factory-rejection",
+        "durationMs": 73.407061,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1006,
+        "name": "pending provider cleanup survives stop before dispose",
+        "durationMs": 92.158964,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1007,
+        "name": "pending provider cleanup survives reconcile before dispose",
+        "durationMs": 100.839496,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1008,
+        "name": "allocated driver checkpoint and close precede captured process cleanup",
+        "durationMs": 116.503657,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1009,
+        "name": "expired MCP proof holds the next admitted input; disposing a never-opened profile performs no allocation",
+        "durationMs": 267.328648,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1010,
+        "name": "Codex Host cost reports retained usage once without native dispatch or private snapshot leakage",
+        "durationMs": 1093.767696,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1012,
+        "name": "composed original stderr survives failed startup before Runtime installs a native session",
+        "durationMs": 93.861585,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1013,
+        "name": "composed original stderr accepts closing diagnostics without settling Runtime state or inputs",
+        "durationMs": 212.901357,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1014,
+        "name": "composed original stderr rejects changed member authority, revocation and a sealed Host",
+        "durationMs": 134.945952,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1015,
+        "name": "activity RPC pages normalized native observations with opaque cursor, bounded snapshots and explicit gaps",
+        "durationMs": 601.41966,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1016,
+        "name": "activity snapshot/feed recheck current human read grants and reject authority overrides",
+        "durationMs": 32.199768,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1017,
+        "name": "production aggregate launch RPC preserves configured and missing roster members and idempotent scoped progress",
+        "durationMs": 160.025208,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1018,
+        "name": "launch options are durably selected before provider creation and replay survives Host restart without new allocation",
+        "durationMs": 358.234766,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1019,
+        "name": "launch options refuse allocated state and compile every selected provider before any publication or allocation",
+        "durationMs": 612.310384,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1022,
+        "name": "selected checkpoint resumes through a new Host/generation, retains Team delivery ownership and fences stale controls",
+        "durationMs": 2638.715211,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1025,
+        "name": "Runtime projection privately observes only evaluated readiness operands and preserves the original view and errors",
+        "durationMs": 1.504257,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1026,
+        "name": "the original passive Runtime projection receiver writes only bounded exit facts and keeps ambiguous evidence unknown",
+        "durationMs": 16.744108,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1027,
+        "name": "source Codex readiness refuses an expired absolute deadline before its first read after the poll handoff",
+        "durationMs": 2.026781,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1028,
+        "name": "source Codex readiness refuses a ready result delivered after its original deadline despite a handoff pause",
+        "durationMs": 1.318442,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1029,
+        "name": "source readiness keeps its timely success, other original budgets, 25ms cadence and exact read errors",
+        "durationMs": 5.621973,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1030,
+        "name": "source standalone refuses expiry during the poll handoff after Start consumed its captured recipe budget",
+        "durationMs": 1.870469,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1031,
+        "name": "source standalone refuses a completed result delivered after the captured absolute deadline",
+        "durationMs": 1.604115,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1032,
+        "name": "source codex standalone preserves the original fresh capture check after successful completion",
+        "durationMs": 1.608822,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1033,
+        "name": "source claude standalone preserves the original fresh capture check after successful completion",
+        "durationMs": 1.213166,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1034,
+        "name": "source standalone keeps captured authority, original relative defaults, cleanup refusals and exact read errors",
+        "durationMs": 13.001597,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1035,
+        "name": "actual normalized content/tool/usage/compaction facts remain scoped to original task after reassignment",
+        "durationMs": 105.102702,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1036,
+        "name": "cold thinking and member stderr retain their exact scope without changing message, usage or preview counts",
+        "durationMs": 73.105014,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1037,
+        "name": "unknown usage stays unknown; foreign operation/input cannot borrow task scope; finite page cap is visible",
+        "durationMs": 36.402599,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1038,
+        "name": "unattributed usage cannot be added to per-input token totals",
+        "durationMs": 0.25647,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1039,
+        "name": "large retained facts produce a partial bounded log rather than losing the entire selection",
+        "durationMs": 43.634356,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1040,
+        "name": "snapshot cursor replays only later invalidations, with stable IDs and explicit restart/retention gaps",
+        "durationMs": 1.623023,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1041,
+        "name": "a recovery publication observed before its completion hook is still ordered under the snapshot fence",
+        "durationMs": 0.24978,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1042,
+        "name": "private conversation reads leave the original Team fence and recheck full grant and lead identity",
+        "durationMs": 43.714254,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1043,
+        "name": "ordinary stream revisions expire only ordinary cursors while original group pages never read conversation",
+        "durationMs": 20.47475,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1044,
+        "name": "the original Team read boundary refuses a sparse private conversation gap array",
+        "durationMs": 7.469017,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1045,
+        "name": "snapshot reads persisted authority/roster/tasks/kanban and only permitted inboxes",
+        "durationMs": 33.231876,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1046,
+        "name": "one task with large nested history retains all task parts, order and signed continuations",
+        "durationMs": 38.576738,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1047,
+        "name": "a 420 KiB Unicode message remains readable through signed Desktop and MCP pages",
+        "durationMs": 193.966565,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1048,
+        "name": "real committed task mutation keeps an under-1-MiB Host acknowledgement with full durable history",
+        "durationMs": 43481.261449,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1049,
+        "name": "large retained task inventory stays readable through all bounded original Owner pages",
+        "durationMs": 3556.611652,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1050,
+        "name": "Kanban entries and column ordering survive both Desktop and MCP page budgets",
+        "durationMs": 96.461546,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1051,
+        "name": "large legitimate inbox history preserves bounded snapshots and authorized change feed",
+        "durationMs": 68.136312,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1052,
+        "name": "owner-side pages retain every message beyond 512 KiB under revision and principal fences",
+        "durationMs": 78.150046,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1053,
+        "name": "removed teammate inbox remains readable for admin only after a persisted owner restart",
+        "durationMs": 12.081205,
+        "outcome": "PASS"
+      },
+      {
+        "line": 1054,
+        "name": "one valid Unicode comment larger than either Owner page remains lossless and signed",
+        "durationMs": 334.483724,
+        "outcome": "PASS"
+      }
+    ],
+    "all24SourceExpandedStderrPassedCases": [
+      {
+        "line": 908,
+        "name": "original stderr captures startup and tail while redacting selected values across UTF-8 chunks",
+        "durationMs": 9.988475,
+        "outcome": "PASS"
+      },
+      {
+        "line": 909,
+        "name": "standalone stderr uses selected private values without a Team endpoint",
+        "durationMs": 1.478959,
+        "outcome": "PASS"
+      },
+      {
+        "line": 910,
+        "name": "invalid UTF-8 and NUL are readable diagnostics, including a final incomplete sequence",
+        "durationMs": 1.046319,
+        "outcome": "PASS"
+      },
+      {
+        "line": 911,
+        "name": "decoded UTF-8 and NUL expansion cannot exceed the retained text byte limit",
+        "durationMs": 3.912131,
+        "outcome": "PASS"
+      },
+      {
+        "line": 912,
+        "name": "oversized lines discard their complete suffix and preserve a multiline dump opener",
+        "durationMs": 1.292603,
+        "outcome": "PASS"
+      },
+      {
+        "line": 913,
+        "name": "dump continuations stay suppressed through ordinary newlines and oversized fragments",
+        "durationMs": 0.982634,
+        "outcome": "PASS"
+      },
+      {
+        "line": 914,
+        "name": "observer errors and reentrant close cannot change stream outcomes or duplicate a tail",
+        "durationMs": 0.804741,
+        "outcome": "PASS"
+      },
+      {
+        "line": 915,
+        "name": "a bounded escape-heavy line remains subject to the existing serialized journal limit",
+        "durationMs": 2.343799,
+        "outcome": "PASS"
+      },
+      {
+        "line": 916,
+        "name": "held escaped, URI and whitespace-normalized values and quoted assignments cannot leave secret suffixes",
+        "durationMs": 2.371911,
+        "outcome": "PASS"
+      },
+      {
+        "line": 921,
+        "name": "dump detection continues through already discarded oversized fragments",
+        "durationMs": 1.010275,
+        "outcome": "PASS"
+      },
+      {
+        "line": 925,
+        "name": "syntax redaction cannot expose fragments of a transformed held value",
+        "durationMs": 0.744542,
+        "outcome": "PASS"
+      },
+      {
+        "line": 931,
+        "name": "safe diagnostics and unambiguous held-value context remain readable",
+        "durationMs": 0.725364,
+        "outcome": "PASS"
+      },
+      {
+        "line": 917,
+        "name": "overlapping held values are masked in one pass: ABABAB",
+        "durationMs": 0.801176,
+        "outcome": "PASS"
+      },
+      {
+        "line": 918,
+        "name": "overlapping held values are masked in one pass: a",
+        "durationMs": 0.608481,
+        "outcome": "PASS"
+      },
+      {
+        "line": 919,
+        "name": "long split ANSI does not lose a dump opener before flush",
+        "durationMs": 0.760616,
+        "outcome": "PASS"
+      },
+      {
+        "line": 920,
+        "name": "long split ANSI does not lose a dump opener before discard",
+        "durationMs": 1.247256,
+        "outcome": "PASS"
+      },
+      {
+        "line": 922,
+        "name": "a short held value cannot destroy sensitive syntax before classification: s",
+        "durationMs": 0.564515,
+        "outcome": "PASS"
+      },
+      {
+        "line": 923,
+        "name": "a short held value cannot destroy sensitive syntax before classification: a",
+        "durationMs": 0.401745,
+        "outcome": "PASS"
+      },
+      {
+        "line": 924,
+        "name": "a short held value cannot destroy sensitive syntax before classification: h",
+        "durationMs": 0.405901,
+        "outcome": "PASS"
+      },
+      {
+        "line": 926,
+        "name": "an ANSI prefix larger than the line budget remains fail-closed (false)",
+        "durationMs": 1.261027,
+        "outcome": "PASS"
+      },
+      {
+        "line": 927,
+        "name": "an ANSI prefix larger than the line budget remains fail-closed (true)",
+        "durationMs": 0.982084,
+        "outcome": "PASS"
+      },
+      {
+        "line": 928,
+        "name": "held whitespace values cannot leak after contextual syntax redaction (space)",
+        "durationMs": 0.6145,
+        "outcome": "PASS"
+      },
+      {
+        "line": 929,
+        "name": "held whitespace values cannot leak after contextual syntax redaction (tab)",
+        "durationMs": 0.468494,
+        "outcome": "PASS"
+      },
+      {
+        "line": 930,
+        "name": "held whitespace values cannot leak after contextual syntax redaction (mixed)",
+        "durationMs": 0.649692,
+        "outcome": "PASS"
+      }
+    ],
+    "threeWhitespaceCanariesAndSafeControlActuallyPassed": true,
+    "zeroSkipsOrCancellations": true
+  },
+  "static": {
+    "sourceWorkflowStep": "      - name: Verify complete workspace types and original typed lint scopes\n        if: matrix.lane == 'team'\n        run: |\n          set -euo pipefail\n          pnpm lint:fast:files -- \\\n            packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts \\\n            packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts \\\n            packages/legacy-agent-host/tests/opencode-configuration-source.test.ts \\\n            scripts/e2e/opencode-diagnostics/platform.mjs \\\n            scripts/e2e/opencode-diagnostics/platform.test.mjs \\\n            scripts/legacy-agent-host/desktop-backend-fixture.ts \\\n            scripts/legacy-agent-host/desktop-backend-observations.test.ts \\\n            scripts/legacy-agent-host/desktop-captured-app.ts \\\n            scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts \\\n            scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts \\\n            scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts \\\n            scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts \\\n            scripts/legacy-agent-host/desktop-emulated-selection-ui.ts \\\n            scripts/legacy-agent-host/desktop-native-process-ui.test.ts \\\n            scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts \\\n            scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts \\\n            scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts \\\n            scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts \\\n            scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts \\\n            scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts \\\n            scripts/legacy-agent-host/desktop-task-comment-input-target.ts \\\n            scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts \\\n            scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts \\\n            scripts/legacy-agent-host/qualify-linux-process-sdk.ts \\\n            scripts/legacy-agent-host/run-packaged-opencode-v2.ts \\\n            src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts \\\n            src/features/agent-backend/renderer/createHostMemberSpawnStatuses.ts \\\n            src/features/agent-backend/renderer/createHostTeamChanges.ts \\\n            src/features/agent-backend/renderer/createHostTeamProvisioning.ts \\\n            src/features/agent-backend/renderer/index.ts \\\n            src/renderer/store/slices/teamSlice.ts \\\n            src/renderer/store/team/teamRuntimeRunAdoption.ts \\\n            test/features/agent-backend/capturedWindowsSelection.test.ts \\\n            test/features/agent-backend/hostMemberSpawnStatuses.test.ts \\\n            test/features/agent-backend/runtimeActivityFacade.test.ts \\\n            test/renderer/store/teamRuntimeRunAdoption.test.ts \\\n            test/renderer/store/teamSlice.test.ts \\\n            tools/owned-process-broker/nativeWindowsAppGate.mjs \\\n            packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts \\\n            packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts \\\n            packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts \\\n            packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts \\\n            packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts \\\n            packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts \\\n            packages/legacy-agent-host/src/composition/HostScheduledRuns.ts \\\n            packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts \\\n            packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts \\\n            packages/legacy-agent-host/src/composition/readTeamActivity.ts \\\n            packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts \\\n            packages/legacy-agent-host/src/composition/scheduledRunProjection.ts \\\n            packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts \\\n            packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts \\\n            packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts \\\n            packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts \\\n            packages/legacy-agent-host/src/runtime/RuntimeOwner.ts \\\n            packages/legacy-agent-host/src/runtime/activityContracts.ts \\\n            packages/legacy-agent-host/src/runtime/normalizeActivity.ts \\\n            packages/legacy-agent-host/src/runtime/providerActivityContracts.ts \\\n            packages/legacy-agent-host/tests/captured-claude-process.test.ts \\\n            packages/legacy-agent-host/tests/codex-member-provider.test.ts \\\n            packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts \\\n            packages/legacy-agent-host/tests/management-model-probe.test.ts \\\n            packages/legacy-agent-host/tests/member-process-stderr.test.ts \\\n            packages/legacy-agent-host/tests/member-provider-authority.test.ts \\\n            packages/legacy-agent-host/tests/native-claude-host.native.ts \\\n            packages/legacy-agent-host/tests/native-codex-team.native.ts \\\n            packages/legacy-agent-host/tests/owned-process-facade.test.ts \\\n            packages/legacy-agent-host/tests/runtime-activity.test.ts \\\n            packages/legacy-agent-host/tests/runtime-team-host.test.ts \\\n            packages/legacy-agent-host/tests/scheduled-run-host.test.ts \\\n            packages/legacy-agent-host/tests/team-activity-read.test.ts \\\n            scripts/legacy-agent-host/desktop-activity-ui-smoke.ts \\\n            src/features/agent-backend/contracts/operations.ts \\\n            src/features/agent-backend/main/adapters/output/projectBackendResult.ts \\\n            src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts \\\n            src/features/agent-backend/renderer/createHostTaskActivityApi.ts \\\n            src/renderer/components/team/ClaudeLogsPanel.tsx \\\n            src/renderer/components/team/ClaudeLogsSection.tsx \\\n            src/renderer/components/team/members/HostMemberActivityLog.tsx \\\n            src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx \\\n            src/renderer/components/team/members/MemberLogsTab.tsx \\\n            src/shared/types/teamActivity.ts \\\n            src/shared/utils/diagnosticsRedaction.ts \\\n            src/shared/utils/redactDiagnosticAssignments.ts \\\n            src/shared/utils/runtimeDiagnosticText.ts \\\n            test/features/agent-backend/hostTaskActivity.test.ts \\\n            test/renderer/components/team/ClaudeLogsSection.test.ts \\\n            test/renderer/components/team/members/MemberLogsPolling.test.ts \\\n            test/renderer/components/team/members/hostLogStatsTabs.test.tsx \\\n            test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx \\\n            tools/owned-process-broker/fixtures/claudeProviderPeer.mjs \\\n            tools/owned-process-broker/fixtures/providerDesktopPeer.mjs \\\n            tools/owned-process-broker/nativeDebugServiceScenario.ts\n          pnpm typecheck:workspace\n          node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json\n          pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main\n          pnpm lint:ci:files src/renderer --cache-location .eslintcache-renderer\n          pnpm lint:ci:files src/features --cache-location .eslintcache-features\n          pnpm lint:mcp\n",
+    "rawStartLine": 1063,
+    "rawEndExclusiveLine": 15717,
+    "originalFailClosedShell": "set -euo pipefail; runner bash -e -o pipefail",
+    "fast93OrderedLiteralPaths": [
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts",
+      "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "packages/legacy-agent-host/tests/opencode-configuration-source.test.ts",
+      "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts",
+      "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+      "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+      "scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+      "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+      "src/features/agent-backend/renderer/createHostMemberSpawnStatuses.ts",
+      "src/features/agent-backend/renderer/createHostTeamChanges.ts",
+      "src/features/agent-backend/renderer/createHostTeamProvisioning.ts",
+      "src/features/agent-backend/renderer/index.ts",
+      "src/renderer/store/slices/teamSlice.ts",
+      "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "test/features/agent-backend/capturedWindowsSelection.test.ts",
+      "test/features/agent-backend/hostMemberSpawnStatuses.test.ts",
+      "test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "test/renderer/store/teamRuntimeRunAdoption.test.ts",
+      "test/renderer/store/teamSlice.test.ts",
+      "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts",
+      "packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "packages/legacy-agent-host/src/composition/HostScheduledRuns.ts",
+      "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "packages/legacy-agent-host/src/composition/readTeamActivity.ts",
+      "packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts",
+      "packages/legacy-agent-host/src/composition/scheduledRunProjection.ts",
+      "packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts",
+      "packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+      "packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts",
+      "packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+      "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "packages/legacy-agent-host/src/runtime/activityContracts.ts",
+      "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+      "packages/legacy-agent-host/src/runtime/providerActivityContracts.ts",
+      "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+      "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+      "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+      "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+      "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+      "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+      "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+      "src/features/agent-backend/contracts/operations.ts",
+      "src/features/agent-backend/main/adapters/output/projectBackendResult.ts",
+      "src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts",
+      "src/features/agent-backend/renderer/createHostTaskActivityApi.ts",
+      "src/renderer/components/team/ClaudeLogsPanel.tsx",
+      "src/renderer/components/team/ClaudeLogsSection.tsx",
+      "src/renderer/components/team/members/HostMemberActivityLog.tsx",
+      "src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx",
+      "src/renderer/components/team/members/MemberLogsTab.tsx",
+      "src/shared/types/teamActivity.ts",
+      "src/shared/utils/diagnosticsRedaction.ts",
+      "src/shared/utils/redactDiagnosticAssignments.ts",
+      "src/shared/utils/runtimeDiagnosticText.ts",
+      "test/features/agent-backend/hostTaskActivity.test.ts",
+      "test/renderer/components/team/ClaudeLogsSection.test.ts",
+      "test/renderer/components/team/members/MemberLogsPolling.test.ts",
+      "test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+      "test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx",
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "tools/owned-process-broker/nativeDebugServiceScenario.ts"
+    ],
+    "fastRuntimeLine": 1174,
+    "exactSourceAndRawFastArgvEqual": true,
+    "originalShellCommandRows": [
+      {
+        "line": 1159,
+        "text": "pnpm typecheck:workspace"
+      },
+      {
+        "line": 1160,
+        "text": "node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json"
+      },
+      {
+        "line": 1161,
+        "text": "pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main"
+      },
+      {
+        "line": 1162,
+        "text": "pnpm lint:ci:files src/renderer --cache-location .eslintcache-renderer"
+      },
+      {
+        "line": 1163,
+        "text": "pnpm lint:ci:files src/features --cache-location .eslintcache-features"
+      },
+      {
+        "line": 1164,
+        "text": "pnpm lint:mcp"
+      }
+    ],
+    "observedWorkspaceScriptExpansionRows": [
+      {
+        "line": 1189,
+        "text": "pnpm typecheck && pnpm typecheck:legacy-host-scripts && pnpm --filter @agent-teams/legacy-agent-host typecheck:test && pnpm --filter agent-teams-mcp typecheck && pnpm --filter agent-teams-mcp typecheck:test"
+      },
+      {
+        "line": 1190,
+        "text": "pnpm --filter @agent-teams/legacy-agent-host build"
+      },
+      {
+        "line": 1191,
+        "text": "pnpm --filter @agent-teams/task-change-ledger build"
+      },
+      {
+        "line": 1194,
+        "text": "node ./node_modules/@typescript/native/bin/tsc --noEmit && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.updater-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.release-tooling.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-preload.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-renderer.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.desktop-e2e.json"
+      },
+      {
+        "line": 1195,
+        "text": "node node_modules/@typescript/native/bin/tsc --project tsconfig.legacy-agent-host-scripts.json"
+      },
+      {
+        "line": 1196,
+        "text": "node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json"
+      },
+      {
+        "line": 1197,
+        "text": "tsc --noEmit"
+      },
+      {
+        "line": 1198,
+        "text": "tsc --noEmit -p tsconfig.test.json"
+      }
+    ],
+    "observedTypedLintExpansionRows": [
+      {
+        "line": 1199,
+        "text": "node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --cache-strategy content src/main src/preload src/shared src/types --cache-location .eslintcache-main"
+      },
+      {
+        "line": 8444,
+        "text": "node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --cache-strategy content src/renderer --cache-location .eslintcache-renderer"
+      },
+      {
+        "line": 13177,
+        "text": "node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --cache-strategy content src/features --cache-location .eslintcache-features"
+      },
+      {
+        "line": 15704,
+        "text": "pnpm --filter agent-teams-mcp lint"
+      },
+      {
+        "line": 15705,
+        "text": "eslint \"src/**/*.ts\""
+      }
+    ],
+    "orderedLintSummaries": [
+      {
+        "line": 1187,
+        "problems": 5,
+        "errors": 0,
+        "warnings": 5
+      },
+      {
+        "line": 8441,
+        "problems": 3338,
+        "errors": 0,
+        "warnings": 3338
+      },
+      {
+        "line": 13174,
+        "problems": 1416,
+        "errors": 0,
+        "warnings": 1416
+      },
+      {
+        "line": 15701,
+        "problems": 1483,
+        "errors": 0,
+        "warnings": 1483
+      },
+      {
+        "line": 15715,
+        "problems": 4,
+        "errors": 0,
+        "warnings": 4
+      }
+    ],
+    "dedicatedBackendTsc": "Silent direct command in the original fail-closed serial script, followed by observed main typed lint and successful entire step; no independent stdout/elapsed result for this individual compiler.",
+    "allDeclaredWorkspaceCompilerAndTypedLintCommandsCompleted": true,
+    "newTypedRendererErrorAbsent": true,
+    "noWarningsClaim": false
+  },
+  "qualificationLimits": [
+    "Only original953fd8 Team job; no local project command/test/compiler/install/provider/native replay or source/ref mutation.",
+    "177/24 are actual complete original Node results. They are not predictions or success borrowed from a prerequisite/API step.",
+    "Fast93 and typed main/renderer/features/MCP completed with zero errors and retained5/3338/1416/1483/4 warnings, not zero warnings.",
+    "Workspace and explicit dedicated backend compiler completion follows the unchanged source scripts, fail-closed serial shell and subsequent observed commands; silent compiler invocations have no separate printed duration.",
+    "Fresh1757 selected Git census captures586 of619 tracked Host source leaves. All619 are separately read as immutable source, not evidence that all installed or built output bytes are archived.",
+    "Source-pinned9423 TGZ bytes are inspected as Git archives; no independent vendor execution or full installed dependency census follows.",
+    "UI/business/cleanup/source packet review is separate and will reference this gate report; this document alone does not qualify Desktop journey or native/P09/Windows checkout/release/migration completion.",
+    "Dormant Models and P11 candidates have not been executed or qualified by these unchanged original tests."
+  ]
+}

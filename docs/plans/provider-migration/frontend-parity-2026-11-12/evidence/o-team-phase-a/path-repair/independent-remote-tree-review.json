@@ -1,0 +1,20 @@
+{
+  "kind": "INDEPENDENT_IMMUTABLE_API_FULL_TREE_REHASH",
+  "result": "APPROVE",
+  "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/c83e7a68b81073ff218cb0f65e813a60218f5b02",
+  "sha": "c83e7a68b81073ff218cb0f65e813a60218f5b02",
+  "entries": 12576,
+  "leafCount": 10922,
+  "directoryObjectsIncludingRoot": 1655,
+  "truncated": false,
+  "allDirectoryHashesIndependentlyRecomputedExact": true,
+  "expectedPrepublicationTree": "c83e7a68b81073ff218cb0f65e813a60218f5b02",
+  "recordedAtUTC": "2026-11-16T05:18:54.031Z",
+  "limit": "Immutable Git tree read only; no ref/commit mutation or project execution.",
+  "prepublicationReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-o-path-repair-independent-prepublication-review.json",
+    "blob": "f7a71e31ec851581e6eab884e880c7b7705e4c44"
+  },
+  "manifestBlob": "66c596c5293447ee6574b3bba90c110191a38baa",
+  "expectedSoleParent": "953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+}

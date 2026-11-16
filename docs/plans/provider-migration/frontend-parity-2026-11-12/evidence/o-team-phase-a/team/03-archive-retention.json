@@ -1,0 +1,115 @@
+{
+  "artifactId": 14200605574,
+  "sourceHead": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "officialSize": 651336,
+  "officialDigest": "sha256:c057a3535e333a708c8fdda3fedf170f0ef5a72cdafb46dff7702de92163dd39",
+  "zipBytes": 651336,
+  "gitBlob": "6dcc4a2f0911b2646e1330183d405162083c9ffe",
+  "sha256": "c057a3535e333a708c8fdda3fedf170f0ef5a72cdafb46dff7702de92163dd39",
+  "memberCount": 14,
+  "members": [
+    {
+      "path": "TEST-desktop-backend-ODtJ5z/desktop-app.log",
+      "bytes": 14505,
+      "gitBlob": "5007d1a2cf22be60b9795d2a2c2af8ec35455f4b",
+      "sha256": "2b3529d49e42a603cf84d811c8988e5599201c4ca27a32571c3ea05d651cbc43",
+      "crc32": "0a6c0fba"
+    },
+    {
+      "path": "TEST-desktop-backend-ODtJ5z/desktop-descriptor.json",
+      "bytes": 1895,
+      "gitBlob": "cf1920cff187940991fcb20d45e372594e0750c1",
+      "sha256": "5ac7d3d6cf0a6502fdd69cf8238db9393ce64660c6915f452e25821f2740a23a",
+      "crc32": "4df4874a"
+    },
+    {
+      "path": "TEST-desktop-backend-ODtJ5z/desktop-backend-receipt.json",
+      "bytes": 708739,
+      "gitBlob": "5815395ed36b2daf595d8125be024f0ac1c72d4f",
+      "sha256": "3d2678733b2765ef99ad46ca9ecb99cb18a038bc32656c7295ec80689c8f1946",
+      "crc32": "a9f6fc29"
+    },
+    {
+      "path": "TEST-desktop-backend-ODtJ5z/host-profile.json",
+      "bytes": 1084,
+      "gitBlob": "e60f87ba1cb28628545a8ccdb033821604a378ec",
+      "sha256": "489b5e3f410e54320adcf4d97e97b5c30e382a385d55880b1983a2c321249398",
+      "crc32": "c713ea24"
+    },
+    {
+      "path": "TEST-desktop-backend-ODtJ5z/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "gitBlob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+      "crc32": "9fc3bdb4"
+    },
+    {
+      "path": "TEST-desktop-backend-ODtJ5z/ui-seed-receipt.json",
+      "bytes": 2037,
+      "gitBlob": "59107fbd1f859f2146132e8864ff5869eafb2ced",
+      "sha256": "e4880177c9a2775b807fe41ca02caf3b46bbbb994483aed6c48660331eb700af",
+      "crc32": "90bdf52e"
+    },
+    {
+      "path": "TEST-desktop-backend-ODtJ5z/ui-task-created.png",
+      "bytes": 92868,
+      "gitBlob": "8c916cefdd6cfc61b22a11abe9b0daa54981bb05",
+      "sha256": "1e79c667672b3111a81827df023f6cefb1ab0705f2784901e2e97293480c40bc",
+      "crc32": "0618aa0a"
+    },
+    {
+      "path": "TEST-desktop-backend-ODtJ5z/ui-task-snapshots.json",
+      "bytes": 3023,
+      "gitBlob": "6df9f1368572cce086e50811a5dd7033dba8d7a8",
+      "sha256": "79577b789763188e83d3651f86ff2559888cc86333adbc12d99d31c69d4083bf",
+      "crc32": "7cfcac37"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-a3tkdE/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "gitBlob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "crc32": "ed0ca14b"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-a3tkdE/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "gitBlob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "crc32": "e06f2443"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1803,
+      "gitBlob": "badd7b400feccbdd1effd84c5aa6ded4aa1284f5",
+      "sha256": "16fb9fadad216ff1864fad2a82887da98b70f966188e90737fd56ca96890a216",
+      "crc32": "02108520"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "gitBlob": "afdb304f09ac1bef54d4b89a7a17f13fa3a5a7f6",
+      "sha256": "4a6d14fa2fae091e5ecf715e8b727c4ac86588fecee453643a111298c4bce9f3",
+      "crc32": "b2bb772a"
+    },
+    {
+      "path": "host-emulated-summary.json",
+      "bytes": 575,
+      "gitBlob": "04e968629903e3770829f1d0fd613bb1a1ed098d",
+      "sha256": "34b997e9691c861a575068e4e1b3c5fe763b9c89f5915288beba39d4733cd2b4",
+      "crc32": "bff16337"
+    },
+    {
+      "path": "host-emulated-team-ui.log",
+      "bytes": 225,
+      "gitBlob": "73be877a28f82a3f8b11a1061fce4ad796fb538a",
+      "sha256": "e22ed01cfcade3e69d56a4f3f2182000241be8d9e12211f45b65ee48c10c9685",
+      "crc32": "c502f1d0"
+    }
+  ],
+  "safePaths": true,
+  "crcAll": true,
+  "roundTripAll": true,
+  "pngCount": 1,
+  "pngActuallyViewed": 0
+}

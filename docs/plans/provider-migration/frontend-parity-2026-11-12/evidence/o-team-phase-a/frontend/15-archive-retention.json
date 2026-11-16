@@ -1,0 +1,30 @@
+{
+  "artifactId": 14200641934,
+  "retrievedAtUTC": "2026-11-16T05:40:39.393156+00:00",
+  "archive": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-4/artifact-14200641934.zip",
+    "bytes": 317444,
+    "blob": "4158fa0739558f2db7078f9cc3bd6a17bb00c82f",
+    "sha256": "49ca02feab1796982f7f43edb76a36cccd15901af2eca5bef748c40f645b4bd0"
+  },
+  "safeUniqueMembersCrcVerified": true,
+  "members": [
+    {
+      "member": "host-offline-tests-4.json",
+      "crc32": "893ff8d2",
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-4/extracted/host-offline-tests-4.json",
+      "bytes": 2329752,
+      "blob": "d641a6b4c02a655f3ffdb6882befe7f3e4ae2813",
+      "sha256": "623d558849c509b35de45812892b3725c2abbd420ee344dda43073cfc6e2c96b"
+    },
+    {
+      "member": "host-offline-tests-4.log",
+      "crc32": "298170ec",
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/frontend-shard-4/extracted/host-offline-tests-4.log",
+      "bytes": 116538,
+      "blob": "fd7a28b22e8b905d6407ac9987b051ebc0bd1261",
+      "sha256": "3fd8cf0c7e2b4bccb1d2115938f2895af501aed9a7fe867e9184348326b6f573"
+    }
+  ],
+  "signedDownloadUrlRetained": false
+}

@@ -1,0 +1,71 @@
+{
+  "kind": "Correction to immutable Models v1 independent source review: invalid typed matcher arity",
+  "observedAtUtc": "2026-11-16T05:29:31.053130+00:00",
+  "author": "/root/ui_failures",
+  "originalReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/models-loading-owner-r1/independent-source-r1-review.json",
+    "bytes": 12361,
+    "gitBlob": "5eeecb8e6527df186391cff921aea6b11c1071ac",
+    "sha256": "b227f2a16580bf132ac9a50a06d2b6dcd3f55199ad9b20c9384f1251ba06d505"
+  },
+  "originalR1": {
+    "path": "/workspace/scratch/82d3f9ba6b85/models-loading-owner-r1/R1-appendix.md",
+    "bytes": 12256,
+    "gitBlob": "006f7728195af5ffaba8d16738549833e38e7fb0",
+    "sha256": "68d7b17c1d1a2e26a4305c56e6f3845a43291ab7016f58783af426362f89d67d"
+  },
+  "originalCandidate": {
+    "path": "/workspace/scratch/82d3f9ba6b85/models-loading-owner-r1/candidate/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+    "bytes": 188106,
+    "gitBlob": "817fe49b43aef4be13d242fd2da0367590d11ace",
+    "sha256": "dd6f62050d537a9a8754cbd2ff5a59c26fedc96c7d42603ae499508ae256caa5"
+  },
+  "findingOrigin": "Root source review identified two invalid typed matcher argument lists; this reviewer then independently read the exact candidate and installed pinned declarations.",
+  "declarationInputs": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/node_modules/.pnpm/@vitest+expect@3.2.6/node_modules/@vitest/expect/package.json",
+      "bytes": 1118,
+      "gitBlob": "2cd702d22d01b20893c788b499ff61a09cc3f179",
+      "sha256": "e63876b0585c03f63418a15e1d02b376c7ee8c1b1e63edce08211c7a1e6a1836"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/node_modules/.pnpm/@vitest+expect@3.2.6/node_modules/@vitest/expect/dist/index.d.ts",
+      "bytes": 27831,
+      "gitBlob": "4f93e899783b1d411aa0fd0ca4f5b040bc729fba",
+      "sha256": "120a80aa556732f684db3ed61aeff1d6671e1655bd6cba0aa88b22b88ac9a6b1"
+    }
+  ],
+  "actualSourceFindings": [
+    {
+      "line": 5760,
+      "text": "    expect(regularResult).toBe(false, 'the superseded regular view remains inadmissible');",
+      "issue": "toBe receives two arguments; its pinned declaration accepts only expected."
+    },
+    {
+      "line": 5793,
+      "text": "        expect(state?.loading).toBe(true, 'old completions cannot release the new project request');",
+      "issue": "toBe receives two arguments; its pinned declaration accepts only expected."
+    }
+  ],
+  "declarations": {
+    "toBe": {
+      "line": 264,
+      "text": "toBe: <E>(expected: E) => void;"
+    },
+    "expect": {
+      "line": 166,
+      "text": "<T>(actual: T, message?: string): Assertion<T>;"
+    }
+  },
+  "correctedVerdict": "The v1 APPROVE overlooked this typed-API error and must not authorize application or assert TypeScript compatibility for the v1 test candidate. Frozen v1 source/R1/review remain historical and unapplied. A separately reviewed v2 must move each diagnostic message to expect(actual, message), retaining the same matcher assertion.",
+  "reviewErrorDisclosure": "This is a concrete omission in my prior static review, not a changed dependency or runtime result.",
+  "unchangedConclusions": [
+    "The loading-ownership source counterexample and currentness predicate reasoning remain source-backed.",
+    "The six expected semantic RED outcomes and four controls were predictions only; no candidate execution occurred.",
+    "No N runtime cause was proved."
+  ],
+  "v2ReviewOwner": "/root/migration_scope, by root assignment; this addendum is not a v2 approval.",
+  "originalsModified": false,
+  "compilerOrTestsExecuted": false,
+  "sourceOrRefsModified": false
+}

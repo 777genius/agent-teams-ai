@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 1,
+  "kind": "current-source-phase-A-preliminary-composition-assessment",
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUTC": "2026-11-16T05:30:52.305627+00:00",
+  "result": "HOLD_FOR_CORRECTED_MODELS_CANDIDATE_AND_EXACT_NEW_COMPOSITION_R1",
+  "sourceHead": "8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2",
+  "sourceTree": "c83e7a68b81073ff218cb0f65e813a60218f5b02",
+  "freshSourceInputs": [
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "bytes": 74351,
+      "blob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+      "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 180091,
+      "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderProjectContext.ts",
+      "bytes": 1300,
+      "blob": "33744a0abc543ab39e13d0b5a784de719e40ec58",
+      "sha256": "94e4ebc5b9e343b12ebc40f5251bab30372d9668aab295a57930653b20b6730f"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 103573,
+      "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+      "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "bytes": 45707,
+      "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+    },
+    {
+      "path": "vitest.config.ts",
+      "bytes": 1187,
+      "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc"
+    },
+    {
+      "path": ".node-version",
+      "bytes": 8,
+      "blob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5"
+    },
+    {
+      "path": "package.json",
+      "bytes": 26839,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c"
+    },
+    {
+      "path": "scripts/ci/source-file-size-baseline.json",
+      "bytes": 9635,
+      "blob": "e827bccf455235b1ff7871e7b93450cdaa53eb54",
+      "sha256": "82080bdf23e0fae3ea087e8aea8c3622fa63a734fa9874e7d07e9d568087f072"
+    },
+    {
+      "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "bytes": 8707,
+      "blob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+      "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "bytes": 8310,
+      "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7"
+    }
+  ],
+  "frozenInputs": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/models-loading-owner-r1/candidate-metadata.json",
+      "bytes": 2472,
+      "blob": "b9c58a9ef4ab00ba2cb7140073e41f7c60f53cb6",
+      "sha256": "bf146bcfc40034cda8b26b485b33b415ba5a70edec1466adea5d8e4930ced3cc"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/models-loading-owner-r1/candidate.patch",
+      "bytes": 8885,
+      "blob": "2a93b2c84635e0a7e30152e2cc30fbee4845d4db",
+      "sha256": "0279af04e913d26454e3df87cb63e12c25cdef2f70b162a327c81c5ef74604c1"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/models-loading-owner-r1/R1-appendix.md",
+      "bytes": 12256,
+      "blob": "006f7728195af5ffaba8d16738549833e38e7fb0",
+      "sha256": "68d7b17c1d1a2e26a4305c56e6f3845a43291ab7016f58783af426362f89d67d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/models-loading-owner-r1/source-and-venue-review.json",
+      "bytes": 12984,
+      "blob": "fa26dac8484ec9502be006686fd44b5102c3199c",
+      "sha256": "edd32a1a394c8e565e45e7068bc82c246efa4a774f96625fd6a36a36e3291a4d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/models-loading-owner-r1/independent-source-r1-review.json",
+      "bytes": 12361,
+      "blob": "5eeecb8e6527df186391cff921aea6b11c1071ac",
+      "sha256": "b227f2a16580bf132ac9a50a06d2b6dcd3f55199ad9b20c9384f1251ba06d505"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/models-loading-owner-r1/independent-v1-static-correction.json",
+      "bytes": 3690,
+      "blob": "cb61e758d7e89022a920949a9e67741de8af2bf9",
+      "sha256": "bc665cc21b2592c0795adf2144b42ab579b75bf6983cfb11a08db4e830aa710f"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/poll-candidate-metadata.json",
+      "bytes": 2250,
+      "blob": "9f16dddff316a2479cc614fd796e22e7a92ed9c9",
+      "sha256": "70b8e86daa5112a7d071ed411d9d4f5bb609e4d7964f0f72bfe41e7726101b18"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/poll-red-test.patch",
+      "bytes": 4670,
+      "blob": "5f2fe94dddd0c378f63502cefdb0f715b0ce0a75",
+      "sha256": "383e11424f6dbbdd58d9ddc03700499d23dcf0a97b083ab6b0a46bf5107d47d2"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/DESIGN-R1-draft-v2.md",
+      "bytes": 22937,
+      "blob": "99c9c114eb6ba6b31d21550f94f617a1e377d1da",
+      "sha256": "df8e2c7e72ce93e4b1eab7a5f0a3c1827a4270e407012583681b80acfee4147f"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/independent-source-design-review-v1.json",
+      "bytes": 22609,
+      "blob": "71d3072dffafdf4016bef204da9a42d9a0da1ee2",
+      "sha256": "9e8e090834cb1d4f228d1170bddeb13cbfcb7c37d1c48db7312b969ae7783402"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/independent-wording-review-v2.json",
+      "bytes": 3550,
+      "blob": "f12678c8cde90693552bef9c805e47be96fa8b41",
+      "sha256": "5b33453c918e6ac9c781a7293a5c011047486afa1e0981e4fea476de7e6aaf47"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/current-79-phase-a-compatibility-review.json",
+      "bytes": 20696,
+      "blob": "ee5e06447f5bd0bed01dcba64443369b64e41e07",
+      "sha256": "06d3da72ab7b9d6311925b4b28860015e59befc95cddc4b59f30ee1c19c5ed6e"
+    }
+  ],
+  "concreteFinding": {
+    "candidate": "817fe49b43aef4be13d242fd2da0367590d11ace",
+    "testLines": [
+      5760,
+      5793
+    ],
+    "finding": "Two newly added calls pass a diagnostic message as a second toBe argument. The pinned Vitest declaration accepts one expected argument. The message belongs on expect(actual, message).",
+    "declaration": {
+      "path": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/node_modules/.pnpm/@vitest+expect@3.2.6/node_modules/@vitest/expect/dist/index.d.ts",
+      "bytes": 27831,
+      "blob": "4f93e899783b1d411aa0fd0ca4f5b040bc729fba",
+      "sha256": "120a80aa556732f684db3ed61aeff1d6671e1655bd6cba0aa88b22b88ac9a6b1"
+    },
+    "exactDeclarations": {
+      "line166": "<T>(actual: T, message?: string): Assertion<T>;",
+      "line264": "toBe: <E>(expected: E) => void;"
+    },
+    "checkedInLock": "8a pnpm-lock root Vitest resolves3.2.6, whose dependency is @vitest/expect3.2.6.",
+    "requiredDisposition": "Preserve v1 and its prior review/correction history; freeze a new candidate/patch/metadata and review the exact two matcher corrections before composition approval. No compiler/test was run."
+  },
+  "modelsReadOnlyFindings": {
+    "preimageExact": "All ten source-and-venue inputs match actual8a Git bytes. Hook1176/test6c311 unchanged.",
+    "originalTestPreservation": "165-line8015-byte block is inserted immediately before the final original describe closure; removing it reconstructs all180091 original bytes exactly. No old assertions/imports/setup are removed.",
+    "seam": "Existing production hook import and ConfigurableHarness/React act, original tracked-root cleanup and Electron response mocks. Actual refresh and refreshDirectory actions are used.",
+    "ownership": "A admits loading; B silently supersedes it using the original shared sequence/context. Original A stale completion cannot release, while original B finally skips release. Both settle orders and successful/error/rejected B are finite and do not require a new production action.",
+    "newCasePredictionsOnly": {
+      "cases": 10,
+      "semanticLoadingFailures": 6,
+      "controls": 4
+    },
+    "proofLimit": "No runtime result or causal attribution to the original N Models UI timeout. In the six predicted failures the final assertion after the first failed terminal-loading expectation is not thereby executed. Unmount control observes rendered state and A currentness refusal, not every internal setter.",
+    "excludedProductionCandidate": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+  },
+  "p11ReadOnlyFindings": {
+    "preimageExact": "Actual8a smoke c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4 and original poll driverbd8bc728808eda00a45b300fd328d49e4e919bc2 match dormant phase-A preimages.",
+    "candidate": "a6c8df59b6fabc013b3570762d6b19a396e32c9e",
+    "wholeOriginalPrefixPreserved": true,
+    "addedLines": 62,
+    "newCases": 4,
+    "predictedSemanticFailures": 3,
+    "predictedControlPass": 1,
+    "seam": "Future test uniquely extracts actual inline TypeScript poll, normalizes only test source CRLF, strips types via existing Node facility and executes a strict closure with local finite clock/observer/currentness/timer callbacks. No driver/native invocation or copied poll algorithm.",
+    "failures": "First true at90000ms, first true at90001ms, and second true at90001ms after original100ms cadence. Old poll accepts each; all three expected rejection assertions must actually fail for RED. Later read/trace assertions remain unexecuted after such failure.",
+    "control": "Timely first/later acceptance, original100ms cadence, false atcutoff, exact observation/currentness errors.",
+    "excluded": "Original driver remains unchanged; both conditional post-read assertions, all route/finite-peer/controller/verifier additions, C admission tests and workflow93→98 remain excluded.",
+    "independentReviewBoundary": "Current composition assessment reuses the separate Native independent source/design and wording reviews; no new implementation or actual P11 business/native acceptance is claimed."
+  },
+  "compositionSpecificGuards": [
+    "Freeze a new current8a-bound composition R1/table/patch before any approval; no nonexistent composition is approved here.",
+    "PhaseA contains exactly the corrected existing Models test and existing smoke test; all production/workflow/config/dependency/source-roster leaves remain byte-identical, including hook1176, pollbd8, renderer aeff and privacy0b0.",
+    "Before selecting or applying A, retain and independently join full original O resulting-source ten-Team177/stderr24 plus workspace types, dedicated backend type project and all original typed lint scopes terminal raw GREEN. API step10SUCCESS is a status observation, not the full raw qualification.",
+    "P11 tests run in shared eight-file Desktop prerequisite at workflow103 in all18 original matrix lanes. Expected RED prevents those jobs from reaching later Team/types/business checks, so A cannot retrospectively establish their missing prerequisite GREEN.",
+    "Models runs in the independent original offline-frontend-tests four-shard job. It has no needs dependency on Desktop prerequisite; whole original containing shard and full file/log/JSON are required. Historical N shard2 placement and80 cases do not identify a future shard or guarantee its results.",
+    "The combined scripts test path matches the existing pull_request path filter; no workflow/newjob/dispatch alteration is selected. Preserve actual source, installed inputs, fresh prerequisite builds and exact original commands/runtime per venue.",
+    "Both semantic RED venues must be retained and independently reviewed before advancing source in a way that cancels the other useful venue. Do not accept checkout/import/marker/setup/type/build/timeouts as either semantic RED.",
+    "Future production changes require the exact conditional stage selection and actual prior RED review. No local project/compiler/lint/install/bootstrap/manual CI fallback is authorized.",
+    "Preserve useful original cohorts without inventing an all-queued/all-terminal rule; current Team ordinary UI is still useful after its types step.",
+    "No P11 live Add/Remove/Restore/Stop/cold, Models real UI journey, cleanup, Windows checkout or general resulting-source acceptance follows from these test-only predictions."
+  ],
+  "actions": {
+    "projectExecution": false,
+    "compilerOrNodeExecution": false,
+    "sourceOrRefMutation": false,
+    "ciPolling": false,
+    "candidateOrFrozenInputMutation": false,
+    "newScratchAssessmentOnly": true
+  }
+}

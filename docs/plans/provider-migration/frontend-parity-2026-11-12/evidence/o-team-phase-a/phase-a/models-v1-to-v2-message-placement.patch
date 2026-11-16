@@ -1,0 +1,20 @@
+--- a/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts
++++ b/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts
+@@ -5757,7 +5757,7 @@
+       });
+       settled.push({ request, loading: state?.loading });
+     }
+-    expect(regularResult).toBe(false, 'the superseded regular view remains inadmissible');
++    expect(regularResult, 'the superseded regular view remains inadmissible').toBe(false);
+     expect(state?.error).toBe(outcome === 'view' ? null : 'TEST current view failure');
+     expect(state?.view?.defaultModel ?? null).toBe(outcome === 'view' ? 'opencode/current-view' : null);
+     expect(fixture.loadView).toHaveBeenCalledTimes(2);
+@@ -5790,7 +5790,7 @@
+             await silent;
+           }
+         });
+-        expect(state?.loading).toBe(true, 'old completions cannot release the new project request');
++        expect(state?.loading, 'old completions cannot release the new project request').toBe(true);
+         expect(state?.view).toBeNull();
+         expect(state?.error).toBeNull();
+       }

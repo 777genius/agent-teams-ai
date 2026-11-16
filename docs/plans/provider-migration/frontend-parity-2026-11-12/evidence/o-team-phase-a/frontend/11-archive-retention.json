@@ -1,0 +1,31 @@
+{
+  "artifactId": 14199184344,
+  "officialSize": 297015,
+  "officialDigest": "sha256:0e7ecbf78bb78e95ca178f590fb3b11848b93f395da663fb16151163b319506f",
+  "sourceHead": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "zipBytes": 297015,
+  "gitBlob": "60281987bfff3f5228982b102cf9ce6989309467",
+  "sha256": "0e7ecbf78bb78e95ca178f590fb3b11848b93f395da663fb16151163b319506f",
+  "safePaths": true,
+  "crcAll": true,
+  "roundTripAll": true,
+  "members": [
+    {
+      "path": "host-offline-tests-3.json",
+      "bytes": 2189203,
+      "crc32": "93be1900",
+      "gitBlob": "5a497d4738faf2a7230a586f7ca0238a8aa1b1e4",
+      "sha256": "7194aaf0f1d28693b98e8549c721f06fae29998bb18c11cebb2f8331c1728712"
+    },
+    {
+      "path": "host-offline-tests-3.log",
+      "bytes": 93537,
+      "crc32": "954b3441",
+      "gitBlob": "01b25a28c9dc949640746a4baf601c1106eda096",
+      "sha256": "5f40eee876eb3e1d953c33823dff32d196583ac9212606be3be4db1ab1a7997f"
+    }
+  ],
+  "memberCount": 2,
+  "pngCount": 0,
+  "visualReview": false
+}

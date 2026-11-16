@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "createdAtUTC": "2026-11-16T05:39:11.199010+00:00",
+  "sourceHead": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "runId": 43807841778,
+  "jobId": 133102584776,
+  "scope": "complete original Team contracts/static gate and scoped offline Task UI PASS; no native/vendor/release qualification",
+  "payloads": [
+    {
+      "path": "ci-o-953fd8/team/original-job-133102584776-response.json",
+      "bytes": 2736193,
+      "gitBlob": "206dab85a2778bc2695f3d02f197fab0878ccb18",
+      "sha256": "a4b998f1cb197beb20594c2eef8f8f84062c8a4576092f33807cc5e22e2b43e3"
+    },
+    {
+      "path": "ci-o-953fd8/team/job-133102584776.log",
+      "bytes": 2709130,
+      "gitBlob": "1f92fa0fa07758dac89699f9121d238828c0d897",
+      "sha256": "534facece8bba5cbaffe7a52bb05c8a70ee6787a4a182058ccd3e46b11645c17"
+    },
+    {
+      "path": "ci-o-953fd8/team/artifact-14200605574.zip",
+      "bytes": 651336,
+      "gitBlob": "6dcc4a2f0911b2646e1330183d405162083c9ffe",
+      "sha256": "c057a3535e333a708c8fdda3fedf170f0ef5a72cdafb46dff7702de92163dd39"
+    },
+    {
+      "path": "ci-o-953fd8/team/archive-retention.json",
+      "bytes": 4282,
+      "gitBlob": "d9981b92cc6b285ce34a4fce95725305b734098e",
+      "sha256": "c91070b53b0fa92614fb25bc07196974ed54883d4f1f8872641802dede62b3d2"
+    },
+    {
+      "path": "ci-o-953fd8/official-host-artifacts-0532.json",
+      "bytes": 3857,
+      "gitBlob": "76181d84a66df8e371863c3f6b4254c4463607d0",
+      "sha256": "e7fe16da0a41575dc8d45bcbef4463f10ecfc90ebd9bdee7611fe51d5acbc649"
+    },
+    {
+      "path": "ci-o-953fd8/owned-api-jobs-0532.json",
+      "bytes": 45695,
+      "gitBlob": "23fde90e8313b5433cb846e8d09ed20195770766",
+      "sha256": "55da7e35c3623f1edfe76e3faf00ea786102ccc6035c70053f57e3c7908fce3e"
+    },
+    {
+      "path": "ci-o-953fd8/team/source-pin-audit.json",
+      "bytes": 707391,
+      "gitBlob": "c9248abbb23e6fa1623db18a18391976b73b0c8a",
+      "sha256": "cef8cb196b26969512c3d3594c783efd6ea399eac3109907886f1e58cf85557b"
+    },
+    {
+      "path": "ci-o-953fd8/team/audit.json",
+      "bytes": 164013,
+      "gitBlob": "1c1e03fe2eeeea7f3d7e470c4bd90ac7d0b72039",
+      "sha256": "09624ac7a6aa1c89d658e0eeb6646b87230a447a7283961bca9cc3d149e9109f"
+    },
+    {
+      "path": "ci-o-953fd8/team/Plan29-appendix.md",
+      "bytes": 6612,
+      "gitBlob": "ba652f7ef9afa2a2210478f1305cac220aa95660",
+      "sha256": "a8abd79bcd8b1ad2fc45f7c5bd93c8b4b802cbf963280e789e68f9c2fbb63e00"
+    }
+  ],
+  "archiveMembersRecoverableFromOriginalZip": 14,
+  "nativeQualified": false,
+  "releaseQualified": false,
+  "allDesktopQualified": false,
+  "independentReviewsAreSeparate": true
+}

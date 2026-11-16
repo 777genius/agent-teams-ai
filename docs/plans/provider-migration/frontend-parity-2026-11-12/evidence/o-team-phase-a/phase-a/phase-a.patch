@@ -1,0 +1,240 @@
+--- a/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
++++ b/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
+@@ -1764,3 +1764,65 @@
+   await assert.rejects(mismatch.run(true), { code: 'ERR_ASSERTION' });
+   assert.deepEqual(mismatch.values, [true], 'the original exact stopped binding assertion remains after the UI read');
+ });
++
++
++async function originalLiveMembershipPoll() {
++  const { stripTypeScriptTypes } = await import('node:module');
++  const source = (await readFile(new URL('./desktop-live-membership-ui-smoke.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
++  const begin = '  const poll = async <T>(', end = "  const workspace = join(fixture.root, 'workspace');";
++  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original P11 poll boundary');
++  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));
++  const makePoll = Function('environment', `'use strict';
++    const {assert,current,Date,setTimeout}=environment;
++    ${actual}
++    return poll;`) as (environment: Record<string, unknown>) =>
++      (observe: () => Promise<boolean>, accepts: (value: boolean) => boolean, label: string) => Promise<boolean>;
++  return (observations: { at: number; value?: boolean; error?: Error }[], guardError?: Error) => {
++    let now = 0, reads = 0;
++    const trace: string[] = [], delays: number[] = [];
++    const poll = makePoll({ assert, Date: { now: () => now },
++      current() { trace.push('guard'); if (guardError) throw guardError; },
++      setTimeout(done: () => void, delay: number) {
++        assert.equal(delay, 100); delays.push(delay); now += delay; done();
++      },
++    });
++    return { trace, delays, reads: () => reads,
++      run: (label: string) => poll(async () => {
++        const observation = observations[reads++]; assert.ok(observation, 'no unplanned observation');
++        trace.push('read'); assert.ok(observation.at >= now); now = observation.at;
++        if (observation.error) throw observation.error;
++        assert.equal(typeof observation.value, 'boolean'); return observation.value!;
++      }, value => value, label),
++    };
++  };
++}
++
++for (const scenario of [
++  { name: 'first result at the exact cutoff', values: [{ at: 90_000, value: true }], reads: 1, trace: ['read'], delays: [] },
++  { name: 'first result after the cutoff', values: [{ at: 90_001, value: true }], reads: 1, trace: ['read'], delays: [] },
++  { name: 'polled result after the cutoff', values: [{ at: 0, value: false }, { at: 90_001, value: true }], reads: 2,
++    trace: ['read', 'guard', 'read'], delays: [100] },
++]) test('P11 keeps the original 90-second cutoff for ' + scenario.name, async () => {
++  const make = await originalLiveMembershipPoll(), f = make(scenario.values), label = 'TEST original P11 deadline';
++  await assert.rejects(f.run(label), error => error instanceof assert.AssertionError && error.message.includes(label));
++  assert.equal(f.reads(), scenario.reads); assert.deepEqual(f.trace, scenario.trace); assert.deepEqual(f.delays, scenario.delays);
++});
++
++test('P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity', async () => {
++  const make = await originalLiveMembershipPoll(), label = 'TEST original P11 observation';
++  const immediate = make([{ at: 89_999, value: true }]);
++  assert.equal(await immediate.run(label), true); assert.equal(immediate.reads(), 1);
++  assert.deepEqual(immediate.trace, ['read']); assert.deepEqual(immediate.delays, []);
++  const later = make([{ at: 0, value: false }, { at: 101, value: true }]);
++  assert.equal(await later.run(label), true); assert.equal(later.reads(), 2);
++  assert.deepEqual(later.trace, ['read', 'guard', 'read']); assert.deepEqual(later.delays, [100]);
++  const refusal = new Error('TEST original observation failure'), failed = make([{ at: 90_001, error: refusal }]);
++  await assert.rejects(failed.run(label), error => error === refusal);
++  assert.equal(failed.reads(), 1); assert.deepEqual(failed.trace, ['read']); assert.deepEqual(failed.delays, []);
++  const stale = new Error('TEST original currentness failure'), guarded = make([{ at: 0, value: false }], stale);
++  await assert.rejects(guarded.run(label), error => error === stale);
++  assert.equal(guarded.reads(), 1); assert.deepEqual(guarded.trace, ['read', 'guard']); assert.deepEqual(guarded.delays, []);
++  const noReady = make([{ at: 90_000, value: false }]);
++  await assert.rejects(noReady.run(label), assert.AssertionError);
++  assert.equal(noReady.reads(), 1); assert.deepEqual(noReady.trace, ['read']); assert.deepEqual(noReady.delays, []);
++});
+--- a/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts
++++ b/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts
+@@ -5675,4 +5675,169 @@
+ 
+     expect(clearProjectDefaultModel).not.toHaveBeenCalled();
+   });
++
++  async function heldViewRefreshFixture() {
++    const requests: {
++      projectPath: string | null;
++      resolve: (value: RuntimeProviderManagementViewResponse) => void;
++      reject: (reason: unknown) => void;
++    }[] = [];
++    const loadView = vi.fn((input: { projectPath?: string | null }) =>
++      new Promise<RuntimeProviderManagementViewResponse>((resolve, reject) => {
++        requests.push({ projectPath: input.projectPath ?? null, resolve, reject });
++      })
++    );
++    const loadProviderDirectory = vi.fn(() => Promise.resolve(createEmptyDirectoryResponse()));
++    Object.defineProperty(window, 'electronAPI', {
++      configurable: true,
++      value: {
++        runtimeProviderManagement: { loadView, loadProviderDirectory },
++      } as unknown as ElectronAPI,
++    });
++    const root = createRoot(host);
++    await act(async () => {
++      root.render(React.createElement(ConfigurableHarness, {
++        enabled: true, projectPath: '/tmp/TEST-view-owner-a', loadViewOnEnable: false,
++      }));
++    });
++    expect(loadView).not.toHaveBeenCalled();
++    expect(state?.loading).toBe(false);
++    const currentActions = (): RuntimeProviderManagementActions => {
++      if (!actions) throw new Error('Actual hook actions were not rendered');
++      return actions;
++    };
++    const request = (index: number) => {
++      const pending = requests[index];
++      if (!pending) throw new Error('Actual loadView call was not retained');
++      return pending;
++    };
++    const complete = (index: number, model: string) => {
++      const pending = request(index);
++      pending.resolve({ schemaVersion: 1, runtimeId: 'opencode',
++        view: { ...createRuntimeView(), projectPath: pending.projectPath, defaultModel: model } });
++    };
++    return { root, loadView, loadProviderDirectory, currentActions, request, complete };
++  }
++
++  it.each([
++    { order: 'regular-first', outcome: 'view' },
++    { order: 'silent-first', outcome: 'view' },
++    { order: 'regular-first', outcome: 'response-error' },
++    { order: 'silent-first', outcome: 'response-error' },
++    { order: 'regular-first', outcome: 'rejection' },
++    { order: 'silent-first', outcome: 'rejection' },
++  ] as const)('releases current view loading after silent supersession ($order, $outcome)', async ({ order, outcome }) => {
++    const fixture = await heldViewRefreshFixture();
++    let regular!: Promise<boolean>, silent!: Promise<void>;
++    await act(async () => { regular = fixture.currentActions().refresh(); });
++    expect(state?.loading).toBe(true);
++    const directoryCalls = fixture.loadProviderDirectory.mock.calls.length;
++    await act(async () => { silent = fixture.currentActions().refreshDirectory(); });
++    expect(fixture.loadView).toHaveBeenCalledTimes(2);
++    expect(fixture.loadProviderDirectory).toHaveBeenCalledTimes(directoryCalls + 1);
++    expect(fixture.request(0).projectPath).toBe('/tmp/TEST-view-owner-a');
++    expect(fixture.request(1).projectPath).toBe('/tmp/TEST-view-owner-a');
++    expect(state?.loading).toBe(true);
++    const settled: { request: string; loading: boolean | undefined }[] = [];
++    let regularResult: boolean | undefined;
++    for (const request of order === 'regular-first' ? ['regular', 'silent'] : ['silent', 'regular']) {
++      await act(async () => {
++        if (request === 'regular') {
++          fixture.complete(0, 'opencode/stale-view');
++          regularResult = await regular;
++        } else {
++          if (outcome === 'view') fixture.complete(1, 'opencode/current-view');
++          else if (outcome === 'response-error') fixture.request(1).resolve({
++            schemaVersion: 1, runtimeId: 'opencode',
++            error: { code: 'runtime-unhealthy', message: 'TEST current view failure', recoverable: true },
++          });
++          else fixture.request(1).reject(new Error('TEST current view failure'));
++          await silent;
++        }
++      });
++      settled.push({ request, loading: state?.loading });
++    }
++    expect(regularResult, 'the superseded regular view remains inadmissible').toBe(false);
++    expect(state?.error).toBe(outcome === 'view' ? null : 'TEST current view failure');
++    expect(state?.view?.defaultModel ?? null).toBe(outcome === 'view' ? 'opencode/current-view' : null);
++    expect(fixture.loadView).toHaveBeenCalledTimes(2);
++    if (order === 'regular-first') expect(settled[0]?.loading).toBe(true);
++    expect(settled.find(row => row.request === 'silent')?.loading).toBe(false);
++    expect(state?.loading).toBe(false);
++  });
++
++  it.each(['regular-first', 'silent-first'] as const)(
++    'keeps a newer project view loading when both old requests settle (%s)', async order => {
++      const fixture = await heldViewRefreshFixture();
++      let regular!: Promise<boolean>, silent!: Promise<void>;
++      await act(async () => { regular = fixture.currentActions().refresh(); });
++      await act(async () => { silent = fixture.currentActions().refreshDirectory(); });
++      await act(async () => {
++        fixture.root.render(React.createElement(ConfigurableHarness, {
++          enabled: true, projectPath: '/tmp/TEST-view-owner-b', loadViewOnEnable: false,
++        }));
++      });
++      expect(fixture.loadView).toHaveBeenCalledTimes(3);
++      expect(fixture.request(2).projectPath).toBe('/tmp/TEST-view-owner-b');
++      expect(state?.loading).toBe(true);
++      for (const request of order === 'regular-first' ? ['regular', 'silent'] : ['silent', 'regular']) {
++        await act(async () => {
++          if (request === 'regular') {
++            fixture.request(0).reject(new Error('TEST stale project failure'));
++            expect(await regular).toBe(false);
++          } else {
++            fixture.complete(1, 'opencode/stale-project');
++            await silent;
++          }
++        });
++        expect(state?.loading, 'old completions cannot release the new project request').toBe(true);
++        expect(state?.view).toBeNull();
++        expect(state?.error).toBeNull();
++      }
++      await act(async () => { fixture.complete(2, 'opencode/current-project'); });
++      expect(state?.view?.projectPath).toBe('/tmp/TEST-view-owner-b');
++      expect(state?.view?.defaultModel).toBe('opencode/current-project');
++      expect(state?.loading).toBe(false);
++      expect(fixture.loadView).toHaveBeenCalledTimes(3);
++    }
++  );
++
++  it('does not publish late regular or silent view results after the actual hook unmounts', async () => {
++    const fixture = await heldViewRefreshFixture();
++    let regular!: Promise<boolean>, silent!: Promise<void>;
++    await act(async () => { regular = fixture.currentActions().refresh(); });
++    await act(async () => { silent = fixture.currentActions().refreshDirectory(); });
++    const lastRenderedState = state;
++    await act(async () => { fixture.root.unmount(); });
++    roots.delete(fixture.root);
++    await act(async () => {
++      fixture.complete(1, 'opencode/after-unmount');
++      await silent;
++      fixture.request(0).reject(new Error('TEST stale unmounted failure'));
++      expect(await regular).toBe(false);
++    });
++    expect(state).toBe(lastRenderedState);
++    expect(fixture.loadView).toHaveBeenCalledTimes(2);
++  });
++
++  it('keeps an otherwise idle silent view refresh free of a visible loading state', async () => {
++    const fixture = await heldViewRefreshFixture();
++    let regular!: Promise<boolean>, silent!: Promise<void>;
++    await act(async () => { regular = fixture.currentActions().refresh(); });
++    await act(async () => {
++      fixture.complete(0, 'opencode/initial-view');
++      expect(await regular).toBe(true);
++    });
++    expect(state?.loading).toBe(false);
++    await act(async () => { silent = fixture.currentActions().refreshDirectory(); });
++    expect(state?.loading).toBe(false);
++    expect(state?.view?.defaultModel).toBe('opencode/initial-view');
++    await act(async () => {
++      fixture.complete(1, 'opencode/refreshed-view');
++      await silent;
++    });
++    expect(state?.loading).toBe(false);
++    expect(state?.view?.defaultModel).toBe('opencode/refreshed-view');
++    expect(fixture.loadView).toHaveBeenCalledTimes(2);
++  });
+ });

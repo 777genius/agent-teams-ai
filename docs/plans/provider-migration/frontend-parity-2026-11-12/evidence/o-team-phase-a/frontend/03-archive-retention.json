@@ -1,0 +1,31 @@
+{
+  "artifactId": 14200345716,
+  "officialSize": 294636,
+  "officialDigest": "sha256:03a46132f92cd810b7027c9c01eb237db48841fb7d60defec9095e4bc95d1dfe",
+  "sourceHead": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "zipBytes": 294636,
+  "gitBlob": "b2d7eac2bc345514665c95df19ff913416b4932f",
+  "sha256": "03a46132f92cd810b7027c9c01eb237db48841fb7d60defec9095e4bc95d1dfe",
+  "safePaths": true,
+  "crcAll": true,
+  "roundTripAll": true,
+  "members": [
+    {
+      "path": "host-offline-tests-1.log",
+      "bytes": 97466,
+      "crc32": "184b22fe",
+      "gitBlob": "404a8ddebed92c4f7f11c35f00b64eb51d18cf79",
+      "sha256": "8d22335947c05293b184b1f7fcf6233670d7669d05224a0de0251cd765fe2f8e"
+    },
+    {
+      "path": "host-offline-tests-1.json",
+      "bytes": 2167989,
+      "crc32": "68ed5a03",
+      "gitBlob": "c2e37908e709dd463ab081d6380ec5ffc065ace1",
+      "sha256": "6c2409b9fd090ffc89468714268b128c4bc6643ec240bb41566229200c5888f9"
+    }
+  ],
+  "memberCount": 2,
+  "pngCount": 0,
+  "visualReview": false
+}

@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "kind": "prospective-source-invariant-candidate-not-executed",
+  "sourceHead": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "paths": [
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "preimage": {
+        "bytes": 74351,
+        "lines": 2068,
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575"
+      },
+      "candidate": {
+        "bytes": 74340,
+        "lines": 2068,
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c"
+      },
+      "addedLines": 1,
+      "removedLines": 1,
+      "inverseExact": true
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "preimage": {
+        "bytes": 180091,
+        "lines": 5678,
+        "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+      },
+      "candidate": {
+        "bytes": 188106,
+        "lines": 5843,
+        "gitBlob": "817fe49b43aef4be13d242fd2da0367590d11ace",
+        "sha256": "dd6f62050d537a9a8754cbd2ff5a59c26fedc96c7d42603ae499508ae256caa5"
+      },
+      "addedLines": 165,
+      "removedLines": 0,
+      "inverseExact": true
+    }
+  ],
+  "historicalCause": "N Models timeout interleaving remains unproven; source defect independently reachable through original refresh and refreshDirectory actions.",
+  "testConstruction": {
+    "actualHook": true,
+    "mockOnlyExistingElectronResponses": true,
+    "newTopLevelCases": 10,
+    "predictedSemanticRed": 6,
+    "predictedNewControlsPass": 4,
+    "historicalNOriginalCases": 80,
+    "predictedWholeFileCases": 90,
+    "predictionsOnly": true,
+    "noProjectExecution": true
+  },
+  "scope": {
+    "productionDelta": "Only remove !silent && from current-request finally loading release.",
+    "unchangedCurrentness": true,
+    "unchangedLoadingAdmission": true,
+    "workflowOrConfigChange": false,
+    "addedProductionQueriesActionsTimersOrFields": false,
+    "sourceLineCap": 2068,
+    "legacyCapUnchanged": true
+  },
+  "patch": {
+    "bytes": 8885,
+    "lines": 183,
+    "gitBlob": "2a93b2c84635e0a7e30152e2cc30fbee4845d4db",
+    "sha256": "0279af04e913d26454e3df87cb63e12c25cdef2f70b162a327c81c5ef74604c1"
+  }
+}

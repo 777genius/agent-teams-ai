@@ -1,0 +1,22 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "content": "{\"sha\":\"8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2\",\"node_id\":\"C_kwDORVTEtNoAKDhhNDk5YTQ5YjE3Y2Y5MmM0ZmYwMGM1ZjQ2ZWQzYWE2ZTMyNWNlZDI\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T05:19:31Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T05:19:31Z\"},\"tree\":{\"sha\":\"c83e7a68b81073ff218cb0f65e813a60218f5b02\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/c83e7a68b81073ff218cb0f65e813a60218f5b02\"},\"message\":\"docs(parity): shorten retained P11 proposal paths\",\"parents\":[{\"sha\":\"953fd8a94dc97bcfe89a7a808043dc11843e19d8\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/953fd8a94dc97bcfe89a7a808043dc11843e19d8\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/953fd8a94dc97bcfe89a7a808043dc11843e19d8\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+    "title": "8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2",
+    "modified_date": null,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2",
+    "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2",
+    "display_title": "8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2",
+    "structuredContent": {
+      "title": "8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2",
+      "content": "{\"sha\":\"8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2\",\"node_id\":\"C_kwDORVTEtNoAKDhhNDk5YTQ5YjE3Y2Y5MmM0ZmYwMGM1ZjQ2ZWQzYWE2ZTMyNWNlZDI\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T05:19:31Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T05:19:31Z\"},\"tree\":{\"sha\":\"c83e7a68b81073ff218cb0f65e813a60218f5b02\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/c83e7a68b81073ff218cb0f65e813a60218f5b02\"},\"message\":\"docs(parity): shorten retained P11 proposal paths\",\"parents\":[{\"sha\":\"953fd8a94dc97bcfe89a7a808043dc11843e19d8\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/953fd8a94dc97bcfe89a7a808043dc11843e19d8\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/953fd8a94dc97bcfe89a7a808043dc11843e19d8\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+      "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2"
+    }
+  },
+  "isError": false
+}
