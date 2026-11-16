@@ -291,6 +291,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     const thoughtCopy = thoughtRow + ' button[title="Copy to clipboard"]';
     await ui.scrollTo(thoughtCopy, 'original Thinking copy'); await ui.click(thoughtCopy, 'copy actual retained Thinking');
     await ui.waitRead(`Boolean(document.querySelector(${literal(thoughtCopy + ' svg.lucide-check')}))`, 'Thinking clipboard write acknowledged');
+    options.assertOwnedRenderer();
     assert.equal(await cdp.evaluate('navigator.clipboard.readText()'), thoughtText);
     await ui.click(thoughtRow + ' [role="button"]', 'collapse original Thinking');
     await ui.waitRead(`!document.querySelector(${literal(thoughtRow + ' [data-host-log-content]')})`, 'Thinking rich content collapses');
@@ -545,6 +546,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     assert.equal(thought.operationRef, array(completedSession.inputs)[0]!.operationRef);
     assert.deepEqual(diagnostic.data, { kind: 'process-output', stream: 'stderr', text: 'TEST standalone stderr' });
     assert.equal(diagnostic.inputId, undefined); assert.equal(diagnostic.operationRef, undefined);
+    options.assertOwnedRenderer();
     const savedLogs = record(await cdp.evaluate(`window.electronAPI.schedules.getRunLogs(${literal(LEGACY_SCHEDULE_ID)},${literal(completedRunId)})`));
     const savedThought = String(savedLogs.stdout).split('\n').map(line => record(JSON.parse(line))).filter(row => row.uuid === thought.eventId);
     assert.equal(savedThought.length, 1);
@@ -563,6 +565,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     const thoughtCopy = thoughtRow + ' button[title="Copy to clipboard"]';
     await ui.scrollTo(thoughtCopy, 'original scheduled Thinking copy'); await ui.click(thoughtCopy, 'copy scheduled Thinking');
     await ui.waitRead(`Boolean(document.querySelector(${literal(thoughtCopy + ' svg.lucide-check')}))`, 'scheduled Thinking clipboard acknowledged');
+    options.assertOwnedRenderer();
     assert.equal(await cdp.evaluate('navigator.clipboard.readText()'), record(thought.data).text);
     await ui.scrollTo('[role="dialog"] pre', 'original scheduled stderr', String(savedLogs.stderr).trim(), 12, { requireCenterHit: true });
     await ui.waitRead(`document.querySelector('[role="dialog"] pre')?.textContent===${literal(savedLogs.stderr)}`, 'saved stderr renders unchanged');

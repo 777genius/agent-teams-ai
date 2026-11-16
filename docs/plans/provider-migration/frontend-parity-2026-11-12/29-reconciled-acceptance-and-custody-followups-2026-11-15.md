@@ -5721,3 +5721,37 @@ The selected Host config is `5be6147040fff092e041b8c8008c7257bf1cdfb2`,399 bytes
 The full test scopes remain the two original V2/HostTask RED files; the same V2 file, two original Host activity files and two original Vitest files for GREEN. Keep original testTimeout15000, cleanup and source/ownership assertions. The existing source-size and provisioning guards run unchanged; the three source/helper files stay133/278/791 lines. Original resulting-source full frontend/Desktop/native/packaged and typed-lint/workspace gates remain separate from these finite checks.
 
 After exact source/result R2, immediately normally push the eight-file source child plus its factual Plan appendix to this separate delivery branch and read back every resulting payload/tree/parent/ref. A later ordinary primary-branch fast-forward requires a fresh expected head and preservation of useful original cohorts under the already published rule; this R1 neither cancels nor manually retries/dispatches any workflow. It does not authorize overwriting new author changes, Ready/main merge, release, default activation, Stage2 or a full private/public native merge.
+
+## Result — exact public-source read boundaries and preserved Thinking coverage
+
+The prospective R1 was published as `0b0250b46ed1e09c712b5d8c07816c37cf935daf`, tree `34029ce201754f885cbe7980cf631ac77c4e1a68`, sole parent0660, on the separate delivery branch `fix/frontend-parity-public-c2f5ff7c` at2026-11-16T01:43:22Z. The complete1295812-byte Plan d3f1f215 and sole-path diff/tree/parent/ref were read back before source/dependency application or any project command. The initial update-ref call reported absent reference422; creating that new branch published the same commit, without another commit, force update or primary-branch movement.
+
+All eight reviewed source/test after-images were applied unchanged. Test-only RED tree `f07ee939ec00e58f49a643d400e94fd43e40e1ac` contains exactly the five test changes plus published Plan. Complete V2 records:6PASS/1FAIL, no skip/cancellation; the actual global-default commands-time owner revocation performed one forbidden DOM read instead of zero at298. That failure stops the containing test before its project-default variant. Complete HostTaskActivity:8PASS/1FAIL; the direct malformed Task response did not throw at341, so the later two API assertions in that case were not reached during RED. These are the two intended semantic boundaries, not setup/import failures and not Stage M privacy evidence.
+
+GREEN tree `5ec39c782c8f8efeb5e18d25108c66cf058f6be9` adds exactly the three reviewed guard-bearing source/helper files over that RED. Full V2 records passed7/7, including both global/project variants. Full RuntimeActivity/TeamActivityRead passed43/43. Full HostTaskActivity/RuntimeActivityFacade passed21/21. Thus71 distinct cases passed across five complete files, with zero skipped/cancelled/todo cases; RED cases are included in those71, not extra unique coverage. The original tests and assertions remained unchanged.
+
+The isolated checkout first completed the original controller copy-build and canonical Host build with its task-change-ledger prerequisite. No private build output was reused. Their fresh source receipt is34029; all Host executable inputs remain unchanged through this eight-path RED/GREEN. The exact resulting controller+Host+ledger output inventory has 1504 files and SHA256 `b8d663686a1fde67a946da32800c04f87f20b8d5d327194a4732cf5811011b5a`. Every subsequent command and final postflight preserved it.
+
+All three strict checks passed: the exact two-root selected Host config5be61470, exact three-root app scope plus six existing ambient declarations a007e3f6, and the complete original legacy-host-scripts compiler. Eight-file fast lint, the unchanged source-size guard (5020 production files,141 frozen exceptions,800-line limit) and provisioning guard (22/50/31/62/154) passed. No compiler option, source-size baseline, source roster, full-workspace retry, native process, GUI journey, install or real Claude/Codex execution was introduced. These finite checks do not replace the original full frontend/typed-lint/workspace/Desktop/Process/V2/packaged gates.
+
+The exact serial argv/environment remain manifestf257713d (SHA256f9ad8b32ee46fbc9e1f3ad424f558f959c2f6c8347455a58708db680f1310c6e), with pinned Node24.21/pnpm11.25/TS7.0.2, four original unsets, explicit no-auto-install setting and180-second subprocess-group ceilings. All commands completed within their ceilings. Raw receipts/logs are retained under public-read-boundary-integration/validation, with these exact full log hashes:
+
+| Command | Exit | Wall seconds | Log bytes | Log SHA256 |
+| --- | --- | --- | --- | --- |
+| baseline-controller-build | 0 | 8.686 | 27 | 8bc0926bfa2d8d2890b8511a26ba862d115779e1a73e5ad66062192c27c8d5db |
+| baseline-host-build | 0 | 8.863 | 182 | d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789 |
+| red-v2-records | 1 | 1.291 | 1682 | 47baef566064eadee8af554cfafcf56a1bec2f9259c781f9db6e3da2f5152732 |
+| red-task-activity | 1 | 8.817 | 2484 | 2d1c63804a6f49f756805f2b5676161eab927773319e34f5baad7ff4eac989fe |
+| green-v2-records | 0 | 1.019 | 890 | 979ee11a19f560cc5641b7c62dd0c9cfcdb05c7fdb61bf6455d30257ac2f44ed |
+| green-host-activity | 0 | 4.596 | 5193 | 89d0a5e3df64920c0c92d6655b48821bb997f0fb8bf61c471097090115438679 |
+| green-app-activity | 0 | 14.932 | 560 | 382b00219d0a571c4fd437764e1b87830f7ccf6e58e74b9fa29b4baef6b115fa |
+| green-host-types | 0 | 0.364 | 0 | e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 |
+| green-app-types | 0 | 4.350 | 0 | e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 |
+| green-script-types | 0 | 7.513 | 97 | 497757da33976a6244e18944dec8185b370f08467b2b5ad675446e3ca3c3b015 |
+| green-source-lint | 0 | 8.016 | 604 | b133207ee66fdc9c31c3a2f1cfd188399bc53a01b85b625303b27e52ada9a384 |
+| green-source-size | 0 | 6.659 | 249 | 26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f |
+| green-provisioning | 0 | 6.499 | 245 | 7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c |
+
+Final postflight at 2026-11-16T01:47:31.394794+00:00 rehashed every tracked public leaf and kept exact GREEN tree5ec39c78. Both normal indexes retained7a2489dc/161fc514; all133 dependency links, six local workspace bindings, both Host provider links, five provider edges and253+12 payload members matched their original manifests and exact public9423 archives, with no extra payload. Shared Vite temp/workspace-state were excluded and installed payloads remained unchanged. The private continuation was untouched.
+
+The eventual source publication is exactly these eight existing files plus this factual Plan append; compared with tested GREEN, only this appendix changes. Preserve the entire original public Plan prefix and all unrelated public leaves, including rich Task/Stop journeys, complete Stage M24-case test072733/unchanged helper6b6c, original workflow/full ten-file Team command and93-operand lint. Current useful original CI is retained; primary delivery still requires a fresh expected head and its published preservation rule. The UI raw-read fences receive source/type/finite-test coverage here; this is not an actual Electron journey or complete migration. Draft/original-base, P08/P09, full native/I386, M16/upgrade, Windows original15s and real-vendor limitations remain.
