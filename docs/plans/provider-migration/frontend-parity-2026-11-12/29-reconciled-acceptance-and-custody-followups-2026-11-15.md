@@ -6246,3 +6246,67 @@ Retain public7 successful Host/ledger build receipt SHA256 a7cb56eaf66454cd5dc47
 Audit `89674468d24ecd82f56f8f3b7789342e520e89b7` (SHA256 `52d32875c8efd029ff75c5522738f5fe2ef8c2eb683bef4b4260b98fcf6d529d`) and runner `3a282e583bcd8b9dac0a089662e4853e60c4257a` (SHA256 `58b396fe2c794675e3e8895479503daf09053e3130bcaa637188a50cb13e6749`) bind publication, exact source/argv/config hashes, dependency closure and outputs. RED tracked delta is exactly published Plan plus two tests; GREEN is that Plan plus four images. Postflight requires every GREEN receipt to match exact source/argv/publication/log and unchanged output inventory. Both ordinary indexes remain exact; logs/receipts use exclusive names; timeout/signal never qualifies. Both scripts were only Python-syntax parsed before publication, with no project command or setup link. An initial scratch preparation Python syntax typo executed no statements and changed no repository/source or validation result; this corrected preparation only constructs reviewable R1 artifacts.
 
 After actual finite results and independent R2, publish exactly four source/test paths plus factual Plan append, with immediate ordinary expected-head push/full payload readback. A later #1192 advance needs fresh head lease and preservation of useful original CI, with no manual rerun/dispatch/cancel/Ready/merge/base change/new PR. StageM helper6b6c7003960eb4075d74ca449d303602e99ef83e/test0727339627757c3a96d54da2933eb7c1b60685f7 stay exact. Original one-click Cross-team actions/geometry/current-owner/20-second wait/cleanup still require resulting-source CI. Original 15-second provider gates, P08/P09, I386/full native-policy HOLD, M16/upgrade, Stage1 and real-vendor exclusions remain.
+
+### Task comment read-only: retained finite results and prospective one-initializer lint correction
+
+Actual documentation parent `735ae4f641e3753d6372a3b66ca0b2f04491f184`, tree `1a86790f256f62b73a71ee683f881215f65de8b7`, was immediately pushed and fully read back before the original four-path execution. Preserve its complete Plan29 prefix `f28ce812c8ca460ce1cc6001598e02b34ebd0dd5` (1409621 bytes). This correction changes only one existing test fixture initializer in the same four-path scope; no source child has yet been published and no revised test was executed.
+
+**Retained first attempt.** Baseline dependency/source audit matched the published documentation tree. Test-only source tree `ccb6e81c8df21a74254c452bf79c9708a89c86f3` ran all three approved Vitest files:61 cases,56PASS/5FAIL, zero skipped, in23.956s with exit1 and no timeout. Raw log7,169bytes SHA256193ec208ddcc5263aed8c3b252943c364a42ce0876481dfd04d8a7ff322087f5. All five new actual-component cases failed at intended boundaries: native readOnly was false, input and Mod+Enter callbacks fired once, selection snapped from8 to0, and the mention listbox stayed visible. All55 old cases plus new fresh-authority preservation case passed. This is semantic renderer prop/handler RED on the original reviewed test union, not native/Cross-team evidence.
+
+With the exact original two product candidates, source tree `567f7a67eaf6a98c8b9a2c0d9d192923428278d8` passed61/61 in the same three complete files, zero skip,19.811s, exit0/no timeout. Raw720bytes SHA256cc5c91fd15bd887e3502f054ca5e8e9fac2d473d3bb3632306b8e066acde7887. Selected strict types passed5.151s with an empty log. The unchanged pendingSend suite's KaTeX quirks-mode warning was retained in both raw outputs and did not change its38/38 result.
+
+The following scoped lint then failed, exit1/no timeout after8.648s, raw668bytes SHA25671a58b70b959173898d60ba8238d4b6513d4f01d6963477de639e0e945b17301. Its only diagnostic was existing `prefer-const` at taskDetailSession.integration.test.tsx:315. Source-size and postflight were not run after this failure. No full cut PASS, resulting-source Host build, native/GUI or StageM execution was claimed. Both indexes, dependency closure and all1,504 retained output files remained exact in each completed receipt. All prior logs/receipts stay in public-task-comment-readonly-integration/validation without overwrite.
+
+**Exact correction.** In the existing full-refresh fixture, `let fullRefresh: Promise<void> | undefined;` becomes `let fullRefresh: Promise<void> | undefined = undefined;`. The callback reads this initial undefined value during early task hydration, before the later promise assignment. Explicitly recording that same initial value makes the actual mutable lifecycle clear to prefer-const. Moving const to the later assignment would change the earlier read/temporal-dead-zone behavior; creating the promise earlier would block initial hydration. Neither alternative is proposed. No eslint disable, rule/config change, new helper, clock, assertion, test case or order change is included.
+
+The final integration test candidate is `0f18886c763559877aff19f319e11575058af08a`,49,616bytes/1,244lines, exactly12bytes beyond prior `bec0cc3bd7860b85bdfbb0852a678d76709c3ad7`. Reverting that sole literal restores the entire prior afterimage. Other candidates stay TaskCommentInput `fde63957a08c0b076bd50ae272115737c4a4af19`, MentionableTextarea `94a360626de2ee67ceac964e3fd8529d345e3843` and its component test `4b81622262f5f690d1c5e17dfc289f27cbb80b70`. Original public preimages remain c30094/3589e2/896779/b7fd85. This explicitly supersedes only the earlier integration-test candidate and the claim that every old test-body byte is preserved: that one existing initializer is the sole exception. No old assertion or behavior changes. Root source manifest `d3d754dc8b9189fe64a03acd914c4672f19d6ed2` (SHA256f866fe7b93dc8785b36a61eceed017d3601809ef2b879bf8f90c10ed2ac6a089), exact patch SHA256b8a704f18fd4db738d344158d9669173bc6f6bf0d793bc5e71146ca7464ff2a9 and preservation proof `fee9205d5de63c5a8c3e990156d5e8ffba91f5f6` bind this exception. MentionableTextarea remains1,431lines; no size baseline changes.
+
+**Prospective corrected-source sequence.** Publish and immediately ordinarily push this Plan-only child on the same delivery branch with expected parent735ae4f, then fully read back whole Plan/sole-parent/tree/ref. Only then restore root's own four uncommitted first-attempt images to their exact reviewed public preimages, create the new scratch-only public-task-comment-readonly-integration-v2/node_modules link to the same public node_modules, audit the baseline, and apply all four reviewed final images. No author/private work or normal index is modified by that restoration. The old scratch link and old receipts remain untouched.
+
+Validation manifest `31a60da800207aba242ab4415e5db1ede97e3c82` (5972bytes; SHA256e6bf1326f767b479ed694a661ab008d72476fafb3948dd21fbe46d7a42ce9782) now permits only four GREEN commands, in the same order: three complete Vitest files, selected strict types, four-file fast lint, original source-size guard. No repeated RED is proposed or admitted by the phase tuple check; the original source-bound RED is retained as above. Counts/PASS on the revised candidate remain prospective. Same argv are retained except the selected config path now names the new v2 scratch directory:
+
+```json
+{
+  "tests": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/pnpm/bin/pnpm.mjs",
+    "exec",
+    "vitest",
+    "run",
+    "--config",
+    "vitest.config.ts",
+    "test/renderer/components/team/dialogs/TaskCommentInput.test.tsx",
+    "test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx",
+    "src/renderer/components/team/messages/MessageComposer.pendingSend.test.tsx",
+    "--maxWorkers=1"
+  ],
+  "types": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "/workspace/scratch/c2f5ff7c30ee/agent-teams-public-0660/node_modules/@typescript/native/bin/tsc",
+    "--singleThreaded",
+    "--project",
+    "/workspace/scratch/c2f5ff7c30ee/public-task-comment-readonly-integration-v2/tsconfig.selected.json"
+  ],
+  "lint": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/pnpm/bin/pnpm.mjs",
+    "lint:fast:files",
+    "--",
+    "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
+    "src/renderer/components/ui/MentionableTextarea.tsx",
+    "test/renderer/components/team/dialogs/TaskCommentInput.test.tsx",
+    "test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx"
+  ],
+  "sourceSize": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/pnpm/bin/pnpm.mjs",
+    "guard:source-file-size"
+  ]
+}
+```
+
+The same Node24.21.0/pnpm11.25/TS7.0.2, original happy-dom/root config/setup/15s limit/one worker, four environment unsets, pinnedNodePATH/AGENT_BACKEND_TEST_NODE, pnpm verify-deps=false and original180s serial subgroup ceilings remain. No Host build, extra compiler/test selector, install, lint-fix, native/GUI/provider/StageM command or CI action is included. Selected config `4a2aa8506ab9a139132c83caacdf501788dafbbc` and all ten unchanged config/setup/third-test/ambient source pins remain exact; only its resolution-link directory changes.
+
+The already-reviewed audit `89674468d24ecd82f56f8f3b7789342e520e89b7` (SHA25652d32875c8efd029ff75c5522738f5fe2ef8c2eb683bef4b4260b98fcf6d529d), runner `3a282e583bcd8b9dac0a089662e4853e60c4257a` (SHA25658b396fe2c794675e3e8895479503daf09053e3130bcaa637188a50cb13e6749) and dependency plan `2da688a52fc62d1ca94c4495133e9afdd74c17fd` (SHA2562ea2ae8bc157ad4f93a4449b66b965e09fba17e788c583180758038e1e077787) are byte-identical. Their full-source temporary-index,133link/253+12payload/five-edge/checked-manifest/both-normal-index checks remain mandatory before/after, with exclusive fresh v2 logs. Context-only retained public7 build receipt a7cb56eaf66454cd5dc4706bfc2b5e96fc6319ac66b1de136809acca8165bdd4 and all1,504output files/inventoryf6f6335efc3c44cfbd7c2d93a1beba1fe2e061c6005bc930e04cb61b7c70f5b9 remain exact; no new Host qualification follows. Baseline tracked delta is only this published Plan; GREEN delta is that Plan plus exactly four final images. Postflight requires all four successful exact-source receipts.
+
+After actual revised-source validation and independent R2, publish only these four paths plus factual Plan append with immediate expected-head push/full readback. All original physical one-click Cross-team, geometry/current-owner/20s/action/cleanup acceptance, original15s provider, P08/P09, I386/full native-policy HOLD, M16, StageM's original-CI-only venue and Draft/original-base/Stage1 limits remain. A narrow test initializer fix cannot close those gates.
