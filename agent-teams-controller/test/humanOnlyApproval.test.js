@@ -199,6 +199,49 @@ describe('human-only review approval', () => {
     })).toMatchObject({ status: 'pending', reviewState: 'needsFix' });
   });
 
+
+  it('moves the board message epoch after AI review and human acceptance without duplicate delivery', () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-11-16T10:00:00.000Z'));
+      const task = board.createTask({ subject: 'Review done message', owner: 'bob' });
+      board.completeTask(task.id, 'bob');
+      const first = controller.messages.sendMessage({
+        to: 'user', from: 'alice', text: 'Implementation has finished.',
+      });
+      expect(first.deduplicated).toBeUndefined();
+
+      vi.advanceTimersByTime(1000);
+      board.setHumanOnlyApproval(true);
+      board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+      const cycle = events(task.id, 'review_requested').at(-1).id;
+      vi.advanceTimersByTime(1000);
+      board.completeReview(task.id, { from: 'alice', expectedReviewRequestId: cycle });
+      const afterReview = controller.messages.sendMessage({
+        to: 'user', from: 'alice', text: 'The AI review has passed, awaiting human acceptance.',
+      });
+      expect(afterReview.deduplicated).toBeUndefined();
+      vi.advanceTimersByTime(1000);
+      const repeatReview = controller.messages.sendMessage({
+        to: 'user', from: 'alice', text: 'Repeating the same completed review status.',
+      });
+      expect(repeatReview.deduplicated).toBe(true);
+
+      vi.advanceTimersByTime(1000);
+      board.approveAsHuman(task.id);
+      const afterHumanApproval = controller.messages.sendMessage({
+        to: 'user', from: 'alice', text: 'The user accepted the reviewed work.',
+      });
+      expect(afterHumanApproval.deduplicated).toBeUndefined();
+      const repeat = controller.messages.sendMessage({
+        to: 'user', from: 'alice', text: 'Repeating acceptance without a board change.',
+      });
+      expect(repeat.deduplicated).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('preserves settings through kanban writes and fails closed for corrupt stored policy', () => {
     board.addReviewer('alice');
     board.setHumanOnlyApproval(true);
