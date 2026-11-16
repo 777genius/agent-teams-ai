@@ -1,0 +1,63 @@
+{
+  "observedAtUTC": "2026-11-16 06:07:23 UTC",
+  "sha": "b0528bb50e05379030eb72c20d4f8eb998098cbf",
+  "commitReadback": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "content": "{\"sha\":\"b0528bb50e05379030eb72c20d4f8eb998098cbf\",\"node_id\":\"C_kwDORVTEtNoAKGIwNTI4YmI1MGUwNTM3OTAzMGViNzJjMjBkNGY4ZWI5OTgwOThjYmY\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/b0528bb50e05379030eb72c20d4f8eb998098cbf\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/b0528bb50e05379030eb72c20d4f8eb998098cbf\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T06:07:09Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T06:07:09Z\"},\"tree\":{\"sha\":\"24f04b4848ca9477894bfca8c27b7c453bb33d60\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/24f04b4848ca9477894bfca8c27b7c453bb33d60\"},\"message\":\"docs(parity): preserve reviewed O evidence and regression proposals\\n\\nRetain the original Team, frontend, and late raw evidence plus reviewed historical Phase A proposals on the followup branch. External primary e1d requires a separate reviewed reconciliation before source application.\",\"parents\":[{\"sha\":\"8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+      "title": "b0528bb50e05379030eb72c20d4f8eb998098cbf",
+      "modified_date": null,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/b0528bb50e05379030eb72c20d4f8eb998098cbf",
+      "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/b0528bb50e05379030eb72c20d4f8eb998098cbf",
+      "display_title": "b0528bb50e05379030eb72c20d4f8eb998098cbf",
+      "structuredContent": {
+        "title": "b0528bb50e05379030eb72c20d4f8eb998098cbf",
+        "content": "{\"sha\":\"b0528bb50e05379030eb72c20d4f8eb998098cbf\",\"node_id\":\"C_kwDORVTEtNoAKGIwNTI4YmI1MGUwNTM3OTAzMGViNzJjMjBkNGY4ZWI5OTgwOThjYmY\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/b0528bb50e05379030eb72c20d4f8eb998098cbf\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/b0528bb50e05379030eb72c20d4f8eb998098cbf\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T06:07:09Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T06:07:09Z\"},\"tree\":{\"sha\":\"24f04b4848ca9477894bfca8c27b7c453bb33d60\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/24f04b4848ca9477894bfca8c27b7c453bb33d60\"},\"message\":\"docs(parity): preserve reviewed O evidence and regression proposals\\n\\nRetain the original Team, frontend, and late raw evidence plus reviewed historical Phase A proposals on the followup branch. External primary e1d requires a separate reviewed reconciliation before source application.\",\"parents\":[{\"sha\":\"8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+        "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/b0528bb50e05379030eb72c20d4f8eb998098cbf"
+      }
+    },
+    "isError": false
+  },
+  "freshLease": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "content": "{\"ref\":\"refs/heads/fix/frontend-parity-e2e-followups-20261115\",\"node_id\":\"REF_kwDORVTEtNoANXJlZnMvaGVhZHMvZml4L2Zyb250ZW5kLXBhcml0eS1lMmUtZm9sbG93dXBzLTIwMjYxMTE1\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/refs/heads/fix/frontend-parity-e2e-followups-20261115\",\"object\":{\"sha\":\"8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2\",\"type\":\"commit\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2\"}}",
+      "title": "frontend-parity-e2e-followups-20261115",
+      "modified_date": null,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/ref/heads/fix/frontend-parity-e2e-followups-20261115",
+      "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/ref/heads/fix/frontend-parity-e2e-followups-20261115",
+      "display_title": "frontend-parity-e2e-followups-20261115",
+      "structuredContent": {
+        "title": "frontend-parity-e2e-followups-20261115",
+        "content": "{\"ref\":\"refs/heads/fix/frontend-parity-e2e-followups-20261115\",\"node_id\":\"REF_kwDORVTEtNoANXJlZnMvaGVhZHMvZml4L2Zyb250ZW5kLXBhcml0eS1lMmUtZm9sbG93dXBzLTIwMjYxMTE1\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/refs/heads/fix/frontend-parity-e2e-followups-20261115\",\"object\":{\"sha\":\"8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2\",\"type\":\"commit\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2\"}}",
+        "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/ref/heads/fix/frontend-parity-e2e-followups-20261115"
+      }
+    },
+    "isError": false
+  },
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "success": true
+    },
+    "isError": false
+  },
+  "primaryAdvanced": false,
+  "phaseAApplied": false,
+  "externalPrimaryOutstanding": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940"
+}

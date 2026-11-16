@@ -1,0 +1,20 @@
+{
+  "createdAtUTC": "2026-11-16 06:07:10 UTC",
+  "request": {
+    "parent": "8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2",
+    "tree": "24f04b4848ca9477894bfca8c27b7c453bb33d60"
+  },
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "sha": "b0528bb50e05379030eb72c20d4f8eb998098cbf"
+    },
+    "isError": false
+  },
+  "sha": "b0528bb50e05379030eb72c20d4f8eb998098cbf"
+}

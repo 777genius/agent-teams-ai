@@ -1,0 +1,292 @@
+﻿2026-11-16T05:07:24.9979716Z Current runner version: '2.338.2'
+2026-11-16T05:07:24.9999710Z ##[group]Runner Image Provisioner
+2026-11-16T05:07:25.0000253Z Hosted Compute Agent
+2026-11-16T05:07:25.0000608Z Version: 20261103.629
+2026-11-16T05:07:25.0001002Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-16T05:07:25.0001474Z Build Date: 2026-11-03T17:26:59Z
+2026-11-16T05:07:25.0001904Z Worker ID: {0c6efeae-cd7d-4109-b38a-ab4b430e98e5}
+2026-11-16T05:07:25.0002353Z Region: eastus2
+2026-11-16T05:07:25.0002672Z Cloud: Azure
+2026-11-16T05:07:25.0002989Z ##[endgroup]
+2026-11-16T05:07:25.0004329Z ##[group]Operating System
+2026-11-16T05:07:25.0004736Z Microsoft Windows Server 2022
+2026-11-16T05:07:25.0005116Z 10.0.20348
+2026-11-16T05:07:25.0005433Z Datacenter
+2026-11-16T05:07:25.0005746Z ##[endgroup]
+2026-11-16T05:07:25.0006069Z ##[group]Runner Image
+2026-11-16T05:07:25.0006427Z Image: windows-2022
+2026-11-16T05:07:25.0006768Z Version: 20261112.366.7
+2026-11-16T05:07:25.0007838Z Included Software: https://github.com/actions/runner-images/blob/win22/20261112.366/images/windows/Windows2022-Readme.md
+2026-11-16T05:07:25.0008872Z Image Release: https://github.com/actions/runner-images/releases/tag/win22%2F20261112.366
+2026-11-16T05:07:25.0009507Z ##[endgroup]
+2026-11-16T05:07:25.0010218Z ##[group]GITHUB_TOKEN Permissions
+2026-11-16T05:07:25.0011544Z Contents: read
+2026-11-16T05:07:25.0011887Z Metadata: read
+2026-11-16T05:07:25.0012204Z ##[endgroup]
+2026-11-16T05:07:25.0013741Z Secret source: Actions
+2026-11-16T05:07:25.0014281Z Cache mode: write
+2026-11-16T05:07:25.0014747Z Prepare workflow directory
+2026-11-16T05:07:25.0439065Z Prepare all required actions
+2026-11-16T05:07:25.0482501Z Getting action download info
+2026-11-16T05:07:25.2369514Z Download action repository 'actions/checkout@v7.0.1' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+2026-11-16T05:07:25.3345743Z Download action repository 'actions/setup-node@v7.0.0' (SHA:820762786026740c76f36085b0efc47a31fe5020)
+2026-11-16T05:07:25.4561029Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-16T05:07:25.7219926Z Complete job name: Host process fixtures (win32-x64)
+2026-11-16T05:07:25.9322618Z ##[group]Run actions/checkout@v7.0.1
+2026-11-16T05:07:25.9323495Z with:
+2026-11-16T05:07:25.9323831Z   ref: 953fd8a94dc97bcfe89a7a808043dc11843e19d8
+2026-11-16T05:07:25.9324273Z   persist-credentials: false
+2026-11-16T05:07:25.9324657Z   repository: 777genius/agent-teams-ai
+2026-11-16T05:07:25.9327975Z   token: ***
+2026-11-16T05:07:25.9328276Z   ssh-strict: true
+2026-11-16T05:07:25.9328573Z   ssh-user: git
+2026-11-16T05:07:25.9328861Z   clean: true
+2026-11-16T05:07:25.9329159Z   sparse-checkout-cone-mode: true
+2026-11-16T05:07:25.9329523Z   fetch-depth: 1
+2026-11-16T05:07:25.9329816Z   fetch-tags: false
+2026-11-16T05:07:25.9330136Z   show-progress: true
+2026-11-16T05:07:25.9330433Z   lfs: false
+2026-11-16T05:07:25.9330713Z   submodules: false
+2026-11-16T05:07:25.9331020Z   set-safe-directory: true
+2026-11-16T05:07:25.9331402Z   allow-unsafe-pr-checkout: false
+2026-11-16T05:07:25.9331922Z env:
+2026-11-16T05:07:25.9332221Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T05:07:25.9332742Z   HOST_PROCESS_SOURCE_HEAD: 953fd8a94dc97bcfe89a7a808043dc11843e19d8
+2026-11-16T05:07:25.9333270Z   HOST_PROCESS_PLATFORM: win32-x64
+2026-11-16T05:07:25.9333627Z ##[endgroup]
+2026-11-16T05:07:26.2229362Z Syncing repository: 777genius/agent-teams-ai
+2026-11-16T05:07:26.2231227Z ##[group]Getting Git version info
+2026-11-16T05:07:26.2231972Z Working directory is 'D:\a\agent-teams-ai\agent-teams-ai'
+2026-11-16T05:07:26.2854270Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-11-16T05:07:26.7969511Z git version 2.56.1.windows.1
+2026-11-16T05:07:26.7999878Z ##[endgroup]
+2026-11-16T05:07:26.8012407Z Temporarily overriding HOME='D:\a\_temp\a1755e32-f8bd-44bf-ba55-878dfb45bc7a' before making global git config changes
+2026-11-16T05:07:26.8013582Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T05:07:26.8020853Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\agent-teams-ai\agent-teams-ai
+2026-11-16T05:07:26.8572572Z Deleting the contents of 'D:\a\agent-teams-ai\agent-teams-ai'
+2026-11-16T05:07:26.8576246Z ##[group]Determining repository object format
+2026-11-16T05:07:26.8577653Z ##[endgroup]
+2026-11-16T05:07:26.8578278Z ##[group]Initializing the repository
+2026-11-16T05:07:26.8585441Z [command]"C:\Program Files\Git\bin\git.exe" init D:\a\agent-teams-ai\agent-teams-ai
+2026-11-16T05:07:26.9424634Z Initialized empty Git repository in D:/a/agent-teams-ai/agent-teams-ai/.git/
+2026-11-16T05:07:26.9457507Z [command]"C:\Program Files\Git\bin\git.exe" remote add origin https://github.com/777genius/agent-teams-ai
+2026-11-16T05:07:26.9997627Z ##[endgroup]
+2026-11-16T05:07:26.9998532Z ##[group]Disabling automatic garbage collection
+2026-11-16T05:07:27.0004281Z [command]"C:\Program Files\Git\bin\git.exe" config --local gc.auto 0
+2026-11-16T05:07:27.0243760Z ##[endgroup]
+2026-11-16T05:07:27.0244603Z ##[group]Setting up auth
+2026-11-16T05:07:27.0245275Z Removing SSH command configuration
+2026-11-16T05:07:27.0252538Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T05:07:27.0498023Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-11-16T05:07:28.3678885Z Removing HTTP extra header
+2026-11-16T05:07:28.3686822Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T05:07:28.3930629Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-11-16T05:07:28.8302460Z Removing includeIf entries pointing to credentials config files
+2026-11-16T05:07:28.8307625Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T05:07:28.8550762Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-11-16T05:07:29.3292792Z [command]"C:\Program Files\Git\bin\git.exe" config --file D:\a\_temp\git-credentials-a961e025-d45a-4159-909f-73e1dd8255d3.config http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+2026-11-16T05:07:29.3567749Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:D:/a/agent-teams-ai/agent-teams-ai/.git.path D:\a\_temp\git-credentials-a961e025-d45a-4159-909f-73e1dd8255d3.config
+2026-11-16T05:07:29.3822005Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:D:/a/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path D:\a\_temp\git-credentials-a961e025-d45a-4159-909f-73e1dd8255d3.config
+2026-11-16T05:07:29.4112251Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-a961e025-d45a-4159-909f-73e1dd8255d3.config
+2026-11-16T05:07:29.4374512Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-a961e025-d45a-4159-909f-73e1dd8255d3.config
+2026-11-16T05:07:29.4629886Z ##[endgroup]
+2026-11-16T05:07:29.4630383Z ##[group]Fetching the repository
+2026-11-16T05:07:29.4640623Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 953fd8a94dc97bcfe89a7a808043dc11843e19d8
+2026-11-16T05:07:43.2097497Z From https://github.com/777genius/agent-teams-ai
+2026-11-16T05:07:43.2098164Z  * branch            953fd8a94dc97bcfe89a7a808043dc11843e19d8 -> FETCH_HEAD
+2026-11-16T05:07:43.2130738Z [command]"C:\Program Files\Git\bin\git.exe" rev-parse --verify --quiet 953fd8a94dc97bcfe89a7a808043dc11843e19d8^{object}
+2026-11-16T05:07:43.2360881Z 953fd8a94dc97bcfe89a7a808043dc11843e19d8
+2026-11-16T05:07:43.2383390Z ##[endgroup]
+2026-11-16T05:07:43.2383844Z ##[group]Determining the checkout info
+2026-11-16T05:07:43.2384337Z ##[endgroup]
+2026-11-16T05:07:43.2390587Z [command]"C:\Program Files\Git\bin\git.exe" sparse-checkout disable
+2026-11-16T05:07:43.2751768Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all extensions.worktreeConfig
+2026-11-16T05:07:43.2999876Z ##[group]Checking out the ref
+2026-11-16T05:07:43.3000442Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force 953fd8a94dc97bcfe89a7a808043dc11843e19d8
+2026-11-16T05:07:44.3780102Z Updating files:  17% (1932/10901)
+2026-11-16T05:07:44.3871936Z Updating files:  18% (1963/10901)
+2026-11-16T05:07:44.3894966Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt: Filename too long
+2026-11-16T05:07:44.3907220Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt: Filename too long
+2026-11-16T05:07:44.3911983Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt: Filename too long
+2026-11-16T05:07:44.3916795Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt: Filename too long
+2026-11-16T05:07:44.3922330Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt: Filename too long
+2026-11-16T05:07:44.3927155Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt: Filename too long
+2026-11-16T05:07:44.3931810Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt: Filename too long
+2026-11-16T05:07:44.3936762Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt: Filename too long
+2026-11-16T05:07:44.5397386Z Updating files:  19% (2072/10901)
+2026-11-16T05:07:44.6677475Z Updating files:  20% (2181/10901)
+2026-11-16T05:07:44.6829538Z Updating files:  21% (2290/10901)
+2026-11-16T05:07:44.6830336Z warning: created file symlink 'landing/dist' pointing to '\Users\belief\dev\projects\claude\claude_team\landing\.output\public';
+2026-11-16T05:07:44.6831436Z set the `symlink` gitattribute to `dir` if a directory symlink is required
+2026-11-16T05:07:44.7085780Z Updating files:  22% (2399/10901)
+2026-11-16T05:07:44.7561433Z Updating files:  23% (2508/10901)
+2026-11-16T05:07:44.7738812Z Updating files:  24% (2617/10901)
+2026-11-16T05:07:44.7909495Z Updating files:  25% (2726/10901)
+2026-11-16T05:07:44.8080468Z Updating files:  26% (2835/10901)
+2026-11-16T05:07:44.8245817Z Updating files:  27% (2944/10901)
+2026-11-16T05:07:44.8406463Z Updating files:  28% (3053/10901)
+2026-11-16T05:07:44.8570364Z Updating files:  29% (3162/10901)
+2026-11-16T05:07:44.8744078Z Updating files:  30% (3271/10901)
+2026-11-16T05:07:44.8952785Z Updating files:  31% (3380/10901)
+2026-11-16T05:07:44.9185106Z Updating files:  32% (3489/10901)
+2026-11-16T05:07:44.9348480Z Updating files:  33% (3598/10901)
+2026-11-16T05:07:44.9757074Z Updating files:  34% (3707/10901)
+2026-11-16T05:07:44.9983555Z Updating files:  35% (3816/10901)
+2026-11-16T05:07:45.0170423Z Updating files:  36% (3925/10901)
+2026-11-16T05:07:45.0380882Z Updating files:  37% (4034/10901)
+2026-11-16T05:07:45.0594892Z Updating files:  38% (4143/10901)
+2026-11-16T05:07:45.0773334Z Updating files:  39% (4252/10901)
+2026-11-16T05:07:45.0928301Z Updating files:  40% (4361/10901)
+2026-11-16T05:07:45.1101749Z Updating files:  41% (4470/10901)
+2026-11-16T05:07:45.1269220Z Updating files:  42% (4579/10901)
+2026-11-16T05:07:45.1443167Z Updating files:  43% (4688/10901)
+2026-11-16T05:07:45.1667248Z Updating files:  44% (4797/10901)
+2026-11-16T05:07:45.2060013Z Updating files:  45% (4906/10901)
+2026-11-16T05:07:45.2395114Z Updating files:  46% (5015/10901)
+2026-11-16T05:07:45.2549380Z Updating files:  47% (5124/10901)
+2026-11-16T05:07:45.2702164Z Updating files:  48% (5233/10901)
+2026-11-16T05:07:45.2879112Z Updating files:  49% (5342/10901)
+2026-11-16T05:07:45.3059309Z Updating files:  50% (5451/10901)
+2026-11-16T05:07:45.3237849Z Updating files:  51% (5560/10901)
+2026-11-16T05:07:45.3398774Z Updating files:  52% (5669/10901)
+2026-11-16T05:07:45.3505689Z Updating files:  53% (5778/10901)
+2026-11-16T05:07:45.3570499Z Updating files:  53% (5845/10901)
+2026-11-16T05:07:45.3753889Z Updating files:  54% (5887/10901)
+2026-11-16T05:07:45.3931211Z Updating files:  55% (5996/10901)
+2026-11-16T05:07:45.4110457Z Updating files:  56% (6105/10901)
+2026-11-16T05:07:45.4300719Z Updating files:  57% (6214/10901)
+2026-11-16T05:07:45.5934888Z Updating files:  58% (6323/10901)
+2026-11-16T05:07:45.6128182Z Updating files:  59% (6432/10901)
+2026-11-16T05:07:45.6321656Z Updating files:  60% (6541/10901)
+2026-11-16T05:07:45.6498987Z Updating files:  61% (6650/10901)
+2026-11-16T05:07:45.6683806Z Updating files:  62% (6759/10901)
+2026-11-16T05:07:45.6871996Z Updating files:  63% (6868/10901)
+2026-11-16T05:07:45.7050764Z Updating files:  64% (6977/10901)
+2026-11-16T05:07:45.7241283Z Updating files:  65% (7086/10901)
+2026-11-16T05:07:45.7444393Z Updating files:  66% (7195/10901)
+2026-11-16T05:07:45.7629358Z Updating files:  67% (7304/10901)
+2026-11-16T05:07:45.7800081Z Updating files:  68% (7413/10901)
+2026-11-16T05:07:45.8006259Z Updating files:  69% (7522/10901)
+2026-11-16T05:07:45.8171394Z Updating files:  70% (7631/10901)
+2026-11-16T05:07:45.8346237Z Updating files:  71% (7740/10901)
+2026-11-16T05:07:45.8532825Z Updating files:  72% (7849/10901)
+2026-11-16T05:07:45.8707093Z Updating files:  73% (7958/10901)
+2026-11-16T05:07:45.8855930Z Updating files:  74% (8067/10901)
+2026-11-16T05:07:45.9029982Z Updating files:  75% (8176/10901)
+2026-11-16T05:07:45.9198015Z Updating files:  76% (8285/10901)
+2026-11-16T05:07:45.9355337Z Updating files:  77% (8394/10901)
+2026-11-16T05:07:45.9517383Z Updating files:  78% (8503/10901)
+2026-11-16T05:07:45.9695735Z Updating files:  79% (8612/10901)
+2026-11-16T05:07:45.9853977Z Updating files:  80% (8721/10901)
+2026-11-16T05:07:46.0001383Z Updating files:  81% (8830/10901)
+2026-11-16T05:07:46.0151607Z Updating files:  82% (8939/10901)
+2026-11-16T05:07:46.0343026Z Updating files:  83% (9048/10901)
+2026-11-16T05:07:46.0546285Z Updating files:  84% (9157/10901)
+2026-11-16T05:07:46.0749213Z Updating files:  85% (9266/10901)
+2026-11-16T05:07:46.1641621Z Updating files:  86% (9375/10901)
+2026-11-16T05:07:46.1845974Z Updating files:  87% (9484/10901)
+2026-11-16T05:07:46.2056272Z Updating files:  88% (9593/10901)
+2026-11-16T05:07:46.2277933Z Updating files:  89% (9702/10901)
+2026-11-16T05:07:46.2575915Z Updating files:  90% (9811/10901)
+2026-11-16T05:07:46.2817755Z Updating files:  91% (9920/10901)
+2026-11-16T05:07:46.2991965Z Updating files:  92% (10029/10901)
+2026-11-16T05:07:46.3215946Z Updating files:  93% (10138/10901)
+2026-11-16T05:07:46.3402236Z Updating files:  94% (10247/10901)
+2026-11-16T05:07:46.3567633Z Updating files:  95% (10356/10901)
+2026-11-16T05:07:46.3600524Z Updating files:  95% (10444/10901)
+2026-11-16T05:07:46.3798811Z Updating files:  96% (10465/10901)
+2026-11-16T05:07:46.3974100Z Updating files:  97% (10574/10901)
+2026-11-16T05:07:46.4164952Z Updating files:  98% (10683/10901)
+2026-11-16T05:07:46.4471681Z Updating files:  99% (10792/10901)
+2026-11-16T05:07:46.4471986Z Updating files: 100% (10901/10901)
+2026-11-16T05:07:46.4472191Z Updating files: 100% (10901/10901), done.
+2026-11-16T05:07:46.4661901Z Note: switching to '953fd8a94dc97bcfe89a7a808043dc11843e19d8'.
+2026-11-16T05:07:46.4662221Z 
+2026-11-16T05:07:46.4662477Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-16T05:07:46.4663031Z changes and commit them, and you can discard any commits you make in this
+2026-11-16T05:07:46.4663371Z state without impacting any branches by switching back to a branch.
+2026-11-16T05:07:46.4663699Z 
+2026-11-16T05:07:46.4663844Z If you want to create a new branch to retain commits you create, you may
+2026-11-16T05:07:46.4664158Z do so (now or later) by using -c with the switch command. Example:
+2026-11-16T05:07:46.4664344Z 
+2026-11-16T05:07:46.4664421Z   git switch -c <new-branch-name>
+2026-11-16T05:07:46.4664554Z 
+2026-11-16T05:07:46.4664624Z Or undo this operation with:
+2026-11-16T05:07:46.4664746Z 
+2026-11-16T05:07:46.4664805Z   git switch -
+2026-11-16T05:07:46.4664899Z 
+2026-11-16T05:07:46.4665055Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-16T05:07:46.4665286Z 
+2026-11-16T05:07:46.4665721Z HEAD is now at 953fd8a docs(parity): preserve renderer publication and late original evidence
+2026-11-16T05:07:46.4858222Z ##[group]Removing auth
+2026-11-16T05:07:46.4858702Z Removing SSH command configuration
+2026-11-16T05:07:46.4866714Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T05:07:46.5114538Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-11-16T05:07:46.9146071Z Removing HTTP extra header
+2026-11-16T05:07:46.9153731Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T05:07:46.9414325Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-11-16T05:07:47.3820773Z Removing includeIf entries pointing to credentials config files
+2026-11-16T05:07:47.3828731Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T05:07:47.4047136Z includeif.gitdir:D:/a/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-16T05:07:47.4047733Z includeif.gitdir:D:/a/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-16T05:07:47.4048447Z includeif.gitdir:/github/workspace/.git.path
+2026-11-16T05:07:47.4048789Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T05:07:47.4075140Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:D:/a/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-16T05:07:47.4292264Z D:\a\_temp\git-credentials-a961e025-d45a-4159-909f-73e1dd8255d3.config
+2026-11-16T05:07:47.4323211Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:D:/a/agent-teams-ai/agent-teams-ai/.git.path D\:\\a\\_temp\\git\-credentials\-a961e025\-d45a\-4159\-909f\-73e1dd8255d3\.config
+2026-11-16T05:07:47.4580976Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:D:/a/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-16T05:07:47.4789402Z D:\a\_temp\git-credentials-a961e025-d45a-4159-909f-73e1dd8255d3.config
+2026-11-16T05:07:47.4821227Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:D:/a/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path D\:\\a\\_temp\\git\-credentials\-a961e025\-d45a\-4159\-909f\-73e1dd8255d3\.config
+2026-11-16T05:07:47.5079476Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-11-16T05:07:47.5301938Z /github/runner_temp/git-credentials-a961e025-d45a-4159-909f-73e1dd8255d3.config
+2026-11-16T05:07:47.5330321Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-a961e025\-d45a\-4159\-909f\-73e1dd8255d3\.config
+2026-11-16T05:07:47.5586945Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T05:07:47.5804245Z /github/runner_temp/git-credentials-a961e025-d45a-4159-909f-73e1dd8255d3.config
+2026-11-16T05:07:47.5832904Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-a961e025\-d45a\-4159\-909f\-73e1dd8255d3\.config
+2026-11-16T05:07:47.6082908Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-11-16T05:07:48.0052781Z Removing credentials config 'D:\a\_temp\git-credentials-a961e025-d45a-4159-909f-73e1dd8255d3.config'
+2026-11-16T05:07:48.0062526Z ##[endgroup]
+2026-11-16T05:07:48.0082302Z ##[error]The process 'C:\Program Files\Git\bin\git.exe' failed with exit code 1
+2026-11-16T05:07:48.0435266Z ##[group]Run actions/upload-artifact@v4
+2026-11-16T05:07:48.0435526Z with:
+2026-11-16T05:07:48.0435807Z   name: host-process-fixtures-win32-x64-953fd8a94dc97bcfe89a7a808043dc11843e19d8
+2026-11-16T05:07:48.0436136Z   retention-days: 14
+2026-11-16T05:07:48.0436295Z   if-no-files-found: error
+2026-11-16T05:07:48.0436788Z   path: native-evidence/
+process-acceptance-evidence/
+D:\a\_temp/TEST-process-node24-43807841917/
+D:\a\_temp/TEST-process-electron-43807841917/
+
+2026-11-16T05:07:48.0437278Z   compression-level: 6
+2026-11-16T05:07:48.0437446Z   overwrite: false
+2026-11-16T05:07:48.0437608Z   include-hidden-files: false
+2026-11-16T05:07:48.0437778Z env:
+2026-11-16T05:07:48.0437927Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T05:07:48.0438200Z   HOST_PROCESS_SOURCE_HEAD: 953fd8a94dc97bcfe89a7a808043dc11843e19d8
+2026-11-16T05:07:48.0438487Z   HOST_PROCESS_PLATFORM: win32-x64
+2026-11-16T05:07:48.0438673Z ##[endgroup]
+2026-11-16T05:07:48.1920451Z (node:5840) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T05:07:48.1921011Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T05:07:48.1946274Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-11-16T05:07:48.1949014Z The least common ancestor is D:\a. This will be the root directory of the artifact
+2026-11-16T05:07:48.1951670Z ##[error]No files were found with the provided path: native-evidence/
+process-acceptance-evidence/
+D:\a\_temp/TEST-process-node24-43807841917/
+D:\a\_temp/TEST-process-electron-43807841917/. No artifacts will be uploaded.
+2026-11-16T05:07:48.2214509Z Post job cleanup.
+2026-11-16T05:07:48.3706126Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-11-16T05:07:48.3949212Z git version 2.56.1.windows.1
+2026-11-16T05:07:48.3998361Z Temporarily overriding HOME='D:\a\_temp\074ce337-ee23-4198-b345-c4bd9e42e2dc' before making global git config changes
+2026-11-16T05:07:48.3999228Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T05:07:48.4008017Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\agent-teams-ai\agent-teams-ai
+2026-11-16T05:07:48.4255270Z Removing SSH command configuration
+2026-11-16T05:07:48.4265238Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T05:07:48.4530516Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-11-16T05:07:48.8796970Z Removing HTTP extra header
+2026-11-16T05:07:48.8805737Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T05:07:48.9048165Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-11-16T05:07:49.3204960Z Removing includeIf entries pointing to credentials config files
+2026-11-16T05:07:49.3214793Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T05:07:49.3462770Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-11-16T05:07:49.8029332Z Cleaning up orphan processes
+2026-11-16T05:07:49.8130640Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

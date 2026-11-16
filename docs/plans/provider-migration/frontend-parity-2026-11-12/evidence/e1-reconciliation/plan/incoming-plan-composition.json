@@ -1,0 +1,78 @@
+{
+  "schema": "lossless-e1d-plan-history-representation/v1",
+  "base": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "ours": "b0528bb50e05379030eb72c20d4f8eb998098cbf",
+  "incoming": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "commonPlan": {
+    "bytes": 1668253,
+    "blob": "1b3308c9f2e7726b31f9bf4755038abfc26c77a4",
+    "sha256": "2eec7430357c2c3c2b0d17109352b5d80c77c8c8699da7a563d00922cff071ac"
+  },
+  "ourWholePlanPrefix": {
+    "bytes": 1712444,
+    "blob": "6e895f3171dd0e2cc752e530cd923ae5bdc77d42",
+    "sha256": "fe4150df6291e4ae6edfc3d947f0a25a6cc6f2f68da104d54f80ae48687aa974"
+  },
+  "incomingWholePlan": {
+    "bytes": 1875442,
+    "blob": "4decf2aa39aba619f90103a77dd8467e37c50cfb",
+    "sha256": "fdd95b0c679e81b04a9b217eab21abc76e538937ed24e7fbab007224154ecf7c"
+  },
+  "incomingIsNotCommonPlanPlusSuffix": true,
+  "blocks": [
+    {
+      "ordinal": 1,
+      "original953InsertionByteOffset": 1278824,
+      "original953LineBefore": 5654,
+      "incomingFirstLine": 5654,
+      "incomingLastLine": 6416,
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/e1-independent-plan-reconstruction/plan29-incoming-insertion-1.md",
+      "bytes": 157733,
+      "blob": "a0f8015978f6983c1a97fcc013ac327cb9dd4d7f",
+      "sha256": "1fbe855a0737267446263a8cfc314de5368cb719807bfc604c75112e4eddcc55"
+    },
+    {
+      "ordinal": 2,
+      "original953InsertionByteOffset": 1463115,
+      "original953LineBefore": 6349,
+      "incomingFirstLine": 7112,
+      "incomingLastLine": 7259,
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/e1-independent-plan-reconstruction/plan29-incoming-insertion-2.md",
+      "bytes": 32909,
+      "blob": "221711c585bb278085d1b23a9b51e4d9b19e853a",
+      "sha256": "7f028b705f8f7d6e543fb470a878018c9e13963bc60803e211fa7f70d8271e39"
+    },
+    {
+      "ordinal": 3,
+      "original953InsertionByteOffset": 1668253,
+      "original953LineBefore": 7122,
+      "incomingFirstLine": 8033,
+      "incomingLastLine": 8104,
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/e1-independent-plan-reconstruction/plan29-incoming-insertion-3.md",
+      "bytes": 16547,
+      "blob": "e7eb6a67972280975bef26b5b52bcb439b09a0fd",
+      "sha256": "0c4dc8924523575d49a75e8fcc616465bfdf86aa239ff99baaf0a533229afefc"
+    }
+  ],
+  "originalIncomingReconstructedExactly": true,
+  "removingOnlyInsertionsRecoversEveryCommonByte": true,
+  "representation": "Keep full b052 prefix, append provenance wrapper, then exact three blocks in original order at EOF, then dormant current A R1, then current root reconciliation R1 last. This is not the original e1d byte position or equivalent execution chronology.",
+  "plan30": {
+    "commonAndOurs": {
+      "bytes": 120803,
+      "blob": "eb68d2643eb11527594d546d8a5088f48f8e2865",
+      "sha256": "d0828ee7c6a9f7444ed9aaec2035939957f87f39092515a198cc48520df637d0"
+    },
+    "incoming": {
+      "bytes": 132735,
+      "blob": "74e17f8bc1abfa1cb4f7567e83b640bfe29fe3fb",
+      "sha256": "9dec5ffc94ced3f6c1802069e101ac179db39f9f00651180150b26f2a3ffcdf1"
+    },
+    "suffix": {
+      "bytes": 11932,
+      "blob": "d8d4070ccb65b7ea367a13cfbe01edb03d55d9a3",
+      "sha256": "2fbd549380e2f4a90cb4ac552361c9d0897e0e30b432875f268cbd7c507f7c86"
+    },
+    "selectedWholeIncomingBytes": true
+  }
+}

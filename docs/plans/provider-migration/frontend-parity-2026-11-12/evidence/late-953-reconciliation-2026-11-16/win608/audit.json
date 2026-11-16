@@ -1,0 +1,355 @@
+{
+  "kind": "original608-packaged-win32-x64-retained-failure-audit",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "sourceTree": "87e104735545a0860ec2bbcd9bf1ef2318dbbebb",
+  "run": 43795234711,
+  "job": 133091842656,
+  "attempt": 1,
+  "artifact": {
+    "id": 14198298316,
+    "name": "packaged-v2-host-win32-x64-608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+    "size_in_bytes": 625065,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14198298316",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14198298316/zip",
+    "expired": false,
+    "created_at": "2026-11-16T04:58:42Z",
+    "expires_at": "2026-11-23T04:58:41Z",
+    "updated_at": "2026-11-16T04:58:42Z",
+    "digest": "sha256:519bf00b1622225262dda3d2b69eaf3df70f0434b921bc41041624a18cd54fdf",
+    "workflow_run": {
+      "id": 43795234711,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+    }
+  },
+  "retainedFiles": {
+    "artifact-14198298316.zip": {
+      "path": "/workspace/scratch/c2f5ff7c30ee/packaged-608-win-x64/artifact-14198298316.zip",
+      "bytes": 625065,
+      "sha256": "519bf00b1622225262dda3d2b69eaf3df70f0434b921bc41041624a18cd54fdf",
+      "gitBlob": "3adb081cb77d221e57a7f7e36ab1525155b95656"
+    },
+    "job-133091842656.log": {
+      "path": "/workspace/scratch/c2f5ff7c30ee/packaged-608-win-x64/job-133091842656.log",
+      "bytes": 314374,
+      "sha256": "31ea4744df4cd594653ced95e24ae48fca9431a40416b7784ddb87c4a0501aad",
+      "gitBlob": "8ddce6f138a109fd5b4ef0100ac31d39d2ef274d"
+    },
+    "source-pin-audit.json": {
+      "path": "/workspace/scratch/c2f5ff7c30ee/packaged-608-win-x64/source-pin-audit.json",
+      "bytes": 709557,
+      "sha256": "d5f2b6dbb99fd98d95772c0bbabac2aaab434b47f1570dd4edc4d68bb7237e18",
+      "gitBlob": "de2c3a75c9ddc2810ceed5b230543024c75f0b5f"
+    },
+    "retry-timing-audit.json": {
+      "path": "/workspace/scratch/c2f5ff7c30ee/packaged-608-win-x64/retry-timing-audit.json",
+      "bytes": 3585,
+      "sha256": "f4670357f444e2672aa8b879f1b798f057122d447c6851b36865c3a384b3a79b",
+      "gitBlob": "079565604cec118e6bb7535ed5f7f5242b0e26e5"
+    },
+    "published-cim-only-comparison.patch": {
+      "path": "/workspace/scratch/c2f5ff7c30ee/packaged-608-win-x64/published-cim-only-comparison.patch",
+      "bytes": 837,
+      "sha256": "48b51a151534318ef53720f48be31deff3579f2ca310b45b021ca5c1ddc192b3",
+      "gitBlob": "cc1fc090a37e3af1bd8a37476584663b7c3a0bc2"
+    },
+    "job-metadata.json": {
+      "path": "/workspace/scratch/c2f5ff7c30ee/packaged-608-win-x64/job-metadata.json",
+      "bytes": 7028,
+      "sha256": "585d9bed9d5f8dfcf7ca2bcff9263bcf09a8ec693f877854ccdf15e462c00a09",
+      "gitBlob": "567207a88cb97f03f0841a28ad5e65c6e2f11c41"
+    }
+  },
+  "receipt": {
+    "path": "/workspace/scratch/c2f5ff7c30ee/packaged-608-win-x64/archive/_temp/windows-same-main-process-ui.json",
+    "bytes": 750852,
+    "sha256": "9488adbdb78f8ce61ecefdd84a16fea78d39a85ee8da4998a5e67b5d0059bc5c",
+    "gitBlob": "e764f6eecaa7787008891534758c7381454621a9"
+  },
+  "sourceFreeze": {
+    "count": 1798,
+    "unique": 1798,
+    "beforeAfterIdentical": true,
+    "immutable608Matches": 1798,
+    "checkoutTransform": "LF-to-CRLF for all1798",
+    "gateBlob": "034d2253e0649bdeb5db0b12244656446150c31c",
+    "platformBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+    "controlsBlob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5"
+  },
+  "firstFailure": {
+    "phase": "one-explicit-same-Main-Retry",
+    "error": "AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: one-explicit-same-Main-Retry\n    at remaining (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:123:10)\n    at validateCensus (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:179:3)\n    at Object.assertOwnedRenderer (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:207:20)\n    at Object.waitRead (D:\\a\\agent-teams-ai\\agent-teams-ai\\scripts\\legacy-agent-host\\desktop-ui-controls.ts:157:15)\n    at file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:502:35",
+    "phaseRecordAtMs": 35031.234,
+    "deadlineUpperBoundMs": 45031.234,
+    "failedRawObservation": {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 44691.21000000001,
+      "endMs": 45377.524900000004,
+      "returned": true,
+      "durationMs": 686.3148999999976
+    },
+    "refusalMeaning": "Complete raw combined query returned; original validateCensus closing remaining() refused before renderer ownership admission at the post-Retry original process-row waitRead. This is not an orphan/listener assertion or provider query error."
+  },
+  "phases": [
+    {
+      "phase": "packaged-App-startup",
+      "atMs": 0.05160000000068976,
+      "budgetMs": 120000
+    },
+    {
+      "phase": "one-initial-Runtime-Open",
+      "atMs": 4334.9568,
+      "budgetMs": 45000
+    },
+    {
+      "phase": "one-original-business-input-and-UI",
+      "atMs": 8374.450700000001,
+      "budgetMs": 35000
+    },
+    {
+      "phase": "actual-Host-A-exit-and-metadata-Refresh",
+      "atMs": 26917.700699999998,
+      "budgetMs": 10000
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "atMs": 35031.234,
+      "budgetMs": 10000
+    },
+    {
+      "phase": "original-product-Quit",
+      "atMs": 45380.811799999996,
+      "budgetMs": 30000
+    }
+  ],
+  "retryUi": {
+    "stages": {
+      "clickReturnedMs": 4890,
+      "writerObservedMs": 6111,
+      "hostCheckedMs": 6430,
+      "uiReadyMs": 8733
+    },
+    "returnedReads": 3,
+    "countTruncated": false,
+    "last": {
+      "atMs": 8733,
+      "result": "ready"
+    }
+  },
+  "timing": {
+    "rawObservations": 13,
+    "combinedCount": 12,
+    "standaloneCount": 1,
+    "totalMs": 8536.39350000002,
+    "combinedMs": 8218.622900000031,
+    "standaloneMs": 317.7705999999889,
+    "preclickCount": 7,
+    "preclickMs": 4651.838500000027,
+    "phaseRecordAtMs": 35031.234,
+    "deadlineUpperBoundMs": 45031.234,
+    "last": {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 44691.21000000001,
+      "endMs": 45377.524900000004,
+      "returned": true,
+      "durationMs": 686.3148999999976
+    }
+  },
+  "timingLimits": [
+    "All durations are inclusive existing interpreter/process-query/listener-query/parse observations, not isolated CIM/TCP/CPU cost.",
+    "The phase record clock follows activeDeadline creation, so its atMs+10000 is an upper bound on the actual cutoff.",
+    "A raw returned=true value does not mean later census/listener/cutoff validation accepted it.",
+    "The standalone census occurs at a different instant; subtracting it from combined duration does not measure listener cost."
+  ],
+  "actions": {
+    "mainStarts": 1,
+    "initialRuntimeOpen": 1,
+    "businessInput": 1,
+    "refreshClicks": 1,
+    "retryClicks": 1,
+    "uiStops": 0,
+    "quit": 1
+  },
+  "actualHostSuccessors": 1,
+  "originalMain": {
+    "pid": 5428,
+    "parent": 2060,
+    "birth": "2026-11-16T04:57:38.4170590Z",
+    "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\AgentTeamsAI.exe"
+  },
+  "originalHost": {
+    "pid": 3372,
+    "parent": 5428,
+    "birth": "2026-11-16T04:57:40.7862680Z",
+    "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe"
+  },
+  "successorHost": {
+    "pid": 7020,
+    "parent": 5428,
+    "birth": "2026-11-16T04:58:18.5304370Z",
+    "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe"
+  },
+  "publicRefsBeforeAfterIdentical": true,
+  "publicRefs": {
+    "processes": [
+      {
+        "id": "19425080-eeac-4cdb-a0fc-5d49505f5194",
+        "pid": 6004,
+        "label": "TEST-primary",
+        "registeredAt": "2026-11-16T04:57:49.614Z",
+        "processRef": "p1:19425080-eeac-4cdb-a0fc-5d49505f5194:556f1dfc65f8c15173f0f89d57b1bc0a4412d7136956a0d3e56338721596d0b0",
+        "canTerminate": true,
+        "observation": "same-live",
+        "registeredBy": "alice"
+      },
+      {
+        "id": "5d0d27ef-f717-44a2-a415-e989215b28d6",
+        "pid": 7272,
+        "label": "TEST-neighbor",
+        "registeredAt": "2026-11-16T04:57:50.421Z",
+        "processRef": "p1:5d0d27ef-f717-44a2-a415-e989215b28d6:214a8a2f9d3c8c31a3807554eb07676440b2df283c90b2f3626621430f3fe21b",
+        "canTerminate": true,
+        "observation": "same-live",
+        "registeredBy": "alice"
+      }
+    ],
+    "readRoute": "packaged-public-process-list"
+  },
+  "originalRuntimeGenerationObserved": "1",
+  "originalRuntimeGenerationsFinal": null,
+  "sameMainAfterRetryFieldPresent": false,
+  "originalCompletedBusinessInput": true,
+  "peer": {
+    "provider": "codex",
+    "connected": 1,
+    "registrations": 1,
+    "serviceExitObservations": 0,
+    "failures": 0,
+    "metadata": {
+      "events": 0,
+      "claudeVersions": 0,
+      "codexVersions": 0,
+      "refused": 0
+    },
+    "modelRequests": 0,
+    "probes": 0,
+    "realVendorExecutions": 0
+  },
+  "cleanup": {
+    "quit": {
+      "attempted": true,
+      "endpoint": "ws://127.0.0.1:9222/devtools/browser/98712dcf-5f44-4dfe-9f0c-98824115f314",
+      "command": {
+        "at": 1794805106638,
+        "id": 1,
+        "method": "Browser.close"
+      },
+      "socketClosed": {
+        "at": 1794805107787,
+        "afterSend": true
+      },
+      "acknowledgement": "socket-closed"
+    },
+    "mainExit": {
+      "code": 0,
+      "signal": null
+    },
+    "finalOwnedRemaining": [],
+    "finalListenerPids": [],
+    "finalDrained": true,
+    "cleanupFailure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 2\n\n    at Object.afterQuit (D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeWindowsAppFixture.ts:467:16)\n    at file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:548:56\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async within (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:141:20)\n    at async file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:548:29",
+    "nativeCleanupPresent": false,
+    "status": "INCOMPLETE",
+    "cleanup": false,
+    "controller": [
+      {
+        "gateController": "drained",
+        "rootExitCode": 1,
+        "activeProcesses": 0
+      }
+    ],
+    "limit": "Final family/listener absence and controller active0/rootExit1 do not replace two original UI Stop/service-exit/HANDLE witnesses; nativeCleanup is absent."
+  },
+  "packagedInputPinsUnchanged": true,
+  "screenshots": [
+    {
+      "phase": "one-original-business-input-and-UI",
+      "path": "D:\\a\\_temp\\windows-same-main-process-ui.before-crash.png",
+      "bytes": 79819,
+      "sha256": "eaa506fa2185166fd626835d1fc3e740e14b147cf1266ca353a894fd1e54474a"
+    }
+  ],
+  "separatePackagedV2": {
+    "outerReceipt": {
+      "path": "/workspace/scratch/c2f5ff7c30ee/packaged-608-win-x64/archive/_temp/opencode-v2-packaged.json",
+      "bytes": 1186,
+      "sha256": "aee3d14580167e3416474f4e989d33b03753c002b0aee33612934074be222638",
+      "gitBlob": "c35365d14e66e5ca1e2e018050518b930c6053c4"
+    },
+    "nativeReceipt": {
+      "path": "/workspace/scratch/c2f5ff7c30ee/packaged-608-win-x64/archive/_temp/opencode-v2-packaged-native.json",
+      "bytes": 5382,
+      "sha256": "b11fa9ad64abb7f08d6527041e85fab69c33d64ad4236d8565c48852b425be03",
+      "gitBlob": "7d8c1f242e4da338db3c824745bf914b3f4515cf"
+    },
+    "manifest": {
+      "path": "/workspace/scratch/c2f5ff7c30ee/packaged-608-win-x64/archive/agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154517,
+      "sha256": "a95fbd84dde0baf9c38e80689f2c704f9bf4e9888d5dbbe56b04c1dc91717146",
+      "gitBlob": "04b0f785afc644708b7c9f05f0add708c3538e73"
+    },
+    "allCrossBindingsMatch": true,
+    "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+    "status": "PASS",
+    "cleanup": true,
+    "nativeCleanup": true,
+    "sourceRestored": true,
+    "bundleRestored": true,
+    "legacyRuntimeRestored": true,
+    "hostExits": [
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      },
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      }
+    ],
+    "modelOrigin": "localhost-scripted",
+    "modelFailures": [],
+    "coordination": {
+      "status": "unqualified",
+      "cleanup": null
+    },
+    "limits": [
+      "Original608 packaged V2 prerequisite only; desktopJourney/vendorAuth/release flags remainfalse.",
+      "Original V2 captured120000ms limit is separate from original15s V1 gate.",
+      "ZIP contains manifest/receipts, not actual app/Node/Host/Bun payloads for new local binary verification."
+    ]
+  },
+  "publishedComparison": {
+    "currentSelectedSource": "ae727104656e2feb288fde84c86cffef313546e1",
+    "selectedPlatformBlob": "5e21bb5f8c50a3c9dd2a18b1d8c461896e0f91a9",
+    "actual608PlatformBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+    "scope": "Only combined snapshot listener statement changes to directCIM; original full process query, standalone processes/listeners, guards/cutoffs and cleanup remain.",
+    "currentCimExecutedByThisJob": false,
+    "performanceRepairQualified": false,
+    "newSourceFixSelected": false
+  },
+  "workPerformed": {
+    "originalJobLogFetches": 1,
+    "originalArtifactDownloads": 1,
+    "archiveCRC": true,
+    "sourceOrProjectExecuted": false,
+    "workflowActions": false,
+    "canonicalMutations": false,
+    "directJobMetadataFetch": "Rejected endpoint; source-bound existing0503 metadata was used without retry."
+  }
+}

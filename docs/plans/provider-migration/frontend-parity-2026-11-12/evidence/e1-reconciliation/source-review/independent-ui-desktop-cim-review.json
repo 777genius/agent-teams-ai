@@ -1,0 +1,325 @@
+{
+  "schema": "TEST-independent-ui-desktop-cim-preservation-review-v1",
+  "createdAtUTC": "2026-11-16T06:21:44.242962+00:00",
+  "reviewer": "ui_failures",
+  "verdict": "APPROVE_EXACT_NINE_PATH_SOURCE_PRESERVATION_WITH_EXPLICIT_QUALIFICATION_LIMITS",
+  "scope": "The four Task read-only paths, three Desktop observer paths, and two combined-live-CIM paths at immutable incoming e1d. This is not a review of the other26 changed non-documentation leaves or the final integration documentation/tree.",
+  "baseHead": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "incomingHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "incomingTree": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+  "incomingParents": [
+    "3575740e9251076fe0bab4ddf10b17bb232038d4",
+    "953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+  ],
+  "sourceProof": {
+    "path": "/workspace/scratch/82d3f9ba6b85/external-e1d-integration/independent-ui-desktop-cim-source-proof.json",
+    "bytes": 16523,
+    "lines": 482,
+    "blob": "370e1936041432a7427e431a485ec9048b1bd2f3",
+    "sha256": "4f8ec4b1e933c2620bdffeaafd35ee0bee6679877bb1dbc3eef98d99a88fd577"
+  },
+  "additionalUnchangedContext": [
+    {
+      "path": "src/renderer/components/ui/auto-resize-textarea.tsx",
+      "before": {
+        "bytes": 3395,
+        "lines": 93,
+        "blob": "53272ec42346a1ff3740bb5a7b28b0c651362390",
+        "sha256": "0abfb8c5dd3f89ef217231809d0cad6d0f134e333a7dd6c590eedb69db602784"
+      },
+      "after": {
+        "bytes": 3395,
+        "lines": 93,
+        "blob": "53272ec42346a1ff3740bb5a7b28b0c651362390",
+        "sha256": "0abfb8c5dd3f89ef217231809d0cad6d0f134e333a7dd6c590eedb69db602784"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "before": {
+        "bytes": 26261,
+        "lines": 313,
+        "blob": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+        "sha256": "a4f1f19bd9ce451946309c5aa6ed2a1437a9244494741937699360a7fe6bab60"
+      },
+      "after": {
+        "bytes": 26261,
+        "lines": 313,
+        "blob": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+        "sha256": "a4f1f19bd9ce451946309c5aa6ed2a1437a9244494741937699360a7fe6bab60"
+      },
+      "unchanged": true
+    }
+  ],
+  "reviewedLeaves": [
+    {
+      "path": "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
+      "before": {
+        "bytes": 14495,
+        "lines": 357,
+        "blob": "c30094a87db542547a5741bb94930a7dd99e4aaf",
+        "sha256": "0b81fa8e8939959d23bbabdbdd30104dd4a9dd825304e6a4111ff536a0a03718"
+      },
+      "after": {
+        "bytes": 14513,
+        "lines": 358,
+        "blob": "fde63957a08c0b076bd50ae272115737c4a4af19",
+        "sha256": "7f5c23b48db6fcb519d3a8837ad77688851c21419c5ab45183632a2600c4bc77"
+      },
+      "additions": 2,
+      "deletions": 1,
+      "reversibleFullTextComparison": true,
+      "commonArtifactRoster": true,
+      "windowsArtifactRoster": true,
+      "explicitFastLint93": false
+    },
+    {
+      "path": "src/renderer/components/ui/MentionableTextarea.tsx",
+      "before": {
+        "bytes": 52237,
+        "lines": 1431,
+        "blob": "3589e26ff85efb370577bd2d8b404fb62bd63fdb",
+        "sha256": "c55440246f2967ca8759102ee54be1c7832412ff2c5a453efdb3b0fa4e6e73ea"
+      },
+      "after": {
+        "bytes": 52375,
+        "lines": 1431,
+        "blob": "94a360626de2ee67ceac964e3fd8529d345e3843",
+        "sha256": "12bd4d337c50ac6308e72e583f29b791be3c9effe7b8b71dcdefa2cc9676133a"
+      },
+      "additions": 4,
+      "deletions": 4,
+      "reversibleFullTextComparison": true,
+      "commonArtifactRoster": false,
+      "windowsArtifactRoster": false,
+      "explicitFastLint93": false
+    },
+    {
+      "path": "test/renderer/components/team/dialogs/TaskCommentInput.test.tsx",
+      "before": {
+        "bytes": 7077,
+        "lines": 203,
+        "blob": "896779479753aaa7c924e1273e4713b2d059e7b4",
+        "sha256": "db1d3ab1b06ef0962511ad956f4c4c216774ed8f8808043891e8ab0e01c82725"
+      },
+      "after": {
+        "bytes": 14830,
+        "lines": 408,
+        "blob": "4b81622262f5f690d1c5e17dfc289f27cbb80b70",
+        "sha256": "b3e0de71f3d3194015e98f2afc68819375e363bbd230d5283721fcce1d418c56"
+      },
+      "additions": 218,
+      "deletions": 13,
+      "reversibleFullTextComparison": true,
+      "commonArtifactRoster": true,
+      "windowsArtifactRoster": true,
+      "explicitFastLint93": false
+    },
+    {
+      "path": "test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx",
+      "before": {
+        "bytes": 46946,
+        "lines": 1184,
+        "blob": "b7fd855c6a3964a56731ba8b86718fc64f6e91bd",
+        "sha256": "2800634878eecb2e44c986d4d9d7ec38e0fdbe4433157564064af9bbbaefda42"
+      },
+      "after": {
+        "bytes": 49616,
+        "lines": 1244,
+        "blob": "0f18886c763559877aff19f319e11575058af08a",
+        "sha256": "11d8b7f2324a2d2b3757e2f1d9036e603fb178c3004d519921c0885322b0254f"
+      },
+      "additions": 61,
+      "deletions": 1,
+      "reversibleFullTextComparison": true,
+      "commonArtifactRoster": true,
+      "windowsArtifactRoster": true,
+      "explicitFastLint93": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "before": {
+        "bytes": 25052,
+        "lines": 456,
+        "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+        "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7"
+      },
+      "after": {
+        "bytes": 27188,
+        "lines": 489,
+        "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+      },
+      "additions": 34,
+      "deletions": 1,
+      "reversibleFullTextComparison": true,
+      "commonArtifactRoster": true,
+      "windowsArtifactRoster": true,
+      "explicitFastLint93": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "before": {
+        "bytes": 103573,
+        "lines": 1766,
+        "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+      },
+      "after": {
+        "bytes": 111672,
+        "lines": 1896,
+        "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+        "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445"
+      },
+      "additions": 130,
+      "deletions": 0,
+      "reversibleFullTextComparison": true,
+      "commonArtifactRoster": true,
+      "windowsArtifactRoster": true,
+      "explicitFastLint93": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "before": {
+        "bytes": 52461,
+        "lines": 996,
+        "blob": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+        "sha256": "ba8020eff1bc7bf80914b3d32cf7673d7a0ed763bb50e0aba7509b98d15bdcf7"
+      },
+      "after": {
+        "bytes": 53683,
+        "lines": 1019,
+        "blob": "e2b96672feefb924a39e20131514e0db5e347311",
+        "sha256": "ba36a5c01c6f670bcba92e6a155683385cd3eb33c871f94b8191b378b226f9d9"
+      },
+      "additions": 24,
+      "deletions": 1,
+      "reversibleFullTextComparison": true,
+      "commonArtifactRoster": false,
+      "windowsArtifactRoster": false,
+      "explicitFastLint93": true
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "before": {
+        "bytes": 12335,
+        "lines": 312,
+        "blob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e"
+      },
+      "after": {
+        "bytes": 12614,
+        "lines": 315,
+        "blob": "5e21bb5f8c50a3c9dd2a18b1d8c461896e0f91a9",
+        "sha256": "a407196b363ba102f68bfcce1da2faa4d0757a84a00f937872aef909a6bb01c4"
+      },
+      "additions": 4,
+      "deletions": 1,
+      "reversibleFullTextComparison": true,
+      "commonArtifactRoster": false,
+      "windowsArtifactRoster": true,
+      "explicitFastLint93": true
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "before": {
+        "bytes": 16835,
+        "lines": 331,
+        "blob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697"
+      },
+      "after": {
+        "bytes": 20150,
+        "lines": 396,
+        "blob": "0be43ad7d6549642c60080caf6001aa5f6d2a23b",
+        "sha256": "19c89b00f420d3858280795c221a423d744e3dbca21704231b073248e597b20b"
+      },
+      "additions": 66,
+      "deletions": 1,
+      "reversibleFullTextComparison": true,
+      "commonArtifactRoster": false,
+      "windowsArtifactRoster": true,
+      "explicitFastLint93": true
+    }
+  ],
+  "blockingSourceFindings": [],
+  "taskReadOnly": {
+    "exactProductChanges": "TaskCommentInput changes only disabled={addingComment||!controller.isOwner} to disabled={addingComment} plus readOnly={!controller.isOwner}. Its full afterimage is byte-identical to the separately reviewed old Cross candidate fde63957. MentionableTextarea changes exactly four expressions: custom change/key/select callbacks become undefined while read-only and the visible mention picker closes.",
+    "nativeChain": "Actual ComposerTextarea passes through MentionableTextarea to unchanged AutoResizeTextarea and native textarea. Native readOnly/disabled props are preserved; submitPending still disables. No new effect, timer, focus(), blur(), input replay, callback cache or owner state is introduced by either product delta.",
+    "authority": "The complete useTaskDetailSession hook is byte-identical. requireOwner reads the current store and requires current origin/context, accepted available Team metadata, same owner surface and revision, ready detail, no deletion intent, matching undeleted task ID and non-deleted status. Text/chip/reply/removal and submit callback admission retain this check; submit additionally refuses existing pending work and unresolved attachment preparation.",
+    "attachmentPrecision": "addPendingFiles checks requireOwner at admission before registering work or creating FileReader. Its already-registered preparation may later complete or be ignored by the retained preparation ID without another owner read. That existing continuation is unchanged. Neither this review nor the old Cross R1 wording should claim a fresh ownership read at every later FileReader continuation.",
+    "partialInteractionPolicy": "Read-only is focusable presentation, not whole-composer inertness. Existing URL/chip overlay controls, parent paste metadata materialization, microphone external link and selection/scroll behavior remain. Task mutation callbacks still enter current authority. Existing file-suggestion state/request can remain open internally while its popup is hidden because the useFileSuggestions enabled expression does not include readOnly. AutoResizeTextarea still owns its native onChange wrapper and layout read. There is no zero-extra-read or universal no-effect claim.",
+    "genericProps": "MentionableTextareaProps omits onChange/onKeyDown/onSelect from its native-prop interface, so the typed trailing textareaProps spread does not provide a supported way to override the new protected callback choices. The reusable component also affects its other readOnly callers; original pending-send/renderer tests remain relevant.",
+    "tests": "The incoming component test retains every old case body, changes the existing mock to opt into the actual MentionableTextarea, and adds five finite native-textarea/picker outcomes. TaskCommentInput is real there, but its controller is createTaskDetailSessionFixture; manually toggled fixture ownership is not the real owner hook. The separate integration file adds one real-hook invalidation/retained-callback case, including no FileReader/API mutation, same-owner restoration and later context refusal. Its only additional existing-body change is explicit undefined initialization of fullRefresh. These tests cover complementary seams; they do not mount the actual TaskCommentInput together with the real owner hook in one new case.",
+    "focusLimit": "Same-element/readOnly/focus assertions in happy-dom do not establish the original Chromium blur sequence or causality of old M/N Cross failures. The actual original Cross one-click20s focus/business/attachment/cleanup gate remains required on the resulting source.",
+    "oldProposalDisposition": "Keep old cross-focus-readonly-r1 R1/candidates and Native old-source R2 immutable. Do not apply old test93fbb over incoming0f188; that would discard incoming preservation coverage. Its Enter.defaultPrevented=true assertion is specifically incompatible with e1d readOnly onKeyDown=undefined. This is not an incoming defect and no manufactured rollback RED is selected."
+  },
+  "desktopObserver": {
+    "exactScope": "controls adds34/removes1 physical lines and remains489lines. The complete waitRead definition and every subsequent action/geometry/ownership/deadline/cleanup byte are exact old-source suffixes. The smoke-test original1766-line prefix is exact; one actual emitted-observer case is appended. The observations test retains its old cases and adds only three complementary empty-peer/zero-Host outcomes plus one-journal-read preservation assertion and finite fixture modes.",
+    "newObservations": "Only an original trusted click gets teamNavigation. The nearest current data-team-name ancestor supplies the target key once; before, original queueMicrotask, and original setTimeout(0) sample current DEV-store selection/tab facts. Each state is null or selectedTeamKey/activeSurface/activeTeamKey. The observed ancestor is not a new owner credential, a complete route trace, or a React commit boundary. TeamListView card itself supplies data-team-name from team.teamName and routes its original click to onOpenTeam.",
+    "bounds": "Host-prefixed nonempty keys retain at most256UTF16 units and refuse C0/DEL; the observer does not parse or grant canonical owner authority. Tabs must be an array of at most64 with exactly one matching active ID; selected/active Team keys and closed activeSurface are validated. Every whole auxiliary fragment is capped at4096UTF8 bytes; failure or overflow becomes null, potentially discarding an earlier diagnostic sample. Absent later fields mean unsampled; null means attempted/unavailable/refused. Existing96 input/32 drag rings remain unchanged.",
+    "costAndActionLimits": "For a retained eligible click there are up to three additional synchronous getState/tab reads in already-existing windows. There are no additional CDP calls, ownership queries, clocks, timers, listeners, product mutations, clicks, retries or deadline changes. The same nine passive listeners, original focus-emulation command, two installation evaluations, original microtask/timer scheduling and old fields remain. Sampling/encoding has real charged synchronous cost.",
+    "testMeaning": "The appended test invokes actual createDesktopUiControls.observeInput and executes its actual emitted expression in node:vm with finite DOM/store/CDP ports. It distinguishes target A/B from later A-to-B-to-A snapshots, unknown/throwing/duplicate/too-many-tab/refused-key/untrusted/Unicode-cap paths, and original callback/read/action counts and ring caps. It does not reproduce Chromium geometry or authenticate native trusted events. No test executed in this review.",
+    "journalPreservation": "The unchanged runtime fixture still takes its original3s budget, one census, unconditional original journal validation with strict post-read cutoff, then original Host/peer current-identity loop. Added tests cover provider mismatch without child, failure journal with allowed zero Host before first Team read, and clean zero-Host journal; they require one census/one journal read and no PID admission. They do not relax cardinality, deadline, duplicate/PID reuse, parent/argv or cleanup oracles."
+  },
+  "liveCim": {
+    "exactChange": "The only platform difference is the listener operand in windowsProcessListenerSnapshot: direct Get-CimInstance root/StandardCimv2 MSFT_NetTCPConnection with closed State=2 and validated LocalPort filter, projected OwningProcess. The original process query still runs first in the same single interpreter, and the exact two-string envelope/parsers are unchanged.",
+    "unchangedRefusal": "PowerShell still uses ErrorActionPreference=Stop and its original30000ms process timeout. Invalid port refuses before execution. There is no catch/fallback/error-to-empty conversion or cache. The unchanged actual Gate calls check, one observed combined snapshot, validateCensus, the nonempty/all-current-original-family listener predicate, then remaining. Empty, mixed/foreign, missing and reused-birth listeners refuse admission.",
+    "standaloneQueries": "The complete standalone listeners(), availability/startup/drain and cleanup evidence query paths remain byte-identical. This source decision only changes the live combined query backend; backend-error identity or OS latency is not asserted equivalent.",
+    "testMeaning": "The existing whole platform test retains every old oracle, changes the one expected query literal, and appends actual assertOwnedRenderer closure checks against the actual exported snapshot/parser with finite executor outputs. Positive and duplicate-current listeners, empty/foreign/mixed/missing/reused sets, and identical initial/executor/census/closing errors exercise original order. This is meaningful caller-refusal preservation, not Windows CIM execution or a timing/phase recovery proof.",
+    "oldP08Disposition": "Our separate old8a census-pipeline R1c4a135/production6e0b/test21cc/Gatecdfec and R216bd remain historical scratch only. Applying its old platform would erase incoming directCIM. No old P08 candidate is selected or silently rebased; all current Windows original P08/native/cleanup gates remain required."
+  },
+  "coverageAndQualificationLimits": [
+    {
+      "finding": "MentionableTextarea.tsx is absent from both current common1757 and Windows1798 literal source rosters.",
+      "impact": "A native/desktop receipt carrying only those selected arrays does not close this newly changed generic editor input. Exact e1d Git identity is independently retained here; full resulting-source original build/CI remains required. This blocks a closed-selected-roster claim, not exact preservation of incoming history. No roster change is silently selected."
+    },
+    {
+      "finding": "desktop-ui-controls.ts is absent from the unchanged93 explicit Host fast-lint operands.",
+      "impact": "It is in common/Windows source rosters, exercised by the original complete helper file and included in the full legacy-scripts compiler through workspace checks. No per-file fast-lint PASS or implicit94th operand is claimed; any permanent extension requires its own explicit scope."
+    },
+    {
+      "finding": "The other non-rostered reviewed test is desktop-backend-observations.test.ts; platform/module test are Windows-only roster additions.",
+      "impact": "The observations test is qualified through exact Git/test/compiler/fast-lint evidence, not falsely relabeled a native artifact pin. The source proof contains exact membership for all9 paths."
+    },
+    {
+      "finding": "Plans record source-specific finite Task61 and CIM79PASS/1WindowsSKIP outcomes on another delivery context.",
+      "impact": "Those are preserved author-recorded claims here; their full raw records were not independently re-audited in this source review and cannot qualify all35 e1d changes or current Chromium/Windows behavior."
+    },
+    {
+      "finding": "Current original e1d Team/frontend/Desktop/Windows CI remains pending except separately retained Creation terminal API/raw archives.",
+      "impact": "Old O177/24/static/frontend success is source953-specific. No old result, publication, or two Creation API successes imply current full-source qualification."
+    }
+  ],
+  "publicationDirection": "Preserve these exact nine incoming images and both histories within the parent-owned complete35-source integration. No competing Cross/P08 patch, roster addition, workflow edit or rollback is selected by this review. Parent/Scope must independently bind the full35 unchanged source map and documentation assembly before publication.",
+  "oldSourceReviewReferences": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/p08-census-pipeline-timings-r1/independent-old-source-r1-review.json",
+      "bytes": 12250,
+      "lines": 213,
+      "blob": "16bdca5ce023b90d61701962b1aacf498f18405c",
+      "sha256": "fe86a0b327c4fd42af1d6d4b234aa0b4badd0484865af61ff7aafc475e644efa"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/p08-census-pipeline-timings-r1/late-e1d-source-disposition.json",
+      "bytes": 10357,
+      "lines": 85,
+      "blob": "806e56943fbd45f167f3e20a5afb146ec7284f32",
+      "sha256": "f136d9a7df3fb352128a678d2a7b58fdeb8b0e6043c993a1892ef96fd5bf45c6"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/cross-focus-readonly-r1/independent-old-source-r1-review.json",
+      "bytes": 11225,
+      "lines": 154,
+      "blob": "8e4e8c137da5517fa73403c0d8db36a06225b85f",
+      "sha256": "aac7d24f003b244a204eb1b9d66a9fd04ef051866cd7d3d452bc0e7095058145"
+    }
+  ],
+  "methods": "Pinned git show/cat-file metadata and complete nine-path diffs; full-byte SHA1/SHA256/length/line recomputation; reversible text comparison; exact four-expression/product/suffix/prefix inverses; static literal roster and existing workflow-command membership; source/control-flow reading. Python bookkeeping only.",
+  "projectExecution": false,
+  "testsOrCompilersOrLintRun": false,
+  "nativeProviderOrBrowserRun": false,
+  "trackedFilesChanged": false,
+  "refsOrCIChanged": false
+}

@@ -1,0 +1,737 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-complete-e1d-source-review-coverage-and-identity-join",
+  "reviewer": "/root/migration_scope",
+  "createdAtUTC": "2026-11-16T06:26:11.496752+00:00",
+  "result": "APPROVE",
+  "scope": "Complete35-path preservation-review coverage and exact immutable source identities only. Not a final docs/source tree, publication/readback, execution qualification or PhaseA selection.",
+  "commonSource": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "incoming": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "incomingTree": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+  "sourceScopeRecord": {
+    "path": "/workspace/scratch/82d3f9ba6b85/external-e1d-integration/incoming-scope.json",
+    "bytes": 54307,
+    "blob": "039d780473f932d98a8a3f83839cc818be61c6be",
+    "sha256": "b54bbcf66d9c53bf1d24df486af5a4fd403cbb72b400f1fffc1b75e0a9d5a425"
+  },
+  "reviewReports": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/external-e1d-integration/root-readiness-and-read-boundary-review.json",
+      "bytes": 17066,
+      "blob": "9422388a1eac880ff4d4d3892fdfeeac8d73d126",
+      "sha256": "8d734b9bf4245b70e84fa65934ce7d7c08a155fc928e3f164685654953c3549b"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/external-e1d-integration/independent-ui-desktop-cim-review.json",
+      "bytes": 21847,
+      "blob": "65d9a3012100b9ec3b782b334ff3680216ef3ec0",
+      "sha256": "ad2d9d6a1ef3d97d7ff03c90cc005ae2b7220e9d026014f8eb3621f7d5072d38"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/external-e1d-integration/independent-six-i386-preservation-review.json",
+      "bytes": 9067,
+      "blob": "d557fa7cfb8797b15820d473fd9d209730a3fdcb",
+      "sha256": "22621b6becd89edcdbc53d96fc203816ee2318456c005938fd8210d629c31e6a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/e1-independent-workflows-stderr-and-reconciliation-review.json",
+      "bytes": 31851,
+      "blob": "5df1f1e0e4a754efb003135bc148abf27f416817",
+      "sha256": "2e1eb3f3d73008c795dc77503d9ca6133be3ce01bfca7da4d40dc4d58ca0c566"
+    }
+  ],
+  "reportedCounts": {
+    "root": 15,
+    "ui": 9,
+    "native": 6,
+    "scope": 6,
+    "unique": 35,
+    "overlap": 1
+  },
+  "exactOverlap": [
+    ".github/workflows/host-process-acceptance.yml"
+  ],
+  "all35IncomingAndCommonFullBytesRehashed": true,
+  "completeGitDiffSourceSetEqualsReviewedSet": true,
+  "allReviewedAfterimagesEqualSelectedScope": true,
+  "paths": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "before": {
+        "bytes": 175238,
+        "blob": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+        "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce"
+      },
+      "after": {
+        "bytes": 175238,
+        "blob": "da94c393b024d3c8a40159edbf9975cd528007a6",
+        "sha256": "1d985c85b89c284ce4745692fa7aafc345337de59cb81a1aa182f0d3f848feba"
+      },
+      "owners": [
+        {
+          "owner": "/root/migration_scope",
+          "reportBlob": "5df1f1e0e4a754efb003135bc148abf27f416817"
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "before": {
+        "bytes": 19532,
+        "blob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+        "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f"
+      },
+      "after": {
+        "bytes": 19680,
+        "blob": "8a39884bdf09fe22fe153c7a9fc3eae89dc749e8",
+        "sha256": "13981d0a919eb7debdffbe57f12716db2ed0b754572643ff0ce2730f1e62d7ee"
+      },
+      "owners": [
+        {
+          "owner": "/root/migration_scope",
+          "reportBlob": "5df1f1e0e4a754efb003135bc148abf27f416817"
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "before": {
+        "bytes": 30399,
+        "blob": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+        "sha256": "a7e59eb17ee93d15ffad248322d79e536d9d9c0b02c83a30a31687fd6e618ce0"
+      },
+      "after": {
+        "bytes": 32248,
+        "blob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+        "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c"
+      },
+      "owners": [
+        {
+          "owner": "/root/native_failures",
+          "reportBlob": "d557fa7cfb8797b15820d473fd9d209730a3fdcb"
+        },
+        {
+          "owner": "/root/migration_scope",
+          "reportBlob": "5df1f1e0e4a754efb003135bc148abf27f416817"
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "before": {
+        "bytes": 36013,
+        "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+        "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14"
+      },
+      "after": {
+        "bytes": 36309,
+        "blob": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+        "sha256": "6db4370dc3ee5521847cef9c039f21bddfcfc412b6dabba49dda73585985996a"
+      },
+      "owners": [
+        {
+          "owner": "/root/migration_scope",
+          "reportBlob": "5df1f1e0e4a754efb003135bc148abf27f416817"
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "before": {
+        "bytes": 6522,
+        "blob": "ef939f224a1642cb596906324c8d61441780ccc7",
+        "sha256": "f57bf21347769c79b9c8c21f6f35b40b772fbfe9cb5f8155d7daabb54499d15f"
+      },
+      "after": {
+        "bytes": 6522,
+        "blob": "72c1a8f760a99c53ce7d279c7bb9d5e3ddaa7298",
+        "sha256": "3cb53bb19e4ee77c51947c5ce39fa4efb8cccbcaa648c6da0293129c92effdaa"
+      },
+      "owners": [
+        {
+          "owner": "/root/migration_scope",
+          "reportBlob": "5df1f1e0e4a754efb003135bc148abf27f416817"
+        }
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+      "before": {
+        "bytes": 23243,
+        "blob": "78b22adbb55ab285186285e4e3f6ada38f413ecb",
+        "sha256": "1f262a499ca1999c6a2188f5b90005c5c1c4c84f8fdb6fb40d08bbeeaab8bdf1"
+      },
+      "after": {
+        "bytes": 24664,
+        "blob": "b98f057ce72161d867b99f01dde0f83e3244c3d2",
+        "sha256": "50685504916c575c2956720debc7fc30ba35bd51d047ed9de1ee197d1880f79f"
+      },
+      "owners": [
+        {
+          "owner": "/root",
+          "reportBlob": "9422388a1eac880ff4d4d3892fdfeeac8d73d126"
+        }
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "before": {
+        "bytes": 43732,
+        "blob": "b9dd573db23b3033b5f3db7024b317681ce31499",
+        "sha256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14"
+      },
+      "after": {
+        "bytes": 44781,
+        "blob": "08552af73c0f67cd62fca0e5b773cde2281eb152",
+        "sha256": "eb985c1ba5f4a6d22a3816cd80795374f817645e8a59fb8ad70a1734f3e20fc3"
+      },
+      "owners": [
+        {
+          "owner": "/root",
+          "reportBlob": "9422388a1eac880ff4d4d3892fdfeeac8d73d126"
+        }
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "before": {
+        "bytes": 16103,
+        "blob": "0727339627757c3a96d54da2933eb7c1b60685f7",
+        "sha256": "2a738fca4120ae3361483abd948f7746d2025f32012b189e695085845bc3e191"
+      },
+      "after": {
+        "bytes": 16208,
+        "blob": "ce5c3a7511009501ca057f01957008a8ce3ef67b",
+        "sha256": "e52a7a6ec9af567c1ff9b8e5c82136d538b3ccffbb0803cdf1c5c9db909b2ae5"
+      },
+      "owners": [
+        {
+          "owner": "/root/migration_scope",
+          "reportBlob": "5df1f1e0e4a754efb003135bc148abf27f416817"
+        }
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-member-provider.test.ts",
+      "before": {
+        "bytes": 41996,
+        "blob": "40e2f39d04da90f663f3d8b1b9308481a8371e23",
+        "sha256": "03e9a98246a9ae43dde999d62b898b3f4208afa6a6aa69dd52d1f99fb765c60f"
+      },
+      "after": {
+        "bytes": 44442,
+        "blob": "9dbb76223a34fffac60c40d92398d2ca31a41b53",
+        "sha256": "15d096068ba0eff94e7cc6b66c7d12c95f45a9790938a8d39bdcfc0fe0c71651"
+      },
+      "owners": [
+        {
+          "owner": "/root",
+          "reportBlob": "9422388a1eac880ff4d4d3892fdfeeac8d73d126"
+        }
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "before": {
+        "bytes": 60689,
+        "blob": "077ad7ea54675a4782984fcb5399f9964d5ec5e6",
+        "sha256": "a559b1b184c4f79f76fbcd99998d689cfc31158609051100c1f5cfdcc3b37c77"
+      },
+      "after": {
+        "bytes": 63022,
+        "blob": "76480223b97320827c97a8469a11418f5ccb0206",
+        "sha256": "208f8d9d28b9236c91e512b2faf0fa7de02f4af5fb514c582c4c4fe7571d6441"
+      },
+      "owners": [
+        {
+          "owner": "/root",
+          "reportBlob": "9422388a1eac880ff4d4d3892fdfeeac8d73d126"
+        }
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "before": {
+        "bytes": 207427,
+        "blob": "c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79",
+        "sha256": "5ecb1c76b7a3cccf205b9856f183095ef7da3fa06cd7617c2f403c37e3f41d2d"
+      },
+      "after": {
+        "bytes": 207380,
+        "blob": "331ed90ca8996b09daee62f4bcad2fcda6080b04",
+        "sha256": "97a9c3e63c4c6db21bd9c665b555a99c26ea30c651eeeadaab946e933cb376bb"
+      },
+      "owners": [
+        {
+          "owner": "/root",
+          "reportBlob": "9422388a1eac880ff4d4d3892fdfeeac8d73d126"
+        }
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "before": {
+        "bytes": 87973,
+        "blob": "bc0913e775d3e076518009c4fe7b5ee45f8c7e7b",
+        "sha256": "a5c97e6dc5ce77215a0fb8e6d86d62606ded0d62cc1cea0475299519ff35cd1a"
+      },
+      "after": {
+        "bytes": 90081,
+        "blob": "6a668daeaf47a920aeddfb87c4d2658a35754f11",
+        "sha256": "63b8db91450898514af1b2bd474faf4c0b5fe4eae29d3b6f986ee636f0f505a8"
+      },
+      "owners": [
+        {
+          "owner": "/root",
+          "reportBlob": "9422388a1eac880ff4d4d3892fdfeeac8d73d126"
+        }
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "before": {
+        "bytes": 14327,
+        "blob": "881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb",
+        "sha256": "56be5d699948e7142fc94bc5b0776b675683e3c16a9a68a72e9e5b148146e0c5"
+      },
+      "after": {
+        "bytes": 16910,
+        "blob": "bb5eb306bd81fdd5bdd69ccd9f10664d44d2c1c4",
+        "sha256": "fe91239dde94cf83bb3478d281eb3489d2d3d4095ff0bf544928739330419cc1"
+      },
+      "owners": [
+        {
+          "owner": "/root",
+          "reportBlob": "9422388a1eac880ff4d4d3892fdfeeac8d73d126"
+        }
+      ]
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "before": {
+        "bytes": 12335,
+        "blob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e"
+      },
+      "after": {
+        "bytes": 12614,
+        "blob": "5e21bb5f8c50a3c9dd2a18b1d8c461896e0f91a9",
+        "sha256": "a407196b363ba102f68bfcce1da2faa4d0757a84a00f937872aef909a6bb01c4"
+      },
+      "owners": [
+        {
+          "owner": "/root/ui_failures",
+          "reportBlob": "65d9a3012100b9ec3b782b334ff3680216ef3ec0"
+        }
+      ]
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "before": {
+        "bytes": 16835,
+        "blob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697"
+      },
+      "after": {
+        "bytes": 20150,
+        "blob": "0be43ad7d6549642c60080caf6001aa5f6d2a23b",
+        "sha256": "19c89b00f420d3858280795c221a423d744e3dbca21704231b073248e597b20b"
+      },
+      "owners": [
+        {
+          "owner": "/root/ui_failures",
+          "reportBlob": "65d9a3012100b9ec3b782b334ff3680216ef3ec0"
+        }
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "before": {
+        "bytes": 52461,
+        "blob": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+        "sha256": "ba8020eff1bc7bf80914b3d32cf7673d7a0ed763bb50e0aba7509b98d15bdcf7"
+      },
+      "after": {
+        "bytes": 53683,
+        "blob": "e2b96672feefb924a39e20131514e0db5e347311",
+        "sha256": "ba36a5c01c6f670bcba92e6a155683385cd3eb33c871f94b8191b378b226f9d9"
+      },
+      "owners": [
+        {
+          "owner": "/root/ui_failures",
+          "reportBlob": "65d9a3012100b9ec3b782b334ff3680216ef3ec0"
+        }
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "before": {
+        "bytes": 68760,
+        "blob": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+        "sha256": "6ca239d1ea242a3ac64323bf28d41b84450fc1d5d7e4ae2324a069d03bff18ad"
+      },
+      "after": {
+        "bytes": 68865,
+        "blob": "76f4e9aa4d29e4eab14041e5343e0e3a5b46b3cf",
+        "sha256": "945b5ad3a507cea5925cb8b5e8d25aa0a15970c38a5f4c6c13db13fcaa3ccb64"
+      },
+      "owners": [
+        {
+          "owner": "/root",
+          "reportBlob": "9422388a1eac880ff4d4d3892fdfeeac8d73d126"
+        }
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "before": {
+        "bytes": 19234,
+        "blob": "7628e511b2f219ad27e517d4a96ecb7aec604131",
+        "sha256": "f4ea5ccdfd127a0ea0271a4923a8da12fcc2bf542a30a152f0b2d34360f781fe"
+      },
+      "after": {
+        "bytes": 20040,
+        "blob": "13229f20c93226ee5b3f4d07516d16f94b0d48d5",
+        "sha256": "460743df044eef3901653a6c4331a14bdf977ca644513a22386bf34907aaf13e"
+      },
+      "owners": [
+        {
+          "owner": "/root",
+          "reportBlob": "9422388a1eac880ff4d4d3892fdfeeac8d73d126"
+        }
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "before": {
+        "bytes": 20394,
+        "blob": "74c3aaddba29d7309af436610f6a8b64c8c337e1",
+        "sha256": "bd70a28a13d10c5150843cd5de88aeb6007c1e27bc6bfcf4b45ced8413d01b3c"
+      },
+      "after": {
+        "bytes": 20435,
+        "blob": "7f224d52e429bbdecb173d65b470a2ac154de475",
+        "sha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6"
+      },
+      "owners": [
+        {
+          "owner": "/root",
+          "reportBlob": "9422388a1eac880ff4d4d3892fdfeeac8d73d126"
+        }
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "before": {
+        "bytes": 103573,
+        "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+      },
+      "after": {
+        "bytes": 111672,
+        "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+        "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445"
+      },
+      "owners": [
+        {
+          "owner": "/root/ui_failures",
+          "reportBlob": "65d9a3012100b9ec3b782b334ff3680216ef3ec0"
+        }
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "before": {
+        "bytes": 25052,
+        "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+        "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7"
+      },
+      "after": {
+        "bytes": 27188,
+        "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+      },
+      "owners": [
+        {
+          "owner": "/root/ui_failures",
+          "reportBlob": "65d9a3012100b9ec3b782b334ff3680216ef3ec0"
+        }
+      ]
+    },
+    {
+      "path": "src/features/agent-backend/main/adapters/output/projectTeamActivity.ts",
+      "before": {
+        "bytes": 4794,
+        "blob": "2f03dbc22891af7d294df53f61af1d3b6e79c0bd",
+        "sha256": "bcce5f530760e9475eb45d9fe193ffba3ef57539d7b3d79f997e0779c8d656a3"
+      },
+      "after": {
+        "bytes": 4943,
+        "blob": "bfa65f8590566ec3139838d6a38cc40ffc2e5bda",
+        "sha256": "2b100f9c6e0254320af8ed761488e39e815d1bb3e0cee7ddc2f2a9f8bcc061c8"
+      },
+      "owners": [
+        {
+          "owner": "/root",
+          "reportBlob": "9422388a1eac880ff4d4d3892fdfeeac8d73d126"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
+      "before": {
+        "bytes": 14495,
+        "blob": "c30094a87db542547a5741bb94930a7dd99e4aaf",
+        "sha256": "0b81fa8e8939959d23bbabdbdd30104dd4a9dd825304e6a4111ff536a0a03718"
+      },
+      "after": {
+        "bytes": 14513,
+        "blob": "fde63957a08c0b076bd50ae272115737c4a4af19",
+        "sha256": "7f5c23b48db6fcb519d3a8837ad77688851c21419c5ab45183632a2600c4bc77"
+      },
+      "owners": [
+        {
+          "owner": "/root/ui_failures",
+          "reportBlob": "65d9a3012100b9ec3b782b334ff3680216ef3ec0"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/components/ui/MentionableTextarea.tsx",
+      "before": {
+        "bytes": 52237,
+        "blob": "3589e26ff85efb370577bd2d8b404fb62bd63fdb",
+        "sha256": "c55440246f2967ca8759102ee54be1c7832412ff2c5a453efdb3b0fa4e6e73ea"
+      },
+      "after": {
+        "bytes": 52375,
+        "blob": "94a360626de2ee67ceac964e3fd8529d345e3843",
+        "sha256": "12bd4d337c50ac6308e72e583f29b791be3c9effe7b8b71dcdefa2cc9676133a"
+      },
+      "owners": [
+        {
+          "owner": "/root/ui_failures",
+          "reportBlob": "65d9a3012100b9ec3b782b334ff3680216ef3ec0"
+        }
+      ]
+    },
+    {
+      "path": "test/features/agent-backend/hostTaskActivity.test.ts",
+      "before": {
+        "bytes": 13948,
+        "blob": "66508376c5c12fe35cbedcbc6cba84a9f6720966",
+        "sha256": "e2c6d7b0670813744d414cf226005e44cf56c608c8567600519250967181db91"
+      },
+      "after": {
+        "bytes": 17955,
+        "blob": "294d5368e92a6f871a394206bc75a4177a59f666",
+        "sha256": "e25f326ad1b2e62f5caf6be50080e782e9376cfa39a8cdfb45ac5e594f12e5cf"
+      },
+      "owners": [
+        {
+          "owner": "/root",
+          "reportBlob": "9422388a1eac880ff4d4d3892fdfeeac8d73d126"
+        }
+      ]
+    },
+    {
+      "path": "test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "before": {
+        "bytes": 36912,
+        "blob": "3233fc10c6f598345f566e542c1f47b5acc18d33",
+        "sha256": "3c9d81c0d7e81ee8fea671a2b1b814295363213a0b79af611ee28d13ec2af265"
+      },
+      "after": {
+        "bytes": 39469,
+        "blob": "8aef5576630d01c091f1514bd2896ef415130d13",
+        "sha256": "a5510c02a1a2712c69dfbc7b6089d973c7dd0bb4eba1918e5d581c6274fa1049"
+      },
+      "owners": [
+        {
+          "owner": "/root",
+          "reportBlob": "9422388a1eac880ff4d4d3892fdfeeac8d73d126"
+        }
+      ]
+    },
+    {
+      "path": "test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx",
+      "before": {
+        "bytes": 46946,
+        "blob": "b7fd855c6a3964a56731ba8b86718fc64f6e91bd",
+        "sha256": "2800634878eecb2e44c986d4d9d7ec38e0fdbe4433157564064af9bbbaefda42"
+      },
+      "after": {
+        "bytes": 49616,
+        "blob": "0f18886c763559877aff19f319e11575058af08a",
+        "sha256": "11d8b7f2324a2d2b3757e2f1d9036e603fb178c3004d519921c0885322b0254f"
+      },
+      "owners": [
+        {
+          "owner": "/root/ui_failures",
+          "reportBlob": "65d9a3012100b9ec3b782b334ff3680216ef3ec0"
+        }
+      ]
+    },
+    {
+      "path": "test/renderer/components/team/dialogs/TaskCommentInput.test.tsx",
+      "before": {
+        "bytes": 7077,
+        "blob": "896779479753aaa7c924e1273e4713b2d059e7b4",
+        "sha256": "db1d3ab1b06ef0962511ad956f4c4c216774ed8f8808043891e8ab0e01c82725"
+      },
+      "after": {
+        "bytes": 14830,
+        "blob": "4b81622262f5f690d1c5e17dfc289f27cbb80b70",
+        "sha256": "b3e0de71f3d3194015e98f2afc68819375e363bbd230d5283721fcce1d418c56"
+      },
+      "owners": [
+        {
+          "owner": "/root/ui_failures",
+          "reportBlob": "65d9a3012100b9ec3b782b334ff3680216ef3ec0"
+        }
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "before": {
+        "bytes": 7271,
+        "blob": "f8a03669780c34de68010184ad6ca03a8440a2e4",
+        "sha256": "ec0665d1f6289492ea103bce13821c2a06847a2599396c8b47de21dde4e4f2a4"
+      },
+      "after": {
+        "bytes": 9009,
+        "blob": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+        "sha256": "f3c3fdcb5f6eaa729ff071574deb894078e15d9d5b7e786789b270b1c7d996c8"
+      },
+      "owners": [
+        {
+          "owner": "/root/native_failures",
+          "reportBlob": "d557fa7cfb8797b15820d473fd9d209730a3fdcb"
+        }
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "before": {
+        "bytes": 20067,
+        "blob": "e3cb3ac88b3b46c8935f64bc2f2b0060e163676b",
+        "sha256": "3da229429f0dfa6c53449078a1b8125715130be2165986f2d4cc1fab31a53951"
+      },
+      "after": {
+        "bytes": 25009,
+        "blob": "e002d7fc688cac9e2db38abbd1c1c9e851f975dd",
+        "sha256": "a11c6fcc322cd240bf396ee7e7bf0fc9d009869fe9e2b94cc9c969a4f7bbb1b1"
+      },
+      "owners": [
+        {
+          "owner": "/root/native_failures",
+          "reportBlob": "d557fa7cfb8797b15820d473fd9d209730a3fdcb"
+        }
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "before": {
+        "bytes": 22666,
+        "blob": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+        "sha256": "69f6948490d5f4c88f090135912bf8c8189c3558e2480eb1ee4ac69ac15a2c5c"
+      },
+      "after": {
+        "bytes": 23934,
+        "blob": "ae066b7c62e2875d975e0f6d701a92bb102a8594",
+        "sha256": "79bea9e617314021ebbd306258d70a1a5beb5a3039665da05a1639bfd0f91fb2"
+      },
+      "owners": [
+        {
+          "owner": "/root",
+          "reportBlob": "9422388a1eac880ff4d4d3892fdfeeac8d73d126"
+        }
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "before": {
+        "bytes": 56556,
+        "blob": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+        "sha256": "3cba93b8d78463415511f25e2b86132801fd5a0059d168072e39e03a0ad624b0"
+      },
+      "after": {
+        "bytes": 58249,
+        "blob": "dd1e8cd2f1ea052f0480833cfe1fca6be9b5d2e6",
+        "sha256": "442fc644470c06095932c89434cdd8d24ffb6971bdb475d2ca1a3e6257be760d"
+      },
+      "owners": [
+        {
+          "owner": "/root",
+          "reportBlob": "9422388a1eac880ff4d4d3892fdfeeac8d73d126"
+        }
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "before": {
+        "bytes": 17444,
+        "blob": "ca0ded66441b8818bdf5726ee7d8ffa95abb8518",
+        "sha256": "dc3cfdb3e8a7398d91dd2d0651bc31c11d2e6c357aaa03e83dba21c3b81adeb5"
+      },
+      "after": {
+        "bytes": 19357,
+        "blob": "dd14a6cbdc9976bbeaf2ae48efda560623fa72c5",
+        "sha256": "a509a625e9e1ab1ccb96040b81d2c2fd1f00c0c23e74677e7002b7c8a4b7b84f"
+      },
+      "owners": [
+        {
+          "owner": "/root/native_failures",
+          "reportBlob": "d557fa7cfb8797b15820d473fd9d209730a3fdcb"
+        }
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+      "before": {
+        "bytes": 2514,
+        "blob": "1d16506c9aa8ef2834bb379d373665947ea06c19",
+        "sha256": "eabb2496217a30e35bd45413aa0cd97a0789b3a2ad1dde354eef6c3697adb85f"
+      },
+      "after": {
+        "bytes": 7387,
+        "blob": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+        "sha256": "40a1d7107607b3d1e6fcbdd0018d452e830622a5d3ba8256d302a2a42ac7633a"
+      },
+      "owners": [
+        {
+          "owner": "/root/native_failures",
+          "reportBlob": "d557fa7cfb8797b15820d473fd9d209730a3fdcb"
+        }
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/serviceScopes.h",
+      "before": {
+        "bytes": 15888,
+        "blob": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+        "sha256": "cc6b60ac08081c1d14201391e912b1062967dadc25d4633b5329e9524550fb06"
+      },
+      "after": {
+        "bytes": 16379,
+        "blob": "b3fbd2949a5b015bf36c56eb19ca8ef43ec42329",
+        "sha256": "88aea669b33d0bb1e60cf80ed5b3c11f6c1ce5f9a14499f421be9d563daadcf9"
+      },
+      "owners": [
+        {
+          "owner": "/root/native_failures",
+          "reportBlob": "d557fa7cfb8797b15820d473fd9d209730a3fdcb"
+        }
+      ]
+    }
+  ],
+  "noHiddenAdditionalSourceSelected": true,
+  "boundaries": [
+    "Preserve complete e1 source with known actual I386 failure and independently identified FD5 publication-order gap; no fix/PASS claim.",
+    "Incoming15s request/post-ACK observer policy is explicitly adopted by root R1; historical60/90 evidence stays source-bound.",
+    "UI pin/fast-lint coverage limitations remain explicit; no silent roster changes.",
+    "Dormant PhaseA candidates remain absent from the source-only union; actual current-source Team/static prerequisite and fresh root selection remain open.",
+    "Final documentation/tree/ordered-parent publication and actual Git-byte R2 must follow separately."
+  ],
+  "method": "Pure evidence/source identity join of frozen owner reviews and complete immutable Git bytes; no project source execution, source/ref edits or CI requests."
+}

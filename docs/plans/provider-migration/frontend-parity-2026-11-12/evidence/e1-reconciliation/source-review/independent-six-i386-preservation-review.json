@@ -1,0 +1,157 @@
+{
+  "kind": "Independent exact incoming six-path/history review for preservation merge only",
+  "reviewer": "/root/native_failures",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "verdict": "APPROVE preserving all six exact current e1d leaves unchanged, with actual qualification failure and source publication gap retained. This is not approval of a correction or native-policy PASS.",
+  "authorR1": {
+    "commit": "732998cfa741393bec65f0d812f777f5f5778b5b",
+    "plan29Blob": "9b9e64e0dc240a1b56181663de04bdf553d388ed",
+    "sourceCommit": "eba491c50fda418f8fc96fb743089b5b1532c1eb",
+    "priorR1AncestryVerified": true,
+    "reviewedHeadContainsBoth": true,
+    "sixAfterImagesInPublishedPlanMatch": true,
+    "executionClaims": "Author Plan separately records extraction-boundary RED and finite4-case GREEN/static checks. That is author history, not newly independently audited native evidence."
+  },
+  "paths": [
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "bytes": 19357,
+      "blob": "dd14a6cbdc9976bbeaf2ae48efda560623fa72c5",
+      "sha256": "a509a625e9e1ab1ccb96040b81d2c2fd1f00c0c23e74677e7002b7c8a4b7b84f",
+      "lines": 355,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": false
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "bytes": 25009,
+      "blob": "e002d7fc688cac9e2db38abbd1c1c9e851f975dd",
+      "sha256": "a11c6fcc322cd240bf396ee7e7bf0fc9d009869fe9e2b94cc9c969a4f7bbb1b1",
+      "lines": 390,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": false
+    },
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "bytes": 9009,
+      "blob": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+      "sha256": "f3c3fdcb5f6eaa729ff071574deb894078e15d9d5b7e786789b270b1c7d996c8",
+      "lines": 186,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": false
+    },
+    {
+      "path": "tools/owned-process-broker/serviceScopes.h",
+      "bytes": 16379,
+      "blob": "b3fbd2949a5b015bf36c56eb19ca8ef43ec42329",
+      "sha256": "88aea669b33d0bb1e60cf80ed5b3c11f6c1ce5f9a14499f421be9d563daadcf9",
+      "lines": 386,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": false
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "bytes": 32248,
+      "blob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+      "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c",
+      "lines": 418,
+      "equalsIncomingI386Commit": false,
+      "equalsOld953": false
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+      "bytes": 7387,
+      "blob": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+      "sha256": "40a1d7107607b3d1e6fcbdd0018d452e830622a5d3ba8256d302a2a42ac7633a",
+      "lines": 124,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": false
+    }
+  ],
+  "pathReview": [
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "judgment": "Exactly one optional sequential same-source I386 application child in original service-pair after original native/cmd checks and before original80-child churn. Existing child creation and original PROCESS_INFORMATION handle supply birth, IsWow64Process2,5s wait/exit0 and one close. Six closed prerequisite stages20–25 append. Original application-breakpoints handlers unchanged; no PID reopen or product broker substitution."
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "judgment": "Canonical fixed-name/same-build-directory PE-I386 and image-hash selection, original service-pair environment assignment, exclusive private FD5, completed child marker parse, strict bounded scalar decoder and exactPID/birth qualifier. Original broker code0 and emptyFD4 checks precede new qualifier. Unknown/partial/malformed/overflow remains refusal. Current trace publication-order gap described separately; do not call finite success native qualification."
+    },
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "judgment": "TEST-only16×8DWORD ledger;15 observations and reserved overflow, fixed512B. Copy uses already retained identity/event/decision after original accept. FD5 disk handle configured before loop; current sole best-effort write occurs only after loop. That exact unchanged source has a demonstrable possible publication race with independent successful Release/ExitProcess; preserve as known open defect, not PASS."
+    },
+    {
+      "path": "tools/owned-process-broker/serviceScopes.h",
+      "judgment": "Only original TEST fence gains observer pointer/setter and same-call returned-decision observation for already held WOW64child. Removing the three exact TEST additions reproduces entire old953 header bytes. Ordinary product firstBreakpoint branch and complete startup/loop policy remain unchanged by this cut."
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "judgment": "Published I386R1 adds two capped120000ms CMake commands in existing Windows build, fixed fresh copy/hash equality and required env in original Node/Electron steps. Currente1 additionally has separate4-line long-path setup; preserve full3228 current workflow, not stale10aa. Root/Scope separately review workflow long-path policy. No matrix/newlane/manualdispatch inferred."
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+      "judgment": "Entire original3 callback/cleanup cases preserved after removing only2imports+newdescribe. New actual private parser/qualifier extraction coversclosedrows,exactchildjoin,extra/missing/foreign/latehandled/overflow/order/Boolean refusals. It cannot prove C++write timing or realnativehandler decisions. Current originalProcess protocol block did run all4casesPASS."
+    }
+  ],
+  "verifiedInverse": {
+    "serviceScopesOrdinarySourceAndOriginalBranches": true,
+    "original3EventTestsByteExact": true,
+    "serviceDebugLoopEquals953": true,
+    "brokerEquals953": true
+  },
+  "boundaries": [
+    "same-source existing fixture target built Win32; no I386 product broker",
+    "new sequential I386 child in existing service-pair only",
+    "original child PROCESS_INFORMATION handle supplies birth/architecture/wait/exit; no PID reopen",
+    "original startup.accept called once; observer conditional under TEST fence; ordinary product branch unchanged",
+    "15 original rows plus reserved overflow record; 512-byte maximum",
+    "four exact matching child observations required, two startup handled and two later first-chance forwarded",
+    "original child-lines10s, helper64/live64 and all Stop/cleanup/unknown predicates unchanged",
+    "direct I386 debugger-root late-handler and full native policy remain unqualified"
+  ],
+  "actualCurrentFailure": {
+    "audit": {
+      "path": "native-audit-E1e1d14b/process-windows-x64-failure-audit.json",
+      "bytes": 51476,
+      "blob": "9757a1c800fe11b3805cc664ca85f7fe84563a80",
+      "sha256": "4af53a5903e056055192ca34572ba364738f193521de81318de40d92f65edd92"
+    },
+    "run": 43813731530,
+    "job": 133120929510,
+    "step": 17,
+    "firstError": "Actual I386 child completion and observations must precede broker cleanup",
+    "path": "nativeDebugServiceScenario.ts:105",
+    "nativeI386ChildObservation": {
+      "status": "unknown"
+    },
+    "rawBrokerExit": {
+      "code": 0,
+      "signal": null
+    },
+    "outerController": {
+      "gateController": "drained",
+      "rootExitCode": 1,
+      "activeProcesses": 0
+    },
+    "fullNativeReceiptAbsent": true,
+    "meaning": "Current qualification is FAIL. Earlier completed marker is source-order inference; unknown trace category/bytes absent. No assertion/cleanup oracle weakened."
+  },
+  "knownSourceGap": {
+    "currentSoleFlush": "debugServiceTest.h152–153 after runDebugLoop",
+    "independentExit": "broker.cpp99/139/526; no observer-thread join",
+    "possibleInterleaving": "Debug loop may still be waiting in WaitForDebugEvent100 when original Stop observesabsence and Release writer exits process. TEST buffer need not have been published.",
+    "historicalCauseProven": false,
+    "amendment": "Root authorizes a separate prospective sameFD5 ≤16×32B event-path publication R1/R2. This review does not select/apply it and does not silently amend old memory-only/no-event-write authority."
+  },
+  "qualificationLimits": [
+    "No realClaude/Codex execution authorized or inferred",
+    "No I386 debugger-root late-handler evidence",
+    "No full native-policy qualification",
+    "No P08/P09 or otherplatform transfer",
+    "No oldsource60/90 result transfer to incoming15s policy",
+    "No measured historicalflushcause",
+    "No sourceapplication/localtest/native/compiler/install/CI/ref mutation by reviewer"
+  ],
+  "parentDisposition": "Root selects exact current35-leaf preservation; all six hashes above must remain intact in that source-preservation merge. Any correction follows its own exact plan/review/resulting-source originalCI."
+}

@@ -1,0 +1,855 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-e1d-six-path-source-and-reconciliation-r1-review",
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUTC": "2026-11-16T06:24:37.562759+00:00",
+  "result": "APPROVE",
+  "approvalScope": "Exact five incoming workflow leaves plus ce5c test assertion, and reconciliation R1 preservation/order. Not an actual CI result or a frozen-manifest/publication approval. Other source groups retain their separate semantic owners; full integration/source readback is still required.",
+  "incomingHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "incomingTree": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+  "commonSource": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "checkoutOnlyComparisonParent": "3575740e9251076fe0bab4ddf10b17bb232038d4",
+  "ourPublishedDocs": "b0528bb50e05379030eb72c20d4f8eb998098cbf",
+  "workflowFiles": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "common953": {
+        "bytes": 175238,
+        "lines": 2633,
+        "blob": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+        "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce"
+      },
+      "firstParent357574": {
+        "bytes": 175238,
+        "lines": 2633,
+        "blob": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+        "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce"
+      },
+      "incomingE1d": {
+        "bytes": 175238,
+        "lines": 2633,
+        "blob": "da94c393b024d3c8a40159edbf9975cd528007a6",
+        "sha256": "1d985c85b89c284ce4745692fa7aafc345337de59cb81a1aa182f0d3f848feba"
+      },
+      "checkoutOnlyDiff": {
+        "bytes": 675,
+        "lines": 21,
+        "blob": "78dc15b1953829b733e2372662324f71184ebcc4",
+        "sha256": "53003d13a00bbdba3230e70492664a8ff193e6b45d47c2dec8c04244d23a7394"
+      },
+      "changedJobs": [
+        "task-change-ledger-windows"
+      ],
+      "entireTextualReverseExact": true,
+      "allWorkflowNonJobFieldsExact": true,
+      "commonEqualsFirstParent": true
+    },
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "common953": {
+        "bytes": 19532,
+        "lines": 313,
+        "blob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+        "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f"
+      },
+      "firstParent357574": {
+        "bytes": 19532,
+        "lines": 313,
+        "blob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+        "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f"
+      },
+      "incomingE1d": {
+        "bytes": 19680,
+        "lines": 317,
+        "blob": "8a39884bdf09fe22fe153c7a9fc3eae89dc749e8",
+        "sha256": "13981d0a919eb7debdffbe57f12716db2ed0b754572643ff0ce2730f1e62d7ee"
+      },
+      "checkoutOnlyDiff": {
+        "bytes": 591,
+        "lines": 15,
+        "blob": "ea040319f28508db003a4fc3b8d5d74ad8d9e18b",
+        "sha256": "cc7426e64a18e52e8c1542bcbc175ffd427e7c4dcf3b0e38067b048771008f56"
+      },
+      "changedJobs": [
+        "packaged-smoke"
+      ],
+      "entireTextualReverseExact": true,
+      "allWorkflowNonJobFieldsExact": true,
+      "commonEqualsFirstParent": true
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "common953": {
+        "bytes": 30399,
+        "lines": 392,
+        "blob": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+        "sha256": "a7e59eb17ee93d15ffad248322d79e536d9d9c0b02c83a30a31687fd6e618ce0"
+      },
+      "firstParent357574": {
+        "bytes": 32100,
+        "lines": 414,
+        "blob": "10aa65bc06fb840a9ec88ddc8c717f1dd4c54d8f",
+        "sha256": "c9de62b435fc3dd7bb167cad0fb9548516ff0a8062d04616f00d55abba91e009"
+      },
+      "incomingE1d": {
+        "bytes": 32248,
+        "lines": 418,
+        "blob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+        "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c"
+      },
+      "checkoutOnlyDiff": {
+        "bytes": 704,
+        "lines": 15,
+        "blob": "54b50d33369c049aa29aff82a416b21da2f26960",
+        "sha256": "6b36632ff15cab3693f54c80dc807ee65c72ef07dd741c301bbbff08e9d23fd3"
+      },
+      "changedJobs": [
+        "process-fixtures"
+      ],
+      "entireTextualReverseExact": true,
+      "allWorkflowNonJobFieldsExact": true,
+      "commonEqualsFirstParent": false
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "common953": {
+        "bytes": 36013,
+        "lines": 622,
+        "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+        "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14"
+      },
+      "firstParent357574": {
+        "bytes": 36013,
+        "lines": 622,
+        "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+        "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14"
+      },
+      "incomingE1d": {
+        "bytes": 36309,
+        "lines": 630,
+        "blob": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+        "sha256": "6db4370dc3ee5521847cef9c039f21bddfcfc412b6dabba49dda73585985996a"
+      },
+      "checkoutOnlyDiff": {
+        "bytes": 1156,
+        "lines": 26,
+        "blob": "475e3bcb221a09a65fb65204bc867f329175985a",
+        "sha256": "7b255542c196bbeab10e277b846bc20be0fafc48616e126ba680bff535c2b6df"
+      },
+      "changedJobs": [
+        "static-preflight",
+        "embedded-v2-native-host"
+      ],
+      "entireTextualReverseExact": true,
+      "allWorkflowNonJobFieldsExact": true,
+      "commonEqualsFirstParent": true
+    },
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "common953": {
+        "bytes": 6522,
+        "lines": 130,
+        "blob": "ef939f224a1642cb596906324c8d61441780ccc7",
+        "sha256": "f57bf21347769c79b9c8c21f6f35b40b772fbfe9cb5f8155d7daabb54499d15f"
+      },
+      "firstParent357574": {
+        "bytes": 6522,
+        "lines": 130,
+        "blob": "ef939f224a1642cb596906324c8d61441780ccc7",
+        "sha256": "f57bf21347769c79b9c8c21f6f35b40b772fbfe9cb5f8155d7daabb54499d15f"
+      },
+      "incomingE1d": {
+        "bytes": 6522,
+        "lines": 130,
+        "blob": "72c1a8f760a99c53ce7d279c7bb9d5e3ddaa7298",
+        "sha256": "3cb53bb19e4ee77c51947c5ce39fa4efb8cccbcaa648c6da0293129c92effdaa"
+      },
+      "checkoutOnlyDiff": {
+        "bytes": 923,
+        "lines": 23,
+        "blob": "c2b7447ed62a091e8f17bead7b97070f68b7eff2",
+        "sha256": "b788a75a74f70c16c3be1521c5b7beece09b25314b5681628b05c7d6fd6071b3"
+      },
+      "changedJobs": [
+        "creation-page"
+      ],
+      "entireTextualReverseExact": true,
+      "allWorkflowNonJobFieldsExact": true,
+      "commonEqualsFirstParent": true
+    }
+  ],
+  "sixPreCheckoutPlacements": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "job": "task-change-ledger-windows",
+      "runner": "windows-latest",
+      "jobIf": "needs.plan.outputs.full == 'true' && needs.plan.outputs.scope == 'full'",
+      "jobTimeoutMinutes": "15",
+      "strategy": null,
+      "oldSetupStep1Based": 3,
+      "newSetupStep1Based": 2,
+      "setup": {
+        "name": "Enable Windows long paths",
+        "shell": "pwsh",
+        "run": "git config --global core.longpaths true"
+      },
+      "kind": "move existing exact step",
+      "checkoutSteps": [
+        {
+          "step1Based": 3,
+          "name": "Checkout",
+          "uses": "actions/checkout@v6"
+        }
+      ],
+      "allOtherStepObjectsAndOrderExact": true,
+      "allNonStepJobFieldsExact": true
+    },
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "job": "packaged-smoke",
+      "runner": "${{ matrix.runner }}",
+      "jobIf": "needs.packaged-scope.outputs.run == 'true' && github.event.pull_request.head.repo.full_name == github.repository",
+      "jobTimeoutMinutes": "90",
+      "strategy": {
+        "fail-fast": "false",
+        "matrix": {
+          "include": [
+            {
+              "platform": "darwin-arm64",
+              "arch": "arm64",
+              "os": "darwin",
+              "runner": "${{ vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15' }}",
+              "pack": "pack:mac:arm64",
+              "bundle": "release/mac-arm64/Agent Teams AI.app"
+            },
+            {
+              "platform": "darwin-x64",
+              "arch": "x64",
+              "os": "darwin",
+              "runner": "macos-15-intel",
+              "pack": "pack:mac:x64",
+              "bundle": "release/mac/Agent Teams AI.app"
+            },
+            {
+              "platform": "win32-x64",
+              "arch": "x64",
+              "os": "win32",
+              "runner": "windows-2022",
+              "pack": "pack:win:x64",
+              "bundle": "release/win-unpacked"
+            },
+            {
+              "platform": "win32-arm64",
+              "arch": "arm64",
+              "os": "win32",
+              "runner": "windows-11-arm",
+              "pack": "pack:win:arm64",
+              "bundle": "release/win-arm64-unpacked"
+            },
+            {
+              "platform": "linux-x64",
+              "arch": "x64",
+              "os": "linux",
+              "runner": "${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}",
+              "pack": "pack:linux",
+              "bundle": "release/linux-unpacked"
+            }
+          ]
+        }
+      },
+      "oldSetupStep1Based": null,
+      "newSetupStep1Based": 1,
+      "setup": {
+        "name": "Enable Windows long paths",
+        "if": "runner.os == 'Windows'",
+        "shell": "pwsh",
+        "run": "git config --global core.longpaths true"
+      },
+      "kind": "add Windows-only step to existing job",
+      "checkoutSteps": [
+        {
+          "step1Based": 2,
+          "uses": "actions/checkout@v6",
+          "with": {
+            "ref": "${{ github.event.pull_request.head.sha }}",
+            "persist-credentials": "false"
+          }
+        }
+      ],
+      "allOtherStepObjectsAndOrderExact": true,
+      "allNonStepJobFieldsExact": true
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "job": "process-fixtures",
+      "runner": "${{ matrix.runner }}",
+      "jobIf": "github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository",
+      "jobTimeoutMinutes": "30",
+      "strategy": {
+        "fail-fast": "false",
+        "matrix": {
+          "include": [
+            {
+              "runner": "ubuntu-24.04",
+              "platform": "linux-x64",
+              "arch": "x64"
+            },
+            {
+              "runner": "macos-15",
+              "platform": "darwin-arm64",
+              "arch": "arm64"
+            },
+            {
+              "runner": "macos-15-intel",
+              "platform": "darwin-x64",
+              "arch": "x64"
+            },
+            {
+              "runner": "windows-2022",
+              "platform": "win32-x64",
+              "arch": "x64"
+            },
+            {
+              "runner": "windows-11-arm",
+              "platform": "win32-arm64",
+              "arch": "arm64"
+            }
+          ]
+        }
+      },
+      "oldSetupStep1Based": null,
+      "newSetupStep1Based": 1,
+      "setup": {
+        "name": "Enable Windows long paths",
+        "if": "runner.os == 'Windows'",
+        "shell": "pwsh",
+        "run": "git config --global core.longpaths true"
+      },
+      "kind": "add Windows-only step to existing job",
+      "checkoutSteps": [
+        {
+          "step1Based": 2,
+          "uses": "actions/checkout@v7.0.1",
+          "with": {
+            "ref": "${{ github.event.pull_request.head.sha || github.sha }}",
+            "persist-credentials": "false"
+          }
+        }
+      ],
+      "allOtherStepObjectsAndOrderExact": true,
+      "allNonStepJobFieldsExact": true
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "job": "static-preflight",
+      "runner": "${{ matrix.os }}",
+      "jobIf": null,
+      "jobTimeoutMinutes": null,
+      "strategy": {
+        "fail-fast": "false",
+        "matrix": {
+          "os": [
+            "ubuntu-24.04",
+            "windows-2022"
+          ]
+        }
+      },
+      "oldSetupStep1Based": null,
+      "newSetupStep1Based": 1,
+      "setup": {
+        "name": "Enable Windows long paths",
+        "if": "runner.os == 'Windows'",
+        "shell": "pwsh",
+        "run": "git config --global core.longpaths true"
+      },
+      "kind": "add Windows-only step to existing job",
+      "checkoutSteps": [
+        {
+          "step1Based": 2,
+          "uses": "actions/checkout@v6",
+          "with": {
+            "ref": "${{ github.event.pull_request.head.sha }}",
+            "persist-credentials": "false"
+          }
+        },
+        {
+          "step1Based": 4,
+          "uses": "actions/checkout@v6",
+          "with": {
+            "ref": "main",
+            "path": ".current-product-lock",
+            "persist-credentials": "false",
+            "sparse-checkout": "runtime.lock.json",
+            "sparse-checkout-cone-mode": "false"
+          }
+        }
+      ],
+      "allOtherStepObjectsAndOrderExact": true,
+      "allNonStepJobFieldsExact": true
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "job": "embedded-v2-native-host",
+      "runner": "${{ matrix.os }}",
+      "jobIf": null,
+      "jobTimeoutMinutes": "25",
+      "strategy": {
+        "fail-fast": "false",
+        "matrix": {
+          "include": [
+            {
+              "os": "ubuntu-24.04",
+              "platform": "linux-x64",
+              "candidate-build": ""
+            },
+            {
+              "os": "macos-15",
+              "platform": "darwin-arm64",
+              "candidate-build": "24H232"
+            },
+            {
+              "os": "macos-15-intel",
+              "platform": "darwin-x64",
+              "candidate-build": "24G830"
+            },
+            {
+              "os": "windows-2022",
+              "platform": "win32-x64",
+              "candidate-build": ""
+            },
+            {
+              "os": "windows-11-arm",
+              "platform": "win32-arm64",
+              "candidate-build": ""
+            }
+          ]
+        }
+      },
+      "oldSetupStep1Based": null,
+      "newSetupStep1Based": 1,
+      "setup": {
+        "name": "Enable Windows long paths",
+        "if": "runner.os == 'Windows'",
+        "shell": "pwsh",
+        "run": "git config --global core.longpaths true"
+      },
+      "kind": "add Windows-only step to existing job",
+      "checkoutSteps": [
+        {
+          "step1Based": 2,
+          "uses": "actions/checkout@v6",
+          "with": {
+            "ref": "${{ github.event.pull_request.head.sha }}",
+            "persist-credentials": "false"
+          }
+        }
+      ],
+      "allOtherStepObjectsAndOrderExact": true,
+      "allNonStepJobFieldsExact": true
+    },
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "job": "creation-page",
+      "runner": "${{ matrix.os }}",
+      "jobIf": null,
+      "jobTimeoutMinutes": "55",
+      "strategy": {
+        "fail-fast": "false",
+        "matrix": {
+          "os": [
+            "ubuntu-latest",
+            "windows-latest",
+            "macos-latest"
+          ]
+        }
+      },
+      "oldSetupStep1Based": 2,
+      "newSetupStep1Based": 1,
+      "setup": {
+        "name": "Enable Windows long paths",
+        "if": "runner.os == 'Windows'",
+        "shell": "pwsh",
+        "run": "git config --global core.longpaths true"
+      },
+      "kind": "move existing exact step",
+      "checkoutSteps": [
+        {
+          "step1Based": 2,
+          "uses": "actions/checkout@v6",
+          "with": {
+            "ref": "${{ github.event.pull_request.head.sha || github.sha }}",
+            "persist-credentials": "false"
+          }
+        }
+      ],
+      "allOtherStepObjectsAndOrderExact": true,
+      "allNonStepJobFieldsExact": true
+    }
+  ],
+  "workflowJudgment": {
+    "existingStepsMoved": 2,
+    "newStepsInExistingJobs": 4,
+    "files": 5,
+    "jobs": 6,
+    "allTriggersConcurrencyPermissionsJobMatricesTimeoutsUnchangedFromFirstParent": true,
+    "allOtherStepObjectsAndRelativeOrderUnchanged": true,
+    "allCheckoutVersionsOptionsRefsCredentialSettingsUnchanged": true,
+    "ciRunnerProofStillFirst": true,
+    "existingStaticSecondaryMainLockCheckoutUnchanged": true,
+    "noNewDispatchRerunCancelOrProjectCommand": true
+  },
+  "hostProcessBoundary": "Only the four-line checkout setup is new relative357574. Entire first-parent I386 workflow body is recovered exactly on removal; earlier I386 delta relative953 remains intact and Native-owned. This is not an I386 behavior/native acceptance approval.",
+  "stderrAssertion": {
+    "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+    "before": {
+      "bytes": 16103,
+      "lines": 277,
+      "blob": "0727339627757c3a96d54da2933eb7c1b60685f7",
+      "sha256": "2a738fca4120ae3361483abd948f7746d2025f32012b189e695085845bc3e191"
+    },
+    "after": {
+      "bytes": 16208,
+      "lines": 278,
+      "blob": "ce5c3a7511009501ca057f01957008a8ce3ef67b",
+      "sha256": "e52a7a6ec9af567c1ff9b8e5c82136d538b3ccffbb0803cdf1c5c9db909b2ae5"
+    },
+    "addedLines": 1,
+    "removedLines": 0,
+    "exactAddedLine": "  assert.equal(f.observations.length, 0, 'no diagnostic is synthesized before original stderr arrives');",
+    "fullOriginalRestoredExactlyByRemovingIt": true,
+    "testRegistrationsAndAllOriginalOraclesUnchanged": true,
+    "position": "Existing standalone/no-Team-endpoint case, after observer attachment and before first original stderr write.",
+    "meaning": "Checks no synchronous observation is synthesized for the existing valid plain-profile fixture at attachment. Not a universal no-diagnostic claim for malformed context: unchanged private-values catch may emit an oversized gap. No async/native/provider/readiness or new execution qualification.",
+    "unchangedProductionHelper": {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "bytes": 8310,
+      "lines": 172,
+      "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7"
+    }
+  },
+  "rootReconciliationR1": {
+    "path": "/workspace/scratch/82d3f9ba6b85/external-e1d-integration/R1-reconciliation.md",
+    "bytes": 15260,
+    "lines": 62,
+    "blob": "dba7210588b2f21922382699d270b40c68d28cae",
+    "sha256": "81272e8f55775b0eafd3869787cb266a8ee8932184d793ee1359580c8aef528b"
+  },
+  "provenanceWrapper": {
+    "path": "/workspace/scratch/82d3f9ba6b85/external-e1d-integration/incoming-plan-provenance.md",
+    "bytes": 1310,
+    "lines": 7,
+    "blob": "ea87d91d9791064e45b364cd5247d130e0b79922",
+    "sha256": "4b8838a25dfa47dc39b111ba64a3438df822f69d42174e75ae713d350871a376"
+  },
+  "priorIndependentFullHistoryAndPlanProof": {
+    "path": "/workspace/scratch/82d3f9ba6b85/e1-independent-history-and-plan-union-review.json",
+    "bytes": 78312,
+    "lines": 1812,
+    "blob": "da4bc40ade0eb296b9fd97f920d4ae7e820d17f7",
+    "sha256": "80bf169f9fbaa0597d1ec3f50d788992428660c20d47d330c423a23abb01a94d"
+  },
+  "freshDormantPhaseAReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/phase-a-composition-e1d-independent-review.json",
+    "bytes": 17218,
+    "lines": 405,
+    "blob": "7a137ce552069cde1d83e2b9543aeb3e7c84ed7b",
+    "sha256": "c475752bb3ae04dd52e261a29cc71cb2967b7d3efc07ce0aa6c0af0897cef9f2"
+  },
+  "rootFifteenPathEvidence": {
+    "rootAuthoredReview": {
+      "path": "/workspace/scratch/82d3f9ba6b85/external-e1d-integration/root-readiness-and-read-boundary-review.json",
+      "bytes": 17066,
+      "lines": 380,
+      "blob": "9422388a1eac880ff4d4d3892fdfeeac8d73d126",
+      "sha256": "8d734b9bf4245b70e84fa65934ce7d7c08a155fc928e3f164685654953c3549b"
+    },
+    "fullPatch": {
+      "path": "/workspace/scratch/82d3f9ba6b85/external-e1d-integration/incoming-readiness-and-read-boundaries.patch",
+      "bytes": 58847,
+      "lines": 884,
+      "blob": "efb26da2644862fb699c0816a43e3ad85a8ef649",
+      "sha256": "430f5e2c7afbb96739b22a0cb2f88b42a2e1966419a86b1e270a282a49523d16"
+    },
+    "freshFullGitIdentityJoins": [
+      {
+        "path": "src/features/agent-backend/main/adapters/output/projectTeamActivity.ts",
+        "before": {
+          "bytes": 4794,
+          "lines": 131,
+          "blob": "2f03dbc22891af7d294df53f61af1d3b6e79c0bd",
+          "sha256": "bcce5f530760e9475eb45d9fe193ffba3ef57539d7b3d79f997e0779c8d656a3"
+        },
+        "after": {
+          "bytes": 4943,
+          "lines": 133,
+          "blob": "bfa65f8590566ec3139838d6a38cc40ffc2e5bda",
+          "sha256": "2b100f9c6e0254320af8ed761488e39e815d1bb3e0cee7ddc2f2a9f8bcc061c8"
+        },
+        "completeGitAndDiffExact": true
+      },
+      {
+        "path": "test/features/agent-backend/hostTaskActivity.test.ts",
+        "before": {
+          "bytes": 13948,
+          "lines": 395,
+          "blob": "66508376c5c12fe35cbedcbc6cba84a9f6720966",
+          "sha256": "e2c6d7b0670813744d414cf226005e44cf56c608c8567600519250967181db91"
+        },
+        "after": {
+          "bytes": 17955,
+          "lines": 482,
+          "blob": "294d5368e92a6f871a394206bc75a4177a59f666",
+          "sha256": "e25f326ad1b2e62f5caf6be50080e782e9376cfa39a8cdfb45ac5e594f12e5cf"
+        },
+        "completeGitAndDiffExact": true
+      },
+      {
+        "path": "test/features/agent-backend/runtimeActivityFacade.test.ts",
+        "before": {
+          "bytes": 36912,
+          "lines": 1022,
+          "blob": "3233fc10c6f598345f566e542c1f47b5acc18d33",
+          "sha256": "3c9d81c0d7e81ee8fea671a2b1b814295363213a0b79af611ee28d13ec2af265"
+        },
+        "after": {
+          "bytes": 39469,
+          "lines": 1074,
+          "blob": "8aef5576630d01c091f1514bd2896ef415130d13",
+          "sha256": "a5510c02a1a2712c69dfbc7b6089d973c7dd0bb4eba1918e5d581c6274fa1049"
+        },
+        "completeGitAndDiffExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+        "before": {
+          "bytes": 60689,
+          "lines": 1186,
+          "blob": "077ad7ea54675a4782984fcb5399f9964d5ec5e6",
+          "sha256": "a559b1b184c4f79f76fbcd99998d689cfc31158609051100c1f5cfdcc3b37c77"
+        },
+        "after": {
+          "bytes": 63022,
+          "lines": 1234,
+          "blob": "76480223b97320827c97a8469a11418f5ccb0206",
+          "sha256": "208f8d9d28b9236c91e512b2faf0fa7de02f4af5fb514c582c4c4fe7571d6441"
+        },
+        "completeGitAndDiffExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+        "before": {
+          "bytes": 14327,
+          "lines": 381,
+          "blob": "881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb",
+          "sha256": "56be5d699948e7142fc94bc5b0776b675683e3c16a9a68a72e9e5b148146e0c5"
+        },
+        "after": {
+          "bytes": 16910,
+          "lines": 427,
+          "blob": "bb5eb306bd81fdd5bdd69ccd9f10664d44d2c1c4",
+          "sha256": "fe91239dde94cf83bb3478d281eb3489d2d3d4095ff0bf544928739330419cc1"
+        },
+        "completeGitAndDiffExact": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "before": {
+          "bytes": 68760,
+          "lines": 788,
+          "blob": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+          "sha256": "6ca239d1ea242a3ac64323bf28d41b84450fc1d5d7e4ae2324a069d03bff18ad"
+        },
+        "after": {
+          "bytes": 68865,
+          "lines": 791,
+          "blob": "76f4e9aa4d29e4eab14041e5343e0e3a5b46b3cf",
+          "sha256": "945b5ad3a507cea5925cb8b5e8d25aa0a15970c38a5f4c6c13db13fcaa3ccb64"
+        },
+        "completeGitAndDiffExact": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+        "before": {
+          "bytes": 20394,
+          "lines": 277,
+          "blob": "74c3aaddba29d7309af436610f6a8b64c8c337e1",
+          "sha256": "bd70a28a13d10c5150843cd5de88aeb6007c1e27bc6bfcf4b45ced8413d01b3c"
+        },
+        "after": {
+          "bytes": 20435,
+          "lines": 278,
+          "blob": "7f224d52e429bbdecb173d65b470a2ac154de475",
+          "sha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6"
+        },
+        "completeGitAndDiffExact": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+        "before": {
+          "bytes": 19234,
+          "lines": 290,
+          "blob": "7628e511b2f219ad27e517d4a96ecb7aec604131",
+          "sha256": "f4ea5ccdfd127a0ea0271a4923a8da12fcc2bf542a30a152f0b2d34360f781fe"
+        },
+        "after": {
+          "bytes": 20040,
+          "lines": 306,
+          "blob": "13229f20c93226ee5b3f4d07516d16f94b0d48d5",
+          "sha256": "460743df044eef3901653a6c4331a14bdf977ca644513a22386bf34907aaf13e"
+        },
+        "completeGitAndDiffExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+        "before": {
+          "bytes": 23243,
+          "lines": 559,
+          "blob": "78b22adbb55ab285186285e4e3f6ada38f413ecb",
+          "sha256": "1f262a499ca1999c6a2188f5b90005c5c1c4c84f8fdb6fb40d08bbeeaab8bdf1"
+        },
+        "after": {
+          "bytes": 24664,
+          "lines": 584,
+          "blob": "b98f057ce72161d867b99f01dde0f83e3244c3d2",
+          "sha256": "50685504916c575c2956720debc7fc30ba35bd51d047ed9de1ee197d1880f79f"
+        },
+        "completeGitAndDiffExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+        "before": {
+          "bytes": 43732,
+          "lines": 696,
+          "blob": "b9dd573db23b3033b5f3db7024b317681ce31499",
+          "sha256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14"
+        },
+        "after": {
+          "bytes": 44781,
+          "lines": 713,
+          "blob": "08552af73c0f67cd62fca0e5b773cde2281eb152",
+          "sha256": "eb985c1ba5f4a6d22a3816cd80795374f817645e8a59fb8ad70a1734f3e20fc3"
+        },
+        "completeGitAndDiffExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-member-provider.test.ts",
+        "before": {
+          "bytes": 41996,
+          "lines": 1051,
+          "blob": "40e2f39d04da90f663f3d8b1b9308481a8371e23",
+          "sha256": "03e9a98246a9ae43dde999d62b898b3f4208afa6a6aa69dd52d1f99fb765c60f"
+        },
+        "after": {
+          "bytes": 44442,
+          "lines": 1082,
+          "blob": "9dbb76223a34fffac60c40d92398d2ca31a41b53",
+          "sha256": "15d096068ba0eff94e7cc6b66c7d12c95f45a9790938a8d39bdcfc0fe0c71651"
+        },
+        "completeGitAndDiffExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "before": {
+          "bytes": 207427,
+          "lines": 3928,
+          "blob": "c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79",
+          "sha256": "5ecb1c76b7a3cccf205b9856f183095ef7da3fa06cd7617c2f403c37e3f41d2d"
+        },
+        "after": {
+          "bytes": 207380,
+          "lines": 3928,
+          "blob": "331ed90ca8996b09daee62f4bcad2fcda6080b04",
+          "sha256": "97a9c3e63c4c6db21bd9c665b555a99c26ea30c651eeeadaab946e933cb376bb"
+        },
+        "completeGitAndDiffExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+        "before": {
+          "bytes": 87973,
+          "lines": 1646,
+          "blob": "bc0913e775d3e076518009c4fe7b5ee45f8c7e7b",
+          "sha256": "a5c97e6dc5ce77215a0fb8e6d86d62606ded0d62cc1cea0475299519ff35cd1a"
+        },
+        "after": {
+          "bytes": 90081,
+          "lines": 1672,
+          "blob": "6a668daeaf47a920aeddfb87c4d2658a35754f11",
+          "sha256": "63b8db91450898514af1b2bd474faf4c0b5fe4eae29d3b6f986ee636f0f505a8"
+        },
+        "completeGitAndDiffExact": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+        "before": {
+          "bytes": 22666,
+          "lines": 266,
+          "blob": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+          "sha256": "69f6948490d5f4c88f090135912bf8c8189c3558e2480eb1ee4ac69ac15a2c5c"
+        },
+        "after": {
+          "bytes": 23934,
+          "lines": 279,
+          "blob": "ae066b7c62e2875d975e0f6d701a92bb102a8594",
+          "sha256": "79bea9e617314021ebbd306258d70a1a5beb5a3039665da05a1639bfd0f91fb2"
+        },
+        "completeGitAndDiffExact": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "before": {
+          "bytes": 56556,
+          "lines": 770,
+          "blob": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+          "sha256": "3cba93b8d78463415511f25e2b86132801fd5a0059d168072e39e03a0ad624b0"
+        },
+        "after": {
+          "bytes": 58249,
+          "lines": 789,
+          "blob": "dd1e8cd2f1ea052f0480833cfe1fca6be9b5d2e6",
+          "sha256": "442fc644470c06095932c89434cdd8d24ffb6971bdb475d2ca1a3e6257be760d"
+        },
+        "completeGitAndDiffExact": true
+      }
+    ],
+    "reviewLimit": "Read claim-bearing read guards/Task refusal/protected diagnostics/schema/source-join/clock hunks and independently rehashed all15 complete before/after/diffs. Root retains ownership of its full15 semantic judgments; no source or execution result is substituted.",
+    "noConcreteClaimMismatchFound": true
+  },
+  "reconciliationFindings": [],
+  "reconciliationJudgment": {
+    "fullB052PlanPrefixPreserved": true,
+    "threeIncomingVerbatimBlocksAndOriginalOffsetsRetained": true,
+    "EOFRepresentationNotOriginalChronologyExplicit": true,
+    "wrapperThenThreeBlocksThenDormantCurrentAThenRootR1Last": true,
+    "incomingPlan30And30NewEvidenceBeforeSourceMerge": true,
+    "all40PriorMovesPreservedNoDeepPathResurrection": true,
+    "ordinaryOrderedTwoParentMergeExactly35NonDocImagesOnly": true,
+    "allMergedNonDocsMustEqualE1d": true,
+    "allHistoricalClaimsRemainSourceBoundNoLocalExecutionReactivation": true,
+    "explicit15sPolicyAdopted": true,
+    "requestAndReadinessAreSeparateBoundaries": true,
+    "teamAnchorPostAck": true,
+    "standaloneSavedPostAckPlus15sIncludesEarlyCaptureChecks": true,
+    "pollBodyBeforeAfterAwaitAnd25msExact": true,
+    "historical60Or90NotRelabeled15s": true,
+    "genericTeamTestsDoNotExecuteMovedAckAnchor": true,
+    "standaloneElapsedNotEntirePostAckInterval": true,
+    "P11P08CrossOtherClocksUnchanged": true,
+    "knownI386FailureRetainedNotQualified": true,
+    "oldReadonlyCIMWholeCandidatesNotSelected": true,
+    "PhaseADormantCurrentSourcePrerequisiteReopened": true,
+    "compilerNative7AndLint5DistinctionExact": true
+  },
+  "separateUICoverageLimits": "UI review reports MentionableTextarea outside current common/Windows selected pin rosters and controls outside fast93. No pin or lint operand is silently added by this preservation; complete current-source frontend/type/lint and artifact qualification remain separately required.",
+  "pending": [
+    "Exact complete frozen documentation manifest/tree and actual published-byte readback.",
+    "Separate remaining source reviews and full35-leaf ordered-parent source merge/readback.",
+    "Actual current e1d original required CI; no old953 transfer.",
+    "Fresh Phase A selection and actual two-venue semantic RED before its corrections."
+  ],
+  "findings": [],
+  "sourceApplied": false,
+  "projectOrCIExecution": false,
+  "method": "Pure immutable Git/source/report reads, complete hashes and diff reconstruction, byte-exact reversal, YAML BaseLoader data comparison without workflow invocation. No tests/compiler/lint/build/install/module/provider/native/CI polling/ref/source edits."
+}

@@ -1,0 +1,1235 @@
+{
+  "schema": "exact-incoming-e1d-preservation-scope/v1",
+  "createdAtUTC": "2026-11-16T06:19:13.986716+00:00",
+  "base": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "ours": "b0528bb50e05379030eb72c20d4f8eb998098cbf",
+  "incoming": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "incomingTree": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+  "incomingParentOrder": [
+    "3575740e9251076fe0bab4ddf10b17bb232038d4",
+    "953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+  ],
+  "commonMergeBase": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "beforeLeafCounts": {
+    "common": 10901,
+    "ours": 11010,
+    "incoming": 10931
+  },
+  "paths": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "da94c393b024d3c8a40159edbf9975cd528007a6",
+        "bytes": 175238,
+        "blob": "da94c393b024d3c8a40159edbf9975cd528007a6",
+        "sha256": "1d985c85b89c284ce4745692fa7aafc345337de59cb81a1aa182f0d3f848feba"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+        "bytes": 175238,
+        "blob": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+        "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8a39884bdf09fe22fe153c7a9fc3eae89dc749e8",
+        "bytes": 19680,
+        "blob": "8a39884bdf09fe22fe153c7a9fc3eae89dc749e8",
+        "sha256": "13981d0a919eb7debdffbe57f12716db2ed0b754572643ff0ce2730f1e62d7ee"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+        "bytes": 19532,
+        "blob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+        "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+        "bytes": 32248,
+        "blob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+        "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+        "bytes": 30399,
+        "blob": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+        "sha256": "a7e59eb17ee93d15ffad248322d79e536d9d9c0b02c83a30a31687fd6e618ce0"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+        "bytes": 36309,
+        "blob": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+        "sha256": "6db4370dc3ee5521847cef9c039f21bddfcfc412b6dabba49dda73585985996a"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+        "bytes": 36013,
+        "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+        "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "72c1a8f760a99c53ce7d279c7bb9d5e3ddaa7298",
+        "bytes": 6522,
+        "blob": "72c1a8f760a99c53ce7d279c7bb9d5e3ddaa7298",
+        "sha256": "3cb53bb19e4ee77c51947c5ce39fa4efb8cccbcaa648c6da0293129c92effdaa"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ef939f224a1642cb596906324c8d61441780ccc7",
+        "bytes": 6522,
+        "blob": "ef939f224a1642cb596906324c8d61441780ccc7",
+        "sha256": "f57bf21347769c79b9c8c21f6f35b40b772fbfe9cb5f8155d7daabb54499d15f"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4decf2aa39aba619f90103a77dd8467e37c50cfb",
+        "bytes": 1875442,
+        "blob": "4decf2aa39aba619f90103a77dd8467e37c50cfb",
+        "sha256": "fdd95b0c679e81b04a9b217eab21abc76e538937ed24e7fbab007224154ecf7c"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1b3308c9f2e7726b31f9bf4755038abfc26c77a4",
+        "bytes": 1668253,
+        "blob": "1b3308c9f2e7726b31f9bf4755038abfc26c77a4",
+        "sha256": "2eec7430357c2c3c2b0d17109352b5d80c77c8c8699da7a563d00922cff071ac"
+      },
+      "disposition": "custom append-only lossless representation"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/30-windows-same-main-retry-integration-2026-11-15.md",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "74e17f8bc1abfa1cb4f7567e83b640bfe29fe3fb",
+        "bytes": 132735,
+        "blob": "74e17f8bc1abfa1cb4f7567e83b640bfe29fe3fb",
+        "sha256": "9dec5ffc94ced3f6c1802069e101ac179db39f9f00651180150b26f2a3ffcdf1"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "eb68d2643eb11527594d546d8a5088f48f8e2865",
+        "bytes": 120803,
+        "blob": "eb68d2643eb11527594d546d8a5088f48f8e2865",
+        "sha256": "d0828ee7c6a9f7444ed9aaec2035939957f87f39092515a198cc48520df637d0"
+      },
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/creation-windows-133102584969.log",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "19bc94a3e446f40f2438fa7e9eb7fa368f35f795",
+        "bytes": 27675,
+        "blob": "19bc94a3e446f40f2438fa7e9eb7fa368f35f795",
+        "sha256": "15308a1546197c1d88fb2aed73e6a45025d13de79ecd42061ad86953656ccaba"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/audit.json",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b3acc4683ffd7c1be77ee5aa51d7f14dc82e09a2",
+        "bytes": 32378,
+        "blob": "b3acc4683ffd7c1be77ee5aa51d7f14dc82e09a2",
+        "sha256": "87075ea6ed8ad2c9d35f153f70697d2d096b2c3b9d322eeddb6653730d52ae17"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585065.log",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "571cd137a403a2ea53984da3c8e2b6181c64abce",
+        "bytes": 26109,
+        "blob": "571cd137a403a2ea53984da3c8e2b6181c64abce",
+        "sha256": "a3c8574504ef6eb9b42ec356ac243b4d9afc87204842874e5680a4d941002e21"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585195.log",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7bb6c4cad0f6de5859c0c7d5bf9fe2c176e2ec39",
+        "bytes": 31546,
+        "blob": "7bb6c4cad0f6de5859c0c7d5bf9fe2c176e2ec39",
+        "sha256": "c2c9d4873e7097de5fd5a474f515c28c9f1734defc837b735b172b850e8b4206"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585206.log",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a4d56d87e99c213b7c5836cd701d5b132d973eb3",
+        "bytes": 108985,
+        "blob": "a4d56d87e99c213b7c5836cd701d5b132d973eb3",
+        "sha256": "434b9ad29cf1c89ad2f77ac1ba5f5023c816e66db9f638deea8fd2003253ccab"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585222.log",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6e468c8d39355d62ec00f4206a57f9834eda3659",
+        "bytes": 30284,
+        "blob": "6e468c8d39355d62ec00f4206a57f9834eda3659",
+        "sha256": "45bb9636f74ac5085edad897c276f9c8d27fce971348c6ab7ef2483dbfb5cadc"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585293.log",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e1e06100399ec6bbb352812c19dca69c8443c4e1",
+        "bytes": 26695,
+        "blob": "e1e06100399ec6bbb352812c19dca69c8443c4e1",
+        "sha256": "eddc5edd47ca82d9588bfe9fd3c2b8b2baec143bd64f7d2daf4f4b73f076c6ec"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585672.log",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bd0e537e23cdfe3d8e05c21edfb5af753f7eb6e3",
+        "bytes": 28154,
+        "blob": "bd0e537e23cdfe3d8e05c21edfb5af753f7eb6e3",
+        "sha256": "4029ebe542160e589ca4f43d4fb89c46f79424ee6d0895b8a78627bb90db9ed0"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/review.md",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f1bbe16a11e1a7270fcdd2bc729145e7e5de5cff",
+        "bytes": 4201,
+        "blob": "f1bbe16a11e1a7270fcdd2bc729145e7e5de5cff",
+        "sha256": "b035f91a67283cb759bc8dbba7e87d9114e50a144eefb5161b138b38fb804b6b"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/load-view-review.md",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "975407cb6109039b3d154105c023ac17ffb4f10a",
+        "bytes": 5954,
+        "blob": "975407cb6109039b3d154105c023ac17ffb4f10a",
+        "sha256": "2db967bedea420d1b199d6b383a935f96042198857309d4c3e8ed08b7f24e2d2"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/load-view-source-pins.json",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "708eab3ffd17049cea5e3a75745616d3807cfd12",
+        "bytes": 11852,
+        "blob": "708eab3ffd17049cea5e3a75745616d3807cfd12",
+        "sha256": "7a5488351b0b4ab6d4269cb58ab9b55496d2e30a3e338172cf817c4b66ef2bf4"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/native-source-cleanup-audit.json",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e542ea4318825b919c43fd1050a367d1fdc3c476",
+        "bytes": 11802,
+        "blob": "e542ea4318825b919c43fd1050a367d1fdc3c476",
+        "sha256": "f9fa32eafc8de1e8d302d126334a0697d7c46ba49ca5f6fee6a303a876329e4c"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/native-source-cleanup-review.md",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5406e4c093693ec1137292fdce172124401a3286",
+        "bytes": 5489,
+        "blob": "5406e4c093693ec1137292fdce172124401a3286",
+        "sha256": "36910b23bc637f01a08886b0c39f6752cf73e5a6e7d18e32f40b4a7ad58076d2"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/renderer-load-view-audit.json",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9a47a805c75a69926bf0544635386793197f5718",
+        "bytes": 9185,
+        "blob": "9a47a805c75a69926bf0544635386793197f5718",
+        "sha256": "bcdd48be655f5a624d74ea7368df25b3511a49ce7afb6d0f537d8ec308b58750"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/renderer-review.md",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4a022e85ba3c7dcdb9eb9a1c6836669de2342d42",
+        "bytes": 1737,
+        "blob": "4a022e85ba3c7dcdb9eb9a1c6836669de2342d42",
+        "sha256": "68f060521f34ec42dab3d6691db0963cee2483bec7fe3241277e54d6a577c755"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/source-pin-audit.json",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3652a1cc49221ac08523548af77ef4b7d4bff9b6",
+        "bytes": 454583,
+        "blob": "3652a1cc49221ac08523548af77ef4b7d4bff9b6",
+        "sha256": "b59acebbd4fda9f1d104bb547d3015908bf2213cdc577db4cf42456882276578"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/artifact-14198298316.zip",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3adb081cb77d221e57a7f7e36ab1525155b95656",
+        "bytes": 625065,
+        "blob": "3adb081cb77d221e57a7f7e36ab1525155b95656",
+        "sha256": "519bf00b1622225262dda3d2b69eaf3df70f0434b921bc41041624a18cd54fdf"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/audit.json",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5ee18d84f44c68b6fd14d6ee477a7755258721b7",
+        "bytes": 14199,
+        "blob": "5ee18d84f44c68b6fd14d6ee477a7755258721b7",
+        "sha256": "b1308320e3f666e68ac2f1a8b416de45ead2c80ee381c7014174961a9da8aaf5"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/job-133091842656.log",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8ddce6f138a109fd5b4ef0100ac31d39d2ef274d",
+        "bytes": 314374,
+        "blob": "8ddce6f138a109fd5b4ef0100ac31d39d2ef274d",
+        "sha256": "31ea4744df4cd594653ced95e24ae48fca9431a40416b7784ddb87c4a0501aad"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/retry-timing-audit.json",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "079565604cec118e6bb7535ed5f7f5242b0e26e5",
+        "bytes": 3585,
+        "blob": "079565604cec118e6bb7535ed5f7f5242b0e26e5",
+        "sha256": "f4670357f444e2672aa8b879f1b798f057122d447c6851b36865c3a384b3a79b"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/review.md",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a74ca6aa022a789a892f2f30bc24fe35a75bd145",
+        "bytes": 6319,
+        "blob": "a74ca6aa022a789a892f2f30bc24fe35a75bd145",
+        "sha256": "4743dac7d896f2f05f85d5df1c457250baff5c491d590caa28acfe62f0503876"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/source-pin-audit.json",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "de2c3a75c9ddc2810ceed5b230543024c75f0b5f",
+        "bytes": 709557,
+        "blob": "de2c3a75c9ddc2810ceed5b230543024c75f0b5f",
+        "sha256": "d5f2b6dbb99fd98d95772c0bbabac2aaab434b47f1570dd4edc4d68bb7237e18"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/artifact-14191980301.zip",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "352cc91ca6171eb0527c20c1601e703c3f561fd6",
+        "bytes": 1064941,
+        "blob": "352cc91ca6171eb0527c20c1601e703c3f561fd6",
+        "sha256": "258cf232660e4cf40e62ae086b61e57d30766f2cf8eb0d62cc16353f21d560f4"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/audit.json",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9fd3a815206330e3c846ee63c0772f4831099386",
+        "bytes": 8894,
+        "blob": "9fd3a815206330e3c846ee63c0772f4831099386",
+        "sha256": "10a2e00212454c7dffa0e2fabc4b34b543763c6b4ef2605018570c76245a50ac"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/job-133040244365.log",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e056cc375319a3f9f47faa2b228dbde477e86dd6",
+        "bytes": 157719,
+        "blob": "e056cc375319a3f9f47faa2b228dbde477e86dd6",
+        "sha256": "e7db08cd4506618dc92ce3ade639770e85892ce8a03e63a524d4671f3d26282d"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/review.md",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d14327bd95a214c3631dd668c13662266fb437cf",
+        "bytes": 7147,
+        "blob": "d14327bd95a214c3631dd668c13662266fb437cf",
+        "sha256": "936bf81e6ae53c426e0ee2eea46cf169a71da4a35bf51683f356b12e7fd720ba"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/source-pin-audit.json",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a4c85fcf288018bef0ada8dc9e3bad211046c8c0",
+        "bytes": 677417,
+        "blob": "a4c85fcf288018bef0ada8dc9e3bad211046c8c0",
+        "sha256": "3b1e00cd647b74e8be35ffc4216cf1fdca198cfc7a6e6d309a57df3d735f563a"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/actual-red-0660/original-ci-red-audit.json",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1eafe2b6e74687670713b297e41a936e4f4f766f",
+        "bytes": 7347,
+        "blob": "1eafe2b6e74687670713b297e41a936e4f4f766f",
+        "sha256": "584139c157da29007f71483e21b11b0fcb05b1b9f414a49645103f6a3febc0a7"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/team-contracts-608-2026-11-16/audit.json",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "98b70a41d6922f1639c6eb81cf2127268f80bad2",
+        "bytes": 12236,
+        "blob": "98b70a41d6922f1639c6eb81cf2127268f80bad2",
+        "sha256": "d5d6809a1252f827a00f3dcbd14756febaa5251cb72603a69be846e01e596ccd"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/team-contracts-608-2026-11-16/job-133062441494.log",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c5446ac9cf26e5515cf8c2b2c9f0df55f8e43795",
+        "bytes": 2205340,
+        "blob": "c5446ac9cf26e5515cf8c2b2c9f0df55f8e43795",
+        "sha256": "52b2fd9b7d2f66475e7e1818b91d3b3ca0f90636e8dee0fb1527279f68021fdd"
+      },
+      "common": null,
+      "disposition": "copy complete incoming bytes during docs publication"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b98f057ce72161d867b99f01dde0f83e3244c3d2",
+        "bytes": 24664,
+        "blob": "b98f057ce72161d867b99f01dde0f83e3244c3d2",
+        "sha256": "50685504916c575c2956720debc7fc30ba35bd51d047ed9de1ee197d1880f79f"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "78b22adbb55ab285186285e4e3f6ada38f413ecb",
+        "bytes": 23243,
+        "blob": "78b22adbb55ab285186285e4e3f6ada38f413ecb",
+        "sha256": "1f262a499ca1999c6a2188f5b90005c5c1c4c84f8fdb6fb40d08bbeeaab8bdf1"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "08552af73c0f67cd62fca0e5b773cde2281eb152",
+        "bytes": 44781,
+        "blob": "08552af73c0f67cd62fca0e5b773cde2281eb152",
+        "sha256": "eb985c1ba5f4a6d22a3816cd80795374f817645e8a59fb8ad70a1734f3e20fc3"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b9dd573db23b3033b5f3db7024b317681ce31499",
+        "bytes": 43732,
+        "blob": "b9dd573db23b3033b5f3db7024b317681ce31499",
+        "sha256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ce5c3a7511009501ca057f01957008a8ce3ef67b",
+        "bytes": 16208,
+        "blob": "ce5c3a7511009501ca057f01957008a8ce3ef67b",
+        "sha256": "e52a7a6ec9af567c1ff9b8e5c82136d538b3ccffbb0803cdf1c5c9db909b2ae5"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0727339627757c3a96d54da2933eb7c1b60685f7",
+        "bytes": 16103,
+        "blob": "0727339627757c3a96d54da2933eb7c1b60685f7",
+        "sha256": "2a738fca4120ae3361483abd948f7746d2025f32012b189e695085845bc3e191"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-member-provider.test.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9dbb76223a34fffac60c40d92398d2ca31a41b53",
+        "bytes": 44442,
+        "blob": "9dbb76223a34fffac60c40d92398d2ca31a41b53",
+        "sha256": "15d096068ba0eff94e7cc6b66c7d12c95f45a9790938a8d39bdcfc0fe0c71651"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "40e2f39d04da90f663f3d8b1b9308481a8371e23",
+        "bytes": 41996,
+        "blob": "40e2f39d04da90f663f3d8b1b9308481a8371e23",
+        "sha256": "03e9a98246a9ae43dde999d62b898b3f4208afa6a6aa69dd52d1f99fb765c60f"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "76480223b97320827c97a8469a11418f5ccb0206",
+        "bytes": 63022,
+        "blob": "76480223b97320827c97a8469a11418f5ccb0206",
+        "sha256": "208f8d9d28b9236c91e512b2faf0fa7de02f4af5fb514c582c4c4fe7571d6441"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "077ad7ea54675a4782984fcb5399f9964d5ec5e6",
+        "bytes": 60689,
+        "blob": "077ad7ea54675a4782984fcb5399f9964d5ec5e6",
+        "sha256": "a559b1b184c4f79f76fbcd99998d689cfc31158609051100c1f5cfdcc3b37c77"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "331ed90ca8996b09daee62f4bcad2fcda6080b04",
+        "bytes": 207380,
+        "blob": "331ed90ca8996b09daee62f4bcad2fcda6080b04",
+        "sha256": "97a9c3e63c4c6db21bd9c665b555a99c26ea30c651eeeadaab946e933cb376bb"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79",
+        "bytes": 207427,
+        "blob": "c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79",
+        "sha256": "5ecb1c76b7a3cccf205b9856f183095ef7da3fa06cd7617c2f403c37e3f41d2d"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6a668daeaf47a920aeddfb87c4d2658a35754f11",
+        "bytes": 90081,
+        "blob": "6a668daeaf47a920aeddfb87c4d2658a35754f11",
+        "sha256": "63b8db91450898514af1b2bd474faf4c0b5fe4eae29d3b6f986ee636f0f505a8"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bc0913e775d3e076518009c4fe7b5ee45f8c7e7b",
+        "bytes": 87973,
+        "blob": "bc0913e775d3e076518009c4fe7b5ee45f8c7e7b",
+        "sha256": "a5c97e6dc5ce77215a0fb8e6d86d62606ded0d62cc1cea0475299519ff35cd1a"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bb5eb306bd81fdd5bdd69ccd9f10664d44d2c1c4",
+        "bytes": 16910,
+        "blob": "bb5eb306bd81fdd5bdd69ccd9f10664d44d2c1c4",
+        "sha256": "fe91239dde94cf83bb3478d281eb3489d2d3d4095ff0bf544928739330419cc1"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb",
+        "bytes": 14327,
+        "blob": "881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb",
+        "sha256": "56be5d699948e7142fc94bc5b0776b675683e3c16a9a68a72e9e5b148146e0c5"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5e21bb5f8c50a3c9dd2a18b1d8c461896e0f91a9",
+        "bytes": 12614,
+        "blob": "5e21bb5f8c50a3c9dd2a18b1d8c461896e0f91a9",
+        "sha256": "a407196b363ba102f68bfcce1da2faa4d0757a84a00f937872aef909a6bb01c4"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "bytes": 12335,
+        "blob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0be43ad7d6549642c60080caf6001aa5f6d2a23b",
+        "bytes": 20150,
+        "blob": "0be43ad7d6549642c60080caf6001aa5f6d2a23b",
+        "sha256": "19c89b00f420d3858280795c221a423d744e3dbca21704231b073248e597b20b"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+        "bytes": 16835,
+        "blob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e2b96672feefb924a39e20131514e0db5e347311",
+        "bytes": 53683,
+        "blob": "e2b96672feefb924a39e20131514e0db5e347311",
+        "sha256": "ba36a5c01c6f670bcba92e6a155683385cd3eb33c871f94b8191b378b226f9d9"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+        "bytes": 52461,
+        "blob": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+        "sha256": "ba8020eff1bc7bf80914b3d32cf7673d7a0ed763bb50e0aba7509b98d15bdcf7"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "76f4e9aa4d29e4eab14041e5343e0e3a5b46b3cf",
+        "bytes": 68865,
+        "blob": "76f4e9aa4d29e4eab14041e5343e0e3a5b46b3cf",
+        "sha256": "945b5ad3a507cea5925cb8b5e8d25aa0a15970c38a5f4c6c13db13fcaa3ccb64"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+        "bytes": 68760,
+        "blob": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+        "sha256": "6ca239d1ea242a3ac64323bf28d41b84450fc1d5d7e4ae2324a069d03bff18ad"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "13229f20c93226ee5b3f4d07516d16f94b0d48d5",
+        "bytes": 20040,
+        "blob": "13229f20c93226ee5b3f4d07516d16f94b0d48d5",
+        "sha256": "460743df044eef3901653a6c4331a14bdf977ca644513a22386bf34907aaf13e"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7628e511b2f219ad27e517d4a96ecb7aec604131",
+        "bytes": 19234,
+        "blob": "7628e511b2f219ad27e517d4a96ecb7aec604131",
+        "sha256": "f4ea5ccdfd127a0ea0271a4923a8da12fcc2bf542a30a152f0b2d34360f781fe"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7f224d52e429bbdecb173d65b470a2ac154de475",
+        "bytes": 20435,
+        "blob": "7f224d52e429bbdecb173d65b470a2ac154de475",
+        "sha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "74c3aaddba29d7309af436610f6a8b64c8c337e1",
+        "bytes": 20394,
+        "blob": "74c3aaddba29d7309af436610f6a8b64c8c337e1",
+        "sha256": "bd70a28a13d10c5150843cd5de88aeb6007c1e27bc6bfcf4b45ced8413d01b3c"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+        "bytes": 111672,
+        "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+        "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "bytes": 103573,
+        "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "bytes": 27188,
+        "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+        "bytes": 25052,
+        "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+        "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "src/features/agent-backend/main/adapters/output/projectTeamActivity.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bfa65f8590566ec3139838d6a38cc40ffc2e5bda",
+        "bytes": 4943,
+        "blob": "bfa65f8590566ec3139838d6a38cc40ffc2e5bda",
+        "sha256": "2b100f9c6e0254320af8ed761488e39e815d1bb3e0cee7ddc2f2a9f8bcc061c8"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2f03dbc22891af7d294df53f61af1d3b6e79c0bd",
+        "bytes": 4794,
+        "blob": "2f03dbc22891af7d294df53f61af1d3b6e79c0bd",
+        "sha256": "bcce5f530760e9475eb45d9fe193ffba3ef57539d7b3d79f997e0779c8d656a3"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fde63957a08c0b076bd50ae272115737c4a4af19",
+        "bytes": 14513,
+        "blob": "fde63957a08c0b076bd50ae272115737c4a4af19",
+        "sha256": "7f5c23b48db6fcb519d3a8837ad77688851c21419c5ab45183632a2600c4bc77"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c30094a87db542547a5741bb94930a7dd99e4aaf",
+        "bytes": 14495,
+        "blob": "c30094a87db542547a5741bb94930a7dd99e4aaf",
+        "sha256": "0b81fa8e8939959d23bbabdbdd30104dd4a9dd825304e6a4111ff536a0a03718"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "src/renderer/components/ui/MentionableTextarea.tsx",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "94a360626de2ee67ceac964e3fd8529d345e3843",
+        "bytes": 52375,
+        "blob": "94a360626de2ee67ceac964e3fd8529d345e3843",
+        "sha256": "12bd4d337c50ac6308e72e583f29b791be3c9effe7b8b71dcdefa2cc9676133a"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3589e26ff85efb370577bd2d8b404fb62bd63fdb",
+        "bytes": 52237,
+        "blob": "3589e26ff85efb370577bd2d8b404fb62bd63fdb",
+        "sha256": "c55440246f2967ca8759102ee54be1c7832412ff2c5a453efdb3b0fa4e6e73ea"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "test/features/agent-backend/hostTaskActivity.test.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "294d5368e92a6f871a394206bc75a4177a59f666",
+        "bytes": 17955,
+        "blob": "294d5368e92a6f871a394206bc75a4177a59f666",
+        "sha256": "e25f326ad1b2e62f5caf6be50080e782e9376cfa39a8cdfb45ac5e594f12e5cf"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "66508376c5c12fe35cbedcbc6cba84a9f6720966",
+        "bytes": 13948,
+        "blob": "66508376c5c12fe35cbedcbc6cba84a9f6720966",
+        "sha256": "e2c6d7b0670813744d414cf226005e44cf56c608c8567600519250967181db91"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8aef5576630d01c091f1514bd2896ef415130d13",
+        "bytes": 39469,
+        "blob": "8aef5576630d01c091f1514bd2896ef415130d13",
+        "sha256": "a5510c02a1a2712c69dfbc7b6089d973c7dd0bb4eba1918e5d581c6274fa1049"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3233fc10c6f598345f566e542c1f47b5acc18d33",
+        "bytes": 36912,
+        "blob": "3233fc10c6f598345f566e542c1f47b5acc18d33",
+        "sha256": "3c9d81c0d7e81ee8fea671a2b1b814295363213a0b79af611ee28d13ec2af265"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0f18886c763559877aff19f319e11575058af08a",
+        "bytes": 49616,
+        "blob": "0f18886c763559877aff19f319e11575058af08a",
+        "sha256": "11d8b7f2324a2d2b3757e2f1d9036e603fb178c3004d519921c0885322b0254f"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b7fd855c6a3964a56731ba8b86718fc64f6e91bd",
+        "bytes": 46946,
+        "blob": "b7fd855c6a3964a56731ba8b86718fc64f6e91bd",
+        "sha256": "2800634878eecb2e44c986d4d9d7ec38e0fdbe4433157564064af9bbbaefda42"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "test/renderer/components/team/dialogs/TaskCommentInput.test.tsx",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4b81622262f5f690d1c5e17dfc289f27cbb80b70",
+        "bytes": 14830,
+        "blob": "4b81622262f5f690d1c5e17dfc289f27cbb80b70",
+        "sha256": "b3e0de71f3d3194015e98f2afc68819375e363bbd230d5283721fcce1d418c56"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "896779479753aaa7c924e1273e4713b2d059e7b4",
+        "bytes": 7077,
+        "blob": "896779479753aaa7c924e1273e4713b2d059e7b4",
+        "sha256": "db1d3ab1b06ef0962511ad956f4c4c216774ed8f8808043891e8ab0e01c82725"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+        "bytes": 9009,
+        "blob": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+        "sha256": "f3c3fdcb5f6eaa729ff071574deb894078e15d9d5b7e786789b270b1c7d996c8"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f8a03669780c34de68010184ad6ca03a8440a2e4",
+        "bytes": 7271,
+        "blob": "f8a03669780c34de68010184ad6ca03a8440a2e4",
+        "sha256": "ec0665d1f6289492ea103bce13821c2a06847a2599396c8b47de21dde4e4f2a4"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e002d7fc688cac9e2db38abbd1c1c9e851f975dd",
+        "bytes": 25009,
+        "blob": "e002d7fc688cac9e2db38abbd1c1c9e851f975dd",
+        "sha256": "a11c6fcc322cd240bf396ee7e7bf0fc9d009869fe9e2b94cc9c969a4f7bbb1b1"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e3cb3ac88b3b46c8935f64bc2f2b0060e163676b",
+        "bytes": 20067,
+        "blob": "e3cb3ac88b3b46c8935f64bc2f2b0060e163676b",
+        "sha256": "3da229429f0dfa6c53449078a1b8125715130be2165986f2d4cc1fab31a53951"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ae066b7c62e2875d975e0f6d701a92bb102a8594",
+        "bytes": 23934,
+        "blob": "ae066b7c62e2875d975e0f6d701a92bb102a8594",
+        "sha256": "79bea9e617314021ebbd306258d70a1a5beb5a3039665da05a1639bfd0f91fb2"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+        "bytes": 22666,
+        "blob": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+        "sha256": "69f6948490d5f4c88f090135912bf8c8189c3558e2480eb1ee4ac69ac15a2c5c"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "dd1e8cd2f1ea052f0480833cfe1fca6be9b5d2e6",
+        "bytes": 58249,
+        "blob": "dd1e8cd2f1ea052f0480833cfe1fca6be9b5d2e6",
+        "sha256": "442fc644470c06095932c89434cdd8d24ffb6971bdb475d2ca1a3e6257be760d"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+        "bytes": 56556,
+        "blob": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+        "sha256": "3cba93b8d78463415511f25e2b86132801fd5a0059d168072e39e03a0ad624b0"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "dd14a6cbdc9976bbeaf2ae48efda560623fa72c5",
+        "bytes": 19357,
+        "blob": "dd14a6cbdc9976bbeaf2ae48efda560623fa72c5",
+        "sha256": "a509a625e9e1ab1ccb96040b81d2c2fd1f00c0c23e74677e7002b7c8a4b7b84f"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ca0ded66441b8818bdf5726ee7d8ffa95abb8518",
+        "bytes": 17444,
+        "blob": "ca0ded66441b8818bdf5726ee7d8ffa95abb8518",
+        "sha256": "dc3cfdb3e8a7398d91dd2d0651bc31c11d2e6c357aaa03e83dba21c3b81adeb5"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+        "bytes": 7387,
+        "blob": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+        "sha256": "40a1d7107607b3d1e6fcbdd0018d452e830622a5d3ba8256d302a2a42ac7633a"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1d16506c9aa8ef2834bb379d373665947ea06c19",
+        "bytes": 2514,
+        "blob": "1d16506c9aa8ef2834bb379d373665947ea06c19",
+        "sha256": "eabb2496217a30e35bd45413aa0cd97a0789b3a2ad1dde354eef6c3697adb85f"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    },
+    {
+      "path": "tools/owned-process-broker/serviceScopes.h",
+      "incoming": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b3fbd2949a5b015bf36c56eb19ca8ef43ec42329",
+        "bytes": 16379,
+        "blob": "b3fbd2949a5b015bf36c56eb19ca8ef43ec42329",
+        "sha256": "88aea669b33d0bb1e60cf80ed5b3c11f6c1ce5f9a14499f421be9d563daadcf9"
+      },
+      "common": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+        "bytes": 15888,
+        "blob": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+        "sha256": "cc6b60ac08081c1d14201391e912b1062967dadc25d4633b5329e9524550fb06"
+      },
+      "disposition": "copy complete incoming bytes only in subsequent source-only merge"
+    }
+  ],
+  "sourcePaths": [
+    ".github/workflows/ci.yml",
+    ".github/workflows/electron-packaged-ci.yml",
+    ".github/workflows/host-process-acceptance.yml",
+    ".github/workflows/opencode-v2-stage1-preflight.yml",
+    ".github/workflows/teams-create-page-desktop-e2e.yml",
+    "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+    "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+    "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+    "packages/legacy-agent-host/tests/opencode-member-provider.test.ts",
+    "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+    "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+    "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+    "scripts/e2e/opencode-diagnostics/platform.mjs",
+    "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+    "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+    "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+    "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+    "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "scripts/legacy-agent-host/desktop-ui-controls.ts",
+    "src/features/agent-backend/main/adapters/output/projectTeamActivity.ts",
+    "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
+    "src/renderer/components/ui/MentionableTextarea.tsx",
+    "test/features/agent-backend/hostTaskActivity.test.ts",
+    "test/features/agent-backend/runtimeActivityFacade.test.ts",
+    "test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx",
+    "test/renderer/components/team/dialogs/TaskCommentInput.test.tsx",
+    "tools/owned-process-broker/debugServiceTest.h",
+    "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+    "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+    "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+    "tools/owned-process-broker/nativeFixture.cpp",
+    "tools/owned-process-broker/nativeGateEvents.test.ts",
+    "tools/owned-process-broker/serviceScopes.h"
+  ],
+  "documentationPathsToCopyBeforeSource": [
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/30-windows-same-main-retry-integration-2026-11-15.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/creation-windows-133102584969.log",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/audit.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585065.log",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585195.log",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585206.log",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585222.log",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585293.log",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/job-133102585672.log",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/checkout-953/native-failures/review.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/load-view-review.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/load-view-source-pins.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/native-source-cleanup-audit.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/native-source-cleanup-review.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/renderer-load-view-audit.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/renderer-review.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/v2-settings-608/source-pin-audit.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/artifact-14198298316.zip",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/audit.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/job-133091842656.log",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/retry-timing-audit.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/review.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/late-953-reconciliation-2026-11-16/win608/source-pin-audit.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/artifact-14191980301.zip",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/audit.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/job-133040244365.log",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/review.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/packaged-darwin-arm64-0660-2026-11-16/source-pin-audit.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-reconciliation-2026-11-16/actual-red-0660/original-ci-red-audit.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/team-contracts-608-2026-11-16/audit.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/team-contracts-608-2026-11-16/job-133062441494.log"
+  ],
+  "sourcePathCount": 35,
+  "documentationCopiedCount": 31,
+  "newIncomingDocuments": 30,
+  "sourceOnlyMergeNonDocumentationMapSha256": "1bd9e1decc71220cd70af3e731e5138629dea1427175060a7e7a530f40e160b0",
+  "sourceOnlyMergeNonDocumentationCount": 8798,
+  "identityUnionLeafCountBeforeNewRecords": 11040,
+  "identityUnionMaximumPath": 216,
+  "fullPlanReconstruction": {
+    "bytes": 3263,
+    "blob": "9a3dafdc134e0684feee88985258f5ce760d7c91",
+    "sha256": "f236dd476b93fa57b78f80de81d15c6b4a22610e0792f98ec13d9d91b6144e76"
+  },
+  "sourceApplied": false,
+  "phaseAApplied": false,
+  "primaryAdvanced": false
+}

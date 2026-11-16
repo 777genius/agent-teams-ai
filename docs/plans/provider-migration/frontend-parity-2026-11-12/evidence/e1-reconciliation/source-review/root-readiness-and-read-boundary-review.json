@@ -1,0 +1,380 @@
+{
+  "schema": "root-preserved-incoming-e1d-readiness-and-read-boundaries/v1",
+  "reviewedAtUTC": "2026-11-16T06:16:12.329649+00:00",
+  "result": "APPROVE unchanged preservation of these15 existing incoming source images, subject to complete integration R1/R2 and actual current-source CI",
+  "base": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "incoming": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "paths": [
+    {
+      "group": "readAndRendererBoundaries",
+      "path": "src/features/agent-backend/main/adapters/output/projectTeamActivity.ts",
+      "before": {
+        "bytes": 4794,
+        "lines": 131,
+        "blob": "2f03dbc22891af7d294df53f61af1d3b6e79c0bd",
+        "sha256": "bcce5f530760e9475eb45d9fe193ffba3ef57539d7b3d79f997e0779c8d656a3"
+      },
+      "after": {
+        "bytes": 4943,
+        "lines": 133,
+        "blob": "bfa65f8590566ec3139838d6a38cc40ffc2e5bda",
+        "sha256": "2b100f9c6e0254320af8ed761488e39e815d1bb3e0cee7ddc2f2a9f8bcc061c8"
+      },
+      "diff": {
+        "bytes": 873,
+        "lines": 13,
+        "blob": "897cb7effe5cf8974f94578bd23dc6800b01f5fa",
+        "sha256": "d05671c415d76d6dcfedfa5719f2a6b94a8576c6afde58c3da978a9e6925c997"
+      }
+    },
+    {
+      "group": "readAndRendererBoundaries",
+      "path": "test/features/agent-backend/hostTaskActivity.test.ts",
+      "before": {
+        "bytes": 13948,
+        "lines": 395,
+        "blob": "66508376c5c12fe35cbedcbc6cba84a9f6720966",
+        "sha256": "e2c6d7b0670813744d414cf226005e44cf56c608c8567600519250967181db91"
+      },
+      "after": {
+        "bytes": 17955,
+        "lines": 482,
+        "blob": "294d5368e92a6f871a394206bc75a4177a59f666",
+        "sha256": "e25f326ad1b2e62f5caf6be50080e782e9376cfa39a8cdfb45ac5e594f12e5cf"
+      },
+      "diff": {
+        "bytes": 5265,
+        "lines": 107,
+        "blob": "ae751b63773498a1d5df6e72ca9956969bdad5af",
+        "sha256": "6dad11705d2f6d86f7eb41f3b20c95eb965ce90cf2d382e3d0c31e0d45e55342"
+      }
+    },
+    {
+      "group": "readAndRendererBoundaries",
+      "path": "test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "before": {
+        "bytes": 36912,
+        "lines": 1022,
+        "blob": "3233fc10c6f598345f566e542c1f47b5acc18d33",
+        "sha256": "3c9d81c0d7e81ee8fea671a2b1b814295363213a0b79af611ee28d13ec2af265"
+      },
+      "after": {
+        "bytes": 39469,
+        "lines": 1074,
+        "blob": "8aef5576630d01c091f1514bd2896ef415130d13",
+        "sha256": "a5510c02a1a2712c69dfbc7b6089d973c7dd0bb4eba1918e5d581c6274fa1049"
+      },
+      "diff": {
+        "bytes": 3167,
+        "lines": 63,
+        "blob": "4aa11d8dd880e692cb40f7f6c257327fa1712003",
+        "sha256": "a1cd60c71962c1c57fa2ddb3cc2dc3d2e6f15a05d360e8bebc86713cc1c43d08"
+      }
+    },
+    {
+      "group": "readAndRendererBoundaries",
+      "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "before": {
+        "bytes": 60689,
+        "lines": 1186,
+        "blob": "077ad7ea54675a4782984fcb5399f9964d5ec5e6",
+        "sha256": "a559b1b184c4f79f76fbcd99998d689cfc31158609051100c1f5cfdcc3b37c77"
+      },
+      "after": {
+        "bytes": 63022,
+        "lines": 1234,
+        "blob": "76480223b97320827c97a8469a11418f5ccb0206",
+        "sha256": "208f8d9d28b9236c91e512b2faf0fa7de02f4af5fb514c582c4c4fe7571d6441"
+      },
+      "diff": {
+        "bytes": 3528,
+        "lines": 66,
+        "blob": "dffec5f2e69c61c5254ceac5b4e15d5afdd6ea71",
+        "sha256": "672e9d52227f5409b3082792aa35f331dbfdb9de7e64bb74522e19814838626e"
+      }
+    },
+    {
+      "group": "readAndRendererBoundaries",
+      "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "before": {
+        "bytes": 14327,
+        "lines": 381,
+        "blob": "881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb",
+        "sha256": "56be5d699948e7142fc94bc5b0776b675683e3c16a9a68a72e9e5b148146e0c5"
+      },
+      "after": {
+        "bytes": 16910,
+        "lines": 427,
+        "blob": "bb5eb306bd81fdd5bdd69ccd9f10664d44d2c1c4",
+        "sha256": "fe91239dde94cf83bb3478d281eb3489d2d3d4095ff0bf544928739330419cc1"
+      },
+      "diff": {
+        "bytes": 3156,
+        "lines": 54,
+        "blob": "45356b5a1bf16b7c46af8ef21d62e19c742aa2b5",
+        "sha256": "16ea3a68923361b453e513754d0a98e13b34eb204583d49f52e4ea5c8f91024c"
+      }
+    },
+    {
+      "group": "readAndRendererBoundaries",
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "before": {
+        "bytes": 68760,
+        "lines": 788,
+        "blob": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+        "sha256": "6ca239d1ea242a3ac64323bf28d41b84450fc1d5d7e4ae2324a069d03bff18ad"
+      },
+      "after": {
+        "bytes": 68865,
+        "lines": 791,
+        "blob": "76f4e9aa4d29e4eab14041e5343e0e3a5b46b3cf",
+        "sha256": "945b5ad3a507cea5925cb8b5e8d25aa0a15970c38a5f4c6c13db13fcaa3ccb64"
+      },
+      "diff": {
+        "bytes": 2745,
+        "lines": 28,
+        "blob": "3b00ac8d54015d5751273a10af3c0e3c03671233",
+        "sha256": "15e3606cfe2a5fc5e3e68dd010685c5ebf3a55602f95dcc5692d7b15985a1560"
+      }
+    },
+    {
+      "group": "readAndRendererBoundaries",
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "before": {
+        "bytes": 20394,
+        "lines": 277,
+        "blob": "74c3aaddba29d7309af436610f6a8b64c8c337e1",
+        "sha256": "bd70a28a13d10c5150843cd5de88aeb6007c1e27bc6bfcf4b45ced8413d01b3c"
+      },
+      "after": {
+        "bytes": 20435,
+        "lines": 278,
+        "blob": "7f224d52e429bbdecb173d65b470a2ac154de475",
+        "sha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6"
+      },
+      "diff": {
+        "bytes": 1037,
+        "lines": 12,
+        "blob": "315d6e66748e8f3ab968f3ea9f411890b0f72ec2",
+        "sha256": "619c22bb08a3b1d201b3d17050950e1830ade6f48ba4795210e2d43de1e33e8a"
+      }
+    },
+    {
+      "group": "readAndRendererBoundaries",
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "before": {
+        "bytes": 19234,
+        "lines": 290,
+        "blob": "7628e511b2f219ad27e517d4a96ecb7aec604131",
+        "sha256": "f4ea5ccdfd127a0ea0271a4923a8da12fcc2bf542a30a152f0b2d34360f781fe"
+      },
+      "after": {
+        "bytes": 20040,
+        "lines": 306,
+        "blob": "13229f20c93226ee5b3f4d07516d16f94b0d48d5",
+        "sha256": "460743df044eef3901653a6c4331a14bdf977ca644513a22386bf34907aaf13e"
+      },
+      "diff": {
+        "bytes": 3468,
+        "lines": 45,
+        "blob": "49d9c41c9c9f7ea82bb4e8cb65205baee5fa0518",
+        "sha256": "9d60e2b272bc5c7b772a61a4c876275a0fa15bf5b80012404fa6c51bab16b63d"
+      }
+    },
+    {
+      "group": "openCodeReadinessAndBoundedDiagnostic",
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+      "before": {
+        "bytes": 23243,
+        "lines": 559,
+        "blob": "78b22adbb55ab285186285e4e3f6ada38f413ecb",
+        "sha256": "1f262a499ca1999c6a2188f5b90005c5c1c4c84f8fdb6fb40d08bbeeaab8bdf1"
+      },
+      "after": {
+        "bytes": 24664,
+        "lines": 584,
+        "blob": "b98f057ce72161d867b99f01dde0f83e3244c3d2",
+        "sha256": "50685504916c575c2956720debc7fc30ba35bd51d047ed9de1ee197d1880f79f"
+      },
+      "diff": {
+        "bytes": 6376,
+        "lines": 125,
+        "blob": "24d17a71bfad332121a35149fe0dd52a2dc98078",
+        "sha256": "3172af05551c6c79ecc491986ffb2d565505d0d7defab148032a188d10661c55"
+      }
+    },
+    {
+      "group": "openCodeReadinessAndBoundedDiagnostic",
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "before": {
+        "bytes": 43732,
+        "lines": 696,
+        "blob": "b9dd573db23b3033b5f3db7024b317681ce31499",
+        "sha256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14"
+      },
+      "after": {
+        "bytes": 44781,
+        "lines": 713,
+        "blob": "08552af73c0f67cd62fca0e5b773cde2281eb152",
+        "sha256": "eb985c1ba5f4a6d22a3816cd80795374f817645e8a59fb8ad70a1734f3e20fc3"
+      },
+      "diff": {
+        "bytes": 3451,
+        "lines": 57,
+        "blob": "bf5e341f867bcb53f4e4d706160af8e948dff805",
+        "sha256": "93948e64d2b068bff6dbdaa60d13838ae70aa2bc8dac26b70677a689799fd9a0"
+      }
+    },
+    {
+      "group": "openCodeReadinessAndBoundedDiagnostic",
+      "path": "packages/legacy-agent-host/tests/opencode-member-provider.test.ts",
+      "before": {
+        "bytes": 41996,
+        "lines": 1051,
+        "blob": "40e2f39d04da90f663f3d8b1b9308481a8371e23",
+        "sha256": "03e9a98246a9ae43dde999d62b898b3f4208afa6a6aa69dd52d1f99fb765c60f"
+      },
+      "after": {
+        "bytes": 44442,
+        "lines": 1082,
+        "blob": "9dbb76223a34fffac60c40d92398d2ca31a41b53",
+        "sha256": "15d096068ba0eff94e7cc6b66c7d12c95f45a9790938a8d39bdcfc0fe0c71651"
+      },
+      "diff": {
+        "bytes": 4972,
+        "lines": 68,
+        "blob": "81cc769bd126dcf8c975afd08f65faaff2630fb3",
+        "sha256": "832e615ee592c855942776a73f659806c00c94cad48c1d09cac5dea27effb332"
+      }
+    },
+    {
+      "group": "openCodeReadinessAndBoundedDiagnostic",
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "before": {
+        "bytes": 207427,
+        "lines": 3928,
+        "blob": "c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79",
+        "sha256": "5ecb1c76b7a3cccf205b9856f183095ef7da3fa06cd7617c2f403c37e3f41d2d"
+      },
+      "after": {
+        "bytes": 207380,
+        "lines": 3928,
+        "blob": "331ed90ca8996b09daee62f4bcad2fcda6080b04",
+        "sha256": "97a9c3e63c4c6db21bd9c665b555a99c26ea30c651eeeadaab946e933cb376bb"
+      },
+      "diff": {
+        "bytes": 3300,
+        "lines": 45,
+        "blob": "5df56c485daefd71b876b215427c1f5a41fd969c",
+        "sha256": "0f47a8171c0857787f39878d76db6468afa67e499b748d0278a222f84f79c353"
+      }
+    },
+    {
+      "group": "openCodeReadinessAndBoundedDiagnostic",
+      "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "before": {
+        "bytes": 87973,
+        "lines": 1646,
+        "blob": "bc0913e775d3e076518009c4fe7b5ee45f8c7e7b",
+        "sha256": "a5c97e6dc5ce77215a0fb8e6d86d62606ded0d62cc1cea0475299519ff35cd1a"
+      },
+      "after": {
+        "bytes": 90081,
+        "lines": 1672,
+        "blob": "6a668daeaf47a920aeddfb87c4d2658a35754f11",
+        "sha256": "63b8db91450898514af1b2bd474faf4c0b5fe4eae29d3b6f986ee636f0f505a8"
+      },
+      "diff": {
+        "bytes": 3963,
+        "lines": 57,
+        "blob": "c9be4ef8ab0d1e7f71b724aa9dc3a2e90a3c614a",
+        "sha256": "0ee5796ed0f95b949b122428e498019b38071b5fc7c149014ee62a8c8dcac199"
+      }
+    },
+    {
+      "group": "openCodeReadinessAndBoundedDiagnostic",
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "before": {
+        "bytes": 22666,
+        "lines": 266,
+        "blob": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+        "sha256": "69f6948490d5f4c88f090135912bf8c8189c3558e2480eb1ee4ac69ac15a2c5c"
+      },
+      "after": {
+        "bytes": 23934,
+        "lines": 279,
+        "blob": "ae066b7c62e2875d975e0f6d701a92bb102a8594",
+        "sha256": "79bea9e617314021ebbd306258d70a1a5beb5a3039665da05a1639bfd0f91fb2"
+      },
+      "diff": {
+        "bytes": 5749,
+        "lines": 57,
+        "blob": "94515559520f56a891112f17efc4ad466f37d563",
+        "sha256": "1ab1e2b3e449b5865b06a4a801a6dc64e06a3fa15184a31798bc4bd310de33e1"
+      }
+    },
+    {
+      "group": "openCodeReadinessAndBoundedDiagnostic",
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "before": {
+        "bytes": 56556,
+        "lines": 770,
+        "blob": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+        "sha256": "3cba93b8d78463415511f25e2b86132801fd5a0059d168072e39e03a0ad624b0"
+      },
+      "after": {
+        "bytes": 58249,
+        "lines": 789,
+        "blob": "dd1e8cd2f1ea052f0480833cfe1fca6be9b5d2e6",
+        "sha256": "442fc644470c06095932c89434cdd8d24ffb6971bdb475d2ca1a3e6257be760d"
+      },
+      "diff": {
+        "bytes": 7797,
+        "lines": 87,
+        "blob": "c86e13dbfaa1ce68cc56cf47ca1ad0e8c2ec1791",
+        "sha256": "a7b4d9bec921baec25a20dcfb95355671ecdcc4660732e4892827cf384dfc433"
+      }
+    }
+  ],
+  "fullReviewedPatch": {
+    "path": "/workspace/scratch/82d3f9ba6b85/external-e1d-integration/incoming-readiness-and-read-boundaries.patch",
+    "bytes": 58847,
+    "lines": 884,
+    "blob": "efb26da2644862fb699c0816a43e3ad85a8ef649",
+    "sha256": "430f5e2c7afbb96739b22a0cb2f88b42a2e1966419a86b1e270a282a49523d16"
+  },
+  "readBoundaryJudgment": {
+    "taskAnonymousProcessOutput": "The existing projection now refuses process-output only for a selected Task stream. The member selection still accepts the same bounded stderr event. Existing closed event projection and selection identity checks remain.",
+    "thinkingAndChildren": "Added tests preserve original journal/cold-read bytes, typed thinking and child identities, output-versus-thinking message counting, null usage, nested identity/text bounds and no provider allocation. They introduce no new production projection implementation.",
+    "rawRendererReads": "Three original Runtime clipboard/log reads and the original V2 saving-intent DOM read gain fresh owner assertions immediately before the read. V2 retained-callback tests revoke during the preceding awaited receipt read and require no DOM access or accepted finish after revocation.",
+    "noObservedResultInvented": true
+  },
+  "diagnosticJudgment": {
+    "openFirstRefusal": "A fixed phase enum and management binding digest are published once on the existing protected diagnostic channel when the original opening catch executes. Cleanup, original refusal and no-retry behavior remain; new tests cover native-ready and post-ready session-authority refusals, late completion and repeated open.",
+    "currentTiming": "Only subscribed, not-yet-refused inspections retain count/total/max/last/truncated; at most4096 measured calls, safe rounded nonnegative values, no exception/error text. The currentness checks run in original order and the original thrown object is rethrown through finally. The first-refusal latch is set once.",
+    "writerAndReader": "Both generated TEST writer and retained reader use exact own-data property sets, enum/digest/type validation and the closed nullable timing tuple. The existing64-row plus single limit sentinel and65,536-byte bound remain; malformed observations stop diagnostic recording instead of qualifying an empty result.",
+    "sourcePinsAndJoin": "The current OpenCode provider source and compiled image join the existing source pins; each opencode-open binding digest must match exactly one original diagnostic launch, then receives its selected source reference. No raw native path, secret or command text is added.",
+    "noBusinessRequestActionOrReplayAdded": true
+  },
+  "explicitClockPolicyAdoptedForIntegration": {
+    "hostRequest": "Existing e1d caller uses15,000ms for all providers, replacing prior OpenCode60,000ms. This is an explicit incoming Plan29 amendment, not unchanged historical timing.",
+    "teamReadiness": "Existing e1d OpenCode/Codex readiness uses one15,000ms absolute cutoff immediately after Start ACK. Earlier captured member type/identity checks remain, while the captured duration no longer defines this observer allowance.",
+    "codexStandalone": "Existing e1d code samples once immediately after schedule Start ACK, retains early source/recipe checks and sets that saved sample+15,000ms. Those checks and the poll handoff spend the same fixed cutoff.",
+    "pollBodyExact": true,
+    "pollBeforeAndAfterAwaitAnd25msCadencePreserved": true,
+    "noDeadlineRenewalWithinObservation": true,
+    "historical60Or90SecondResultsAreNotRelabeled15SecondAcceptance": true,
+    "standaloneElapsedMsStillBeginsAfterEarlyCaptureChecks": true,
+    "twoStandaloneTestsReparameterizedNotRemoved": true,
+    "genericInjectedTeamDeadlineTestsDoNotExecuteMovedAckAnchor": true,
+    "p11Separate90SecondPollUnaffected": true
+  },
+  "limitations": [
+    "This is source inspection and exact Git/byte analysis only; no application/module import, project test, compiler, linter, install/build, provider/native/GUI process or manual Actions operation ran.",
+    "Incoming historical finite execution claims remain attributed to their original sources; this report does not independently recreate them or qualify e1d.",
+    "The current original e1d Team/static prerequisites and other frontend/native/Desktop/packaged gates remain required; known I386, P08/P09, Cross/Models and geometry questions are not closed by this preservation.",
+    "The remaining20 source paths have separate owners. Complete integration review and published-plan ordering are still mandatory.",
+    "The source-only merge must copy exact e1d leaves and preserve all other reviewed documentation/history. This report selects no new fix, Phase A source, release/default activation or Stage2."
+  ],
+  "findings": []
+}

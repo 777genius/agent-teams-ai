@@ -1,0 +1,744 @@
+diff --git a/scripts/e2e/opencode-diagnostics/platform.mjs b/scripts/e2e/opencode-diagnostics/platform.mjs
+index 71d5629149..5e21bb5f8c 100644
+--- a/scripts/e2e/opencode-diagnostics/platform.mjs
++++ b/scripts/e2e/opencode-diagnostics/platform.mjs
+@@ -137,7 +137,10 @@ export function windowsProcessListenerSnapshot(port = 9222, execute = powershell
+   assertCdpPort(port);
+   const output = execute(
+     `$TESTProcessOutput = ${windowsProcessQuery};\n` +
+-    `$TESTListenerOutput = ${windowsListenerQuery(port)};\n` +
++    // Empty listeners can only refuse the live guard; standalone absence queries stay unchanged.
++    `$TESTListenerOutput = Get-CimInstance -Namespace root/StandardCimv2 ` +
++    `-ClassName MSFT_NetTCPConnection -Filter "State = 2 AND LocalPort = ${port}" ` +
++    '-Property OwningProcess | Select-Object -ExpandProperty OwningProcess;\n' +
+     '[pscustomobject]@{ processes = [string]$TESTProcessOutput; ' +
+     'listeners = [string]($TESTListenerOutput -join [Environment]::NewLine) } | ConvertTo-Json -Compress'
+   );
+diff --git a/scripts/e2e/opencode-diagnostics/platform.test.mjs b/scripts/e2e/opencode-diagnostics/platform.test.mjs
+index d04bcf2af4..0be43ad7d6 100644
+--- a/scripts/e2e/opencode-diagnostics/platform.test.mjs
++++ b/scripts/e2e/opencode-diagnostics/platform.test.mjs
+@@ -41,7 +41,7 @@ test('one fresh Windows interpreter retains ordered original process and listene
+   const launcher = { pid: 42, parent: 1, birth: '2026-09-10T01:00:00.0000000Z', executable: 'C:\\TEST\\app.exe' };
+   const child = { pid: 43, parent: 42, birth: '2026-09-10T01:00:00.0000001Z' };
+   const processQuery = "@(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,CreationDate,ExecutablePath | Where-Object CreationDate | ForEach-Object { [pscustomobject]@{pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; birth=$_.CreationDate.ToUniversalTime().ToString('o'); executable=$_.ExecutablePath} }) | ConvertTo-Json -Compress";
+-  const listenerQuery = 'Get-NetTCPConnection -State Listen | Where-Object LocalPort -eq 9222 | Select-Object -ExpandProperty OwningProcess';
++  const listenerQuery = 'Get-CimInstance -Namespace root/StandardCimv2 -ClassName MSFT_NetTCPConnection -Filter "State = 2 AND LocalPort = 9222" -Property OwningProcess | Select-Object -ExpandProperty OwningProcess';
+   let calls = 0;
+   const execute = script => {
+     calls++;
+@@ -329,3 +329,68 @@ test('Windows census observations preserve original results, refusals and bounde
+   assert.equal(observe('process-census', () => original), original);
+   assert.equal(proof.censusReads.length, 512); assert.equal(proof.censusReadsTruncated, true);
+ });
++
++test('actual live Windows renderer guard refuses empty, foreign and stale listener observations', () => {
++  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
++  const start = 'const assertOwnedRenderer = () => {', end = 'const readJson = async path => {';
++  assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
++  const from = source.indexOf(start), to = source.indexOf(end);
++  assert(to > from);
++  const create = runInThisContext('(function(assert, check, observeCensus, windowsProcessListenerSnapshot, validateCensus, lineage, remaining) {' +
++    source.slice(from, to) + 'return assertOwnedRenderer;})');
++  const main = { pid: 42, parent: 1, birth: '2026-09-10T01:00:00.0000000Z' };
++  const renderer = { pid: 43, parent: 42, birth: '2026-09-10T01:00:00.0000001Z' };
++  const foreign = { pid: 99, parent: 1, birth: '2026-09-10T01:00:00.0000002Z' };
++  const lineage = [main, renderer];
++  const exercise = ({ census = [main, renderer, foreign], listeners = '43',
++    initialError, executorError, censusError, closingError } = {}) => {
++    const calls = [];
++    const guard = create(assert, () => {
++      calls.push('check'); if (initialError) throw initialError;
++    }, (operation, read) => {
++      calls.push(operation); return read();
++    }, () => {
++      calls.push('snapshot');
++      return windowsProcessListenerSnapshot(9222, () => {
++        calls.push('execute'); if (executorError) throw executorError;
++        return JSON.stringify({ processes: JSON.stringify(census), listeners });
++      });
++    }, value => {
++      calls.push('validate'); assert.deepEqual(value, census);
++      if (censusError) throw censusError;
++      return value;
++    }, lineage, () => {
++      calls.push('remaining'); if (closingError) throw closingError;
++    });
++    return { calls, run: () => { guard(); calls.push('admitted'); } };
++  };
++  const throughCensus = ['check', 'process-listener-snapshot', 'snapshot', 'execute', 'validate'];
++  for (const listeners of ['43', '43\r\n43\r\n42\r\n']) {
++    const current = exercise({ listeners });
++    current.run();
++    assert.deepEqual(current.calls, [...throughCensus, 'remaining', 'admitted']);
++  }
++  for (const options of [
++    { listeners: '' },
++    { listeners: '99' },
++    { listeners: '43\n99' },
++    { listeners: '44' },
++    { census: [main, foreign] },
++    { census: [main, { ...renderer, birth: 'reused' }, foreign] },
++  ]) {
++    const refused = exercise(options);
++    assert.throws(refused.run, /CDP listener belongs to this original Main family/);
++    assert.deepEqual(refused.calls, throughCensus, 'no final admission follows a refused listener set');
++  }
++  for (const [key, expected] of [
++    ['initialError', ['check']],
++    ['executorError', throughCensus.slice(0, -1)],
++    ['censusError', throughCensus],
++    ['closingError', [...throughCensus, 'remaining']],
++  ]) {
++    const failure = new Error('TEST original live guard refusal: ' + key);
++    const refused = exercise({ [key]: failure });
++    assert.throws(refused.run, error => error === failure);
++    assert.deepEqual(refused.calls, expected, 'the original refusal stops before caller admission');
++  }
++});
+diff --git a/scripts/legacy-agent-host/desktop-backend-observations.test.ts b/scripts/legacy-agent-host/desktop-backend-observations.test.ts
+index b7fe4566d3..e2b96672fe 100644
+--- a/scripts/legacy-agent-host/desktop-backend-observations.test.ts
++++ b/scripts/legacy-agent-host/desktop-backend-observations.test.ts
+@@ -914,6 +914,11 @@ function emulatedObserverFixture(t: TestContext, mode: string) {
+   if (mode.startsWith('no-child-')) fs.writeFileSync(journal,
+     mode === 'no-child-failure' ? JSON.stringify({ ...launch, event: 'failure' }) + '\n'
+       : mode === 'no-child-malformed' ? '{\n' : '');
++  if (mode === 'no-child-provider-mismatch')
++    fs.writeFileSync(journal, JSON.stringify({ ...launch, provider: 'claude' }) + '\n');
++  if (mode === 'zero-host-failure')
++    fs.writeFileSync(journal, JSON.stringify({ ...launch, event: 'failure' }) + '\n');
++  if (mode === 'zero-host-clean') fs.writeFileSync(journal, '');
+   let now = 0, censusReads = 0, journalReads = 0;
+   t.mock.method(performance, 'now', () => now);
+   const readFile = fsp.readFile;
+@@ -940,6 +945,7 @@ function emulatedObserverFixture(t: TestContext, mode: string) {
+       censusReads++; assert.ok(options?.timeout && options.timeout <= 3000);
+       assert.equal(options.env?.LC_ALL, process.platform === 'linux' ? 'C.UTF-8' : 'en_US.UTF-8');
+       const host = '4100 4000 4100 Sun Nov 15 00:00:00 2026 /TEST/electron\n4101 4100 4100 Sun Nov 15 00:00:00 2026 /TEST/node /TEST/host.js\n';
++      if (mode.startsWith('zero-host-')) return host.split('\n')[0]! + '\n';
+       if (censusReads > 1 && mode === 'exit') return host;
+       if (mode.startsWith('no-child-')) return host;
+       const birth = censusReads > 1 && mode === 'reuse' ? '00:00:01' : '00:00:00';
+@@ -956,7 +962,8 @@ function emulatedObserverFixture(t: TestContext, mode: string) {
+   syncBuiltinESMExports();
+   t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
+   return { fixture, observe: () => observeDesktopEmulatedRuntimeChildren(4100,
+-    fixture as unknown as Parameters<typeof observeDesktopEmulatedRuntimeChildren>[1], 'after-team-read'),
++    fixture as unknown as Parameters<typeof observeDesktopEmulatedRuntimeChildren>[1],
++    mode.startsWith('zero-host-') ? 'before-first-team-read' : 'after-team-read'),
+     reads: () => ({ censusReads, journalReads }) };
+ }
+ 
+@@ -981,6 +988,7 @@ test('original peer observation accepts a valid empty journal with no current ch
+   await f.observe();
+   assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
+   assert.equal(f.reads().censusReads, 1);
++  assert.equal(f.reads().journalReads, 1);
+ });
+ 
+ for (const [mode, error] of [
+@@ -994,3 +1002,18 @@ test(`original peer observation validates ${mode} before returning without child
+   assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
+   assert.deepEqual(f.reads(), { censusReads: 1, journalReads: 1 });
+ });
++
++for (const mode of ['no-child-provider-mismatch', 'zero-host-failure'])
++test(`empty peer census refuses ${mode} through the original journal oracle`, async t => {
++  const f = emulatedObserverFixture(t, mode);
++  await assert.rejects(f.observe());
++  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
++  assert.deepEqual(f.reads(), { censusReads: 1, journalReads: 1 });
++});
++
++test('empty peer census validates its journal with no current Host before the first Team read', async t => {
++  const f = emulatedObserverFixture(t, 'zero-host-clean');
++  await f.observe();
++  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
++  assert.deepEqual(f.reads(), { censusReads: 1, journalReads: 1 });
++});
+diff --git a/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts b/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
+index c4f6f16a7f..95b983dc9b 100644
+--- a/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
++++ b/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
+@@ -1764,3 +1764,133 @@ test('Selection stopped convergence refuses wrong identity, unaccepted progress,
+   await assert.rejects(mismatch.run(true), { code: 'ERR_ASSERTION' });
+   assert.deepEqual(mismatch.values, [true], 'the original exact stopped binding assertion remains after the UI read');
+ });
++
++
++test('the existing passive click recorder distinguishes the actual Team from later navigation without new actions', async () => {
++  const teamA = 'host-team:TEST-A', teamB = 'host-team:TEST-B';
++  type NavigationState = { selectedTeamName: string | null; activeTabId: string; openTabs: unknown[] };
++  const state = (selectedTeamName: string | null, activeTabId = 'list'): NavigationState => ({
++    selectedTeamName, activeTabId,
++    openTabs: [{ id: 'list', type: 'teams' }, { id: 'a', type: 'team', teamName: teamA },
++      { id: 'b', type: 'team', teamName: teamB }],
++  });
++  const setup = async () => {
++    const listeners = new Map<string, (event: Record<string, unknown>) => void>();
++    const microtasks: Array<() => void> = [], timers: Array<() => void> = [];
++    let current = state(teamA), failRead = false, failTarget = false;
++    const calls = { send: 0, evaluate: 0, stateReads: 0, microtasks: 0, timers: 0, business: 0 };
++    class Target {
++      tagName = 'DIV'; id = ''; className = 'TEST-card-body';
++      readonly team: string | null;
++      constructor(team: string | null) { this.team = team; }
++      getAttribute(name: string) { return name === 'data-team-name' ? this.team : null; }
++      closest(selector: string) {
++        if (selector === '[data-team-name]') {
++          if (failTarget) throw new Error('PRIVATE-target');
++          return this.team === null ? null : this;
++        }
++        assert.ok(['button', '[role="dialog"]', '.kanban-task-card'].includes(selector));
++        return null;
++      }
++    }
++    const passiveWindow: Record<string, unknown> = {
++      __agentTeamsDevStore: { getState: () => {
++        calls.stateReads++;
++        if (failRead) throw new Error('PRIVATE-store');
++        return current;
++      } },
++    };
++    const document = {
++      activeElement: new Target(null),
++      querySelectorAll(selector: string) {
++        assert.ok(['[aria-roledescription="sortable"][aria-pressed="true"]', '[id^="DndLiveRegion-"]'].includes(selector));
++        return [];
++      },
++      addEventListener(type: string, listener: (event: Record<string, unknown>) => void,
++        options: { capture: boolean; passive: boolean }) {
++        assert.equal(options.capture, true); assert.equal(options.passive, true);
++        assert.equal(listeners.has(type), false); listeners.set(type, listener);
++      },
++    };
++    const cdp = {
++      async send(method: string, params?: Record<string, unknown>) {
++        calls.send++;
++        assert.equal(method, 'Emulation.setFocusEmulationEnabled'); assert.deepEqual(params, { enabled: true });
++      },
++      async evaluate(expression: string) {
++        calls.evaluate++;
++        if (expression === 'document.visibilityState') return 'visible';
++        assert.equal(calls.evaluate, 1, 'execute only the actual existing observer installation');
++        return runInNewContext(expression, {
++          window: passiveWindow, document, Element: Target, TextEncoder,
++          performance: { now: () => 17 },
++          queueMicrotask: (callback: () => void) => { calls.microtasks++; microtasks.push(callback); },
++          setTimeout: (callback: () => void, delay: number) => {
++            assert.equal(delay, 0); calls.timers++; timers.push(callback);
++          },
++        });
++      },
++    };
++    await createDesktopUiControls(cdp, {
++      assertOwnedRenderer: () => assert.fail('observer does not add an ownership call'),
++      step: () => assert.fail('passive observer does not dispatch an action'),
++    }).observeInput();
++    assert.equal(listeners.size, 9); assert.equal(calls.send, 1); assert.equal(calls.evaluate, 2);
++    const rows = (name = '__TEST_desktopInputEvents') => passiveWindow[name] as Array<Record<string, unknown>>;
++    const fire = (team: string | null, type = 'click', trusted = true) => {
++      const blocked = () => { calls.business++; assert.fail('observer cannot change or redispatch input'); };
++      listeners.get(type)!({ type, target: new Target(team), isTrusted: trusted, clientX: 191, clientY: 228,
++        button: 0, buttons: type === 'pointermove' ? 1 : 0, defaultPrevented: false,
++        preventDefault: blocked, stopPropagation: blocked, stopImmediatePropagation: blocked, dispatchEvent: blocked });
++      return rows(type === 'pointermove' ? '__TEST_desktopDragEvents' : undefined).at(-1)!;
++    };
++    return { calls, rows, fire, update: (next: NavigationState) => { current = next; },
++      failRead: () => { failRead = true; }, failTarget: () => { failTarget = true; },
++      microtask: () => { assert.equal(microtasks.length, 1); microtasks.shift()!(); },
++      dispatch: () => { assert.equal(timers.length, 1); timers.shift()!(); },
++    };
++  };
++  const normalized = (value: unknown) => JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
++  for (const actualTarget of [teamA, teamB]) {
++    const f = await setup(), row = f.fire(actualTarget);
++    // The original physical step retains intended B separately; this observer records actual A or B.
++    assert.ok(row.teamNavigation, 'the original passive click must retain its actual Team ancestor');
++    assert.deepEqual(normalized(row.teamNavigation), { targetTeamKey: actualTarget,
++      before: { selectedTeamKey: teamA, activeSurface: 'teams', activeTeamKey: null } });
++    f.update(state(actualTarget, actualTarget === teamA ? 'a' : 'b')); f.microtask();
++    f.update(state(teamA, 'a')); f.dispatch();
++    const navigation = normalized(row.teamNavigation);
++    assert.deepEqual(navigation.afterMicrotask, { selectedTeamKey: actualTarget, activeSurface: 'team', activeTeamKey: actualTarget });
++    assert.deepEqual(navigation.afterDispatch, { selectedTeamKey: teamA, activeSurface: 'team', activeTeamKey: teamA });
++    assert.equal(navigation.targetTeamKey, actualTarget, 'a later selected Team cannot rewrite the actual clicked ancestor');
++    assert.deepEqual(f.calls, { send: 1, evaluate: 2, stateReads: 3, microtasks: 1, timers: 1, business: 0 });
++  }
++  for (const mode of ['read-throws', 'duplicate-tab', 'too-many-tabs', 'bad-selected', 'bad-target', 'target-throws', 'untrusted', 'no-card', 'utf8-cap']) {
++    const f = await setup();
++    let target: string | null = teamB;
++    if (mode === 'read-throws') f.failRead();
++    if (mode === 'target-throws') f.failTarget();
++    if (mode === 'duplicate-tab') f.update({ ...state(teamA), openTabs: [{ id: 'list', type: 'teams' }, { id: 'list', type: 'teams' }] });
++    if (mode === 'too-many-tabs') f.update({ ...state(teamA), openTabs: Array.from({ length: 65 }, () => ({ id: 'list', type: 'teams' })) });
++    if (mode === 'bad-selected') f.update(state('PRIVATE-selected'));
++    if (mode === 'bad-target') target = 'host-team:' + 'x'.repeat(247);
++    if (mode === 'no-card') target = null;
++    if (mode === 'utf8-cap') {
++      target = 'host-team:' + '文'.repeat(246);
++      f.update({ selectedTeamName: target, activeTabId: 'a', openTabs: [{ id: 'a', type: 'team', teamName: target }] });
++    }
++    const row = f.fire(target, 'click', mode !== 'untrusted'); f.microtask(); f.dispatch();
++    if (['read-throws', 'duplicate-tab', 'too-many-tabs', 'bad-selected'].includes(mode))
++      assert.deepEqual(normalized(row.teamNavigation), { targetTeamKey: teamB, before: null, afterMicrotask: null, afterDispatch: null });
++    else assert.equal(row.teamNavigation, null);
++    assert.equal(JSON.stringify(row).includes('PRIVATE-'), false);
++    assert.ok(Buffer.byteLength(JSON.stringify(row.teamNavigation), 'utf8') <= 4096);
++    assert.equal(f.calls.send, 1); assert.equal(f.calls.evaluate, 2); assert.equal(f.calls.microtasks, 1);
++    assert.equal(f.calls.timers, 1); assert.equal(f.calls.business, 0);
++  }
++  const bounded = await setup();
++  for (let i = 0; i < 100; i++) { bounded.fire(null); bounded.microtask(); bounded.dispatch(); }
++  for (let i = 0; i < 35; i++) { bounded.fire(null, 'pointermove'); bounded.microtask(); bounded.dispatch(); }
++  assert.equal(bounded.rows().length, 96); assert.equal(bounded.rows('__TEST_desktopDragEvents').length, 32);
++  assert.deepEqual(bounded.calls, { send: 1, evaluate: 2, stateReads: 0, microtasks: 135, timers: 135, business: 0 });
++});
+diff --git a/scripts/legacy-agent-host/desktop-ui-controls.ts b/scripts/legacy-agent-host/desktop-ui-controls.ts
+index 2ea000d33b..c634a6275a 100644
+--- a/scripts/legacy-agent-host/desktop-ui-controls.ts
++++ b/scripts/legacy-agent-host/desktop-ui-controls.ts
+@@ -46,6 +46,35 @@ export function createDesktopUiControls(
+       window.__TEST_desktopInputEvents=[];
+       window.__TEST_desktopDragEvents=[];
+       const describe=el=>el instanceof Element?{tag:el.tagName,id:el.id,ariaLabel:el.getAttribute('aria-label'),className:String(el.className).slice(0,120)}:null;
++      // Passive click identity only; these observations never navigate or authorize a retry.
++      const hostTeamKey=value=>typeof value==='string'&&value.length>10&&value.length<=256&&
++        value.startsWith('host-team:')&&!/[\\u0000-\\u001f\\u007f]/u.test(value)?value:null;
++      const teamNavigationState=()=>{
++        try{
++          const state=window.__agentTeamsDevStore?.getState(),tabs=state?.openTabs,selected=state?.selectedTeamName;
++          if(!state||(selected!==null&&hostTeamKey(selected)===null)||!Array.isArray(tabs)||tabs.length>64)return null;
++          const id=state.activeTabId;
++          if(typeof id!=='string'||!id||id.length>256)return null;
++          const active=tabs.filter(tab=>tab&&typeof tab==='object'&&tab.id===id);
++          if(active.length!==1)return null;
++          const type=active[0].type,team=type==='team'||type==='graph';
++          if(typeof type!=='string'||!type||type.length>32)return null;
++          const activeTeamKey=team?hostTeamKey(active[0].teamName):null;
++          if(team&&activeTeamKey===null)return null;
++          return {selectedTeamKey:selected,activeSurface:team?type:type==='teams'?'teams':'other',activeTeamKey};
++        }catch{return null;}
++      };
++      const boundedTeamNavigation=value=>{
++        try{return new TextEncoder().encode(JSON.stringify(value)).byteLength<=4096?value:null;}catch{return null;}
++      };
++      const teamNavigation=e=>{
++        try{
++          if(e.isTrusted!==true)return null;
++          const targetTeamKey=hostTeamKey(e.target instanceof Element?
++            e.target.closest('[data-team-name]')?.getAttribute('data-team-name'):null);
++          return targetTeamKey===null?null:boundedTeamNavigation({targetTeamKey,before:teamNavigationState()});
++        }catch{return null;}
++      };
+       const taskClarification=e=>{
+         try{
+           const target=e.target instanceof Element?e.target:null,dialog=target?.closest('[role="dialog"]');
+@@ -136,8 +165,12 @@ export function createDesktopUiControls(
+           activeSortable:[...document.querySelectorAll('[aria-roledescription="sortable"][aria-pressed="true"]')].map(el=>({taskId:el.querySelector('.kanban-task-card')?.getAttribute('data-task-id'),transform:el.style.transform})),
+           dragAnnouncement:[...document.querySelectorAll('[id^="DndLiveRegion-"]')].map(el=>el.textContent)};
+         if(type==='pointerdown'||type==='pointerup'||type==='click')row.taskClarification=taskClarification(e);
++        if(type==='click')row.teamNavigation=teamNavigation(e);
+         rows.push(row);queueMicrotask(()=>{row.defaultPreventedAfterMicrotask=e.defaultPrevented;row.focusAfterMicrotask=describe(document.activeElement);
+-          setTimeout(()=>{row.defaultPreventedAfterDispatch=e.defaultPrevented;row.focusAfterDispatch=describe(document.activeElement);},0);});
++          if(row.teamNavigation)row.teamNavigation=boundedTeamNavigation({...row.teamNavigation,afterMicrotask:teamNavigationState()});
++          setTimeout(()=>{row.defaultPreventedAfterDispatch=e.defaultPrevented;row.focusAfterDispatch=describe(document.activeElement);
++            if(row.teamNavigation)row.teamNavigation=boundedTeamNavigation({...row.teamNavigation,afterDispatch:teamNavigationState()});
++          },0);});
+       },{capture:true,passive:true});return true;
+     })()`);
+     assert.equal(
+diff --git a/src/renderer/components/team/dialogs/TaskCommentInput.tsx b/src/renderer/components/team/dialogs/TaskCommentInput.tsx
+index c30094a87d..fde63957a0 100644
+--- a/src/renderer/components/team/dialogs/TaskCommentInput.tsx
++++ b/src/renderer/components/team/dialogs/TaskCommentInput.tsx
+@@ -284,7 +284,8 @@ export const TaskCommentInput = ({
+           minRows={2}
+           maxRows={6}
+           maxLength={MAX_TEXT_LENGTH}
+-          disabled={addingComment || !controller.isOwner}
++          disabled={addingComment}
++          readOnly={!controller.isOwner}
+           cornerAction={
+             <div className="flex items-center gap-2">
+               <Tooltip>
+diff --git a/src/renderer/components/ui/MentionableTextarea.tsx b/src/renderer/components/ui/MentionableTextarea.tsx
+index 3589e26ff8..94a360626d 100644
+--- a/src/renderer/components/ui/MentionableTextarea.tsx
++++ b/src/renderer/components/ui/MentionableTextarea.tsx
+@@ -1343,9 +1343,9 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
+           <AutoResizeTextarea
+             ref={setRefs}
+             value={value}
+-            onChange={composedHandleChange}
+-            onKeyDown={composedHandleKeyDown}
+-            onSelect={composedHandleSelect}
++            onChange={textareaProps.readOnly ? undefined : composedHandleChange}
++            onKeyDown={textareaProps.readOnly ? undefined : composedHandleKeyDown}
++            onSelect={textareaProps.readOnly ? undefined : composedHandleSelect}
+             {...textareaProps}
+             className={cn(className, hasCornerActions && cornerInsetClass)}
+             onScroll={handleScroll}
+@@ -1414,7 +1414,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
+         <MentionSuggestionsPopup
+           placement={suggestionPlacement}
+           anchorRef={surfaceShellRef}
+-          open={isOpen}
++          open={isOpen && !textareaProps.readOnly}
+           top={dropdownPosition?.top}
+           dismiss={dismiss}
+           suggestions={effectiveSuggestions}
+diff --git a/test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx b/test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx
+index b7fd855c6a..0f18886c76 100644
+--- a/test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx
++++ b/test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx
+@@ -12,6 +12,7 @@ import { __resetTeamSliceModuleStateForTests } from '@renderer/store/slices/team
+ import {
+   acceptTaskDetailLiveTeamSnapshot,
+   captureTaskDetailReadScope,
++  invalidateTeamSnapshotResource,
+   invalidateTeamTaskFullResource,
+ } from '@renderer/store/team/taskDetailReadAuthority';
+ import { invalidateContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
+@@ -163,6 +164,65 @@ describe('task session surface and origin integration', () => {
+     vi.unstubAllGlobals();
+   });
+ 
++  it('refuses retained callbacks after metadata invalidation before a new render', async () => {
++    let controller!: TaskDetailSessionController;
++    await act(async () => {
++      mount('dialog', (value) => {
++        controller = value;
++      });
++    });
++    const chip = {
++      id: 'TEST-chip',
++      filePath: '/TEST/retained.ts',
++      fileName: 'retained.ts',
++      fromLine: null,
++      toLine: null,
++      codeText: '',
++      language: 'typescript',
++    };
++    await act(async () => {
++      controller.setCommentText('TEST retained draft');
++      controller.addCommentChip(chip);
++    });
++    const retained = controller;
++    const before = structuredClone(retained.session);
++    const fileReader = vi.fn(() => {
++      throw new Error('Unexpected FileReader before current owner authority');
++    });
++    vi.stubGlobal('FileReader', fileReader);
++    invalidateTeamSnapshotResource(identity.contextId, identity.teamName);
++    expect(retained.isOwner).toBe(true);
++    expect(retained.canEditNow()).toBe(false);
++    await act(async () => {
++      retained.setCommentText('TEST refused typing');
++      retained.addCommentChip({ ...chip, id: 'TEST-refused' });
++      retained.removeCommentChip(chip.id);
++      retained.setReply({ taskId: identity.taskId, author: 'alice', text: 'TEST refused reply' });
++      await retained.addPendingFiles([new File(['TEST'], 'refused.txt', { type: 'text/plain' })]);
++      await retained.submitComment();
++      useStore.setState((state) => ({ teamDataCacheByName: { ...state.teamDataCacheByName } }));
++    });
++    expect(controller.isOwner).toBe(false);
++    expect(controller.canSubmit).toBe(false);
++    expect(controller.session).toEqual(before);
++    expect(fileReader).not.toHaveBeenCalled();
++    expect(apiMock.teams.addTaskComment).not.toHaveBeenCalled();
++    await act(async () => acceptLiveTeamSnapshotFixture(identity.teamName));
++    expect(controller.isOwner).toBe(true);
++    expect(controller.canEditNow()).toBe(true);
++    expect(controller.session.ownerSurfaceId).toBe(before.ownerSurfaceId);
++    expect(controller.session.ownerRevision).toBe(before.ownerRevision);
++    await act(async () => controller.setCommentText('TEST current owner resumes editing'));
++    expect(controller.session.commentText).toBe('TEST current owner resumes editing');
++    const current = controller;
++    invalidateContextScopedRequestEpoch();
++    expect(current.canEditNow()).toBe(false);
++    await act(async () => current.setCommentText('TEST stale scope refusal'));
++    expect(useStore.getState().taskDetailSessionById[key].commentText).toBe(
++      'TEST current owner resumes editing'
++    );
++  });
++
+   it('retains Host comment ID/payload across actual unmount/reopen and retirement while preserving newer draft edits', async () => {
+     const hostIdentity = { ...identity, teamName: 'host-team:TEST-owner' };
+     const hostKey = taskDetailKey(hostIdentity);
+@@ -252,7 +312,7 @@ describe('task session surface and origin integration', () => {
+       [identity.teamName, 'full tail A'],
+       [other.teamName, 'full tail B'],
+     ]);
+-    let fullRefresh: Promise<void> | undefined;
++    let fullRefresh: Promise<void> | undefined = undefined;
+     apiMock.teams.getTask.mockImplementation(async (teamName: string) => {
+       if (teamName === identity.teamName && fullRefresh) await fullRefresh;
+       return { ...task, needsClarification: 'user', description: tails.get(teamName) };
+diff --git a/test/renderer/components/team/dialogs/TaskCommentInput.test.tsx b/test/renderer/components/team/dialogs/TaskCommentInput.test.tsx
+index 8967794797..4b81622262 100644
+--- a/test/renderer/components/team/dialogs/TaskCommentInput.test.tsx
++++ b/test/renderer/components/team/dialogs/TaskCommentInput.test.tsx
+@@ -5,6 +5,8 @@ import { createRoot } from 'react-dom/client';
+ import { MAX_TEXT_LENGTH } from '@shared/constants';
+ import { afterEach, describe, expect, it, vi } from 'vitest';
+ 
++const composerHarness = vi.hoisted(() => ({ realEditor: false }));
++
+ vi.mock('@features/localization/renderer', () => ({
+   useAppTranslation: () => ({ t: (key: string) => key }),
+ }));
+@@ -25,19 +27,38 @@ vi.mock('@renderer/components/team/MemberBadge', () => ({
+   MemberBadge: ({ name }: { name: string }) => React.createElement('span', null, name),
+ }));
+ 
+-vi.mock('@renderer/components/ui/MentionableTextarea', () => ({
+-  MentionableTextarea: ({
+-    surfaceClassName,
+-    cornerAction,
+-  }: {
+-    surfaceClassName?: string;
+-    cornerAction?: React.ReactNode;
+-  }) =>
+-    React.createElement(
+-      'div',
+-      { 'data-testid': 'composer-surface', className: surfaceClassName },
+-      cornerAction
+-    ),
++vi.mock('@renderer/components/ui/MentionableTextarea', async (importOriginal) => {
++  const actual = await importOriginal<
++    typeof import('@renderer/components/ui/MentionableTextarea')
++  >();
++  return {
++    MentionableTextarea: ({
++      surfaceClassName,
++      cornerAction,
++      ...props
++    }: React.ComponentProps<typeof actual.MentionableTextarea>) =>
++      composerHarness.realEditor
++        ? React.createElement(actual.MentionableTextarea, {
++            ...props,
++            surfaceClassName,
++            cornerAction,
++          })
++        : React.createElement(
++            'div',
++            { 'data-testid': 'composer-surface', className: surfaceClassName },
++            cornerAction
++          ),
++  };
++});
++
++vi.mock('@renderer/hooks/useTheme', () => ({
++  useTheme: () => ({
++    theme: 'dark',
++    resolvedTheme: 'dark',
++    isDark: true,
++    isLight: false,
++    customTheme: null,
++  }),
+ }));
+ 
+ vi.mock('@renderer/components/ui/tooltip', () => ({
+@@ -60,11 +81,13 @@ vi.mock('@renderer/hooks/useTeamSuggestions', () => ({
+ /* eslint-enable @typescript-eslint/naming-convention -- End PascalCase vi.mock exports. */
+ 
+ import { TaskCommentInput } from '@renderer/components/team/dialogs/TaskCommentInput';
++import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
+ 
+ import { createTaskDetailSessionFixture } from './taskDetailSessionFixture';
+ 
+ describe('TaskCommentInput composer layout', () => {
+   afterEach(() => {
++    composerHarness.realEditor = false;
+     document.body.innerHTML = '';
+     vi.clearAllMocks();
+     vi.unstubAllGlobals();
+@@ -200,4 +223,186 @@ describe('TaskCommentInput composer layout', () => {
+       });
+     }
+   );
++
++  it('keeps comment focus during owner ineligibility and disables pending submission', async () => {
++    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
++    composerHarness.realEditor = true;
++    const host = document.createElement('div');
++    document.body.appendChild(host);
++    const root = createRoot(host);
++    const controller = createTaskDetailSessionFixture('task-a');
++    const render = async () => {
++      await act(async () => {
++        root.render(
++          <TaskCommentInput
++            surfaceId="TEST-dialog"
++            contextId="local"
++            teamName="team-a"
++            taskId="task-a"
++            projectPath={null}
++            members={[]}
++            controller={controller}
++          />
++        );
++      });
++    };
++    try {
++      await render();
++      const input = host.querySelector('textarea');
++      if (!(input instanceof HTMLTextAreaElement)) throw new Error('Task textarea not found');
++      await act(async () => input.focus());
++      expect(document.activeElement).toBe(input);
++      const focus = vi.spyOn(input, 'focus');
++      controller.isOwner = false;
++      controller.canSubmit = false;
++      await render();
++      expect(host.querySelector('textarea')).toBe(input);
++      expect(input.readOnly).toBe(true);
++      expect(input.disabled).toBe(false);
++      expect(document.activeElement).toBe(input);
++      await act(async () => {
++        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
++      });
++      expect(controller.submitComment).not.toHaveBeenCalled();
++      controller.isOwner = true;
++      controller.canSubmit = true;
++      await render();
++      expect(host.querySelector('textarea')).toBe(input);
++      expect(input.readOnly).toBe(false);
++      expect(document.activeElement).toBe(input);
++      expect(focus).not.toHaveBeenCalled();
++      focus.mockRestore();
++      controller.session = { ...controller.session, submitPending: true };
++      controller.canSubmit = false;
++      await render();
++      expect(host.querySelector('textarea')).toBe(input);
++      expect(input.disabled).toBe(true);
++    } finally {
++      await act(async () => root.unmount());
++    }
++  });
++
++  it.each(['input', 'enter', 'selection'] as const)(
++    'does not invoke the real textarea custom %s path while read-only',
++    async (mode) => {
++      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
++      composerHarness.realEditor = true;
++      const host = document.createElement('div');
++      document.body.appendChild(host);
++      const root = createRoot(host);
++      const change = vi.fn();
++      const submit = vi.fn();
++      const original = 'https://example.test/retained';
++      try {
++        await act(async () => {
++          root.render(
++            <MentionableTextarea
++              value={original}
++              onValueChange={change}
++              onModEnter={submit}
++              suggestions={[]}
++              projectPath={null}
++              readOnly
++              showHint={false}
++            />
++          );
++        });
++        const input = host.querySelector('textarea');
++        if (!(input instanceof HTMLTextAreaElement)) throw new Error('Real textarea not found');
++        await act(async () => input.focus());
++        expect(input.readOnly).toBe(true);
++        expect(input.disabled).toBe(false);
++        if (mode === 'input') {
++          const setValue = Object.getOwnPropertyDescriptor(
++            HTMLTextAreaElement.prototype,
++            'value'
++          )?.set;
++          if (!setValue) throw new Error('Native textarea value setter unavailable');
++          await act(async () => {
++            setValue.call(input, 'TEST unexpected input delivery');
++            input.dispatchEvent(new Event('input', { bubbles: true }));
++          });
++        } else if (mode === 'enter') {
++          await act(async () => {
++            input.dispatchEvent(
++              new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true })
++            );
++          });
++        } else {
++          await act(async () => {
++            input.setSelectionRange(8, 8);
++            document.dispatchEvent(new Event('selectionchange', { bubbles: true }));
++            await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
++          });
++          expect(input.selectionStart).toBe(8);
++          expect(input.selectionEnd).toBe(8);
++        }
++        expect(change).not.toHaveBeenCalled();
++        expect(submit).not.toHaveBeenCalled();
++        expect(document.activeElement).toBe(input);
++      } finally {
++        await act(async () => root.unmount());
++      }
++    }
++  );
++
++  it('hides the open mention picker while read-only without selection or refocus', async () => {
++    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
++    composerHarness.realEditor = true;
++    const host = document.createElement('div');
++    document.body.appendChild(host);
++    const root = createRoot(host);
++    const change = vi.fn();
++    const submit = vi.fn();
++    const render = async (value: string, readOnly: boolean) => {
++      await act(async () => {
++        root.render(
++          <MentionableTextarea
++            value={value}
++            onValueChange={change}
++            onModEnter={submit}
++            suggestions={[{ id: 'alice', name: 'alice' }]}
++            projectPath={null}
++            readOnly={readOnly}
++            showHint={false}
++          />
++        );
++      });
++    };
++    try {
++      await render('', false);
++      const input = host.querySelector('textarea');
++      if (!(input instanceof HTMLTextAreaElement)) throw new Error('Real textarea not found');
++      input.style.lineHeight = '20px';
++      await act(async () => input.focus());
++      const setValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
++      if (!setValue) throw new Error('Native textarea value setter unavailable');
++      await act(async () => {
++        setValue.call(input, '@al');
++        input.setSelectionRange(3, 3);
++        input.dispatchEvent(new Event('input', { bubbles: true }));
++      });
++      await render('@al', false);
++      expect(change.mock.calls).toEqual([['@al']]);
++      expect(host.querySelector('[role="option"]')?.textContent).toContain('alice');
++      change.mockClear();
++      const focus = vi.spyOn(input, 'focus');
++      await render('@al', true);
++      expect(host.querySelector('textarea')).toBe(input);
++      expect(input.readOnly).toBe(true);
++      expect(host.querySelector('[role="listbox"]')).toBeNull();
++      await act(async () => {
++        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
++        await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
++      });
++      expect(change).not.toHaveBeenCalled();
++      expect(submit).not.toHaveBeenCalled();
++      expect(focus).not.toHaveBeenCalled();
++      expect(input.value).toBe('@al');
++      expect(document.activeElement).toBe(input);
++      focus.mockRestore();
++    } finally {
++      await act(async () => root.unmount());
++    }
++  });
+ });

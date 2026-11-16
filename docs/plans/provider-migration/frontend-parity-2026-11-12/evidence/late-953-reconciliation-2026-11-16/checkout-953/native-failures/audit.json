@@ -1,0 +1,502 @@
+{
+  "kind": "original-953-native-first-failure-audit",
+  "source": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "metadataSnapshot": "../snapshot.json",
+  "metadataJobs": [
+    "../jobs-43807841917.json",
+    "../jobs-43807841826.json"
+  ],
+  "method": "Read-only original job logs fetched once. Exact decoded UTF-8 log bytes preserved with original BOM and line endings. Findings recomputed from already retained log strings; no local project, Git, native or provider execution, workflow mutation, additional polling or archive retrieval.",
+  "jobs": [
+    {
+      "jobId": 133102585293,
+      "runId": 43807841917,
+      "lane": "Host Process Windows x64",
+      "attempt": 1,
+      "targetSource": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/43807841917/job/133102585293",
+      "log": {
+        "path": "job-133102585293.log",
+        "bytes": 26695,
+        "sha256": "eddc5edd47ca82d9588bfe9fd3c2b8b2baec143bd64f7d2daf4f4b73f076c6ec",
+        "encoding": "UTF-8, original BOM retained",
+        "crlfCount": 285,
+        "lfCount": 292
+      },
+      "firstFailedStep": 2,
+      "firstFailedStepName": "Run actions/checkout@v7.0.1",
+      "firstFailure": {
+        "line": 108,
+        "text": "2026-11-16T05:07:44.3894966Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt: Filename too long"
+      },
+      "sameEightLongPaths": true,
+      "sourceLines": [
+        {
+          "line": 37,
+          "text": "2026-11-16T05:07:25.9323831Z   ref: 953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        },
+        {
+          "line": 108,
+          "text": "2026-11-16T05:07:44.3894966Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt: Filename too long"
+        },
+        {
+          "line": 109,
+          "text": "2026-11-16T05:07:44.3907220Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt: Filename too long"
+        },
+        {
+          "line": 110,
+          "text": "2026-11-16T05:07:44.3911983Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt: Filename too long"
+        },
+        {
+          "line": 111,
+          "text": "2026-11-16T05:07:44.3916795Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt: Filename too long"
+        },
+        {
+          "line": 112,
+          "text": "2026-11-16T05:07:44.3922330Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt: Filename too long"
+        },
+        {
+          "line": 113,
+          "text": "2026-11-16T05:07:44.3927155Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt: Filename too long"
+        },
+        {
+          "line": 114,
+          "text": "2026-11-16T05:07:44.3931810Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt: Filename too long"
+        },
+        {
+          "line": 115,
+          "text": "2026-11-16T05:07:44.3936762Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt: Filename too long"
+        },
+        {
+          "line": 272,
+          "text": "2026-11-16T05:07:48.1951670Z ##[error]No files were found with the provided path: native-evidence/"
+        }
+      ]
+    },
+    {
+      "jobId": 133102585672,
+      "runId": 43807841917,
+      "lane": "Host Process Windows ARM64",
+      "attempt": 1,
+      "targetSource": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/43807841917/job/133102585672",
+      "log": {
+        "path": "job-133102585672.log",
+        "bytes": 28154,
+        "sha256": "4029ebe542160e589ca4f43d4fb89c46f79424ee6d0895b8a78627bb90db9ed0",
+        "encoding": "UTF-8, original BOM retained",
+        "crlfCount": 307,
+        "lfCount": 314
+      },
+      "firstFailedStep": 2,
+      "firstFailedStepName": "Run actions/checkout@v7.0.1",
+      "firstFailure": {
+        "line": 121,
+        "text": "2026-11-16T05:06:31.3895485Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt: Filename too long"
+      },
+      "sameEightLongPaths": true,
+      "sourceLines": [
+        {
+          "line": 37,
+          "text": "2026-11-16T05:06:04.8851109Z   ref: 953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        },
+        {
+          "line": 121,
+          "text": "2026-11-16T05:06:31.3895485Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt: Filename too long"
+        },
+        {
+          "line": 122,
+          "text": "2026-11-16T05:06:31.3907771Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt: Filename too long"
+        },
+        {
+          "line": 123,
+          "text": "2026-11-16T05:06:31.3911663Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt: Filename too long"
+        },
+        {
+          "line": 124,
+          "text": "2026-11-16T05:06:31.3915272Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt: Filename too long"
+        },
+        {
+          "line": 125,
+          "text": "2026-11-16T05:06:31.3918756Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt: Filename too long"
+        },
+        {
+          "line": 126,
+          "text": "2026-11-16T05:06:31.3922241Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt: Filename too long"
+        },
+        {
+          "line": 127,
+          "text": "2026-11-16T05:06:31.3938780Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt: Filename too long"
+        },
+        {
+          "line": 128,
+          "text": "2026-11-16T05:06:31.3950997Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt: Filename too long"
+        },
+        {
+          "line": 294,
+          "text": "2026-11-16T05:06:47.6106781Z ##[error]No files were found with the provided path: native-evidence/"
+        }
+      ]
+    },
+    {
+      "jobId": 133102585065,
+      "runId": 43807841826,
+      "lane": "V2 static Windows",
+      "attempt": 1,
+      "targetSource": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/43807841826/job/133102585065",
+      "log": {
+        "path": "job-133102585065.log",
+        "bytes": 26109,
+        "sha256": "a3c8574504ef6eb9b42ec356ac243b4d9afc87204842874e5680a4d941002e21",
+        "encoding": "UTF-8, original BOM retained",
+        "crlfCount": 275,
+        "lfCount": 275
+      },
+      "firstFailedStep": 2,
+      "firstFailedStepName": "Run actions/checkout@v6",
+      "firstFailure": {
+        "line": 110,
+        "text": "2026-11-16T05:07:49.1891397Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt: Filename too long"
+      },
+      "sameEightLongPaths": true,
+      "sourceLines": [
+        {
+          "line": 38,
+          "text": "2026-11-16T05:07:30.1764960Z   ref: 953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        },
+        {
+          "line": 110,
+          "text": "2026-11-16T05:07:49.1891397Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt: Filename too long"
+        },
+        {
+          "line": 111,
+          "text": "2026-11-16T05:07:49.1907383Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt: Filename too long"
+        },
+        {
+          "line": 112,
+          "text": "2026-11-16T05:07:49.1913592Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt: Filename too long"
+        },
+        {
+          "line": 113,
+          "text": "2026-11-16T05:07:49.1920366Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt: Filename too long"
+        },
+        {
+          "line": 114,
+          "text": "2026-11-16T05:07:49.1926695Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt: Filename too long"
+        },
+        {
+          "line": 115,
+          "text": "2026-11-16T05:07:49.1930702Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt: Filename too long"
+        },
+        {
+          "line": 116,
+          "text": "2026-11-16T05:07:49.1934135Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt: Filename too long"
+        },
+        {
+          "line": 117,
+          "text": "2026-11-16T05:07:49.1938609Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt: Filename too long"
+        }
+      ]
+    },
+    {
+      "jobId": 133102585195,
+      "runId": 43807841826,
+      "lane": "V2 embedded Windows ARM64",
+      "attempt": 1,
+      "targetSource": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/43807841826/job/133102585195",
+      "log": {
+        "path": "job-133102585195.log",
+        "bytes": 31546,
+        "sha256": "c2c9d4873e7097de5fd5a474f515c28c9f1734defc837b735b172b850e8b4206",
+        "encoding": "UTF-8, original BOM retained",
+        "crlfCount": 331,
+        "lfCount": 350
+      },
+      "firstFailedStep": 2,
+      "firstFailedStepName": "Run actions/checkout@v6",
+      "firstFailure": {
+        "line": 129,
+        "text": "2026-11-16T05:05:03.0541313Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt: Filename too long"
+      },
+      "sameEightLongPaths": true,
+      "sourceLines": [
+        {
+          "line": 38,
+          "text": "2026-11-16T05:04:37.6239852Z   ref: 953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        },
+        {
+          "line": 129,
+          "text": "2026-11-16T05:05:03.0541313Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt: Filename too long"
+        },
+        {
+          "line": 130,
+          "text": "2026-11-16T05:05:03.0551679Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt: Filename too long"
+        },
+        {
+          "line": 131,
+          "text": "2026-11-16T05:05:03.0555585Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt: Filename too long"
+        },
+        {
+          "line": 132,
+          "text": "2026-11-16T05:05:03.0559228Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt: Filename too long"
+        },
+        {
+          "line": 133,
+          "text": "2026-11-16T05:05:03.0562665Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt: Filename too long"
+        },
+        {
+          "line": 134,
+          "text": "2026-11-16T05:05:03.0566702Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt: Filename too long"
+        },
+        {
+          "line": 135,
+          "text": "2026-11-16T05:05:03.0570277Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt: Filename too long"
+        },
+        {
+          "line": 136,
+          "text": "2026-11-16T05:05:03.0601045Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt: Filename too long"
+        }
+      ]
+    },
+    {
+      "jobId": 133102585222,
+      "runId": 43807841826,
+      "lane": "V2 embedded Windows x64",
+      "attempt": 1,
+      "targetSource": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/43807841826/job/133102585222",
+      "log": {
+        "path": "job-133102585222.log",
+        "bytes": 30284,
+        "sha256": "45bb9636f74ac5085edad897c276f9c8d27fce971348c6ab7ef2483dbfb5cadc",
+        "encoding": "UTF-8, original BOM retained",
+        "crlfCount": 312,
+        "lfCount": 331
+      },
+      "firstFailedStep": 2,
+      "firstFailedStepName": "Run actions/checkout@v6",
+      "firstFailure": {
+        "line": 118,
+        "text": "2026-11-16T05:09:53.5165402Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt: Filename too long"
+      },
+      "sameEightLongPaths": true,
+      "sourceLines": [
+        {
+          "line": 38,
+          "text": "2026-11-16T05:09:34.3727562Z   ref: 953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        },
+        {
+          "line": 118,
+          "text": "2026-11-16T05:09:53.5165402Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt: Filename too long"
+        },
+        {
+          "line": 119,
+          "text": "2026-11-16T05:09:53.5175978Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt: Filename too long"
+        },
+        {
+          "line": 120,
+          "text": "2026-11-16T05:09:53.5179660Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt: Filename too long"
+        },
+        {
+          "line": 121,
+          "text": "2026-11-16T05:09:53.5183200Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt: Filename too long"
+        },
+        {
+          "line": 122,
+          "text": "2026-11-16T05:09:53.5186617Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt: Filename too long"
+        },
+        {
+          "line": 123,
+          "text": "2026-11-16T05:09:53.5190027Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt: Filename too long"
+        },
+        {
+          "line": 124,
+          "text": "2026-11-16T05:09:53.5193456Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt: Filename too long"
+        },
+        {
+          "line": 125,
+          "text": "2026-11-16T05:09:53.5197219Z ##[error]error: unable to create file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt: Filename too long"
+        }
+      ]
+    },
+    {
+      "jobId": 133102585206,
+      "runId": 43807841826,
+      "lane": "V2 embedded Darwin ARM64",
+      "attempt": 1,
+      "targetSource": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/43807841826/job/133102585206",
+      "log": {
+        "path": "job-133102585206.log",
+        "bytes": 108985,
+        "sha256": "434b9ad29cf1c89ad2f77ac1ba5f5023c816e66db9f638deea8fd2003253ccab",
+        "encoding": "UTF-8, original BOM retained",
+        "crlfCount": 0,
+        "lfCount": 1204
+      },
+      "firstFailedStep": 24,
+      "firstFailedStepName": "Observe POSIX original-path exec and explicit mutation counterexamples",
+      "firstFailure": {
+        "line": 1096,
+        "text": "2026-11-16T05:10:04.6879680Z {\"kind\":\"TEST_POSIX_MUTATION_FAILURE\",\"case\":\"adhoc-test-only:after-check\",\"stage\":\"exit\",\"errno\":0,\"execErrno\":0,\"stoppedBeforeUser\":true,\"payloadMarkersAbsentBeforeGate\":true,\"kernelImageObserved\":true,\"imageMatched\":true,\"resumed\":true,\"mutationAfterCheckErrno\":0,\"codeSigningFlags\":570425345,\"codeSigningError\":0,\"exitCode\":0,\"exitSignal\":0,\"originalReaped\":true,\"originalGroupAbsent\":true,\"cleanup\":true,\"markers\":{\"count\":3,\"library\":true,\"constructorA\":true,\"constructorB\":false,\"mainA\":true,\"mainB\":false}}"
+      },
+      "sameEightLongPaths": null,
+      "sourceLines": [
+        {
+          "line": 38,
+          "text": "2026-11-16T05:04:35.0732260Z   ref: 953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+        },
+        {
+          "line": 1096,
+          "text": "2026-11-16T05:10:04.6879680Z {\"kind\":\"TEST_POSIX_MUTATION_FAILURE\",\"case\":\"adhoc-test-only:after-check\",\"stage\":\"exit\",\"errno\":0,\"execErrno\":0,\"stoppedBeforeUser\":true,\"payloadMarkersAbsentBeforeGate\":true,\"kernelImageObserved\":true,\"imageMatched\":true,\"resumed\":true,\"mutationAfterCheckErrno\":0,\"codeSigningFlags\":570425345,\"codeSigningError\":0,\"exitCode\":0,\"exitSignal\":0,\"originalReaped\":true,\"originalGroupAbsent\":true,\"cleanup\":true,\"markers\":{\"count\":3,\"library\":true,\"constructorA\":true,\"constructorB\":false,\"mainA\":true,\"mainB\":false}}"
+        },
+        {
+          "line": 1097,
+          "text": "2026-11-16T05:10:04.7532190Z {\"kind\":\"TEST_POSIX_MUTATION_FAILURE\",\"case\":\"adhoc-test-only:writer-open\",\"stage\":\"exit\",\"errno\":0,\"execErrno\":0,\"stoppedBeforeUser\":true,\"payloadMarkersAbsentBeforeGate\":true,\"kernelImageObserved\":true,\"imageMatched\":true,\"resumed\":true,\"mutationAfterCheckErrno\":0,\"codeSigningFlags\":570425345,\"codeSigningError\":0,\"exitCode\":0,\"exitSignal\":0,\"originalReaped\":true,\"originalGroupAbsent\":true,\"cleanup\":true,\"markers\":{\"count\":3,\"library\":true,\"constructorA\":true,\"constructorB\":false,\"mainA\":true,\"mainB\":false}}"
+        },
+        {
+          "line": 1112,
+          "text": "2026-11-16T05:10:05.0694720Z   AssertionError [ERR_ASSERTION]: no selected library or payload constructor may run after byte mutation"
+        },
+        {
+          "line": 1128,
+          "text": "2026-11-16T05:10:05.0756100Z ##[error]Process completed with exit code 1."
+        }
+      ]
+    }
+  ],
+  "windows": {
+    "classification": "checkout infrastructure refusal before application/native qualification",
+    "commonPathCount": 8,
+    "allFivePathSetsEqual": true,
+    "paths": [
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt"
+    ],
+    "notReached": [
+      "Node and package-manager setup",
+      "dependency installation",
+      "Host/controller/broker build",
+      "retained Main/process-contract tests",
+      "Windows Job custody and native fixture gates",
+      "original Codex/Claude/OpenCode source cases",
+      "V2 native journeys and their cleanup oracles"
+    ],
+    "secondaryFailures": [
+      "Both Host Process jobs later report no native-evidence files; this follows the failed checkout.",
+      "Embedded V2 artifact upload warns that original receipt files do not exist; the original native scenarios did not run."
+    ],
+    "scopeLimit": "Creation's pre-existing longpaths command being after checkout is a separate workflow fact. Process/V2 require their own Windows-only pre-checkout setup; these logs do not prove any proposed workflow repair."
+  },
+  "darwinArm": {
+    "classification": "P09 original zero-marker oracle failure",
+    "testCommand": "node --test --test-name-pattern='^POSIX original-path' packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+    "mutationRecords": [
+      {
+        "timestamp": "2026-11-16T05:10:04.6879680Z",
+        "record": {
+          "kind": "TEST_POSIX_MUTATION_FAILURE",
+          "case": "adhoc-test-only:after-check",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "stoppedBeforeUser": true,
+          "payloadMarkersAbsentBeforeGate": true,
+          "kernelImageObserved": true,
+          "imageMatched": true,
+          "resumed": true,
+          "mutationAfterCheckErrno": 0,
+          "codeSigningFlags": 570425345,
+          "codeSigningError": 0,
+          "exitCode": 0,
+          "exitSignal": 0,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "markers": {
+            "count": 3,
+            "library": true,
+            "constructorA": true,
+            "constructorB": false,
+            "mainA": true,
+            "mainB": false
+          }
+        }
+      },
+      {
+        "timestamp": "2026-11-16T05:10:04.7532190Z",
+        "record": {
+          "kind": "TEST_POSIX_MUTATION_FAILURE",
+          "case": "adhoc-test-only:writer-open",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "stoppedBeforeUser": true,
+          "payloadMarkersAbsentBeforeGate": true,
+          "kernelImageObserved": true,
+          "imageMatched": true,
+          "resumed": true,
+          "mutationAfterCheckErrno": 0,
+          "codeSigningFlags": 570425345,
+          "codeSigningError": 0,
+          "exitCode": 0,
+          "exitSignal": 0,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "markers": {
+            "count": 3,
+            "library": true,
+            "constructorA": true,
+            "constructorB": false,
+            "mainA": true,
+            "mainB": false
+          }
+        }
+      }
+    ],
+    "assertion": "no selected library or payload constructor may run after byte mutation",
+    "expected": "",
+    "actual": "LIB\nBIN:A\nMAIN:A\n",
+    "registration": "packages/legacy-agent-host/tests/registered-process-executable.native.ts:318",
+    "assertionLocation": "packages/legacy-agent-host/tests/registered-process-executable.native.ts:496:24",
+    "testTotals": {
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "unsignedImageWitnessFailurePrinted": false,
+    "codeSigningErrorMinus67062Printed": false,
+    "limits": [
+      "Both exact mutation rows report originalReaped, originalGroupAbsent and cleanup true; that limited cleanup does not satisfy the zero-marker oracle.",
+      "A markers were observed. No B markers or successful prevention of post-mutation execution is established.",
+      "No unsigned-image -67062 fact is attributed to this ARM log.",
+      "Earlier V2 step metadata success and preserved job artifacts have not been substituted for a full receipt/archive/source audit.",
+      "Strict P09 HOLD and selected executable/script requirements remain unchanged."
+    ]
+  },
+  "qualification": {
+    "windowsNative": false,
+    "windowsReadiness15s": false,
+    "p08Packaged": false,
+    "p09Darwin": false,
+    "i386Policy": false,
+    "resultingDeliverySource": false
+  },
+  "newArchiveDownloads": 0,
+  "actionsMutated": false,
+  "projectCommandsExecuted": false
+}

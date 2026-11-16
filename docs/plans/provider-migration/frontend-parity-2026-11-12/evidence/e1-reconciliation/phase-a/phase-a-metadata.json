@@ -1,0 +1,338 @@
+{
+  "schema": "fresh-e1d-proposed-two-test-phase-a/v1",
+  "createdAtUTC": "2026-11-16T06:10:42.670622+00:00",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "sourceTree": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+  "status": "PROPOSAL ONLY; NOT SELECTED, APPLIED, OR EXECUTED; CURRENT E1D TEAM/STATIC PREREQUISITE OPEN",
+  "selection": {
+    "proposedOrder": "One two-file test-only A; independently reviewed actual semantic RED in each original venue; each corresponding B correction separately gated; P11 C remains later separately selected.",
+    "prerequisites": [
+      "Reviewed ordinary integration preserving b052 and e1d histories, all35 incoming source changes, all40 prior evidence path relocations, and lossless Plan reconciliation.",
+      "Independent exact e1d composition R2 and prospective plan publication with actual complete published-byte readback.",
+      "Actual original current e1d Team/static complete source-bound result: original full ten-file Team command, all24 stderr cases, full workspace and separate backend compiler, and all original typed lint scopes. Old O953 GREEN does not qualify e1d.",
+      "Fresh root selection after those actual prerequisites and preservation of useful original executing e1d evidence; queued jobs alone are not an all-terminal gate.",
+      "Fresh current source/ref guards before source application; any later source drift requires another bounded exact composition review."
+    ],
+    "selectedOrApplied": false
+  },
+  "phaseAOnly": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "preimage": {
+        "bytes": 111672,
+        "lines": 1896,
+        "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+        "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445"
+      },
+      "candidate": {
+        "bytes": 115936,
+        "lines": 1958,
+        "blob": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+        "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076"
+      },
+      "candidateFile": "/workspace/scratch/82d3f9ba6b85/phase-a-composition-e1d/p11-test.ts.txt",
+      "addedLines": 62,
+      "removedLines": 0,
+      "oldPrefixExact": true,
+      "predictedNewCases": {
+        "semanticFailures": 3,
+        "controlsPass": 1
+      },
+      "actualResult": null
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "preimage": {
+        "bytes": 180091,
+        "lines": 5678,
+        "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+      },
+      "candidate": {
+        "bytes": 188106,
+        "lines": 5843,
+        "blob": "370e1b067c732c2a59c68a10cdf857f31707386b",
+        "sha256": "6d80fc146e310ca01faf74af88d180777d6896c5e976f84a940ac2980845d562"
+      },
+      "candidateFile": "/workspace/scratch/82d3f9ba6b85/phase-a-composition-e1d/models-test-v2.ts.txt",
+      "addedLines": 165,
+      "removedLines": 0,
+      "oldTestBytesRecoverableExactly": true,
+      "predictedNewCases": {
+        "semanticFailures": 6,
+        "controlsPass": 4
+      },
+      "predictedFileCases": 90,
+      "actualResult": null
+    }
+  ],
+  "excludedProduction": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "phaseAPreimage": {
+        "bytes": 45707,
+        "lines": 570,
+        "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+      },
+      "conditionalBBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "phaseAPreimage": {
+        "bytes": 74351,
+        "lines": 2068,
+        "blob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575"
+      },
+      "conditionalB": {
+        "bytes": 74340,
+        "lines": 2068,
+        "blob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c"
+      },
+      "candidateFile": "/workspace/scratch/82d3f9ba6b85/phase-a-composition-8a/models-conditional-hook.ts.txt"
+    }
+  ],
+  "v1Correction": {
+    "supersededTest": {
+      "bytes": 188106,
+      "lines": 5843,
+      "blob": "817fe49b43aef4be13d242fd2da0367590d11ace",
+      "sha256": "dd6f62050d537a9a8754cbd2ff5a59c26fedc96c7d42603ae499508ae256caa5"
+    },
+    "correctedTest": {
+      "bytes": 188106,
+      "lines": 5843,
+      "blob": "370e1b067c732c2a59c68a10cdf857f31707386b",
+      "sha256": "6d80fc146e310ca01faf74af88d180777d6896c5e976f84a940ac2980845d562"
+    },
+    "reason": "Two prospective assertions incorrectly supplied a message as a second toBe argument. Exact Vitest3.2.6 declaration permits that message on expect, while toBe accepts one argument.",
+    "changes": [
+      {
+        "old": "expect(regularResult).toBe(false, 'the superseded regular view remains inadmissible');",
+        "new": "expect(regularResult, 'the superseded regular view remains inadmissible').toBe(false);"
+      },
+      {
+        "old": "expect(state?.loading).toBe(true, 'old completions cannot release the new project request');",
+        "new": "expect(state?.loading, 'old completions cannot release the new project request').toBe(true);"
+      }
+    ],
+    "onlyTwoLineReplacements": true,
+    "equalByteAndLineCounts": true,
+    "allAssertionValuesMessagesAndOrderPreserved": true,
+    "declarationEvidence": {
+      "path": "/workspace/scratch/82d3f9ba6b85/phase-a-composition-8a/vitest-expect-3.2.6-index.d.ts.txt",
+      "bytes": 27831,
+      "lines": 808,
+      "blob": "4f93e899783b1d411aa0fd0ca4f5b040bc729fba",
+      "sha256": "120a80aa556732f684db3ed61aeff1d6671e1655bd6cba0aa88b22b88ac9a6b1"
+    },
+    "lockSourcePath": "pnpm-lock.yaml",
+    "v1RecordsFrozenUnchanged": true,
+    "noExecutedFailureClaim": true
+  },
+  "originalVenues": {
+    "p11": {
+      "job": "offline-desktop-scenario",
+      "step": "Build existing Desktop prerequisites and verify admission",
+      "runtime": "Original captured Node24.21.0",
+      "command": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "gate": "Three actual missing-expected-rejection assertions for first true at90000, first true after90000, second true after cutoff; full eight-file original output mandatory."
+    },
+    "models": {
+      "job": "offline-frontend-tests",
+      "step": "Run the complete safe frontend shard",
+      "runtime": "Original workspace .node-version26.12.1; captured Host Node24.21.0 remains separate",
+      "commandLines": [
+        "pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" \\",
+        "--exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' \\",
+        "--reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" \\",
+        "2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\""
+      ],
+      "gate": "Six actual loading true-versus-false failures after all earlier hook/currentness/view assertions; four new controls and every preexisting case inspected. Original containing full shard/file, all shard outcomes retained."
+    },
+    "independentJobNoNeeds": true,
+    "noWorkflowMutation": true,
+    "noManualDispatchRerunCancel": true,
+    "noLocalProjectExecution": true,
+    "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "workflowStillExactlyDad3": true
+  },
+  "patches": {
+    "phaseA": {
+      "path": "/workspace/scratch/82d3f9ba6b85/phase-a-composition-e1d/phase-a.patch",
+      "bytes": 13177,
+      "lines": 240,
+      "blob": "e9eae4f8054ed9b70506ea9c9a25a66cc07b1760",
+      "sha256": "9fa1755077d9cc1615e32b32827ea75af690379453af16966cff7e68c3a0d6a5"
+    },
+    "conditionalModelsFullV2": {
+      "path": "/workspace/scratch/82d3f9ba6b85/phase-a-composition-8a/models-full-v2.patch",
+      "bytes": 8885,
+      "lines": 183,
+      "blob": "98e0bcf91c7c425fd74226a949793c3accc5c6e6",
+      "sha256": "5495073e49f492390e70a9575f45f26ae7b6440120f6afab40970dceaced1c69"
+    },
+    "v1ToV2Correction": {
+      "path": "/workspace/scratch/82d3f9ba6b85/phase-a-composition-8a/models-v1-to-v2-message-placement.patch",
+      "bytes": 1093,
+      "lines": 20,
+      "blob": "06ad8e06ea02acee6195d5d2e122794bd71faef4",
+      "sha256": "852c2d4155f21e9c0e4c714b6d80ee028a5bf1f4f8266210bbd7eb470cced1b6"
+    }
+  },
+  "freshSourcePins": [
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "mode": "100644",
+      "bytes": 180091,
+      "lines": 5678,
+      "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "mode": "100644",
+      "bytes": 74351,
+      "lines": 2068,
+      "blob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+      "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 111672,
+      "lines": 1896,
+      "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+      "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 45707,
+      "lines": 570,
+      "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "mode": "100644",
+      "bytes": 101741,
+      "lines": 1312,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+    },
+    {
+      "path": "vitest.config.ts",
+      "mode": "100644",
+      "bytes": 1187,
+      "lines": 34,
+      "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc"
+    },
+    {
+      "path": ".node-version",
+      "mode": "100644",
+      "bytes": 8,
+      "lines": 1,
+      "blob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "mode": "100644",
+      "bytes": 956788,
+      "lines": 26665,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c"
+    },
+    {
+      "path": "tsconfig.json",
+      "mode": "100644",
+      "bytes": 1235,
+      "lines": 40,
+      "blob": "568952f5025a88c16b0568c7279d8e85a4288b43",
+      "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a"
+    },
+    {
+      "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "mode": "100644",
+      "bytes": 8707,
+      "lines": 264,
+      "blob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+      "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "mode": "100644",
+      "bytes": 8310,
+      "lines": 172,
+      "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7"
+    }
+  ],
+  "guards": {
+    "sourceCapChanges": false,
+    "compilerChanges": false,
+    "workflowChanges": false,
+    "extraProductionRequestsActionsTimers": false,
+    "deadlineOrOwnershipRelaxation": false,
+    "dormantInstallerOrP11RouteApplied": false,
+    "historicalNModelsCauseProven": false,
+    "nativeOrV2AcceptanceClaimed": false,
+    "oldCrossOrP08CandidateApplied": false,
+    "e1dSourceReverted": false
+  },
+  "historicalProposal": {
+    "sourceHead": "8a499a49b17cf92c4ff00c5f46ed3aa6e325ced2",
+    "metadata": {
+      "bytes": 12074,
+      "lines": 282,
+      "blob": "6eac7a17f5f8555d0300915040d75ccac3c2b323",
+      "sha256": "136837d4be80e1c599d1d0f4281428232ebd6dec04627f1baed0df1bb9d70a3f"
+    },
+    "publishedAt": "b0528bb50e05379030eb72c20d4f8eb998098cbf",
+    "oldSelectionDoesNotApplyToE1d": true
+  },
+  "p11Composition": {
+    "incomingFullPrefix": {
+      "bytes": 111672,
+      "lines": 1896,
+      "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+      "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445"
+    },
+    "historicalBasePrefix": {
+      "bytes": 103573,
+      "lines": 1766,
+      "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+      "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+    },
+    "incoming130LineSuffix": {
+      "bytes": 8099,
+      "lines": 130,
+      "blob": "9fab999b974341172ca42c222b3deb59175676e2",
+      "sha256": "64cfde8b86427a785394fce9a0b4aac55b623ae4fca8d27176323fa19e860a12"
+    },
+    "unchanged62LineRegressionSuffix": {
+      "bytes": 4264,
+      "lines": 62,
+      "blob": "08699c4890b2ef83bcbda53094c450c6a9c3b366",
+      "sha256": "a299b6ec1497dc542f675fd7868a430d8e9d4d0503199c9ff0343a7187b5312d"
+    },
+    "oldCandidate": {
+      "bytes": 107837,
+      "lines": 1828,
+      "blob": "a6c8df59b6fabc013b3570762d6b19a396e32c9e",
+      "sha256": "d8bfcea3677773bb7d9fd800f958728719f292c7e01a9e4a0ead4fd746276cf9"
+    },
+    "incomingPrefixExact": true,
+    "incomingAssertionsPreserved": true,
+    "regressionBytesAndOrderUnchanged": true
+  },
+  "currentOriginalResults": {
+    "e1dTeamStatic": null,
+    "phaseAP11": null,
+    "phaseAModels": null
+  }
+}

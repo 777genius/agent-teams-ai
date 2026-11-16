@@ -1,0 +1,1744 @@
+{
+  "kind": "Original E1 Windows x64 Process failure author audit; no rerun or execution",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "runId": 43813731530,
+  "jobId": 133120929510,
+  "observedTerminalAt": "2026-11-16T06:11:31Z",
+  "job": {
+    "id": 133120929510,
+    "name": "Host process fixtures (win32-x64)",
+    "status": "completed",
+    "conclusion": "failure",
+    "run_id": 43813731530,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Select the pinned package manager with bundled Corepack",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Bind exact source and actual process tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Install frozen workspace without Desktop postinstall",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Build existing controller and Host",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Verify process contracts and retained Main Host transport",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Verify original POSIX Node and shell lifecycle fixtures",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 11
+      },
+      {
+        "name": "Prepare pinned Electron for native process fixtures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 12
+      },
+      {
+        "name": "Verify Linux Node exec descriptor closure under both original parents",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15
+      },
+      {
+        "name": "Build original Windows product broker and C++ fixtures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16
+      },
+      {
+        "name": "Qualify original Windows Job and control under Host Node",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 17
+      },
+      {
+        "name": "Qualify original Windows Job and control under Electron Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Qualify original codex source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Qualify original claude source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Qualify original opencode source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Require completed original platform receipts and unchanged source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Preserve original process evidence including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24
+      },
+      {
+        "name": "Post Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 46
+      },
+      {
+        "name": "Post Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 47
+      },
+      {
+        "name": "Post Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 48
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 49
+      }
+    ]
+  },
+  "sourceAndRuntime": {
+    "checkoutHeadExact": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "sourceHeadArtifactExact": true,
+    "node": "24.21.0",
+    "platform": "win32-x64",
+    "workflowSourceBlob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+    "sameSourceI386BuildAndCopyStep": "actual step16 SUCCESS; original configure/build Win32 and SHA-copy equality checks precede step17",
+    "binaryDigestEvidence": "Original full binary-hash listing retained; executable files themselves are not archived, so no independent executable-byte/PE inspection claimed."
+  },
+  "originalResponseJoin": {
+    "response": {
+      "path": "native-audit-E1e1d14b/job-133120929510-original-response.json",
+      "bytes": 154758,
+      "blob": "c344b7eead9203cc997439a4d211842d18b992d7",
+      "sha256": "0dd2df0b7d18402dae29a93525fe1da35cf4fcd83527cca130321827c1653450"
+    },
+    "decodedLog": {
+      "path": "native-audit-E1e1d14b/job-133120929510.log",
+      "bytes": 143153,
+      "blob": "e8c536e76fd86896858f74a4b471a9057a20f08f",
+      "sha256": "0d6e66f963303d739a75fe2d39110fc04ad7b61bdf78376d4ba77f7f0e7639ee"
+    },
+    "entireUtf8Equal": true
+  },
+  "archive": {
+    "path": "native-audit-E1e1d14b/artifact-14201916494.zip",
+    "bytes": 15043,
+    "blob": "adf76542bf8ec1f143f3ddf9c26736490fe28fec",
+    "sha256": "b5d26672269fc6bbf7ab6e13adddf62b65bd5295de28590df44ebdc547d74e86",
+    "artifactId": 14201916494,
+    "officialMetadata": {
+      "id": 14201916494,
+      "name": "host-process-fixtures-win32-x64-e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "size_in_bytes": 15043,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14201916494",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14201916494/zip",
+      "expired": false,
+      "created_at": "2026-11-16T06:06:39Z",
+      "expires_at": "2026-11-30T06:06:39Z",
+      "updated_at": "2026-11-16T06:06:39Z",
+      "digest": "sha256:b5d26672269fc6bbf7ab6e13adddf62b65bd5295de28590df44ebdc547d74e86",
+      "workflow_run": {
+        "id": 43813731530,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "head_sha": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940"
+      }
+    },
+    "safeUniqueNames": true,
+    "allCRCValid": true,
+    "memberCount": 9,
+    "members": [
+      {
+        "path": "agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt",
+        "bytes": 1909,
+        "blob": "6c9515cc0e2d12ab2cb7f4c1cae6304bbc31474d",
+        "sha256": "06e3fbe05bf444c076486dc7576a057cd4d251caa5410bc3f426492635082d4d",
+        "crc32": "0a43f014"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+        "bytes": 20525,
+        "blob": "f137d9c192d0a5ecb4a8bf5d6d72e445f1ff7690",
+        "sha256": "2c0bca7203d6019469ad3a49bf588aa9f1cab59fa498d23601619f4f4663e7ef",
+        "crc32": "e5494f7c"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+        "bytes": 758,
+        "blob": "60a6ae01fed0b0bb9e26f7db1c29aaa0d6bd01a9",
+        "sha256": "72e03a94114673a19f536f016b8473f0fc06029e4990d09887a3ee6868671f9d",
+        "crc32": "626ebf31"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+        "bytes": 9498,
+        "blob": "677a5a8cce9beb834861d232a8920bd231967ae5",
+        "sha256": "d8585bcc20f005bd1b38c790754960d338360261ba83275004143b7784c655bf",
+        "crc32": "81c53bff"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+        "bytes": 41,
+        "blob": "64df2ac36d2400af7b971319a2274577c225275a",
+        "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681",
+        "crc32": "4b15b81c"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt",
+        "bytes": 1909,
+        "blob": "6c9515cc0e2d12ab2cb7f4c1cae6304bbc31474d",
+        "sha256": "06e3fbe05bf444c076486dc7576a057cd4d251caa5410bc3f426492635082d4d",
+        "crc32": "0a43f014"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json",
+        "bytes": 193,
+        "blob": "72994084531d3afd617b4f0950e43a5c6c7079db",
+        "sha256": "235bb5b98a928f1c66b573e03ece5a6b9a86ae41b87ed6e3078b15d211494d3f",
+        "crc32": "c189ec05"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+        "bytes": 28803,
+        "blob": "5f61a8de7b6f9e72922fcbdc2af1df92188bd37c",
+        "sha256": "71524349dcdcff0209f8984017bd6aa283c52cd4a17f66247b8e75b0237088be",
+        "crc32": "80ddb500"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json",
+        "bytes": 230,
+        "blob": "7ae7279a1b8f37c4b813b18fc2ca1e537cd9e1e1",
+        "sha256": "00f6f0b3e8c92e1551595636de99387d382960b0e512d279a182b78992711657",
+        "crc32": "a40945b9"
+      }
+    ],
+    "extractedBytesExact": true
+  },
+  "originalNativeTeeJoin": {
+    "path": "native-audit-E1e1d14b/process-windows-x64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+    "identity": {
+      "bytes": 28803,
+      "blob": "5f61a8de7b6f9e72922fcbdc2af1df92188bd37c",
+      "sha256": "71524349dcdcff0209f8984017bd6aa283c52cd4a17f66247b8e75b0237088be"
+    },
+    "lines": 143,
+    "fullJobStartLine": 1032,
+    "entire143LineSequenceEqualAfterTimestampAndAnsiRemoval": true
+  },
+  "prerequisites": {
+    "hostNode": {
+      "tests": 167,
+      "pass": 164,
+      "fail": 0,
+      "skip": 3,
+      "cancel": 0
+    },
+    "protocolVitest": {
+      "files": 3,
+      "pass": 54,
+      "fail": 0,
+      "originalNativeEventsFile": 4
+    },
+    "retainedMainVitest": {
+      "files": 8,
+      "pass": 81,
+      "fail": 0
+    },
+    "totalObservedPrerequisiteAssertions": 302,
+    "pass": 299,
+    "skip": 3,
+    "fail": 0,
+    "notNativeQualification": true
+  },
+  "failure": {
+    "step": 17,
+    "stepName": "Qualify original Windows Job and control under Host Node",
+    "message": "Actual I386 child completion and observations must precede broker cleanup",
+    "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+    "line": 105,
+    "actual": "undefined",
+    "expected": true,
+    "callback": "nativeGateEvents.ts:22",
+    "nativeI386ChildObservation": {
+      "status": "unknown"
+    },
+    "firstErrorCategory": "mandatory I386 trace read/decode absent or refused; exact subcategory unknown",
+    "sourceOrderInference": "Required environment, canonical fixture/image checks and completed I386 marker parse/assignment precede recorded capture-descendants. No later assignment clears i386Child. The explicit unknown branch establishes i386Observations undefined. This is not an observed nonzero I386 child result. PID/birth/record bytes/hash are omitted in that unknown branch and cannot be recovered from final log.",
+    "decoderUnknownPossibilities": [
+      "readFileSync throws",
+      "empty trace",
+      "oversized trace",
+      "partial record",
+      "overflow record",
+      "ordinal/identity/code/Boolean refusal"
+    ],
+    "noExactTraceSubcategoryClaim": true,
+    "nativeFailureRecordLimit": "The exit callback passed broker code==0 and empty FD4 record assertions before line105. This is source-order inference, not an independently retained FD4 byte artifact."
+  },
+  "originalPhases": {
+    "rows": [
+      {
+        "scenario": "sentinel",
+        "phase": "start",
+        "elapsedMs": 0
+      },
+      {
+        "scenario": "sentinel",
+        "phase": "sentinel-ready",
+        "elapsedMs": 7
+      },
+      {
+        "scenario": "sentinel",
+        "phase": "complete",
+        "elapsedMs": 40
+      },
+      {
+        "scenario": "pre-resume-cancel",
+        "phase": "start",
+        "elapsedMs": 40
+      },
+      {
+        "scenario": "pre-resume-cancel",
+        "phase": "prepare",
+        "elapsedMs": 41
+      },
+      {
+        "scenario": "pre-resume-cancel",
+        "phase": "capture-root",
+        "elapsedMs": 67
+      },
+      {
+        "scenario": "pre-resume-cancel",
+        "phase": "stop",
+        "elapsedMs": 87
+      },
+      {
+        "scenario": "pre-resume-cancel",
+        "phase": "witness-exits",
+        "elapsedMs": 107
+      },
+      {
+        "scenario": "pre-resume-cancel",
+        "phase": "target-drain",
+        "elapsedMs": 108
+      },
+      {
+        "scenario": "pre-resume-cancel",
+        "phase": "release-ack",
+        "elapsedMs": 108
+      },
+      {
+        "scenario": "pre-resume-cancel",
+        "phase": "broker-exit",
+        "elapsedMs": 110
+      },
+      {
+        "scenario": "pre-resume-cancel",
+        "phase": "complete",
+        "elapsedMs": 112
+      },
+      {
+        "scenario": "facade-stdio",
+        "phase": "start",
+        "elapsedMs": 112
+      },
+      {
+        "scenario": "facade-stdio",
+        "phase": "prepare",
+        "elapsedMs": 112
+      },
+      {
+        "scenario": "facade-stdio",
+        "phase": "capture-root",
+        "elapsedMs": 140
+      },
+      {
+        "scenario": "facade-stdio",
+        "phase": "resume",
+        "elapsedMs": 158
+      },
+      {
+        "scenario": "facade-stdio",
+        "phase": "root-exit",
+        "elapsedMs": 176
+      },
+      {
+        "scenario": "facade-stdio",
+        "phase": "stop",
+        "elapsedMs": 186
+      },
+      {
+        "scenario": "facade-stdio",
+        "phase": "witness-exits",
+        "elapsedMs": 186
+      },
+      {
+        "scenario": "facade-stdio",
+        "phase": "target-drain",
+        "elapsedMs": 186
+      },
+      {
+        "scenario": "facade-stdio",
+        "phase": "release-ack",
+        "elapsedMs": 187
+      },
+      {
+        "scenario": "facade-stdio",
+        "phase": "broker-exit",
+        "elapsedMs": 188
+      },
+      {
+        "scenario": "facade-stdio",
+        "phase": "complete",
+        "elapsedMs": 188
+      },
+      {
+        "scenario": "facade-cancel",
+        "phase": "start",
+        "elapsedMs": 188
+      },
+      {
+        "scenario": "facade-cancel",
+        "phase": "prepare",
+        "elapsedMs": 188
+      },
+      {
+        "scenario": "facade-cancel",
+        "phase": "capture-root",
+        "elapsedMs": 210
+      },
+      {
+        "scenario": "facade-cancel",
+        "phase": "stop",
+        "elapsedMs": 230
+      },
+      {
+        "scenario": "facade-cancel",
+        "phase": "stop",
+        "elapsedMs": 237
+      },
+      {
+        "scenario": "facade-cancel",
+        "phase": "witness-exits",
+        "elapsedMs": 248
+      },
+      {
+        "scenario": "facade-cancel",
+        "phase": "target-drain",
+        "elapsedMs": 248
+      },
+      {
+        "scenario": "facade-cancel",
+        "phase": "release-ack",
+        "elapsedMs": 248
+      },
+      {
+        "scenario": "facade-cancel",
+        "phase": "broker-exit",
+        "elapsedMs": 250
+      },
+      {
+        "scenario": "facade-cancel",
+        "phase": "complete",
+        "elapsedMs": 250
+      },
+      {
+        "scenario": "capture-claude",
+        "phase": "start",
+        "elapsedMs": 250
+      },
+      {
+        "scenario": "capture-claude",
+        "phase": "prepare",
+        "elapsedMs": 257
+      },
+      {
+        "scenario": "capture-claude",
+        "phase": "root-exit",
+        "elapsedMs": 273
+      },
+      {
+        "scenario": "capture-claude",
+        "phase": "stop",
+        "elapsedMs": 342
+      },
+      {
+        "scenario": "capture-claude",
+        "phase": "complete",
+        "elapsedMs": 344
+      },
+      {
+        "scenario": "capture-codex",
+        "phase": "start",
+        "elapsedMs": 345
+      },
+      {
+        "scenario": "capture-codex",
+        "phase": "prepare",
+        "elapsedMs": 350
+      },
+      {
+        "scenario": "capture-codex",
+        "phase": "root-exit",
+        "elapsedMs": 355
+      },
+      {
+        "scenario": "capture-codex",
+        "phase": "stop",
+        "elapsedMs": 420
+      },
+      {
+        "scenario": "capture-codex",
+        "phase": "complete",
+        "elapsedMs": 423
+      },
+      {
+        "scenario": "capture-opencode",
+        "phase": "start",
+        "elapsedMs": 423
+      },
+      {
+        "scenario": "capture-opencode",
+        "phase": "prepare",
+        "elapsedMs": 429
+      },
+      {
+        "scenario": "capture-opencode",
+        "phase": "root-exit",
+        "elapsedMs": 434
+      },
+      {
+        "scenario": "capture-opencode",
+        "phase": "stop",
+        "elapsedMs": 498
+      },
+      {
+        "scenario": "capture-opencode",
+        "phase": "complete",
+        "elapsedMs": 501
+      },
+      {
+        "scenario": "capture-root-first",
+        "phase": "start",
+        "elapsedMs": 501
+      },
+      {
+        "scenario": "capture-root-first",
+        "phase": "prepare",
+        "elapsedMs": 506
+      },
+      {
+        "scenario": "capture-root-first",
+        "phase": "child-lines",
+        "elapsedMs": 511
+      },
+      {
+        "scenario": "capture-root-first",
+        "phase": "capture-descendants",
+        "elapsedMs": 576
+      },
+      {
+        "scenario": "capture-root-first",
+        "phase": "root-exit",
+        "elapsedMs": 616
+      },
+      {
+        "scenario": "capture-root-first",
+        "phase": "stop",
+        "elapsedMs": 623
+      },
+      {
+        "scenario": "capture-root-first",
+        "phase": "witness-exits",
+        "elapsedMs": 641
+      },
+      {
+        "scenario": "capture-root-first",
+        "phase": "complete",
+        "elapsedMs": 641
+      },
+      {
+        "scenario": "debug-service-cancel",
+        "phase": "start",
+        "elapsedMs": 641
+      },
+      {
+        "scenario": "debug-service-cancel",
+        "phase": "prepare",
+        "elapsedMs": 647
+      },
+      {
+        "scenario": "debug-service-cancel",
+        "phase": "capture-root",
+        "elapsedMs": 652
+      },
+      {
+        "scenario": "debug-service-cancel",
+        "phase": "stop",
+        "elapsedMs": 671
+      },
+      {
+        "scenario": "debug-service-cancel",
+        "phase": "witness-exits",
+        "elapsedMs": 686
+      },
+      {
+        "scenario": "debug-service-cancel",
+        "phase": "target-drain",
+        "elapsedMs": 688
+      },
+      {
+        "scenario": "debug-service-cancel",
+        "phase": "release-ack",
+        "elapsedMs": 688
+      },
+      {
+        "scenario": "debug-service-cancel",
+        "phase": "broker-exit",
+        "elapsedMs": 688
+      },
+      {
+        "scenario": "debug-service-cancel",
+        "phase": "complete",
+        "elapsedMs": 690
+      },
+      {
+        "scenario": "debug-service",
+        "phase": "start",
+        "elapsedMs": 690
+      },
+      {
+        "scenario": "debug-service",
+        "phase": "prepare",
+        "elapsedMs": 694
+      },
+      {
+        "scenario": "debug-service",
+        "phase": "capture-root",
+        "elapsedMs": 698
+      },
+      {
+        "scenario": "debug-service",
+        "phase": "resume",
+        "elapsedMs": 716
+      },
+      {
+        "scenario": "debug-service",
+        "phase": "child-lines",
+        "elapsedMs": 717
+      },
+      {
+        "scenario": "debug-service",
+        "phase": "capture-descendants",
+        "elapsedMs": 1228
+      },
+      {
+        "scenario": "debug-service",
+        "phase": "service-capture",
+        "elapsedMs": 1274
+      },
+      {
+        "scenario": "debug-service",
+        "phase": "service-query-lifetime",
+        "elapsedMs": 1276
+      },
+      {
+        "scenario": "debug-service",
+        "phase": "service-effect-retirement",
+        "elapsedMs": 1561
+      },
+      {
+        "scenario": "debug-service",
+        "phase": "expired-service-stop",
+        "elapsedMs": 1579
+      },
+      {
+        "scenario": "debug-service",
+        "phase": "stop",
+        "elapsedMs": 1580
+      },
+      {
+        "scenario": "debug-service",
+        "phase": "witness-exits",
+        "elapsedMs": 1594
+      },
+      {
+        "scenario": "debug-service",
+        "phase": "stop",
+        "elapsedMs": 1610
+      },
+      {
+        "scenario": "debug-service",
+        "phase": "witness-exits",
+        "elapsedMs": 1626
+      },
+      {
+        "scenario": "debug-service",
+        "phase": "target-drain",
+        "elapsedMs": 1630
+      },
+      {
+        "scenario": "debug-service",
+        "phase": "release-ack",
+        "elapsedMs": 1630
+      },
+      {
+        "scenario": "debug-service",
+        "phase": "broker-exit",
+        "elapsedMs": 1630
+      },
+      {
+        "scenario": "cleanup",
+        "phase": "abandon-control",
+        "elapsedMs": 1638
+      },
+      {
+        "scenario": "cleanup",
+        "phase": "helper-exits",
+        "elapsedMs": 1638
+      }
+    ],
+    "completedScenarioRows": [
+      "sentinel",
+      "pre-resume-cancel",
+      "facade-stdio",
+      "facade-cancel",
+      "capture-claude",
+      "capture-codex",
+      "capture-opencode",
+      "capture-root-first",
+      "debug-service-cancel"
+    ],
+    "rowCount": 84,
+    "completedScenarioCount": 9,
+    "full25ResultReceiptAbsent": true,
+    "lastOriginalWorkPhase": "debug-service/broker-exit",
+    "newI386ChildCompletedMarkerInferredFromSourceOrderOnly": true,
+    "directWow64RootAndLaterScenariosNotReached": true
+  },
+  "cleanup": {
+    "gateFailureSnapshot": {
+      "scenario": "debug-service",
+      "phase": "broker-exit",
+      "helperCount": 17,
+      "retainedCount": 3,
+      "helpers": [
+        {
+          "slot": 0,
+          "role": "sentinel",
+          "scenario": "sentinel",
+          "errorObserved": false,
+          "closed": false,
+          "cleanupRequested": false,
+          "stdoutEnded": false,
+          "stderrEnded": false,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 1,
+          "role": "witness",
+          "scenario": "pre-resume-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 2,
+          "role": "witness",
+          "scenario": "facade-stdio",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 3,
+          "role": "witness",
+          "scenario": "facade-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 4,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 5,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 6,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 7,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 8,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 9,
+          "role": "raw-broker",
+          "scenario": "debug-service-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 10,
+          "role": "witness",
+          "scenario": "debug-service-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 11,
+          "role": "raw-broker",
+          "scenario": "debug-service",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 12,
+          "role": "witness",
+          "scenario": "debug-service",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 13,
+          "role": "witness",
+          "scenario": "debug-service",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 14,
+          "role": "witness",
+          "scenario": "debug-service",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 15,
+          "role": "witness",
+          "scenario": "debug-service",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 16,
+          "role": "witness",
+          "scenario": "debug-service",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        }
+      ],
+      "retainedCapabilities": [
+        {
+          "slot": 0,
+          "diagnostics": {
+            "writeCompleted": true,
+            "brokerExit": {
+              "code": 0,
+              "signal": null
+            }
+          }
+        },
+        {
+          "slot": 1,
+          "diagnostics": {
+            "writeCompleted": true,
+            "brokerExit": {
+              "code": 0,
+              "signal": null
+            }
+          }
+        },
+        {
+          "slot": 2,
+          "diagnostics": {
+            "writeCompleted": true,
+            "brokerExit": {
+              "code": 0,
+              "signal": null
+            }
+          }
+        }
+      ]
+    },
+    "afterHelperWait": {
+      "cleanupObservation": "after-helper-wait",
+      "helperCount": 17,
+      "retainedCount": 3,
+      "helpers": [
+        {
+          "slot": 0,
+          "role": "sentinel",
+          "scenario": "sentinel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": true,
+          "exit": {
+            "code": null,
+            "signal": "SIGTERM"
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 1,
+          "role": "witness",
+          "scenario": "pre-resume-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 2,
+          "role": "witness",
+          "scenario": "facade-stdio",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 3,
+          "role": "witness",
+          "scenario": "facade-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 4,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 5,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 6,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 7,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 8,
+          "role": "witness",
+          "scenario": "capture-root-first",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 9,
+          "role": "raw-broker",
+          "scenario": "debug-service-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 10,
+          "role": "witness",
+          "scenario": "debug-service-cancel",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 11,
+          "role": "raw-broker",
+          "scenario": "debug-service",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 12,
+          "role": "witness",
+          "scenario": "debug-service",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 13,
+          "role": "witness",
+          "scenario": "debug-service",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 14,
+          "role": "witness",
+          "scenario": "debug-service",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 15,
+          "role": "witness",
+          "scenario": "debug-service",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        },
+        {
+          "slot": 16,
+          "role": "witness",
+          "scenario": "debug-service",
+          "errorObserved": false,
+          "closed": true,
+          "cleanupRequested": false,
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "stdoutEnded": true,
+          "stderrEnded": true,
+          "stdoutBuffered": 0,
+          "stderrBuffered": 0
+        }
+      ],
+      "retainedCapabilities": [
+        {
+          "slot": 0,
+          "diagnostics": {
+            "writeCompleted": true,
+            "brokerExit": {
+              "code": 0,
+              "signal": null
+            }
+          }
+        },
+        {
+          "slot": 1,
+          "diagnostics": {
+            "writeCompleted": true,
+            "brokerExit": {
+              "code": 0,
+              "signal": null
+            }
+          }
+        },
+        {
+          "slot": 2,
+          "diagnostics": {
+            "writeCompleted": true,
+            "brokerExit": {
+              "code": 0,
+              "signal": null
+            }
+          }
+        }
+      ]
+    },
+    "controller": {
+      "gateController": "drained",
+      "rootExitCode": 1,
+      "activeProcesses": 0
+    },
+    "controllerMeaning": "Original Node root exited1 and original outer Job was observed zero; controller printed drained after sandbox removal and returns failure104 for nonzero root. Do not call successful native gate or natural sentinel exit.",
+    "rawBrokerSlot11": {
+      "slot": 11,
+      "role": "raw-broker",
+      "scenario": "debug-service",
+      "errorObserved": false,
+      "closed": true,
+      "cleanupRequested": false,
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "stdoutEnded": true,
+      "stderrEnded": true,
+      "stdoutBuffered": 0,
+      "stderrBuffered": 0
+    },
+    "sentinelSlot0": {
+      "slot": 0,
+      "role": "sentinel",
+      "scenario": "sentinel",
+      "errorObserved": false,
+      "closed": true,
+      "cleanupRequested": true,
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      },
+      "stdoutEnded": true,
+      "stderrEnded": true,
+      "stdoutBuffered": 0,
+      "stderrBuffered": 0
+    },
+    "allOther16HelperExitsZeroWithoutCleanupSignal": true,
+    "retainedCapabilities": 3,
+    "unknownTracePrivateFileNotArchived": "Original controller removes its complete sandbox only after root exit and zero accounting; final ZIP has no i386-child-events or debug-failure file. No recovery/new read performed."
+  },
+  "sources": [
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "bytes": 19357,
+      "blob": "dd14a6cbdc9976bbeaf2ae48efda560623fa72c5",
+      "sha256": "a509a625e9e1ab1ccb96040b81d2c2fd1f00c0c23e74677e7002b7c8a4b7b84f",
+      "lines": 355,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": false
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "bytes": 25009,
+      "blob": "e002d7fc688cac9e2db38abbd1c1c9e851f975dd",
+      "sha256": "a11c6fcc322cd240bf396ee7e7bf0fc9d009869fe9e2b94cc9c969a4f7bbb1b1",
+      "lines": 390,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": false
+    },
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "bytes": 9009,
+      "blob": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+      "sha256": "f3c3fdcb5f6eaa729ff071574deb894078e15d9d5b7e786789b270b1c7d996c8",
+      "lines": 186,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": false
+    },
+    {
+      "path": "tools/owned-process-broker/serviceScopes.h",
+      "bytes": 16379,
+      "blob": "b3fbd2949a5b015bf36c56eb19ca8ef43ec42329",
+      "sha256": "88aea669b33d0bb1e60cf80ed5b3c11f6c1ce5f9a14499f421be9d563daadcf9",
+      "lines": 386,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": false
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "bytes": 32248,
+      "blob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+      "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c",
+      "lines": 418,
+      "equalsIncomingI386Commit": false,
+      "equalsOld953": false
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+      "bytes": 7387,
+      "blob": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+      "sha256": "40a1d7107607b3d1e6fcbdd0018d452e830622a5d3ba8256d302a2a42ac7633a",
+      "lines": 124,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": false
+    },
+    {
+      "path": "tools/owned-process-broker/serviceDebugLoop.h",
+      "bytes": 4891,
+      "blob": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298",
+      "sha256": "b31ecf2118e467b07bb973736920b10109a03c831a2cc72364c1abdb8973a8d3",
+      "lines": 93,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": true
+    },
+    {
+      "path": "tools/owned-process-broker/broker.cpp",
+      "bytes": 25929,
+      "blob": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e",
+      "sha256": "c9b35397e4beb534a9a4298b6a6b7c8c8745571381b69b3301ab3b60fccd6dc3",
+      "lines": 530,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.ts",
+      "bytes": 1367,
+      "blob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+      "sha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+      "lines": 39,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGate.ts",
+      "bytes": 22330,
+      "blob": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d",
+      "sha256": "3b549e313e3ca43b76232282b7dbe9e7a1dfcec594ad93bc81c047f740851197",
+      "lines": 586,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateDiagnostics.ts",
+      "bytes": 6380,
+      "blob": "22cf67a484f0a2a5a2b89639e38515cc0242a21a",
+      "sha256": "d963accfadeb14a93fd5d7e2b934a409212cca40e678b452d011c4a579f29237",
+      "lines": 220,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "bytes": 7278,
+      "blob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+      "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+      "lines": 192,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateOutput.ts",
+      "bytes": 1842,
+      "blob": "f9e5bb809cc4ae03485e1c55c7d7010322b63ae1",
+      "sha256": "ec40aeff9e713d30af99aed2c0936a2c8fc2a3094e57207c21f55da3970f17c8",
+      "lines": 46,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": true
+    },
+    {
+      "path": "tools/owned-process-broker/gateController.cpp",
+      "bytes": 5935,
+      "blob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+      "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+      "lines": 108,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": true
+    },
+    {
+      "path": "tools/owned-process-broker/CMakeLists.txt",
+      "bytes": 2160,
+      "blob": "cf158110832d24afd7f97b6e9ef2dbf7472b0410",
+      "sha256": "c58f71f7f341fd6f77fce721db77a4ae843a719e744a227757268b8eb6778e2e",
+      "lines": 27,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": true
+    },
+    {
+      "path": "tools/owned-process-broker/vitest.config.ts",
+      "bytes": 342,
+      "blob": "cd03a73404a7b2548c15234743c24c1093b554af",
+      "sha256": "d7af296db40661045f6402af15eeb6072781919fd8c8145e554dada03e0de88e",
+      "lines": 13,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": true
+    },
+    {
+      "path": "scripts/build/buildOwnedProcessBroker.ts",
+      "bytes": 3476,
+      "blob": "90499776e145f9ffaba230b280d5d9da9e15a8e0",
+      "sha256": "4db8137541af5f78d821d55f70b1f3a497b79a3e82bfa700e09d4237b3d97682",
+      "lines": 58,
+      "equalsIncomingI386Commit": true,
+      "equalsOld953": true
+    }
+  ],
+  "incomingSixPathReview": {
+    "prospectiveR1Commit": "732998cfa741393bec65f0d812f777f5f5778b5b",
+    "prospectiveR1PlanBlob": "9b9e64e0dc240a1b56181663de04bdf553d388ed",
+    "sourceCommit": "eba491c50fda418f8fc96fb743089b5b1532c1eb",
+    "ancestryVerified": true,
+    "fiveSourceLeavesExact": true,
+    "workflowAdditionalCurrentDelta": "Only four-line Windows long-path setup is added after the I386 source cut; current execution workflow is3228b9978cf5064c103ec486468b2e5c5a36956e. Scope/root own that independent incoming workflow disposition.",
+    "preservedBoundaries": [
+      "same-source existing fixture target built Win32; no I386 product broker",
+      "new sequential I386 child in existing service-pair only",
+      "original child PROCESS_INFORMATION handle supplies birth/architecture/wait/exit; no PID reopen",
+      "original startup.accept called once; observer conditional under TEST fence; ordinary product branch unchanged",
+      "15 original rows plus reserved overflow record; 512-byte maximum",
+      "four exact matching child observations required, two startup handled and two later first-chance forwarded",
+      "original child-lines10s, helper64/live64 and all Stop/cleanup/unknown predicates unchanged",
+      "direct I386 debugger-root late-handler and full native policy remain unqualified"
+    ],
+    "authorReportedFiniteExecution": "Plan reports extraction-boundary test RED/4-case GREEN and selected static checks; this audit does not requalify those earlier raw local records. Actual current CI protocol block independently contains4 nativeGateEvents PASS, which tests decoder/qualifier only."
+  },
+  "publicationGap": {
+    "establishedBySource": true,
+    "historicalFailureCauseEstablished": false,
+    "sequence": [
+      "TEST observer copies rows in memory after same original startup.accept under existing scope lock.",
+      "Only debugServiceTest.run post-runDebugLoop calls flushBreakpointObservations.",
+      "The loop may remain inside WaitForDebugEvent(100) after target/Job physical absence.",
+      "Original broker Stop can independently confirm root+Job absence; writer accepts Release and calls exitReleased/ExitProcess(0).",
+      "No dependency joins that exit to completion of the TEST observer post-loop flush.",
+      "A permitted scheduling order therefore terminates the observer thread before its sole file publication, leaving otherwise completed work without a qualifying trace."
+    ],
+    "ordinaryBrokerAndDebugLoopUnchangedFrom953": true,
+    "primaryReferences": [
+      {
+        "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-exitprocess",
+        "reference": "turn36view0",
+        "claim": "ExitProcess terminates the process including other threads; it does not join the unfinished observer."
+      },
+      {
+        "url": "https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-waitfordebugevent",
+        "reference": "turn36view1",
+        "claim": "WaitForDebugEvent uses the supplied wait interval on the creating debugger thread."
+      },
+      {
+        "url": "https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-continuedebugevent",
+        "reference": "turn36view2",
+        "claim": "The existing ContinueDebugEvent permits the reported thread to continue; no replay/suspend mechanism is proposed."
+      }
+    ],
+    "admissibleProspectiveDirection": "Root approved preparation only of same-FD5 copied-row publication before unchanged ContinueDebugEvent, at most16 writes/512 payload bytes, no extra process query/HANDLE/process action or release wait/join/deadline. Explicit new R1 must amend incoming memory-only/no-event-write promise. Partial/failed/overflow traces remain refusal. No implementation or actual fix result claimed."
+  },
+  "unreachedSteps": [
+    {
+      "number": 11,
+      "name": "Verify original POSIX Node and shell lifecycle fixtures",
+      "conclusion": "skipped"
+    },
+    {
+      "number": 13,
+      "name": "Verify Linux Node exec descriptor closure under both original parents",
+      "conclusion": "skipped"
+    },
+    {
+      "number": 14,
+      "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+      "conclusion": "skipped"
+    },
+    {
+      "number": 15,
+      "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+      "conclusion": "skipped"
+    },
+    {
+      "number": 18,
+      "name": "Qualify original Windows Job and control under Electron Node",
+      "conclusion": "skipped"
+    },
+    {
+      "number": 19,
+      "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+      "conclusion": "skipped"
+    },
+    {
+      "number": 20,
+      "name": "Qualify original codex source A B with TEST peer",
+      "conclusion": "skipped"
+    },
+    {
+      "number": 21,
+      "name": "Qualify original claude source A B with TEST peer",
+      "conclusion": "skipped"
+    },
+    {
+      "number": 22,
+      "name": "Qualify original opencode source A B with TEST peer",
+      "conclusion": "skipped"
+    },
+    {
+      "number": 23,
+      "name": "Require completed original platform receipts and unchanged source",
+      "conclusion": "skipped"
+    },
+    {
+      "number": 46,
+      "name": "Post Run actions/setup-node@v7.0.0",
+      "conclusion": "skipped"
+    },
+    {
+      "number": 47,
+      "name": "Post Run actions/setup-node@v7.0.0",
+      "conclusion": "skipped"
+    }
+  ],
+  "limits": [
+    "No final native scenario receipt or full25-case success",
+    "No Electron native invocation qualification",
+    "No Codex/Claude/OpenCode provider qualification from captured finite C++ scenario labels",
+    "No direct I386 debugger-root late-handler qualification",
+    "No P08/P09/full migration PASS",
+    "No replay/rerun/new native or project execution/source or ref mutation",
+    "This is author audit for independent R2, not self-labeled independent qualification"
+  ]
+}

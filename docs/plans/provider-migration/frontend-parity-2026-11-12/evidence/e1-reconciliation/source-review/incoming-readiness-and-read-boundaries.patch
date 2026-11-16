@@ -1,0 +1,884 @@
+diff --git a/src/features/agent-backend/main/adapters/output/projectTeamActivity.ts b/src/features/agent-backend/main/adapters/output/projectTeamActivity.ts
+index 2f03dbc228..bfa65f8590 100644
+--- a/src/features/agent-backend/main/adapters/output/projectTeamActivity.ts
++++ b/src/features/agent-backend/main/adapters/output/projectTeamActivity.ts
+@@ -79,6 +79,8 @@ export function projectTeamActivityLogs(
+           : { lastOutputPreview: text(log.lastOutputPreview, true) }),
+         events: log.events.map((raw) => {
+           const event = projectEvent(raw);
++          if ('taskId' in selected && event.data.kind === 'process-output')
++            throw new Error('Unattributed process output in task logs');
+           if (event.data.kind === 'state' || event.data.kind === 'interaction')
+             throw new Error('Not a log content fact');
+           return {
+diff --git a/test/features/agent-backend/hostTaskActivity.test.ts b/test/features/agent-backend/hostTaskActivity.test.ts
+index 66508376c5..294d5368e9 100644
+--- a/test/features/agent-backend/hostTaskActivity.test.ts
++++ b/test/features/agent-backend/hostTaskActivity.test.ts
+@@ -7,7 +7,7 @@ import { projectTaskHistory } from '../../../src/features/agent-backend/main/ada
+ import { createHostTaskActivityApi } from '../../../src/features/agent-backend/renderer/createHostTaskActivityApi';
+ 
+ import type { AgentBackendApi } from '../../../src/features/agent-backend/contracts/operations';
+-import type { HostMemberActivityLog } from '../../../src/shared/types/teamActivity';
++import type { HostActivityContent, HostMemberActivityLog } from '../../../src/shared/types/teamActivity';
+ vi.stubGlobal('crypto', webcrypto);
+ const history = [
+   {
+@@ -270,6 +270,93 @@ describe('Host Task Activity original read scope', () => {
+     ).toBe(true);
+   });
+ 
++  it('counts output and thinking once per original input while preserving child facts and exact byte freshness', async () => {
++    const f = fixture();
++    const thinking: Extract<HostActivityContent, { kind: 'thinking' }> = {
++      kind: 'thinking', messageRef: 'message-original', block: 1, text: 'Observed thought', phase: 'complete',
++    };
++    const child: HostMemberActivityLog['events'][number]['data'] = {
++      kind: 'subagent', phase: 'fact', childId: 'child-' + 'a'.repeat(64),
++      parentToolRef: 'tool-' + 'b'.repeat(64), fact: thinking,
++    };
++    f.logs[0]!.events.push(
++      { eventId: 'source:7', sequence: 7, inputId: 'original-input', data: thinking },
++      { eventId: 'source:8', sequence: 8, inputId: 'original-input',
++        data: { ...thinking, messageRef: 'thinking-only' } },
++      { eventId: 'source:9', sequence: 9, inputId: 'another-original-input', data: thinking },
++      { eventId: 'source:10', sequence: 10, inputId: 'original-input', data: child }
++    );
++    const exact = await f.api.getTaskExactLogSummaries('host-team:original', 'task-original');
++    expect(exact.items.map((item) => [item.inputId, item.messageCount])).toEqual([
++      ['original-input', 2], ['another-original-input', 1],
++    ]);
++    const summary = exact.items[0]!;
++    const detail = await f.api.getTaskExactLogDetail(
++      'host-team:original', 'task-original', summary.id, summary.sourceGeneration
++    );
++    expect(detail.status).toBe('ok');
++    if (detail.status !== 'ok') throw new Error('Expected original detail');
++    expect(detail.detail.log.events.map((event) => event.data.kind)).toEqual([
++      'text', 'tool-result', 'thinking', 'thinking', 'subagent',
++    ]);
++    expect(detail.detail.log.events.at(-1)!.data).toEqual(child);
++    expect(detail.detail.log.lastOutputPreview).toBeUndefined();
++    thinking.text = 'Changed retained thought';
++    expect(await f.api.getTaskExactLogDetail(
++      'host-team:original', 'task-original', summary.id, summary.sourceGeneration
++    )).toEqual({ status: 'stale' });
++    expect(f.invoke.mock.calls.every(([request]) => request.operation === 'team.activity.logs.read')).toBe(true);
++  });
++
++  it('accepts member stderr but refuses the same anonymous fact before a Task stream accepts it', async () => {
++    const f = fixture();
++    const stderr: HostMemberActivityLog['events'][number] = {
++      sequence: 7,
++      eventId: 'source:7',
++      data: { kind: 'process-output', stream: 'stderr', text: 'TEST member diagnostic' },
++    };
++    f.logs[0]!.events.push(stderr);
++    const memberLogs = structuredClone(f.logs);
++    delete memberLogs[0]!.taskId;
++    const request = {
++      handle: { handleId: 'original' },
++      commandId: 'read',
++      operation: 'team.activity.logs.read' as const,
++      payload: { memberName: 'alice' },
++    };
++    expect(
++      projectBackendResult(request, {
++        ok: true,
++        value: { kind: 'team-activity-logs', logs: memberLogs },
++      })
++    ).toMatchObject({
++      ok: true,
++      value: { logs: [{ events: expect.arrayContaining([stderr]) }] },
++    });
++    expect(() =>
++      projectBackendResult(
++        { ...request, payload: { taskId: 'task-original' } },
++        { ok: true, value: { kind: 'team-activity-logs', logs: f.logs } }
++      )
++    ).toThrow('Unattributed process output in task logs');
++    f.invoke.mockImplementation(async (selected) =>
++      projectBackendResult(selected, {
++        ok: true,
++        value: { kind: 'team-activity-logs', logs: f.logs },
++      })
++    );
++    await expect(f.api.getTaskLogStream('host-team:original', 'task-original')).rejects.toThrow(
++      'Unattributed process output in task logs'
++    );
++    await expect(
++      f.api.getTaskExactLogSummaries('host-team:original', 'task-original')
++    ).rejects.toThrow('Unattributed process output in task logs');
++    expect(f.invoke).toHaveBeenCalledTimes(2);
++    expect(
++      f.invoke.mock.calls.every(([selected]) => selected.operation === 'team.activity.logs.read')
++    ).toBe(true);
++  });
++
+   it('refuses exact detail after retention/content change, never selects foreign or missing input', async () => {
+     const f = fixture();
+     const original = (await f.api.getTaskExactLogSummaries('host-team:original', 'task-original'))
+diff --git a/test/features/agent-backend/runtimeActivityFacade.test.ts b/test/features/agent-backend/runtimeActivityFacade.test.ts
+index 3233fc10c6..8aef557663 100644
+--- a/test/features/agent-backend/runtimeActivityFacade.test.ts
++++ b/test/features/agent-backend/runtimeActivityFacade.test.ts
+@@ -896,6 +896,58 @@ describe('finite Runtime activity facade', () => {
+     }
+   });
+ 
++  it('projects distinct thinking and child facts through the original closed activity codec', async () => {
++    const { router, facade } = setup();
++    const thinking = {
++      kind: 'thinking', messageRef: 'message-A', block: 1, text: 'Observed thought', phase: 'complete',
++    };
++    const child = {
++      kind: 'subagent', phase: 'fact', childId: 'child-' + 'a'.repeat(64),
++      parentToolRef: 'tool-' + 'b'.repeat(64), fact: thinking,
++    };
++    router.request.mockResolvedValue({ ok: true, value: feed([
++      event(1, { ...thinking, native: 'PRIVATE-thinking', stream: 'stdout', thinkingTokens: 42 }),
++      event(2, { ...child, fact: { ...thinking, native: 'PRIVATE-child' } }),
++      event(3, { ...child, childId: 'child-' + 'c'.repeat(64) }),
++    ]) } as JsonValue);
++    const result = await facade.invoke(request);
++    expect(result.ok).toBe(true);
++    const projected = result as { ok: true; value: { events: { data: unknown }[] } };
++    expect(projected.value.events.map((row) => row.data)).toEqual([
++      thinking, child, { ...child, childId: 'child-' + 'c'.repeat(64) },
++    ]);
++    const serialized = JSON.stringify(result);
++    for (const privateField of ['PRIVATE-', 'operationRef', 'thinkingTokens', 'stdout'])
++      expect(serialized).not.toContain(privateField);
++    expect(router.request).toHaveBeenCalledExactlyOnceWith(request.handle, {
++      commandId: request.commandId, method: 'runtime.activity.feed', payload: request.payload, control: true,
++    });
++    expect(router.lookup).not.toHaveBeenCalled();
++  });
++
++  it('applies the original text bounds and nested identity refusal to thinking', async () => {
++    const { router, facade } = setup();
++    const thinking = {
++      kind: 'thinking', messageRef: 'message-A', block: 1, text: 'Observed thought', phase: 'complete',
++    };
++    const child = {
++      kind: 'subagent', phase: 'fact', childId: 'child-' + 'a'.repeat(64),
++      parentToolRef: 'tool-' + 'b'.repeat(64), fact: thinking,
++    };
++    for (const data of [
++      { ...thinking, block: -1 },
++      { ...thinking, block: 0.5 },
++      { ...thinking, phase: 'invented' },
++      { ...thinking, text: 'x'.repeat(24 * 1024 + 1) },
++      { ...thinking, text: 'unsafe\0text' },
++      { ...child, childId: 'native-child-id' },
++      { ...child, fact: { ...thinking, text: 'x'.repeat(24 * 1024 + 1) } },
++    ]) {
++      router.request.mockResolvedValueOnce({ ok: true, value: feed([event(1, data)]) } as JsonValue);
++      expect(await facade.invoke(request)).toEqual({ ok: false, code: 'hold', outcome: 'unknown' });
++    }
++  });
++
+   it('preserves snapshot/gap semantics and unknown usage without fabricating attribution', async () => {
+     const { router, facade } = setup();
+     const sessionUsage = {
+diff --git a/packages/legacy-agent-host/tests/runtime-activity.test.ts b/packages/legacy-agent-host/tests/runtime-activity.test.ts
+index 077ad7ea54..76480223b9 100644
+--- a/packages/legacy-agent-host/tests/runtime-activity.test.ts
++++ b/packages/legacy-agent-host/tests/runtime-activity.test.ts
+@@ -15,6 +15,7 @@ import { tmpdir } from 'node:os';
+ import { join } from 'node:path';
+ import { test } from 'node:test';
+ import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
++import { projectRuntimeActivity } from '../dist/composition/runtimeActivityProjection.js';
+ import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
+ import { RuntimeOwnerError } from '../dist/runtime/contracts.js';
+ import { runtimeDigest } from '../dist/runtime/identity.js';
+@@ -1067,6 +1068,53 @@ test('process diagnostics use the existing serialized event budget and storage d
+   assert.ok((await stat(f.path())).size <= f.store.activityLimits.maxBytes);
+ });
+ 
++
++test('typed thinking survives the original bounded journal cold read and projection without a provider', async (t) => {
++  const f = await setup(t), target = binding(), resource = runtimeDigest(target);
++  const thinking = {
++    kind: 'thinking', messageRef: 'TEST-message', block: 1, text: 'TEST retained thought', phase: 'complete',
++  };
++  const child = {
++    kind: 'subagent', childId: 'child-' + 'a'.repeat(64), parentToolRef: 'tool-' + 'b'.repeat(64),
++    phase: 'fact', fact: thinking,
++  };
++  const facts: RuntimeActivityRecord['events'][number]['data'][] = [
++    { ...thinking, privateNative: 'PRIVATE-source' }, child,
++  ];
++  const body = {
++    schemaVersion: 1 as const, binding: target, sequence: 2, writerIncarnation: 'host-1',
++    stateDigest: runtimeDigest({}),
++    events: facts.map((data, index) => ({
++      sequence: index + 1, eventId: resource + ':' + (index + 1),
++      inputId: 'TEST-input', operationRef: 'PRIVATE-operation', data,
++    })),
++  };
++  const retained: RuntimeActivityRecord = { ...body, digest: runtimeDigest(body) };
++  f.store.fenced(target, () => f.store.writeActivity(retained));
++  const originalBytes = await readFile(f.path(), 'utf8');
++  const cold = new FileRuntimeStore(f.root);
++  const read = cold.fenced(target, () => cold.readActivity(target));
++  assert.deepEqual(read, retained);
++  assert.ok(read);
++  const projected = projectRuntimeActivity({
++    memberId: target.memberId,
++    source: {
++      binding: target, cursor: { resource, hostIncarnation: 'cold-host', sequence: 2 },
++      retainedFrom: 1, events: read.events, hasMore: false,
++    },
++    nativeReady: false,
++  });
++  assert.ok(projected && typeof projected === 'object' && !Array.isArray(projected));
++  assert.deepEqual(projected.events, [
++    { sequence: 1, eventId: resource + ':1', inputId: 'TEST-input', data: thinking },
++    { sequence: 2, eventId: resource + ':2', inputId: 'TEST-input', data: child },
++  ]);
++  assert.ok(!JSON.stringify(projected).includes('PRIVATE-'));
++  assert.equal(await readFile(f.path(), 'utf8'), originalBytes);
++  assert.equal(cold.fenced(target, () => cold.readConversation(target)), undefined);
++  assert.equal(f.sessions.length, 0, 'read-side fixture does not create a provider or conversation cache');
++});
++
+ test('distinct Thinking retains original attribution without becoming text, conversation or state', async t => {
+   const f = await setup(t), owner = f.make(), { session, attribution } = await f.open(owner);
+   const before = owner.readSession(binding()).record!;
+diff --git a/packages/legacy-agent-host/tests/team-activity-read.test.ts b/packages/legacy-agent-host/tests/team-activity-read.test.ts
+index 881ec246b9..bb5eb306bd 100644
+--- a/packages/legacy-agent-host/tests/team-activity-read.test.ts
++++ b/packages/legacy-agent-host/tests/team-activity-read.test.ts
+@@ -379,3 +379,49 @@ test('large retained facts produce a partial bounded log rather than losing the
+   assert.ok(logs[0]!.events.length < 12);
+   assert.ok(logs[0]!.gaps.includes('bounded activity projection limit'));
+ });
++
++
++test('retained thinking keeps original task and child identities without duplicating messages or inventing usage', (t) => {
++  const f = fixture(t);
++  const thinking = {
++    kind: 'thinking', messageRef: 'TEST-message', block: 1, text: 'partial thought', phase: 'snapshot',
++  };
++  f.push(thinking);
++  f.push({ ...thinking, text: 'complete thought', phase: 'complete' });
++  const first = readTeamActivity(f.options, { memberName: 'alice' })[0]!;
++  assert.deepEqual(first.events.map((event) => event.data.kind), ['thinking', 'thinking']);
++  assert.equal(first.messageCount, 1);
++  assert.equal(first.lastOutputPreview, undefined, 'thinking is not ordinary conversation output');
++  f.push({ kind: 'text', messageRef: 'TEST-message', block: 2, text: 'answer', phase: 'complete' });
++  f.push({ ...thinking, messageRef: 'TEST-thinking-only', text: 'another thought', phase: 'complete' });
++  for (const child of ['a', 'c']) f.push({
++    kind: 'subagent', phase: 'fact', childId: 'child-' + child.repeat(64),
++    parentToolRef: 'tool-' + 'b'.repeat(64), fact: { ...thinking, phase: 'complete' },
++  });
++  const logs = readTeamActivity(f.options, { taskId: f.taskId });
++  assert.deepEqual(logs[0]!.events.map((event) => event.eventId), f.events.map((event) => event.eventId));
++  assert.deepEqual(logs[0]!.events.slice(-2).map((event) => event.data.childId), [
++    'child-' + 'a'.repeat(64), 'child-' + 'c'.repeat(64),
++  ]);
++  assert.equal(logs[0]!.messageCount, 2, 'output and thinking share a message; child messages stay separate');
++  assert.equal(logs[0]!.lastOutputPreview, 'answer');
++  const stats = summarizeTeamActivity('alice', logs);
++  assert.equal(stats.observedMessages, 2);
++  assert.equal(stats.inputTokens, null);
++  assert.equal(stats.outputTokens, null);
++  assert.equal(stats.costUsd, null);
++  const recovered = readTeamActivity({
++    ...f.options,
++    runtime: { ...f.options.runtime, readCapturedSession: () => ({ record: f.record, attached: false }) },
++  }, { taskId: f.taskId });
++  assert.deepEqual(recovered[0]!.events, logs[0]!.events);
++  assert.equal(recovered[0]!.isOngoing, false);
++  f.push({ ...thinking, text: 'PRIVATE-foreign thought' });
++  f.events.at(-1)!.operationRef = 'foreign-operation';
++  const refused = readTeamActivity(f.options, { taskId: f.taskId });
++  assert.equal(refused[0]!.events.length, 6);
++  assert.ok(refused[0]!.gaps.includes('unattributed input'));
++  assert.ok(!JSON.stringify(refused).includes('PRIVATE-'));
++  f.connection.revoke('human');
++  assert.throws(() => readTeamActivity(f.options, { memberName: 'alice' }), { code: 'forbidden' });
++});
+diff --git a/scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts b/scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts
+index 1bde37adb7..76f4e9aa4d 100644
+--- a/scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts
++++ b/scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts
+@@ -291,6 +291,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
+     const thoughtCopy = thoughtRow + ' button[title="Copy to clipboard"]';
+     await ui.scrollTo(thoughtCopy, 'original Thinking copy'); await ui.click(thoughtCopy, 'copy actual retained Thinking');
+     await ui.waitRead(`Boolean(document.querySelector(${literal(thoughtCopy + ' svg.lucide-check')}))`, 'Thinking clipboard write acknowledged');
++    options.assertOwnedRenderer();
+     assert.equal(await cdp.evaluate('navigator.clipboard.readText()'), thoughtText);
+     await ui.click(thoughtRow + ' [role="button"]', 'collapse original Thinking');
+     await ui.waitRead(`!document.querySelector(${literal(thoughtRow + ' [data-host-log-content]')})`, 'Thinking rich content collapses');
+@@ -545,6 +546,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
+     assert.equal(thought.operationRef, array(completedSession.inputs)[0]!.operationRef);
+     assert.deepEqual(diagnostic.data, { kind: 'process-output', stream: 'stderr', text: 'TEST standalone stderr' });
+     assert.equal(diagnostic.inputId, undefined); assert.equal(diagnostic.operationRef, undefined);
++    options.assertOwnedRenderer();
+     const savedLogs = record(await cdp.evaluate(`window.electronAPI.schedules.getRunLogs(${literal(LEGACY_SCHEDULE_ID)},${literal(completedRunId)})`));
+     const savedThought = String(savedLogs.stdout).split('\n').map(line => record(JSON.parse(line))).filter(row => row.uuid === thought.eventId);
+     assert.equal(savedThought.length, 1);
+@@ -563,6 +565,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
+     const thoughtCopy = thoughtRow + ' button[title="Copy to clipboard"]';
+     await ui.scrollTo(thoughtCopy, 'original scheduled Thinking copy'); await ui.click(thoughtCopy, 'copy scheduled Thinking');
+     await ui.waitRead(`Boolean(document.querySelector(${literal(thoughtCopy + ' svg.lucide-check')}))`, 'scheduled Thinking clipboard acknowledged');
++    options.assertOwnedRenderer();
+     assert.equal(await cdp.evaluate('navigator.clipboard.readText()'), record(thought.data).text);
+     await ui.scrollTo('[role="dialog"] pre', 'original scheduled stderr', String(savedLogs.stderr).trim(), 12, { requireCenterHit: true });
+     await ui.waitRead(`document.querySelector('[role="dialog"] pre')?.textContent===${literal(savedLogs.stderr)}`, 'saved stderr renders unchanged');
+diff --git a/scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts b/scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts
+index 74c3aaddba..7f224d52e4 100644
+--- a/scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts
++++ b/scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts
+@@ -91,6 +91,7 @@ export async function runDesktopV2ManagementUi(cdp: UiCdpPort, options: {
+           assert.ok(Date.now() < deadline, 'original default intent remains within its deadline');
+           const modelId = step === 'global-default' ? modelA : modelB;
+           const row = dialog + ' [data-testid=' + JSON.stringify('runtime-provider-model-row-' + modelId) + ']';
++          options.assertOwnedRenderer();
+           intentComplete = await cdp.evaluate('(() => { const rows=[...document.querySelectorAll(' +
+             desktopJsLiteral(row) + ')]; if(rows.length!==1)return false;' +
+             'const buttons=[...rows[0].querySelectorAll("button[aria-pressed]")]; if(buttons.length!==1)return false;' +
+diff --git a/scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts b/scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts
+index 7628e511b2..13229f20c9 100644
+--- a/scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts
++++ b/scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts
+@@ -188,7 +188,8 @@ test('original V2 default intent joins its selected saving row within the same r
+     pauses: number; finishes: number; begins: number; bindings: number; native: number; guards: number;
+     busy: boolean; selected: boolean; rowCount: number; buttonCount: number; width: number; revoked: boolean };
+   const setup = (step: string, settings: { initial?: Partial<State>;
+-    onRead?: (state: State) => void; onPause?: (state: State) => void } = {}) => {
++    onRead?: (state: State) => void; onPause?: (state: State) => void;
++    onCommands?: (state: State) => void } = {}) => {
+     const state: State = { now: 0, commands: 0, clicks: 0, scrolls: 0, reads: 0, pauses: 0,
+       finishes: 0, begins: 0, bindings: 0, native: 0, guards: 0, busy: true, selected: true,
+       rowCount: 1, buttonCount: 1, width: 10, revoked: false, ...settings.initial };
+@@ -216,7 +217,11 @@ test('original V2 default intent joins its selected saving row within the same r
+       '(function () {\n' + block + '\nreturn originalStep; })()', {
+         assert, desktopJsLiteral, desktopV2ProviderId: 'test-local', modelA, modelB,
+         dialog: '[role="dialog"]', authority, effects, Date: { now: () => state.now },
+-        commands: async () => { state.commands++; return state.commands === 1 ? [] : [receipt]; },
++        commands: async () => {
++          state.commands++;
++          settings.onCommands?.(state);
++          return state.commands === 1 ? [] : [receipt];
++        },
+         bindDesktopV2ManagementReceipt: (owner: unknown, rows: unknown[], command: unknown, intent: string) => {
+           assert.equal(owner, authority); assert.equal(rows[0], receipt);
+           assert.equal(command, receipt); assert.equal(intent, step); state.bindings++; return { evidence };
+@@ -284,6 +289,17 @@ test('original V2 default intent joins its selected saving row within the same r
+   await assert.rejects(revoked.run(), error => error === revoked.revoked);
+   assert.equal(revoked.state.clicks, 1); assert.equal(revoked.state.reads, 1);
+   assert.equal(revoked.state.finishes, 0); assert.equal(revoked.effects.length, 0);
++  for (const step of ['global-default', 'project-default']) {
++    const beforeRead = setup(step, { initial: { busy: false },
++      onCommands: state => { if (state.commands === 2) state.revoked = true; } });
++    await assert.rejects(beforeRead.run(), error => error === beforeRead.revoked);
++    assert.equal(beforeRead.state.commands, 2, 'owner is revoked by the original awaited receipt read');
++    assert.equal(beforeRead.state.clicks, 1);
++    assert.equal(beforeRead.state.reads, 0, 'no DOM evaluation after the receipt read revokes its owner');
++    assert.equal(beforeRead.state.finishes, 0);
++    assert.equal(beforeRead.state.bindings, 0);
++    assert.equal(beforeRead.effects.length, 0);
++  }
+   const ordinary = setup('project-test'); await ordinary.run();
+   assert.equal(ordinary.state.clicks, 1); assert.equal(ordinary.state.reads, 0); assert.equal(ordinary.state.pauses, 0);
+   assert.equal(ordinary.state.finishes, 1); assert.equal(ordinary.effects.length, 1);
+diff --git a/packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts b/packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts
+index 78b22adbb5..b98f057ce7 100644
+--- a/packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts
++++ b/packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts
+@@ -2,6 +2,7 @@ import { readOpenCodeInputModalities } from './readOpenCodeInputModalities.js';
+ import { captureOpenCodeExtraArgs } from '@agent-teams/provider-implementations/opencode';
+ import { capturedMcpSourceCurrent } from '../../mcp-catalog/capturedSource.js';
+ import { createHash, randomBytes } from 'node:crypto';
++import { channel } from 'node:diagnostics_channel';
+ import { realpathSync, statSync } from 'node:fs';
+ import { setTimeout as delay } from 'node:timers/promises';
+ import {
+@@ -24,6 +25,7 @@ import {
+ } from './openCodeMcpPolicy.js';
+ import { createTeamMcpTools } from '../../mcp/tools.js';
+ import { initialContextDigest } from '../../team-launch/context.js';
++import { managementDigest } from '../../management/identity.js';
+ import { selectedOpenCodeManagedLimits } from '../../composition/openCodeManagedPreferences.js';
+ 
+ import type {
+@@ -37,6 +39,7 @@ import type { OpenCodeMemberProfile } from '../../composition/runtimeProfile.js'
+ import type { TeamMcpCatalogReceipt } from '../../mcp/contracts.js';
+ 
+ const capabilities = ['text', 'tools', 'permission', 'interrupt', 'checkpoint'];
++const readinessRefusal = channel('agent-teams.legacy-host.first-refusal');
+ const record = (value: unknown): Record<string, unknown> => {
+   if (!value || typeof value !== 'object' || Array.isArray(value))
+     throw new Error('Invalid OpenCode configuration');
+@@ -197,6 +200,9 @@ export function createOpenCodeMemberProvider(
+   const contextDigest = initialContextDigest(context.instructions);
+   let allocated = false;
+   let nativeSessionId: string | undefined;
++  let openingStage: 'configuration' | 'server-launch' | 'native-ready' | 'startup-authority' |
++    'startup-configuration' | 'startup-delay' | 'session-authority' | 'session-create' | 'driver-readiness' = 'configuration';
++  let openingRefusalObserved = false;
+   // Pending calls, not a delivery queue: D readiness must recheck their media until native handoff.
+   const nativeMediaSubmits = new Set<Input>();
+   const abort = new AbortController();
+@@ -297,6 +303,7 @@ export function createOpenCodeMemberProvider(
+   let starting: Promise<void> | undefined;
+   const startServer = (): Promise<void> =>
+     (starting ??= (async () => {
++      openingStage = 'server-launch';
+       verifyNamespaces();
+       const child = custody.launch({
+         command: profile.executable.path,
+@@ -314,6 +321,7 @@ export function createOpenCodeMemberProvider(
+       const deadline = Date.now() + profile.limits.timeoutMs;
+       const api = client(abort.signal, deadline);
+       if (child instanceof OwnedProcessFacade) {
++        openingStage = 'native-ready';
+         const waiting = new AbortController();
+         const cancelWaiting = () => waiting.abort();
+         abort.signal.addEventListener('abort', cancelWaiting, { once: true });
+@@ -336,15 +344,18 @@ export function createOpenCodeMemberProvider(
+       }
+       // Retry only read-only startup qualification; never repeat a session-creation mutation.
+       for (;;) {
++        openingStage = 'startup-authority';
+         if (!context.isCurrent() || !context.canAllocate() || sealed)
+           throw new Error('OpenCode authority unavailable');
+         try {
++          openingStage = 'startup-configuration';
+           if (await verifyConfiguration(api)) break;
+         } catch {
+           /* Startup not proved yet. */
+         }
+         if (Date.now() >= deadline || !custody.isRunning())
+           throw new Error('OpenCode configuration unavailable');
++        openingStage = 'startup-delay';
+         await delay(Math.min(25, Math.max(1, deadline - Date.now())), undefined, {
+           signal: abort.signal,
+         });
+@@ -355,6 +366,7 @@ export function createOpenCodeMemberProvider(
+     if (sealed || !context.isCurrent() || !nativeSessionId || !capturedMcpSourceCurrent(profile))
+       return false;
+     await startServer();
++    openingStage = 'driver-readiness';
+     if (!current()) return false;
+     const api = client(
+       AbortSignal.any([signal, abort.signal]),
+@@ -395,6 +407,7 @@ export function createOpenCodeMemberProvider(
+   const native = createOpenCodeV1DriverFactory({
+     capabilities,
+     resolveConfiguration: async (request): Promise<OpenCodeV1DriverConfig | undefined> => {
++      openingStage = 'configuration';
+       if (
+         allocated ||
+         sealed ||
+@@ -419,9 +432,11 @@ export function createOpenCodeMemberProvider(
+         nativeSessionId = restoredSessionId;
+       } else {
+         await startServer();
++        openingStage = 'session-authority';
+         if (!context.canAllocate() || !current())
+           throw new Error('OpenCode allocation unavailable');
+         const api = client(abort.signal, Date.now() + profile.limits.timeoutMs);
++        openingStage = 'session-create';
+         const session = await api.createSession({
+           title: `Team member ${profile.memberId}`,
+         });
+@@ -429,6 +444,7 @@ export function createOpenCodeMemberProvider(
+           throw new Error('OpenCode session unavailable');
+         nativeSessionId = session.id;
+       }
++      openingStage = 'driver-readiness';
+       return {
+         endpoint: profile.endpoint,
+         version: v1ProtocolRevision,
+@@ -516,6 +532,15 @@ export function createOpenCodeMemberProvider(
+         };
+         return { ...opened, driver };
+       } catch {
++        if (!openingRefusalObserved) {
++          openingRefusalObserved = true;
++          try { if (readinessRefusal.hasSubscribers) {
++            const { backendId, teamId, runId, memberId, generation } = context.endpoint.binding;
++            readinessRefusal.publish({ kind: 'opencode-open',
++              bindingDigest: managementDigest({ backendId, teamId, runId, memberId, generation }),
++              phase: openingStage, reason: 'threw' });
++          } } catch { /* Original TEST subscriber handles its own errors; preserve cleanup. */ }
++        }
+         evidence?.seal();
+         sealed = true;
+         ready = false;
+diff --git a/packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts b/packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts
+index b9dd573db2..08552af73c 100644
+--- a/packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts
++++ b/packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts
+@@ -1,4 +1,5 @@
+ import { channel } from 'node:diagnostics_channel';
++import { performance } from 'node:perf_hooks';
+ import { z } from 'zod';
+ import { replaceRosterPayloadSchema } from '../team/rosterSchema.js';
+ import { teamModelProbeSelectionSchema } from './teamLaunchModelProbe.js';
+@@ -338,9 +339,18 @@ export function inspectMemberModelReadiness(options: {
+     phase: options.phase ?? 'preclaim' });
+   const observedAccount: { value?: NonNullable<ReturnType<typeof captureOpenCodeProbeAccount>> } = {};
+   let refusalObserved = false;
++  const currentCalls = { count: 0, totalMs: 0, maxMs: 0, lastMs: null as number | null, truncated: false };
+   const current = () => {
+     let phase = 'initial-authority', reason: 'held' | 'threw' = 'threw';
+     let cutoff: number | null = null, observedAt: number | null = null;
++    let started: number | undefined, failed = false;
++    try {
++      if (readinessRefusal.hasSubscribers && !refusalObserved) {
++        currentCalls.lastMs = null;
++        if (currentCalls.count < 4096) { currentCalls.count++; started = performance.now(); }
++        else currentCalls.truncated = true;
++      }
++    } catch { currentCalls.truncated = true; }
+     try {
+       options.assertCurrent(); phase = 'read-consumer';
+       const current = launch.readModelReadiness(selected), consumer = current.consumer;
+@@ -368,16 +378,23 @@ export function inspectMemberModelReadiness(options: {
+       if (runtimeDigest(observed) !== runtimeDigest(current.reference)) { reason = 'held'; held(); }
+       phase = 'final-authority'; options.assertCurrent();
+     } catch (error) {
+-      if (!refusalObserved) {
++      failed = true; throw error;
++    } finally {
++      if (started !== undefined) try {
++        const elapsed = Math.round(performance.now() - started);
++        if (!Number.isSafeInteger(elapsed) || elapsed < 0 || !Number.isSafeInteger(currentCalls.totalMs + elapsed))
++          currentCalls.truncated = true;
++        else { currentCalls.totalMs += elapsed; currentCalls.maxMs = Math.max(currentCalls.maxMs, elapsed); currentCalls.lastMs = elapsed; }
++      } catch { currentCalls.truncated = true; }
++      if (failed && !refusalObserved) {
+         refusalObserved = true;
+         try { if (readinessRefusal.hasSubscribers) readinessRefusal.publish({
+           kind: 'consumer', actionDigest: runtimeDigest(original.consumer.actionId),
+           groupDigest: runtimeDigest({ commandDigest: runtimeDigest(original.consumer.groupCommandId ?? null),
+             contextDigest: runtimeDigest(original.reference?.context ?? null) }), bindingDigest: managementDigest(selected.binding),
+-          consumerId: original.consumer.consumerId, phase, reason, cutoff, observedAt,
+-        }); } catch { /* Passive TEST observation cannot replace the original refusal. */ }
++          consumerId: original.consumer.consumerId, phase, reason, cutoff, observedAt, currentCalls: { ...currentCalls },
++        }); } catch { /* Original TEST subscriber handles its own errors; preserve this refusal. */ }
+       }
+-      throw error;
+     }
+   };
+   current();
+diff --git a/packages/legacy-agent-host/tests/opencode-member-provider.test.ts b/packages/legacy-agent-host/tests/opencode-member-provider.test.ts
+index 40e2f39d04..9dbb76223a 100644
+--- a/packages/legacy-agent-host/tests/opencode-member-provider.test.ts
++++ b/packages/legacy-agent-host/tests/opencode-member-provider.test.ts
+@@ -1,5 +1,6 @@
+ import assert from 'node:assert/strict';
+ import { createHash } from 'node:crypto';
++import { channel } from 'node:diagnostics_channel';
+ import { ChildProcess } from 'node:child_process';
+ import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
+ import { tmpdir } from 'node:os';
+@@ -31,6 +32,8 @@ const { runtimeProfileSchema }: typeof import('../src/composition/runtimeProfile
+   );
+ const { OwnedProcessFacade }: typeof import('../src/owned-process/processFacade.ts') =
+   await import(sourceMode ? '../src/owned-process/processFacade.ts' : '../dist/owned-process/processFacade.js');
++const { managementDigest }: typeof import('../src/management/identity.ts') =
++  await import(sourceMode ? '../src/management/identity.ts' : '../dist/management/identity.js');
+ const record = (value: unknown): Record<string, unknown> => {
+   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
+   return value as Record<string, unknown>;
+@@ -1006,6 +1009,9 @@ for (const mode of ['prepare-rejected', 'owner-revoked', 'seal', 'pending-deadli
+       if (delayedAck) t.mock.method(Date, 'now', () => now);
+       const native = suspendedNativeFixture();
+       const f = fixture({ suspendedNative: native, unknownCleanup: mode === 'unknown-cleanup' });
++      const diagnostic = channel('agent-teams.legacy-host.first-refusal'), observations: unknown[] = [];
++      const observe = (value: unknown) => { observations.push(value); };
++      diagnostic.subscribe(observe); t.after(() => { diagnostic.unsubscribe(observe); });
+       const opening = f.provider.factory.open(f.context.request);
+       const outcome = opening.then(value => ({ kind: 'opened' as const, value }),
+         (error: unknown) => ({ kind: 'failed' as const, error }));
+@@ -1037,6 +1043,10 @@ for (const mode of ['prepare-rejected', 'owner-revoked', 'seal', 'pending-deadli
+         assert.equal(readySettled, false, 'abort/cutoff does not await unresolved native preparation');
+       assert.deepEqual(f.reads, []); assert.deepEqual(f.writes, []);
+       assert.equal(f.launches.length, 1); assert.equal(f.cleanup(), 1);
++      const { backendId, teamId, runId, memberId, generation } = f.context.endpoint.binding;
++      assert.deepEqual(observations, [{ kind: 'opencode-open',
++        bindingDigest: managementDigest({ backendId, teamId, runId, memberId, generation }),
++        phase: 'native-ready', reason: 'threw' }]);
+       assert.equal(f.running(), false); assert.equal(f.provider.isReady(), false);
+       native.finish();
+       if (delayedAck) assert.equal(await native.child().ready, native.native);
+@@ -1047,5 +1057,26 @@ for (const mode of ['prepare-rejected', 'owner-revoked', 'seal', 'pending-deadli
+       assert.equal(native.calls.includes('resume-ack'), delayedAck);
+       assert.equal(native.child().exitCode, null, 'refusal does not invent native root exit');
+       assert.equal(await f.provider.cleanup(), mode !== 'unknown-cleanup');
++      assert.equal(observations.length, 1, 'late completion/cleanup does not invent another opening refusal');
+     });
+ }
++
++test('OpenCode first opening refusal distinguishes the original post-ready allocation guard', async t => {
++  const f = fixture(), diagnostic = channel('agent-teams.legacy-host.first-refusal'), observations: unknown[] = [];
++  const observe = (value: unknown) => { observations.push(value); };
++  diagnostic.subscribe(observe);
++  t.after(async () => { diagnostic.unsubscribe(observe); f.provider.seal(); assert.equal(await f.provider.cleanup(), true); });
++  f.beforeCatalogReply(() => f.forbid());
++  await assert.rejects(f.provider.factory.open(f.context.request), { message: 'OpenCode member unavailable' });
++  assert.deepEqual(f.reads, ['/config', '/agent', '/config/providers']);
++  assert.deepEqual(f.writes, []); assert.equal(f.launches.length, 1); assert.equal(f.cleanup(), 1);
++  assert.equal(f.running(), false); assert.equal(f.provider.isReady(), false);
++  const { backendId, teamId, runId, memberId, generation } = f.context.endpoint.binding;
++  assert.deepEqual(observations, [{ kind: 'opencode-open',
++    bindingDigest: managementDigest({ backendId, teamId, runId, memberId, generation }),
++    phase: 'session-authority', reason: 'threw' }]);
++  await assert.rejects(f.provider.factory.open(f.context.request), { message: 'OpenCode member unavailable' });
++  assert.equal(observations.length, 1, 'a repeated open cannot replace the first original refusal');
++  assert.equal(f.cleanup(), 2); assert.equal(f.launches.length, 1);
++  assert.deepEqual(f.reads, ['/config', '/agent', '/config/providers']); assert.deepEqual(f.writes, []);
++});
+diff --git a/packages/legacy-agent-host/tests/runtime-team-host.test.ts b/packages/legacy-agent-host/tests/runtime-team-host.test.ts
+index c3f23b9a6b..331ed90ca8 100644
+--- a/packages/legacy-agent-host/tests/runtime-team-host.test.ts
++++ b/packages/legacy-agent-host/tests/runtime-team-host.test.ts
+@@ -3807,7 +3807,7 @@ async function sourceStandaloneDeadlineFixture(input: {
+ }) {
+   const clock = await sourceReadinessDeadlineFixture({ now: input.now ?? 0 });
+   const { stripTypeScriptTypes } = await import('node:module');
+-  const begin = '      const before = first.jobs.length;\n      const standaloneStarted = performance.now();';
++  const begin = '      const before = first.jobs.length;';
+   const end = "\n      const jobs = first.jobs.slice(before); assertSourceJobs(jobs, b.source, 'B', 'runtime', fixture.profile.teams[1]!.binding.teamId);";
+   for (const marker of [begin, end]) assert.equal(clock.source.split(marker).length, 2);
+   const body = stripTypeScriptTypes(clock.source.slice(clock.source.indexOf(begin), clock.source.indexOf(end)));
+@@ -3873,22 +3873,22 @@ async function sourceStandaloneDeadlineFixture(input: {
+   };
+ }
+ 
+-test('source standalone refuses expiry during the poll handoff after Start consumed its captured recipe budget', async () => {
+-  const f = await sourceStandaloneDeadlineFixture({ ackMs: 89_990, handoffPause: 20 });
++test('source standalone refuses expiry during the poll handoff after its original post-ACK 15s budget', async () => {
++  const f = await sourceStandaloneDeadlineFixture({ ackMs: 100, handoffPause: 15_020 });
+   await assert.rejects(f.run(), /Original standalone completion/);
+-  assert.deepEqual(f.counts(), { now: 90_010, starts: 1, reads: 0 });
++  assert.deepEqual(f.counts(), { now: 15_120, starts: 1, reads: 0 });
+   assert.deepEqual(f.delays, []); assert.deepEqual(f.trace, ['start', 'capture', 'recipe']);
+-  assert.deepEqual(f.argumentsSeen, [[undefined, 90_000]]);
++  assert.deepEqual(f.argumentsSeen, [[undefined, 15_100]]);
+   assert.equal((f.evidence.lastStandaloneCompletion as Record<string, unknown>).readCount, 0);
+ });
+ 
+-test('source standalone refuses a completed result delivered after the captured absolute deadline', async () => {
+-  const f = await sourceStandaloneDeadlineFixture({ ackMs: 89_900, handoffPause: 50, readCost: 60 });
++test('source standalone refuses a completed result delivered after its original post-ACK absolute deadline', async () => {
++  const f = await sourceStandaloneDeadlineFixture({ ackMs: 100, handoffPause: 14_950, readCost: 60 });
+   await assert.rejects(f.run(), /Original standalone completion/);
+-  assert.deepEqual(f.counts(), { now: 90_010, starts: 1, reads: 1 }); assert.deepEqual(f.delays, []);
+-  assert.deepEqual(f.argumentsSeen, [[undefined, 90_000]]);
++  assert.deepEqual(f.counts(), { now: 15_110, starts: 1, reads: 1 }); assert.deepEqual(f.delays, []);
++  assert.deepEqual(f.argumentsSeen, [[undefined, 15_100]]);
+   const completion = f.evidence.lastStandaloneCompletion as Record<string, unknown>;
+-  assert.equal(completion.readCount, 1); assert.equal(completion.elapsedMs, 110);
++  assert.equal(completion.readCount, 1); assert.equal(completion.elapsedMs, 15_010);
+   assert.equal((completion.lastRunRead as Record<string, unknown>).phase, 'completed');
+ });
+ 
+diff --git a/packages/legacy-agent-host/tests/saved-team-model-probe.test.ts b/packages/legacy-agent-host/tests/saved-team-model-probe.test.ts
+index bc0913e775..6a668daeaf 100644
+--- a/packages/legacy-agent-host/tests/saved-team-model-probe.test.ts
++++ b/packages/legacy-agent-host/tests/saved-team-model-probe.test.ts
+@@ -1,5 +1,6 @@
+ import assert from 'node:assert/strict';
+ import { createHash } from 'node:crypto';
++import { channel } from 'node:diagnostics_channel';
+ import {
+   mkdirSync,
+   lstatSync,
+@@ -1571,6 +1572,9 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
+       }
+       return target(selected);
+     } };
++    const diagnostic = channel('agent-teams.legacy-host.first-refusal'), observations: unknown[] = [];
++    const observe = (value: unknown) => { observations.push(value); };
++    if (change === 'unchanged') diagnostic.subscribe(observe);
+     const inspection = { management: manager, launch, entry, hostIncarnation: 'TEST-retained-host',
+       assertCurrent() { if (!active) throw Error('TEST original member owner revoked'); } };
+     const read = (): ReturnType<TeamLaunchOwner['readModelReadiness']> => launch.readModelReadiness({ binding, configRevision: member.configRevision,
+@@ -1603,6 +1607,27 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
+       assert.deepEqual(inspected.reference, selectedReference);
+       assert.deepEqual(read(), pending, 'readonly inspection leaves consumption to its existing owner');
+       inspected.assertCurrent();
++      if (change === 'unchanged') {
++        const originalCheck = inspection.assertCurrent, failure = Error('TEST exact original current refusal');
++        inspection.assertCurrent = () => { throw failure; };
++        try {
++          assert.throws(inspected.assertCurrent, error => error === failure);
++          assert.throws(inspected.assertCurrent, error => error === failure);
++        } finally { inspection.assertCurrent = originalCheck; }
++        assert.equal(observations.length, 1, 'only the first failure of this actual inspector is observed');
++        const observed = observations[0] as Record<string, unknown>;
++        assert.equal(observed.kind, 'consumer'); assert.equal(observed.phase, 'initial-authority');
++        assert.equal(observed.reason, 'threw'); assert.equal(observed.bindingDigest, managementDigest(binding));
++        assert.equal(observed.consumerId, pending.consumer.consumerId);
++        assert.ok(observed.currentCalls && typeof observed.currentCalls === 'object', 'actual current calls retain bounded timings');
++        const timing = observed.currentCalls as { count: number; totalMs: number; maxMs: number; lastMs: number | null; truncated: boolean };
++        assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'totalMs', 'truncated']);
++        assert.equal(timing.count, 3, 'initial inspection, explicit check, and first failed check are measured once');
++        assert.equal(timing.truncated, false);
++        assert.ok([timing.totalMs, timing.maxMs, timing.lastMs].every(value => Number.isSafeInteger(value) && value! >= 0));
++        assert.ok(timing.totalMs >= timing.maxMs && timing.maxMs >= timing.lastMs!);
++        assert.deepEqual(read(), pending, 'observation and the unchanged error never consume readiness');
++      }
+       if (change === 'shadowed-native') {
+         mkdirSync(shadowDirectory, { mode: 0o700 });
+         const shadowConfig = (key: string) => JSON.stringify({ provider: { [providerId]: {
+@@ -1637,6 +1662,7 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
+       assert.equal(runs, 1); assert.equal(closes, 1);
+       assert.equal(allocations, 0); assert.equal(businessOpens, 0);
+     } finally {
++      diagnostic.unsubscribe(observe);
+       launch.seal();
+       if (change === 'shadowed-native') rmSync(shadowDirectory, { recursive: true, force: true });
+       rmSync(consulted, { force: true });
+diff --git a/tools/owned-process-broker/nativeEmulatedSourceProfile.ts b/tools/owned-process-broker/nativeEmulatedSourceProfile.ts
+index 91098e2083..ae066b7c62 100644
+--- a/tools/owned-process-broker/nativeEmulatedSourceProfile.ts
++++ b/tools/owned-process-broker/nativeEmulatedSourceProfile.ts
+@@ -142,7 +142,7 @@ if(argv.length===1&&argv[0]==='--version'){
+   });
+   const cli = realpathSync(fileURLToPath(new URL('../../packages/legacy-agent-host/dist/cli.js', import.meta.url)));
+   const hostEntry = join(root, 'TEST-source-host.mjs');
+-  const diagnosticPins = ['owned-process/HostWindowsLaunch', 'composition/prepareTeamModelReadiness', 'management/ModelProbeOwner', 'composition/projectRuntimeMember']
++  const diagnosticPins = ['owned-process/HostWindowsLaunch', 'composition/prepareTeamModelReadiness', 'management/ModelProbeOwner', 'composition/projectRuntimeMember', 'adapters/providers/OpenCodeMemberProvider']
+     .flatMap(name => (['src', 'dist'] as const).map(directory => {
+       const path = fileURLToPath(new URL(`../../packages/legacy-agent-host/${directory}/${name}${directory === 'src' ? '.ts' : '.js'}`, import.meta.url));
+       assert.equal(realpathSync(path), path); return { path, sha256: fileHash(path) };
+@@ -158,7 +158,8 @@ function validateSourceRefusal(value, persisted) {
+   assert.ok(Object.getOwnPropertySymbols(value).length === 0 && Object.values(Object.getOwnPropertyDescriptors(value)).every(row => 'value' in row));
+   const hash = raw => typeof raw === 'string' && /^[a-f0-9]{64}$/.test(raw), clock = raw => typeof raw === 'number' && Number.isSafeInteger(raw) && raw >= 0;
+   const fields = { native: 'capability phase reason dispatched staged rootCaptured deadlineExpired',
+-    consumer: 'actionDigest groupDigest bindingDigest consumerId phase reason cutoff observedAt',
++    consumer: 'actionDigest groupDigest bindingDigest consumerId phase reason cutoff observedAt currentCalls',
++    'opencode-open': 'bindingDigest phase reason',
+     reference: 'commandDigest contextDigest phase reason probeCutoff probeNow scopeCutoff scopeNow preparationCutoff preparationNow', limit: '' };
+   assert.ok(typeof value.kind === 'string' && Object.hasOwn(fields, value.kind));
+   const keys = fields[value.kind]; assert.ok(typeof keys === 'string'); assert.deepEqual(Object.keys(value).sort(), ['kind', ...keys.split(' ').filter(Boolean), ...(persisted ? ['ordinal'] : [])].sort());
+@@ -170,8 +171,22 @@ function validateSourceRefusal(value, persisted) {
+     assert.ok('sealed current-false current-threw launch-deadline refused unknown result-mismatch preparation-failed'.split(' ').includes(value.reason));
+     assert.ok(['dispatched', 'staged', 'rootCaptured'].every(key => typeof value[key] === 'boolean'));
+     assert.equal(value.deadlineExpired, value.reason === 'launch-deadline' ? true : null);
++  } else if (value.kind === 'opencode-open') {
++    assert.ok(hash(value.bindingDigest)); assert.equal(value.reason, 'threw');
++    assert.ok('configuration server-launch native-ready startup-authority startup-configuration startup-delay session-authority session-create driver-readiness'.split(' ').includes(value.phase));
+   } else {
+     assert.ok(value.reason === 'held' || value.reason === 'threw'); const consumer = value.kind === 'consumer';
++    if (consumer) {
++      const timing = value.currentCalls;
++      assert.ok(timing && typeof timing === 'object' && !Array.isArray(timing) && [Object.prototype, null].includes(Object.getPrototypeOf(timing)));
++      assert.ok(Object.getOwnPropertySymbols(timing).length === 0 && Object.values(Object.getOwnPropertyDescriptors(timing)).every(row => 'value' in row));
++      assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'totalMs', 'truncated']);
++      assert.ok(clock(timing.count) && timing.count <= 4096 && clock(timing.totalMs) && clock(timing.maxMs) && timing.maxMs <= timing.totalMs);
++      assert.equal(typeof timing.truncated, 'boolean');
++      assert.ok(timing.lastMs === null || clock(timing.lastMs) && timing.lastMs <= timing.maxMs);
++      if (timing.count === 0) assert.ok(timing.totalMs === 0 && timing.maxMs === 0 && timing.lastMs === null);
++      else if (!timing.truncated) assert.notEqual(timing.lastMs, null);
++    }
+     assert.ok((consumer ? ['actionDigest', 'groupDigest', 'bindingDigest', 'consumerId'] : ['commandDigest', 'contextDigest']).every(key => hash(value[key])));
+     assert.ok((consumer ? 'initial-authority read-consumer identity continuation requirements cutoff reference equality final-authority' :
+       'read inspect admission target scope retired completion probe-expiry scope-cutoff preparation-expiry origin purpose readiness account projection').split(' ').includes(value.phase));
+@@ -243,9 +258,7 @@ await import(${JSON.stringify(pathToFileURL(cli).href)});
+     cwd: root, env: { HOME: join(root, 'host-home'), TMPDIR: join(root, 'host-tmp'), TEMP: join(root, 'host-tmp'),
+       TMP: join(root, 'host-tmp'), SystemRoot: systemRoot, PATH: [dirname(node), join(systemRoot, 'System32')].join(';'),
+       LEGACY_AGENT_HOST_PROFILE_PATH: profilePath, LEGACY_AGENT_HOST_PROFILE_SHA256: fileHash(profilePath) },
+-    // Match the existing non-V2 Desktop caller for aggregate OpenCode preparation.
+-    startupTimeoutMs: 10000, requestTimeoutMs: provider === 'opencode' ? 60000 : 15000,
+-    writeTimeoutMs: 5000, shutdownTimeoutMs: 1000 };
++    startupTimeoutMs: 10000, requestTimeoutMs: 15000, writeTimeoutMs: 5000, shutdownTimeoutMs: 1000 };
+   const owner = { ownerId, revision: profile.owner.revision };
+   const descriptor: DesktopBackendDescriptor = { schemaVersion: 1, defaultOwner: owner,
+     owners: [{ ...owner, storageRoot: profile.owner.storageRoot, profile: host }],
+diff --git a/tools/owned-process-broker/nativeEmulatedSourceScenario.ts b/tools/owned-process-broker/nativeEmulatedSourceScenario.ts
+index 296e4ccab2..dd1e8cd2f1 100644
+--- a/tools/owned-process-broker/nativeEmulatedSourceScenario.ts
++++ b/tools/owned-process-broker/nativeEmulatedSourceScenario.ts
+@@ -71,7 +71,8 @@ function validateSourceRefusal(value: Record<string, unknown>, persisted: boolea
+   assert.ok(Object.getOwnPropertySymbols(value).length === 0 && Object.values(Object.getOwnPropertyDescriptors(value)).every(row => 'value' in row));
+   const hash = (raw: unknown) => typeof raw === 'string' && /^[a-f0-9]{64}$/.test(raw), clock = (raw: unknown) => typeof raw === 'number' && Number.isSafeInteger(raw) && raw >= 0;
+   const fields: Record<string, string> = { native: 'capability phase reason dispatched staged rootCaptured deadlineExpired',
+-    consumer: 'actionDigest groupDigest bindingDigest consumerId phase reason cutoff observedAt',
++    consumer: 'actionDigest groupDigest bindingDigest consumerId phase reason cutoff observedAt currentCalls',
++    'opencode-open': 'bindingDigest phase reason',
+     reference: 'commandDigest contextDigest phase reason probeCutoff probeNow scopeCutoff scopeNow preparationCutoff preparationNow', limit: '' };
+   assert.ok(typeof value.kind === 'string' && Object.hasOwn(fields, value.kind));
+   const keys = fields[value.kind]; assert.ok(typeof keys === 'string'); assert.deepEqual(Object.keys(value).sort(), ['kind', ...keys.split(' ').filter(Boolean), ...(persisted ? ['ordinal'] : [])].sort());
+@@ -83,8 +84,22 @@ function validateSourceRefusal(value: Record<string, unknown>, persisted: boolea
+     assert.ok('sealed current-false current-threw launch-deadline refused unknown result-mismatch preparation-failed'.split(' ').includes(value.reason));
+     assert.ok(['dispatched', 'staged', 'rootCaptured'].every(key => typeof value[key] === 'boolean'));
+     assert.equal(value.deadlineExpired, value.reason === 'launch-deadline' ? true : null);
++  } else if (value.kind === 'opencode-open') {
++    assert.ok(hash(value.bindingDigest)); assert.equal(value.reason, 'threw');
++    assert.ok('configuration server-launch native-ready startup-authority startup-configuration startup-delay session-authority session-create driver-readiness'.split(' ').includes(value.phase));
+   } else {
+     assert.ok(value.reason === 'held' || value.reason === 'threw'); const consumer = value.kind === 'consumer';
++    if (consumer) {
++      const timing = object(value.currentCalls);
++      assert.ok(timing && typeof timing === 'object' && !Array.isArray(timing) && [Object.prototype, null].includes(Object.getPrototypeOf(timing)));
++      assert.ok(Object.getOwnPropertySymbols(timing).length === 0 && Object.values(Object.getOwnPropertyDescriptors(timing)).every(row => 'value' in row));
++      assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'totalMs', 'truncated']);
++      assert.ok(clock(timing.count) && (timing.count as number) <= 4096 && clock(timing.totalMs) && clock(timing.maxMs) && (timing.maxMs as number) <= (timing.totalMs as number));
++      assert.equal(typeof timing.truncated, 'boolean');
++      assert.ok(timing.lastMs === null || clock(timing.lastMs) && (timing.lastMs as number) <= (timing.maxMs as number));
++      if (timing.count === 0) assert.ok(timing.totalMs === 0 && timing.maxMs === 0 && timing.lastMs === null);
++      else if (!timing.truncated) assert.notEqual(timing.lastMs, null);
++    }
+     assert.ok((consumer ? ['actionDigest', 'groupDigest', 'bindingDigest', 'consumerId'] : ['commandDigest', 'contextDigest']).every(key => hash(value[key])));
+     assert.ok((consumer ? 'initial-authority read-consumer identity continuation requirements cutoff reference equality final-authority' :
+       'read inspect admission target scope retired completion probe-expiry scope-cutoff preparation-expiry origin purpose readiness account projection').split(' ').includes(value.phase));
+@@ -411,8 +426,6 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
+         assert.equal(object(selected[0]!.attempt).claimed, false);
+         const timeoutMs = member.timeoutMs;
+         assert.ok(typeof timeoutMs === 'number' && Number.isSafeInteger(timeoutMs) && timeoutMs > 0);
+-        // Start and its acknowledgement consume the original captured member budget.
+-        memberReadinessDeadline = performance.now() + timeoutMs;
+       }
+       if (provider === 'opencode') {
+         // Reuse the original Main aggregate phases with this fixture's private native inputs.
+@@ -454,6 +467,8 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
+         unwrap(await router.request(handle, { commandId, method: 'team.launch.start', payload,
+           guard, requestBudget: budget, localModelReadinessOrigin: createReadinessPreparation(origin, budget) }));
+       } else await first.rpc(team, 'team.launch.start', commandId, payload);
++      // Original readiness observation starts once after the Start acknowledgement.
++      if (provider !== 'claude') memberReadinessDeadline = performance.now() + 15000;
+       let view: Record<string, unknown> = {};
+       const readiness = { source: sourceRef(source), image, launchId, readCount: 0, elapsedMs: 0,
+         lastRuntimeRead: null as Record<string, unknown> | null };
+@@ -584,8 +599,8 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
+           ...(provider === 'claude' ? { effort: 'low', resolvedFastMode: false } : {}) },
+         ...(provider === 'claude' ? { maxTurns: 6, maxBudgetUsd: 0.25 } : {}) };
+       const before = first.jobs.length;
+-      const standaloneStarted = performance.now();
+       await first.rpc(1, 'schedule.run.start', scheduled.runId, scheduled);
++      const standaloneStarted = performance.now();
+       let standaloneDeadline: number | undefined;
+       if (provider === 'codex') {
+         const budgetCapture = readScheduledRunCapture(new TeamOwnerStore(fixture.profile.owner.storageRoot,
+@@ -596,8 +611,8 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
+         const recipe = resolveRuntimeRecipe(fixture.profile.runtime, fixture.profile.teams[1]!.binding.teamId,
+           budgetCapture.memberId, scheduled.config.providerId);
+         assert.equal(runtimeDigest(recipe), budgetCapture.recipeDigest);
+-        // Bound this TEST observation by the original recipe, including Start and acknowledgement.
+-        standaloneDeadline = standaloneStarted + recipe.limits.timeoutMs;
++        // The original post-ACK observation includes these captured-source checks.
++        standaloneDeadline = standaloneStarted + 15000;
+       }
+       let completed: Record<string, unknown> = {};
+       const completion = { source: sourceRef(b.source), runId: scheduled.runId, scheduleId: scheduled.scheduleId,
+@@ -750,6 +765,10 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
+         assert.equal(matches.length, 1); return { row, launch: matches[0]! };
+       });
+       const observations = records.map(row => {
++        if (row.kind === 'opencode-open') {
++          const matches = diagnosticLaunches.filter(value => value.bindingDigests.includes(text(row.bindingDigest)));
++          assert.equal(matches.length, 1); return { ...row, launchId: matches[0]!.launchId, source: matches[0]!.source };
++        }
+         if (row.kind === 'native') { const matches = epochs.flatMap(epoch => epoch.jobs).filter(job => job.capability === row.capability);
+           assert.equal(matches.length, 1); assert.ok(matches[0]!.origin); const { capability: _capability, ...observed } = row;
+           return { ...observed, source: sourceRef(matches[0]!.origin) }; }

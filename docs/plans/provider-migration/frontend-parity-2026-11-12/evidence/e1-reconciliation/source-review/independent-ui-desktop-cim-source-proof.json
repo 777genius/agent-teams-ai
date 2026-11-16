@@ -1,0 +1,482 @@
+{
+  "schema": "TEST-independent-source-preservation-review-v1",
+  "createdAtUTC": "2026-11-16T06:19:43.758681+00:00",
+  "reviewer": "ui_failures",
+  "sourceBase": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "incomingHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "incomingTree": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+  "incomingParents": [
+    "3575740e9251076fe0bab4ddf10b17bb232038d4",
+    "953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+  ],
+  "scopePaths": [
+    {
+      "path": "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
+      "before": {
+        "bytes": 14495,
+        "lines": 357,
+        "blob": "c30094a87db542547a5741bb94930a7dd99e4aaf",
+        "sha256": "0b81fa8e8939959d23bbabdbdd30104dd4a9dd825304e6a4111ff536a0a03718"
+      },
+      "after": {
+        "bytes": 14513,
+        "lines": 358,
+        "blob": "fde63957a08c0b076bd50ae272115737c4a4af19",
+        "sha256": "7f5c23b48db6fcb519d3a8837ad77688851c21419c5ab45183632a2600c4bc77"
+      },
+      "additions": 2,
+      "deletions": 1,
+      "reversibleFullTextComparison": true,
+      "commonArtifactRoster": true,
+      "windowsArtifactRoster": true,
+      "explicitFastLint93": false
+    },
+    {
+      "path": "src/renderer/components/ui/MentionableTextarea.tsx",
+      "before": {
+        "bytes": 52237,
+        "lines": 1431,
+        "blob": "3589e26ff85efb370577bd2d8b404fb62bd63fdb",
+        "sha256": "c55440246f2967ca8759102ee54be1c7832412ff2c5a453efdb3b0fa4e6e73ea"
+      },
+      "after": {
+        "bytes": 52375,
+        "lines": 1431,
+        "blob": "94a360626de2ee67ceac964e3fd8529d345e3843",
+        "sha256": "12bd4d337c50ac6308e72e583f29b791be3c9effe7b8b71dcdefa2cc9676133a"
+      },
+      "additions": 4,
+      "deletions": 4,
+      "reversibleFullTextComparison": true,
+      "commonArtifactRoster": false,
+      "windowsArtifactRoster": false,
+      "explicitFastLint93": false
+    },
+    {
+      "path": "test/renderer/components/team/dialogs/TaskCommentInput.test.tsx",
+      "before": {
+        "bytes": 7077,
+        "lines": 203,
+        "blob": "896779479753aaa7c924e1273e4713b2d059e7b4",
+        "sha256": "db1d3ab1b06ef0962511ad956f4c4c216774ed8f8808043891e8ab0e01c82725"
+      },
+      "after": {
+        "bytes": 14830,
+        "lines": 408,
+        "blob": "4b81622262f5f690d1c5e17dfc289f27cbb80b70",
+        "sha256": "b3e0de71f3d3194015e98f2afc68819375e363bbd230d5283721fcce1d418c56"
+      },
+      "additions": 218,
+      "deletions": 13,
+      "reversibleFullTextComparison": true,
+      "commonArtifactRoster": true,
+      "windowsArtifactRoster": true,
+      "explicitFastLint93": false
+    },
+    {
+      "path": "test/features/team-task-detail/renderer/taskDetailSession.integration.test.tsx",
+      "before": {
+        "bytes": 46946,
+        "lines": 1184,
+        "blob": "b7fd855c6a3964a56731ba8b86718fc64f6e91bd",
+        "sha256": "2800634878eecb2e44c986d4d9d7ec38e0fdbe4433157564064af9bbbaefda42"
+      },
+      "after": {
+        "bytes": 49616,
+        "lines": 1244,
+        "blob": "0f18886c763559877aff19f319e11575058af08a",
+        "sha256": "11d8b7f2324a2d2b3757e2f1d9036e603fb178c3004d519921c0885322b0254f"
+      },
+      "additions": 61,
+      "deletions": 1,
+      "reversibleFullTextComparison": true,
+      "commonArtifactRoster": true,
+      "windowsArtifactRoster": true,
+      "explicitFastLint93": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "before": {
+        "bytes": 25052,
+        "lines": 456,
+        "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+        "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7"
+      },
+      "after": {
+        "bytes": 27188,
+        "lines": 489,
+        "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+      },
+      "additions": 34,
+      "deletions": 1,
+      "reversibleFullTextComparison": true,
+      "commonArtifactRoster": true,
+      "windowsArtifactRoster": true,
+      "explicitFastLint93": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "before": {
+        "bytes": 103573,
+        "lines": 1766,
+        "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+      },
+      "after": {
+        "bytes": 111672,
+        "lines": 1896,
+        "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+        "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445"
+      },
+      "additions": 130,
+      "deletions": 0,
+      "reversibleFullTextComparison": true,
+      "commonArtifactRoster": true,
+      "windowsArtifactRoster": true,
+      "explicitFastLint93": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "before": {
+        "bytes": 52461,
+        "lines": 996,
+        "blob": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+        "sha256": "ba8020eff1bc7bf80914b3d32cf7673d7a0ed763bb50e0aba7509b98d15bdcf7"
+      },
+      "after": {
+        "bytes": 53683,
+        "lines": 1019,
+        "blob": "e2b96672feefb924a39e20131514e0db5e347311",
+        "sha256": "ba36a5c01c6f670bcba92e6a155683385cd3eb33c871f94b8191b378b226f9d9"
+      },
+      "additions": 24,
+      "deletions": 1,
+      "reversibleFullTextComparison": true,
+      "commonArtifactRoster": false,
+      "windowsArtifactRoster": false,
+      "explicitFastLint93": true
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "before": {
+        "bytes": 12335,
+        "lines": 312,
+        "blob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e"
+      },
+      "after": {
+        "bytes": 12614,
+        "lines": 315,
+        "blob": "5e21bb5f8c50a3c9dd2a18b1d8c461896e0f91a9",
+        "sha256": "a407196b363ba102f68bfcce1da2faa4d0757a84a00f937872aef909a6bb01c4"
+      },
+      "additions": 4,
+      "deletions": 1,
+      "reversibleFullTextComparison": true,
+      "commonArtifactRoster": false,
+      "windowsArtifactRoster": true,
+      "explicitFastLint93": true
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "before": {
+        "bytes": 16835,
+        "lines": 331,
+        "blob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697"
+      },
+      "after": {
+        "bytes": 20150,
+        "lines": 396,
+        "blob": "0be43ad7d6549642c60080caf6001aa5f6d2a23b",
+        "sha256": "19c89b00f420d3858280795c221a423d744e3dbca21704231b073248e597b20b"
+      },
+      "additions": 66,
+      "deletions": 1,
+      "reversibleFullTextComparison": true,
+      "commonArtifactRoster": false,
+      "windowsArtifactRoster": true,
+      "explicitFastLint93": true
+    }
+  ],
+  "contextPaths": [
+    {
+      "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailSession.ts",
+      "before": {
+        "bytes": 27853,
+        "lines": 734,
+        "blob": "4ebf5a55d7cdcc5c29cc63e2bc9915c631222165",
+        "sha256": "cc73af4fab0ee40b4711173ed71db67776e16027009156cd373a1abcb942cb30"
+      },
+      "after": {
+        "bytes": 27853,
+        "lines": 734,
+        "blob": "4ebf5a55d7cdcc5c29cc63e2bc9915c631222165",
+        "sha256": "cc73af4fab0ee40b4711173ed71db67776e16027009156cd373a1abcb942cb30"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "src/renderer/components/team/composer/ComposerSurface.tsx",
+      "before": {
+        "bytes": 1598,
+        "lines": 45,
+        "blob": "9e1cf3a76ef6a442c212ed806837e8f728e9e5f4",
+        "sha256": "5a65ae5d70f9193087061a9ba72750a05445c25e7e4c97c2bc95ce28539f901d"
+      },
+      "after": {
+        "bytes": 1598,
+        "lines": 45,
+        "blob": "9e1cf3a76ef6a442c212ed806837e8f728e9e5f4",
+        "sha256": "5a65ae5d70f9193087061a9ba72750a05445c25e7e4c97c2bc95ce28539f901d"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "src/renderer/components/team/TeamListView.tsx",
+      "before": {
+        "bytes": 59762,
+        "lines": 1529,
+        "blob": "56c8601ecfa52bef64dd58512271310ced275889",
+        "sha256": "0b89aa932884473833dab3e4dfac90e89cd9e5799c4bf920bbc532451adffcc1"
+      },
+      "after": {
+        "bytes": 59762,
+        "lines": 1529,
+        "blob": "56c8601ecfa52bef64dd58512271310ced275889",
+        "sha256": "0b89aa932884473833dab3e4dfac90e89cd9e5799c4bf920bbc532451adffcc1"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "test/renderer/components/team/dialogs/taskDetailSessionFixture.ts",
+      "before": {
+        "bytes": 1353,
+        "lines": 38,
+        "blob": "1f73dfe85b981cb488ad6cfc06a380d7ccb25f14",
+        "sha256": "6a76777e6a199c24e149e4bed8893d8a3e3c1fd4d3b0bf7a0d255b4ca1f60cc1"
+      },
+      "after": {
+        "bytes": 1353,
+        "lines": 38,
+        "blob": "1f73dfe85b981cb488ad6cfc06a380d7ccb25f14",
+        "sha256": "6a76777e6a199c24e149e4bed8893d8a3e3c1fd4d3b0bf7a0d255b4ca1f60cc1"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "before": {
+        "bytes": 22082,
+        "lines": 281,
+        "blob": "a9d725fbe11278dd98611b49d570c19d80684087",
+        "sha256": "3aa149837f6686e8307ba1803984874b4c673d8211094bd3e8e52b9ddb3d70cd"
+      },
+      "after": {
+        "bytes": 22082,
+        "lines": 281,
+        "blob": "a9d725fbe11278dd98611b49d570c19d80684087",
+        "sha256": "3aa149837f6686e8307ba1803984874b4c673d8211094bd3e8e52b9ddb3d70cd"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "before": {
+        "bytes": 34285,
+        "lines": 597,
+        "blob": "034d2253e0649bdeb5db0b12244656446150c31c",
+        "sha256": "a7057b647c13852fbabdebbb0d8da775a24d55382637d5947d06c733317213bc"
+      },
+      "after": {
+        "bytes": 34285,
+        "lines": 597,
+        "blob": "034d2253e0649bdeb5db0b12244656446150c31c",
+        "sha256": "a7057b647c13852fbabdebbb0d8da775a24d55382637d5947d06c733317213bc"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/packaged.test.mjs",
+      "before": {
+        "bytes": 67288,
+        "lines": 1810,
+        "blob": "751d80c1ea409d84b42e486e48853cfa1cd2c4a1",
+        "sha256": "df5427548f5d16b89967fbe656ad489d931953170ca1a57847a11d115700d40e"
+      },
+      "after": {
+        "bytes": 67288,
+        "lines": 1810,
+        "blob": "751d80c1ea409d84b42e486e48853cfa1cd2c4a1",
+        "sha256": "df5427548f5d16b89967fbe656ad489d931953170ca1a57847a11d115700d40e"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "before": {
+        "bytes": 646,
+        "lines": 20,
+        "blob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+        "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306"
+      },
+      "after": {
+        "bytes": 646,
+        "lines": 20,
+        "blob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+        "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "tsconfig.json",
+      "before": {
+        "bytes": 1235,
+        "lines": 40,
+        "blob": "568952f5025a88c16b0568c7279d8e85a4288b43",
+        "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a"
+      },
+      "after": {
+        "bytes": 1235,
+        "lines": 40,
+        "blob": "568952f5025a88c16b0568c7279d8e85a4288b43",
+        "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "vitest.config.ts",
+      "before": {
+        "bytes": 1187,
+        "lines": 34,
+        "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+        "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc"
+      },
+      "after": {
+        "bytes": 1187,
+        "lines": 34,
+        "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+        "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "package.json",
+      "before": {
+        "bytes": 26839,
+        "lines": 580,
+        "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+      },
+      "after": {
+        "bytes": 26839,
+        "lines": 580,
+        "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+      },
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "bytes": 101741,
+        "lines": 1312,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+      },
+      "after": {
+        "bytes": 101741,
+        "lines": 1312,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "before": {
+        "bytes": 52632,
+        "lines": 800,
+        "blob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+        "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a"
+      },
+      "after": {
+        "bytes": 52632,
+        "lines": 800,
+        "blob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+        "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "before": {
+        "bytes": 20996,
+        "lines": 323,
+        "blob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+        "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b"
+      },
+      "after": {
+        "bytes": 20996,
+        "lines": 323,
+        "blob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+        "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+      "before": {
+        "bytes": 44561,
+        "lines": 600,
+        "blob": "083522612dd93e77dbb0e79c966103b03a71fe87",
+        "sha256": "555a309f762015659a3b7a0d44522785fa7ea171aedf77392020c25dc5d70e33"
+      },
+      "after": {
+        "bytes": 44561,
+        "lines": 600,
+        "blob": "083522612dd93e77dbb0e79c966103b03a71fe87",
+        "sha256": "555a309f762015659a3b7a0d44522785fa7ea171aedf77392020c25dc5d70e33"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-management-sources.ts",
+      "before": {
+        "bytes": 21211,
+        "lines": 309,
+        "blob": "762570da8b4fc492065b217303a3da169bf627cf",
+        "sha256": "7b89bab88022f53fbc8470f0cbcd4acd93f8ee5412059144e3a676c0fb7466f8"
+      },
+      "after": {
+        "bytes": 21211,
+        "lines": 309,
+        "blob": "762570da8b4fc492065b217303a3da169bf627cf",
+        "sha256": "7b89bab88022f53fbc8470f0cbcd4acd93f8ee5412059144e3a676c0fb7466f8"
+      },
+      "unchanged": true
+    }
+  ],
+  "commonRosterCount": 1757,
+  "windowsRosterCount": 1798,
+  "explicitFastLintCount": 93,
+  "rosterMethod": "Static parse of exact literal arrays and their named spreads; deduplicated in original Set order. No TypeScript module executed.",
+  "proofs": {
+    "taskCommentMatchesOldReviewedCandidateExactly": true,
+    "mentionableOnlyFourExpressions": true,
+    "teamSmokeOriginal1766LinePrefixExact": true,
+    "controlsEntireWaitReadAndAllFollowingActionsExact": true,
+    "platformOnlyCombinedListenerQueryReplacement": true,
+    "allNineFullByteInverseComparisons": true
+  },
+  "sourcePatch": {
+    "path": "/workspace/scratch/82d3f9ba6b85/external-e1d-integration/incoming-ui-desktop-cim-nine-path.patch",
+    "bytes": 38984,
+    "lines": 744,
+    "blob": "e49b2e9723d8ad1a63e6611fa5dd626c603873a9",
+    "sha256": "aae713e46516bbc6913a6e79475bf14937d24b14fd31e96f083b636d66b4ab2e"
+  },
+  "executedProjectCommands": [],
+  "nativeOrProviderExecution": false
+}
