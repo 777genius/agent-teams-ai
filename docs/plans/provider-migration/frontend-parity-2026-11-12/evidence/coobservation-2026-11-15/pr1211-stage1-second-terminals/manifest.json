@@ -1,0 +1,708 @@
+{
+  "schemaVersion": 1,
+  "kind": "READ_ONLY_ORIGINAL_PR1211_STAGE1_TERMINAL_EVIDENCE",
+  "source": {
+    "repo": "777genius/agent-teams-ai",
+    "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "tree": "0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103",
+    "base": "0b3fa6117b1856b947d799f95bae7aae0238061c",
+    "pr": 1211,
+    "targets": [
+      [
+        "process",
+        43790825981
+      ],
+      [
+        "stage1",
+        43790825753
+      ],
+      [
+        "packaged",
+        43790825796
+      ]
+    ]
+  },
+  "run": {
+    "id": 43790825753,
+    "attempt": 1,
+    "event": "pull_request",
+    "workflowBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+  },
+  "snapshot": "2026-11-16 02:26:40 UTC",
+  "previousTerminalEvidenceTree": "cf8f59fe638837c72264fdf2e96995c1129bf8c4",
+  "scope": "Only the two further terminal jobs; neither all Stage1 nor Process/packaged qualification.",
+  "jobs": [
+    {
+      "id": 133048604971,
+      "run_id": 43790825753,
+      "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+      "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+      "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825753",
+      "run_attempt": 1,
+      "node_id": "CR_kwDORVTEtM8AAAAe-lCZKw",
+      "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048604971",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825753/job/133048604971",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-11-16T02:13:21Z",
+      "started_at": "2026-11-16T02:15:28Z",
+      "completed_at": "2026-11-16T02:23:42Z",
+      "name": "Embedded V2.1.4 original Host (darwin-x64)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-16T02:15:29Z",
+          "completed_at": "2026-11-16T02:15:31Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-16T02:15:31Z",
+          "completed_at": "2026-11-16T02:15:44Z"
+        },
+        {
+          "name": "Require immutable source HEAD and record actual runner tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-16T02:15:44Z",
+          "completed_at": "2026-11-16T02:15:44Z"
+        },
+        {
+          "name": "Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-16T02:15:44Z",
+          "completed_at": "2026-11-16T02:15:52Z"
+        },
+        {
+          "name": "Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-16T02:15:52Z",
+          "completed_at": "2026-11-16T02:16:05Z"
+        },
+        {
+          "name": "Install exact source workspace dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-16T02:16:05Z",
+          "completed_at": "2026-11-16T02:18:43Z"
+        },
+        {
+          "name": "Build original Host and its pinned provider implementation",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-16T02:18:43Z",
+          "completed_at": "2026-11-16T02:18:49Z"
+        },
+        {
+          "name": "Check original graph and custody boundaries",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-16T02:18:49Z",
+          "completed_at": "2026-11-16T02:18:57Z"
+        },
+        {
+          "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-16T02:18:57Z",
+          "completed_at": "2026-11-16T02:19:02Z"
+        },
+        {
+          "name": "Prepare exact Bun, engine graph and original-process artifact",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-11-16T02:19:02Z",
+          "completed_at": "2026-11-16T02:20:16Z"
+        },
+        {
+          "name": "Prove actual Darwin executable custody and adversarial cleanup",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-11-16T02:20:16Z",
+          "completed_at": "2026-11-16T02:20:30Z"
+        },
+        {
+          "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-11-16T02:20:30Z",
+          "completed_at": "2026-11-16T02:20:30Z"
+        },
+        {
+          "name": "Prove original Windows Job custody and surviving descendant cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13,
+          "started_at": "2026-11-16T02:20:30Z",
+          "completed_at": "2026-11-16T02:20:30Z"
+        },
+        {
+          "name": "Require exact Windows original-process evidence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14,
+          "started_at": "2026-11-16T02:20:30Z",
+          "completed_at": "2026-11-16T02:20:30Z"
+        },
+        {
+          "name": "Check original Desktop private recipe composition",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-11-16T02:20:30Z",
+          "completed_at": "2026-11-16T02:20:57Z"
+        },
+        {
+          "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16,
+          "started_at": "2026-11-16T02:20:57Z",
+          "completed_at": "2026-11-16T02:23:27Z"
+        },
+        {
+          "name": "Exercise Windows automatic approval and cold Host Resume",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 17,
+          "started_at": "2026-11-16T02:23:27Z",
+          "completed_at": "2026-11-16T02:23:27Z"
+        },
+        {
+          "name": "Exercise native catalog and model probe without tool allocation",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 18,
+          "started_at": "2026-11-16T02:23:27Z",
+          "completed_at": "2026-11-16T02:23:27Z"
+        },
+        {
+          "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19,
+          "started_at": "2026-11-16T02:23:27Z",
+          "completed_at": "2026-11-16T02:23:27Z"
+        },
+        {
+          "name": "Exercise effective permissions and active Stop with a surviving sibling",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20,
+          "started_at": "2026-11-16T02:23:27Z",
+          "completed_at": "2026-11-16T02:23:27Z"
+        },
+        {
+          "name": "Exercise captured external MCP and app-only through the native Host",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21,
+          "started_at": "2026-11-16T02:23:27Z",
+          "completed_at": "2026-11-16T02:23:27Z"
+        },
+        {
+          "name": "Require complete native management and permission evidence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22,
+          "started_at": "2026-11-16T02:23:27Z",
+          "completed_at": "2026-11-16T02:23:27Z"
+        },
+        {
+          "name": "Require product-path Host proof after exact candidate qualification",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23,
+          "started_at": "2026-11-16T02:23:27Z",
+          "completed_at": "2026-11-16T02:23:27Z"
+        },
+        {
+          "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 24,
+          "started_at": "2026-11-16T02:23:27Z",
+          "completed_at": "2026-11-16T02:23:31Z"
+        },
+        {
+          "name": "Preserve exact native evidence or candidate HOLD",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 25,
+          "started_at": "2026-11-16T02:23:31Z",
+          "completed_at": "2026-11-16T02:23:33Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 48,
+          "started_at": "2026-11-16T02:23:33Z",
+          "completed_at": "2026-11-16T02:23:33Z"
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 49,
+          "started_at": "2026-11-16T02:23:33Z",
+          "completed_at": "2026-11-16T02:23:34Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 50,
+          "started_at": "2026-11-16T02:23:34Z",
+          "completed_at": "2026-11-16T02:23:34Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 51,
+          "started_at": "2026-11-16T02:23:34Z",
+          "completed_at": "2026-11-16T02:23:35Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048604971",
+      "labels": [
+        "macos-15-intel"
+      ],
+      "runner_id": 1000375867,
+      "runner_name": "GitHub Actions 1000375867",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 133048605058,
+      "run_id": 43790825753,
+      "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+      "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+      "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825753",
+      "run_attempt": 1,
+      "node_id": "CR_kwDORVTEtM8AAAAe-lCZgg",
+      "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048605058",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825753/job/133048605058",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-16T02:13:21Z",
+      "started_at": "2026-11-16T02:16:47Z",
+      "completed_at": "2026-11-16T02:26:29Z",
+      "name": "Embedded V2.1.4 original Host (win32-x64)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-16T02:16:48Z",
+          "completed_at": "2026-11-16T02:16:49Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-16T02:16:49Z",
+          "completed_at": "2026-11-16T02:17:03Z"
+        },
+        {
+          "name": "Require immutable source HEAD and record actual runner tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-16T02:17:03Z",
+          "completed_at": "2026-11-16T02:17:03Z"
+        },
+        {
+          "name": "Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-16T02:17:03Z",
+          "completed_at": "2026-11-16T02:17:16Z"
+        },
+        {
+          "name": "Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-16T02:17:16Z",
+          "completed_at": "2026-11-16T02:17:25Z"
+        },
+        {
+          "name": "Install exact source workspace dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-16T02:17:25Z",
+          "completed_at": "2026-11-16T02:19:05Z"
+        },
+        {
+          "name": "Build original Host and its pinned provider implementation",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-16T02:19:05Z",
+          "completed_at": "2026-11-16T02:19:10Z"
+        },
+        {
+          "name": "Check original graph and custody boundaries",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-16T02:19:10Z",
+          "completed_at": "2026-11-16T02:19:20Z"
+        },
+        {
+          "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-16T02:19:20Z",
+          "completed_at": "2026-11-16T02:19:28Z"
+        },
+        {
+          "name": "Prepare exact Bun, engine graph and original-process artifact",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-11-16T02:19:28Z",
+          "completed_at": "2026-11-16T02:20:03Z"
+        },
+        {
+          "name": "Prove actual Darwin executable custody and adversarial cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 11,
+          "started_at": "2026-11-16T02:20:03Z",
+          "completed_at": "2026-11-16T02:20:03Z"
+        },
+        {
+          "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12,
+          "started_at": "2026-11-16T02:20:03Z",
+          "completed_at": "2026-11-16T02:20:03Z"
+        },
+        {
+          "name": "Prove original Windows Job custody and surviving descendant cleanup",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-11-16T02:20:03Z",
+          "completed_at": "2026-11-16T02:20:20Z"
+        },
+        {
+          "name": "Require exact Windows original-process evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-11-16T02:20:20Z",
+          "completed_at": "2026-11-16T02:20:20Z"
+        },
+        {
+          "name": "Check original Desktop private recipe composition",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 15,
+          "started_at": "2026-11-16T02:20:20Z",
+          "completed_at": "2026-11-16T02:20:20Z"
+        },
+        {
+          "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16,
+          "started_at": "2026-11-16T02:20:20Z",
+          "completed_at": "2026-11-16T02:23:20Z"
+        },
+        {
+          "name": "Exercise Windows automatic approval and cold Host Resume",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17,
+          "started_at": "2026-11-16T02:23:20Z",
+          "completed_at": "2026-11-16T02:26:05Z"
+        },
+        {
+          "name": "Exercise native catalog and model probe without tool allocation",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 18,
+          "started_at": "2026-11-16T02:26:05Z",
+          "completed_at": "2026-11-16T02:26:05Z"
+        },
+        {
+          "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19,
+          "started_at": "2026-11-16T02:26:05Z",
+          "completed_at": "2026-11-16T02:26:05Z"
+        },
+        {
+          "name": "Exercise effective permissions and active Stop with a surviving sibling",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20,
+          "started_at": "2026-11-16T02:26:05Z",
+          "completed_at": "2026-11-16T02:26:05Z"
+        },
+        {
+          "name": "Exercise captured external MCP and app-only through the native Host",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21,
+          "started_at": "2026-11-16T02:26:05Z",
+          "completed_at": "2026-11-16T02:26:05Z"
+        },
+        {
+          "name": "Require complete native management and permission evidence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22,
+          "started_at": "2026-11-16T02:26:05Z",
+          "completed_at": "2026-11-16T02:26:05Z"
+        },
+        {
+          "name": "Require product-path Host proof after exact candidate qualification",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23,
+          "started_at": "2026-11-16T02:26:05Z",
+          "completed_at": "2026-11-16T02:26:06Z"
+        },
+        {
+          "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 24,
+          "started_at": "2026-11-16T02:26:06Z",
+          "completed_at": "2026-11-16T02:26:06Z"
+        },
+        {
+          "name": "Preserve exact native evidence or candidate HOLD",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 25,
+          "started_at": "2026-11-16T02:26:06Z",
+          "completed_at": "2026-11-16T02:26:06Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 48,
+          "started_at": "2026-11-16T02:26:06Z",
+          "completed_at": "2026-11-16T02:26:24Z"
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 49,
+          "started_at": "2026-11-16T02:26:24Z",
+          "completed_at": "2026-11-16T02:26:24Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 50,
+          "started_at": "2026-11-16T02:26:24Z",
+          "completed_at": "2026-11-16T02:26:26Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 51,
+          "started_at": "2026-11-16T02:26:26Z",
+          "completed_at": "2026-11-16T02:26:26Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048605058",
+      "labels": [
+        "windows-2022"
+      ],
+      "runner_id": 1000375872,
+      "runner_name": "GitHub Actions 1000375872",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  ],
+  "payloads": [
+    {
+      "path": "run-api.json",
+      "gitBlob": "77acf98fb733bbacec97405889a9542e9cf4f4a2",
+      "sha256": "2c85466bd164bbc7adf9ad3bf125874fa9a3dce9b0c01b46cb4c33cdd15a372b",
+      "bytes": 13860
+    },
+    {
+      "path": "jobs-api.json",
+      "gitBlob": "d51974e7e58e29a4b95e3aa3246432976145b09a",
+      "sha256": "a7d7197bb53c440c6828cc7afa418c5db72ff67ae664968de763146f0cfb570b",
+      "bytes": 33957
+    },
+    {
+      "path": "artifacts-api.json",
+      "gitBlob": "fadb5229870370743035863edd2b15900c5dfc86",
+      "sha256": "8a407e8a061392edf47cb496f1d291b836e0c12f51214c66ef22348fdd154123",
+      "bytes": 2635
+    },
+    {
+      "path": "job-133048604971.log",
+      "gitBlob": "08b36875197639ad16e7dbe1c9cf33489cb9ab08",
+      "sha256": "2125a485b24c1d8785113f4cd34b87b1260084d115cbca77d0b8299c25b2203b",
+      "bytes": 114479
+    },
+    {
+      "path": "job-133048605058.log",
+      "gitBlob": "0de39e4690137dd0f2fa5a35fa4f5e55faf1be59",
+      "sha256": "b9809fa3f66f0a970fdb8852342a2eab9920d4771a0649f86b7f82d4dfa1b654",
+      "bytes": 104154
+    }
+  ],
+  "observations": {
+    "darwinX64": {
+      "id": 133048604971,
+      "firstFailedStep": 24,
+      "firstFailure": {
+        "case": "compiler-default:baseline",
+        "stage": "kernel-image-validity",
+        "errno": 13,
+        "codeSigningError": -67062,
+        "assertion": "Expected values to be strictly equal: 13 !== 0",
+        "source": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+        "sourceBlob": "f1e1d1145898e201723be343fa8768d73332fcb1",
+        "line": 476
+      },
+      "laterRetainedFailures": [
+        "adhoc-test-only:after-check",
+        "adhoc-test-only:writer-open"
+      ],
+      "laterMutationFacts": {
+        "errno": 0,
+        "codeSigningError": 0,
+        "mutationAfterCheckErrno": 0,
+        "resumed": true,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markers": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ]
+      },
+      "nativeBusiness": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skip": 0
+      },
+      "originalProductReceiptVerifierStep23": "success",
+      "artifact": {
+        "id": 14192707574,
+        "name": "opencode-v2-embedded-native-darwin-x64",
+        "size_in_bytes": 10549,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192707574",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192707574/zip",
+        "expired": false,
+        "created_at": "2026-11-16T02:23:33Z",
+        "expires_at": "2026-11-23T02:23:32Z",
+        "updated_at": "2026-11-16T02:23:33Z",
+        "digest": "sha256:a2b2081fdad83d10f253c0012ade88f8fc886cef9d68a9bc5196fbde08b64376",
+        "workflow_run": {
+          "id": 43790825753,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+          "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+        }
+      }
+    },
+    "windowsX64": {
+      "id": 133048605058,
+      "wholeJob": "success",
+      "originalJobCustody": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skip": 0,
+        "receiptVerifierStep14": "success"
+      },
+      "nativeBusiness": {
+        "normal": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skip": 0
+        },
+        "automatic": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skip": 0
+        }
+      },
+      "originalProductReceiptVerifierStep23": "success",
+      "P09Step24": "skipped on Windows by unchanged original platform condition",
+      "artifact": {
+        "id": 14192312780,
+        "name": "opencode-v2-embedded-native-win32-x64",
+        "size_in_bytes": 13313,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192312780",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192312780/zip",
+        "expired": false,
+        "created_at": "2026-11-16T02:26:06Z",
+        "expires_at": "2026-11-23T02:26:06Z",
+        "updated_at": "2026-11-16T02:26:06Z",
+        "digest": "sha256:112fcd72cf6ce3b6cb3c984c7292a0b681f4acb491e8dab590fe14b4c505e162",
+        "workflow_run": {
+          "id": 43790825753,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+          "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+        }
+      }
+    }
+  },
+  "sourceJoins": {
+    "runAndEachJobHeadExact": true,
+    "rawCheckoutExact": true,
+    "artifactRunHeadAndUploadBytesDigestIdMatched": true,
+    "artifactMetadataRepresentation": "Complete original tool structuredContent, serialized with two spaces and final LF."
+  },
+  "limits": [
+    "Root alone downloads and verifies actual ZIP bytes/CRC/paths/receipts. Child read no archive payload here.",
+    "Current Darwin x64 baseline -67062 is an actual raw observation; it is not transferred to ARM, whose first error is mutation markers.",
+    "P09 remains separate from Process15-second readiness and packagedP08.",
+    "No runtime, actual Claude/Codex invocation, rerun/cancellation, ref/PR/source mutation. Immutable evidence only."
+  ]
+}

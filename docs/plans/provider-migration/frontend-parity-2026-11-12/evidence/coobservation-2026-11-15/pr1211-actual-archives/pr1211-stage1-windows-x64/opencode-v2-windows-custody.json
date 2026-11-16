@@ -1,0 +1,22 @@
+{
+  "kind": "TEST_WINDOWS_ORIGINAL_JOB_CUSTODY",
+  "status": "PASS",
+  "cleanup": true,
+  "sourceHead": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "platform": "win32-x64",
+  "nodeVersion": "v24.21.0",
+  "bunSha256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+  "manifestSha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+  "hostBuild": {
+    "hostSourceDigest": "876850f34858c09eb44a5fe128ab1a06ee97a90564c9d97ee4dbe304d3c81143",
+    "hostDistDigest": "5e5161f28a68b7497bc291fac4b58b4985b2d8e79474995ae67389aba1db58eb",
+    "providerDigest": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+  },
+  "productQualified": false,
+  "desktopQualified": false,
+  "captureBeforeInput": true,
+  "descendantSurvivedRootExit": true,
+  "originalJobCleanup": "confirmed",
+  "neighborSurvivedTargetStop": true,
+  "neighborJobCleanup": "confirmed"
+}

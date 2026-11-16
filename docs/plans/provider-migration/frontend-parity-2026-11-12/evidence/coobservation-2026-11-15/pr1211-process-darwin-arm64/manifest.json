@@ -1,0 +1,407 @@
+{
+  "schemaVersion": 1,
+  "repository": "777genius/agent-teams-ai",
+  "pr": 1211,
+  "sourceHead": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "sourceTree": "0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103",
+  "base": "0b3fa6117b1856b947d799f95bae7aae0238061c",
+  "run": {
+    "id": 43790825981,
+    "event": "pull_request",
+    "attempt": 1,
+    "workflow": ".github/workflows/host-process-acceptance.yml",
+    "workflowBlob": "70202d22a5840401a00025cd60b797c514f3e455"
+  },
+  "apiSnapshot": "2026-11-16 02:44:42 UTC",
+  "job": {
+    "id": 133048605640,
+    "run_id": 43790825981,
+    "workflow_name": "Host process fixture acceptance",
+    "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+    "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825981",
+    "run_attempt": 1,
+    "node_id": "CR_kwDORVTEtM8AAAAe-lCbyA",
+    "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048605640",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825981/job/133048605640",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-11-16T02:13:21Z",
+    "started_at": "2026-11-16T02:38:52Z",
+    "completed_at": "2026-11-16T02:42:31Z",
+    "name": "Host process fixtures (darwin-arm64)",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-16T02:38:53Z",
+        "completed_at": "2026-11-16T02:38:54Z"
+      },
+      {
+        "name": "Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-11-16T02:38:54Z",
+        "completed_at": "2026-11-16T02:39:04Z"
+      },
+      {
+        "name": "Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-11-16T02:39:04Z",
+        "completed_at": "2026-11-16T02:39:09Z"
+      },
+      {
+        "name": "Select the pinned package manager with bundled Corepack",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-16T02:39:09Z",
+        "completed_at": "2026-11-16T02:39:11Z"
+      },
+      {
+        "name": "Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-16T02:39:11Z",
+        "completed_at": "2026-11-16T02:39:11Z"
+      },
+      {
+        "name": "Bind exact source and actual process tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6,
+        "started_at": "2026-11-16T02:39:11Z",
+        "completed_at": "2026-11-16T02:39:11Z"
+      },
+      {
+        "name": "Install frozen workspace without Desktop postinstall",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7,
+        "started_at": "2026-11-16T02:39:11Z",
+        "completed_at": "2026-11-16T02:40:16Z"
+      },
+      {
+        "name": "Build existing controller and Host",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-16T02:40:16Z",
+        "completed_at": "2026-11-16T02:40:23Z"
+      },
+      {
+        "name": "Verify process contracts and retained Main Host transport",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9,
+        "started_at": "2026-11-16T02:40:23Z",
+        "completed_at": "2026-11-16T02:41:25Z"
+      },
+      {
+        "name": "Verify original POSIX Node and shell lifecycle fixtures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10,
+        "started_at": "2026-11-16T02:41:25Z",
+        "completed_at": "2026-11-16T02:41:35Z"
+      },
+      {
+        "name": "Prepare pinned Electron for native process fixtures",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 11,
+        "started_at": "2026-11-16T02:41:35Z",
+        "completed_at": "2026-11-16T02:41:35Z"
+      },
+      {
+        "name": "Verify Linux Node exec descriptor closure under both original parents",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12,
+        "started_at": "2026-11-16T02:41:35Z",
+        "completed_at": "2026-11-16T02:41:35Z"
+      },
+      {
+        "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13,
+        "started_at": "2026-11-16T02:41:35Z",
+        "completed_at": "2026-11-16T02:41:35Z"
+      },
+      {
+        "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14,
+        "started_at": "2026-11-16T02:41:35Z",
+        "completed_at": "2026-11-16T02:41:35Z"
+      },
+      {
+        "name": "Build original Windows product broker and C++ fixtures",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15,
+        "started_at": "2026-11-16T02:41:35Z",
+        "completed_at": "2026-11-16T02:41:35Z"
+      },
+      {
+        "name": "Qualify original Windows Job and control under Host Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16,
+        "started_at": "2026-11-16T02:41:35Z",
+        "completed_at": "2026-11-16T02:41:35Z"
+      },
+      {
+        "name": "Qualify original Windows Job and control under Electron Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17,
+        "started_at": "2026-11-16T02:41:35Z",
+        "completed_at": "2026-11-16T02:41:35Z"
+      },
+      {
+        "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18,
+        "started_at": "2026-11-16T02:41:35Z",
+        "completed_at": "2026-11-16T02:41:35Z"
+      },
+      {
+        "name": "Qualify original codex source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19,
+        "started_at": "2026-11-16T02:41:35Z",
+        "completed_at": "2026-11-16T02:41:35Z"
+      },
+      {
+        "name": "Qualify original claude source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20,
+        "started_at": "2026-11-16T02:41:35Z",
+        "completed_at": "2026-11-16T02:41:35Z"
+      },
+      {
+        "name": "Qualify original opencode source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21,
+        "started_at": "2026-11-16T02:41:35Z",
+        "completed_at": "2026-11-16T02:41:35Z"
+      },
+      {
+        "name": "Require completed original platform receipts and unchanged source",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 22,
+        "started_at": "2026-11-16T02:41:35Z",
+        "completed_at": "2026-11-16T02:41:36Z"
+      },
+      {
+        "name": "Preserve original process evidence including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 23,
+        "started_at": "2026-11-16T02:41:36Z",
+        "completed_at": "2026-11-16T02:41:37Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 44,
+        "started_at": "2026-11-16T02:41:37Z",
+        "completed_at": "2026-11-16T02:42:27Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 45,
+        "started_at": "2026-11-16T02:42:27Z",
+        "completed_at": "2026-11-16T02:42:27Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 46,
+        "started_at": "2026-11-16T02:42:27Z",
+        "completed_at": "2026-11-16T02:42:28Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 47,
+        "started_at": "2026-11-16T02:42:28Z",
+        "completed_at": "2026-11-16T02:42:29Z"
+      }
+    ],
+    "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048605640",
+    "labels": [
+      "macos-15"
+    ],
+    "runner_id": 1000375971,
+    "runner_name": "GitHub Actions 1000375971",
+    "runner_group_id": 0,
+    "runner_group_name": "GitHub Actions"
+  },
+  "artifact": {
+    "id": 14193840538,
+    "name": "host-process-fixtures-darwin-arm64-2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "size_in_bytes": 12304,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14193840538",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14193840538/zip",
+    "expired": false,
+    "created_at": "2026-11-16T02:41:37Z",
+    "expires_at": "2026-11-30T02:41:36Z",
+    "updated_at": "2026-11-16T02:41:37Z",
+    "digest": "sha256:9ba9c12cebb0693196d43e8be713bc21cef2f8647ca6ab5c74879b814d03a058",
+    "workflow_run": {
+      "id": 43790825981,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+      "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+    }
+  },
+  "sourceAndApiUploadJoins": true,
+  "actualResults": {
+    "Node": "24.21.0",
+    "contracts": {
+      "tests": 167,
+      "pass": 165,
+      "fail": 0,
+      "skip": 2,
+      "cancelled": 0
+    },
+    "protocolVitest": {
+      "files": 3,
+      "pass": 53
+    },
+    "retainedMainVitest": {
+      "files": 8,
+      "pass": 81
+    },
+    "posixLifecycle": {
+      "tests": 27,
+      "pass": 27,
+      "fail": 0,
+      "skip": 0,
+      "cancelled": 0
+    },
+    "finalPlatformVerifierStep22": "success",
+    "actualCompilerCommands": [
+      "node node_modules/@typescript/native/bin/tsc -p packages/task-change-ledger/tsconfig.json",
+      "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.json",
+      "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json",
+      "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json",
+      "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json"
+    ],
+    "actualCounters": [
+      {
+        "line": 830,
+        "text": "ℹ tests 167"
+      },
+      {
+        "line": 832,
+        "text": "ℹ pass 165"
+      },
+      {
+        "line": 833,
+        "text": "ℹ fail 0"
+      },
+      {
+        "line": 834,
+        "text": "ℹ cancelled 0"
+      },
+      {
+        "line": 835,
+        "text": "ℹ skipped 2"
+      },
+      {
+        "line": 837,
+        "text": "ℹ duration_ms 15657.064167"
+      },
+      {
+        "line": 845,
+        "text": " Test Files  3 passed (3)"
+      },
+      {
+        "line": 846,
+        "text": "      Tests  53 passed (53)"
+      },
+      {
+        "line": 887,
+        "text": " Test Files  8 passed (8)"
+      },
+      {
+        "line": 888,
+        "text": "      Tests  81 passed (81)"
+      },
+      {
+        "line": 935,
+        "text": "ℹ tests 27"
+      },
+      {
+        "line": 937,
+        "text": "ℹ pass 27"
+      },
+      {
+        "line": 938,
+        "text": "ℹ fail 0"
+      },
+      {
+        "line": 939,
+        "text": "ℹ cancelled 0"
+      },
+      {
+        "line": 940,
+        "text": "ℹ skipped 0"
+      },
+      {
+        "line": 942,
+        "text": "ℹ duration_ms 9458.302959"
+      }
+    ]
+  },
+  "limits": [
+    "Exact original attempt1 raw/API/upload evidence only; no rerun, source/ref/CI action or runtime by child.",
+    "Darwin Process fixture/POSIX acceptance is separate from native Darwin registration, P09, Desktop, Windows source-readiness and packaged P08 qualification.",
+    "Original full whole-job SUCCESS does not change the Windows failures in the same run.",
+    "Artifact ZIP/member/CRC/receipt bytes were not read by this child; root owns archive verification."
+  ],
+  "payloads": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1211-process-darwin-arm64/run-api.json",
+      "sha256": "9eb54bc53c4f552acb9c44224731c262d45ec25d460623f6180a9e58c929c412",
+      "bytes": 13838
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1211-process-darwin-arm64/jobs-api.json",
+      "sha256": "b4dd27d69b9f7d2ff9360a5535ed58ef5c608a0ddcfff6831a0de0b3ddfba4b0",
+      "bytes": 25294
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1211-process-darwin-arm64/artifacts-api.json",
+      "sha256": "c163c4529068d89b0c0653211af859a2efd6dc1b9bacc9518d8d1f2bb2842940",
+      "bytes": 3646
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1211-process-darwin-arm64/job-133048605640.log",
+      "sha256": "829fe6cc58a38e60545bd4f2b3431594c88aeee75974cf7bdf8176d25c0ec1c9",
+      "bytes": 120619
+    }
+  ]
+}

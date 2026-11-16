@@ -1,0 +1,34 @@
+{
+  "artifactId": 14192312780,
+  "sourceCommit": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "zipBytes": 13313,
+  "zipSha256": "112fcd72cf6ce3b6cb3c984c7292a0b681f4acb491e8dab590fe14b4c505e162",
+  "crcVerified": true,
+  "safeUniqueMemberPaths": true,
+  "members": [
+    {
+      "path": "opencode-v2-embedded-inputs.json",
+      "bytes": 780,
+      "sha256": "af6aaee3a04bc237aebe874df8a8800ef6dad3c56d6865139ed18b337d710cad",
+      "gitBlobSha": "47fcd9d229cf16d204f3291bf0a9196a9328746b"
+    },
+    {
+      "path": "opencode-v2-embedded-host.json",
+      "bytes": 95094,
+      "sha256": "2a65cbbcbc493147b8d038e7c80415bdf7a32ddeb2b8d7001fbb669ab1367187",
+      "gitBlobSha": "de8ff3099fd24287b786cc8e652fd6850fe7e215"
+    },
+    {
+      "path": "opencode-v2-windows-custody.json",
+      "bytes": 907,
+      "sha256": "1c19861ffeb1a7e99d0318125672caae0b7a063da5aad1562e4ae6d07b1b1f3f",
+      "gitBlobSha": "91ae1833c2457e02cc759a09c821ea50cfc1abc8"
+    },
+    {
+      "path": "opencode-v2-embedded-host-auto.json",
+      "bytes": 94911,
+      "sha256": "67350661a30b04dd20e6d31af19d0f672f3159808316b56d937cd650b6a9c876",
+      "gitBlobSha": "d1a30a4b6ec6238f646f343b8d6e3cbbd76d2833"
+    }
+  ]
+}

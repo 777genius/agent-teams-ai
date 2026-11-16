@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "kind": "original-pr1211-four-quality-terminal-observations",
+  "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "tree": "0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103",
+  "snapshotStarted": {
+    "current_time": "2026-11-16 03:20:29 UTC"
+  },
+  "snapshotEnded": {
+    "current_time": "2026-11-16 03:20:29 UTC"
+  },
+  "observations": [
+    {
+      "key": "announcements",
+      "runId": 43790825705,
+      "jobId": 133048604227,
+      "runStatusAtSnapshot": "completed",
+      "runConclusionAtSnapshot": "success",
+      "jobConclusion": "success",
+      "actualCheckout": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+      "completedAt": "2026-11-16T03:15:12Z",
+      "artifactCount": 0
+    },
+    {
+      "key": "updater-native-quality",
+      "runId": 43790825963,
+      "jobId": 133048605304,
+      "runStatusAtSnapshot": "completed",
+      "runConclusionAtSnapshot": "success",
+      "jobConclusion": "success",
+      "actualCheckout": "441e76ffe1cc5e288645877e15b312caf7b8c109",
+      "completedAt": "2026-11-16T03:19:53Z",
+      "artifactCount": 0
+    },
+    {
+      "key": "dependencies",
+      "runId": 43790825860,
+      "jobId": 133048604676,
+      "runStatusAtSnapshot": "completed",
+      "runConclusionAtSnapshot": "success",
+      "jobConclusion": "success",
+      "actualCheckout": "441e76ffe1cc5e288645877e15b312caf7b8c109",
+      "completedAt": "2026-11-16T03:11:16Z",
+      "artifactCount": 0
+    },
+    {
+      "key": "general-plan",
+      "runId": 43790825790,
+      "jobId": 133048605709,
+      "runStatusAtSnapshot": "queued",
+      "runConclusionAtSnapshot": null,
+      "jobConclusion": "success",
+      "actualCheckout": "441e76ffe1cc5e288645877e15b312caf7b8c109",
+      "completedAt": "2026-11-16T03:12:36Z",
+      "artifactCount": 0
+    }
+  ],
+  "notes": {
+    "announcements": "Original 14/14 Node cases, zero fail/skip/cancel/todo; generator step also succeeds.",
+    "dependencies": "Original dependency-review action succeeds; raw says no vulnerable packages at high severity or higher.",
+    "updater": "Original Host and ledger builds, then exact eight-project pnpm typecheck and scoped release-updater fast/typed lint succeed. Actual Node26.12.1/pnpm11.22.0; engine warnings retained. No dedicated legacy-agent-host-scripts or Host test compiler result is inferred. Three separate native-release siblings are skipped with zero steps.",
+    "general": "Only original planning job succeeds: 17/17 policy tests and Draft feedback. At snapshot Fast feedback and Full qualification are queued, other guarded siblings skipped. No General/full qualification PASS.",
+    "source": "GitHub merge441e76 has exact frozen2ab tree, confirmed by full commit metadata and existing full tree inventory. These results apply to frozen source; later receipt/getter/diagnostic changes have no transferred qualification.",
+    "actions": "Read-only original run/API/log inspection. No local compiler, new run, rerun, cancellation, ref, PR edit or real Claude/Codex command. No archive download claimed; all four artifact listings are empty."
+  },
+  "files": [
+    {
+      "name": "announcements-artifacts.json",
+      "bytes": 33,
+      "sha256": "d3ad979d01443a9d7342e7fbe39064b41ebdb340029293f1b099bcfb6c493c42",
+      "gitBlob": "623f6273c3c8e3adf76506bcdd7341c56b70ecbe"
+    },
+    {
+      "name": "announcements-run.json",
+      "bytes": 13837,
+      "sha256": "47728741070a62fc7cc708b148bbfccf61d5fa8f25d59e1a3dc11bf3d9dd8ec9",
+      "gitBlob": "a8c8dd4498b7fafb7f67f39ddc26255edb880981"
+    },
+    {
+      "name": "announcements.log",
+      "bytes": 125254,
+      "sha256": "921b28a46826a19469599cc4b711d28a94f596901c45b2cd191846824f9e3f51",
+      "gitBlob": "0a48c2c86a19bf057678c522a92bf0565a51e478"
+    },
+    {
+      "name": "dependencies-artifacts.json",
+      "bytes": 33,
+      "sha256": "d3ad979d01443a9d7342e7fbe39064b41ebdb340029293f1b099bcfb6c493c42",
+      "gitBlob": "623f6273c3c8e3adf76506bcdd7341c56b70ecbe"
+    },
+    {
+      "name": "dependencies-run.json",
+      "bytes": 13829,
+      "sha256": "0ce4137cc6a1337f256d74c292c30ccb93367aba19b6b2b7494ec049e7c0b655",
+      "gitBlob": "8edf56b09a3fe93778f5fc17b82f933794975b4e"
+    },
+    {
+      "name": "dependencies.log",
+      "bytes": 16615,
+      "sha256": "7451c5f47a475c6516656c026a3d1f791899658cad0896aebe3f79e9e2ab9c05",
+      "gitBlob": "20c99c12daad7bda0eacdc10d89f8127a78fce24"
+    },
+    {
+      "name": "general-plan-artifacts.json",
+      "bytes": 33,
+      "sha256": "d3ad979d01443a9d7342e7fbe39064b41ebdb340029293f1b099bcfb6c493c42",
+      "gitBlob": "623f6273c3c8e3adf76506bcdd7341c56b70ecbe"
+    },
+    {
+      "name": "general-plan-run.json",
+      "bytes": 14113,
+      "sha256": "6e66ffcd6d0c021d995748d555d7a9a16efbd16e469285bd0ee132cf66592a9b",
+      "gitBlob": "4b5bcd7bd619a57d37f1c6d0a0e917cf771d6b9c"
+    },
+    {
+      "name": "general-plan.log",
+      "bytes": 118754,
+      "sha256": "6fb811bc29f3851b5fa04fc7a2f09abfb746298b1db14780c051489558504c63",
+      "gitBlob": "3f2ea1a278d77f9d8e2e27eace369beffc36f7b3"
+    },
+    {
+      "name": "github-test-merge-commit.json",
+      "bytes": 2654,
+      "sha256": "42509b7f215695ebbab5bbbcaac70040291f727b18c63179fc953c3fcd0d9e0b",
+      "gitBlob": "3bb703a7ca042af9b37cf7eb2cee38da407557df"
+    },
+    {
+      "name": "ten-original-quality-job-census.json",
+      "bytes": 67542,
+      "sha256": "5842571003cbd07a5a68d44b7061b04cd1bfcce089b39e477cc913f22bd77b82",
+      "gitBlob": "f6d11e0c085a7c389ad1c4f3361584587f5f09f2"
+    },
+    {
+      "name": "updater-native-quality-artifacts.json",
+      "bytes": 33,
+      "sha256": "d3ad979d01443a9d7342e7fbe39064b41ebdb340029293f1b099bcfb6c493c42",
+      "gitBlob": "623f6273c3c8e3adf76506bcdd7341c56b70ecbe"
+    },
+    {
+      "name": "updater-native-quality-run.json",
+      "bytes": 13867,
+      "sha256": "17a4de82facd60fd05c177aba18c6a292fcbb2fc719f953bfc42727e7127380d",
+      "gitBlob": "872084cd8c37d028d41d29221f92d2e79bd0ac2a"
+    },
+    {
+      "name": "updater-native-quality.log",
+      "bytes": 161430,
+      "sha256": "92fd0e95dcfd7bcb04562082980a3579b8e871127729060fb5e3c9dd9f726ed8",
+      "gitBlob": "a1ae105523073103e70f5342c74e05aa883f7fc9"
+    }
+  ]
+}

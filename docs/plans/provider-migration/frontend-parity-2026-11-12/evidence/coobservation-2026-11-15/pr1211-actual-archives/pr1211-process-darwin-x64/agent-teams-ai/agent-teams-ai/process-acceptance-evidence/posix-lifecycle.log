@@ -1,0 +1,42 @@
+✔ the original finite captured child retains sanitized stderr and excludes its stdout protocol (76.144441ms)
+(node:7390) [CLAUDE_SDK_CAN_USE_TOOL_SHADOWED] Warning: canUseTool will not be invoked for: mcp__team__task_create, mcp__team__task_update, mcp__team__task_set_owner, mcp__team__task_lifecycle, mcp__team__task_set_status, mcp__team__task_add_comment, mcp__team__task_set_clarification, mcp__team__task_link, mcp__team__task_unlink, mcp__team__review_request, mcp__team__review_start, mcp__team__review_approve, mcp__team__review_request_changes, mcp__team__task_get, mcp__team__message_send, mcp__team__command_lookup, mcp__team__task_start, mcp__team__task_complete, mcp__team__task_restore, mcp__team__task_delete, mcp__team__member_briefing, mcp__team__team_get, mcp__team__kanban_get, mcp__team__kanban_list_reviewers, mcp__team__task_get_comment, mcp__team__task_list, mcp__team__task_briefing, mcp__team__lead_briefing. Bare allowedTools entries auto-approve the whole tool before the callback is consulted. To gate every tool call, use a PreToolUse hook; or remove the bare names from allowedTools so they fall through to canUseTool. Allow rules from settings files can also shadow the callback but are not visible here.
+(Use `node --trace-warnings ...` to show where the warning was created)
+legacy-agent-host: claude-close {"binding":{"backendId":"TEST-backend","teamId":"TEST-team","runId":"TEST-run","memberId":"alice","generation":"1"},"sessionRef":"TEST-session","stage":"custody-confirmed","physicalConfirmed":true}
+legacy-agent-host: claude-close {"binding":{"backendId":"TEST-backend","teamId":"TEST-team","runId":"TEST-run","memberId":"alice","generation":"1"},"sessionRef":"TEST-session","stage":"sdk-close-completed","physicalConfirmed":true}
+legacy-agent-host: claude-close {"binding":{"backendId":"TEST-backend","teamId":"TEST-team","runId":"TEST-run","memberId":"alice","generation":"1"},"sessionRef":"TEST-session","stage":"sdk-read-completed","physicalConfirmed":true}
+✔ original Claude SDK child stderr reaches the member observer before failed startup and flushes its final tail (217.188258ms)
+✔ original standalone claude child retains startup stderr and its closing tail without an endpoint (191.435898ms)
+✔ original standalone codex child retains startup stderr and its closing tail without an endpoint (99.861551ms)
+✔ captured native executable is pinned again at launch and sealing forbids late allocation (6.192166ms)
+✔ captured launch rejects exact inode changes hidden by numeric file metadata before spawning (6.061865ms)
+✔ captured launch rejects exact mtime changes hidden by numeric file metadata before spawning (6.950762ms)
+✔ captured launch rejects exact ctime changes hidden by numeric file metadata before spawning (6.236699ms)
+✔ custody closes its live original process group, preserving a neighboring process (1688.263919ms)
+ℹ {"cleanupConfirmed":true,"descendantAbsent":true,"neighborPreserved":true}
+✔ custody holds an unverified group after parent exit until TEST descendants leave naturally (3701.271336ms)
+ℹ {"cleanupConfirmed":false,"descendantAbsent":true,"neighborPreserved":true}
+✔ an exited original cannot signal a positively probed replacement group (3543.229816ms)
+✔ captured launch revalidates selected cwd before any process allocation (9.240848ms)
+✔ source hashing yields to original Host control and rejects a replaced pathname before publication (378.333928ms)
+✔ V1 preferences publish once, retain lost-ACK A and apply only the actual selected model limits (315.025262ms)
+✔ native-only installer intent shares the exact full-candidate receipt and replay identity (205.377701ms)
+✔ V2 native selection inherits executor and delivery only from its original expected revision (534.142729ms)
+✔ new qualified native bytes publish only after exact owned version and cleanup; cold replay never repeats the child (56.46329ms)
+✔ version policy, exact native output and post-read bytes are independent gates (188.046528ms)
+✔ installer restart recovers the one prepared original intent before any replacement selection (63.687119ms)
+✔ source recovery refuses missing, changed and ambiguous durable intent snapshots (43.806309ms)
+✔ verified pre-publication recovery reuses its original native observation without another version process (69.658543ms)
+✔ unknown cleanup is retained; only the original live handle may settle it without rerunning native verification (86.59208ms)
+✔ a later shutdown can confirm the same retained version check after an unconfirmed close (41.147934ms)
+✔ Host shutdown seals admission, drains the original version child and persists confirmed cleanup under its lease (61.535407ms)
+✔ Claude native qualification compares its original CLI version, never the SDK revision (100.115218ms)
+✔ supported V1 native updates change the selected CLI while preserving the engine generation (67.979019ms)
+✔ V2 CLI policy cannot substitute another engine, cross generation or qualify unsupported engine versions (6.311232ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 27
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10767.748393

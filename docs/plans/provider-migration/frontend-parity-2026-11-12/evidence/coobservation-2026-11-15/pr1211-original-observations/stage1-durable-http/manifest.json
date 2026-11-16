@@ -1,0 +1,291 @@
+{
+  "schemaVersion": 1,
+  "status": "original-TEST-discovery-job-success-with-explicit-unqualified-boundaries",
+  "runId": 43790825753,
+  "attempt": 1,
+  "event": "pull_request",
+  "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "job": {
+    "id": 133048604679,
+    "run_id": 43790825753,
+    "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+    "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+    "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825753",
+    "run_attempt": 1,
+    "node_id": "CR_kwDORVTEtM8AAAAe-lCYBw",
+    "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048604679",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825753/job/133048604679",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-11-16T02:13:21Z",
+    "started_at": "2026-11-16T03:42:02Z",
+    "completed_at": "2026-11-16T03:43:43Z",
+    "name": "Published V2.0.21 durable HTTP process (TEST discovery only)",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-16T03:42:03Z",
+        "completed_at": "2026-11-16T03:42:04Z"
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-11-16T03:42:04Z",
+        "completed_at": "2026-11-16T03:42:11Z"
+      },
+      {
+        "name": "Require immutable PR source HEAD",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-11-16T03:42:11Z",
+        "completed_at": "2026-11-16T03:42:11Z"
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-16T03:42:11Z",
+        "completed_at": "2026-11-16T03:42:15Z"
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-16T03:42:15Z",
+        "completed_at": "2026-11-16T03:42:20Z"
+      },
+      {
+        "name": "Install exact private Stage1 Session SPI dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6,
+        "started_at": "2026-11-16T03:42:20Z",
+        "completed_at": "2026-11-16T03:42:51Z"
+      },
+      {
+        "name": "Build isolated Stage1 V2 Session SPI for TEST-only HTTP proof",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7,
+        "started_at": "2026-11-16T03:42:51Z",
+        "completed_at": "2026-11-16T03:42:56Z"
+      },
+      {
+        "name": "Check isolated durable-HTTP TEST harness syntax",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-16T03:42:56Z",
+        "completed_at": "2026-11-16T03:42:56Z"
+      },
+      {
+        "name": "Check TEST shell-flag permission split diagnostic (no tool execution)",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9,
+        "started_at": "2026-11-16T03:42:56Z",
+        "completed_at": "2026-11-16T03:42:56Z"
+      },
+      {
+        "name": "Negative SDK setup cleanup and HOLD receipt (no worker launch)",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10,
+        "started_at": "2026-11-16T03:42:56Z",
+        "completed_at": "2026-11-16T03:42:57Z"
+      },
+      {
+        "name": "Install official pinned SDK without scripts in TEST-owned npm prefix",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11,
+        "started_at": "2026-11-16T03:42:57Z",
+        "completed_at": "2026-11-16T03:43:27Z"
+      },
+      {
+        "name": "Negative valid-SDK post-copy cleanup cannot touch shared package prefix",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 12,
+        "started_at": "2026-11-16T03:43:27Z",
+        "completed_at": "2026-11-16T03:43:27Z"
+      },
+      {
+        "name": "Negative owned-worker cleanup on parent SIGINT and SIGTERM",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13,
+        "started_at": "2026-11-16T03:43:27Z",
+        "completed_at": "2026-11-16T03:43:32Z"
+      },
+      {
+        "name": "Probe actual published server HTTP durable-log and cold restart",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 14,
+        "started_at": "2026-11-16T03:43:32Z",
+        "completed_at": "2026-11-16T03:43:39Z"
+      },
+      {
+        "name": "Require exact-HEAD TEST receipt (never a Host/model certificate)",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15,
+        "started_at": "2026-11-16T03:43:39Z",
+        "completed_at": "2026-11-16T03:43:39Z"
+      },
+      {
+        "name": "Preserve TEST-only receipt on success or safe failure",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16,
+        "started_at": "2026-11-16T03:43:39Z",
+        "completed_at": "2026-11-16T03:43:40Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 30,
+        "started_at": "2026-11-16T03:43:40Z",
+        "completed_at": "2026-11-16T03:43:40Z"
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31,
+        "started_at": "2026-11-16T03:43:40Z",
+        "completed_at": "2026-11-16T03:43:40Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 32,
+        "started_at": "2026-11-16T03:43:40Z",
+        "completed_at": "2026-11-16T03:43:41Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 33,
+        "started_at": "2026-11-16T03:43:41Z",
+        "completed_at": "2026-11-16T03:43:41Z"
+      }
+    ],
+    "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048604679",
+    "labels": [
+      "ubuntu-24.04"
+    ],
+    "runner_id": 1000376299,
+    "runner_name": "GitHub Actions 1000376299",
+    "runner_group_id": 0,
+    "runner_group_name": "GitHub Actions"
+  },
+  "artifact": {
+    "id": 14195613836,
+    "name": "opencode-v2-published-http-persist-ubuntu",
+    "size_in_bytes": 869,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14195613836",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14195613836/zip",
+    "expired": false,
+    "created_at": "2026-11-16T03:43:40Z",
+    "expires_at": "2026-11-23T03:43:39Z",
+    "updated_at": "2026-11-16T03:43:40Z",
+    "digest": "sha256:3b70a0ca6c119e3bafacbd150bef7f167cb007b0472ae6d8f840962fc85f16dd",
+    "workflow_run": {
+      "id": 43790825753,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+      "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+    }
+  },
+  "files": [
+    {
+      "path": "durable-http-full.log",
+      "sha": "cadeb6cc5e1cc3f6d3e7f961a4df5e7802db9bca",
+      "sha256": "5de4658f4f2554273b63d226d747f9ec6e12bbc9b51fd873f9c6130290547be6",
+      "bytes": 74091
+    },
+    {
+      "path": "run-api.json",
+      "sha": "77acf98fb733bbacec97405889a9542e9cf4f4a2",
+      "sha256": "2c85466bd164bbc7adf9ad3bf125874fa9a3dce9b0c01b46cb4c33cdd15a372b",
+      "bytes": 13860
+    },
+    {
+      "path": "jobs-api.json",
+      "sha": "333ff0aea45183edf3afed00ba9b327e001d41e1",
+      "sha256": "fa79ed5db8f50ba81fff9e1062862766cab0ac8608795c9615b474f1ec6aac22",
+      "bytes": 38713
+    },
+    {
+      "path": "artifacts-api.json",
+      "sha": "18e6c6399f918c3d2c2b8a0afd5364b005801998",
+      "sha256": "a1c0c4042c3833489b2425fc45ba6f4920a7c3f7f5b04a6298348dbfbcb86cf8",
+      "bytes": 4377
+    }
+  ],
+  "sourceBinding": {
+    "explicitCheckout": true,
+    "originalExpectedHead": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "sourceTree": "0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103",
+    "rawCapturedHeadMatches": true
+  },
+  "actualNodeInvocations": [
+    {
+      "file": "opencode-v2-shell-flag-policy-probe.test.mjs",
+      "tests": 6,
+      "pass": 6,
+      "fail": 0,
+      "skip": 0,
+      "cancel": 0
+    },
+    {
+      "file": "opencode-v2-http-setup-negative.test.mjs",
+      "stage": "before SDK prefix",
+      "tests": 6,
+      "pass": 5,
+      "fail": 0,
+      "skip": 1,
+      "cancel": 0
+    },
+    {
+      "file": "opencode-v2-http-setup-negative.test.mjs",
+      "stage": "after official SDK prefix",
+      "tests": 6,
+      "pass": 6,
+      "fail": 0,
+      "skip": 0,
+      "cancel": 0
+    },
+    {
+      "file": "opencode-v2-http-interrupt-negative.test.mjs",
+      "tests": 4,
+      "pass": 2,
+      "fail": 0,
+      "skip": 2,
+      "cancel": 0,
+      "skips": "Original native ELF SIGINT/SIGTERM cases are skipped in this published HTTP lane."
+    }
+  ],
+  "verificationBoundary": [
+    "Original durable HTTP probe step14 and exact-HEAD receipt verifier15 actually completed success, followed by upload16.",
+    "The verifier requires TEST_V2_HTTP_DURABLE_DISCOVERY, qualified=false, packagedElectronQualified=false, modelTurnProven=false, processCustodyQualified=false, cleanup=true, one durableHTTPEvents, closed native permission/readiness fields and twelve exact ordered TEST stage labels.",
+    "Those are conclusions of the executed original verifier, not a child direct receipt-byte read. Root may verify the actual 869-byte archive separately.",
+    "Original no-model-turn/no-captured-Host-custody qualification remains. No Windows15s, P09, packaged GUI or other native job result is inferred.",
+    "No child local/native/vendor command, ZIP download, workflow/ref/PR mutation or rerun. Original remaining3 queued Stage1 jobs remain intact."
+  ]
+}

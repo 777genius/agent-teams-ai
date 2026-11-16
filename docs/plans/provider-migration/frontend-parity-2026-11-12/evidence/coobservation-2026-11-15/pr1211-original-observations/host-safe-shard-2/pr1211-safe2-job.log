@@ -1,0 +1,1411 @@
+﻿2026-11-16T03:09:55.2910472Z Current runner version: '2.338.2'
+2026-11-16T03:09:55.2945836Z ##[group]Runner Image Provisioner
+2026-11-16T03:09:55.2947428Z Hosted Compute Agent
+2026-11-16T03:09:55.2948610Z Version: 20261103.629
+2026-11-16T03:09:55.2949713Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-16T03:09:55.2950978Z Build Date: 2026-11-03T17:26:59Z
+2026-11-16T03:09:55.2952294Z Worker ID: {8e97e104-0cde-4e95-88ea-756d43ccbeb3}
+2026-11-16T03:09:55.2953611Z Region: eastus
+2026-11-16T03:09:55.2954617Z Cloud: Azure
+2026-11-16T03:09:55.2955552Z ##[endgroup]
+2026-11-16T03:09:55.2958106Z ##[group]Operating System
+2026-11-16T03:09:55.2959188Z Ubuntu
+2026-11-16T03:09:55.2960093Z 26.04.1
+2026-11-16T03:09:55.2960958Z LTS
+2026-11-16T03:09:55.2961777Z ##[endgroup]
+2026-11-16T03:09:55.2962846Z ##[group]Runner Image
+2026-11-16T03:09:55.2963828Z Image: ubuntu-26.04
+2026-11-16T03:09:55.2964958Z Version: 20261111.196.1
+2026-11-16T03:09:55.2967157Z Included Software: https://github.com/actions/runner-images/blob/ubuntu26/20261111.196/images/ubuntu/Ubuntu2604-Readme.md
+2026-11-16T03:09:55.2969953Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu26%2F20261111.196
+2026-11-16T03:09:55.2971775Z ##[endgroup]
+2026-11-16T03:09:55.2973900Z ##[group]GITHUB_TOKEN Permissions
+2026-11-16T03:09:55.2976877Z Contents: read
+2026-11-16T03:09:55.2977838Z Metadata: read
+2026-11-16T03:09:55.2978833Z ##[endgroup]
+2026-11-16T03:09:55.2982085Z Secret source: Actions
+2026-11-16T03:09:55.2983813Z Cache mode: write
+2026-11-16T03:09:55.2985013Z Prepare workflow directory
+2026-11-16T03:09:55.3778205Z Prepare all required actions
+2026-11-16T03:09:55.3827251Z Getting action download info
+2026-11-16T03:09:55.5660481Z Download action repository 'actions/checkout@v6' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-11-16T03:09:55.6966037Z Download action repository 'pnpm/action-setup@v6' (SHA:73e46992e05b19abd31f2f3c20e0e7370d762115)
+2026-11-16T03:09:55.8413221Z Download action repository 'actions/setup-node@v6' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+2026-11-16T03:09:55.9422595Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-16T03:09:56.1445866Z Complete job name: Offline frontend tests (2/4)
+2026-11-16T03:09:56.2397407Z ##[group]Run actions/checkout@v6
+2026-11-16T03:09:56.2398977Z with:
+2026-11-16T03:09:56.2400022Z   ref: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:09:56.2401519Z   persist-credentials: false
+2026-11-16T03:09:56.2402664Z   repository: 777genius/agent-teams-ai
+2026-11-16T03:09:56.2412993Z   token: ***
+2026-11-16T03:09:56.2413960Z   ssh-strict: true
+2026-11-16T03:09:56.2414811Z   ssh-user: git
+2026-11-16T03:09:56.2415633Z   clean: true
+2026-11-16T03:09:56.2416731Z   sparse-checkout-cone-mode: true
+2026-11-16T03:09:56.2417819Z   fetch-depth: 1
+2026-11-16T03:09:56.2418627Z   fetch-tags: false
+2026-11-16T03:09:56.2419525Z   show-progress: true
+2026-11-16T03:09:56.2420024Z   lfs: false
+2026-11-16T03:09:56.2420487Z   submodules: false
+2026-11-16T03:09:56.2421002Z   set-safe-directory: true
+2026-11-16T03:09:56.2421541Z   allow-unsafe-pr-checkout: false
+2026-11-16T03:09:56.2422451Z env:
+2026-11-16T03:09:56.2422912Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:09:56.2423630Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:09:56.2424425Z   HOST_EMULATED_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:09:56.2425259Z   HOST_TEST_SHARD: 2
+2026-11-16T03:09:56.2425755Z ##[endgroup]
+2026-11-16T03:09:56.5192063Z Syncing repository: 777genius/agent-teams-ai
+2026-11-16T03:09:56.5195336Z ##[group]Getting Git version info
+2026-11-16T03:09:56.5197222Z Working directory is '/home/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-16T03:09:56.5200209Z [command]/usr/bin/git version
+2026-11-16T03:09:56.5233737Z git version 2.56.1
+2026-11-16T03:09:56.5250675Z ##[endgroup]
+2026-11-16T03:09:56.5285576Z Temporarily overriding HOME='/home/runner/work/_temp/5336e192-863d-460c-af9a-b34cb7dd4f47' before making global git config changes
+2026-11-16T03:09:56.5289459Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T03:09:56.5318175Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T03:09:56.5406147Z Deleting the contents of '/home/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-16T03:09:56.5409127Z ##[group]Determining repository object format
+2026-11-16T03:09:56.5410953Z ##[endgroup]
+2026-11-16T03:09:56.5412461Z ##[group]Initializing the repository
+2026-11-16T03:09:56.5414391Z [command]/usr/bin/git init /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T03:09:56.5543107Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-16T03:09:56.5545474Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-16T03:09:56.5547430Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-16T03:09:56.5549054Z hint: call:
+2026-11-16T03:09:56.5550162Z hint:
+2026-11-16T03:09:56.5551493Z hint: 	git config --global init.defaultBranch <name>
+2026-11-16T03:09:56.5552752Z hint:
+2026-11-16T03:09:56.5554222Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-16T03:09:56.5556082Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-16T03:09:56.5557878Z hint:
+2026-11-16T03:09:56.5558519Z hint: 	git branch -m <name>
+2026-11-16T03:09:56.5559161Z hint:
+2026-11-16T03:09:56.5559958Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-16T03:09:56.5575488Z Initialized empty Git repository in /home/runner/work/agent-teams-ai/agent-teams-ai/.git/
+2026-11-16T03:09:56.5590116Z [command]/usr/bin/git remote add origin https://github.com/777genius/agent-teams-ai
+2026-11-16T03:09:56.5651954Z ##[endgroup]
+2026-11-16T03:09:56.5653732Z ##[group]Disabling automatic garbage collection
+2026-11-16T03:09:56.5665794Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-16T03:09:56.5707782Z ##[endgroup]
+2026-11-16T03:09:56.5709100Z ##[group]Setting up auth
+2026-11-16T03:09:56.5709822Z Removing SSH command configuration
+2026-11-16T03:09:56.5711095Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T03:09:56.5754185Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T03:09:56.6267161Z Removing HTTP extra header
+2026-11-16T03:09:56.6276710Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T03:09:56.6322585Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T03:09:56.6680104Z Removing includeIf entries pointing to credentials config files
+2026-11-16T03:09:56.6687486Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T03:09:56.6724841Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T03:09:56.7009733Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-a27aeaf0-5883-4433-83fd-eb7e68830a27.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-16T03:09:56.7058266Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path /home/runner/work/_temp/git-credentials-a27aeaf0-5883-4433-83fd-eb7e68830a27.config
+2026-11-16T03:09:56.7101222Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-a27aeaf0-5883-4433-83fd-eb7e68830a27.config
+2026-11-16T03:09:56.7182671Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-a27aeaf0-5883-4433-83fd-eb7e68830a27.config
+2026-11-16T03:09:56.7192912Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-a27aeaf0-5883-4433-83fd-eb7e68830a27.config
+2026-11-16T03:09:56.7221551Z ##[endgroup]
+2026-11-16T03:09:56.7222331Z ##[group]Fetching the repository
+2026-11-16T03:09:56.7233300Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:10:01.6145233Z From https://github.com/777genius/agent-teams-ai
+2026-11-16T03:10:01.6147145Z  * branch            2abcf83fddacbc1efedee83f9c1d203d12ed656e -> FETCH_HEAD
+2026-11-16T03:10:01.6162962Z [command]/usr/bin/git rev-parse --verify --quiet 2abcf83fddacbc1efedee83f9c1d203d12ed656e^{object}
+2026-11-16T03:10:01.6189335Z 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:10:01.6195345Z ##[endgroup]
+2026-11-16T03:10:01.6196650Z ##[group]Determining the checkout info
+2026-11-16T03:10:01.6198106Z ##[endgroup]
+2026-11-16T03:10:01.6202820Z [command]/usr/bin/git sparse-checkout disable
+2026-11-16T03:10:01.6257295Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-16T03:10:01.6287873Z ##[group]Checking out the ref
+2026-11-16T03:10:01.6292056Z [command]/usr/bin/git checkout --progress --force 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:10:02.5984000Z Note: switching to '2abcf83fddacbc1efedee83f9c1d203d12ed656e'.
+2026-11-16T03:10:02.5984733Z 
+2026-11-16T03:10:02.5985169Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-16T03:10:02.5986213Z changes and commit them, and you can discard any commits you make in this
+2026-11-16T03:10:02.5987511Z state without impacting any branches by switching back to a branch.
+2026-11-16T03:10:02.5988083Z 
+2026-11-16T03:10:02.5988441Z If you want to create a new branch to retain commits you create, you may
+2026-11-16T03:10:02.5989399Z do so (now or later) by using -c with the switch command. Example:
+2026-11-16T03:10:02.5990095Z 
+2026-11-16T03:10:02.5990319Z   git switch -c <new-branch-name>
+2026-11-16T03:10:02.5990730Z 
+2026-11-16T03:10:02.5990996Z Or undo this operation with:
+2026-11-16T03:10:02.5991818Z 
+2026-11-16T03:10:02.5992044Z   git switch -
+2026-11-16T03:10:02.5992354Z 
+2026-11-16T03:10:02.5992840Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-16T03:10:02.5993591Z 
+2026-11-16T03:10:02.5994161Z HEAD is now at 2abcf83 test(desktop): observe original Team navigation phases
+2026-11-16T03:10:02.6020841Z ##[endgroup]
+2026-11-16T03:10:02.6072177Z [command]/usr/bin/git log -1 --format=%H
+2026-11-16T03:10:02.6098496Z 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:10:02.6108967Z ##[group]Removing auth
+2026-11-16T03:10:02.6109980Z Removing SSH command configuration
+2026-11-16T03:10:02.6114382Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T03:10:02.6147592Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T03:10:02.6447794Z Removing HTTP extra header
+2026-11-16T03:10:02.6452295Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T03:10:02.6488770Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T03:10:02.6772822Z Removing includeIf entries pointing to credentials config files
+2026-11-16T03:10:02.6776814Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T03:10:02.6802255Z includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-16T03:10:02.6803957Z includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-16T03:10:02.6804811Z includeif.gitdir:/github/workspace/.git.path
+2026-11-16T03:10:02.6805184Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T03:10:02.6815667Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-16T03:10:02.6843528Z /home/runner/work/_temp/git-credentials-a27aeaf0-5883-4433-83fd-eb7e68830a27.config
+2026-11-16T03:10:02.6855314Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path /home/runner/work/_temp/git-credentials-a27aeaf0-5883-4433-83fd-eb7e68830a27.config
+2026-11-16T03:10:02.6891407Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-16T03:10:02.6914258Z /home/runner/work/_temp/git-credentials-a27aeaf0-5883-4433-83fd-eb7e68830a27.config
+2026-11-16T03:10:02.6924635Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-a27aeaf0-5883-4433-83fd-eb7e68830a27.config
+2026-11-16T03:10:02.6964685Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-11-16T03:10:02.6989225Z /github/runner_temp/git-credentials-a27aeaf0-5883-4433-83fd-eb7e68830a27.config
+2026-11-16T03:10:02.6996725Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-a27aeaf0-5883-4433-83fd-eb7e68830a27.config
+2026-11-16T03:10:02.7035034Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T03:10:02.7061271Z /github/runner_temp/git-credentials-a27aeaf0-5883-4433-83fd-eb7e68830a27.config
+2026-11-16T03:10:02.7070639Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-a27aeaf0-5883-4433-83fd-eb7e68830a27.config
+2026-11-16T03:10:02.7113438Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T03:10:02.7411511Z Removing credentials config '/home/runner/work/_temp/git-credentials-a27aeaf0-5883-4433-83fd-eb7e68830a27.config'
+2026-11-16T03:10:02.7422162Z ##[endgroup]
+2026-11-16T03:10:02.7662204Z ##[group]Run pnpm/action-setup@v6
+2026-11-16T03:10:02.7662490Z with:
+2026-11-16T03:10:02.7662685Z   dest: ~/setup-pnpm
+2026-11-16T03:10:02.7662894Z   run_install: null
+2026-11-16T03:10:02.7663100Z   cache: false
+2026-11-16T03:10:02.7663320Z   cache_dependency_path: pnpm-lock.yaml
+2026-11-16T03:10:02.7663599Z   package_json_file: package.json
+2026-11-16T03:10:02.7663841Z   standalone: false
+2026-11-16T03:10:02.7664032Z env:
+2026-11-16T03:10:02.7664225Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:10:02.7664498Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:10:02.7664841Z   HOST_EMULATED_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:10:02.7665214Z   HOST_TEST_SHARD: 2
+2026-11-16T03:10:02.7665414Z ##[endgroup]
+2026-11-16T03:10:02.9219906Z ##[group]Running self-installer...
+2026-11-16T03:10:04.2271604Z 
+2026-11-16T03:10:04.2272176Z added 1 package, and audited 2 packages in 1s
+2026-11-16T03:10:04.2272486Z 
+2026-11-16T03:10:04.2273269Z 1 package is looking for funding
+2026-11-16T03:10:04.2273922Z   run `npm fund` for details
+2026-11-16T03:10:04.2283841Z 
+2026-11-16T03:10:04.2284133Z found 0 vulnerabilities
+2026-11-16T03:10:04.9763798Z Checking for updates...
+2026-11-16T03:10:05.1304896Z Switching pnpm from v11.28.10 to v11.22.0...
+2026-11-16T03:10:05.6125618Z .../v11/9ce-1a1e2555493-4f16e5b1c9badb71 | Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-16T03:10:05.6147305Z .../v11/9ce-1a1e2555493-4f16e5b1c9badb71 |   +1 +
+2026-11-16T03:10:06.0205974Z .../v11/9ce-1a1e2555493-4f16e5b1c9badb71 | Progress: resolved 1, reused 0, downloaded 1, added 1, done
+2026-11-16T03:10:06.6872776Z [WARN] Detected a pnpm v10 installation layout at PNPM_HOME. The pnpm shims at PNPM_HOME have been refreshed so the new version is active, but pnpm v11 expects bins in PNPM_HOME/bin. Run "pnpm setup" to migrate your PATH to the v11 layout.
+2026-11-16T03:10:06.6932099Z Successfully updated pnpm to v11.22.0
+2026-11-16T03:10:06.7306494Z ##[endgroup]
+2026-11-16T03:10:06.7307141Z Installation Completed!
+2026-11-16T03:10:06.7493834Z ##[group]Run actions/setup-node@v6
+2026-11-16T03:10:06.7494125Z with:
+2026-11-16T03:10:06.7494323Z   node-version: 24.21.0
+2026-11-16T03:10:06.7494549Z   check-latest: false
+2026-11-16T03:10:06.7497515Z   token: ***
+2026-11-16T03:10:06.7497749Z   package-manager-cache: true
+2026-11-16T03:10:06.7497994Z env:
+2026-11-16T03:10:06.7498189Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:10:06.7498458Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:10:06.7498795Z   HOST_EMULATED_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:10:06.7499150Z   HOST_TEST_SHARD: 2
+2026-11-16T03:10:06.7499422Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:10:06.7499712Z ##[endgroup]
+2026-11-16T03:10:06.8850801Z Attempting to download 24.21.0...
+2026-11-16T03:10:07.3629968Z Acquiring 24.21.0 - x64 from https://github.com/actions/node-versions/releases/download/24.21.0-34304089047/node-24.21.0-linux-x64.tar.gz
+2026-11-16T03:10:07.8534782Z Extracting ...
+2026-11-16T03:10:07.8668023Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/268ea3fe-3bb1-47cd-9663-6a80f003d076 -f /home/runner/work/_temp/9521bc2c-2f4c-4c78-ac04-b4884ecefe66
+2026-11-16T03:10:08.6331088Z Adding to the cache ...
+2026-11-16T03:10:10.3887350Z ##[group]Environment details
+2026-11-16T03:10:10.6185595Z node: v24.21.0
+2026-11-16T03:10:10.6186004Z npm: 11.19.0
+2026-11-16T03:10:10.6186591Z yarn: 1.22.22
+2026-11-16T03:10:10.6187484Z ##[endgroup]
+2026-11-16T03:10:10.6394409Z ##[group]Run set -euo pipefail
+2026-11-16T03:10:10.6394762Z [36;1mset -euo pipefail[0m
+2026-11-16T03:10:10.6395135Z [36;1mtest "$(git rev-parse HEAD)" = "$HOST_EMULATED_SOURCE_HEAD"[0m
+2026-11-16T03:10:10.6395642Z [36;1mecho "AGENT_BACKEND_TEST_NODE=$(node -p 'process.execPath')" >> "$GITHUB_ENV"[0m
+2026-11-16T03:10:10.6452995Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T03:10:10.6453349Z env:
+2026-11-16T03:10:10.6453555Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:10:10.6453838Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:10:10.6454184Z   HOST_EMULATED_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:10:10.6454550Z   HOST_TEST_SHARD: 2
+2026-11-16T03:10:10.6454813Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:10:10.6455111Z ##[endgroup]
+2026-11-16T03:10:10.6936977Z ##[group]Run actions/setup-node@v6
+2026-11-16T03:10:10.6937285Z with:
+2026-11-16T03:10:10.6937504Z   node-version-file: .node-version
+2026-11-16T03:10:10.6937774Z   cache: pnpm
+2026-11-16T03:10:10.6937982Z   check-latest: false
+2026-11-16T03:10:10.6940607Z   token: ***
+2026-11-16T03:10:10.6940843Z   package-manager-cache: true
+2026-11-16T03:10:10.6941086Z env:
+2026-11-16T03:10:10.6941287Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:10:10.6941562Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:10:10.6941916Z   HOST_EMULATED_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:10:10.6942282Z   HOST_TEST_SHARD: 2
+2026-11-16T03:10:10.6942546Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:10:10.6942949Z   AGENT_BACKEND_TEST_NODE: /opt/hostedtoolcache/node/24.21.0/x64/bin/node
+2026-11-16T03:10:10.6943306Z ##[endgroup]
+2026-11-16T03:10:10.8326774Z Node version file is not JSON file
+2026-11-16T03:10:10.8327405Z Resolved .node-version as 26.12.1
+2026-11-16T03:10:10.8338626Z Attempting to download 26.12.1...
+2026-11-16T03:10:11.3406012Z Acquiring 26.12.1 - x64 from https://github.com/actions/node-versions/releases/download/26.12.1-39618969937/node-26.12.1-linux-x64.tar.gz
+2026-11-16T03:10:11.7145074Z Extracting ...
+2026-11-16T03:10:11.7278218Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/b4a22e53-52e9-4788-8bd6-1e4126d5112c -f /home/runner/work/_temp/01c76d28-c084-4474-b826-2cff05a59e33
+2026-11-16T03:10:12.5447779Z Adding to the cache ...
+2026-11-16T03:10:14.3200574Z ##[group]Environment details
+2026-11-16T03:10:14.5385027Z node: v26.12.1
+2026-11-16T03:10:14.5385402Z npm: 11.20.0
+2026-11-16T03:10:14.5385736Z yarn: 1.22.22
+2026-11-16T03:10:14.5386567Z ##[endgroup]
+2026-11-16T03:10:14.5408734Z [command]/home/runner/setup-pnpm/node_modules/.bin/bin/pnpm store path --silent
+2026-11-16T03:10:15.1441782Z /home/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-11-16T03:10:15.2213772Z Cache hit for: node-cache-Linux-x64-pnpm-33b7283dc3ef217b641b14e26ce1a6d807c9880352847e1b431ffd461cf78c22
+2026-11-16T03:10:16.2669264Z Received 264241152 of 499378635 (52.9%), 252.0 MBs/sec
+2026-11-16T03:10:17.1875807Z Received 499378635 of 499378635 (100.0%), 247.9 MBs/sec
+2026-11-16T03:10:17.1882221Z Cache Size: ~476 MB (499378635 B)
+2026-11-16T03:10:17.1997542Z [command]/usr/bin/tar -xf /home/runner/work/_temp/dfea22a3-7da5-4c79-98b0-d0f562320810/cache.tzst -P -C /home/runner/work/agent-teams-ai/agent-teams-ai --use-compress-program unzstd
+2026-11-16T03:10:23.6473682Z Cache restored successfully
+2026-11-16T03:10:23.6683889Z Cache restored from key: node-cache-Linux-x64-pnpm-33b7283dc3ef217b641b14e26ce1a6d807c9880352847e1b431ffd461cf78c22
+2026-11-16T03:10:23.6890329Z ##[group]Run set -euo pipefail
+2026-11-16T03:10:23.6890667Z [36;1mset -euo pipefail[0m
+2026-11-16T03:10:23.6890930Z [36;1msudo apt-get update[0m
+2026-11-16T03:10:23.6891180Z [36;1msudo apt-get install -y lsof[0m
+2026-11-16T03:10:23.6891615Z [36;1mnode scripts/ci/install-dependencies-with-retry.mjs --child-concurrency=1[0m
+2026-11-16T03:10:23.6892104Z [36;1mnode scripts/ci/rebuild-better-sqlite3-node.cjs[0m
+2026-11-16T03:10:23.6892464Z [36;1mpnpm --filter agent-teams-mcp build[0m
+2026-11-16T03:10:23.6892818Z [36;1mpnpm --filter @agent-teams/legacy-agent-host build[0m
+2026-11-16T03:10:23.6942896Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T03:10:23.6943226Z env:
+2026-11-16T03:10:23.6943430Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:10:23.6943710Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:10:23.6944062Z   HOST_EMULATED_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:10:23.6944418Z   HOST_TEST_SHARD: 2
+2026-11-16T03:10:23.6944719Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:10:23.6945126Z   AGENT_BACKEND_TEST_NODE: /opt/hostedtoolcache/node/24.21.0/x64/bin/node
+2026-11-16T03:10:23.6945481Z ##[endgroup]
+2026-11-16T03:10:23.7955300Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+2026-11-16T03:10:23.8093377Z Get:6 https://packages.microsoft.com/ubuntu/26.04/prod resolute InRelease [3964 B]
+2026-11-16T03:10:23.8323379Z Hit:2 http://azure.archive.ubuntu.com/ubuntu resolute InRelease
+2026-11-16T03:10:23.8364085Z Get:3 http://azure.archive.ubuntu.com/ubuntu resolute-updates InRelease [137 kB]
+2026-11-16T03:10:23.8464011Z Get:4 http://azure.archive.ubuntu.com/ubuntu resolute-backports InRelease [137 kB]
+2026-11-16T03:10:23.8543740Z Get:5 http://azure.archive.ubuntu.com/ubuntu resolute-security InRelease [137 kB]
+2026-11-16T03:10:23.8664521Z Get:7 https://packages.microsoft.com/ubuntu/26.04/prod resolute/main amd64 Packages [158 kB]
+2026-11-16T03:10:23.8941967Z Get:8 https://packages.microsoft.com/ubuntu/26.04/prod resolute/main arm64 Packages [143 kB]
+2026-11-16T03:10:23.9138232Z Get:9 http://azure.archive.ubuntu.com/ubuntu resolute-updates/main amd64v3 Packages [869 kB]
+2026-11-16T03:10:23.9208017Z Get:10 http://azure.archive.ubuntu.com/ubuntu resolute-updates/main Translation-en [195 kB]
+2026-11-16T03:10:23.9289819Z Get:11 http://azure.archive.ubuntu.com/ubuntu resolute-updates/universe amd64v3 Packages [390 kB]
+2026-11-16T03:10:23.9291801Z Get:12 http://azure.archive.ubuntu.com/ubuntu resolute-updates/universe Translation-en [122 kB]
+2026-11-16T03:10:23.9455544Z Get:13 http://azure.archive.ubuntu.com/ubuntu resolute-security/main amd64v3 Packages [718 kB]
+2026-11-16T03:10:23.9499909Z Get:14 http://azure.archive.ubuntu.com/ubuntu resolute-security/main Translation-en [157 kB]
+2026-11-16T03:10:23.9527624Z Get:15 http://azure.archive.ubuntu.com/ubuntu resolute-security/universe amd64v3 Packages [220 kB]
+2026-11-16T03:10:23.9544999Z Get:16 http://azure.archive.ubuntu.com/ubuntu resolute-security/universe Translation-en [72.5 kB]
+2026-11-16T03:10:23.9564400Z Get:17 http://azure.archive.ubuntu.com/ubuntu resolute-security/restricted amd64v3 Packages [590 kB]
+2026-11-16T03:10:23.9602175Z Get:18 http://azure.archive.ubuntu.com/ubuntu resolute-security/restricted Translation-en [122 kB]
+2026-11-16T03:10:27.7604329Z Fetched 4172 kB in 0s (10.8 MB/s)
+2026-11-16T03:10:28.4529006Z Reading package lists...
+2026-11-16T03:10:28.4869733Z Reading package lists...
+2026-11-16T03:10:28.6333293Z Building dependency tree...
+2026-11-16T03:10:28.6340541Z Reading state information...
+2026-11-16T03:10:28.6649447Z lsof is already the newest version (4.99.4+dfsg-2build2).
+2026-11-16T03:10:28.6650039Z lsof set to manually installed.
+2026-11-16T03:10:28.7194345Z Solving dependencies...
+2026-11-16T03:10:28.8403918Z 0 upgraded, 0 newly installed, 0 to remove and 24 not upgraded.
+2026-11-16T03:10:29.3126212Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:10:29.3130437Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:10:29.3369612Z Scope: all 7 workspace projects
+2026-11-16T03:10:29.5347795Z ? Verifying lockfile against supply-chain policies (2533 entries)...
+2026-11-16T03:10:29.6000317Z Lockfile is up to date, resolution step is skipped
+2026-11-16T03:10:29.7903878Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-16T03:10:30.0115646Z Packages: +2293
+2026-11-16T03:10:30.0117720Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-11-16T03:10:30.7913336Z Progress: resolved 2293, reused 485, downloaded 0, added 0
+2026-11-16T03:10:31.7970393Z Progress: resolved 2293, reused 1006, downloaded 0, added 0
+2026-11-16T03:10:32.8034713Z Progress: resolved 2293, reused 1701, downloaded 0, added 0
+2026-11-16T03:10:33.6310327Z Packages are hard linked from the content-addressable store to the virtual store.
+2026-11-16T03:10:33.6337648Z   Content-addressable store is at: /home/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-11-16T03:10:33.6367173Z   Virtual store is at:             node_modules/.pnpm
+2026-11-16T03:10:33.8126453Z Progress: resolved 2293, reused 2278, downloaded 0, added 31
+2026-11-16T03:10:34.8177781Z Progress: resolved 2293, reused 2278, downloaded 0, added 96
+2026-11-16T03:10:35.8162463Z Progress: resolved 2293, reused 2278, downloaded 0, added 276
+2026-11-16T03:10:36.8164198Z Progress: resolved 2293, reused 2278, downloaded 0, added 484
+2026-11-16T03:10:37.7860511Z ✓ Lockfile passes supply-chain policies (2533 entries in 8.2s)
+2026-11-16T03:10:37.8197595Z Progress: resolved 2293, reused 2278, downloaded 0, added 881
+2026-11-16T03:10:38.6899316Z Progress: resolved 2293, reused 2278, downloaded 0, added 2293, done
+2026-11-16T03:10:39.6712397Z [WARN] Failed to create bin at /home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js'
+2026-11-16T03:10:39.8342601Z 
+2026-11-16T03:10:39.8343335Z dependencies:
+2026-11-16T03:10:39.8344153Z + @agent-teams/legacy-agent-host 0.1.0 <- packages/legacy-agent-host
+2026-11-16T03:10:39.8345166Z + @agent-teams/task-change-ledger 0.1.0 <- packages/task-change-ledger
+2026-11-16T03:10:39.8346056Z + @claude-teams/agent-graph 0.1.0 <- packages/agent-graph
+2026-11-16T03:10:39.8347959Z + @codemirror/autocomplete 6.20.0
+2026-11-16T03:10:39.8348878Z + @codemirror/commands 6.10.2
+2026-11-16T03:10:39.8349522Z + @codemirror/lang-cpp 6.0.3
+2026-11-16T03:10:39.8349995Z + @codemirror/lang-css 6.3.1
+2026-11-16T03:10:39.8350441Z + @codemirror/lang-go 6.0.1
+2026-11-16T03:10:39.8350940Z + @codemirror/lang-html 6.4.11
+2026-11-16T03:10:39.8351407Z + @codemirror/lang-java 6.0.2
+2026-11-16T03:10:39.8351942Z + @codemirror/lang-javascript 6.2.4
+2026-11-16T03:10:39.8352460Z + @codemirror/lang-json 6.0.2
+2026-11-16T03:10:39.8352918Z + @codemirror/lang-less 6.0.2
+2026-11-16T03:10:39.8353443Z + @codemirror/lang-markdown 6.5.0
+2026-11-16T03:10:39.8353930Z + @codemirror/lang-php 6.0.2
+2026-11-16T03:10:39.8354443Z + @codemirror/lang-python 6.2.1
+2026-11-16T03:10:39.8354930Z + @codemirror/lang-rust 6.0.2
+2026-11-16T03:10:39.8355390Z + @codemirror/lang-sass 6.0.2
+2026-11-16T03:10:39.8355847Z + @codemirror/lang-sql 6.10.0
+2026-11-16T03:10:39.8356467Z + @codemirror/lang-xml 6.1.0
+2026-11-16T03:10:39.8356942Z + @codemirror/lang-yaml 6.1.2
+2026-11-16T03:10:39.8357392Z + @codemirror/language 6.12.1
+2026-11-16T03:10:39.8357911Z + @codemirror/language-data 6.5.2
+2026-11-16T03:10:39.8358388Z + @codemirror/lint 6.9.5
+2026-11-16T03:10:39.8358820Z + @codemirror/merge 6.12.0
+2026-11-16T03:10:39.8359252Z + @codemirror/search 6.6.0
+2026-11-16T03:10:39.8359689Z + @codemirror/state 6.5.4
+2026-11-16T03:10:39.8360177Z + @codemirror/theme-one-dark 6.1.3
+2026-11-16T03:10:39.8360651Z + @codemirror/view 6.39.15
+2026-11-16T03:10:39.8361351Z + @daypicker/react 10.0.1
+2026-11-16T03:10:39.8361780Z + @dnd-kit/core 6.3.1
+2026-11-16T03:10:39.8362185Z + @dnd-kit/sortable 10.0.0
+2026-11-16T03:10:39.8362615Z + @dnd-kit/utilities 3.2.2
+2026-11-16T03:10:39.8363027Z + @fastify/cors 11.2.0
+2026-11-16T03:10:39.8363430Z + @fastify/static 10.1.2
+2026-11-16T03:10:39.8363910Z + @file-viewer/preset-office 3.1.2
+2026-11-16T03:10:39.8364395Z + @file-viewer/react 3.1.2
+2026-11-16T03:10:39.8364813Z + @floating-ui/dom 1.7.6
+2026-11-16T03:10:39.8365233Z + @headless-tree/core 1.7.0
+2026-11-16T03:10:39.8365661Z + @headless-tree/react 1.7.0
+2026-11-16T03:10:39.8366115Z + @openuidev/lang-core 0.3.2
+2026-11-16T03:10:39.8366822Z + @openuidev/react-headless 0.17.0
+2026-11-16T03:10:39.8367308Z + @openuidev/react-lang 0.3.2
+2026-11-16T03:10:39.8367713Z + @openuidev/react-ui 0.17.0
+2026-11-16T03:10:39.8368168Z + @radix-ui/react-alert-dialog 1.1.15
+2026-11-16T03:10:39.8368660Z + @radix-ui/react-checkbox 1.3.3
+2026-11-16T03:10:39.8369150Z + @radix-ui/react-collapsible 1.1.12
+2026-11-16T03:10:39.8369656Z + @radix-ui/react-context-menu 2.2.16
+2026-11-16T03:10:39.8370125Z + @radix-ui/react-dialog 1.1.15
+2026-11-16T03:10:39.8370612Z + @radix-ui/react-dropdown-menu 2.1.16
+2026-11-16T03:10:39.8371282Z + @radix-ui/react-hover-card 1.1.15
+2026-11-16T03:10:39.8371774Z + @radix-ui/react-label 2.1.8
+2026-11-16T03:10:39.8372277Z + @radix-ui/react-popover 1.1.15
+2026-11-16T03:10:39.8372781Z + @radix-ui/react-presence 1.1.5
+2026-11-16T03:10:39.8373279Z + @radix-ui/react-select 2.2.6
+2026-11-16T03:10:39.8373727Z + @radix-ui/react-slot 1.2.4
+2026-11-16T03:10:39.8374221Z + @radix-ui/react-switch 1.3.7
+2026-11-16T03:10:39.8374679Z + @radix-ui/react-tabs 1.1.13
+2026-11-16T03:10:39.8375178Z + @radix-ui/react-tooltip 1.2.8
+2026-11-16T03:10:39.8375632Z + @sentry/electron 7.10.0
+2026-11-16T03:10:39.8376054Z + @sentry/react 10.45.0
+2026-11-16T03:10:39.8377366Z + @tanstack/react-table 9.3.1
+2026-11-16T03:10:39.8377884Z + @tanstack/react-virtual 3.13.24
+2026-11-16T03:10:39.8378558Z + @terminal-platform/design-tokens 0.1.0
+2026-11-16T03:10:39.8379209Z + @terminal-platform/foundation 0.1.0
+2026-11-16T03:10:39.8379799Z + @terminal-platform/runtime-types 0.1.0
+2026-11-16T03:10:39.8380540Z + @terminal-platform/workspace-adapter-websocket 0.1.0
+2026-11-16T03:10:39.8381277Z + @terminal-platform/workspace-contracts 0.1.0
+2026-11-16T03:10:39.8381935Z + @terminal-platform/workspace-core 0.1.0
+2026-11-16T03:10:39.8382562Z + @terminal-platform/workspace-elements 0.1.0
+2026-11-16T03:10:39.8383221Z + @terminal-platform/workspace-gateway-node 0.1.0
+2026-11-16T03:10:39.8383886Z + @terminal-platform/workspace-react 0.1.0
+2026-11-16T03:10:39.8385638Z + @tiptap/extension-placeholder 3.30.5
+2026-11-16T03:10:39.8386148Z + @tiptap/markdown 3.30.5
+2026-11-16T03:10:39.8386800Z + @tiptap/pm 3.30.5
+2026-11-16T03:10:39.8387192Z + @tiptap/react 3.30.5
+2026-11-16T03:10:39.8387619Z + @tiptap/starter-kit 3.30.5
+2026-11-16T03:10:39.8388067Z + @xterm/addon-fit 0.11.0
+2026-11-16T03:10:39.8389179Z + @xterm/addon-web-links 0.12.0
+2026-11-16T03:10:39.8389648Z + @xterm/xterm 6.0.0
+2026-11-16T03:10:39.8390248Z + agent-teams-controller 1.0.0 <- agent-teams-controller
+2026-11-16T03:10:39.8390845Z + better-sqlite3 12.11.1
+2026-11-16T03:10:39.8391290Z + builder-util-runtime 9.7.0
+2026-11-16T03:10:39.8391715Z + chokidar 4.0.3
+2026-11-16T03:10:39.8392167Z + class-variance-authority 0.7.1
+2026-11-16T03:10:39.8392599Z + clsx 2.1.1
+2026-11-16T03:10:39.8392916Z + cmdk 1.0.4
+2026-11-16T03:10:39.8393239Z + croner 10.0.1
+2026-11-16T03:10:39.8393600Z + cronstrue 3.13.0
+2026-11-16T03:10:39.8393953Z + date-fns 3.6.0
+2026-11-16T03:10:39.8394309Z + diff 8.0.3
+2026-11-16T03:10:39.8394652Z + dompurify 3.4.17
+2026-11-16T03:10:39.8395026Z + drizzle-orm 0.45.2
+2026-11-16T03:10:39.8395425Z + electron-updater 6.8.9
+2026-11-16T03:10:39.8395864Z + fast-json-stringify 6.4.0
+2026-11-16T03:10:39.8396253Z + fastify 5.12.5
+2026-11-16T03:10:39.8397068Z + highlight.js 11.11.1
+2026-11-16T03:10:39.8397433Z + i18next 26.2.0
+2026-11-16T03:10:39.8397784Z + idb-keyval 6.2.2
+2026-11-16T03:10:39.8398392Z + isbinaryfile 6.0.0
+2026-11-16T03:10:39.8398889Z + json-schema-ref-resolver 3.0.0
+2026-11-16T03:10:39.8399368Z + jsonc-parser 3.3.1
+2026-11-16T03:10:39.8399775Z + lucide-react 0.577.0
+2026-11-16T03:10:39.8400202Z + mdast-util-to-hast 13.2.1
+2026-11-16T03:10:39.8400641Z + mermaid 11.15.0
+2026-11-16T03:10:39.8400992Z + motion 12.38.0
+2026-11-16T03:10:39.8401361Z + node-diff3 3.2.0
+2026-11-16T03:10:39.8401734Z + node-pty 1.1.0
+2026-11-16T03:10:39.8402092Z + pica 9.0.1
+2026-11-16T03:10:39.8402441Z + pidusage 4.0.1
+2026-11-16T03:10:39.8402831Z + posthog-js 1.396.6
+2026-11-16T03:10:39.8403245Z + react 19.2.4
+2026-11-16T03:10:39.8403698Z + react-dom 19.2.4
+2026-11-16T03:10:39.8404146Z + react-grid-layout 2.2.2
+2026-11-16T03:10:39.8404601Z + react-i18next 17.0.8
+2026-11-16T03:10:39.8405030Z + react-markdown 10.1.0
+2026-11-16T03:10:39.8405479Z + react-modal-sheet 5.6.0
+2026-11-16T03:10:39.8405924Z + react-resizable 3.1.3
+2026-11-16T03:10:39.8406576Z + rehype-highlight 7.0.2
+2026-11-16T03:10:39.8407026Z + rehype-raw 7.0.0
+2026-11-16T03:10:39.8407427Z + rehype-sanitize 6.0.0
+2026-11-16T03:10:39.8407848Z + remark-gfm 4.0.1
+2026-11-16T03:10:39.8408234Z + remark-parse 11.0.0
+2026-11-16T03:10:39.8408638Z + simple-git 4.0.2
+2026-11-16T03:10:39.8409024Z + ssh-config 5.0.4
+2026-11-16T03:10:39.8409381Z + ssh2 1.17.0
+2026-11-16T03:10:39.8409763Z + strip-markdown 6.0.0
+2026-11-16T03:10:39.8410177Z + tailwind-merge 3.5.0
+2026-11-16T03:10:39.8410612Z + tailwindcss-animate 1.0.7
+2026-11-16T03:10:39.8411693Z + terminal-platform-node terminal-platform-node@file:vendor/terminal-platform/terminal-platform-node-stub
+2026-11-16T03:10:39.8412617Z + unified 11.0.5
+2026-11-16T03:10:39.8412963Z + ws 8.21.0
+2026-11-16T03:10:39.8413273Z + yaml 2.9.0
+2026-11-16T03:10:39.8413718Z + yet-another-react-lightbox 3.29.1
+2026-11-16T03:10:39.8414162Z + zod 4.6.7
+2026-11-16T03:10:39.8414487Z + zustand 4.5.7
+2026-11-16T03:10:39.8414694Z 
+2026-11-16T03:10:39.8414854Z devDependencies:
+2026-11-16T03:10:39.8415249Z + @electron/rebuild 4.2.0
+2026-11-16T03:10:39.8415889Z + @eslint-community/eslint-plugin-eslint-comments 4.6.0
+2026-11-16T03:10:39.8420053Z + @eslint/js 9.39.2
+2026-11-16T03:10:39.8420540Z + @file-viewer/vite-plugin 3.1.2
+2026-11-16T03:10:39.8421050Z + @sentry/vite-plugin 5.1.1
+2026-11-16T03:10:39.8421572Z + @tailwindcss/typography 0.5.19
+2026-11-16T03:10:39.8422109Z + @types/better-sqlite3 7.6.13
+2026-11-16T03:10:39.8422570Z + @types/hast 3.0.4
+2026-11-16T03:10:39.8423002Z + @types/mdast 4.0.4
+2026-11-16T03:10:39.8423407Z + @types/node 24.12.4
+2026-11-16T03:10:39.8423823Z + @types/pidusage 2.0.5
+2026-11-16T03:10:39.8424938Z + @types/react 19.2.14
+2026-11-16T03:10:39.8425369Z + @types/react-dom 19.2.3
+2026-11-16T03:10:39.8425804Z + @types/ssh2 1.15.5
+2026-11-16T03:10:39.8426525Z + @typescript/native <- typescript 7.0.2
+2026-11-16T03:10:39.8427072Z + @vitejs/plugin-react 4.7.0
+2026-11-16T03:10:39.8427527Z + @vitest/coverage-v8 3.2.6
+2026-11-16T03:10:39.8427961Z + autoprefixer 10.4.23
+2026-11-16T03:10:39.8428532Z + better-sqlite3-node <- better-sqlite3 12.10.1
+2026-11-16T03:10:39.8429083Z + electron 44.10.1
+2026-11-16T03:10:39.8429493Z + electron-builder 26.17.0
+2026-11-16T03:10:39.8429952Z + electron-vite 5.0.0
+2026-11-16T03:10:39.8430334Z + eslint 9.39.4
+2026-11-16T03:10:39.8430790Z + eslint-config-prettier 10.1.8
+2026-11-16T03:10:39.8431392Z + eslint-import-resolver-typescript 4.4.4
+2026-11-16T03:10:39.8432022Z + eslint-plugin-boundaries 5.3.1
+2026-11-16T03:10:39.8432542Z + eslint-plugin-import 2.32.0
+2026-11-16T03:10:39.8433059Z + eslint-plugin-jsx-a11y 6.10.2
+2026-11-16T03:10:39.8433536Z + eslint-plugin-react 7.37.5
+2026-11-16T03:10:39.8434058Z + eslint-plugin-react-hooks 7.0.1
+2026-11-16T03:10:39.8434604Z + eslint-plugin-react-refresh 0.4.26
+2026-11-16T03:10:39.8435240Z + eslint-plugin-security 3.0.1
+2026-11-16T03:10:39.8435826Z + eslint-plugin-simple-import-sort 12.1.1
+2026-11-16T03:10:39.8437279Z + eslint-plugin-sonarjs 3.0.6
+2026-11-16T03:10:39.8437871Z + eslint-plugin-tailwindcss 3.18.2
+2026-11-16T03:10:39.8438625Z + fake-indexeddb 6.2.5
+2026-11-16T03:10:39.8439034Z + globals 17.2.0
+2026-11-16T03:10:39.8439403Z + happy-dom 21.0.4
+2026-11-16T03:10:39.8439750Z + husky 9.1.7
+2026-11-16T03:10:39.8440108Z + i18next-cli 1.58.0
+2026-11-16T03:10:39.8440472Z + knip 5.82.1
+2026-11-16T03:10:39.8440846Z + lint-staged 16.2.7
+2026-11-16T03:10:39.8441213Z + oxfmt 0.72.0
+2026-11-16T03:10:39.8441544Z + oxlint 1.87.0
+2026-11-16T03:10:39.8441898Z + postcss 8.5.28
+2026-11-16T03:10:39.8442269Z + prettier 3.8.1
+2026-11-16T03:10:39.8442743Z + prettier-plugin-tailwindcss 0.7.2
+2026-11-16T03:10:39.8443296Z + tailwindcss 3.4.19
+2026-11-16T03:10:39.8443712Z + tsx 4.23.15
+2026-11-16T03:10:39.8444100Z + typescript 5.9.3
+2026-11-16T03:10:39.8444520Z + typescript-eslint 8.54.0
+2026-11-16T03:10:39.8444931Z + vite 6.4.4
+2026-11-16T03:10:39.8445275Z + vitest 3.2.6
+2026-11-16T03:10:39.8445483Z 
+2026-11-16T03:10:39.8491247Z landing postinstall$ node ./scripts/patch-minimatch-brace-expansion.mjs && node ../scripts/ci/transitive-security.ts --apply
+2026-11-16T03:10:39.9018405Z landing postinstall: [landing postinstall] skipped npm layout patch; pnpm patchedDependencies handles compatibility
+2026-11-16T03:10:40.1001085Z landing postinstall: Verified braces security backport in 1 package(s)
+2026-11-16T03:10:40.1984773Z landing postinstall: Verified http-cache-semantics security backport in 1 package(s)
+2026-11-16T03:10:40.2080459Z landing postinstall: Done
+2026-11-16T03:10:40.2693602Z [WARN] Failed to create bin at /home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/@agent-teams/legacy-agent-host/dist/cli.js'
+2026-11-16T03:10:40.2735353Z . preinstall$ node ./scripts/ci/enforce-pnpm-install.mjs
+2026-11-16T03:10:40.3164138Z . preinstall: Done
+2026-11-16T03:10:40.3167130Z . postinstall$ node ./scripts/postinstall-electron.cjs
+2026-11-16T03:10:40.3625427Z . postinstall: Done
+2026-11-16T03:10:40.3626435Z . prepare$ husky
+2026-11-16T03:10:40.4237660Z . prepare: Done
+2026-11-16T03:10:40.4530548Z Done in 11.5s using pnpm v11.22.0
+2026-11-16T03:10:41.1644030Z rebuilt dependencies successfully
+2026-11-16T03:10:41.2115723Z [better-sqlite3-node] Node ABI rebuild verified
+2026-11-16T03:10:41.6604792Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:10:41.6612014Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:10:41.6930921Z $ tsup
+2026-11-16T03:10:41.9974401Z [34mCLI[39m Building entry: src/index.ts
+2026-11-16T03:10:41.9976766Z [34mCLI[39m Using tsconfig: tsconfig.json
+2026-11-16T03:10:41.9977986Z [34mCLI[39m tsup v8.5.1
+2026-11-16T03:10:41.9979436Z [34mCLI[39m Using tsup config: /home/runner/work/agent-teams-ai/agent-teams-ai/mcp-server/tsup.config.ts
+2026-11-16T03:10:41.9995477Z [34mCLI[39m Target: node24
+2026-11-16T03:10:41.9996161Z [34mCLI[39m Cleaning output folder
+2026-11-16T03:10:42.0006056Z [34mESM[39m Build start
+2026-11-16T03:10:42.3965333Z [32mESM[39m [1mdist/index.js     [22m[32m3.04 MB[39m
+2026-11-16T03:10:42.3966683Z [32mESM[39m [1mdist/index.js.map [22m[32m4.78 MB[39m
+2026-11-16T03:10:42.3967620Z [32mESM[39m ⚡️ Build success in 396ms
+2026-11-16T03:10:42.9049390Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:10:42.9058046Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:10:42.9411588Z $ pnpm --filter @agent-teams/task-change-ledger build
+2026-11-16T03:10:43.4433068Z .                                        | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:10:43.4442115Z ../task-change-ledger                    | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:10:43.4711801Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
+2026-11-16T03:10:43.9364266Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
+2026-11-16T03:10:47.1549237Z ##[group]Run set -euo pipefail
+2026-11-16T03:10:47.1549580Z [36;1mset -euo pipefail[0m
+2026-11-16T03:10:47.1549989Z [36;1m# Live subscriptions and real vendor executables are outside this finite lane.[0m
+2026-11-16T03:10:47.1550572Z [36;1m# Excluded files remain unqualified; the existing native gates are unchanged.[0m
+2026-11-16T03:10:47.1551110Z [36;1mpnpm exec vitest run --maxWorkers=2 --shard="$HOST_TEST_SHARD/4" \[0m
+2026-11-16T03:10:47.1551668Z [36;1m  --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' \[0m
+2026-11-16T03:10:47.1552372Z [36;1m  --reporter=default --reporter=json --outputFile "$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json" \[0m
+2026-11-16T03:10:47.1552980Z [36;1m  2>&1 | tee "$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log"[0m
+2026-11-16T03:10:47.1602767Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T03:10:47.1603137Z env:
+2026-11-16T03:10:47.1603457Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:10:47.1603777Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:10:47.1604170Z   HOST_EMULATED_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:10:47.1604582Z   HOST_TEST_SHARD: 2
+2026-11-16T03:10:47.1604889Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:10:47.1605352Z   AGENT_BACKEND_TEST_NODE: /opt/hostedtoolcache/node/24.21.0/x64/bin/node
+2026-11-16T03:10:47.1605756Z ##[endgroup]
+2026-11-16T03:10:47.9434857Z 
+2026-11-16T03:10:47.9437064Z [1m[46m RUN [49m[22m [36mv3.2.6 [39m[90m/home/runner/work/agent-teams-ai/agent-teams-ai[39m
+2026-11-16T03:10:47.9437765Z 
+2026-11-16T03:10:59.9580328Z [90mstdout[2m | test/main/services/team/TeamAgentLaunchMatrix.safe-e2e.test.ts
+2026-11-16T03:10:59.9581505Z [22m[39mDownloading Electron binary...
+2026-11-16T03:10:59.9582298Z 
+2026-11-16T03:11:00.7777717Z [90mstderr[2m | test/renderer/components/team/TeamModelSelectorDisabledState.test.ts
+2026-11-16T03:11:00.7779618Z [22m[39mWarning: KaTeX doesn't work in quirks mode. Make sure your website has a suitable doctype.
+2026-11-16T03:11:00.7780034Z 
+2026-11-16T03:11:05.9517457Z  [32m✓[39m test/renderer/components/team/TeamModelSelectorDisabledState.test.ts [2m([22m[2m96 tests[22m[2m)[22m[33m 4590[2mms[22m[39m
+2026-11-16T03:11:05.9519448Z    [33m[2m✓[22m[39m TeamModelSelector disabled Codex models[2m > [22mrenders flat OpenCode groups with shared route status and individual proof badges [33m 307[2mms[22m[39m
+2026-11-16T03:11:10.7477578Z  [32m✓[39m test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts [2m([22m[2m80 tests[22m[2m)[22m[33m 3094[2mms[22m[39m
+2026-11-16T03:11:10.7479888Z    [33m[2m✓[22m[39m useRuntimeProviderManagement[2m > [22mdoes not replace the cached full catalog with search results [33m 305[2mms[22m[39m
+2026-11-16T03:11:10.7482137Z    [33m[2m✓[22m[39m useRuntimeProviderManagement[2m > [22mkeeps provider search local until full-catalog search is explicitly requested [33m 656[2mms[22m[39m
+2026-11-16T03:11:10.7484317Z    [33m[2m✓[22m[39m useRuntimeProviderManagement[2m > [22mlazy-loads provider directory and ignores stale search responses [33m 313[2mms[22m[39m
+2026-11-16T03:11:10.7486697Z    [33m[2m✓[22m[39m useRuntimeProviderManagement[2m > [22mdebounces provider model search and groups superseded picker requests [33m 356[2mms[22m[39m
+2026-11-16T03:11:10.7488809Z    [33m[2m✓[22m[39m useRuntimeProviderManagement[2m > [22mkeeps Test results across a debounced catalog search reload [33m 356[2mms[22m[39m
+2026-11-16T03:11:13.4995621Z  [32m✓[39m test/renderer/store/cliInstallerSlice.test.ts [2m([22m[2m88 tests[22m[2m)[22m[33m 412[2mms[22m[39m
+2026-11-16T03:11:16.8459715Z  [32m✓[39m test/main/services/team/RuntimeDeliveryService.test.ts [2m([22m[2m65 tests[22m[2m)[22m[33m 763[2mms[22m[39m
+2026-11-16T03:11:16.8463641Z    [33m[2m✓[22m[39m RuntimeDeliveryService[2m > [22mretains the first committed receipt beyond the 512 full-record boundary [33m 343[2mms[22m[39m
+2026-11-16T03:11:19.3235428Z  [32m✓[39m test/main/services/infrastructure/CliInstallerService.test.ts [2m([22m[2m50 tests[22m[2m)[22m[33m 1297[2mms[22m[39m
+2026-11-16T03:11:19.3238514Z    [33m[2m✓[22m[39m CliInstallerService[2m > [22mgetStatus[2m > [22mdoes not mark the CLI installed when the version probe cannot confirm the binary [33m 353[2mms[22m[39m
+2026-11-16T03:11:19.3241399Z    [33m[2m✓[22m[39m CliInstallerService[2m > [22mgetStatus[2m > [22mretries the version probe once before marking the runtime unhealthy [33m 354[2mms[22m[39m
+2026-11-16T03:11:19.3243366Z    [33m[2m✓[22m[39m CliInstallerService[2m > [22mgetStatus[2m > [22mreuses the last healthy runtime snapshot when a later version probe fails transiently [33m 354[2mms[22m[39m
+2026-11-16T03:11:21.1836780Z  [32m✓[39m test/main/http/teams.test.ts [2m([22m[2m51 tests[22m[2m)[22m[33m 330[2mms[22m[39m
+2026-11-16T03:11:22.0802985Z  [32m✓[39m test/main/services/team/TaskChangeComputer.test.ts [2m([22m[2m43 tests[22m[2m)[22m[32m 161[2mms[22m[39m
+2026-11-16T03:11:24.1932034Z (node:3469) ExperimentalWarning: vm.USE_MAIN_CONTEXT_DEFAULT_LOADER is an experimental feature and might change at any time
+2026-11-16T03:11:24.1933888Z (Use `node --trace-warnings ...` to show where the warning was created)
+2026-11-16T03:11:24.6959343Z  [32m✓[39m test/scripts/opencodeNativeIpcFailureDetail.test.ts [2m([22m[2m53 tests[22m[2m)[22m[33m 863[2mms[22m[39m
+2026-11-16T03:11:26.0075786Z  [32m✓[39m src/main/services/team/opencode/bridge/CursorAgentProcessCleanup.test.ts [2m([22m[2m79 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+2026-11-16T03:11:26.6723976Z  [32m✓[39m test/renderer/utils/memberHelpers.test.ts [2m([22m[2m109 tests[22m[2m)[22m[32m 60[2mms[22m[39m
+2026-11-16T03:11:27.1012073Z  [32m✓[39m test/main/services/team/TeamAgentLaunchMatrix.safe-e2e.test.ts [2m([22m[2m349 tests[22m[2m)[22m[33m 21283[2mms[22m[39m
+2026-11-16T03:11:27.1014407Z    [33m[2m✓[22m[39m Team agent launch matrix safe e2e[2m > [22mlaunches pure OpenCode worktree members as aggregate worktree-root lanes [33m 380[2mms[22m[39m
+2026-11-16T03:11:27.1017151Z    [33m[2m✓[22m[39m Team agent launch matrix safe e2e[2m > [22msurfaces OpenCode permissions when inline delivery observe hits a pending request [33m 3072[2mms[22m[39m
+2026-11-16T03:11:27.7515466Z  [32m✓[39m test/renderer/utils/memberLaunchDiagnostics.test.ts [2m([22m[2m80 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+2026-11-16T03:11:27.9538712Z  [32m✓[39m test/renderer/features/agent-graph/TeamGraphAdapter.test.ts [2m([22m[2m53 tests[22m[2m)[22m[32m 76[2mms[22m[39m
+2026-11-16T03:11:28.2946023Z  [32m✓[39m test/renderer/utils/teamProvisioningPresentation.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+2026-11-16T03:11:29.9098268Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeRuntimeStopFlow.test.ts [2m([22m[2m40 tests[22m[2m)[22m[32m 181[2mms[22m[39m
+2026-11-16T03:11:31.4069092Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeRuntimeAdapterLaunch.test.ts [2m([22m[2m62 tests[22m[2m)[22m[32m 285[2mms[22m[39m
+2026-11-16T03:11:33.5446990Z [90mstderr[2m | src/renderer/components/team/messages/MessageComposer.pendingSend.test.tsx
+2026-11-16T03:11:33.5448973Z [22m[39mWarning: KaTeX doesn't work in quirks mode. Make sure your website has a suitable doctype.
+2026-11-16T03:11:33.5449866Z 
+2026-11-16T03:11:34.9899347Z  [32m✓[39m src/renderer/components/team/messages/MessageComposer.pendingSend.test.tsx [2m([22m[2m38 tests[22m[2m)[22m[33m 641[2mms[22m[39m
+2026-11-16T03:11:35.0141925Z  [32m✓[39m test/renderer/features/runtime-provider-management/RuntimeLocalProviderSetupDialog.test.tsx [2m([22m[2m19 tests[22m[2m)[22m[33m 2441[2mms[22m[39m
+2026-11-16T03:11:35.0145090Z    [33m[2m✓[22m[39m RuntimeLocalProviderSetupDialog[2m > [22mautomatically retries once when the new provider has not reached the OpenCode catalog yet [33m 913[2mms[22m[39m
+2026-11-16T03:11:35.7089871Z  [32m✓[39m test/features/codex-account/renderer/useCodexAccountSnapshot.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 100[2mms[22m[39m
+2026-11-16T03:11:36.1771422Z  [32m✓[39m test/main/services/team/ReviewDecisionStore.test.ts [2m([22m[2m35 tests[22m[2m)[22m[33m 598[2mms[22m[39m
+2026-11-16T03:11:36.2835624Z  [32m✓[39m src/main/services/team/contracts/__tests__/TeamProvisioningApis.test.ts [2m([22m[2m27 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+2026-11-16T03:11:38.6518335Z  [32m✓[39m test/features/member-work-sync/main/MemberWorkSyncPreparedBackend.test.ts [2m([22m[2m43 tests[22m[2m)[22m[33m 1015[2mms[22m[39m
+2026-11-16T03:11:39.1150901Z  [32m✓[39m test/main/services/team/AgentTeamsMcpHttpServer.test.ts [2m([22m[2m39 tests[22m[2m)[22m[33m 538[2mms[22m[39m
+2026-11-16T03:11:40.3413338Z  [32m✓[39m test/main/services/team/TeamProvisioningOpenCodeModelPreparation.test.ts [2m([22m[2m41 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+2026-11-16T03:11:40.9521310Z  [32m✓[39m test/main/services/team/TeamInboxReader.test.ts [2m([22m[2m36 tests[22m[2m)[22m[32m 111[2mms[22m[39m
+2026-11-16T03:11:41.6287432Z  [32m✓[39m test/renderer/store/teamSliceContextRace.test.ts [2m([22m[2m36 tests[22m[2m)[22m[33m 1565[2mms[22m[39m
+2026-11-16T03:11:41.6289594Z    [33m[2m✓[22m[39m team slice context races[2m > [22mreruns a pending global task refresh for the current context instead of applying stale tasks [33m 1504[2mms[22m[39m
+2026-11-16T03:11:42.5987269Z  [32m✓[39m test/main/services/team/OpenCodeRuntimeManifestEvidenceReader.test.ts [2m([22m[2m28 tests[22m[2m)[22m[33m 374[2mms[22m[39m
+2026-11-16T03:11:42.6332921Z  [32m✓[39m test/renderer/features/runtime-provider-management/runtimeProviderQuickConnect.test.ts [2m([22m[2m28 tests[22m[2m)[22m[33m 836[2mms[22m[39m
+2026-11-16T03:11:43.6487836Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningMixedSecondaryLaunchQueue.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 45[2mms[22m[39m
+2026-11-16T03:11:44.9217593Z  [32m✓[39m test/main/services/team/TeamDataWorkerClient.test.ts [2m([22m[2m31 tests[22m[2m)[22m[33m 815[2mms[22m[39m
+2026-11-16T03:11:45.4865021Z  [32m✓[39m src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalModelRuntimeInspector.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 45[2mms[22m[39m
+2026-11-16T03:11:46.7041554Z  [32m✓[39m src/renderer/store/slices/__tests__/cliInstallerSlice.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+2026-11-16T03:11:48.0393084Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningLeadRuntimeRestart.test.ts [2m([22m[2m32 tests[22m[2m)[22m[33m 4354[2mms[22m[39m
+2026-11-16T03:11:48.0395275Z    [33m[2m✓[22m[39m lead runtime restart[2m > [22mrestores the original default launch identity after a post-sync replacement failure [33m 505[2mms[22m[39m
+2026-11-16T03:11:48.0401716Z    [33m[2m✓[22m[39m lead runtime restart[2m > [22mkills the replacement and restores the old runtime when metadata sync fails [33m 503[2mms[22m[39m
+2026-11-16T03:11:48.0403343Z    [33m[2m✓[22m[39m lead runtime restart[2m > [22mobserves replacement exit before close while metadata sync is pending [33m 553[2mms[22m[39m
+2026-11-16T03:11:48.0404828Z    [33m[2m✓[22m[39m lead runtime restart[2m > [22mretains degraded rollback ownership when old metadata restoration is unconfirmed [33m 503[2mms[22m[39m
+2026-11-16T03:11:48.0406118Z    [33m[2m✓[22m[39m lead runtime restart[2m > [22mdoes not restore lifecycle when rollback exits before metadata close [33m 503[2mms[22m[39m
+2026-11-16T03:11:48.0407759Z    [33m[2m✓[22m[39m lead runtime restart[2m > [22mrolls back without metadata writes when replacement exits during startup confirmation [33m 503[2mms[22m[39m
+2026-11-16T03:11:48.3874625Z  [32m✓[39m test/renderer/features/runtime-provider-management/useOpenCodeProviderModelCatalog.test.tsx [2m([22m[2m31 tests[22m[2m)[22m[32m 81[2mms[22m[39m
+2026-11-16T03:11:48.8089380Z  [32m✓[39m src/features/team-provisioning/renderer/ui/EditTeamMemberDialog.test.tsx [2m([22m[2m33 tests[22m[2m)[22m[32m 193[2mms[22m[39m
+2026-11-16T03:11:48.9801652Z  [32m✓[39m src/features/token-usage/core/domain/__tests__/snapshotProjection.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+2026-11-16T03:11:49.9871909Z  [32m✓[39m test/main/services/team/TeamLaunchSummaryProjection.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+2026-11-16T03:11:50.7137916Z  [32m✓[39m test/renderer/store/notificationSlice.test.ts [2m([22m[2m40 tests[22m[2m)[22m[32m 203[2mms[22m[39m
+2026-11-16T03:11:50.7947738Z  [32m✓[39m src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.test.tsx [2m([22m[2m41 tests[22m[2m)[22m[32m 220[2mms[22m[39m
+2026-11-16T03:11:51.4258346Z  [32m✓[39m test/renderer/features/agent-graph/GraphView.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 104[2mms[22m[39m
+2026-11-16T03:11:52.0427112Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningLaunchIdentity.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-11-16T03:11:52.0772365Z  [32m✓[39m src/main/services/team/opencode/delivery/__tests__/OpenCodePromptDeliveryWatchdogCoordinator.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+2026-11-16T03:11:52.6051366Z  [32m✓[39m src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalModelCoordinationProbe.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+2026-11-16T03:11:53.3080786Z  [32m✓[39m test/renderer/components/extensions/ExtensionStoreView.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 149[2mms[22m[39m
+2026-11-16T03:11:53.4369392Z  [32m✓[39m test/main/services/discovery/ProjectScanner.sessionIndex.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 119[2mms[22m[39m
+2026-11-16T03:11:53.8284163Z  [32m✓[39m test/renderer/components/runtime/providerConnectionUi.test.ts [2m([22m[2m27 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-11-16T03:11:54.6653478Z  [32m✓[39m test/renderer/components/team/TeamProvisioningBanner.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 115[2mms[22m[39m
+2026-11-16T03:11:55.6193746Z  [32m✓[39m test/renderer/store/tabSlice.test.ts [2m([22m[2m28 tests[22m[2m)[22m[32m 148[2mms[22m[39m
+2026-11-16T03:11:56.3988816Z  [32m✓[39m test/features/opencode-compatibility/generation.test.ts [2m([22m[2m88 tests[22m[2m)[22m[32m 86[2mms[22m[39m
+2026-11-16T03:11:57.2429743Z  [32m✓[39m test/main/utils/ReviewFileTransaction.safe-e2e.test.ts [2m([22m[2m20 tests[22m[2m | [22m[33m1 skipped[39m[2m)[22m[32m 203[2mms[22m[39m
+2026-11-16T03:11:57.8410132Z  [32m✓[39m src/main/services/team/opencode/delivery/__tests__/OpenCodePromptDeliveryReadCommitPolicy.test.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+2026-11-16T03:11:59.0744755Z  [32m✓[39m test/renderer/components/extensions/skills/SkillsPanel.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 158[2mms[22m[39m
+2026-11-16T03:12:00.5843609Z [90mstderr[2m | test/renderer/components/team/TeamModelSelector.test.ts
+2026-11-16T03:12:00.5853785Z [22m[39mWarning: KaTeX doesn't work in quirks mode. Make sure your website has a suitable doctype.
+2026-11-16T03:12:00.5855132Z 
+2026-11-16T03:12:00.9843125Z  [32m✓[39m test/renderer/components/team/TeamModelSelector.test.ts [2m([22m[2m42 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+2026-11-16T03:12:00.9925567Z  [32m✓[39m test/renderer/components/common/ProviderActivityStatusStrip.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 156[2mms[22m[39m
+2026-11-16T03:12:01.5461898Z  [32m✓[39m test/main/services/infrastructure/CrossPlatformFileChangeSource.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+2026-11-16T03:12:02.1510747Z  [32m✓[39m test/main/features/team-provisioning/LegacyMemberSettingsAdapters.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+2026-11-16T03:12:02.7441500Z  [32m✓[39m test/main/services/schedule/ScheduledTaskExecutor.test.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 81[2mms[22m[39m
+2026-11-16T03:12:02.7952838Z [90mstderr[2m | test/renderer/features/terminal-workspace/TerminalWorkspacePanelInternals.fixture-e2e.test.ts
+2026-11-16T03:12:02.7957849Z [22m[39mLit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information.
+2026-11-16T03:12:02.7958607Z 
+2026-11-16T03:12:02.8347482Z  [32m✓[39m test/renderer/features/terminal-workspace/TerminalWorkspacePanelInternals.fixture-e2e.test.ts [2m([22m[2m39 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+2026-11-16T03:12:03.4452526Z  [32m✓[39m test/main/services/team/FileContentResolver.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 121[2mms[22m[39m
+2026-11-16T03:12:03.9601180Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningPreparePrimaryOwnedMemberRestartRuntimeUseCase.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+2026-11-16T03:12:04.7072915Z  [32m✓[39m test/scripts/opencodeNativeV2Transcript.test.ts [2m([22m[2m28 tests[22m[2m)[22m[32m 211[2mms[22m[39m
+2026-11-16T03:12:06.8253612Z  [32m✓[39m test/main/services/team/TeamProvisioningOpenCodePrimaryStatusRefresh.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 280[2mms[22m[39m
+2026-11-16T03:12:07.8928260Z  [32m✓[39m test/main/services/team/OpenCodeAgendaSyncRecovery.safe-e2e.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 204[2mms[22m[39m
+2026-11-16T03:12:08.4422731Z  [32m✓[39m src/main/services/team/runtime-projection/__tests__/RuntimeProjection.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+2026-11-16T03:12:08.9824289Z  [32m✓[39m test/renderer/features/terminal-workspace/TerminalWorkspaceBottomSheet.fixture-e2e.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[32m 172[2mms[22m[39m
+2026-11-16T03:12:09.1299054Z  [32m✓[39m src/main/services/team/opencode/bridge/CursorAgentAttributionRecords.test.ts [2m([22m[2m31 tests[22m[2m)[22m[32m 148[2mms[22m[39m
+2026-11-16T03:12:13.3215701Z  [32m✓[39m test/main/services/schedule/SmartSchedules.safe-e2e.test.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 3672[2mms[22m[39m
+2026-11-16T03:12:13.3219144Z    [33m[2m✓[22m[39m Smart schedules filesystem safe E2E[2m > [22mcarries the unfinished task through more skips than the retained run history [33m 2902[2mms[22m[39m
+2026-11-16T03:12:13.9589745Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeMemberInboxRelay.readCommitRecovery.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+2026-11-16T03:12:14.4339012Z  [32m✓[39m test/renderer/components/team/provisioningSteps.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:12:15.1087357Z  [32m✓[39m test/features/member-work-sync/main/MemberWorkSyncConditionalUseCases.test.ts [2m([22m[2m16 tests[22m[2m)[22m[33m 4682[2mms[22m[39m
+2026-11-16T03:12:15.1089553Z    [33m[2m✓[22m[39m conditional use cases on real json storage[2m > [22mdoes not restart an exhausted nested reconcile from rejected Reporter [33m 976[2mms[22m[39m
+2026-11-16T03:12:15.1090904Z    [33m[2m✓[22m[39m conditional use cases on real json storage[2m > [22mstops after exhausted stale-snapshot conflicts and does not plan an outbox [33m 954[2mms[22m[39m
+2026-11-16T03:12:15.1092177Z    [33m[2m✓[22m[39m conditional use cases on real sqlite storage[2m > [22mdoes not restart an exhausted nested reconcile from rejected Reporter [33m 813[2mms[22m[39m
+2026-11-16T03:12:15.1093723Z    [33m[2m✓[22m[39m conditional use cases on real sqlite storage[2m > [22mstops after exhausted stale-snapshot conflicts and does not plan an outbox [33m 841[2mms[22m[39m
+2026-11-16T03:12:15.8460356Z  [32m✓[39m test/features/opencode-runtime-installer/installPolicy.test.ts [2m([22m[2m76 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+2026-11-16T03:12:17.0699949Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningDiagnosticsPreflightCompatibilityFacade.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 56[2mms[22m[39m
+2026-11-16T03:12:18.3342286Z  [32m✓[39m test/main/services/team/stallMonitor/TeamTaskStallPendingPickup.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+2026-11-16T03:12:18.9186975Z  [32m✓[39m src/main/services/team/runtime-control/__tests__/RuntimeControlService.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 77[2mms[22m[39m
+2026-11-16T03:12:19.6839100Z  [32m✓[39m test/features/agent-backend/hostProvisioningProgress.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 140[2mms[22m[39m
+2026-11-16T03:12:19.8119030Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningLaunchRuntimeStatusCompatibilityFacade.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+2026-11-16T03:12:20.2244047Z  [32m✓[39m test/main/services/team/TeamBootstrapStateReader.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+2026-11-16T03:12:20.4454962Z  [32m✓[39m test/main/services/infrastructure/NotificationManager.team.test.ts [2m([22m[2m27 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-11-16T03:12:21.0163746Z  [32m✓[39m test/features/member-work-sync/main/RuntimeTurnSettledIngestor.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+2026-11-16T03:12:21.4656840Z  [32m✓[39m test/renderer/components/runtime/ProviderModelBadges.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[32m 126[2mms[22m[39m
+2026-11-16T03:12:23.0145977Z  [32m✓[39m test/renderer/features/agent-graph/GraphActivityHud.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 86[2mms[22m[39m
+2026-11-16T03:12:23.1216632Z  [32m✓[39m src/features/runtime-provider-management/main/infrastructure/KiroCliCompanionService.test.ts [2m([22m[2m23 tests[22m[2m)[22m[33m 1046[2mms[22m[39m
+2026-11-16T03:12:23.7597492Z    [33m[2m✓[22m[39m KiroCliCompanionService[2m > [22mkeeps an installed CLI and offers sign-in retry when browser auth fails [33m 1001[2mms[22m[39m
+2026-11-16T03:12:23.7599750Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningLeadSendMessageCapture.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-11-16T03:12:24.8829354Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningCreateDeterministicSetupFlow.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 74[2mms[22m[39m
+2026-11-16T03:12:25.9552618Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningProviderPreflight.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-11-16T03:12:27.3945316Z  [32m✓[39m src/renderer/components/team/members/LeadModelRow.test.tsx [2m([22m[2m17 tests[22m[2m)[22m[32m 160[2mms[22m[39m
+2026-11-16T03:12:28.0090668Z  [32m✓[39m src/main/services/team/opencode/delivery/__tests__/OpenCodeHumanGroupReply.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 98[2mms[22m[39m
+2026-11-16T03:12:28.9558780Z  [32m✓[39m test/renderer/components/extensions/mcp/McpServersPanel.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 78[2mms[22m[39m
+2026-11-16T03:12:29.5283547Z  [32m✓[39m test/main/services/team/ReviewPersistenceScopeLock.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 5893[2mms[22m[39m
+2026-11-16T03:12:29.5286216Z    [33m[2m✓[22m[39m ReviewPersistenceScopeLock[2m > [22mre-probes an owner whose start time was unobservable on the first attempt [33m 1013[2mms[22m[39m
+2026-11-16T03:12:29.5288910Z    [33m[2m✓[22m[39m ReviewPersistenceScopeLock[2m > [22mrate-limits owner probes and caps them by the remaining acquire budget [33m 1213[2mms[22m[39m
+2026-11-16T03:12:29.5291808Z    [33m[2m✓[22m[39m ReviewPersistenceScopeLock[2m > [22manswers a sub-second acquire budget while the probe it started runs on [33m 1519[2mms[22m[39m
+2026-11-16T03:12:29.5294140Z    [33m[2m✓[22m[39m ReviewPersistenceScopeLock[2m > [22mholds a joining acquire to its own budget, not to the probe it joined [33m 1517[2mms[22m[39m
+2026-11-16T03:12:29.5295652Z    [33m[2m✓[22m[39m ReviewPersistenceScopeLock[2m > [22mkeeps a live-pid owner whose start time cannot be observed at all [33m 311[2mms[22m[39m
+2026-11-16T03:12:31.3083519Z  [32m✓[39m src/main/services/runtime/ClaudeMultimodelBridgeService.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 173[2mms[22m[39m
+2026-11-16T03:12:34.1997609Z [90mstderr[2m | test/features/announcements/renderer/host.test.tsx
+2026-11-16T03:12:34.1999087Z [22m[39mWarning: KaTeX doesn't work in quirks mode. Make sure your website has a suitable doctype.
+2026-11-16T03:12:34.1999767Z 
+2026-11-16T03:12:35.4932657Z  [32m✓[39m test/features/announcements/renderer/host.test.tsx [2m([22m[2m19 tests[22m[2m)[22m[33m 481[2mms[22m[39m
+2026-11-16T03:12:36.1392342Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeInboxReadCommitRecovery.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-16T03:12:37.0688768Z [90mstderr[2m | test/renderer/utils/memberRuntimeSummary.test.ts
+2026-11-16T03:12:37.0690066Z [22m[39mWarning: KaTeX doesn't work in quirks mode. Make sure your website has a suitable doctype.
+2026-11-16T03:12:37.0690648Z 
+2026-11-16T03:12:37.4430566Z  [32m✓[39m test/renderer/utils/memberRuntimeSummary.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-11-16T03:12:39.0065489Z  [32m✓[39m src/features/token-usage/renderer/ui/BudgetAlertsPanel.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 762[2mms[22m[39m
+2026-11-16T03:12:39.1522265Z  [32m✓[39m test/main/ipc/teams/teamStopEscalationSharedFlow.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 70[2mms[22m[39m
+2026-11-16T03:12:40.0912175Z  [32m✓[39m test/renderer/components/team/review/ReviewActionHistoryPopover.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 391[2mms[22m[39m
+2026-11-16T03:12:40.5167627Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningStreamEventPortsFactory.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+2026-11-16T03:12:42.3674111Z  [32m✓[39m test/features/team-direct-chats/renderer/conversationSurface.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 46[2mms[22m[39m
+2026-11-16T03:12:43.0198100Z  [32m✓[39m test/main/services/team/RuntimePermission.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 66[2mms[22m[39m
+2026-11-16T03:12:43.6194171Z  [32m✓[39m test/main/utils/pathDecoder.test.ts [2m([22m[2m55 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+2026-11-16T03:12:45.8019141Z [90mstderr[2m | test/renderer/components/team/members/membersEditorUtils.test.ts
+2026-11-16T03:12:45.8021199Z [22m[39mWarning: KaTeX doesn't work in quirks mode. Make sure your website has a suitable doctype.
+2026-11-16T03:12:45.8022373Z 
+2026-11-16T03:12:46.1830244Z  [32m✓[39m test/renderer/components/team/members/membersEditorUtils.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-11-16T03:12:46.9903102Z  [32m✓[39m src/features/gateway-provider/__tests__/GatewayDraftRecovery.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 132[2mms[22m[39m
+2026-11-16T03:12:47.2741921Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeRuntimeRecoveryFlow.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+2026-11-16T03:12:48.3059340Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningCreateLaunchOrchestration.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 83[2mms[22m[39m
+2026-11-16T03:12:48.8836728Z  [32m✓[39m src/renderer/components/dashboard/openCodeProjectStatusBoundary.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 68[2mms[22m[39m
+2026-11-16T03:12:48.9676768Z  [32m✓[39m test/main/features/runtime-provider-management/openCodeConnectApiKeyFallback.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+2026-11-16T03:12:49.4257721Z  [32m✓[39m test/features/workspace-trust/core/ClaudePtyWorkspaceTrustStrategy.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+2026-11-16T03:12:49.5475974Z  [32m✓[39m test/features/agent-backend/hostReviewTransport.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 78[2mms[22m[39m
+2026-11-16T03:12:50.0905557Z  [32m✓[39m src/features/token-usage/core/domain/__tests__/budgetPolicy.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+2026-11-16T03:12:50.5096703Z  [32m✓[39m test/features/agent-backend/hostTaskActivity.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 85[2mms[22m[39m
+2026-11-16T03:12:50.6117597Z  [32m✓[39m test/shared/utils/rateLimitDetector.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+2026-11-16T03:12:51.1935436Z  [32m✓[39m test/features/agent-backend/hostTeamsAggregateCapacity.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+2026-11-16T03:12:51.9532553Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningLeadInboxRelayPortsFactory.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-11-16T03:12:52.5056249Z  [32m✓[39m test/features/internal-storage/InternalStorageWorkerClient.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+2026-11-16T03:12:52.7233210Z  [32m✓[39m src/features/member-log-stream/main/adapters/output/sources/__tests__/OpenCodeOriginalTranscriptSources.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 145[2mms[22m[39m
+2026-11-16T03:12:53.4214454Z  [32m✓[39m test/main/services/team/TeamAttachmentStore.immutable.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 161[2mms[22m[39m
+2026-11-16T03:12:55.8536976Z  [32m✓[39m test/main/services/team/OpenCodeV2TaskLogAttribution.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+2026-11-16T03:12:56.5449764Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningConfigMaintenance.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+2026-11-16T03:12:57.1783370Z  [32m✓[39m src/renderer/components/team/dialogs/TeamModelSelector.test.ts [2m([22m[2m34 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-11-16T03:12:58.0817805Z [90mstderr[2m | test/renderer/components/team/activity/PendingRepliesBlockDiscardQueued.test.ts
+2026-11-16T03:12:58.0819443Z [22m[39mWarning: KaTeX doesn't work in quirks mode. Make sure your website has a suitable doctype.
+2026-11-16T03:12:58.0820084Z 
+2026-11-16T03:12:58.1614886Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeBootstrapStall.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-11-16T03:12:58.6221196Z  [32m✓[39m test/renderer/components/team/activity/PendingRepliesBlockDiscardQueued.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 129[2mms[22m[39m
+2026-11-16T03:12:58.8272286Z  [32m✓[39m src/features/token-usage/main/infrastructure/__tests__/OpenCodeUsageIntegration.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 94[2mms[22m[39m
+2026-11-16T03:12:59.2494428Z  [32m✓[39m test/features/task-folders/task-view-projection.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-11-16T03:12:59.3518596Z  [32m✓[39m test/main/services/editor/EditorFileWatcher.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+2026-11-16T03:12:59.7488073Z  [32m✓[39m src/features/tmux-installer/renderer/view-models/__tests__/TmuxInstallerBannerViewModelBuilder.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-11-16T03:13:00.3914343Z  [32m✓[39m test/main/services/runtime/openCodeBridgeRuntimeEnv.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+2026-11-16T03:13:00.4192601Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningCreateTeamFlow.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+2026-11-16T03:13:00.8984583Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningOutputRecovery.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+2026-11-16T03:13:00.9807990Z  [32m✓[39m test/main/services/team/OpenCodeHostStartupLockCleanup.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 84[2mms[22m[39m
+2026-11-16T03:13:01.4668611Z  [32m✓[39m test/renderer/hooks/useDraftPersistence.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+2026-11-16T03:13:01.9799510Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningStaleMixedSecondaryRecovery.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-16T03:13:02.3383063Z  [32m✓[39m test/features/member-work-sync/main/MemberWorkSyncStatusAuthority.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+2026-11-16T03:13:02.5719197Z  [32m✓[39m src/main/services/team/opencode/delivery/__tests__/OpenCodeHeadOfLineBlockNotice.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-11-16T03:13:02.9389205Z  [32m✓[39m src/features/gateway-provider/__tests__/GatewayProviderService.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 75[2mms[22m[39m
+2026-11-16T03:13:04.1961646Z  [32m✓[39m test/main/services/team/TeamProvisioningRuntimeSnapshot.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+2026-11-16T03:13:05.1160564Z  [32m✓[39m test/main/services/team/OpenCodeRuntimePublicationCallers.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 220[2mms[22m[39m
+2026-11-16T03:13:05.2912036Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningCleanupRunPortsFactory.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-16T03:13:05.7919126Z  [32m✓[39m test/main/features/team-provisioning/memberSettingsPolicy.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+2026-11-16T03:13:06.3728786Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningPrimaryBootstrapTruthReporting.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-11-16T03:13:06.7154764Z  [32m✓[39m src/features/token-usage/main/adapters/input/http/__tests__/teamIdentityIntegration.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 265[2mms[22m[39m
+2026-11-16T03:13:06.9504212Z  [32m✓[39m test/main/utils/windowsProcessTable.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 78[2mms[22m[39m
+2026-11-16T03:13:07.5135387Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeRuntimeRecoveryIdentity.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-16T03:13:07.9344011Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningLaunchReconcileReporting.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-11-16T03:13:08.0757176Z  [32m✓[39m test/renderer/components/team/dialogs/providerPreparePlans.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+2026-11-16T03:13:08.5407372Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningWorkspaceTrustPreSpawnBoundary.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-11-16T03:13:08.5890661Z  [32m✓[39m src/main/services/team/provisioning/__tests__/StaleProcessRuntimeMetadataCleanup.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-11-16T03:13:09.0745503Z  [32m✓[39m test/scripts/opencodeNativeV2TerminalFailure.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+2026-11-16T03:13:09.1898769Z  [32m✓[39m test/main/services/team/CrossTeamOutbox.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+2026-11-16T03:13:09.6264125Z  [32m✓[39m src/features/tmux-installer/renderer/hooks/__tests__/useTmuxInstallerBanner.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+2026-11-16T03:13:11.4818609Z  [32m✓[39m test/features/agent-backend/hostTeamLifecycle.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-11-16T03:13:12.0541775Z  [32m✓[39m test/main/services/team/TeamRuntimeLivenessResolver.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-16T03:13:12.6047611Z  [32m✓[39m src/renderer/components/team/messages/composerSubmission.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 66[2mms[22m[39m
+2026-11-16T03:13:13.2209040Z  [32m✓[39m test/main/services/team/OpenCodeTaskLogAttributionStore.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 74[2mms[22m[39m
+2026-11-16T03:13:13.4403174Z [90mstderr[2m | test/features/chat-visualizations/displayContract.test.ts
+2026-11-16T03:13:13.4404762Z [22m[39mWarning: KaTeX doesn't work in quirks mode. Make sure your website has a suitable doctype.
+2026-11-16T03:13:13.4405475Z 
+2026-11-16T03:13:13.5672371Z  [32m✓[39m test/features/chat-visualizations/displayContract.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 104[2mms[22m[39m
+2026-11-16T03:13:14.1425627Z  [32m✓[39m test/features/member-work-sync/core/application/MemberWorkSyncRecoveryRuntimeAdmission.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:13:14.3261033Z  [32m✓[39m test/renderer/components/extensions/skills/SkillDetailDialog.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 69[2mms[22m[39m
+2026-11-16T03:13:14.6945526Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningConfigLaunchNormalization.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-11-16T03:13:14.9460122Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningWorkspaceTrust.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-11-16T03:13:15.7477634Z  [32m✓[39m test/renderer/hooks/useMessageFileAttachments.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+2026-11-16T03:13:15.9184432Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningPrimaryBootstrapTruthReportingPortsFactory.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-11-16T03:13:16.3767387Z  [32m✓[39m test/renderer/components/team/useClaudeLogsController.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+2026-11-16T03:13:16.4517645Z  [32m✓[39m test/renderer/features/agent-graph/drawTasks.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-11-16T03:13:16.8656680Z  [32m✓[39m test/features/member-work-sync/core/MemberWorkSyncRecoveryTerminal.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:13:17.0587717Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-11-16T03:13:17.5132751Z  [32m✓[39m test/features/agent-backend/claudeCloseDiagnostics.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-11-16T03:13:17.9983103Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningShutdownCoordination.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-11-16T03:13:18.1181820Z  [32m✓[39m test/features/application-command-ledger/main/InternalStorageApplicationCommandLedgerStore.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 110[2mms[22m[39m
+2026-11-16T03:13:20.2265140Z  [32m✓[39m test/main/services/team/OpenCodeReadinessHandshake.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+2026-11-16T03:13:21.2343005Z  [32m✓[39m test/main/services/team/provisioningHarness/servicePrivateHarness.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+2026-11-16T03:13:22.0097281Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningInboxPersistence.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 88[2mms[22m[39m
+2026-11-16T03:13:22.5467194Z  [32m✓[39m test/features/workspace-trust/main/WorkspaceTrustStatusReader.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+2026-11-16T03:13:23.1000454Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeRuntimeLaneRecoveryPortsFactory.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-16T03:13:23.6707763Z  [32m✓[39m test/main/services/team/TeamProvisioningRuntimeLaunchSelection.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:13:25.5592983Z [90mstderr[2m | test/renderer/components/team/members/MemberMessagesTab.test.ts
+2026-11-16T03:13:25.5595510Z [22m[39mWarning: KaTeX doesn't work in quirks mode. Make sure your website has a suitable doctype.
+2026-11-16T03:13:25.5596780Z 
+2026-11-16T03:13:26.4082795Z [90mstderr[2m | test/renderer/components/team/members/MemberMessagesTab.test.ts
+2026-11-16T03:13:26.4098319Z [22m[39mLit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information.
+2026-11-16T03:13:26.4112145Z 
+2026-11-16T03:13:26.6113061Z  [2m[90m↓[39m[22m test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts [2m([22m[2m2 tests[22m[2m | [22m[33m2 skipped[39m[2m)[22m
+2026-11-16T03:13:27.5670571Z  [32m✓[39m test/renderer/components/team/members/MemberMessagesTab.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 74[2mms[22m[39m
+2026-11-16T03:13:27.6813054Z  [32m✓[39m test/renderer/components/team/review/CodeMirrorDiffView.draft.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 255[2mms[22m[39m
+2026-11-16T03:13:28.8800953Z  [32m✓[39m test/main/services/infrastructure/ConfigManager.notifications.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 766[2mms[22m[39m
+2026-11-16T03:13:28.9268529Z  [32m✓[39m test/main/services/team/TeamWorkSyncIdentityAccess.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 45[2mms[22m[39m
+2026-11-16T03:13:29.3680598Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningProgressState.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:13:29.5860325Z  [32m✓[39m test/main/ipc/teams/teamMessageNotificationScanner.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:13:29.8602121Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeMemberIdentity.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-11-16T03:13:30.3550917Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningProcessExitPortsFactory.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:13:30.7424255Z  [32m✓[39m test/features/team-runtime-recovery/main/JsonTeamRuntimeRecoveryRepository.test.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 339[2mms[22m[39m
+2026-11-16T03:13:30.8310970Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningToolApprovalTimeouts.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+2026-11-16T03:13:31.2631100Z  [32m✓[39m src/shared/utils/__tests__/contextMetrics.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-16T03:13:31.7037634Z  [32m✓[39m test/renderer/components/team/review/CodeMirrorDiffView.hover.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 192[2mms[22m[39m
+2026-11-16T03:13:32.2825470Z  [32m✓[39m src/features/token-usage/core/application/__tests__/BudgetService.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+2026-11-16T03:13:32.7921710Z  [32m✓[39m test/renderer/store/teamGlobalTaskNotifications.startup.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-16T03:13:33.2818300Z  [32m✓[39m test/main/services/team/TeamLaunchStateEvaluator.openCodeLead.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-16T03:13:33.6011424Z  [32m✓[39m test/main/services/extensions/PluginInstallService.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 105[2mms[22m[39m
+2026-11-16T03:13:34.2579061Z  [32m✓[39m test/scripts/opencodeNativeCommandMatch.test.ts [2m([22m[2m62 tests[22m[2m)[22m[32m 215[2mms[22m[39m
+2026-11-16T03:13:35.0864567Z  [32m✓[39m test/features/member-work-sync/legacySourceRuntimeAdmission.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 178[2mms[22m[39m
+2026-11-16T03:13:36.3454457Z  [32m✓[39m test/features/codex-runtime-installer/renderer/CodexRuntimeUpdateUi.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 179[2mms[22m[39m
+2026-11-16T03:13:36.8557462Z  [32m✓[39m src/main/services/team/opencode/delivery/__tests__/OpenCodePromptDeliveryTurnActivity.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-16T03:13:37.5051720Z  [32m✓[39m src/features/runtime-provider-management/renderer/hooks/useOpenCodeAttachmentDeclarations.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+2026-11-16T03:13:38.4154999Z  [32m✓[39m src/features/token-usage/renderer/ui/TokenUsageDashboard.budget.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 372[2mms[22m[39m
+2026-11-16T03:13:38.8704013Z  [32m✓[39m test/shared/utils/costFormatting.test.ts [2m([22m[2m31 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-11-16T03:13:41.0267331Z  [32m✓[39m test/scripts/captureAgentTeamsCpu.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 3032[2mms[22m[39m
+2026-11-16T03:13:41.0268819Z    [33m[2m✓[22m[39m read-only process CPU capture[2m > [22mhandles root 'ppid' changes without misidentifying the process [33m 1001[2mms[22m[39m
+2026-11-16T03:13:41.0269980Z    [33m[2m✓[22m[39m read-only process CPU capture[2m > [22mcaptures a real test-owned child without terminating it [33m 1018[2mms[22m[39m
+2026-11-16T03:13:41.7140360Z  [32m✓[39m test/main/services/team/TeamProvisioningServiceForeignStatusReads.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 108[2mms[22m[39m
+2026-11-16T03:13:41.7174478Z  [32m✓[39m test/renderer/components/team/dialogs/GlobalTaskDetailDialog.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-11-16T03:13:42.2061992Z  [32m✓[39m src/main/services/team/opencode/delivery/__tests__/OpenCodeLaneTurnActivityRegistry.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-11-16T03:13:42.8090341Z  [32m✓[39m test/features/agent-backend/hostProductLifecycle.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-11-16T03:13:43.6159931Z  [32m✓[39m test/renderer/features/runtime-provider-management/RuntimeProviderCompanionSetupDialog.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 146[2mms[22m[39m
+2026-11-16T03:13:43.9523032Z  [32m✓[39m test/main/services/extensions/McpInstallationStateService.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-16T03:13:44.1052553Z  [32m✓[39m src/renderer/components/team/dialogs/providerPrepareReasonCodes.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-11-16T03:13:44.4911603Z  [32m✓[39m test/main/utils/persistentAppLog.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+2026-11-16T03:13:44.9977961Z  [32m✓[39m test/renderer/store/projectRepositoryContextRace.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-16T03:13:45.2376620Z  [32m✓[39m test/renderer/components/team/review/duplicateReviewEntries.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 83[2mms[22m[39m
+2026-11-16T03:13:46.2992904Z  [32m✓[39m test/renderer/components/ui/MemberSelect.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 237[2mms[22m[39m
+2026-11-16T03:13:46.8091880Z  [32m✓[39m test/main/services/team/TeamDataServiceForeignTeamNotifications.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 82[2mms[22m[39m
+2026-11-16T03:13:46.9616702Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningSameTeamNativeDelivery.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-16T03:13:47.3027851Z  [32m✓[39m src/main/services/team/runtime/__tests__/OpenCodeLaunchGateResult.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-16T03:13:47.4501677Z  [32m✓[39m test/features/codex-runtime-profile/resolveCodexRuntimeProfile.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-16T03:13:47.8240686Z  [32m✓[39m src/features/organizations/renderer/view-models/__tests__/organizationGraphFocus.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-16T03:13:48.0211882Z  [32m✓[39m test/renderer/hooks/useExtensionsTabState.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+2026-11-16T03:13:48.3578460Z  [32m✓[39m test/renderer/utils/displayItemBuilder.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-11-16T03:13:48.5302731Z  [32m✓[39m test/renderer/features/agent-graph/buildInlineActivityEntries.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-11-16T03:13:48.8514183Z  [32m✓[39m test/scripts/opencodeNativeRealTaskPrompt.test.ts [2m([22m[2m28 tests[22m[2m | [22m[33m1 skipped[39m[2m)[22m[32m 34[2mms[22m[39m
+2026-11-16T03:13:49.0437291Z  [32m✓[39m test/main/services/team/OpenCodeApiCapabilities.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+2026-11-16T03:13:49.5211564Z  [32m✓[39m test/main/services/team/OpenCodeVersionPolicy.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+2026-11-16T03:13:49.5794062Z  [32m✓[39m src/features/agent-attachments/main/providers/opencodeAttachmentAdapter.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 244[2mms[22m[39m
+2026-11-16T03:13:50.3760261Z  [32m✓[39m src/features/gateway-provider/renderer/hooks/__tests__/GatewayBindingDraft.test.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 377[2mms[22m[39m
+2026-11-16T03:13:50.8984341Z  [32m✓[39m test/main/services/team/runtimeTeammateMode.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+2026-11-16T03:13:50.9253056Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningBootstrapTranscriptFacade.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+2026-11-16T03:13:51.3978074Z  [32m✓[39m test/features/team-direct-chats/core/domain/belongsToConversation.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-16T03:13:51.7211915Z  [32m✓[39m test/renderer/components/team/dialogs/TaskCommentInput.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 70[2mms[22m[39m
+2026-11-16T03:13:52.3239973Z  [32m✓[39m src/main/services/team/opencode/delivery/__tests__/OpenCodePromptDeliveryLedgerObservation.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 60[2mms[22m[39m
+2026-11-16T03:13:52.8110615Z  [32m✓[39m test/renderer/components/team/dialogs/editTeamRuntimeChanges.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-16T03:13:52.9569700Z  [32m✓[39m test/main/services/team/TeamBackupRestoreHoles.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+2026-11-16T03:13:53.4541591Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeAgendaSyncRecovery.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-16T03:13:53.4591333Z  [32m✓[39m test/features/member-work-sync/main/adapters/output/sendOpenCodeWorkSyncAdmittedMessage.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-16T03:13:54.2610886Z  [32m✓[39m test/renderer/components/cli/OpenCodeV2InstallAction.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 151[2mms[22m[39m
+2026-11-16T03:13:54.7979708Z  [32m✓[39m test/features/team-group-chats/useGroupMessageReaction.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+2026-11-16T03:13:55.2179719Z  [32m✓[39m test/renderer/components/team/members/MemberDetailHeader.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 67[2mms[22m[39m
+2026-11-16T03:13:55.3501731Z  [32m✓[39m test/renderer/features/runtime-provider-management/refreshRuntimeProviderConnection.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 61[2mms[22m[39m
+2026-11-16T03:13:55.7318922Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningLeadAttachments.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-16T03:13:56.3764553Z  [32m✓[39m test/features/member-work-sync/main/adapters/output/mergeTeamMembers.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-11-16T03:13:56.9526781Z  [32m✓[39m test/renderer/features/agent-graph/edgeHitDetection.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-16T03:13:57.4425871Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningTaskActivityRepairBoundary.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-11-16T03:13:58.1076680Z  [32m✓[39m test/renderer/features/runtime-provider-management/OpenCodeProviderCompatibilityStatus.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 89[2mms[22m[39m
+2026-11-16T03:13:58.6260337Z  [32m✓[39m test/main/utils/cliProcessDefaults.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:13:58.7472914Z  [32m✓[39m test/main/ipc/teamsRosterStopConcurrency.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+2026-11-16T03:13:59.1118459Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningLanguageChangeNotification.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-11-16T03:13:59.6162007Z  [32m✓[39m test/renderer/utils/fileReferences.test.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-11-16T03:14:00.2490982Z  [32m✓[39m test/main/services/team/TeamDataService.stallMonitor.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+2026-11-16T03:14:00.2679208Z  [32m✓[39m test/features/agent-backend/hostProductReadBoundary.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-11-16T03:14:00.7434931Z  [32m✓[39m test/shared/utils/teamLaunchFailureReason.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:14:01.6195898Z  [32m✓[39m src/renderer/hooks/useOpenCodePassiveStatusPrefetch.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+2026-11-16T03:14:01.8666762Z  [32m✓[39m src/features/tmux-installer/renderer/ui/__tests__/TmuxInstallerBannerView.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 80[2mms[22m[39m
+2026-11-16T03:14:02.1178281Z  [32m✓[39m test/main/utils/managedGit.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+2026-11-16T03:14:02.6177031Z  [32m✓[39m src/main/services/team/opencode/delivery/__tests__/OpenCodePromptDeliveryContinuityScan.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-11-16T03:14:02.9198141Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningClearStoppedTeamRuntimeHandles.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-16T03:14:03.5288609Z  [32m✓[39m test/features/member-work-sync/main/memberWorkSyncRevisionMerge.test.ts [2m([22m[2m31 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+2026-11-16T03:14:03.6974846Z  [32m✓[39m test/main/services/extensions/ApiKeyService.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 241[2mms[22m[39m
+2026-11-16T03:14:04.0115860Z  [32m✓[39m test/main/services/analysis/ProcessLinker.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-16T03:14:04.5813241Z  [32m✓[39m test/renderer/components/team/editor/fileIcons.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-16T03:14:05.0616867Z  [32m✓[39m test/renderer/components/team/dialogs/useCreateTeamLaunchModel.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+2026-11-16T03:14:05.1273846Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningAppShellBoundary.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:14:05.5523115Z  [32m✓[39m test/shared/utils/taskWorkDuration.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:14:06.0878664Z  [32m✓[39m test/renderer/features/terminal-workspace/TerminalWorkspaceAdapters.fixture-e2e.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+2026-11-16T03:14:06.5760305Z  [32m✓[39m test/shared/utils/reviewState.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:14:06.7082855Z  [32m✓[39m test/main/services/team/TeamWorkSyncBackupRestore.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-11-16T03:14:07.1310361Z  [32m✓[39m test/features/workspace-trust/main/ClaudeTrustPersister.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+2026-11-16T03:14:07.1953303Z  [32m✓[39m test/main/services/team/BoardTaskTranscriptContract.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:14:07.6701902Z  [32m✓[39m test/renderer/store/teamToolApprovalSettings.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-16T03:14:07.8492779Z  [32m✓[39m test/features/chat-visualizations/presentation.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 95[2mms[22m[39m
+2026-11-16T03:14:08.4976725Z  [32m✓[39m src/features/token-usage/main/adapters/input/http/__tests__/budgetTransport.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 102[2mms[22m[39m
+2026-11-16T03:14:08.5328381Z  [32m✓[39m test/preload/electronApiQueuedUserMessages.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 392[2mms[22m[39m
+2026-11-16T03:14:09.0510458Z  [32m✓[39m test/features/workspace-trust/core/PtyDialogEngine.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+2026-11-16T03:14:09.4147741Z  [32m✓[39m test/features/agent-backend/hostLogStats.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-16T03:14:09.8697183Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeMemberSendSerialization.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-16T03:14:09.9760652Z  [32m✓[39m test/features/team-direct-chats/renderer/chatListRowContextMenu.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 119[2mms[22m[39m
+2026-11-16T03:14:10.3564921Z  [32m✓[39m test/main/services/team/CodexNativeTraceProjector.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:14:10.4680840Z  [32m✓[39m test/shared/utils/teamInternalControlMessages.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:14:10.8268775Z  [32m✓[39m test/renderer/utils/streamJsonParser.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:14:11.2172870Z  [32m✓[39m test/renderer/hooks/useOverlayOccupancy.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 107[2mms[22m[39m
+2026-11-16T03:14:11.3172165Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningMemberSpawnCursor.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-16T03:14:11.8616649Z  [32m✓[39m test/main/services/team/stallMonitor/TeamTaskLogFreshnessReader.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-11-16T03:14:12.3234642Z  [32m✓[39m src/main/services/gateway/createGatewayLaunchRuntime.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+2026-11-16T03:14:12.3630579Z  [32m✓[39m test/renderer/utils/skillCommandSuggestions.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:14:13.1855633Z  [32m✓[39m test/features/member-work-sync/main/memberWorkSyncSqliteMappers.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:14:13.1928785Z  [32m✓[39m src/features/gateway-provider/__tests__/registerGatewayProviderIpc.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 320[2mms[22m[39m
+2026-11-16T03:14:13.6821147Z  [32m✓[39m src/features/codex-model-catalog/core/domain/__tests__/normalizeCodexAppServerModel.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-11-16T03:14:13.7046867Z  [32m✓[39m src/features/token-usage/main/infrastructure/__tests__/ClaudeJsonlUsageImporter.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+2026-11-16T03:14:14.2549240Z  [32m✓[39m test/features/editor-tab-sessions/tabSession.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 108[2mms[22m[39m
+2026-11-16T03:14:14.7828678Z  [32m✓[39m test/renderer/features/agent-graph/useGraphCamera.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+2026-11-16T03:14:14.9885573Z  [32m✓[39m src/renderer/components/team/dialogs/EffortLevelSelector.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+2026-11-16T03:14:16.1195832Z  [32m✓[39m test/main/utils/durablePathOperations.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 619[2mms[22m[39m
+2026-11-16T03:14:16.1198328Z    [33m[2m✓[22m[39m removePathWithIdentityFenceAsync transient rename retry[2m > [22mcompletes the removal once a transient detach rename clears [33m 455[2mms[22m[39m
+2026-11-16T03:14:16.8424624Z  [32m✓[39m test/renderer/components/team/TeamDeleteButton.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+2026-11-16T03:14:17.3413733Z  [32m✓[39m test/features/announcements/ipc.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-11-16T03:14:17.9220192Z  [32m✓[39m test/main/services/team/teamBackupManifest.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+2026-11-16T03:14:18.6143910Z [90mstderr[2m | test/features/chat-visualizations/programBudget.test.ts
+2026-11-16T03:14:18.6144749Z [22m[39mWarning: KaTeX doesn't work in quirks mode. Make sure your website has a suitable doctype.
+2026-11-16T03:14:18.6145132Z 
+2026-11-16T03:14:18.6859561Z  [32m✓[39m test/features/chat-visualizations/programBudget.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 62[2mms[22m[39m
+2026-11-16T03:14:20.2575134Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningSendMessageToRunBoundaryFactory.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:14:21.0348933Z  [32m✓[39m test/main/services/editor/GitServices.realGit.integration.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 88[2mms[22m[39m
+2026-11-16T03:14:21.5666840Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningStoppedTeamRuntimeProjection.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:14:22.0632567Z  [32m✓[39m test/features/agent-attachments/messageFileReferences.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-16T03:14:23.2418733Z  [32m✓[39m test/renderer/features/runtime-provider-management/RuntimeProviderErrorAlert.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 97[2mms[22m[39m
+2026-11-16T03:14:23.6673679Z [90mstderr[2m | test/renderer/components/team/members/MemberCardLaunchFailureReason.test.tsx
+2026-11-16T03:14:23.6675302Z [22m[39mWarning: KaTeX doesn't work in quirks mode. Make sure your website has a suitable doctype.
+2026-11-16T03:14:23.6676159Z 
+2026-11-16T03:14:23.7084299Z  [32m✓[39m src/main/services/team/runtime-control/__tests__/RuntimeControlIds.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:14:24.1118272Z  [32m✓[39m test/renderer/components/team/members/MemberCardLaunchFailureReason.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 66[2mms[22m[39m
+2026-11-16T03:14:24.1594833Z  [32m✓[39m test/renderer/components/team/schedule/resolveScheduleLaunchConfig.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:14:24.6472714Z  [32m✓[39m src/features/agent-attachments/main/providers/claudeAttachmentAdapter.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-16T03:14:25.1136894Z  [32m✓[39m test/renderer/utils/tabLabelDisambiguation.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:14:25.4070668Z  [32m✓[39m test/renderer/api/httpClient.memberWorkSync.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-11-16T03:14:25.6955328Z  [32m✓[39m test/renderer/components/team/messages/MessagesThreadView.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 46[2mms[22m[39m
+2026-11-16T03:14:25.9299526Z  [32m✓[39m test/shared/utils/pricing.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-11-16T03:14:26.2181829Z  [32m✓[39m src/features/runtime-provider-management/renderer/hooks/useOpenCodeLocalModelSetup.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 19[2mms[22m[39m
+2026-11-16T03:14:26.7281619Z  [32m✓[39m test/renderer/components/team/dialogs/defaultModelSelection.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-11-16T03:14:27.6200070Z  [32m✓[39m test/renderer/features/terminal-workspace/TerminalWorkspaceKeyboard.fixture-e2e.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+2026-11-16T03:14:27.9974839Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningRuntimeProjectionFactory.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-16T03:14:28.1782518Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningAppShellFacade.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:14:28.5562734Z  [32m✓[39m test/main/services/team/stallMonitor/TeamTaskStallExactRowReader.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-16T03:14:28.6602651Z  [32m✓[39m test/features/member-work-sync/main/CompositeMemberWorkSyncBusySignal.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-16T03:14:29.2846221Z  [32m✓[39m test/renderer/components/sidebar/ProjectContextMenu.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+2026-11-16T03:14:29.5773515Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningTimeoutLifecycle.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-16T03:14:30.0660213Z  [32m✓[39m test/features/agent-backend/skillsManagementTransport.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 160[2mms[22m[39m
+2026-11-16T03:14:30.1783063Z  [32m✓[39m test/features/agent-graph/graphTaskSubmissionRetention.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 22[2mms[22m[39m
+2026-11-16T03:14:30.5771571Z  [32m✓[39m test/features/member-work-sync/main/OpenCodeTurnSettledPayloadNormalizer.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:14:30.6610269Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningOrgConfigCompatibilityFacade.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-16T03:14:31.2531901Z  [32m✓[39m test/renderer/components/team/schedule/ScheduleRunLogDialog.task-navigation.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 62[2mms[22m[39m
+2026-11-16T03:14:31.7284672Z  [32m✓[39m src/main/services/runtime/cliSettingsArgs.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:14:31.8671413Z  [32m✓[39m test/features/agent-backend/hostLeadObservation.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:14:32.2509462Z  [32m✓[39m test/main/services/team/TeamProjectWorkspaces.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-16T03:14:32.7222486Z  [32m✓[39m test/renderer/utils/reviewDecisionScope.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-16T03:14:32.8838203Z  [32m✓[39m test/features/member-work-sync/main/memberWorkSyncImportEvidence.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 100[2mms[22m[39m
+2026-11-16T03:14:33.2367086Z  [32m✓[39m src/features/token-usage/main/infrastructure/__tests__/CodexJsonlUsageImporter.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-16T03:14:33.3690238Z  [32m✓[39m test/renderer/utils/pathUtils.test.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-11-16T03:14:33.7615948Z  [32m✓[39m test/features/member-work-sync/core/application/MemberWorkSyncTargetedRecoveryPolicy.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:14:33.8275713Z  [32m✓[39m src/features/runtime-provider-management/renderer/view-models/openCodeDefaultModelInheritance.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:14:34.3131850Z  [32m✓[39m test/renderer/components/team/review/reviewRestoreSnapshotSelection.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:14:34.7985244Z  [32m✓[39m test/renderer/utils/pathNormalize.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:14:34.8948979Z  [32m✓[39m test/renderer/components/team/kanban/table/taskTableProjection.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-16T03:14:35.4505212Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningLaunchNotificationsBoundaryFactory.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-16T03:14:35.9466642Z  [32m✓[39m test/features/team-task-detail/renderer/taskDraftStorage.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:14:36.0584572Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningCreateDeterministicRunFlowPortsFactory.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-16T03:14:36.4505811Z  [32m✓[39m test/main/services/team/fileLockOwnership.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+2026-11-16T03:14:36.5381003Z  [32m✓[39m src/renderer/store/team/__tests__/teamGlobalTaskProjection.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:14:37.0309822Z  [32m✓[39m test/main/services/infrastructure/TeamTaskPollSnapshot.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+2026-11-16T03:14:37.5194974Z  [32m✓[39m test/features/codex-account/main/registerCodexAccountIpc.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-11-16T03:14:37.8388840Z  [32m✓[39m test/features/task-folders/deleted-count-gate.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+2026-11-16T03:14:38.3673477Z  [32m✓[39m test/scripts/opencodeNativeWindowsCandidate.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-11-16T03:14:39.1269262Z  [32m✓[39m test/main/services/discovery/ProjectPathResolver.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 214[2mms[22m[39m
+2026-11-16T03:14:40.2884492Z  [32m✓[39m src/renderer/components/team/dialogs/CodexReconnectPrompt.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 57[2mms[22m[39m
+2026-11-16T03:14:40.8407066Z  [32m✓[39m src/features/agent-attachments/main/providers/codexNativeAttachmentAdapter.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-16T03:14:41.3218565Z  [32m✓[39m test/features/workspace-trust/main/registerWorkspaceTrustIpc.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-16T03:14:41.8255984Z  [32m✓[39m test/renderer/utils/teamProvisioningLeadActivityPresentation.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:14:42.3469368Z  [32m✓[39m test/shared/utils/teamGraphDefaultLayout.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:14:43.1546075Z [90mstderr[2m | test/features/external-agent-connection/renderer/ExternalAgentConnectionSettings.test.tsx
+2026-11-16T03:14:43.1549994Z [22m[39mWarning: KaTeX doesn't work in quirks mode. Make sure your website has a suitable doctype.
+2026-11-16T03:14:43.1550977Z 
+2026-11-16T03:14:43.5891651Z  [32m✓[39m test/features/external-agent-connection/renderer/ExternalAgentConnectionSettings.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+2026-11-16T03:14:44.1097721Z  [32m✓[39m test/renderer/features/runtime-provider-management/useOpenCodeLocalProviders.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-16T03:14:44.1839483Z  [32m✓[39m test/renderer/features/agent-graph/useGraphSidebarVisibility.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+2026-11-16T03:14:44.6113069Z  [32m✓[39m test/features/agent-backend/hostKanbanPagination.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-16T03:14:44.7282154Z  [32m✓[39m test/main/services/team/OpenCodeAggregatePrimaryRestartPolicy.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:14:45.2394944Z  [32m✓[39m src/renderer/components/settings/SettingsTabs.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+2026-11-16T03:14:45.2930244Z  [32m✓[39m test/features/agent-backend/nativeExtensionsCaptureNativeClaudeFile.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-16T03:14:45.7312649Z  [32m✓[39m test/renderer/store/teamDataSelectors.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:14:45.7872595Z  [32m✓[39m src/renderer/components/team/dialogs/runtimeDefaultModelLabel.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:14:46.2067712Z  [32m✓[39m test/renderer/features/runtime-provider-management/openCodeProviderCompatibility.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-11-16T03:14:46.5250846Z  [32m✓[39m test/features/agent-backend/hostProcessesSection.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 58[2mms[22m[39m
+2026-11-16T03:14:46.6703039Z  [32m✓[39m test/renderer/components/team/activity/collapseState.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:14:47.0142734Z  [32m✓[39m test/main/services/team/escalation/memberWorkSyncReviewPickupEscalationMessage.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:14:47.1743266Z  [32m✓[39m test/main/services/team/HistoricalBoardMcpRawProbe.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+2026-11-16T03:14:47.6182339Z  [32m✓[39m src/renderer/components/team/messages/MessageComposerStatusNotice.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-11-16T03:14:47.6813128Z  [32m✓[39m src/renderer/components/sidebar/taskCardActions.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:14:48.1864405Z  [32m✓[39m test/main/services/team/ChatVisualizationDelivery.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-16T03:14:48.2092039Z  [32m✓[39m test/main/services/team/TeamProvisioningMemberStatusProjection.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:14:48.6673259Z  [32m✓[39m test/main/services/team/BranchStatusService.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:14:48.6967091Z  [32m✓[39m test/main/services/parsing/AgentConfigReader.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-16T03:14:49.1359242Z  [32m✓[39m test/main/services/team/teamLogSourceWatchScope.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:14:49.1693477Z  [32m✓[39m src/renderer/utils/__tests__/modelReleaseFreshness.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:14:49.6194821Z  [32m✓[39m test/features/member-work-sync/main/RuntimeTurnSettledHookSettings.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-16T03:14:49.6305250Z  [32m✓[39m src/features/member-log-stream/main/infrastructure/__tests__/memberLogMessageBudget.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:14:50.1028030Z  [32m✓[39m test/renderer/store/teamSnapshotReadFallback.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:14:50.1721557Z  [32m✓[39m test/features/chat-visualizations/dependencyCompatibility.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-11-16T03:14:50.5640484Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningClaudeLogs.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:14:50.6482087Z  [32m✓[39m src/features/tmux-installer/core/domain/policies/__tests__/buildTmuxAutoInstallCapability.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:14:51.2069337Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningAnthropicApiKeyHelperCleanup.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:14:51.6241483Z  [32m✓[39m test/main/services/team/TeamProvisioningOpenCodeVisualizationBriefing.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 24[2mms[22m[39m
+2026-11-16T03:14:51.6848843Z  [32m✓[39m test/renderer/store/teamMemberSpawnUiEqualWarningThrottle.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:14:52.1215920Z  [32m✓[39m src/renderer/utils/__tests__/teamModelCatalog.chatgptGate.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:14:52.1915925Z  [32m✓[39m src/main/services/team/__tests__/TeamRuntimeLivenessResolver.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:14:52.6831671Z  [32m✓[39m test/renderer/utils/attachmentUtils.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 46[2mms[22m[39m
+2026-11-16T03:14:53.1651638Z  [32m✓[39m test/renderer/utils/urlMatchUtils.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-16T03:14:53.6434033Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeRuntimeLivenessPolicy.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-16T03:14:54.0780335Z  [32m✓[39m src/renderer/components/team/messages/useComposerDraftAddressRequest.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-16T03:14:54.1541862Z  [32m✓[39m test/renderer/components/team/teamLogSources.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:14:54.5720428Z  [32m✓[39m test/renderer/features/agent-graph/taskGraphSemantics.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:14:54.6265277Z  [32m✓[39m src/features/runtime-provider-management/renderer/connectedCountObservationPolicy.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:14:55.0914457Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningAppendDirectProcessRuntimeEventUseCase.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:14:55.1140647Z  [32m✓[39m test/renderer/hooks/useTaskLocalState.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 34[2mms[22m[39m
+2026-11-16T03:14:55.5610674Z  [32m✓[39m test/renderer/store/teamMemberSpawnStatusBackoff.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:14:55.5930277Z  [32m✓[39m test/renderer/store/teamProvisioningStateRules.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:14:56.1195200Z  [32m✓[39m test/features/team-direct-chats/core/domain/pinnedChatOrder.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-16T03:14:56.1938876Z  [32m✓[39m src/renderer/components/team/sidebar/TeamSidebarRail.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+2026-11-16T03:14:56.6898695Z  [32m✓[39m test/main/services/team/OpenCodeRuntimeDeliveryTaskRefInference.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:14:56.7792968Z  [32m✓[39m test/features/team-direct-chats/core/domain/buildChatList.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:14:57.3106849Z  [32m✓[39m test/renderer/utils/teamModelRecommendations.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:14:57.8756634Z  [32m✓[39m test/features/recent-projects/renderer/ui/RecentProjectCard.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 60[2mms[22m[39m
+2026-11-16T03:14:57.9950284Z  [32m✓[39m test/renderer/components/team/dialogs/TaskAttachments.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 50[2mms[22m[39m
+2026-11-16T03:14:58.4150582Z  [32m✓[39m src/renderer/components/dashboard/useDashboardStatusRefresh.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+2026-11-16T03:14:58.4879612Z  [32m✓[39m src/main/services/team/opencode/delivery/__tests__/retireNeverSentOpenCodeWorkSyncDelivery.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:14:58.9165177Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningRuntimeLiveness.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:14:59.4308432Z  [32m✓[39m test/main/services/team/BootstrapProofValidation.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:14:59.7940121Z  [32m✓[39m test/main/sourceControlCharacters.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 828[2mms[22m[39m
+2026-11-16T03:14:59.7941776Z    [33m[2m✓[22m[39m source control characters[2m > [22mhas no raw control characters in any TypeScript source file [33m 826[2mms[22m[39m
+2026-11-16T03:14:59.9201160Z  [32m✓[39m test/main/services/runtime/providerCatalogDisplayAuthority.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:15:00.4111262Z  [32m✓[39m test/shared/constants/agentBlocks.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-16T03:15:00.4200990Z  [32m✓[39m src/renderer/components/team/members/membersEditorUtils.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:15:00.9579085Z  [32m✓[39m test/features/member-work-sync/main/JsonMemberWorkSyncActiveStatePurger.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-11-16T03:15:01.0503940Z  [32m✓[39m src/renderer/components/team/members/MemberQuickActions.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+2026-11-16T03:15:01.5038107Z  [32m✓[39m test/main/services/infrastructure/ConfigManager.persistence.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-11-16T03:15:02.0054211Z  [32m✓[39m test/renderer/hooks/navigationUtils.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:15:02.4700415Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningRetainedLogs.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:15:02.9314285Z  [32m✓[39m test/renderer/utils/teamMessageReadStorage.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:15:04.2058343Z  [32m✓[39m test/renderer/api/httpClient.organizations.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-16T03:15:04.7074693Z  [32m✓[39m test/features/workspace-trust/core/CodexWorkspaceTrustSettings.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:15:05.2051393Z  [32m✓[39m src/features/agent-attachments/main/application/messageAttachmentModelAdmission.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:15:05.7478901Z  [32m✓[39m test/main/services/analysis/SubagentDetailBuilder.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:15:06.2248496Z  [32m✓[39m src/shared/utils/__tests__/sentryConfig.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:15:06.5538489Z [90mstderr[2m | test/renderer/components/team/members/MemberLogsTab.test.ts
+2026-11-16T03:15:06.5545128Z [22m[39mWarning: KaTeX doesn't work in quirks mode. Make sure your website has a suitable doctype.
+2026-11-16T03:15:06.5546197Z 
+2026-11-16T03:15:06.6813807Z  [32m✓[39m test/renderer/components/runtime/providerAuthModeUiState.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-16T03:15:06.9142700Z  [32m✓[39m test/renderer/components/team/members/MemberLogsTab.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:15:07.1578459Z  [32m✓[39m test/features/recent-projects/renderer/utils/navigation.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-16T03:15:07.6197570Z  [32m✓[39m test/shared/utils/apiErrorDetector.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:15:08.1043087Z  [32m✓[39m test/renderer/utils/pathDisplay.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:15:08.5859499Z  [32m✓[39m test/main/services/team/TeamChangeFanout.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:15:08.7697939Z  [32m✓[39m src/renderer/components/ui/MentionInteractionLayer.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-11-16T03:15:09.0989587Z  [32m✓[39m test/features/localization/core/runtimeProviderReconnectCatalog.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 34[2mms[22m[39m
+2026-11-16T03:15:09.2588051Z  [32m✓[39m test/shared/utils/slashCommands.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:15:09.6101103Z  [32m✓[39m test/main/services/extensions/SkillPlanService.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 17[2mms[22m[39m
+2026-11-16T03:15:09.7297726Z  [32m✓[39m test/features/recent-projects/renderer/utils/activeProjectTeams.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-16T03:15:10.0795006Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningCompatibilityFacade.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-16T03:15:10.1875254Z  [32m✓[39m src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementInternals.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-16T03:15:10.6240308Z  [32m✓[39m src/renderer/components/team/kanban/KanbanTaskCardSkeleton.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 27[2mms[22m[39m
+2026-11-16T03:15:10.6668719Z  [32m✓[39m test/main/services/team/memberUpdateNotifications.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-16T03:15:11.1040918Z  [32m✓[39m src/renderer/utils/__tests__/teamModelAvailability.openCodeEmptyCatalog.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:15:11.1683112Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeMemberIdentityBoundaryFactory.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:15:11.6432728Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningRegularFileRead.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-16T03:15:12.1070743Z  [32m✓[39m src/features/token-usage/main/adapters/output/__tests__/budgetSink.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:15:12.1955260Z  [32m✓[39m test/renderer/components/team/LiveRuntimeStatusSection.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 38[2mms[22m[39m
+2026-11-16T03:15:12.6043813Z  [32m✓[39m src/features/agent-attachments/core/domain/budgets.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:15:12.6807874Z  [32m✓[39m test/renderer/telemetry/posthogConfig.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-16T03:15:13.0723870Z  [32m✓[39m test/renderer/utils/memberSpawnStatusPolling.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-16T03:15:13.2568232Z  [32m✓[39m src/renderer/components/team/dialogs/createTeamInitialRoster.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:15:13.5379452Z  [32m✓[39m src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeStoppedLaneStopBackoff.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-11-16T03:15:13.7920015Z  [32m✓[39m test/features/announcements/renderer/assetLoader.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:15:14.1213201Z  [32m✓[39m src/features/agent-attachments/main/infrastructure/attachmentArtifactStore.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:15:14.6661532Z  [32m✓[39m src/renderer/components/team/dialogs/useOpenCodeAuthModelOptions.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 22[2mms[22m[39m
+2026-11-16T03:15:15.5583377Z  [32m✓[39m test/renderer/components/layout/TeamTabSectionNav.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 50[2mms[22m[39m
+2026-11-16T03:15:15.9596900Z  [32m✓[39m test/renderer/api/httpClient.codexAccount.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:15:16.0921204Z  [32m✓[39m src/renderer/components/team/messages/useAutoDelegateActionMode.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-16T03:15:16.4692023Z  [32m✓[39m test/features/member-work-sync/main/MemberWorkSyncStorePaths.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:15:16.5581997Z  [32m✓[39m test/features/localization/core/catalogPolicy.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:15:16.9443076Z  [32m✓[39m src/main/services/team/opencode/delivery/__tests__/OpenCodeDeliveryTurnActivityLogGate.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-16T03:15:17.0528908Z  [32m✓[39m test/main/services/extensions/SkillReviewService.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:15:17.4341518Z  [32m✓[39m test/main/utils/appIcon.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:15:17.5390118Z  [32m✓[39m test/renderer/editorReadRequest.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-16T03:15:17.9297330Z  [32m✓[39m src/renderer/components/team/teamLoadingMemberSkeleton.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:15:18.0204552Z  [32m✓[39m test/features/document-preview/parentOrigin.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-16T03:15:18.3898708Z  [32m✓[39m test/main/utils/inheritedHarnessEnv.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-16T03:15:18.5058565Z  [32m✓[39m src/shared/utils/version.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-16T03:15:18.8664453Z  [32m✓[39m test/renderer/utils/geminiUiFreeze.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:15:19.3430553Z  [32m✓[39m test/features/agent-backend/nativeExtensionsNativeMcpDiagnostics.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:15:19.7766910Z  [32m✓[39m test/renderer/api/httpClient.teamRuntimeFallback.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:15:19.8341904Z  [32m✓[39m test/renderer/security/csp.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-11-16T03:15:20.3441880Z  [32m✓[39m test/main/services/extensions/SkillRootsResolver.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:15:21.3799541Z  [32m✓[39m test/renderer/components/team/members/MemberDraftStatusNotices.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-11-16T03:15:21.5698897Z  [32m✓[39m src/renderer/components/team/dialogs/useOpenCodeLocalModelScope.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:15:21.8568963Z  [32m✓[39m src/features/agent-graph/renderer/ui/buildTransientHandoffMessage.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:15:22.0964427Z  [32m✓[39m src/renderer/components/team/TeamListSkeleton.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-11-16T03:15:22.3502042Z  [32m✓[39m test/shared/utils/lineDiffStats.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:15:22.6156048Z  [32m✓[39m test/shared/utils/reviewChunks.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:15:22.8604820Z  [32m✓[39m test/main/services/infrastructure/DataCacheDisposal.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:15:24.2445485Z  [32m✓[39m test/main/services/team/provisioningHarness/TeamProvisioningHarnessBuilder.test.ts [2m([22m[2m76 tests[22m[2m)[22m[32m 209[2mms[22m[39m
+2026-11-16T03:15:24.7628997Z  [32m✓[39m test/main/services/runtime/ClaudeMultimodelBridgeService.test.ts [2m([22m[2m74 tests[22m[2m)[22m[33m 1119[2mms[22m[39m
+2026-11-16T03:15:25.7970922Z  [32m✓[39m test/main/utils/childProcess.test.ts [2m([22m[2m54 tests[22m[2m)[22m[32m 141[2mms[22m[39m
+2026-11-16T03:15:30.5531136Z  [32m✓[39m test/main/services/runtime/providerAwareCliEnv.test.ts [2m([22m[2m62 tests[22m[2m)[22m[33m 5253[2mms[22m[39m
+2026-11-16T03:15:30.5533453Z    [33m[2m✓[22m[39m buildProviderAwareCliEnv[2m > [22mprojects current app root/control into active outer and MCP child env without stale shell contamination [33m 565[2mms[22m[39m
+2026-11-16T03:15:30.5535920Z    [33m[2m✓[22m[39m buildProviderAwareCliEnv[2m > [22mpasses cold Host publication and changed-port reopen to direct provider catalog without provisioning [33m 551[2mms[22m[39m
+2026-11-16T03:15:31.1668553Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2mprunes host node-pty build outputs when a matching target prebuild exists
+2026-11-16T03:15:31.1670830Z [22m[39m[afterPack] pruned 1 incompatible native artifact(s) for win32-x64
+2026-11-16T03:15:31.1671979Z 
+2026-11-16T03:15:31.1972419Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2mprunes known win32-x64 runtime variants while retaining compatible target siblings
+2026-11-16T03:15:31.1973879Z [22m[39m[afterPack] pruned 18 incompatible native artifact(s) for win32-x64
+2026-11-16T03:15:31.1974208Z 
+2026-11-16T03:15:31.2377023Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2mprunes known win32-arm64 runtime variants while retaining compatible target siblings
+2026-11-16T03:15:31.2378667Z [22m[39m[afterPack] pruned 18 incompatible native artifact(s) for win32-arm64
+2026-11-16T03:15:31.2379144Z 
+2026-11-16T03:15:31.2922803Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2mprunes known darwin-arm64 runtime variants while retaining compatible target siblings
+2026-11-16T03:15:31.2924354Z [22m[39m[afterPack] pruned 17 incompatible native artifact(s) for darwin-arm64
+2026-11-16T03:15:31.2924821Z 
+2026-11-16T03:15:31.3154614Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2mprunes known darwin-x64 runtime variants while retaining compatible target siblings
+2026-11-16T03:15:31.3156915Z [22m[39m[afterPack] pruned 17 incompatible native artifact(s) for darwin-x64
+2026-11-16T03:15:31.3157564Z 
+2026-11-16T03:15:31.3602221Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2mprunes the msgpackr-extract ELF build leftovers shipped in the win32-arm64 runtime
+2026-11-16T03:15:31.3604274Z [22m[39m[afterPack] pruned 3 incompatible native artifact(s) for win32-arm64
+2026-11-16T03:15:31.3604893Z 
+2026-11-16T03:15:31.3665884Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2mkeeps a compatible msgpackr-extract binding while pruning node-gyp build leftovers
+2026-11-16T03:15:31.3668046Z [22m[39m[afterPack] pruned 2 incompatible native artifact(s) for win32-arm64
+2026-11-16T03:15:31.3668609Z 
+2026-11-16T03:15:31.4172182Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2mprunes portable runtime optional binaries for darwin-arm64 while preserving target bytes
+2026-11-16T03:15:31.4173641Z [22m[39m[afterPack] pruned 22 incompatible native artifact(s) for darwin-arm64
+2026-11-16T03:15:31.4174212Z 
+2026-11-16T03:15:31.4479780Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2mprunes portable runtime optional binaries for darwin-x64 while preserving target bytes
+2026-11-16T03:15:31.4482127Z [22m[39m[afterPack] pruned 22 incompatible native artifact(s) for darwin-x64
+2026-11-16T03:15:31.4482881Z 
+2026-11-16T03:15:31.4750807Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2mprunes portable runtime optional binaries for win32-x64 while preserving target bytes
+2026-11-16T03:15:31.4753014Z [22m[39m[afterPack] pruned 22 incompatible native artifact(s) for win32-x64
+2026-11-16T03:15:31.4753662Z 
+2026-11-16T03:15:31.5042680Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2mprunes portable runtime optional binaries for win32-arm64 while preserving target bytes
+2026-11-16T03:15:31.5044876Z [22m[39m[afterPack] pruned 22 incompatible native artifact(s) for win32-arm64
+2026-11-16T03:15:31.5045554Z 
+2026-11-16T03:15:31.5248785Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2mprunes only foreign bun-pty variants for darwin-universal
+2026-11-16T03:15:31.5249987Z [22m[39m[afterPack] pruned 6 incompatible native artifact(s) for darwin-universal
+2026-11-16T03:15:31.5250734Z 
+2026-11-16T03:15:31.5602268Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2mprunes foreign hoisted bun-pty libraries for win32-arm64
+2026-11-16T03:15:31.5604848Z [22m[39m[afterPack] pruned 1 incompatible native artifact(s) for win32-arm64
+2026-11-16T03:15:31.5607829Z [afterPack] notice: no loadable bun-pty binding for win32-arm64 (missing /tmp/after-pack-test-4b7WeW/resources/runtime/local-cli/node_modules/bun-pty/rust-pty/target/release/rust_pty_arm64.dll); PTY stays unavailable until the runtime ships it
+2026-11-16T03:15:31.5609858Z 
+2026-11-16T03:15:31.5705973Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2mprunes only the known portable ffi-rs ia32 optional binary for win32-x64
+2026-11-16T03:15:31.5708106Z [22m[39m[afterPack] pruned 1 incompatible native artifact(s) for win32-x64
+2026-11-16T03:15:31.5708683Z 
+2026-11-16T03:15:31.5764241Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2mprunes only the known portable ffi-rs ia32 optional binary for win32-arm64
+2026-11-16T03:15:31.5766835Z [22m[39m[afterPack] pruned 1 incompatible native artifact(s) for win32-arm64
+2026-11-16T03:15:31.5767759Z 
+2026-11-16T03:15:31.5872235Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2mprunes only incompatible known msgpackr build files for win32-x64
+2026-11-16T03:15:31.5874441Z [22m[39m[afterPack] pruned 3 incompatible native artifact(s) for win32-x64
+2026-11-16T03:15:31.5874801Z 
+2026-11-16T03:15:31.6005972Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2mprunes only incompatible known msgpackr build files for win32-arm64
+2026-11-16T03:15:31.6008076Z [22m[39m[afterPack] pruned 3 incompatible native artifact(s) for win32-arm64
+2026-11-16T03:15:31.6008612Z 
+2026-11-16T03:15:31.6135522Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2mprunes only incompatible known msgpackr build files for win32-arm64
+2026-11-16T03:15:31.6137682Z [22m[39m[afterPack] pruned 3 incompatible native artifact(s) for win32-arm64
+2026-11-16T03:15:31.6138627Z 
+2026-11-16T03:15:35.1403178Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2maccepts a clean arm64 mac bundle after pruning
+2026-11-16T03:15:35.1405270Z [22m[39m[afterPack] pruned 1 incompatible native artifact(s) for darwin-arm64
+2026-11-16T03:15:35.1405633Z 
+2026-11-16T03:15:35.1538709Z [90mstdout[2m | test/main/build/electronBuilderAfterPack.test.ts[2m > [22m[2melectron-builder afterPack[2m > [22m[2maccepts a clean x64 Windows bundle with optional standalone helper binaries
+2026-11-16T03:15:35.1541043Z [22m[39m[afterPack] pruned 1 incompatible native artifact(s) for win32-x64
+2026-11-16T03:15:35.1566741Z 
+2026-11-16T03:15:35.1658151Z  [32m✓[39m test/main/build/electronBuilderAfterPack.test.ts [2m([22m[2m63 tests[22m[2m)[22m[33m 4041[2mms[22m[39m
+2026-11-16T03:15:35.1668076Z    [33m[2m✓[22m[39m electron-builder afterPack[2m > [22mrequires the exact copied native Linux launcher in a complete afterPack pass [33m 3447[2mms[22m[39m
+2026-11-16T03:15:38.4411943Z {"kind":"TEST_LAZY_HOST_STARTUP_OBSERVATION","point":"case-finally","observations":[{"phase":"profile-validation-start","kind":"handshake","elapsedMs":11044},{"phase":"profile-validation-complete","kind":"handshake","elapsedMs":11291},{"phase":"child-captured","kind":"handshake","elapsedMs":11294},{"phase":"request-admitted","kind":"handshake","elapsedMs":11295},{"phase":"response-accepted","kind":"handshake","elapsedMs":12610},{"phase":"ready","kind":"handshake","elapsedMs":12610}],"dropped":0,"pending":{"state":"resolved-failure","code":"forbidden","outcome":"not-dispatched"}}
+2026-11-16T03:15:39.2485554Z  [32m✓[39m test/features/agent-backend/desktopBackendFeature.test.ts [2m([22m[2m16 tests[22m[2m)[22m[33m 8010[2mms[22m[39m
+2026-11-16T03:15:39.2488128Z    [33m[2m✓[22m[39m captures global and exact project provider scopes without Team handles or default-owner fallback [33m 839[2mms[22m[39m
+2026-11-16T03:15:39.2489841Z    [33m[2m✓[22m[39m routes paired facade sends through the original captured owner with both immutable bindings [33m 517[2mms[22m[39m
+2026-11-16T03:15:39.2491066Z    [33m[2m✓[22m[39m uses two lazily captured subprocess hosts and captured context grants for finite IPC operations [33m 1092[2mms[22m[39m
+2026-11-16T03:15:39.2492298Z    [33m[2m✓[22m[39m connection discovery ignores renderer context claims and denies navigation/context changes during initialization [33m 444[2mms[22m[39m
+2026-11-16T03:15:39.2493421Z    [33m[2m✓[22m[39m keeps healthy owner discovery available after original transport loss [33m 924[2mms[22m[39m
+2026-11-16T03:15:39.2494401Z    [33m[2m✓[22m[39m keeps malformed registry, binding conflicts and stale discovery context fatal [33m 969[2mms[22m[39m
+2026-11-16T03:15:39.2495404Z    [33m[2m✓[22m[39m HTTP discovery uses the same captured context and rejects client context overrides [33m 488[2mms[22m[39m
+2026-11-16T03:15:39.2496940Z    [33m[2m✓[22m[39m rechecks captured context after lazy host startup before dispatching a finite command [33m 1583[2mms[22m[39m
+2026-11-16T03:15:39.2498047Z    [33m[2m✓[22m[39m rejects a lazy startup marker when the original selected Host closes first [33m 336[2mms[22m[39m
+2026-11-16T03:15:39.2499437Z    [33m[2m✓[22m[39m native health starts only the granted default owner and reports actual handshake without provider or Team work [33m 461[2mms[22m[39m
+2026-11-16T03:15:39.6447901Z  [32m✓[39m test/main/services/team/ShutdownMcpTransport.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 570[2mms[22m[39m
+2026-11-16T03:15:44.3289895Z [90mstdout[2m | test/main/build/smokePackagedApp.test.ts[2m > [22m[2msmokePackagedApp POSIX process cleanup[2m > [22m[2mtreats a same-uid non-dumpable process as unowned instead of failing the census
+2026-11-16T03:15:44.3292129Z [22m[39m[packagedSmokeOwnership] {"phase":"begin","at":"2026-11-16T03:15:44.325Z"}
+2026-11-16T03:15:44.3292754Z 
+2026-11-16T03:15:44.4155060Z [90mstdout[2m | test/main/build/smokePackagedApp.test.ts[2m > [22m[2msmokePackagedApp POSIX process cleanup[2m > [22m[2mkeeps a marked non-dumpable descendant as unsettled debt until it exits
+2026-11-16T03:15:44.4157204Z [22m[39m[packagedSmokeOwnership] {"phase":"begin","leaderPid":8125,"at":"2026-11-16T03:15:44.413Z"}
+2026-11-16T03:15:44.4157610Z 
+2026-11-16T03:15:45.2559668Z  [32m✓[39m test/features/agent-backend/runtimeActivityFacade.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 1124[2mms[22m[39m
+2026-11-16T03:15:45.2561040Z    [33m[2m✓[22m[39m finite Runtime activity facade[2m > [22mprojects actual NDJSON Runtime activity through the production facade after a canonical Team input [33m 1111[2mms[22m[39m
+2026-11-16T03:15:51.2028871Z  [32m✓[39m test/main/services/team/Issue443DesktopContract.safe-e2e.test.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 3483[2mms[22m[39m
+2026-11-16T03:15:59.7427847Z [smokePackagedApp] shutdown grace expired: pid=8660; forcing cleanup
+2026-11-16T03:16:01.9509451Z [smokePackagedApp] shutdown grace expired: pid=8709; forcing cleanup
+2026-11-16T03:16:13.6109388Z  [32m✓[39m test/features/agent-backend/desktopRuntimeSources.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 20493[2mms[22m[39m
+2026-11-16T03:16:13.6111671Z    [33m[2m✓[22m[39m first launch preparation captures stored preferences through the real Main/Host source owner and restart keeps retained A [33m 2981[2mms[22m[39m
+2026-11-16T03:16:13.6113055Z    [33m[2m✓[22m[39m real Main/Host publication preserves legacy target bytes and restores every retained target after restart [33m 3192[2mms[22m[39m
+2026-11-16T03:16:13.6114463Z    [33m[2m✓[22m[39m installed CLI is admitted by the real Host and immediate Refresh reuses its exact receipt [33m 6031[2mms[22m[39m
+2026-11-16T03:16:13.6115490Z    [33m[2m✓[22m[39m installer lost ACK reports its original publication even when a later selection is current [33m 3040[2mms[22m[39m
+2026-11-16T03:16:13.6116751Z    [33m[2m✓[22m[39m restarted installer resumes the Host snapshot before any new acquisition [33m 5246[2mms[22m[39m
+2026-11-16T03:16:15.1298421Z  [32m✓[39m test/main/build/smokePackagedApp.test.ts [2m([22m[2m38 tests[22m[2m)[22m[33m 34908[2mms[22m[39m
+2026-11-16T03:16:15.1300114Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mpreserves strict process birth and ownership boundaries for preexisting environments [33m 516[2mms[22m[39m
+2026-11-16T03:16:15.1301615Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mpreserves strict process birth and ownership boundaries for young environments [33m 374[2mms[22m[39m
+2026-11-16T03:16:15.1303751Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mpreserves strict process birth and ownership boundaries for late environments [33m 333[2mms[22m[39m
+2026-11-16T03:16:15.1305232Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mpreserves strict process birth and ownership boundaries for leader environments [33m 420[2mms[22m[39m
+2026-11-16T03:16:15.1307349Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mkeeps same-birth unmarked process debt unsettled on ownership-retiring [33m 683[2mms[22m[39m
+2026-11-16T03:16:15.1309186Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mkeeps same-birth unmarked process debt unsettled on ownership-persistent [33m 761[2mms[22m[39m
+2026-11-16T03:16:15.1311455Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mkeeps same-birth unmarked process debt unsettled on ownership-newly-observed [33m 946[2mms[22m[39m
+2026-11-16T03:16:15.1313633Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mkeeps a marked non-dumpable descendant as unsettled debt until it exits [33m 1590[2mms[22m[39m
+2026-11-16T03:16:15.1315259Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mdrains escaped owned processes and preserves an unrelated sentinel on app-success [33m 1035[2mms[22m[39m
+2026-11-16T03:16:15.1317810Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mdrains escaped owned processes and preserves an unrelated sentinel on app-failure [33m 1058[2mms[22m[39m
+2026-11-16T03:16:15.1319709Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mdrains escaped owned processes and preserves an unrelated sentinel on mcp-success [33m 2611[2mms[22m[39m
+2026-11-16T03:16:15.1321790Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mdrains escaped owned processes and preserves an unrelated sentinel on mcp-failure [33m 2610[2mms[22m[39m
+2026-11-16T03:16:15.1323830Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mdrains escaped owned processes and preserves an unrelated sentinel on owner-exited [33m 2016[2mms[22m[39m
+2026-11-16T03:16:15.1326802Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mdrains escaped owned processes and preserves an unrelated sentinel on delayed-kill [33m 2114[2mms[22m[39m
+2026-11-16T03:16:15.1329069Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mcloses retained-pipes fixture and lets its Node harness exit [33m 2231[2mms[22m[39m
+2026-11-16T03:16:15.1331149Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mcloses already-exited fixture and lets its Node harness exit [33m 2208[2mms[22m[39m
+2026-11-16T03:16:15.1333229Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mcloses delayed-kill fixture and lets its Node harness exit [33m 312[2mms[22m[39m
+2026-11-16T03:16:15.1335510Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mcleans inherited pipes on the full harness success path [33m 2763[2mms[22m[39m
+2026-11-16T03:16:15.1337698Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mcleans inherited pipes on the full harness early-exit path [33m 2794[2mms[22m[39m
+2026-11-16T03:16:15.1339589Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mcleans inherited pipes on the full harness timeout path [33m 4592[2mms[22m[39m
+2026-11-16T03:16:15.1341732Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mcleans inherited pipes on the full harness failure-pattern path [33m 2970[2mms[22m[39m
+2026-11-16T03:16:15.1343915Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mcleans inherited pipes on the full harness renderer-crash path [33m 2970[2mms[22m[39m
+2026-11-16T03:16:15.1346034Z    [33m[2m✓[22m[39m smokePackagedApp POSIX process cleanup[2m > [22mcleans inherited pipes on the full harness failure-and-cleanup-error path [33m 2567[2mms[22m[39m
+2026-11-16T03:16:15.1348403Z    [33m[2m✓[22m[39m packaged smoke child isolation[2m > [22misolates the App child with a valid contract and removes its sandbox after close [33m 544[2mms[22m[39m
+2026-11-16T03:16:15.1349761Z    [33m[2m✓[22m[39m packaged smoke child isolation[2m > [22misolates the App child with a invalid contract and removes its sandbox after close [33m 5359[2mms[22m[39m
+2026-11-16T03:16:15.1351315Z    [33m[2m✓[22m[39m smokePackagedApp finite vendor metadata fence[2m > [22mpins both CLI overrides and the cold Codex manifest to version-only TEST children [33m 735[2mms[22m[39m
+2026-11-16T03:16:16.0630532Z  [32m✓[39m test/features/agent-backend/backendOperationsFacade.test.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 85[2mms[22m[39m
+2026-11-16T03:16:16.1544539Z  [32m✓[39m test/main/services/runtime/providerStatusCheckContract.test.ts [2m([22m[2m70 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+2026-11-16T03:16:16.6908962Z  [32m✓[39m src/main/utils/electronDevPathOverrides.test.ts [2m([22m[2m27 tests[22m[2m | [22m[33m3 skipped[39m[2m)[22m[32m 32[2mms[22m[39m
+2026-11-16T03:16:17.8048595Z  [32m✓[39m test/features/agent-backend/hostTaskSubmissionRecovery.test.ts [2m([22m[2m22 tests[22m[2m)[22m[33m 798[2mms[22m[39m
+2026-11-16T03:16:21.0042379Z  [32m✓[39m test/features/runtime-provider-management/capturedProviderOAuth.test.ts [2m([22m[2m22 tests[22m[2m)[22m[33m 933[2mms[22m[39m
+2026-11-16T03:16:21.9118586Z  [32m✓[39m test/main/services/team/LegacyNativeStopRelease.test.ts [2m([22m[2m28 tests[22m[2m)[22m[32m 85[2mms[22m[39m
+2026-11-16T03:16:22.4916862Z  [32m✓[39m test/features/codex-account/main/infrastructure/detectCodexLocalAccountArtifacts.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 57[2mms[22m[39m
+2026-11-16T03:16:23.4763328Z  [32m✓[39m test/main/services/runtime/anthropicTeamApiKeyHelper.cleanup.test.ts [2m([22m[2m19 tests[22m[2m)[22m[33m 403[2mms[22m[39m
+2026-11-16T03:16:23.9648210Z  [32m✓[39m test/main/utils/windowsElevation.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-11-16T03:16:24.4478816Z  [32m✓[39m test/main/services/team/ClaudeBinaryResolver.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-11-16T03:16:25.3858813Z  [32m✓[39m test/workflows/runSupersession.test.ts [2m([22m[2m144 tests[22m[2m)[22m[32m 161[2mms[22m[39m
+2026-11-16T03:16:26.8331299Z  [32m✓[39m test/features/agent-backend/capturedOpenCodeLaunchTransfer.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 8243[2mms[22m[39m
+2026-11-16T03:16:26.8332503Z    [33m[2m✓[22m[39m unchanged OpenCode readiness binds the original product roster before capture, with one finite probe [33m 2175[2mms[22m[39m
+2026-11-16T03:16:26.8333917Z    [33m[2m✓[22m[39m captured OpenCode bare Start stays held while its original aggregate probe permits one Runtime without replay [33m 6067[2mms[22m[39m
+2026-11-16T03:16:28.4434342Z  [32m✓[39m test/features/agent-backend/hostCrossTeamComposition.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 1123[2mms[22m[39m
+2026-11-16T03:16:28.4435531Z    [33m[2m✓[22m[39m routes headless same-Host tools through real owners and original receipts (captured snapshot: false) [33m 535[2mms[22m[39m
+2026-11-16T03:16:28.4437361Z    [33m[2m✓[22m[39m routes headless same-Host tools through real owners and original receipts (captured snapshot: true) [33m 389[2mms[22m[39m
+2026-11-16T03:16:28.8258349Z  [32m✓[39m test/features/agent-backend/capturedWindowsSourceHistory.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 131[2mms[22m[39m
+2026-11-16T03:16:32.0987396Z  [32m✓[39m test/main/services/team/OpenCodeV2ModelBlocking.pipeline.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 984[2mms[22m[39m
+2026-11-16T03:16:33.4752176Z  [32m✓[39m test/features/agent-backend/hostMessagesPageTransport.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 276[2mms[22m[39m
+2026-11-16T03:16:34.5408316Z  [32m✓[39m test/features/agent-backend/capturedWindowsSelection.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 74[2mms[22m[39m
+2026-11-16T03:16:35.6772254Z  [32m✓[39m test/features/agent-backend/hostMessageAttachmentRead.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 156[2mms[22m[39m
+2026-11-16T03:16:38.0193658Z  [32m✓[39m test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts [2m([22m[2m2 tests[22m[2m | [22m[33m1 skipped[39m[2m)[22m[32m 70[2mms[22m[39m
+2026-11-16T03:16:40.4323184Z  [32m✓[39m test/features/agent-backend/hostActivityRouting.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 657[2mms[22m[39m
+2026-11-16T03:16:41.0608472Z  [32m✓[39m test/features/agent-backend/fileTeamModelProbeIntents.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 103[2mms[22m[39m
+2026-11-16T03:16:43.6363059Z  [32m✓[39m test/features/agent-backend/desktopTeamPreparation.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 124[2mms[22m[39m
+2026-11-16T03:16:44.5992844Z  [32m✓[39m test/features/agent-backend/configuredHostTeam.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 13921[2mms[22m[39m
+2026-11-16T03:16:44.5995733Z    [33m[2m✓[22m[39m existing Create-config to actual Host registry[2m > [22msaves one captured product intent with runtime version undefined, exposes only its canonical binding and reconstructs it cold [33m 3005[2mms[22m[39m
+2026-11-16T03:16:44.5999292Z    [33m[2m✓[22m[39m existing Create-config to actual Host registry[2m > [22msaves one captured product intent with runtime version 1, exposes only its canonical binding and reconstructs it cold [33m 3083[2mms[22m[39m
+2026-11-16T03:16:44.6002150Z    [33m[2m✓[22m[39m existing Create-config to actual Host registry[2m > [22mdoes not publish a binding after context switches across Host commit; cold discovery recovers only original creation [33m 3017[2mms[22m[39m
+2026-11-16T03:16:44.6004967Z    [33m[2m✓[22m[39m existing Create-config to actual Host registry[2m > [22mreleases a Host configuration refusal only after its original owner lookup is absent (absent) [33m 1624[2mms[22m[39m
+2026-11-16T03:16:44.6007903Z    [33m[2m✓[22m[39m existing Create-config to actual Host registry[2m > [22mreleases a Host configuration refusal only after its original owner lookup is absent (unavailable) [33m 1606[2mms[22m[39m
+2026-11-16T03:16:44.6010624Z    [33m[2m✓[22m[39m existing Create-config to actual Host registry[2m > [22mreleases a Host configuration refusal only after its original owner lookup is absent (changed-owner) [33m 1578[2mms[22m[39m
+2026-11-16T03:16:45.9224577Z  [32m✓[39m test/main/services/runtime/AnthropicModelCatalogPicker.safe-e2e.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-11-16T03:16:46.7283512Z  [32m✓[39m test/main/services/schedule/ScheduledTaskExecutor.safe-e2e.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 263[2mms[22m[39m
+2026-11-16T03:16:46.8716699Z  [32m✓[39m test/features/runtime-provider-management/capturedCodexFeatures.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+2026-11-16T03:16:47.4716742Z  [32m✓[39m test/main/utils/shellEnv.real-shell.integration.test.ts [2m([22m[2m10 tests[22m[2m | [22m[33m5 skipped[39m[2m)[22m[32m 230[2mms[22m[39m
+2026-11-16T03:16:50.3770761Z  [32m✓[39m test/features/agent-backend/importedTaskAttachments.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 2948[2mms[22m[39m
+2026-11-16T03:16:50.3773334Z    [33m[2m✓[22m[39m owner-qualified immutable imported task/comment blob reads[2m > [22mreturns exact bounded chunks with public metadata only and a digest bound to every continuation [33m 2931[2mms[22m[39m
+2026-11-16T03:16:51.4838591Z  [32m✓[39m test/main/utils/openCodeNodeModulesJunctionRecovery.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-16T03:16:53.2817741Z  [32m✓[39m test/main/services/runtime/AnthropicCompatibleClaudeSettings.safe-e2e.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 5332[2mms[22m[39m
+2026-11-16T03:16:53.2819373Z    [33m[2m✓[22m[39m Anthropic-compatible Claude settings safe e2e[2m > [22mbuilds provider-managed Anthropic runtime env from user Claude settings [33m 1554[2mms[22m[39m
+2026-11-16T03:16:53.2820744Z    [33m[2m✓[22m[39m Anthropic-compatible Claude settings safe e2e[2m > [22mbuilds provider-managed Anthropic API key env from user Claude settings [33m 596[2mms[22m[39m
+2026-11-16T03:16:53.2822350Z    [33m[2m✓[22m[39m Anthropic-compatible Claude settings safe e2e[2m > [22mdoes not import Claude settings auth into generic augment envs [33m 1577[2mms[22m[39m
+2026-11-16T03:16:53.2823610Z    [33m[2m✓[22m[39m Anthropic-compatible Claude settings safe e2e[2m > [22mimports Claude settings auth into aggregate strict runtime envs [33m 1603[2mms[22m[39m
+2026-11-16T03:16:53.9739669Z  [32m✓[39m test/features/agent-backend/desktopBackendShell.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-16T03:16:55.0569051Z  [32m✓[39m test/features/agent-backend/capturedWindowsSourcePending.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+2026-11-16T03:16:55.5537829Z  [32m✓[39m test/scripts/transitiveSecurity.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1747[2mms[22m[39m
+2026-11-16T03:16:55.5539746Z    [33m[2m✓[22m[39m verified transitive security backports[2m > [22mbraces rejects the registry source, repairs it, and preserves idempotence [33m 695[2mms[22m[39m
+2026-11-16T03:16:55.5541504Z    [33m[2m✓[22m[39m verified transitive security backports[2m > [22mhttp-cache-semantics rejects the registry source, repairs it, and preserves idempotence [33m 607[2mms[22m[39m
+2026-11-16T03:16:55.5543173Z    [33m[2m✓[22m[39m verified transitive security backports[2m > [22mdiscovers and verifies every nested npm copy, including paths only in the audit report [33m 417[2mms[22m[39m
+2026-11-16T03:16:55.8904844Z  [32m✓[39m test/main/services/team/TeamControlApiState.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 226[2mms[22m[39m
+2026-11-16T03:16:56.9759184Z  [32m✓[39m test/main/services/team/OpenCodeLifecycleCleanupTail.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+2026-11-16T03:16:57.5956843Z  [32m✓[39m test/main/services/team/NativeBootstrapCancellation.safe-e2e.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 484[2mms[22m[39m
+2026-11-16T03:16:57.5959253Z    [33m[2m✓[22m[39m cancel during native bootstrap confirms detached children gone before cancelled/offline and app shutdown [33m 483[2mms[22m[39m
+2026-11-16T03:16:58.0875152Z  [32m✓[39m src/main/services/runtime/agentChildProcessPreflight.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-16T03:16:58.9837639Z  [2m[90m↓[39m[22m test/main/utils/childProcess.windows.test.ts [2m([22m[2m5 tests[22m[2m | [22m[33m5 skipped[39m[2m)[22m
+2026-11-16T03:16:59.8737300Z  [32m✓[39m test/scripts/stageTerminalPlatformRuntime.e2e.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 403[2mms[22m[39m
+2026-11-16T03:16:59.8743324Z    [33m[2m✓[22m[39m stage-terminal-platform-runtime script e2e[2m > [22mstages and cleans a local terminal-platform runtime archive [33m 402[2mms[22m[39m
+2026-11-16T03:17:00.0367241Z  [32m✓[39m test/features/agent-backend/draftModelProbeTransport.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 51[2mms[22m[39m
+2026-11-16T03:17:00.5868040Z  [32m✓[39m test/features/agent-backend/capturedProviderManagement.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 60[2mms[22m[39m
+2026-11-16T03:17:01.6730503Z  [32m✓[39m test/features/agent-backend/backendConnectionDiagnostics.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-11-16T03:17:02.1585290Z  [32m✓[39m test/features/codex-account/core/evaluateCodexLaunchReadiness.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:17:02.7223659Z  [32m✓[39m test/main/services/runtime/claudeUserSettingsEnv.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+2026-11-16T03:17:02.8228173Z  [32m✓[39m test/scripts/desktopEmulatedCodexInstallerFixture.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 1759[2mms[22m[39m
+2026-11-16T03:17:02.8230952Z    [33m[2m✓[22m[39m selects the finite installer source with cold and warm shell PATH, then yields to the installed source [33m 1758[2mms[22m[39m
+2026-11-16T03:17:03.9359341Z  [32m✓[39m test/features/agent-backend/backendTransportClients.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-16T03:17:04.6142771Z  [32m✓[39m test/main/build/smokePackagedNative.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 261[2mms[22m[39m
+2026-11-16T03:17:05.3975514Z  [32m✓[39m test/main/bootstrapConfigIsolation.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 158[2mms[22m[39m
+2026-11-16T03:17:06.0621435Z  [32m✓[39m test/features/agent-backend/hostCrossTeamMcp.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 101[2mms[22m[39m
+2026-11-16T03:17:06.4999114Z  [32m✓[39m test/scripts/postinstallElectron.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:17:06.9903607Z  [32m✓[39m test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-11-16T03:17:07.7162729Z  [32m✓[39m test/features/agent-backend/checkpointAvailability.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:17:08.1494101Z  [32m✓[39m test/main/utils/processKill.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-16T03:17:08.6345920Z  [32m✓[39m src/features/tmux-installer/main/adapters/output/sources/__tests__/TmuxStatusSourceAdapter.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-16T03:17:09.0660226Z  [32m✓[39m test/main/build/electronBuilderVerifyBundleScript.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:17:10.9826277Z  [32m✓[39m test/main/services/team/assertOpenCodeSmokeCleanup.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:17:11.6105274Z  [32m✓[39m test/features/document-preview/viewerProtocol.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+2026-11-16T03:17:12.0479636Z  [32m✓[39m src/features/runtime-provider-management/renderer/hooks/runtimeProviderLoading.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-16T03:17:12.0845734Z  [32m✓[39m test/main/build/smokePackagedRuntime.lifecycle.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 8728[2mms[22m[39m
+2026-11-16T03:17:12.0847888Z    [33m[2m✓[22m[39m packaged runtime owner lifecycle[2m > [22mrejects a child that survives the natural owner exit and cleans up only after failure [33m 8592[2mms[22m[39m
+2026-11-16T03:17:12.5435041Z  [32m✓[39m test/main/build/electronBuilderLinuxPackaging.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-16T03:17:12.8513484Z  [32m✓[39m test/features/agent-backend/runtimeAttachmentCapabilities.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-16T03:17:12.8925254Z 
+2026-11-16T03:17:12.8940664Z [2m Test Files [22m [1m[32m539 passed[39m[22m[2m | [22m[33m2 skipped[39m[90m (541)[39m
+2026-11-16T03:17:12.8964619Z [2m      Tests [22m [1m[32m6730 passed[39m[22m[2m | [22m[33m18 skipped[39m[90m (6748)[39m
+2026-11-16T03:17:12.8965697Z [2m   Start at [22m 03:10:47
+2026-11-16T03:17:12.8989660Z [2m   Duration [22m 384.94s[2m (transform 33.63s, setup 24.84s, collect 293.46s, tests 218.96s, environment 119.61s, prepare 36.84s)[22m
+2026-11-16T03:17:12.8990860Z 
+2026-11-16T03:17:12.9301441Z JSON report written to /home/runner/work/_temp/host-offline-tests-2.json
+2026-11-16T03:17:13.3351459Z ##[group]Run actions/upload-artifact@v4
+2026-11-16T03:17:13.3351804Z with:
+2026-11-16T03:17:13.3352138Z   name: host-offline-tests-2abcf83fddacbc1efedee83f9c1d203d12ed656e-2
+2026-11-16T03:17:13.3352535Z   retention-days: 14
+2026-11-16T03:17:13.3352756Z   if-no-files-found: warn
+2026-11-16T03:17:13.3353222Z   path: /home/runner/work/_temp/host-offline-tests-*.json
+/home/runner/work/_temp/host-offline-tests-*.log
+
+2026-11-16T03:17:13.3353719Z   compression-level: 6
+2026-11-16T03:17:13.3353932Z   overwrite: false
+2026-11-16T03:17:13.3354144Z   include-hidden-files: false
+2026-11-16T03:17:13.3354371Z env:
+2026-11-16T03:17:13.3354568Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T03:17:13.3354854Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-16T03:17:13.3355200Z   HOST_EMULATED_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:17:13.3355567Z   HOST_TEST_SHARD: 2
+2026-11-16T03:17:13.3355833Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:17:13.3356277Z   AGENT_BACKEND_TEST_NODE: /opt/hostedtoolcache/node/24.21.0/x64/bin/node
+2026-11-16T03:17:13.3356956Z ##[endgroup]
+2026-11-16T03:17:13.5084907Z (node:10676) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T03:17:13.5086204Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T03:17:13.5164986Z With the provided path, there will be 2 files uploaded
+2026-11-16T03:17:13.5171487Z Artifact name is valid!
+2026-11-16T03:17:13.5172554Z Root directory input is valid!
+2026-11-16T03:17:13.7385035Z Beginning upload of artifact content to blob storage
+2026-11-16T03:17:13.8017178Z (node:10676) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-16T03:17:13.9251887Z Uploaded bytes 312577
+2026-11-16T03:17:13.9437085Z Finished uploading artifact content to blob storage!
+2026-11-16T03:17:13.9438387Z SHA256 digest of uploaded artifact zip is 7bbb4b70f5954a9e3b5d24e22eed8cca11d3e528e2617768e363d0202c1c62f2
+2026-11-16T03:17:13.9439897Z Finalizing artifact upload
+2026-11-16T03:17:14.2985977Z Artifact host-offline-tests-2abcf83fddacbc1efedee83f9c1d203d12ed656e-2.zip successfully finalized. Artifact ID 14194917340
+2026-11-16T03:17:14.2987846Z Artifact host-offline-tests-2abcf83fddacbc1efedee83f9c1d203d12ed656e-2 has been successfully uploaded! Final size is 312577 bytes. Artifact ID is 14194917340
+2026-11-16T03:17:14.2994239Z Artifact download URL: https://github.com/777genius/agent-teams-ai/actions/runs/43790825919/artifacts/14194917340
+2026-11-16T03:17:14.3198908Z Post job cleanup.
+2026-11-16T03:17:14.4485423Z Cache hit occurred on the primary key node-cache-Linux-x64-pnpm-33b7283dc3ef217b641b14e26ce1a6d807c9880352847e1b431ffd461cf78c22, not saving cache.
+2026-11-16T03:17:14.4611605Z Post job cleanup.
+2026-11-16T03:17:14.6017608Z Post job cleanup.
+2026-11-16T03:17:14.7625621Z Pruning is unnecessary.
+2026-11-16T03:17:14.7857879Z Post job cleanup.
+2026-11-16T03:17:14.8760547Z [command]/usr/bin/git version
+2026-11-16T03:17:14.8807113Z git version 2.56.1
+2026-11-16T03:17:14.8850264Z Temporarily overriding HOME='/home/runner/work/_temp/05fec301-b04c-4f7b-a340-5bfc5a41a674' before making global git config changes
+2026-11-16T03:17:14.8852142Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T03:17:14.8855022Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T03:17:14.8892961Z Removing SSH command configuration
+2026-11-16T03:17:14.8899910Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T03:17:14.8947751Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T03:17:14.9262255Z Removing HTTP extra header
+2026-11-16T03:17:14.9269583Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T03:17:14.9310517Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T03:17:14.9726747Z Removing includeIf entries pointing to credentials config files
+2026-11-16T03:17:14.9735734Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T03:17:14.9773216Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T03:17:15.0229575Z Cleaning up orphan processes
+2026-11-16T03:17:15.0717048Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

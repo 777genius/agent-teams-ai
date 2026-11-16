@@ -1,0 +1,310 @@
+{
+  "schemaVersion": 1,
+  "repository": "777genius/agent-teams-ai",
+  "pr": 1211,
+  "sourceHead": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "sourceTree": "0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103",
+  "runId": 43790825857,
+  "attempt": 1,
+  "job": {
+    "id": 133048605254,
+    "run_id": 43790825857,
+    "workflow_name": "Teams creation page Electron E2E",
+    "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+    "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825857",
+    "run_attempt": 1,
+    "node_id": "CR_kwDORVTEtM8AAAAe-lCaRg",
+    "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048605254",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825857/job/133048605254",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-11-16T02:13:21Z",
+    "started_at": "2026-11-16T02:17:45Z",
+    "completed_at": "2026-11-16T02:26:03Z",
+    "name": "Creation page (macos-latest)",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-16T02:17:46Z",
+        "completed_at": "2026-11-16T02:17:47Z"
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-11-16T02:17:47Z",
+        "completed_at": "2026-11-16T02:17:56Z"
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 3,
+        "started_at": "2026-11-16T02:17:56Z",
+        "completed_at": "2026-11-16T02:17:56Z"
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-16T02:17:56Z",
+        "completed_at": "2026-11-16T02:18:01Z"
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-16T02:18:01Z",
+        "completed_at": "2026-11-16T02:18:08Z"
+      },
+      {
+        "name": "Prepare Linux virtual display and zh-TW font fallback",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 6,
+        "started_at": "2026-11-16T02:18:08Z",
+        "completed_at": "2026-11-16T02:18:08Z"
+      },
+      {
+        "name": "Install frozen dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7,
+        "started_at": "2026-11-16T02:18:08Z",
+        "completed_at": "2026-11-16T02:19:44Z"
+      },
+      {
+        "name": "Build isolated Host before Electron startup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-16T02:19:44Z",
+        "completed_at": "2026-11-16T02:19:49Z"
+      },
+      {
+        "name": "Stage pinned terminal-platform runtime before Electron startup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9,
+        "started_at": "2026-11-16T02:19:49Z",
+        "completed_at": "2026-11-16T02:19:51Z"
+      },
+      {
+        "name": "Ensure Electron binary before UI E2E",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10,
+        "started_at": "2026-11-16T02:19:51Z",
+        "completed_at": "2026-11-16T02:20:01Z"
+      },
+      {
+        "name": "Verify owned Windows process census and fail-closed teardown invariants",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11,
+        "started_at": "2026-11-16T02:20:01Z",
+        "completed_at": "2026-11-16T02:20:01Z"
+      },
+      {
+        "name": "Exercise actual Electron Create/Back/Resume/Copy/Launch",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 12,
+        "started_at": "2026-11-16T02:20:01Z",
+        "completed_at": "2026-11-16T02:24:52Z"
+      },
+      {
+        "name": "Upload sanitized evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13,
+        "started_at": "2026-11-16T02:24:52Z",
+        "completed_at": "2026-11-16T02:24:54Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24,
+        "started_at": "2026-11-16T02:24:54Z",
+        "completed_at": "2026-11-16T02:25:57Z"
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 25,
+        "started_at": "2026-11-16T02:25:57Z",
+        "completed_at": "2026-11-16T02:25:58Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 26,
+        "started_at": "2026-11-16T02:25:58Z",
+        "completed_at": "2026-11-16T02:25:58Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 27,
+        "started_at": "2026-11-16T02:25:58Z",
+        "completed_at": "2026-11-16T02:26:01Z"
+      }
+    ],
+    "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048605254",
+    "labels": [
+      "macos-latest"
+    ],
+    "runner_id": 1000375874,
+    "runner_name": "GitHub Actions 1000375874",
+    "runner_group_id": 0,
+    "runner_group_name": "GitHub Actions"
+  },
+  "artifact": {
+    "id": 14193165566,
+    "node_id": "MDg6QXJ0aWZhY3QxNDE5MzE2NTU2Ng==",
+    "name": "teams-create-page-macos-latest-2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "size_in_bytes": 2297423,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14193165566",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14193165566/zip",
+    "expired": false,
+    "digest": "sha256:803aae06917670af8e976d824b7b8b10a35ac9ebfab04634b0a86cf17d4d9907",
+    "created_at": "2026-11-16T02:24:54Z",
+    "updated_at": "2026-11-16T02:24:54Z",
+    "expires_at": "2026-11-30T02:24:53Z",
+    "workflow_run": {
+      "id": 43790825857,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+      "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+    }
+  },
+  "payloads": [
+    {
+      "path": "pr1211-teams-macos-job.log",
+      "gitBlob": "ff82b830705401e9dbfb687070f050b4530c07b4",
+      "bytes": 71350,
+      "sha256": "f078e83607d709e26648f2e099d2bf3344ba11bd3e381bf2f60660ea205cf5a8"
+    },
+    {
+      "path": "pr1211-teams-macos-run-api.json",
+      "gitBlob": "f06f6caa2b086701d83456b4ccee0a623716fc5f",
+      "bytes": 13846,
+      "sha256": "cc3e388ab32b91dc4563d7175e87ccc8a8342cdc674489984a4c84960666f503"
+    },
+    {
+      "path": "pr1211-teams-macos-jobs-api.json",
+      "gitBlob": "9551f555b97181c83930561c8d87ec2457d8bfd6",
+      "bytes": 8898,
+      "sha256": "4bedf5bb5e94a7fadfe9bab1dfd6f023c4c0526cdccf316ce6cf9ae5892459a8"
+    },
+    {
+      "path": "pr1211-teams-macos-artifacts-api.json",
+      "gitBlob": "801608b6252b49a3c79638c0bd2a55c29a88fc43",
+      "bytes": 1623,
+      "sha256": "4585c682fddc706bca517fa29354ad0fb1e7e5740c58b9ec3852effda3e1910f"
+    }
+  ],
+  "actual": {
+    "ownedProcessTests": {
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0
+    },
+    "runtime": "v26.12.1",
+    "originalJourneyStdout": {
+      "success": true,
+      "scheduleUiEvidence": {
+        "scheduleLabel": "schedule-visual-e2e-6065a150",
+        "scheduleId": "ab5e64da-8578-4cb0-a414-5c2ae5d6298c",
+        "createdAndDeleted": true
+      },
+      "zhTwMcpUiEvidence": {
+        "locale": "zh-TW",
+        "taskDetailUiEvidence": {
+          "taskId": "77",
+          "locale": "zh-TW",
+          "dialogOpenTabAction": "在獨立分頁中開啟",
+          "dialogScreenshot": "teams-create-zh-tw-task-detail-dialog.png",
+          "tabScreenshot": "teams-create-zh-tw-task-detail-tab.png",
+          "nativeTaskTabVisible": true
+        },
+        "strictAllowlistVisible": true,
+        "placeholder": "github, sentry",
+        "parsedServerNames": [
+          "github",
+          "sentry"
+        ],
+        "screenshot": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+        "controlEditedThroughNativeCdp": true
+      },
+      "unique": "create-page-e2e-f1957502",
+      "retainedAcrossBack": true,
+      "retainedAcrossTabSwitch": true,
+      "manageProvidersNavigationRetainsDraft": true,
+      "retainedAcrossProcessRestart": true,
+      "advancedCliRetainedAcrossRename": true,
+      "teammateModeOverridePersistedThroughNativeUi": true,
+      "teammateModeOverrideValidatedThroughNativeUi": true,
+      "missingRequiredCliValueRejectedThroughNativeUi": true,
+      "advancedCliRetainedAcrossPaneSplit": true,
+      "advancedCliRetainedAcrossBackRemount": true,
+      "advancedCliRestoresUneditedDefaults": true,
+      "unnamedAdvancedCliEditsRetained": true,
+      "launchStillModal": true,
+      "launchContentLoaded": true,
+      "configOnlyCreatedThroughUi": true,
+      "nativeConfigOnlyRejectionKeepsDraft": true,
+      "copiedTeamUsesSharedEditor": true,
+      "copiedDraftDoesNotReplaySeed": true,
+      "templateReplacementCancelledAndConfirmed": true,
+      "organizationPlacementPersistedViaNativeApi": true,
+      "duplicateNameValidationRecovered": true,
+      "themeDarkLightRendered": true,
+      "cssZoom200Rendered": true,
+      "nativeElectronZoom200Rendered": true,
+      "splitPaneSingleEditor": true,
+      "macInputSelectionFallbackCount": 0,
+      "sandboxRoot": "/private/var/folders/h5/t85nd63d71x27_8gl5gw3l_w0000gn/T/teams-create-page-e2e-w1VIsz",
+      "cleanup": {
+        "processGroupAbsent": true,
+        "windowsTaskkillExitedZero": null,
+        "windowsExactOwnedProcessesAbsent": null,
+        "windowsTeardowns": null,
+        "temporaryProfileRemoved": true
+      }
+    },
+    "scope": "Original actual Electron journey and its explicitly emitted assertions; no qualification beyond those checks."
+  },
+  "sourceJoin": {
+    "workflow": {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "sha": "ef939f224a1642cb596906324c8d61441780ccc7"
+    },
+    "checkoutHeadInFullLog": true,
+    "artifactUploadAndApiIdentityMatch": true
+  },
+  "limits": {
+    "originalRunOnly": true,
+    "noReplayOrChildActions": true,
+    "childDownloadedOrInspectedZip": false,
+    "artifactDigestAndSizeAreOriginalUploadPlusApi": true,
+    "wholeRunOrOtherJobQualification": false,
+    "skipIsNotPass": true,
+    "actualSourceAndAttemptOnly": true
+  }
+}

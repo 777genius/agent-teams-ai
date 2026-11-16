@@ -1,0 +1,393 @@
+{
+  "schemaVersion": 1,
+  "runId": 43790825753,
+  "attempt": 1,
+  "event": "pull_request",
+  "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "job": {
+    "id": 133048604976,
+    "run_id": 43790825753,
+    "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+    "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+    "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825753",
+    "run_attempt": 1,
+    "node_id": "CR_kwDORVTEtM8AAAAe-lCZMA",
+    "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048604976",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825753/job/133048604976",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-11-16T02:13:21Z",
+    "started_at": "2026-11-16T03:48:57Z",
+    "completed_at": "2026-11-16T03:57:19Z",
+    "name": "Embedded V2.1.4 original Host (linux-x64)",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-16T03:48:57Z",
+        "completed_at": "2026-11-16T03:48:59Z"
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-11-16T03:48:59Z",
+        "completed_at": "2026-11-16T03:49:07Z"
+      },
+      {
+        "name": "Require immutable source HEAD and record actual runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-11-16T03:49:07Z",
+        "completed_at": "2026-11-16T03:49:07Z"
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-16T03:49:07Z",
+        "completed_at": "2026-11-16T03:49:15Z"
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-16T03:49:15Z",
+        "completed_at": "2026-11-16T03:49:29Z"
+      },
+      {
+        "name": "Install exact source workspace dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6,
+        "started_at": "2026-11-16T03:49:29Z",
+        "completed_at": "2026-11-16T03:49:52Z"
+      },
+      {
+        "name": "Build original Host and its pinned provider implementation",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7,
+        "started_at": "2026-11-16T03:49:52Z",
+        "completed_at": "2026-11-16T03:49:55Z"
+      },
+      {
+        "name": "Check original graph and custody boundaries",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-16T03:49:55Z",
+        "completed_at": "2026-11-16T03:50:01Z"
+      },
+      {
+        "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9,
+        "started_at": "2026-11-16T03:50:01Z",
+        "completed_at": "2026-11-16T03:50:06Z"
+      },
+      {
+        "name": "Prepare exact Bun, engine graph and original-process artifact",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10,
+        "started_at": "2026-11-16T03:50:06Z",
+        "completed_at": "2026-11-16T03:50:25Z"
+      },
+      {
+        "name": "Prove actual Darwin executable custody and adversarial cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 11,
+        "started_at": "2026-11-16T03:50:25Z",
+        "completed_at": "2026-11-16T03:50:25Z"
+      },
+      {
+        "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12,
+        "started_at": "2026-11-16T03:50:25Z",
+        "completed_at": "2026-11-16T03:50:25Z"
+      },
+      {
+        "name": "Prove original Windows Job custody and surviving descendant cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13,
+        "started_at": "2026-11-16T03:50:25Z",
+        "completed_at": "2026-11-16T03:50:25Z"
+      },
+      {
+        "name": "Require exact Windows original-process evidence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14,
+        "started_at": "2026-11-16T03:50:25Z",
+        "completed_at": "2026-11-16T03:50:25Z"
+      },
+      {
+        "name": "Check original Desktop private recipe composition",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15,
+        "started_at": "2026-11-16T03:50:25Z",
+        "completed_at": "2026-11-16T03:50:35Z"
+      },
+      {
+        "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16,
+        "started_at": "2026-11-16T03:50:35Z",
+        "completed_at": "2026-11-16T03:51:50Z"
+      },
+      {
+        "name": "Exercise Windows automatic approval and cold Host Resume",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17,
+        "started_at": "2026-11-16T03:51:50Z",
+        "completed_at": "2026-11-16T03:51:50Z"
+      },
+      {
+        "name": "Exercise native catalog and model probe without tool allocation",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 18,
+        "started_at": "2026-11-16T03:51:50Z",
+        "completed_at": "2026-11-16T03:52:56Z"
+      },
+      {
+        "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 19,
+        "started_at": "2026-11-16T03:52:56Z",
+        "completed_at": "2026-11-16T03:55:16Z"
+      },
+      {
+        "name": "Exercise effective permissions and active Stop with a surviving sibling",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 20,
+        "started_at": "2026-11-16T03:55:16Z",
+        "completed_at": "2026-11-16T03:56:33Z"
+      },
+      {
+        "name": "Exercise captured external MCP and app-only through the native Host",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 21,
+        "started_at": "2026-11-16T03:56:33Z",
+        "completed_at": "2026-11-16T03:57:12Z"
+      },
+      {
+        "name": "Require complete native management and permission evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 22,
+        "started_at": "2026-11-16T03:57:12Z",
+        "completed_at": "2026-11-16T03:57:12Z"
+      },
+      {
+        "name": "Require product-path Host proof after exact candidate qualification",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 23,
+        "started_at": "2026-11-16T03:57:12Z",
+        "completed_at": "2026-11-16T03:57:12Z"
+      },
+      {
+        "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24,
+        "started_at": "2026-11-16T03:57:12Z",
+        "completed_at": "2026-11-16T03:57:13Z"
+      },
+      {
+        "name": "Preserve exact native evidence or candidate HOLD",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 25,
+        "started_at": "2026-11-16T03:57:13Z",
+        "completed_at": "2026-11-16T03:57:14Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 48,
+        "started_at": "2026-11-16T03:57:14Z",
+        "completed_at": "2026-11-16T03:57:14Z"
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 49,
+        "started_at": "2026-11-16T03:57:14Z",
+        "completed_at": "2026-11-16T03:57:14Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 50,
+        "started_at": "2026-11-16T03:57:14Z",
+        "completed_at": "2026-11-16T03:57:15Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 51,
+        "started_at": "2026-11-16T03:57:15Z",
+        "completed_at": "2026-11-16T03:57:15Z"
+      }
+    ],
+    "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048604976",
+    "labels": [
+      "ubuntu-24.04"
+    ],
+    "runner_id": 1000376336,
+    "runner_name": "GitHub Actions 1000376336",
+    "runner_group_id": 0,
+    "runner_group_name": "GitHub Actions"
+  },
+  "artifact": {
+    "id": 14196456100,
+    "name": "opencode-v2-embedded-native-linux-x64",
+    "size_in_bytes": 23573,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14196456100",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14196456100/zip",
+    "expired": false,
+    "created_at": "2026-11-16T03:57:14Z",
+    "expires_at": "2026-11-23T03:57:14Z",
+    "updated_at": "2026-11-16T03:57:14Z",
+    "digest": "sha256:56bc304ff18ced4ba64f41a219648ec85e96c81ad72a0a4e81ca250aa4807b61",
+    "workflow_run": {
+      "id": 43790825753,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+      "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+    }
+  },
+  "files": [
+    {
+      "path": "linux-embedded-full.log",
+      "sha": "3d97a658114b45734334aee616d815af9c588a6c",
+      "sha256": "23bd6e1dc50b92fd2b1bda1c1d2779b30ab8898e76ed946cf32c3352ddcd32af",
+      "bytes": 115621
+    },
+    {
+      "path": "run-api.json",
+      "sha": "77acf98fb733bbacec97405889a9542e9cf4f4a2",
+      "sha256": "2c85466bd164bbc7adf9ad3bf125874fa9a3dce9b0c01b46cb4c33cdd15a372b",
+      "bytes": 13860
+    },
+    {
+      "path": "jobs-api.json",
+      "sha": "40c328285f7db717fe221268ad4659addb3b2b43",
+      "sha256": "8f462f090808d01f1ed7aea0a95b63947fdfd2adf2c74c7792b9fb0a6a7ee11a",
+      "bytes": 44357
+    },
+    {
+      "path": "artifacts-api.json",
+      "sha": "6420feaa22015502e227fb27b3ad8c21869b0f3c",
+      "sha256": "fa75586688f2955849cd7fcad6c2faa421fed950b308fd33475ab2980c30321b",
+      "bytes": 5246
+    }
+  ],
+  "actualRuntime": {
+    "node": "v24.21.0",
+    "graphAndCustody": {
+      "files": 6,
+      "tests": 58,
+      "pass": 58,
+      "fail": 0,
+      "skip": 0,
+      "cancel": 0
+    },
+    "singleCaseCommands": [
+      {
+        "file": "desktop-opencode-v2-fixture.test.ts",
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skip": 0,
+        "cancel": 0
+      },
+      {
+        "file": "opencode-v2-embedded-host.native.ts",
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skip": 0,
+        "cancel": 0
+      },
+      {
+        "file": "opencode-v2-model-probe.native.ts",
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skip": 0,
+        "cancel": 0
+      },
+      {
+        "file": "opencode-v2-credentials.native.ts",
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skip": 0,
+        "cancel": 0
+      },
+      {
+        "file": "opencode-v2-permission-lifecycle.native.ts",
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skip": 0,
+        "cancel": 0
+      },
+      {
+        "file": "opencode-v2-captured-mcp.native.ts",
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skip": 0,
+        "cancel": 0
+      },
+      {
+        "file": "registered-process-executable.native.ts (original POSIX test-name-pattern)",
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skip": 0,
+        "cancel": 0
+      }
+    ],
+    "receiptVerifierSteps": [
+      22,
+      23
+    ],
+    "sourceCheckoutExact": true
+  },
+  "limits": [
+    "Original2ab Linux lane completed all its own graph, recipe, native business/model/credential/permission/MCP and POSIX steps; Windows/Darwin-only steps11-14/17 were original API skipped.",
+    "Executed original receipt verifiers require source/platform, PASS/cleanup, Node24.21.0/native2.1.4, pinned hashes and exact business/management/coordination observations. They retain vendorAuthQualified=false, desktopQualified=false and releaseQualified=false.",
+    "No child direct receipt/ZIP payload verification. Full raw/API/upload join only; root owns actual archive bytes.",
+    "Does not qualify Windows15s failures, DarwinP09 failures, unreached packaged GUI or new Windows diagnostics.",
+    "No child runtime/vendor/native experiment, action, rerun/cancellation or source/ref change."
+  ]
+}

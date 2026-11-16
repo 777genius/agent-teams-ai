@@ -1,0 +1,97 @@
+✔ retains exact descendants when a verified parent exits (2.433293ms)
+✔ never adopts children of a reused parent PID (0.31542ms)
+✔ refuses older child identity and an unknown owner history (1.016233ms)
+✖ actual task-tab action retains before/first/last evidence without changing its input or predicate (5.50031ms)
+✖ actual delivery may miss the measured task button; failure disposal retains that fact only (2.479372ms)
+✖ actual predicate preserves null/undefined and reports session/context/pane facts without authority calls (3.571889ms)
+✔ diagnostic-only accessor reads are refused without invocation or changing original work (13.186956ms)
+✔ observer setup and sinks cannot replace original failures or create additional input (9.163203ms)
+✖ actual observer bounds events, ancestry, snapshots and counters without emitting private text (15.898152ms)
+✔ ordinary non-opted-in click adds no store read/listener or diagnostic field (1.587073ms)
+✔ malformed or oversize diagnostic identity/state stays unavailable without coercion (3.409958ms)
+✖ actual diagnostic serialization failure leaves the original failure snapshot usable (1.082262ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 7
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 160.004968
+
+✖ failing tests:
+
+test at scripts/e2e/teams-create-page-owned-processes.test.mjs:200:1
+✖ actual task-tab action retains before/first/last evidence without changing its input or predicate (5.50031ms)
+  AssertionError [ERR_ASSERTION]: Actual original task-tab flow must retain its bounded observation
+      at observed (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/e2e/teams-create-page-owned-processes.test.mjs:192:10)
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/e2e/teams-create-page-owned-processes.test.mjs:206:17)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at scripts/e2e/teams-create-page-owned-processes.test.mjs:223:1
+✖ actual delivery may miss the measured task button; failure disposal retains that fact only (2.479372ms)
+  AssertionError [ERR_ASSERTION]: Actual original task-tab flow must retain its bounded observation
+      at observed (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/e2e/teams-create-page-owned-processes.test.mjs:192:10)
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/e2e/teams-create-page-owned-processes.test.mjs:226:17)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at scripts/e2e/teams-create-page-owned-processes.test.mjs:236:1
+✖ actual predicate preserves null/undefined and reports session/context/pane facts without authority calls (3.571889ms)
+  AssertionError [ERR_ASSERTION]: Actual original task-tab flow must retain its bounded observation
+      at observed (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/e2e/teams-create-page-owned-processes.test.mjs:192:10)
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/e2e/teams-create-page-owned-processes.test.mjs:244:19)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at scripts/e2e/teams-create-page-owned-processes.test.mjs:282:1
+✖ actual observer bounds events, ancestry, snapshots and counters without emitting private text (15.898152ms)
+  AssertionError [ERR_ASSERTION]: Actual original task-tab flow must retain its bounded observation
+      at observed (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/e2e/teams-create-page-owned-processes.test.mjs:192:10)
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/e2e/teams-create-page-owned-processes.test.mjs:286:17)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at scripts/e2e/teams-create-page-owned-processes.test.mjs:330:1
+✖ actual diagnostic serialization failure leaves the original failure snapshot usable (1.082262ms)
+  AssertionError [ERR_ASSERTION]: Actual original task-tab flow must retain its bounded observation
+      at observed (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/e2e/teams-create-page-owned-processes.test.mjs:192:10)
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/e2e/teams-create-page-owned-processes.test.mjs:332:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

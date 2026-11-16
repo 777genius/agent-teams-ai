@@ -1,0 +1,438 @@
+{
+  "schemaVersion": 1,
+  "repository": "777genius/agent-teams-ai",
+  "pr": 1211,
+  "sourceHead": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "sourceTree": "0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103",
+  "runId": 43790825919,
+  "attempt": 1,
+  "job": {
+    "id": 133048605663,
+    "run_id": 43790825919,
+    "workflow_name": "Host Emulated Acceptance",
+    "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+    "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825919",
+    "run_attempt": 1,
+    "node_id": "CR_kwDORVTEtM8AAAAe-lCb3w",
+    "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048605663",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825919/job/133048605663",
+    "status": "completed",
+    "conclusion": "failure",
+    "created_at": "2026-11-16T02:13:21Z",
+    "started_at": "2026-11-16T03:23:30Z",
+    "completed_at": "2026-11-16T03:25:54Z",
+    "name": "Offline Host Desktop (linux-x64, processes)",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-16T03:23:31Z",
+        "completed_at": "2026-11-16T03:23:34Z"
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-11-16T03:23:34Z",
+        "completed_at": "2026-11-16T03:23:43Z"
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-11-16T03:23:43Z",
+        "completed_at": "2026-11-16T03:23:50Z"
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-16T03:23:50Z",
+        "completed_at": "2026-11-16T03:24:04Z"
+      },
+      {
+        "name": "Verify original checkout and runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-16T03:24:04Z",
+        "completed_at": "2026-11-16T03:24:04Z"
+      },
+      {
+        "name": "Prepare private Linux display",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6,
+        "started_at": "2026-11-16T03:24:04Z",
+        "completed_at": "2026-11-16T03:24:13Z"
+      },
+      {
+        "name": "Install frozen workspace and Electron",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7,
+        "started_at": "2026-11-16T03:24:13Z",
+        "completed_at": "2026-11-16T03:25:26Z"
+      },
+      {
+        "name": "Build existing Desktop prerequisites and verify admission",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-16T03:25:26Z",
+        "completed_at": "2026-11-16T03:25:40Z"
+      },
+      {
+        "name": "Verify original Runtime and Team conversation contracts",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 9,
+        "started_at": "2026-11-16T03:25:40Z",
+        "completed_at": "2026-11-16T03:25:40Z"
+      },
+      {
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 10,
+        "started_at": "2026-11-16T03:25:40Z",
+        "completed_at": "2026-11-16T03:25:40Z"
+      },
+      {
+        "name": "Capture package-manager and Host inputs without vendor executables",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11,
+        "started_at": "2026-11-16T03:25:40Z",
+        "completed_at": "2026-11-16T03:25:42Z"
+      },
+      {
+        "name": "Capture original controlled Linux process input without a provider",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 12,
+        "started_at": "2026-11-16T03:25:42Z",
+        "completed_at": "2026-11-16T03:25:42Z"
+      },
+      {
+        "name": "Exercise ordinary Team controls and renderer reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13,
+        "started_at": "2026-11-16T03:25:42Z",
+        "completed_at": "2026-11-16T03:25:42Z"
+      },
+      {
+        "name": "Exercise ordinary Taskboard controls and persistence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14,
+        "started_at": "2026-11-16T03:25:42Z",
+        "completed_at": "2026-11-16T03:25:42Z"
+      },
+      {
+        "name": "Exercise original Skills and cross-Team controls",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15,
+        "started_at": "2026-11-16T03:25:42Z",
+        "completed_at": "2026-11-16T03:25:42Z"
+      },
+      {
+        "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16,
+        "started_at": "2026-11-16T03:25:42Z",
+        "completed_at": "2026-11-16T03:25:42Z"
+      },
+      {
+        "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17,
+        "started_at": "2026-11-16T03:25:42Z",
+        "completed_at": "2026-11-16T03:25:42Z"
+      },
+      {
+        "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18,
+        "started_at": "2026-11-16T03:25:42Z",
+        "completed_at": "2026-11-16T03:25:42Z"
+      },
+      {
+        "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19,
+        "started_at": "2026-11-16T03:25:42Z",
+        "completed_at": "2026-11-16T03:25:42Z"
+      },
+      {
+        "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20,
+        "started_at": "2026-11-16T03:25:42Z",
+        "completed_at": "2026-11-16T03:25:42Z"
+      },
+      {
+        "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21,
+        "started_at": "2026-11-16T03:25:42Z",
+        "completed_at": "2026-11-16T03:25:42Z"
+      },
+      {
+        "name": "Exercise original Review after a cold Host and app restart",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22,
+        "started_at": "2026-11-16T03:25:42Z",
+        "completed_at": "2026-11-16T03:25:42Z"
+      },
+      {
+        "name": "Exercise saved next-launch selection while the original Team remains live",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23,
+        "started_at": "2026-11-16T03:25:42Z",
+        "completed_at": "2026-11-16T03:25:43Z"
+      },
+      {
+        "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 24,
+        "started_at": "2026-11-16T03:25:43Z",
+        "completed_at": "2026-11-16T03:25:48Z"
+      },
+      {
+        "name": "Exercise stock Codex Update while the original Team retains its captured source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 25,
+        "started_at": "2026-11-16T03:25:48Z",
+        "completed_at": "2026-11-16T03:25:48Z"
+      },
+      {
+        "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 26,
+        "started_at": "2026-11-16T03:25:48Z",
+        "completed_at": "2026-11-16T03:25:48Z"
+      },
+      {
+        "name": "Prepare exact OpenCode V2 Bun and engine graph",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 27,
+        "started_at": "2026-11-16T03:25:48Z",
+        "completed_at": "2026-11-16T03:25:48Z"
+      },
+      {
+        "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 28,
+        "started_at": "2026-11-16T03:25:48Z",
+        "completed_at": "2026-11-16T03:25:48Z"
+      },
+      {
+        "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 29,
+        "started_at": "2026-11-16T03:25:48Z",
+        "completed_at": "2026-11-16T03:25:48Z"
+      },
+      {
+        "name": "Verify exact source, original screenshots, receipts and cleanup",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 30,
+        "started_at": "2026-11-16T03:25:48Z",
+        "completed_at": "2026-11-16T03:25:49Z"
+      },
+      {
+        "name": "Preserve original Desktop evidence, including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31,
+        "started_at": "2026-11-16T03:25:49Z",
+        "completed_at": "2026-11-16T03:25:51Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 60,
+        "started_at": "2026-11-16T03:25:51Z",
+        "completed_at": "2026-11-16T03:25:51Z"
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 61,
+        "started_at": "2026-11-16T03:25:51Z",
+        "completed_at": "2026-11-16T03:25:51Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 62,
+        "started_at": "2026-11-16T03:25:51Z",
+        "completed_at": "2026-11-16T03:25:51Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 63,
+        "started_at": "2026-11-16T03:25:51Z",
+        "completed_at": "2026-11-16T03:25:51Z"
+      }
+    ],
+    "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048605663",
+    "labels": [
+      "ubuntu-latest"
+    ],
+    "runner_id": 1000376215,
+    "runner_name": "GitHub Actions 1000376215",
+    "runner_group_id": 0,
+    "runner_group_name": "GitHub Actions"
+  },
+  "artifact": {
+    "id": 14195123340,
+    "node_id": "MDg6QXJ0aWZhY3QxNDE5NTEyMzM0MA==",
+    "name": "host-emulated-linux-x64-2abcf83fddacbc1efedee83f9c1d203d12ed656e-processes",
+    "size_in_bytes": 386591,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14195123340",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14195123340/zip",
+    "expired": false,
+    "digest": "sha256:65a47d4af1aaa98ca215e0d3fc8eb639d9c5dbd4e8deee1a62f0fa2ccad217a4",
+    "created_at": "2026-11-16T03:25:51Z",
+    "updated_at": "2026-11-16T03:25:51Z",
+    "expires_at": "2026-11-30T03:25:49Z",
+    "workflow_run": {
+      "id": 43790825919,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+      "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+    }
+  },
+  "payloads": [
+    {
+      "path": "pr1211-processes-job.log",
+      "gitBlob": "528b3eaef617caaee65f8c312b3b3b4d34aaef97",
+      "bytes": 192962,
+      "sha256": "010325d78480ffa3749f0254656c877b7b3402f8b8c3c408b1544f55cba3693a"
+    },
+    {
+      "path": "pr1211-processes-run-api.json",
+      "gitBlob": "fe12a001587326f50d324643e9134beb3c3af7fd",
+      "bytes": 13832,
+      "sha256": "2bf08adec2e5cf80a33a66249e71eb36d3651b6c4119d29ece968ac0bc1e5507"
+    },
+    {
+      "path": "pr1211-processes-jobs-api.json",
+      "gitBlob": "b0a801140fd589c91d2afdf222300b5b16784d4b",
+      "bytes": 112988,
+      "sha256": "4b2fc0768c0cb8293b2f30a5ac9bf12bd18112ba6ce3432484356275c4326ac6"
+    },
+    {
+      "path": "pr1211-processes-artifacts-api.json",
+      "gitBlob": "3c81ab8788165301556f3814541baaa1b257bee5",
+      "bytes": 12747,
+      "sha256": "19f3039e5bf2b9c0ec56114c71595095309531e5503da2341b7a22b27aa413b5"
+    }
+  ],
+  "actual": {
+    "prerequisites": [
+      {
+        "tests": 122,
+        "passed": 122,
+        "failed": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "todo": 0
+      },
+      {
+        "tests": 7,
+        "passed": 7,
+        "failed": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "todo": 0
+      },
+      {
+        "tests": 7,
+        "passed": 7,
+        "failed": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "todo": 0,
+        "command": "node --test scripts/legacy-agent-host/desktop-native-process-ui.test.ts"
+      }
+    ],
+    "firstFailure": {
+      "at": "2026-11-16T03:25:48.7099482Z",
+      "step": 24,
+      "path": "packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts",
+      "line": 23,
+      "code": "ERR_ASSERTION",
+      "actual": false,
+      "expected": true,
+      "stack": [
+        "readNativeProviderArtifact:23",
+        "desktopProofEvidence:292",
+        "desktop-backend-smoke.ts:220"
+      ]
+    },
+    "downstreamFailure": {
+      "step": 30,
+      "message": "original UI flow and cleanup must pass"
+    },
+    "runtime": "v24.21.0",
+    "scope": "Original frozen-source prerequisite receipt-schema refusal before ordinary Desktop app spawn. Earlier test cases qualify only their own executed finite assertions; no ordinary GUI/native/cleanup PASS or later-repair transfer."
+  },
+  "sourceJoin": {
+    "workflow": {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "sha": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+    },
+    "checkoutHeadInFullLog": true,
+    "artifactUploadAndApiIdentityMatch": true,
+    "reader": {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts",
+      "sha": "a370b8c16f18b21c34699114cd7d92ae801841b6"
+    }
+  },
+  "limits": {
+    "originalRunOnly": true,
+    "noReplayOrChildActions": true,
+    "childDownloadedOrInspectedZip": false,
+    "artifactDigestAndSizeAreOriginalUploadPlusApi": true,
+    "wholeRunOrOtherJobQualification": false,
+    "skipIsNotPass": true,
+    "actualSourceAndAttemptOnly": true,
+    "aggregateRunSnapshot": {
+      "status": "queued",
+      "conclusion": null
+    },
+    "laterManagementFixQualificationTransferred": false
+  }
+}

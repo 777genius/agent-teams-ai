@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "kind": "passive-navigation-getter-type-source-review",
+  "repository": "777genius/agent-teams-ai",
+  "publishedR1": {
+    "commit": "242770cba46f0a099062e042e9401557a4875120",
+    "tree": "1aa894ac82d53b4c7d78f8f5de3edfab0b8b5645",
+    "appendix": "797533a5211911a9fb57202a1304abfe23ec8961",
+    "independentFullPublishedReadback": true
+  },
+  "candidate": {
+    "tree": "c3298a08cc4ad8bf96f4df3a2935e071bc88b3a8",
+    "changes": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8e9884ea50b1aae54b50d6271367b495c1ca591e"
+      }
+    ],
+    "baseLeaves": 10403,
+    "candidateLeaves": 10403,
+    "noDeletion": true,
+    "noModeChange": true,
+    "allUnlistedLeavesExact": true
+  },
+  "source": {
+    "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "preimage": {
+      "git": "44cf93706a5b92be4296119810c7c07264cb4ccd",
+      "bytes": 119240,
+      "sha256": "c8c37d98de5700d2fa21afc46b61108235bb80f2c45505b73907ac33764b9a10",
+      "lines": 1960
+    },
+    "postimage": {
+      "git": "8e9884ea50b1aae54b50d6271367b495c1ca591e",
+      "bytes": 119247,
+      "sha256": "40957ecc99cf92ec6f4e397c06c19d5c4fec9ffd8d65ffcc44be0e99f8e320b3",
+      "lines": 1960
+    },
+    "uniqueForward": {
+      "before": "get teamName() { assert.fail('non-Team metadata is not read'); }",
+      "after": "get teamName() { return assert.fail('non-Team metadata is not read'); }",
+      "preimageMatches": 1
+    },
+    "uniqueInverse": {
+      "before": "get teamName() { return assert.fail('non-Team metadata is not read'); }",
+      "after": "get teamName() { assert.fail('non-Team metadata is not read'); }",
+      "postimageMatches": 1,
+      "restoresEntirePreimage": true
+    },
+    "physicalLine": 1762,
+    "byteDelta": 7,
+    "lineDiff": {
+      "added": 1,
+      "deleted": 1
+    },
+    "diffHunks": [
+      " 1760/1760   const absent = g.emit().row; g.flush();\n 1761/1761   assert.deepEqual(navigationPlain(absent.teamNavigation).before, { status: 'available', focusedPaneId: 'pane-1', activeTabId: null, activeTabType: null, activeTabTeamName: null, selectedTeamName: null });\n+/1762   pane.activeTabId = 'tab-A'; pane.tabs = [{ id: 'tab-A', type: 'dashboard', get teamName() { return assert.fail('non-Team metadata is not read'); } }];\n-1762/   pane.activeTabId = 'tab-A'; pane.tabs = [{ id: 'tab-A', type: 'dashboard', get teamName() { assert.fail('non-Team metadata is not read'); } }];\n 1763/1763   const other = g.emit().row; g.flush();\n 1764/1764   assert.deepEqual(navigationPlain(other.teamNavigation).before, { status: 'available', focusedPaneId: 'pane-1', activeTabId: 'tab-A', activeTabType: 'other', activeTabTeamName: null, selectedTeamName: null });"
+    ],
+    "fullRemoteReadbackExact": true
+  },
+  "semantics": {
+    "unchangedAssertFailCallAndMessage": true,
+    "noNormalGetterReturnIntroduced": true,
+    "allOtherCurrentTestBytesPreserved": true,
+    "noTestAddedRemovedOrSkipped": true,
+    "allFourManagementCasesPreserved": true,
+    "productionReader": "342fab2bf377b7ca6acd6dbd180a946382c00c1a"
+  },
+  "evidence": {
+    "originalFrozenSource": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "originalFrozenTest": "a78bfc7d0d656cd2a785aeb0a9bdd59a7262769e",
+    "originalPhysicalLine": 1760,
+    "originalPackagedRun": 43790825796,
+    "originalJob": 133068178223,
+    "originalDiagnostic": "TS2378: A 'get' accessor must return a value.",
+    "originalRaw": "371606d4fcfa2645220bed83a07dcdb75d017f38",
+    "originalManifest": "adfddf8c45f948c95a80e2d5a88d45c6a6aea814"
+  },
+  "qualification": {
+    "sourceProposalOnly": true,
+    "sourceApplied": false,
+    "commitCreated": false,
+    "refMoved": false,
+    "noExecution": true,
+    "noCompilerPassClaim": true,
+    "onlyAfterReviewedPublicationLocalChecks": [
+      "one-path original fast lint",
+      "one-path git diff --check"
+    ],
+    "noRuntimeRerunOrBuildOrCompilerRetry": true,
+    "resultingCompilerQualification": "Original unchanged packaged scripts compiler on the resulting source; no new venue/action is authorized by this source proposal."
+  }
+}

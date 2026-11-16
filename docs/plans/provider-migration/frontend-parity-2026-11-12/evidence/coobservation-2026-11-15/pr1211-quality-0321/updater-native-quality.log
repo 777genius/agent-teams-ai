@@ -1,0 +1,1182 @@
+﻿2026-11-16T03:18:06.8276627Z Current runner version: '2.338.2'
+2026-11-16T03:18:06.8294899Z ##[group]Runner Image Provisioner
+2026-11-16T03:18:06.8295550Z Hosted Compute Agent
+2026-11-16T03:18:06.8296060Z Version: 20261103.629
+2026-11-16T03:18:06.8296543Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-16T03:18:06.8297068Z Build Date: 2026-11-03T17:26:59Z
+2026-11-16T03:18:06.8297575Z Worker ID: {c30f2f67-6e9d-4565-811b-946f8fee9ad4}
+2026-11-16T03:18:06.8298087Z Region: us-west-2
+2026-11-16T03:18:06.8298514Z Cloud: AWS
+2026-11-16T03:18:06.8298915Z ##[endgroup]
+2026-11-16T03:18:06.8299797Z ##[group]Operating System
+2026-11-16T03:18:06.8300250Z Ubuntu
+2026-11-16T03:18:06.8300624Z 24.04.5
+2026-11-16T03:18:06.8300988Z LTS
+2026-11-16T03:18:06.8301399Z ##[endgroup]
+2026-11-16T03:18:06.8301789Z ##[group]Runner Image
+2026-11-16T03:18:06.8302201Z Image: ubuntu-24.04
+2026-11-16T03:18:06.8302843Z Version: 20261111.127.1
+2026-11-16T03:18:06.8303816Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261111.127/images/ubuntu/Ubuntu2404-Readme.md
+2026-11-16T03:18:06.8304943Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261111.127
+2026-11-16T03:18:06.8305617Z ##[endgroup]
+2026-11-16T03:18:06.8306437Z ##[group]GITHUB_TOKEN Permissions
+2026-11-16T03:18:06.8308069Z Contents: read
+2026-11-16T03:18:06.8308472Z Metadata: read
+2026-11-16T03:18:06.8308856Z ##[endgroup]
+2026-11-16T03:18:06.8310333Z Secret source: Actions
+2026-11-16T03:18:06.8310964Z Cache mode: write
+2026-11-16T03:18:06.8311518Z Prepare workflow directory
+2026-11-16T03:18:06.8542905Z Prepare all required actions
+2026-11-16T03:18:06.8579575Z Getting action download info
+2026-11-16T03:18:07.2630533Z Download action repository 'actions/checkout@v6' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-11-16T03:18:09.3580380Z Download action repository 'pnpm/action-setup@v6' (SHA:73e46992e05b19abd31f2f3c20e0e7370d762115)
+2026-11-16T03:18:09.6546325Z Download action repository 'actions/setup-node@v6' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+2026-11-16T03:18:09.8989015Z Complete job name: linux-appimage-tooling-quality
+2026-11-16T03:18:09.9729663Z ##[group]Run actions/checkout@v6
+2026-11-16T03:18:09.9730743Z with:
+2026-11-16T03:18:09.9731468Z   persist-credentials: false
+2026-11-16T03:18:09.9732360Z   repository: 777genius/agent-teams-ai
+2026-11-16T03:18:09.9738865Z   token: ***
+2026-11-16T03:18:09.9739643Z   ssh-strict: true
+2026-11-16T03:18:09.9740380Z   ssh-user: git
+2026-11-16T03:18:09.9741091Z   clean: true
+2026-11-16T03:18:09.9741852Z   sparse-checkout-cone-mode: true
+2026-11-16T03:18:09.9742837Z   fetch-depth: 1
+2026-11-16T03:18:09.9743589Z   fetch-tags: false
+2026-11-16T03:18:09.9744364Z   show-progress: true
+2026-11-16T03:18:09.9745124Z   lfs: false
+2026-11-16T03:18:09.9745823Z   submodules: false
+2026-11-16T03:18:09.9746577Z   set-safe-directory: true
+2026-11-16T03:18:09.9747476Z   allow-unsafe-pr-checkout: false
+2026-11-16T03:18:09.9748546Z ##[endgroup]
+2026-11-16T03:18:13.8007870Z Syncing repository: 777genius/agent-teams-ai
+2026-11-16T03:18:13.8009383Z ##[group]Getting Git version info
+2026-11-16T03:18:13.8009893Z Working directory is '/home/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-16T03:18:13.8010604Z [command]/usr/bin/git version
+2026-11-16T03:18:14.0534890Z git version 2.56.1
+2026-11-16T03:18:14.0551769Z ##[endgroup]
+2026-11-16T03:18:14.0563953Z Temporarily overriding HOME='/home/runner/work/_temp/dad67ace-f0a6-4954-a5d5-f1d5a2c3e00f' before making global git config changes
+2026-11-16T03:18:14.0564780Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T03:18:14.0567774Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T03:18:14.0982191Z Deleting the contents of '/home/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-16T03:18:14.0985171Z ##[group]Determining repository object format
+2026-11-16T03:18:14.0986797Z ##[endgroup]
+2026-11-16T03:18:14.0987271Z ##[group]Initializing the repository
+2026-11-16T03:18:14.0990615Z [command]/usr/bin/git init /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T03:18:14.1926542Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-16T03:18:14.1927336Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-16T03:18:14.1927775Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-16T03:18:14.1928176Z hint: call:
+2026-11-16T03:18:14.1928393Z hint:
+2026-11-16T03:18:14.1928704Z hint: 	git config --global init.defaultBranch <name>
+2026-11-16T03:18:14.1929000Z hint:
+2026-11-16T03:18:14.1929311Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-16T03:18:14.1929700Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-16T03:18:14.1930052Z hint:
+2026-11-16T03:18:14.1930267Z hint: 	git branch -m <name>
+2026-11-16T03:18:14.1930537Z hint:
+2026-11-16T03:18:14.1930876Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-16T03:18:14.1933113Z Initialized empty Git repository in /home/runner/work/agent-teams-ai/agent-teams-ai/.git/
+2026-11-16T03:18:14.1946930Z [command]/usr/bin/git remote add origin https://github.com/777genius/agent-teams-ai
+2026-11-16T03:18:14.1987815Z ##[endgroup]
+2026-11-16T03:18:14.1988297Z ##[group]Disabling automatic garbage collection
+2026-11-16T03:18:14.1990442Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-16T03:18:14.2012946Z ##[endgroup]
+2026-11-16T03:18:14.2013457Z ##[group]Setting up auth
+2026-11-16T03:18:14.2013808Z Removing SSH command configuration
+2026-11-16T03:18:14.2017825Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T03:18:14.2043517Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T03:18:14.5256858Z Removing HTTP extra header
+2026-11-16T03:18:14.5263119Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T03:18:14.5287485Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T03:18:14.5431012Z Removing includeIf entries pointing to credentials config files
+2026-11-16T03:18:14.5436656Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T03:18:14.5459399Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T03:18:14.5613648Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-98d671c9-8065-4a95-adab-e7a773e93118.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-16T03:18:14.5641143Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path /home/runner/work/_temp/git-credentials-98d671c9-8065-4a95-adab-e7a773e93118.config
+2026-11-16T03:18:14.5662240Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-98d671c9-8065-4a95-adab-e7a773e93118.config
+2026-11-16T03:18:14.5685484Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-98d671c9-8065-4a95-adab-e7a773e93118.config
+2026-11-16T03:18:14.5705885Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-98d671c9-8065-4a95-adab-e7a773e93118.config
+2026-11-16T03:18:14.5724070Z ##[endgroup]
+2026-11-16T03:18:14.5724451Z ##[group]Fetching the repository
+2026-11-16T03:18:14.5729595Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +441e76ffe1cc5e288645877e15b312caf7b8c109:refs/remotes/pull/1211/merge
+2026-11-16T03:18:19.8593629Z From https://github.com/777genius/agent-teams-ai
+2026-11-16T03:18:19.8594447Z  * [new ref]         441e76ffe1cc5e288645877e15b312caf7b8c109 -> pull/1211/merge
+2026-11-16T03:18:19.8610469Z ##[endgroup]
+2026-11-16T03:18:19.8611064Z ##[group]Determining the checkout info
+2026-11-16T03:18:19.8611512Z ##[endgroup]
+2026-11-16T03:18:19.8611806Z [command]/usr/bin/git sparse-checkout disable
+2026-11-16T03:18:19.8672733Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-16T03:18:19.8695948Z ##[group]Checking out the ref
+2026-11-16T03:18:19.8701952Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/1211/merge
+2026-11-16T03:18:20.5506172Z Note: switching to 'refs/remotes/pull/1211/merge'.
+2026-11-16T03:18:20.5506512Z 
+2026-11-16T03:18:20.5506690Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-16T03:18:20.5507266Z changes and commit them, and you can discard any commits you make in this
+2026-11-16T03:18:20.5507758Z state without impacting any branches by switching back to a branch.
+2026-11-16T03:18:20.5507971Z 
+2026-11-16T03:18:20.5508210Z If you want to create a new branch to retain commits you create, you may
+2026-11-16T03:18:20.5509223Z do so (now or later) by using -c with the switch command. Example:
+2026-11-16T03:18:20.5509485Z 
+2026-11-16T03:18:20.5509658Z   git switch -c <new-branch-name>
+2026-11-16T03:18:20.5509910Z 
+2026-11-16T03:18:20.5510063Z Or undo this operation with:
+2026-11-16T03:18:20.5510304Z 
+2026-11-16T03:18:20.5510421Z   git switch -
+2026-11-16T03:18:20.5510606Z 
+2026-11-16T03:18:20.5510871Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-16T03:18:20.5511196Z 
+2026-11-16T03:18:20.5511567Z HEAD is now at 441e76f Merge 2abcf83fddacbc1efedee83f9c1d203d12ed656e into 0b3fa6117b1856b947d799f95bae7aae0238061c
+2026-11-16T03:18:20.5532117Z ##[endgroup]
+2026-11-16T03:18:20.5581980Z [command]/usr/bin/git log -1 --format=%H
+2026-11-16T03:18:20.5603606Z 441e76ffe1cc5e288645877e15b312caf7b8c109
+2026-11-16T03:18:20.5610721Z ##[group]Removing auth
+2026-11-16T03:18:20.5610989Z Removing SSH command configuration
+2026-11-16T03:18:20.5614057Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T03:18:20.5637972Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T03:18:20.5800062Z Removing HTTP extra header
+2026-11-16T03:18:20.5804197Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T03:18:20.5826676Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T03:18:20.5982139Z Removing includeIf entries pointing to credentials config files
+2026-11-16T03:18:20.5985539Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T03:18:20.6006701Z includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-16T03:18:20.6007525Z includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-16T03:18:20.6008023Z includeif.gitdir:/github/workspace/.git.path
+2026-11-16T03:18:20.6008424Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T03:18:20.6013156Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-16T03:18:20.6030746Z /home/runner/work/_temp/git-credentials-98d671c9-8065-4a95-adab-e7a773e93118.config
+2026-11-16T03:18:20.6039312Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path /home/runner/work/_temp/git-credentials-98d671c9-8065-4a95-adab-e7a773e93118.config
+2026-11-16T03:18:20.6069077Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-16T03:18:20.6085827Z /home/runner/work/_temp/git-credentials-98d671c9-8065-4a95-adab-e7a773e93118.config
+2026-11-16T03:18:20.6091769Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-98d671c9-8065-4a95-adab-e7a773e93118.config
+2026-11-16T03:18:20.6118345Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-11-16T03:18:20.6142416Z /github/runner_temp/git-credentials-98d671c9-8065-4a95-adab-e7a773e93118.config
+2026-11-16T03:18:20.6158918Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-98d671c9-8065-4a95-adab-e7a773e93118.config
+2026-11-16T03:18:20.6177681Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T03:18:20.6195035Z /github/runner_temp/git-credentials-98d671c9-8065-4a95-adab-e7a773e93118.config
+2026-11-16T03:18:20.6200487Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-98d671c9-8065-4a95-adab-e7a773e93118.config
+2026-11-16T03:18:20.6225374Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T03:18:20.6380444Z Removing credentials config '/home/runner/work/_temp/git-credentials-98d671c9-8065-4a95-adab-e7a773e93118.config'
+2026-11-16T03:18:20.6386543Z ##[endgroup]
+2026-11-16T03:18:20.6554477Z ##[group]Run pnpm/action-setup@v6
+2026-11-16T03:18:20.6554764Z with:
+2026-11-16T03:18:20.6555010Z   dest: ~/setup-pnpm
+2026-11-16T03:18:20.6555233Z   run_install: null
+2026-11-16T03:18:20.6555504Z   cache: false
+2026-11-16T03:18:20.6555740Z   cache_dependency_path: pnpm-lock.yaml
+2026-11-16T03:18:20.6556064Z   package_json_file: package.json
+2026-11-16T03:18:20.6556332Z   standalone: false
+2026-11-16T03:18:20.6556552Z ##[endgroup]
+2026-11-16T03:18:20.7692959Z ##[group]Running self-installer...
+2026-11-16T03:18:25.2677134Z 
+2026-11-16T03:18:25.2677824Z added 1 package, and audited 2 packages in 1s
+2026-11-16T03:18:25.2678125Z 
+2026-11-16T03:18:25.2678294Z 1 package is looking for funding
+2026-11-16T03:18:25.2678775Z   run `npm fund` for details
+2026-11-16T03:18:25.2682876Z 
+2026-11-16T03:18:25.2683297Z found 0 vulnerabilities
+2026-11-16T03:18:26.4926745Z Checking for updates...
+2026-11-16T03:18:26.6693192Z Switching pnpm from v11.28.10 to v11.22.0...
+2026-11-16T03:18:27.2160215Z .../v11/8f5-1a1e25cfc09-5341c632e04e42dd | Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-16T03:18:27.2174154Z .../v11/8f5-1a1e25cfc09-5341c632e04e42dd |   +1 +
+2026-11-16T03:18:27.5081513Z .../v11/8f5-1a1e25cfc09-5341c632e04e42dd | Progress: resolved 1, reused 0, downloaded 1, added 1, done
+2026-11-16T03:18:28.1106731Z [WARN] Detected a pnpm v10 installation layout at PNPM_HOME. The pnpm shims at PNPM_HOME have been refreshed so the new version is active, but pnpm v11 expects bins in PNPM_HOME/bin. Run "pnpm setup" to migrate your PATH to the v11 layout.
+2026-11-16T03:18:28.1177660Z Successfully updated pnpm to v11.22.0
+2026-11-16T03:18:28.1414284Z ##[endgroup]
+2026-11-16T03:18:28.1414650Z Installation Completed!
+2026-11-16T03:18:28.1559456Z ##[group]Run actions/setup-node@v6
+2026-11-16T03:18:28.1559750Z with:
+2026-11-16T03:18:28.1559965Z   node-version-file: .node-version
+2026-11-16T03:18:28.1560254Z   package-manager-cache: false
+2026-11-16T03:18:28.1560501Z   check-latest: false
+2026-11-16T03:18:28.1562309Z   token: ***
+2026-11-16T03:18:28.1562755Z env:
+2026-11-16T03:18:28.1563016Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:18:28.1563335Z ##[endgroup]
+2026-11-16T03:18:28.2601024Z Node version file is not JSON file
+2026-11-16T03:18:28.2601514Z Resolved .node-version as 26.12.1
+2026-11-16T03:18:28.2891094Z Attempting to download 26.12.1...
+2026-11-16T03:18:28.8449798Z Acquiring 26.12.1 - x64 from https://github.com/actions/node-versions/releases/download/26.12.1-39618969937/node-26.12.1-linux-x64.tar.gz
+2026-11-16T03:18:29.6604980Z Extracting ...
+2026-11-16T03:18:29.6708771Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/5a5dd988-717e-4c51-8fbe-a73779995f7f -f /home/runner/work/_temp/1a2ca9a1-d4af-4408-b27f-7d3b109dbb3c
+2026-11-16T03:18:30.8105410Z Adding to the cache ...
+2026-11-16T03:18:31.7987092Z ##[group]Environment details
+2026-11-16T03:18:32.4610308Z node: v26.12.1
+2026-11-16T03:18:32.4610698Z npm: 11.20.0
+2026-11-16T03:18:32.4610918Z yarn: 1.22.22
+2026-11-16T03:18:32.4611440Z ##[endgroup]
+2026-11-16T03:18:32.4748627Z ##[group]Run pnpm install --frozen-lockfile --ignore-scripts
+2026-11-16T03:18:32.4749096Z [36;1mpnpm install --frozen-lockfile --ignore-scripts[0m
+2026-11-16T03:18:32.8128939Z shell: /usr/bin/bash -e {0}
+2026-11-16T03:18:32.8129259Z env:
+2026-11-16T03:18:32.8129740Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:18:32.8130050Z ##[endgroup]
+2026-11-16T03:18:33.2594431Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:18:33.2595974Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:18:33.2740100Z Scope: all 7 workspace projects
+2026-11-16T03:18:33.4111850Z ? Verifying lockfile against supply-chain policies (2533 entries)...
+2026-11-16T03:18:33.4571729Z Lockfile is up to date, resolution step is skipped
+2026-11-16T03:18:33.6164701Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-16T03:18:33.7351768Z Packages: +2293
+2026-11-16T03:18:33.7352436Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-11-16T03:18:34.3336659Z Packages are hard linked from the content-addressable store to the virtual store.
+2026-11-16T03:18:34.3337590Z   Content-addressable store is at: /home/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-11-16T03:18:34.3338329Z   Virtual store is at:             node_modules/.pnpm
+2026-11-16T03:18:34.6214704Z Progress: resolved 2293, reused 1, downloaded 74, added 4
+2026-11-16T03:18:35.6284842Z Progress: resolved 2293, reused 1, downloaded 145, added 8
+2026-11-16T03:18:36.6343851Z Progress: resolved 2293, reused 1, downloaded 236, added 16
+2026-11-16T03:18:37.6441677Z Progress: resolved 2293, reused 1, downloaded 360, added 24
+2026-11-16T03:18:38.6506765Z Progress: resolved 2293, reused 1, downloaded 559, added 40
+2026-11-16T03:18:39.6675887Z Progress: resolved 2293, reused 1, downloaded 818, added 60
+2026-11-16T03:18:40.6697584Z Progress: resolved 2293, reused 1, downloaded 956, added 69
+2026-11-16T03:18:41.6735846Z Progress: resolved 2293, reused 1, downloaded 1173, added 85
+2026-11-16T03:18:42.7286849Z Progress: resolved 2293, reused 1, downloaded 1309, added 97
+2026-11-16T03:18:43.7309430Z Progress: resolved 2293, reused 1, downloaded 1665, added 124
+2026-11-16T03:18:43.9261405Z ✓ Lockfile passes supply-chain policies (2533 entries in 10.5s)
+2026-11-16T03:18:44.7325638Z Progress: resolved 2293, reused 1, downloaded 1964, added 148
+2026-11-16T03:18:45.7308653Z Progress: resolved 2293, reused 1, downloaded 2276, added 503
+2026-11-16T03:18:46.7315889Z Progress: resolved 2293, reused 1, downloaded 2277, added 2292
+2026-11-16T03:18:46.8490915Z Progress: resolved 2293, reused 1, downloaded 2277, added 2293, done
+2026-11-16T03:18:47.6373739Z [WARN] Failed to create bin at /home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js'
+2026-11-16T03:18:47.8023222Z 
+2026-11-16T03:18:47.8044123Z dependencies:
+2026-11-16T03:18:47.8074283Z + @agent-teams/legacy-agent-host 0.1.0 <- packages/legacy-agent-host
+2026-11-16T03:18:47.8075671Z + @agent-teams/task-change-ledger 0.1.0 <- packages/task-change-ledger
+2026-11-16T03:18:47.8076627Z + @claude-teams/agent-graph 0.1.0 <- packages/agent-graph
+2026-11-16T03:18:47.8085252Z + @codemirror/autocomplete 6.20.0
+2026-11-16T03:18:47.8086033Z + @codemirror/commands 6.10.2
+2026-11-16T03:18:47.8086815Z + @codemirror/lang-cpp 6.0.3
+2026-11-16T03:18:47.8087347Z + @codemirror/lang-css 6.3.1
+2026-11-16T03:18:47.8093665Z + @codemirror/lang-go 6.0.1
+2026-11-16T03:18:47.8094425Z + @codemirror/lang-html 6.4.11
+2026-11-16T03:18:47.8094931Z + @codemirror/lang-java 6.0.2
+2026-11-16T03:18:47.8095463Z + @codemirror/lang-javascript 6.2.4
+2026-11-16T03:18:47.8095961Z + @codemirror/lang-json 6.0.2
+2026-11-16T03:18:47.8096719Z + @codemirror/lang-less 6.0.2
+2026-11-16T03:18:47.8097246Z + @codemirror/lang-markdown 6.5.0
+2026-11-16T03:18:47.8097741Z + @codemirror/lang-php 6.0.2
+2026-11-16T03:18:47.8098279Z + @codemirror/lang-python 6.2.1
+2026-11-16T03:18:47.8098787Z + @codemirror/lang-rust 6.0.2
+2026-11-16T03:18:47.8099249Z + @codemirror/lang-sass 6.0.2
+2026-11-16T03:18:47.8099751Z + @codemirror/lang-sql 6.10.0
+2026-11-16T03:18:47.8100256Z + @codemirror/lang-xml 6.1.0
+2026-11-16T03:18:47.8100703Z + @codemirror/lang-yaml 6.1.2
+2026-11-16T03:18:47.8101169Z + @codemirror/language 6.12.1
+2026-11-16T03:18:47.8101654Z + @codemirror/language-data 6.5.2
+2026-11-16T03:18:47.8102153Z + @codemirror/lint 6.9.5
+2026-11-16T03:18:47.8102809Z + @codemirror/merge 6.12.0
+2026-11-16T03:18:47.8103267Z + @codemirror/search 6.6.0
+2026-11-16T03:18:47.8103679Z + @codemirror/state 6.5.4
+2026-11-16T03:18:47.8104105Z + @codemirror/theme-one-dark 6.1.3
+2026-11-16T03:18:47.8104759Z + @codemirror/view 6.39.15
+2026-11-16T03:18:47.8123470Z + @daypicker/react 10.0.1
+2026-11-16T03:18:47.8124283Z + @dnd-kit/core 6.3.1
+2026-11-16T03:18:47.8124648Z + @dnd-kit/sortable 10.0.0
+2026-11-16T03:18:47.8125047Z + @dnd-kit/utilities 3.2.2
+2026-11-16T03:18:47.8125353Z + @fastify/cors 11.2.0
+2026-11-16T03:18:47.8125675Z + @fastify/static 10.1.2
+2026-11-16T03:18:47.8126066Z + @file-viewer/preset-office 3.1.2
+2026-11-16T03:18:47.8126533Z + @file-viewer/react 3.1.2
+2026-11-16T03:18:47.8126914Z + @floating-ui/dom 1.7.6
+2026-11-16T03:18:47.8127279Z + @headless-tree/core 1.7.0
+2026-11-16T03:18:47.8127671Z + @headless-tree/react 1.7.0
+2026-11-16T03:18:47.8128049Z + @openuidev/lang-core 0.3.2
+2026-11-16T03:18:47.8128431Z + @openuidev/react-headless 0.17.0
+2026-11-16T03:18:47.8128844Z + @openuidev/react-lang 0.3.2
+2026-11-16T03:18:47.8129259Z + @openuidev/react-ui 0.17.0
+2026-11-16T03:18:47.8129683Z + @radix-ui/react-alert-dialog 1.1.15
+2026-11-16T03:18:47.8130435Z + @radix-ui/react-checkbox 1.3.3
+2026-11-16T03:18:47.8130873Z + @radix-ui/react-collapsible 1.1.12
+2026-11-16T03:18:47.8131323Z + @radix-ui/react-context-menu 2.2.16
+2026-11-16T03:18:47.8131761Z + @radix-ui/react-dialog 1.1.15
+2026-11-16T03:18:47.8132208Z + @radix-ui/react-dropdown-menu 2.1.16
+2026-11-16T03:18:47.8132865Z + @radix-ui/react-hover-card 1.1.15
+2026-11-16T03:18:47.8133298Z + @radix-ui/react-label 2.1.8
+2026-11-16T03:18:47.8133710Z + @radix-ui/react-popover 1.1.15
+2026-11-16T03:18:47.8134125Z + @radix-ui/react-presence 1.1.5
+2026-11-16T03:18:47.8134586Z + @radix-ui/react-select 2.2.6
+2026-11-16T03:18:47.8134963Z + @radix-ui/react-slot 1.2.4
+2026-11-16T03:18:47.8135350Z + @radix-ui/react-switch 1.3.7
+2026-11-16T03:18:47.8139944Z + @radix-ui/react-tabs 1.1.13
+2026-11-16T03:18:47.8140343Z + @radix-ui/react-tooltip 1.2.8
+2026-11-16T03:18:47.8140624Z + @sentry/electron 7.10.0
+2026-11-16T03:18:47.8140882Z + @sentry/react 10.45.0
+2026-11-16T03:18:47.8141459Z + @tanstack/react-table 9.3.1
+2026-11-16T03:18:47.8141750Z + @tanstack/react-virtual 3.13.24
+2026-11-16T03:18:47.8142114Z + @terminal-platform/design-tokens 0.1.0
+2026-11-16T03:18:47.8142740Z + @terminal-platform/foundation 0.1.0
+2026-11-16T03:18:47.8143192Z + @terminal-platform/runtime-types 0.1.0
+2026-11-16T03:18:47.8143659Z + @terminal-platform/workspace-adapter-websocket 0.1.0
+2026-11-16T03:18:47.8144166Z + @terminal-platform/workspace-contracts 0.1.0
+2026-11-16T03:18:47.8144522Z + @terminal-platform/workspace-core 0.1.0
+2026-11-16T03:18:47.8144880Z + @terminal-platform/workspace-elements 0.1.0
+2026-11-16T03:18:47.8145242Z + @terminal-platform/workspace-gateway-node 0.1.0
+2026-11-16T03:18:47.8145637Z + @terminal-platform/workspace-react 0.1.0
+2026-11-16T03:18:47.8145992Z + @tiptap/extension-placeholder 3.30.5
+2026-11-16T03:18:47.8146327Z + @tiptap/markdown 3.30.5
+2026-11-16T03:18:47.8146577Z + @tiptap/pm 3.30.5
+2026-11-16T03:18:47.8146815Z + @tiptap/react 3.30.5
+2026-11-16T03:18:47.8147090Z + @tiptap/starter-kit 3.30.5
+2026-11-16T03:18:47.8147386Z + @xterm/addon-fit 0.11.0
+2026-11-16T03:18:47.8147673Z + @xterm/addon-web-links 0.12.0
+2026-11-16T03:18:47.8148075Z + @xterm/xterm 6.0.0
+2026-11-16T03:18:47.8148436Z + agent-teams-controller 1.0.0 <- agent-teams-controller
+2026-11-16T03:18:47.8148771Z + better-sqlite3 12.11.1
+2026-11-16T03:18:47.8149047Z + builder-util-runtime 9.7.0
+2026-11-16T03:18:47.8149398Z + chokidar 4.0.3
+2026-11-16T03:18:47.8149662Z + class-variance-authority 0.7.1
+2026-11-16T03:18:47.8149927Z + clsx 2.1.1
+2026-11-16T03:18:47.8150164Z + cmdk 1.0.4
+2026-11-16T03:18:47.8150377Z + croner 10.0.1
+2026-11-16T03:18:47.8150614Z + cronstrue 3.13.0
+2026-11-16T03:18:47.8150865Z + date-fns 3.6.0
+2026-11-16T03:18:47.8151084Z + diff 8.0.3
+2026-11-16T03:18:47.8151324Z + dompurify 3.4.17
+2026-11-16T03:18:47.8151554Z + drizzle-orm 0.45.2
+2026-11-16T03:18:47.8151807Z + electron-updater 6.8.9
+2026-11-16T03:18:47.8153703Z + fast-json-stringify 6.4.0
+2026-11-16T03:18:47.8154011Z + fastify 5.12.5
+2026-11-16T03:18:47.8154279Z + highlight.js 11.11.1
+2026-11-16T03:18:47.8154521Z + i18next 26.2.0
+2026-11-16T03:18:47.8154757Z + idb-keyval 6.2.2
+2026-11-16T03:18:47.8154997Z + isbinaryfile 6.0.0
+2026-11-16T03:18:47.8155250Z + json-schema-ref-resolver 3.0.0
+2026-11-16T03:18:47.8155575Z + jsonc-parser 3.3.1
+2026-11-16T03:18:47.8155805Z + lucide-react 0.577.0
+2026-11-16T03:18:47.8156061Z + mdast-util-to-hast 13.2.1
+2026-11-16T03:18:47.8156314Z + mermaid 11.15.0
+2026-11-16T03:18:47.8156521Z + motion 12.38.0
+2026-11-16T03:18:47.8156779Z + node-diff3 3.2.0
+2026-11-16T03:18:47.8157026Z + node-pty 1.1.0
+2026-11-16T03:18:47.8157251Z + pica 9.0.1
+2026-11-16T03:18:47.8157460Z + pidusage 4.0.1
+2026-11-16T03:18:47.8157673Z + posthog-js 1.396.6
+2026-11-16T03:18:47.8157930Z + react 19.2.4
+2026-11-16T03:18:47.8158146Z + react-dom 19.2.4
+2026-11-16T03:18:47.8158421Z + react-grid-layout 2.2.2
+2026-11-16T03:18:47.8158662Z + react-i18next 17.0.8
+2026-11-16T03:18:47.8158888Z + react-markdown 10.1.0
+2026-11-16T03:18:47.8159175Z + react-modal-sheet 5.6.0
+2026-11-16T03:18:47.8159422Z + react-resizable 3.1.3
+2026-11-16T03:18:47.8159964Z + rehype-highlight 7.0.2
+2026-11-16T03:18:47.8160250Z + rehype-raw 7.0.0
+2026-11-16T03:18:47.8160474Z + rehype-sanitize 6.0.0
+2026-11-16T03:18:47.8160841Z + remark-gfm 4.0.1
+2026-11-16T03:18:47.8161071Z + remark-parse 11.0.0
+2026-11-16T03:18:47.8161307Z + simple-git 4.0.2
+2026-11-16T03:18:47.8161559Z + ssh-config 5.0.4
+2026-11-16T03:18:47.8161784Z + ssh2 1.17.0
+2026-11-16T03:18:47.8162023Z + strip-markdown 6.0.0
+2026-11-16T03:18:47.8162260Z + tailwind-merge 3.5.0
+2026-11-16T03:18:47.8162660Z + tailwindcss-animate 1.0.7
+2026-11-16T03:18:47.8163264Z + terminal-platform-node terminal-platform-node@file:vendor/terminal-platform/terminal-platform-node-stub
+2026-11-16T03:18:47.8163722Z + unified 11.0.5
+2026-11-16T03:18:47.8163958Z + ws 8.21.0
+2026-11-16T03:18:47.8164164Z + yaml 2.9.0
+2026-11-16T03:18:47.8164416Z + yet-another-react-lightbox 3.29.1
+2026-11-16T03:18:47.8164684Z + zod 4.6.7
+2026-11-16T03:18:47.8164908Z + zustand 4.5.7
+2026-11-16T03:18:47.8165063Z 
+2026-11-16T03:18:47.8165192Z devDependencies:
+2026-11-16T03:18:47.8165430Z + @electron/rebuild 4.2.0
+2026-11-16T03:18:47.8165755Z + @eslint-community/eslint-plugin-eslint-comments 4.6.0
+2026-11-16T03:18:47.8166072Z + @eslint/js 9.39.2
+2026-11-16T03:18:47.8166342Z + @file-viewer/vite-plugin 3.1.2
+2026-11-16T03:18:47.8166642Z + @sentry/vite-plugin 5.1.1
+2026-11-16T03:18:47.8167052Z + @tailwindcss/typography 0.5.19
+2026-11-16T03:18:47.8167341Z + @types/better-sqlite3 7.6.13
+2026-11-16T03:18:47.8167602Z + @types/hast 3.0.4
+2026-11-16T03:18:47.8167853Z + @types/mdast 4.0.4
+2026-11-16T03:18:47.8168101Z + @types/node 24.12.4
+2026-11-16T03:18:47.8168360Z + @types/pidusage 2.0.5
+2026-11-16T03:18:47.8168594Z + @types/react 19.2.14
+2026-11-16T03:18:47.8168857Z + @types/react-dom 19.2.3
+2026-11-16T03:18:47.8169101Z + @types/ssh2 1.15.5
+2026-11-16T03:18:47.8169380Z + @typescript/native <- typescript 7.0.2
+2026-11-16T03:18:47.8169664Z + @vitejs/plugin-react 4.7.0
+2026-11-16T03:18:47.8169955Z + @vitest/coverage-v8 3.2.6
+2026-11-16T03:18:47.8170232Z + autoprefixer 10.4.23
+2026-11-16T03:18:47.8170526Z + better-sqlite3-node <- better-sqlite3 12.10.1
+2026-11-16T03:18:47.8170877Z + electron 44.10.1
+2026-11-16T03:18:47.8171115Z + electron-builder 26.17.0
+2026-11-16T03:18:47.8171348Z + electron-vite 5.0.0
+2026-11-16T03:18:47.8171642Z + eslint 9.39.4
+2026-11-16T03:18:47.8171903Z + eslint-config-prettier 10.1.8
+2026-11-16T03:18:47.8172224Z + eslint-import-resolver-typescript 4.4.4
+2026-11-16T03:18:47.8172697Z + eslint-plugin-boundaries 5.3.1
+2026-11-16T03:18:47.8172986Z + eslint-plugin-import 2.32.0
+2026-11-16T03:18:47.8173312Z + eslint-plugin-jsx-a11y 6.10.2
+2026-11-16T03:18:47.8173659Z + eslint-plugin-react 7.37.5
+2026-11-16T03:18:47.8173946Z + eslint-plugin-react-hooks 7.0.1
+2026-11-16T03:18:47.8174239Z + eslint-plugin-react-refresh 0.4.26
+2026-11-16T03:18:47.8174518Z + eslint-plugin-security 3.0.1
+2026-11-16T03:18:47.8174855Z + eslint-plugin-simple-import-sort 12.1.1
+2026-11-16T03:18:47.8175142Z + eslint-plugin-sonarjs 3.0.6
+2026-11-16T03:18:47.8175461Z + eslint-plugin-tailwindcss 3.18.2
+2026-11-16T03:18:47.8175723Z + fake-indexeddb 6.2.5
+2026-11-16T03:18:47.8175941Z + globals 17.2.0
+2026-11-16T03:18:47.8176198Z + happy-dom 21.0.4
+2026-11-16T03:18:47.8176415Z + husky 9.1.7
+2026-11-16T03:18:47.8176633Z + i18next-cli 1.58.0
+2026-11-16T03:18:47.8176888Z + knip 5.82.1
+2026-11-16T03:18:47.8177094Z + lint-staged 16.2.7
+2026-11-16T03:18:47.8177354Z + oxfmt 0.72.0
+2026-11-16T03:18:47.8177564Z + oxlint 1.87.0
+2026-11-16T03:18:47.8177775Z + postcss 8.5.28
+2026-11-16T03:18:47.8177995Z + prettier 3.8.1
+2026-11-16T03:18:47.8178287Z + prettier-plugin-tailwindcss 0.7.2
+2026-11-16T03:18:47.8178572Z + tailwindcss 3.4.19
+2026-11-16T03:18:47.8178791Z + tsx 4.23.15
+2026-11-16T03:18:47.8179008Z + typescript 5.9.3
+2026-11-16T03:18:47.8179246Z + typescript-eslint 8.54.0
+2026-11-16T03:18:47.8179495Z + vite 6.4.4
+2026-11-16T03:18:47.8179737Z + vitest 3.2.6
+2026-11-16T03:18:47.8179843Z 
+2026-11-16T03:18:47.8481842Z Done in 15s using pnpm v11.22.0
+2026-11-16T03:18:47.9908187Z ##[group]Run pnpm typecheck
+2026-11-16T03:18:47.9908525Z [36;1mpnpm typecheck[0m
+2026-11-16T03:18:47.9935673Z shell: /usr/bin/bash -e {0}
+2026-11-16T03:18:47.9935965Z env:
+2026-11-16T03:18:47.9936226Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:18:47.9936551Z ##[endgroup]
+2026-11-16T03:18:48.3099708Z $ pnpm --filter @agent-teams/legacy-agent-host build
+2026-11-16T03:18:48.6290261Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:18:48.6297339Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:18:48.6470123Z $ pnpm --filter @agent-teams/task-change-ledger build
+2026-11-16T03:18:48.9604102Z .                                        | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:18:48.9610997Z ../task-change-ledger                    | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:18:48.9774175Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
+2026-11-16T03:18:49.2477108Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
+2026-11-16T03:18:51.1508400Z $ node ./node_modules/@typescript/native/bin/tsc --noEmit && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.updater-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.release-tooling.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-preload.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-renderer.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.desktop-e2e.json
+2026-11-16T03:19:23.3599621Z ##[group]Run pnpm lint:fast:files -- scripts/e2e/release-updater/*.mts
+2026-11-16T03:19:23.3600249Z [36;1mpnpm lint:fast:files -- scripts/e2e/release-updater/*.mts[0m
+2026-11-16T03:19:23.3639633Z shell: /usr/bin/bash -e {0}
+2026-11-16T03:19:23.3640117Z env:
+2026-11-16T03:19:23.3640511Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:19:23.3640983Z ##[endgroup]
+2026-11-16T03:19:23.6877253Z $ eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content -- scripts/e2e/release-updater/archive.mts scripts/e2e/release-updater/cdp-values.mts scripts/e2e/release-updater/cdp-values.test.mts scripts/e2e/release-updater/cdp.mts scripts/e2e/release-updater/execution-provenance.mts scripts/e2e/release-updater/execution-provenance.test.mts scripts/e2e/release-updater/github-download.mts scripts/e2e/release-updater/github-download.test.mts scripts/e2e/release-updater/inputs.mts scripts/e2e/release-updater/linux-appimage-proof.mts scripts/e2e/release-updater/linux-feasibility.mts scripts/e2e/release-updater/linux-ota.mts scripts/e2e/release-updater/linux-packages-inputs.mts scripts/e2e/release-updater/linux-packages-inputs.test.mts scripts/e2e/release-updater/linux-packages-mirror.mts scripts/e2e/release-updater/linux-packages-native.mts scripts/e2e/release-updater/linux-packages-seal.mts scripts/e2e/release-updater/linux-packages-seal.test.mts scripts/e2e/release-updater/linux-packages.mts scripts/e2e/release-updater/mac-about-ui.test.mts scripts/e2e/release-updater/mac-capture-read.test.mts scripts/e2e/release-updater/mac-cleanup-diagnostics.mts scripts/e2e/release-updater/mac-cleanup-diagnostics.test.mts scripts/e2e/release-updater/mac-input-artifact.mts scripts/e2e/release-updater/mac-input-artifact.test.mts scripts/e2e/release-updater/mac-input-transfer.mts scripts/e2e/release-updater/mac-inputs.mts scripts/e2e/release-updater/mac-installer-download.test.mts scripts/e2e/release-updater/mac-lifecycle.test.mts scripts/e2e/release-updater/mac-loopback.mts scripts/e2e/release-updater/mac-manual-inputs.mts scripts/e2e/release-updater/mac-manual-inputs.test.mts scripts/e2e/release-updater/mac-manual-migration.mts scripts/e2e/release-updater/mac-migration-state.mts scripts/e2e/release-updater/mac-migration-state.test.mts scripts/e2e/release-updater/mac-mirror.mts scripts/e2e/release-updater/mac-old-native.mts scripts/e2e/release-updater/mac-old-observer.mts scripts/e2e/release-updater/mac-old-stop-paint.test.mts scripts/e2e/release-updater/mac-old-ui.mts scripts/e2e/release-updater/mac-old-updater.mts scripts/e2e/release-updater/mac-pf-baseline.mts scripts/e2e/release-updater/mac-pf-baseline.test.mts scripts/e2e/release-updater/mac-pf-receipt.test.mts scripts/e2e/release-updater/mac-serialization.mts scripts/e2e/release-updater/mac-serialization.test.mts scripts/e2e/release-updater/mac-source.mts scripts/e2e/release-updater/mac-stop-owned.test.mts scripts/e2e/release-updater/mac-updater.mts scripts/e2e/release-updater/mirror.mts scripts/e2e/release-updater/native-release-scenario.mts scripts/e2e/release-updater/native-window.mts scripts/e2e/release-updater/ota-mirror.mts scripts/e2e/release-updater/ota-process.mts scripts/e2e/release-updater/prepared-stage-download.mts scripts/e2e/release-updater/prepared-stage-download.test.mts scripts/e2e/release-updater/serialized-function.mts scripts/e2e/release-updater/serialized-function.test.mts scripts/e2e/release-updater/transport.mts scripts/e2e/release-updater/windows-arm-prior-fixture.mts scripts/e2e/release-updater/windows-arm-prior-fixture.test.mts scripts/e2e/release-updater/windows-cloud-preflight.mts scripts/e2e/release-updater/windows-cloud-preflight.test.mts scripts/e2e/release-updater/windows-installer-lineage.mts scripts/e2e/release-updater/windows-installer-ps5-diagnostic.mts scripts/e2e/release-updater/windows-installer-ps5-diagnostic.test.mts scripts/e2e/release-updater/windows-mirror.mts scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-native-owners.test.mts scripts/e2e/release-updater/windows-native-paint-content.mts scripts/e2e/release-updater/windows-native-paint-content.test.mts scripts/e2e/release-updater/windows-native-route.test.mts scripts/e2e/release-updater/windows-native.mts scripts/e2e/release-updater/windows-observer-receipt.mts scripts/e2e/release-updater/windows-ota-mirror.mts scripts/e2e/release-updater/windows-ota-mirror.test.mts scripts/e2e/release-updater/windows-ota-observer.mts scripts/e2e/release-updater/windows-ota-profile.mts scripts/e2e/release-updater/windows-ota.mts scripts/e2e/release-updater/windows-owned-uia-metadata.mts scripts/e2e/release-updater/windows-plan-command.mts scripts/e2e/release-updater/windows-plan-command.test.mts scripts/e2e/release-updater/windows-plan-download.mts scripts/e2e/release-updater/windows-plan-inputs.mts scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/windows-powershell.mts scripts/e2e/release-updater/windows-profile-capture.test.mts scripts/e2e/release-updater/windows-startup-diagnostic.mts scripts/e2e/release-updater/windows-startup-retry.mts scripts/e2e/release-updater/windows-startup-retry.test.mts scripts/e2e/release-updater/windows-updater.mts
+2026-11-16T03:19:26.4775134Z ##[group]Run pnpm lint:ci:files -- scripts/e2e/release-updater/*.mts
+2026-11-16T03:19:26.4775784Z [36;1mpnpm lint:ci:files -- scripts/e2e/release-updater/*.mts[0m
+2026-11-16T03:19:26.4810820Z shell: /usr/bin/bash -e {0}
+2026-11-16T03:19:26.4811125Z env:
+2026-11-16T03:19:26.4811404Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:19:26.4811750Z ##[endgroup]
+2026-11-16T03:19:26.8050098Z $ node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --cache-strategy content -- scripts/e2e/release-updater/archive.mts scripts/e2e/release-updater/cdp-values.mts scripts/e2e/release-updater/cdp-values.test.mts scripts/e2e/release-updater/cdp.mts scripts/e2e/release-updater/execution-provenance.mts scripts/e2e/release-updater/execution-provenance.test.mts scripts/e2e/release-updater/github-download.mts scripts/e2e/release-updater/github-download.test.mts scripts/e2e/release-updater/inputs.mts scripts/e2e/release-updater/linux-appimage-proof.mts scripts/e2e/release-updater/linux-feasibility.mts scripts/e2e/release-updater/linux-ota.mts scripts/e2e/release-updater/linux-packages-inputs.mts scripts/e2e/release-updater/linux-packages-inputs.test.mts scripts/e2e/release-updater/linux-packages-mirror.mts scripts/e2e/release-updater/linux-packages-native.mts scripts/e2e/release-updater/linux-packages-seal.mts scripts/e2e/release-updater/linux-packages-seal.test.mts scripts/e2e/release-updater/linux-packages.mts scripts/e2e/release-updater/mac-about-ui.test.mts scripts/e2e/release-updater/mac-capture-read.test.mts scripts/e2e/release-updater/mac-cleanup-diagnostics.mts scripts/e2e/release-updater/mac-cleanup-diagnostics.test.mts scripts/e2e/release-updater/mac-input-artifact.mts scripts/e2e/release-updater/mac-input-artifact.test.mts scripts/e2e/release-updater/mac-input-transfer.mts scripts/e2e/release-updater/mac-inputs.mts scripts/e2e/release-updater/mac-installer-download.test.mts scripts/e2e/release-updater/mac-lifecycle.test.mts scripts/e2e/release-updater/mac-loopback.mts scripts/e2e/release-updater/mac-manual-inputs.mts scripts/e2e/release-updater/mac-manual-inputs.test.mts scripts/e2e/release-updater/mac-manual-migration.mts scripts/e2e/release-updater/mac-migration-state.mts scripts/e2e/release-updater/mac-migration-state.test.mts scripts/e2e/release-updater/mac-mirror.mts scripts/e2e/release-updater/mac-old-native.mts scripts/e2e/release-updater/mac-old-observer.mts scripts/e2e/release-updater/mac-old-stop-paint.test.mts scripts/e2e/release-updater/mac-old-ui.mts scripts/e2e/release-updater/mac-old-updater.mts scripts/e2e/release-updater/mac-pf-baseline.mts scripts/e2e/release-updater/mac-pf-baseline.test.mts scripts/e2e/release-updater/mac-pf-receipt.test.mts scripts/e2e/release-updater/mac-serialization.mts scripts/e2e/release-updater/mac-serialization.test.mts scripts/e2e/release-updater/mac-source.mts scripts/e2e/release-updater/mac-stop-owned.test.mts scripts/e2e/release-updater/mac-updater.mts scripts/e2e/release-updater/mirror.mts scripts/e2e/release-updater/native-release-scenario.mts scripts/e2e/release-updater/native-window.mts scripts/e2e/release-updater/ota-mirror.mts scripts/e2e/release-updater/ota-process.mts scripts/e2e/release-updater/prepared-stage-download.mts scripts/e2e/release-updater/prepared-stage-download.test.mts scripts/e2e/release-updater/serialized-function.mts scripts/e2e/release-updater/serialized-function.test.mts scripts/e2e/release-updater/transport.mts scripts/e2e/release-updater/windows-arm-prior-fixture.mts scripts/e2e/release-updater/windows-arm-prior-fixture.test.mts scripts/e2e/release-updater/windows-cloud-preflight.mts scripts/e2e/release-updater/windows-cloud-preflight.test.mts scripts/e2e/release-updater/windows-installer-lineage.mts scripts/e2e/release-updater/windows-installer-ps5-diagnostic.mts scripts/e2e/release-updater/windows-installer-ps5-diagnostic.test.mts scripts/e2e/release-updater/windows-mirror.mts scripts/e2e/release-updater/windows-native-entrypoint.test.mts scripts/e2e/release-updater/windows-native-owners.test.mts scripts/e2e/release-updater/windows-native-paint-content.mts scripts/e2e/release-updater/windows-native-paint-content.test.mts scripts/e2e/release-updater/windows-native-route.test.mts scripts/e2e/release-updater/windows-native.mts scripts/e2e/release-updater/windows-observer-receipt.mts scripts/e2e/release-updater/windows-ota-mirror.mts scripts/e2e/release-updater/windows-ota-mirror.test.mts scripts/e2e/release-updater/windows-ota-observer.mts scripts/e2e/release-updater/windows-ota-profile.mts scripts/e2e/release-updater/windows-ota.mts scripts/e2e/release-updater/windows-owned-uia-metadata.mts scripts/e2e/release-updater/windows-plan-command.mts scripts/e2e/release-updater/windows-plan-command.test.mts scripts/e2e/release-updater/windows-plan-download.mts scripts/e2e/release-updater/windows-plan-inputs.mts scripts/e2e/release-updater/windows-plan-inputs.test.mts scripts/e2e/release-updater/windows-plan-producer.mts scripts/e2e/release-updater/windows-plan-producer.test.mts scripts/e2e/release-updater/windows-powershell.mts scripts/e2e/release-updater/windows-profile-capture.test.mts scripts/e2e/release-updater/windows-startup-diagnostic.mts scripts/e2e/release-updater/windows-startup-retry.mts scripts/e2e/release-updater/windows-startup-retry.test.mts scripts/e2e/release-updater/windows-updater.mts
+2026-11-16T03:19:49.9002770Z 
+2026-11-16T03:19:49.9003859Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/archive.mts
+2026-11-16T03:19:49.9028475Z ##[warning]  15:24  warning  Found open from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9034964Z ##[warning]  28:56  warning  Generic Object Injection Sink                                                         security/detect-object-injection
+2026-11-16T03:19:49.9036482Z ##[warning]  64:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9038116Z ##[warning]  73:24  warning  Found open from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9038864Z 
+2026-11-16T03:19:49.9039162Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/cdp-values.test.mts
+2026-11-16T03:19:49.9040104Z ##[warning]  36:9  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9041495Z ##[warning]  37:9  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9043304Z ##[warning]  42:9  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9044059Z 
+2026-11-16T03:19:49.9044343Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/github-download.mts
+2026-11-16T03:19:49.9045291Z ##[warning]  30:30  warning  Found createWriteStream from package "node:fs" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9046008Z 
+2026-11-16T03:19:49.9046362Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/github-download.test.mts
+2026-11-16T03:19:49.9047285Z ##[warning]  40:27  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9048621Z ##[warning]  51:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9049996Z ##[warning]  58:24  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9051414Z ##[warning]  76:26  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9053015Z ##[warning]  97:28  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9053791Z 
+2026-11-16T03:19:49.9054072Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/inputs.mts
+2026-11-16T03:19:49.9055005Z ##[warning]   95:29  warning  Found createReadStream from package "node:fs" with non literal argument at index 0    security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9056339Z ##[warning]  101:18  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9058065Z ##[warning]  131:27  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9059435Z ##[warning]  155:31  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9060771Z ##[warning]  160:22  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9062085Z ##[warning]  187:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9063645Z ##[warning]  190:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9064915Z ##[warning]  221:19  warning  Variable Assigned to Object Injection Sink                                            security/detect-object-injection
+2026-11-16T03:19:49.9066205Z ##[warning]  251:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9067620Z ##[warning]  286:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9068985Z ##[warning]  289:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9070282Z ##[warning]  333:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9071648Z ##[warning]  357:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9073376Z ##[warning]  384:35  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9074160Z 
+2026-11-16T03:19:49.9074463Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/linux-appimage-proof.mts
+2026-11-16T03:19:49.9075430Z ##[warning]   27:23  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9076769Z ##[warning]   30:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9078125Z ##[warning]  116:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9079447Z ##[warning]  117:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9080154Z 
+2026-11-16T03:19:49.9080508Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/linux-feasibility.mts
+2026-11-16T03:19:49.9081497Z ##[warning]   39:7   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9082979Z ##[warning]   47:13  warning  Found createWriteStream from package "node:fs" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9084437Z ##[warning]  117:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9085967Z ##[warning]  144:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9087307Z ##[warning]  158:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9088614Z ##[warning]  190:9   warning  Found chmod from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9089952Z ##[warning]  241:26  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9091258Z ##[warning]  272:11  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9092719Z ##[warning]  273:11  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9094111Z ##[warning]  286:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9095420Z ##[warning]  288:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9096827Z ##[warning]  433:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9097584Z 
+2026-11-16T03:19:49.9097855Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/linux-ota.mts
+2026-11-16T03:19:49.9098719Z ##[warning]   68:15  warning  Variable Assigned to Object Injection Sink                                            security/detect-object-injection
+2026-11-16T03:19:49.9100000Z ##[warning]   79:7   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9101308Z ##[warning]  102:13  warning  Found createWriteStream from package "node:fs" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9102741Z ##[warning]  235:11  warning  Found readlink from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9104157Z ##[warning]  255:26  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9105501Z ##[warning]  300:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9106791Z ##[warning]  309:27  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9108117Z ##[warning]  389:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9109439Z ##[warning]  400:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9110790Z ##[warning]  403:11  warning  Found chmod from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9112166Z ##[warning]  437:11  warning  Found chmod from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9113823Z ##[warning]  458:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9115268Z ##[warning]  568:31  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9116600Z ##[warning]  602:24  warning  Found readlink from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9117941Z ##[warning]  611:19  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9119227Z ##[warning]  630:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9120571Z ##[warning]  733:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9121304Z 
+2026-11-16T03:19:49.9121620Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/linux-packages-inputs.mts
+2026-11-16T03:19:49.9122465Z ##[warning]   73:10  warning  Generic Object Injection Sink                                                         security/detect-object-injection
+2026-11-16T03:19:49.9123941Z ##[warning]  117:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9125293Z ##[warning]  120:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9126698Z ##[warning]  199:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9128030Z ##[warning]  216:36  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9129329Z ##[warning]  226:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9130664Z ##[warning]  236:32  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9131978Z ##[warning]  237:25  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9133529Z ##[warning]  238:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9134894Z ##[warning]  245:25  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9135653Z 
+2026-11-16T03:19:49.9136013Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/linux-packages-inputs.test.mts
+2026-11-16T03:19:49.9137033Z ##[warning]   61:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9138422Z ##[warning]  116:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9139782Z ##[warning]  120:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9141262Z ##[warning]  121:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9142771Z ##[warning]  122:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9144183Z ##[warning]  164:23  warning  Variable Assigned to Object Injection Sink                                            security/detect-object-injection
+2026-11-16T03:19:49.9145499Z ##[warning]  198:15  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9146871Z ##[warning]  200:15  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9148300Z ##[warning]  203:15  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9149013Z 
+2026-11-16T03:19:49.9149336Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/linux-packages-mirror.mts
+2026-11-16T03:19:49.9150269Z ##[warning]  40:18  warning  Found createReadStream from package "node:fs" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9150996Z 
+2026-11-16T03:19:49.9151324Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/linux-packages-native.mts
+2026-11-16T03:19:49.9152121Z ##[warning]  114:17  warning  Generic Object Injection Sink                                                         security/detect-object-injection
+2026-11-16T03:19:49.9153558Z ##[warning]  119:16  warning  Generic Object Injection Sink                                                         security/detect-object-injection
+2026-11-16T03:19:49.9154934Z ##[warning]  138:23  warning  Found readlink from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9156244Z ##[warning]  152:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9157546Z ##[warning]  177:23  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9158834Z ##[warning]  178:29  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9160170Z ##[warning]  188:25  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9161476Z ##[warning]  196:32  warning  Found open from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9162968Z ##[warning]  216:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9164366Z ##[warning]  232:14  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9165680Z ##[warning]  233:27  warning  Found readlink from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9166989Z ##[warning]  244:10  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9168311Z ##[warning]  256:22  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9169806Z ##[warning]  258:24  warning  Found readlink from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9171156Z ##[warning]  366:29  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9172642Z ##[warning]  461:22  warning  Found readlink from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9174124Z ##[warning]  486:24  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9175550Z ##[warning]  493:11  warning  Found readlink from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9176987Z ##[warning]  497:26  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9178360Z ##[warning]  517:16  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9179847Z ##[warning]  541:28  warning  Found readlink from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9181150Z ##[warning]  618:12  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9182399Z ##[warning]  697:20  warning  Function Call Object Injection Sink                                                   security/detect-object-injection
+2026-11-16T03:19:49.9183732Z ##[warning]  697:33  warning  Function Call Object Injection Sink                                                   security/detect-object-injection
+2026-11-16T03:19:49.9185018Z ##[warning]  723:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9186383Z ##[warning]  754:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9187722Z ##[warning]  755:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9189024Z ##[warning]  771:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9189753Z 
+2026-11-16T03:19:49.9190080Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/linux-packages-seal.mts
+2026-11-16T03:19:49.9190921Z ##[warning]   87:51  warning  Generic Object Injection Sink                                                        security/detect-object-injection
+2026-11-16T03:19:49.9192240Z ##[warning]  117:22  warning  Found readlink from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9193850Z ##[warning]  118:24  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9195172Z ##[warning]  131:19  warning  Found non-literal argument to RegExp Constructor                                     security/detect-non-literal-regexp
+2026-11-16T03:19:49.9196434Z ##[warning]  134:21  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9197769Z ##[warning]  137:43  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9199064Z ##[warning]  139:30  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9200560Z ##[warning]  192:11  warning  Found readlink from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9201973Z ##[warning]  195:27  warning  Found stat from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9203499Z ##[warning]  196:25  warning  Found stat from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9204868Z ##[warning]  200:23  warning  Found stat from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9205608Z 
+2026-11-16T03:19:49.9205920Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/linux-packages.mts
+2026-11-16T03:19:49.9206892Z ##[warning]   65:7   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9208264Z ##[warning]   90:13  warning  Found createWriteStream from package "node:fs" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9209683Z ##[warning]  151:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9211054Z ##[warning]  160:27  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9212323Z ##[warning]  304:38  warning  Generic Object Injection Sink                                                         security/detect-object-injection
+2026-11-16T03:19:49.9213715Z ##[warning]  306:22  warning  Found readlink from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9215117Z ##[warning]  409:5   warning  Found non-literal argument to RegExp Constructor                                      security/detect-non-literal-regexp
+2026-11-16T03:19:49.9216288Z ##[warning]  409:16  warning  Generic Object Injection Sink                                                         security/detect-object-injection
+2026-11-16T03:19:49.9217562Z ##[warning]  435:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9218863Z ##[warning]  445:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9220199Z ##[warning]  644:15  warning  Found readlink from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9221597Z ##[warning]  669:21  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9223145Z ##[warning]  775:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9223937Z 
+2026-11-16T03:19:49.9224296Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-capture-read.test.mts
+2026-11-16T03:19:49.9225287Z ##[warning]  100:19  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9226649Z ##[warning]  101:26  warning  Found readdir from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9228092Z ##[warning]  106:39  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9228863Z 
+2026-11-16T03:19:49.9229295Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-cleanup-diagnostics.mts
+2026-11-16T03:19:49.9230261Z ##[warning]  21:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9231686Z ##[warning]  24:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9233327Z ##[warning]  27:24  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9234676Z ##[warning]  28:21  warning  Found readdir from package "node:fs/promises" with non literal argument at index 0    security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9235980Z ##[warning]  38:28  warning  Found lstat from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9237273Z ##[warning]  41:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9238609Z ##[warning]  41:57  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9239886Z ##[warning]  44:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9240960Z 
+2026-11-16T03:19:49.9241310Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-cleanup-diagnostics.test.mts
+2026-11-16T03:19:49.9242244Z ##[warning]  19:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9243779Z ##[warning]  24:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9245175Z ##[warning]  26:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9246519Z ##[warning]  27:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9247823Z ##[warning]  28:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9249148Z ##[warning]  29:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9250453Z ##[warning]  30:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9251805Z ##[warning]  33:14  warning  Found readdir from package "node:fs/promises" with non literal argument at index 0    security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9253408Z ##[warning]  37:13  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9255373Z ##[warning]  49:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9256921Z ##[warning]  52:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9258333Z ##[warning]  54:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9259686Z ##[warning]  55:11  warning  Found symlink from package "node:fs/promises" with non literal argument at index 0,1  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9260464Z 
+2026-11-16T03:19:49.9260872Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-input-artifact.mts
+2026-11-16T03:19:49.9261870Z ##[warning]  144:28  warning  Found createWriteStream from package "node:fs" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9263468Z ##[warning]  176:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9264796Z ##[warning]  208:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9266121Z ##[warning]  211:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9266839Z 
+2026-11-16T03:19:49.9267173Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-input-transfer.mts
+2026-11-16T03:19:49.9268076Z ##[warning]   52:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9269365Z ##[warning]   91:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9270693Z ##[warning]   92:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9271998Z ##[warning]   92:66  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9273701Z ##[warning]  100:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9275137Z ##[warning]  102:13  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9276492Z ##[warning]  109:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9277704Z ##[warning]  118:5   warning  Generic Object Injection Sink                                                         security/detect-object-injection
+2026-11-16T03:19:49.9278985Z ##[warning]  131:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9279704Z 
+2026-11-16T03:19:49.9280008Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-inputs.mts
+2026-11-16T03:19:49.9280910Z ##[warning]   76:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9282222Z ##[warning]   94:25  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9283769Z ##[warning]  112:11  warning  Found lstat from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9285136Z ##[warning]  163:22  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9286547Z ##[warning]  183:24  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9287889Z ##[warning]  191:24  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9289380Z ##[warning]  264:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9290738Z ##[warning]  267:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9292157Z ##[warning]  279:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9293741Z ##[warning]  289:29  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9295081Z ##[warning]  291:20  warning  Variable Assigned to Object Injection Sink                                            security/detect-object-injection
+2026-11-16T03:19:49.9296367Z ##[warning]  316:22  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9297693Z ##[warning]  361:24  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9299037Z ##[warning]  387:29  warning  Found createWriteStream from package "node:fs" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9300307Z ##[warning]  412:20  warning  Variable Assigned to Object Injection Sink                                            security/detect-object-injection
+2026-11-16T03:19:49.9301007Z 
+2026-11-16T03:19:49.9301356Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-installer-download.test.mts
+2026-11-16T03:19:49.9302095Z    65:3   warning  Unused eslint-disable directive (no problems were reported from 'sonarjs/no-clear-text-protocols')
+2026-11-16T03:19:49.9303397Z ##[warning]   69:24  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0                 security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9304978Z ##[warning]   77:26  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0                 security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9306067Z    95:3   warning  Unused eslint-disable directive (no problems were reported from 'sonarjs/no-clear-text-protocols')
+2026-11-16T03:19:49.9307114Z ##[warning]   99:24  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0                 security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9308529Z ##[warning]  100:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0                security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9309939Z ##[warning]  102:22  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0                 security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9310670Z 
+2026-11-16T03:19:49.9310960Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-lifecycle.test.mts
+2026-11-16T03:19:49.9311899Z ##[warning]   29:26  warning  Found readdir from package "node:fs/promises" with non literal argument at index 0    security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9313556Z ##[warning]   34:25  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9314858Z ##[warning]   43:25  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9316272Z ##[warning]   46:13  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9317660Z ##[warning]   71:28  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9319144Z ##[warning]   87:17  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9320531Z ##[warning]   88:17  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9321898Z ##[warning]   89:17  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9323417Z ##[warning]   91:17  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9324837Z ##[warning]   93:17  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9326296Z ##[warning]  112:17  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9327626Z ##[warning]  120:62  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9328362Z 
+2026-11-16T03:19:49.9328670Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-loopback.mts
+2026-11-16T03:19:49.9329568Z ##[warning]   42:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9330943Z ##[warning]   74:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9332229Z ##[warning]   76:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9333900Z ##[warning]  118:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9335228Z ##[warning]  124:28  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9336585Z ##[warning]  129:14  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9337984Z ##[warning]  148:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9339385Z ##[warning]  188:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9340749Z ##[warning]  214:18  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9342164Z ##[warning]  248:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9343674Z ##[warning]  292:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9345096Z ##[warning]  305:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9346486Z ##[warning]  316:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9347916Z ##[warning]  333:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9349424Z ##[warning]  344:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9350866Z ##[warning]  535:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9352218Z ##[warning]  582:17  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9353928Z ##[warning]  594:63  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9354709Z 
+2026-11-16T03:19:49.9355049Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-manual-inputs.mts
+2026-11-16T03:19:49.9355925Z ##[warning]   80:40  warning  Function Call Object Injection Sink                                                   security/detect-object-injection
+2026-11-16T03:19:49.9357168Z ##[warning]   80:62  warning  Function Call Object Injection Sink                                                   security/detect-object-injection
+2026-11-16T03:19:49.9358433Z ##[warning]   96:18  warning  Function Call Object Injection Sink                                                   security/detect-object-injection
+2026-11-16T03:19:49.9359612Z ##[warning]   96:31  warning  Function Call Object Injection Sink                                                   security/detect-object-injection
+2026-11-16T03:19:49.9360830Z ##[warning]  114:21  warning  Variable Assigned to Object Injection Sink                                            security/detect-object-injection
+2026-11-16T03:19:49.9362023Z ##[warning]  194:17  warning  Variable Assigned to Object Injection Sink                                            security/detect-object-injection
+2026-11-16T03:19:49.9363539Z ##[warning]  211:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9364997Z ##[warning]  226:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9366349Z ##[warning]  274:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9367699Z ##[warning]  315:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9369081Z ##[warning]  329:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9370444Z ##[warning]  343:30  warning  Found createWriteStream from package "node:fs" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9371778Z ##[warning]  347:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9373266Z ##[warning]  359:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9374617Z ##[warning]  361:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9375976Z ##[warning]  364:23  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9377298Z ##[warning]  368:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9378619Z ##[warning]  386:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9379406Z 
+2026-11-16T03:19:49.9379867Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-manual-inputs.test.mts
+2026-11-16T03:19:49.9380787Z ##[warning]  104:17  warning  Variable Assigned to Object Injection Sink                                            security/detect-object-injection
+2026-11-16T03:19:49.9382100Z ##[warning]  330:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9383039Z 
+2026-11-16T03:19:49.9383347Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-manual-migration.mts
+2026-11-16T03:19:49.9384334Z ##[warning]   40:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9385724Z ##[warning]   46:7   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9387074Z ##[warning]   72:7   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9388468Z ##[warning]  106:7   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9389899Z ##[warning]  132:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9391228Z ##[warning]  143:25  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9392781Z ##[warning]  147:16  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9394279Z ##[warning]  219:35  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9395640Z ##[warning]  228:14  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9396927Z ##[warning]  274:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9398253Z ##[warning]  279:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9399551Z ##[warning]  280:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9400887Z ##[warning]  285:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9402210Z ##[warning]  286:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9403722Z ##[warning]  299:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9405040Z ##[warning]  315:9   warning  Found createWriteStream from package "node:fs" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9406382Z ##[warning]  323:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9407683Z ##[warning]  349:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9409097Z ##[warning]  357:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9410457Z ##[warning]  479:19  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9411256Z 
+2026-11-16T03:19:49.9411556Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-mirror.mts
+2026-11-16T03:19:49.9412612Z ##[warning]  145:20  warning  Found createReadStream from package "node:fs" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9413454Z 
+2026-11-16T03:19:49.9413793Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-old-native.mts
+2026-11-16T03:19:49.9414769Z ##[warning]   37:11  warning  Found lstat from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9416136Z ##[warning]   59:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9417543Z ##[warning]   61:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9418934Z ##[warning]   62:23  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9420277Z ##[warning]   87:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9421673Z ##[warning]  155:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9423094Z ##[warning]  156:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9424572Z ##[warning]  177:29  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9425878Z ##[warning]  178:30  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9427261Z ##[warning]  240:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9428562Z ##[warning]  242:24  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9429909Z ##[warning]  247:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9431263Z ##[warning]  254:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9432869Z ##[warning]  256:29  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9434329Z ##[warning]  260:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9435668Z ##[warning]  274:19  warning  Variable Assigned to Object Injection Sink                                            security/detect-object-injection
+2026-11-16T03:19:49.9436979Z ##[warning]  319:33  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9438495Z ##[warning]  322:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9440220Z ##[warning]  323:23  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9441645Z ##[warning]  325:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9443144Z ##[warning]  326:23  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9444544Z ##[warning]  334:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9445861Z ##[warning]  335:23  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9447197Z ##[warning]  336:23  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9448516Z ##[warning]  348:24  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9449895Z ##[warning]  349:25  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9451209Z ##[warning]  361:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9452722Z ##[warning]  489:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9454211Z ##[warning]  495:29  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9455680Z ##[warning]  542:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9457060Z ##[warning]  551:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9458436Z ##[warning]  561:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9459824Z ##[warning]  573:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9461211Z ##[warning]  591:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9462744Z ##[warning]  708:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9464213Z ##[warning]  801:17  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9465533Z ##[warning]  818:60  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9466255Z 
+2026-11-16T03:19:49.9466629Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-old-stop-paint.test.mts
+2026-11-16T03:19:49.9467537Z ##[warning]   16:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9468859Z ##[warning]   19:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9470273Z ##[warning]   20:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9471494Z ##[warning]   36:83  warning  Generic Object Injection Sink                                                         security/detect-object-injection
+2026-11-16T03:19:49.9472987Z ##[warning]   54:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9474348Z ##[warning]   55:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9475710Z ##[warning]   63:54  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9477009Z ##[warning]  109:15  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9477791Z 
+2026-11-16T03:19:49.9478077Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-old-ui.mts
+2026-11-16T03:19:49.9478969Z ##[warning]  31:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9479704Z 
+2026-11-16T03:19:49.9480017Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-old-updater.mts
+2026-11-16T03:19:49.9480936Z ##[warning]   94:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9482262Z ##[warning]   96:7   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9483711Z ##[warning]  100:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9485230Z ##[warning]  163:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9486597Z ##[warning]  202:15  warning  Found createWriteStream from package "node:fs" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9487977Z ##[warning]  266:23  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9489262Z ##[warning]  389:10  warning  Unsafe Regular Expression                                                             security/detect-unsafe-regex
+2026-11-16T03:19:49.9490581Z ##[warning]  423:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9491959Z ##[warning]  443:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9493568Z ##[warning]  587:30  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9494984Z ##[warning]  589:25  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9496472Z ##[warning]  787:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9497187Z 
+2026-11-16T03:19:49.9497541Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-pf-baseline.test.mts
+2026-11-16T03:19:49.9498356Z ##[warning]  36:7   warning  Generic Object Injection Sink                                                        security/detect-object-injection
+2026-11-16T03:19:49.9499680Z ##[warning]  73:15  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9500929Z ##[warning]  83:39  warning  Generic Object Injection Sink                                                        security/detect-object-injection
+2026-11-16T03:19:49.9502078Z ##[warning]  84:12  warning  Generic Object Injection Sink                                                        security/detect-object-injection
+2026-11-16T03:19:49.9502911Z 
+2026-11-16T03:19:49.9503240Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-pf-receipt.test.mts
+2026-11-16T03:19:49.9504186Z ##[warning]  12:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9505552Z ##[warning]  31:13  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9506842Z ##[warning]  32:11  warning  Found symlink from package "node:fs/promises" with non literal argument at index 0,1  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9508188Z ##[warning]  52:13  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9509498Z ##[warning]  54:41  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9510862Z ##[warning]  74:15  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9512174Z ##[warning]  77:17  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9513220Z 
+2026-11-16T03:19:49.9513561Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-serialization.test.mts
+2026-11-16T03:19:49.9514560Z ##[warning]  36:9  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9515893Z ##[warning]  37:9  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9517290Z ##[warning]  42:9  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9518059Z 
+2026-11-16T03:19:49.9518365Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-source.mts
+2026-11-16T03:19:49.9519301Z ##[warning]  129:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9520682Z ##[warning]  349:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9522056Z ##[warning]  538:14  warning  Found readdir from package "node:fs/promises" with non literal argument at index 0    security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9523723Z ##[warning]  543:28  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9525136Z ##[warning]  545:36  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9526527Z ##[warning]  626:14  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9527894Z ##[warning]  643:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9529300Z ##[warning]  751:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9530639Z ##[warning]  752:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9531987Z ##[warning]  790:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9533489Z ##[warning]  855:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9534849Z ##[warning]  860:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9536204Z ##[warning]  893:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9537649Z ##[warning]  897:15  warning  Found readdir from package "node:fs/promises" with non literal argument at index 0    security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9539009Z ##[warning]  900:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9540413Z ##[warning]  923:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9541884Z ##[warning]  929:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9542798Z 
+2026-11-16T03:19:49.9543161Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/mac-updater.mts
+2026-11-16T03:19:49.9544201Z ##[warning]  130:26  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9545627Z ##[warning]  135:7   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9547002Z ##[warning]  139:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9548429Z ##[warning]  173:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9549759Z ##[warning]  222:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9551013Z ##[warning]  364:10  warning  Unsafe Regular Expression                                                             security/detect-unsafe-regex
+2026-11-16T03:19:49.9552241Z ##[warning]  395:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9553840Z ##[warning]  410:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9555196Z ##[warning]  469:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9556574Z ##[warning]  473:43  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9693807Z ##[warning]  524:9   warning  Found createWriteStream from package "node:fs" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9696120Z ##[warning]  592:18  warning  Function Call Object Injection Sink                                                   security/detect-object-injection
+2026-11-16T03:19:49.9697692Z ##[warning]  792:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9698590Z 
+2026-11-16T03:19:49.9698963Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/native-window.mts
+2026-11-16T03:19:49.9700137Z ##[warning]   21:14  warning  Found stat from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9701754Z ##[warning]   25:23  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9703498Z ##[warning]   41:16  warning  Found stat from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9705088Z ##[warning]  129:22  warning  Found stat from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9706806Z ##[warning]  151:17  warning  Found stat from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9707790Z 
+2026-11-16T03:19:49.9708181Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/ota-mirror.mts
+2026-11-16T03:19:49.9709398Z ##[warning]  56:18  warning  Found createReadStream from package "node:fs" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9710348Z 
+2026-11-16T03:19:49.9710737Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/ota-process.mts
+2026-11-16T03:19:49.9711870Z ##[warning]  15:14  warning  Found stat from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9714207Z ##[warning]  19:28  warning  Found readlink from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9716010Z ##[warning]  36:23  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9717795Z ##[warning]  54:28  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9719167Z ##[warning]  87:21  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9719816Z 
+2026-11-16T03:19:49.9720114Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/prepared-stage-download.mts
+2026-11-16T03:19:49.9720976Z ##[warning]   32:28  warning  Found createWriteStream from package "node:fs" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9722132Z ##[warning]   38:27  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9723563Z ##[warning]  127:33  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9724766Z ##[warning]  134:23  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9725909Z ##[warning]  135:9   warning  Found unlink from package "node:fs/promises" with non literal argument at index 0    security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9726531Z 
+2026-11-16T03:19:49.9726845Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/prepared-stage-download.test.mts
+2026-11-16T03:19:49.9727787Z ##[warning]  32:28  warning  Found readdir from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9728431Z 
+2026-11-16T03:19:49.9728730Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-arm-prior-fixture.mts
+2026-11-16T03:19:49.9729650Z ##[warning]  105:24  warning  Found lstat from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9730805Z ##[warning]  116:23  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9731969Z ##[warning]  175:20  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9733354Z ##[warning]  216:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9734537Z ##[warning]  221:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9735670Z ##[warning]  255:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9736786Z ##[warning]  258:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9737867Z ##[warning]  294:5   warning  Generic Object Injection Sink                                                         security/detect-object-injection
+2026-11-16T03:19:49.9738935Z ##[warning]  299:23  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9740197Z ##[warning]  311:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9741317Z ##[warning]  341:44  warning  Function Call Object Injection Sink                                                   security/detect-object-injection
+2026-11-16T03:19:49.9741916Z 
+2026-11-16T03:19:49.9742232Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-arm-prior-fixture.test.mts
+2026-11-16T03:19:49.9743270Z ##[warning]   72:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9744499Z ##[warning]   82:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9745689Z ##[warning]   89:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9746881Z ##[warning]   91:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9748036Z ##[warning]   94:28  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9749230Z ##[warning]  100:43  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9750409Z ##[warning]  104:24  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9751595Z ##[warning]  106:11  warning  Found symlink from package "node:fs/promises" with non literal argument at index 0,1  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9753099Z ##[warning]  114:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9754366Z ##[warning]  116:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9755549Z ##[warning]  121:13  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9756718Z ##[warning]  125:13  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9757923Z ##[warning]  134:28  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9758588Z 
+2026-11-16T03:19:49.9758888Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-cloud-preflight.mts
+2026-11-16T03:19:49.9759663Z ##[warning]  109:18  warning  Function Call Object Injection Sink                                                   security/detect-object-injection
+2026-11-16T03:19:49.9760710Z ##[warning]  111:18  warning  Function Call Object Injection Sink                                                   security/detect-object-injection
+2026-11-16T03:19:49.9761738Z ##[warning]  113:18  warning  Function Call Object Injection Sink                                                   security/detect-object-injection
+2026-11-16T03:19:49.9763002Z ##[warning]  211:23  warning  Found open from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9764230Z ##[warning]  215:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9765428Z ##[warning]  216:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9766740Z ##[warning]  244:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9767942Z ##[warning]  249:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9769115Z ##[warning]  255:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9769772Z 
+2026-11-16T03:19:49.9770095Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-cloud-preflight.test.mts
+2026-11-16T03:19:49.9770950Z ##[warning]  397:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9772131Z ##[warning]  401:24  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9773527Z ##[warning]  402:28  warning  Found readdir from package "node:fs/promises" with non literal argument at index 0    security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9774230Z 
+2026-11-16T03:19:49.9774505Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-mirror.mts
+2026-11-16T03:19:49.9775326Z ##[warning]   74:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9776506Z ##[warning]   77:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9777711Z ##[warning]  239:20  warning  Found createReadStream from package "node:fs" with non literal argument at index 0    security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9778964Z ##[warning]  271:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9779611Z 
+2026-11-16T03:19:49.9779924Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-native-owners.test.mts
+2026-11-16T03:19:49.9780763Z ##[warning]  21:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9781948Z ##[warning]  28:22  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9783336Z ##[warning]  69:13  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9784555Z ##[warning]  71:13  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9785223Z 
+2026-11-16T03:19:49.9785557Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-native-paint-content.test.mts
+2026-11-16T03:19:49.9786405Z ##[warning]  9:3  warning  Found readFileSync from package "node:fs" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9787042Z 
+2026-11-16T03:19:49.9787306Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-native.mts
+2026-11-16T03:19:49.9788120Z ##[warning]  568:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9789303Z ##[warning]  569:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9790484Z ##[warning]  572:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9791734Z ##[warning]  573:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9793172Z ##[warning]  582:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9794391Z ##[warning]  588:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9795581Z ##[warning]  638:13  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9796795Z ##[warning]  647:15  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9797978Z ##[warning]  653:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9799165Z ##[warning]  720:24  warning  Found open from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9800336Z ##[warning]  748:34  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9801520Z ##[warning]  778:38  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9802206Z 
+2026-11-16T03:19:49.9802497Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-ota-mirror.test.mts
+2026-11-16T03:19:49.9803496Z ##[warning]  50:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9804199Z 
+2026-11-16T03:19:49.9804539Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-ota-observer.mts
+2026-11-16T03:19:49.9805389Z ##[warning]  713:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9806575Z ##[warning]  714:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9807771Z ##[warning]  715:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9808968Z ##[warning]  722:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9810160Z ##[warning]  749:13  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9811337Z ##[warning]  755:37  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9812602Z ##[warning]  766:13  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9813319Z 
+2026-11-16T03:19:49.9813616Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-ota-profile.mts
+2026-11-16T03:19:49.9814461Z ##[warning]   29:11  warning  Found lstat from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9815677Z ##[warning]   55:25  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9816934Z ##[warning]   92:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9818107Z ##[warning]   95:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9819287Z ##[warning]   96:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9820463Z ##[warning]  101:11  warning  Found symlink from package "node:fs/promises" with non literal argument at index 0,1  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9821653Z ##[warning]  103:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9822971Z ##[warning]  104:25  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9824225Z ##[warning]  124:19  warning  Found lstat from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9825389Z ##[warning]  125:25  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9826555Z ##[warning]  127:13  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9827737Z ##[warning]  131:11  warning  Found rmdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9828398Z 
+2026-11-16T03:19:49.9828663Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-ota.mts
+2026-11-16T03:19:49.9829550Z ##[warning]   158:34  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9830753Z ##[warning]   191:38  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9831939Z ##[warning]   224:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9833368Z ##[warning]   225:22  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9834577Z ##[warning]   263:15  warning  Found createWriteStream from package "node:fs" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9835769Z ##[warning]   268:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9836953Z ##[warning]   299:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9838176Z ##[warning]   320:13  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9839348Z ##[warning]   441:14  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9840520Z ##[warning]   471:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9841709Z ##[warning]   485:7   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9843082Z ##[warning]   511:25  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9844299Z ##[warning]   557:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9845485Z ##[warning]   563:13  warning  Found unlink from package "node:fs/promises" with non literal argument at index 0     security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9846668Z ##[warning]   603:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9847859Z ##[warning]   624:13  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9849021Z ##[warning]   712:32  warning  Found unlink from package "node:fs/promises" with non literal argument at index 0     security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9850211Z ##[warning]   759:14  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9851381Z ##[warning]   762:25  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9852689Z ##[warning]   778:13  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9853865Z ##[warning]   862:20  warning  Function Call Object Injection Sink                                                   security/detect-object-injection
+2026-11-16T03:19:49.9854923Z ##[warning]   862:48  warning  Function Call Object Injection Sink                                                   security/detect-object-injection
+2026-11-16T03:19:49.9856099Z ##[warning]   911:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9857304Z ##[warning]   977:15  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9858505Z ##[warning]  1005:15  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9859779Z ##[warning]  1011:15  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9860970Z ##[warning]  1035:11  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9862141Z ##[warning]  1038:13  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9863541Z ##[warning]  1052:33  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9864730Z ##[warning]  1053:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9865917Z ##[warning]  1068:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9866571Z 
+2026-11-16T03:19:49.9866893Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-owned-uia-metadata.mts
+2026-11-16T03:19:49.9867512Z ##[warning]  195:17  warning  Unsafe Regular Expression  security/detect-unsafe-regex
+2026-11-16T03:19:49.9868026Z 
+2026-11-16T03:19:49.9868321Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-plan-command.mts
+2026-11-16T03:19:49.9869229Z ##[warning]  64:45  warning  Found createWriteStream from package "node:fs" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9869874Z 
+2026-11-16T03:19:49.9870174Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-plan-command.test.mts
+2026-11-16T03:19:49.9871018Z ##[warning]   32:28  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9872208Z ##[warning]  117:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9873661Z ##[warning]  134:24  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9874300Z 
+2026-11-16T03:19:49.9874604Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-plan-download.mts
+2026-11-16T03:19:49.9875455Z ##[warning]   48:27  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9876588Z ##[warning]  153:33  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9877726Z ##[warning]  170:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9878848Z ##[warning]  177:9   warning  Found unlink from package "node:fs/promises" with non literal argument at index 0     security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9879956Z ##[warning]  214:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9881144Z ##[warning]  257:22  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9882293Z ##[warning]  258:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9883644Z ##[warning]  263:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9884259Z 
+2026-11-16T03:19:49.9884532Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-plan-inputs.mts
+2026-11-16T03:19:49.9885386Z ##[warning]   84:33  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9886583Z ##[warning]   96:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9887754Z ##[warning]   99:11  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9888958Z ##[warning]  136:22  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9889603Z 
+2026-11-16T03:19:49.9889913Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-plan-inputs.test.mts
+2026-11-16T03:19:49.9890761Z ##[warning]   70:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9891941Z ##[warning]  134:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9893321Z ##[warning]  138:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9894579Z ##[warning]  139:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9895778Z ##[warning]  140:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9896961Z ##[warning]  190:17  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9898151Z ##[warning]  207:17  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9898806Z 
+2026-11-16T03:19:49.9899079Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-powershell.mts
+2026-11-16T03:19:49.9899919Z ##[warning]   32:47  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9901103Z ##[warning]   47:31  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9902296Z ##[warning]   48:23  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9903678Z ##[warning]   50:12  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9904869Z ##[warning]   51:12  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9906075Z ##[warning]   53:28  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9907329Z ##[warning]   54:24  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9908534Z ##[warning]   74:25  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9909704Z ##[warning]   86:57  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0     security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9910797Z ##[warning]  115:42  warning  Generic Object Injection Sink                                                        security/detect-object-injection
+2026-11-16T03:19:49.9911828Z ##[warning]  131:5   warning  Generic Object Injection Sink                                                        security/detect-object-injection
+2026-11-16T03:19:49.9913202Z ##[warning]  149:12  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9914419Z ##[warning]  153:24  warning  Found readdir from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9915614Z ##[warning]  171:12  warning  Found readdir from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9916801Z ##[warning]  185:29  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9917435Z 
+2026-11-16T03:19:49.9917760Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-profile-capture.test.mts
+2026-11-16T03:19:49.9918420Z ##[warning]  32:18  warning  Function Call Object Injection Sink  security/detect-object-injection
+2026-11-16T03:19:49.9918977Z 
+2026-11-16T03:19:49.9919357Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-startup-diagnostic.mts
+2026-11-16T03:19:49.9920214Z ##[warning]   22:7   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9921387Z ##[warning]   36:62  warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9922478Z ##[warning]   70:40  warning  Generic Object Injection Sink                                                         security/detect-object-injection
+2026-11-16T03:19:49.9923750Z ##[warning]   74:7   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9924966Z ##[warning]  105:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9926172Z ##[warning]  106:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9927411Z ##[warning]  108:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9928599Z ##[warning]  109:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9929799Z ##[warning]  123:15  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9930965Z ##[warning]  173:32  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9932168Z ##[warning]  192:32  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9933612Z ##[warning]  193:15  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9934816Z ##[warning]  197:15  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9935992Z ##[warning]  202:15  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9937212Z ##[warning]  203:15  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9938400Z ##[warning]  210:7   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9939040Z 
+2026-11-16T03:19:49.9939330Z /home/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/release-updater/windows-updater.mts
+2026-11-16T03:19:49.9940151Z ##[warning]   54:7   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9941334Z ##[warning]   68:20  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9942641Z ##[warning]   84:13  warning  Found createWriteStream from package "node:fs" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9943939Z ##[warning]   91:7   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9945143Z ##[warning]  137:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9946439Z ##[warning]  165:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9947627Z ##[warning]  192:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9948841Z ##[warning]  212:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9950043Z ##[warning]  267:13  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9951250Z ##[warning]  295:13  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9952608Z ##[warning]  301:13  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9953913Z ##[warning]  308:38  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9955133Z ##[warning]  309:13  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9956313Z ##[warning]  338:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9957492Z ##[warning]  342:11  warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9958698Z ##[warning]  366:27  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9959962Z ##[warning]  367:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9961163Z ##[warning]  458:23  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9962336Z ##[warning]  460:25  warning  Found realpath from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9963664Z ##[warning]  500:9   warning  Found mkdir from package "node:fs/promises" with non literal argument at index 0      security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9964831Z ##[warning]  523:17  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9966023Z ##[warning]  552:17  warning  Found stat from package "node:fs/promises" with non literal argument at index 0       security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9967215Z ##[warning]  656:45  warning  Found readFile from package "node:fs/promises" with non literal argument at index 0   security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9968404Z ##[warning]  676:9   warning  Found writeFile from package "node:fs/promises" with non literal argument at index 0  security/detect-non-literal-fs-filename
+2026-11-16T03:19:49.9969077Z 
+2026-11-16T03:19:49.9969479Z ✖ 569 problems (0 errors, 569 warnings)
+2026-11-16T03:19:49.9969848Z   0 errors and 2 warnings potentially fixable with the `--fix` option.
+2026-11-16T03:19:49.9970048Z 
+2026-11-16T03:19:50.1955843Z Post job cleanup.
+2026-11-16T03:19:50.2934136Z Post job cleanup.
+2026-11-16T03:19:50.4077659Z Pruning is unnecessary.
+2026-11-16T03:19:50.4199157Z Post job cleanup.
+2026-11-16T03:19:50.4843279Z [command]/usr/bin/git version
+2026-11-16T03:19:50.4872924Z git version 2.56.1
+2026-11-16T03:19:50.4903962Z Temporarily overriding HOME='/home/runner/work/_temp/93d6ab60-941f-426d-8d22-7b991343182d' before making global git config changes
+2026-11-16T03:19:50.4905176Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T03:19:50.4910010Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T03:19:50.4939399Z Removing SSH command configuration
+2026-11-16T03:19:50.4945156Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T03:19:50.4980206Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T03:19:50.5234510Z Removing HTTP extra header
+2026-11-16T03:19:50.5240560Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T03:19:50.5277747Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T03:19:50.5507937Z Removing includeIf entries pointing to credentials config files
+2026-11-16T03:19:50.5515149Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T03:19:50.5555556Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T03:19:50.5861643Z Cleaning up orphan processes

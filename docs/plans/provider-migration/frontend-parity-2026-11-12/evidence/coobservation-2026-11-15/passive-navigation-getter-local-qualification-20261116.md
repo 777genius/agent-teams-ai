@@ -1,0 +1,16 @@
+# Actual local qualification of the explicit-return TEST getter (2026-11-16)
+
+The source correction is published at 26d30dc4d4f9de444f0924f60fa2ee7630d821ec, sole parent 242770cba46f0a099062e042e9401557a4875120, tree c3298a08cc4ad8bf96f4df3a2935e071bc88b3a8. Root committed and immediately pushed it after the published R1 797533a5211911a9fb57202a1304abfe23ec8961, full independent R1 readback, and root/independent exact source review. Complete published source/tree readback is exact.
+
+The sole source delta is scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts, 44cf93706a5b92be4296119810c7c07264cb4ccd to 8e9884ea50b1aae54b50d6271367b495c1ca591e. It inserts seven ASCII bytes, `return `, before the existing assert.fail in the non-Team metadata getter at current line1762. The file remains1960 physical lines; bytes119240 become119247; the new SHA256 is40957ecc99cf92ec6f4e397c06c19d5c4fec9ffd8d65ffcc44be0e99f8e320b3. The unique inverse restores the complete old file. The same throwing assertion/message and all53 test cases remain; no normal getter return, new test, skip, import, helper or production change is introduced. The full forward/inverse audit is d7139134bef51966603ac9f770e95a1ba61e4827.
+
+Root ran exactly the two published local checks on the clean source above. Pinned Node24.21.0 binary SHA2567fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c and pnpm11.22.0 were retained; NODE_OPTIONS/GOMAXPROCS/GOMEMLIMIT were absent. No compiler, build, dependency installation, source-size/closure retry, whole53 runtime replay, native process, CI action or vendor invocation was added.
+
+| Actual command | UTC interval | Exit | Raw evidence |
+| --- | --- | ---: | --- |
+| pnpm lint:fast:files scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts | 03:37:09.790825 to03:37:12.292127 | 0 | 65c6b227f152d63d338103754640603662eeac81;164 bytes; SHA256f8195f3eea5a97dbd40c1bfbc75b8a41128a335e4b20aafc9c262650c8d48fd7 |
+| git diff --check 242770cba46f0a099062e042e9401557a4875120 26d30dc4d4f9de444f0924f60fa2ee7630d821ec -- scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts | 03:37:12.292502 to03:37:12.299179 | 0 | e69de29bb2d1d6434b8b29ae775ad8c2e48c5391;empty original output |
+
+The full local manifest is104484ca1a24510e47adac35b2c675898cae5ed8,2349bytes/SHA256502fe34228d19ee310fc14c5f28f54fd8e6b0455e0a230124557c0e7a4fa8cdd. It retains exact argv/toolchain/source/timestamps/exits and clean worktree before and after both checks.
+
+The original frozen2ab Darwin ARM packaged job133068178223/run43790825796 remains FAILURE at its original scripts compiler TS2378, a78 line1760. Its complete six-payload evidence is published with the R1, including full raw371606d4fcfa2645220bed83a07dcdb75d017f38 and manifestadfddf8c45f948c95a80e2d5a88d45c6a6aea814. The same line shifts by two earlier imports in current44cf/8e988; no failure is relabeled or transferred. Successful source review and these two local checks do not establish a resulting-source compiler PASS. That exact original packaged compiler must still execute the corrected source in a separately reviewed venue. Packaged runtime/P08, Desktop, Windows15-second readiness, Teams navigation, DarwinP09 and complete delivery remain open under their original predicates.

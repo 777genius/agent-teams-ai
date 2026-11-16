@@ -1,0 +1,9 @@
+{
+  "schema": 2,
+  "platform": "win32",
+  "arch": "x64",
+  "file": "owned-process-broker.exe",
+  "sha256": "9a1b71904c021053d3a65a0eab2e9ef776e2a7ed181f324f092ddf5a77e20557",
+  "protocol": 1,
+  "capability": "service-scopes-v1"
+}

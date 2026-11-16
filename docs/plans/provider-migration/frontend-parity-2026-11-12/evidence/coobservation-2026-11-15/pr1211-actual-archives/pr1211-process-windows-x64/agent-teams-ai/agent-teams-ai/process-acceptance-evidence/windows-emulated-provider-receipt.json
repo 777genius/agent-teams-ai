@@ -1,0 +1,90 @@
+{
+  "kind": "TEST_WINDOWS_EMULATED_PROVIDER_PARITY",
+  "sourceHead": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "platform": "win32-x64",
+  "nodeVersion": "v24.21.0",
+  "status": "PASS",
+  "pins": [
+    {
+      "path": "D:\\a\\_temp\\TEST-process-stage-x64\\owned-process-broker.exe",
+      "sha256": "5d44c984e8dccfd5b7aae03624d1419de5812bca93932a1fc4e85db78ebcc3e3"
+    },
+    {
+      "path": "D:\\a\\_temp\\TEST-process-build-x64\\Release\\owned-process-fixture.exe",
+      "sha256": "ed1aeca392fbdb2bd274839bb5681adb733cd5a785b228cc1bd4f768d626ad74"
+    },
+    {
+      "path": "D:\\a\\_temp\\TEST-process-scoped-stage-x64\\owned-process-broker.exe",
+      "sha256": "9a1b71904c021053d3a65a0eab2e9ef776e2a7ed181f324f092ddf5a77e20557"
+    }
+  ],
+  "wrappers": [
+    "npm-node",
+    "generated-bun",
+    "opaque-cmd",
+    "positional-bat",
+    "npm-native"
+  ],
+  "providers": [
+    {
+      "provider": "codex",
+      "wrapper": "npm-node",
+      "pins": {
+        "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+        "peer": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+        "wrapper": "808f1868f1cb9649df4edf133c1f7d8da7e888b513b380868de8659ef46b90ca",
+        "cli": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+        "source": "46f995c5c8d34ab11fd22f5a6b8147c2277a9c3f30ae23bbef5714c15f8f00b5"
+      },
+      "counts": {
+        "allocate": 1,
+        "prepare": 1,
+        "resume": 1,
+        "stop": 1,
+        "release": 1,
+        "serviceCapture": 2,
+        "serviceStop": 2,
+        "serviceSettle": 2
+      },
+      "nativeReady": true,
+      "inputCompleted": true,
+      "registeredServices": 2,
+      "scopedStops": 2,
+      "neighborSurvivedPrimary": true,
+      "providerSurvivedScopedStops": true,
+      "cleanup": true
+    },
+    {
+      "provider": "opencode",
+      "wrapper": "opaque-cmd",
+      "pins": {
+        "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+        "peer": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+        "wrapper": "fd4631ca06e32fe34da1b55f10ffac07eec775fe87127876d13592c4c983b1cf",
+        "cli": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+        "source": "52ab5c73a08f2ddc14a43052b4548679923cab95bd47b6dd3a51822e4d5c96a8"
+      },
+      "counts": {
+        "allocate": 1,
+        "prepare": 1,
+        "resume": 1,
+        "stop": 1,
+        "release": 1,
+        "serviceCapture": 2,
+        "serviceStop": 2,
+        "serviceSettle": 2
+      },
+      "nativeReady": true,
+      "inputCompleted": true,
+      "registeredServices": 2,
+      "scopedStops": 2,
+      "neighborSurvivedPrimary": true,
+      "providerSurvivedScopedStops": true,
+      "cleanup": true
+    }
+  ],
+  "cleanup": true,
+  "realProviderExecuted": false,
+  "desktopQualified": false,
+  "releaseQualified": false
+}

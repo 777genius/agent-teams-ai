@@ -1,0 +1,58 @@
+{
+  "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+  "status": "READY",
+  "sourceHead": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "platform": "darwin-x64",
+  "nodeVersion": "v24.21.0",
+  "productQualified": false,
+  "stage": "prepared",
+  "baseArchiveSha256": "fbaab0cb2a1b46241985ecabf4f256abf8f80051be264786cbf301857e46969a",
+  "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+  "bun": {
+    "path": "/Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+    "sha256": "c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab",
+    "version": "1.4.4"
+  },
+  "osBuild": "24G830",
+  "productTupleAdmitted": true,
+  "processArtifact": {
+    "manifest": {
+      "schemaVersion": 1,
+      "abi": "napi-8",
+      "platform": "darwin",
+      "architecture": "x64",
+      "osBuild": "24G830",
+      "library": "registered-process.node",
+      "sourceSha256": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5",
+      "binarySha256": "50e8af2e01f9a79387b13548d2d84f963e543baaa5c3fc842f4a38580ed6c973",
+      "compilerSha256": "4c458256bcdf913774de1bb4a37768244d3b41f32ad55afb2dfec3432f46f4fe",
+      "sdkSettingsSha256": "58a133735f0a55a624a1703067059f6e78925e51725ec6e1f966072e142c9c42",
+      "headers": [
+        {
+          "file": "node_api.h",
+          "sha256": "2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a"
+        },
+        {
+          "file": "node_api_types.h",
+          "sha256": "a25356630d3058f0a0c8937d9f297e9471e037fda58c2696d8a505c2bd99cb00"
+        },
+        {
+          "file": "js_native_api.h",
+          "sha256": "8808ef8899a1691411928ef5dd7dae0537aedc93d3a34e223b2d89692e79c788"
+        },
+        {
+          "file": "js_native_api_types.h",
+          "sha256": "4f19cb90d240765cc0961d92a1ee20f65fdc50db7de1ab0a5cb6bc227224e1a0"
+        },
+        {
+          "file": "node_version.h",
+          "sha256": "bd056729fddf4bfa58687036219f07417c334c4ecfcb513ac256fa254451bfc9"
+        }
+      ]
+    },
+    "manifestSha256": "160c3052dda74b45ed6d78e8f1553091f52587399e5912590c01484b6b37e10e",
+    "directory": "/Users/runner/work/_temp/TEST-opencode-v2-inputs-HK04kW/process-artifact"
+  },
+  "supportArchiveSha256": "f80837d4659bcd0ccc0275dbbff3731e517a50567572d24635bfdcf6447f1111",
+  "manifestSha256": "7690030a5aba3026544e65f000475dd20f83213383e9bfddad3d98c1134a65fb"
+}

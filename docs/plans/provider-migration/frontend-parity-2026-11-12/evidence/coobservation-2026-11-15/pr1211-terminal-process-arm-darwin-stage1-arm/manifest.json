@@ -1,0 +1,1914 @@
+{
+  "schemaVersion": 1,
+  "kind": "original-frozen-pr1211-terminal-evidence",
+  "repository": "777genius/agent-teams-ai",
+  "pr": 1211,
+  "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "tree": "0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103",
+  "base": "0b3fa6117b1856b947d799f95bae7aae0238061c",
+  "apiSnapshot": "2026-11-16 02:37:17 UTC",
+  "jobs": [
+    {
+      "lane": "process",
+      "job": {
+        "id": 133048605587,
+        "run_id": 43790825981,
+        "workflow_name": "Host process fixture acceptance",
+        "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+        "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825981",
+        "run_attempt": 1,
+        "node_id": "CR_kwDORVTEtM8AAAAe-lCbkw",
+        "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048605587",
+        "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825981/job/133048605587",
+        "status": "completed",
+        "conclusion": "failure",
+        "created_at": "2026-11-16T02:13:21Z",
+        "started_at": "2026-11-16T02:22:05Z",
+        "completed_at": "2026-11-16T02:36:02Z",
+        "name": "Host process fixtures (win32-arm64)",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-11-16T02:22:06Z",
+            "completed_at": "2026-11-16T02:22:08Z"
+          },
+          {
+            "name": "Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-11-16T02:22:08Z",
+            "completed_at": "2026-11-16T02:22:41Z"
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-11-16T02:22:41Z",
+            "completed_at": "2026-11-16T02:22:58Z"
+          },
+          {
+            "name": "Select the pinned package manager with bundled Corepack",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-11-16T02:22:58Z",
+            "completed_at": "2026-11-16T02:23:10Z"
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-11-16T02:23:10Z",
+            "completed_at": "2026-11-16T02:23:12Z"
+          },
+          {
+            "name": "Bind exact source and actual process tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-11-16T02:23:12Z",
+            "completed_at": "2026-11-16T02:23:13Z"
+          },
+          {
+            "name": "Install frozen workspace without Desktop postinstall",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-11-16T02:23:13Z",
+            "completed_at": "2026-11-16T02:31:29Z"
+          },
+          {
+            "name": "Build existing controller and Host",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-11-16T02:31:29Z",
+            "completed_at": "2026-11-16T02:31:38Z"
+          },
+          {
+            "name": "Verify process contracts and retained Main Host transport",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9,
+            "started_at": "2026-11-16T02:31:38Z",
+            "completed_at": "2026-11-16T02:33:42Z"
+          },
+          {
+            "name": "Verify original POSIX Node and shell lifecycle fixtures",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 10,
+            "started_at": "2026-11-16T02:33:42Z",
+            "completed_at": "2026-11-16T02:33:42Z"
+          },
+          {
+            "name": "Prepare pinned Electron for native process fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11,
+            "started_at": "2026-11-16T02:33:42Z",
+            "completed_at": "2026-11-16T02:33:42Z"
+          },
+          {
+            "name": "Verify Linux Node exec descriptor closure under both original parents",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 12,
+            "started_at": "2026-11-16T02:33:42Z",
+            "completed_at": "2026-11-16T02:33:42Z"
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 13,
+            "started_at": "2026-11-16T02:33:42Z",
+            "completed_at": "2026-11-16T02:33:42Z"
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 14,
+            "started_at": "2026-11-16T02:33:42Z",
+            "completed_at": "2026-11-16T02:33:42Z"
+          },
+          {
+            "name": "Build original Windows product broker and C++ fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15,
+            "started_at": "2026-11-16T02:33:42Z",
+            "completed_at": "2026-11-16T02:34:20Z"
+          },
+          {
+            "name": "Qualify original Windows Job and control under Host Node",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16,
+            "started_at": "2026-11-16T02:34:20Z",
+            "completed_at": "2026-11-16T02:34:33Z"
+          },
+          {
+            "name": "Qualify original Windows Job and control under Electron Node",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17,
+            "started_at": "2026-11-16T02:34:33Z",
+            "completed_at": "2026-11-16T02:34:45Z"
+          },
+          {
+            "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18,
+            "started_at": "2026-11-16T02:34:45Z",
+            "completed_at": "2026-11-16T02:35:23Z"
+          },
+          {
+            "name": "Qualify original codex source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "failure",
+            "number": 19,
+            "started_at": "2026-11-16T02:35:23Z",
+            "completed_at": "2026-11-16T02:35:54Z"
+          },
+          {
+            "name": "Qualify original claude source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20,
+            "started_at": "2026-11-16T02:35:54Z",
+            "completed_at": "2026-11-16T02:35:54Z"
+          },
+          {
+            "name": "Qualify original opencode source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21,
+            "started_at": "2026-11-16T02:35:54Z",
+            "completed_at": "2026-11-16T02:35:54Z"
+          },
+          {
+            "name": "Require completed original platform receipts and unchanged source",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 22,
+            "started_at": "2026-11-16T02:35:54Z",
+            "completed_at": "2026-11-16T02:35:54Z"
+          },
+          {
+            "name": "Preserve original process evidence including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 23,
+            "started_at": "2026-11-16T02:35:54Z",
+            "completed_at": "2026-11-16T02:35:56Z"
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 44,
+            "started_at": "2026-11-16T02:35:56Z",
+            "completed_at": "2026-11-16T02:35:56Z"
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 45,
+            "started_at": "2026-11-16T02:35:56Z",
+            "completed_at": "2026-11-16T02:35:56Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 46,
+            "started_at": "2026-11-16T02:35:56Z",
+            "completed_at": "2026-11-16T02:36:00Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 47,
+            "started_at": "2026-11-16T02:36:00Z",
+            "completed_at": "2026-11-16T02:36:00Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048605587",
+        "labels": [
+          "windows-11-arm"
+        ],
+        "runner_id": 1000375898,
+        "runner_name": "GitHub Actions 1000375898",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      },
+      "artifact": {
+        "id": 14192769739,
+        "name": "host-process-fixtures-win32-arm64-2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "size_in_bytes": 33436,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192769739",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192769739/zip",
+        "expired": false,
+        "created_at": "2026-11-16T02:35:55Z",
+        "expires_at": "2026-11-30T02:35:55Z",
+        "updated_at": "2026-11-16T02:35:55Z",
+        "digest": "sha256:983f2720d7e793eb0b29ac55f64840067d335535e7bfcf3873ffdde19a6b5885",
+        "workflow_run": {
+          "id": 43790825981,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+          "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+        }
+      },
+      "run": {
+        "id": 43790825981,
+        "event": "pull_request",
+        "attempt": 1,
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "workflow": ".github/workflows/host-process-acceptance.yml"
+      },
+      "raw": {
+        "sha256": "10143fd06621daa536f2663b47fa82bf8228c55a8a1d123f233d34667d4cc5a6",
+        "bytes": 361674
+      },
+      "sourceBinding": {
+        "checkoutMatches": true,
+        "jobApiMatches": true,
+        "runApiMatches": true,
+        "artifactApiMatches": true,
+        "uploadSizeIdDigestMatch": true
+      }
+    },
+    {
+      "lane": "process",
+      "job": {
+        "id": 133048605665,
+        "run_id": 43790825981,
+        "workflow_name": "Host process fixture acceptance",
+        "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+        "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825981",
+        "run_attempt": 1,
+        "node_id": "CR_kwDORVTEtM8AAAAe-lCb4Q",
+        "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048605665",
+        "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825981/job/133048605665",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-11-16T02:13:21Z",
+        "started_at": "2026-11-16T02:29:19Z",
+        "completed_at": "2026-11-16T02:36:52Z",
+        "name": "Host process fixtures (darwin-x64)",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-11-16T02:29:20Z",
+            "completed_at": "2026-11-16T02:29:21Z"
+          },
+          {
+            "name": "Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-11-16T02:29:21Z",
+            "completed_at": "2026-11-16T02:29:33Z"
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-11-16T02:29:33Z",
+            "completed_at": "2026-11-16T02:29:43Z"
+          },
+          {
+            "name": "Select the pinned package manager with bundled Corepack",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-11-16T02:29:43Z",
+            "completed_at": "2026-11-16T02:29:47Z"
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-11-16T02:29:47Z",
+            "completed_at": "2026-11-16T02:29:48Z"
+          },
+          {
+            "name": "Bind exact source and actual process tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-11-16T02:29:48Z",
+            "completed_at": "2026-11-16T02:29:48Z"
+          },
+          {
+            "name": "Install frozen workspace without Desktop postinstall",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-11-16T02:29:48Z",
+            "completed_at": "2026-11-16T02:32:35Z"
+          },
+          {
+            "name": "Build existing controller and Host",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-11-16T02:32:35Z",
+            "completed_at": "2026-11-16T02:32:52Z"
+          },
+          {
+            "name": "Verify process contracts and retained Main Host transport",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9,
+            "started_at": "2026-11-16T02:32:52Z",
+            "completed_at": "2026-11-16T02:35:01Z"
+          },
+          {
+            "name": "Verify original POSIX Node and shell lifecycle fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10,
+            "started_at": "2026-11-16T02:35:01Z",
+            "completed_at": "2026-11-16T02:35:12Z"
+          },
+          {
+            "name": "Prepare pinned Electron for native process fixtures",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 11,
+            "started_at": "2026-11-16T02:35:12Z",
+            "completed_at": "2026-11-16T02:35:12Z"
+          },
+          {
+            "name": "Verify Linux Node exec descriptor closure under both original parents",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 12,
+            "started_at": "2026-11-16T02:35:12Z",
+            "completed_at": "2026-11-16T02:35:12Z"
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 13,
+            "started_at": "2026-11-16T02:35:12Z",
+            "completed_at": "2026-11-16T02:35:12Z"
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 14,
+            "started_at": "2026-11-16T02:35:12Z",
+            "completed_at": "2026-11-16T02:35:12Z"
+          },
+          {
+            "name": "Build original Windows product broker and C++ fixtures",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 15,
+            "started_at": "2026-11-16T02:35:12Z",
+            "completed_at": "2026-11-16T02:35:12Z"
+          },
+          {
+            "name": "Qualify original Windows Job and control under Host Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 16,
+            "started_at": "2026-11-16T02:35:12Z",
+            "completed_at": "2026-11-16T02:35:12Z"
+          },
+          {
+            "name": "Qualify original Windows Job and control under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 17,
+            "started_at": "2026-11-16T02:35:12Z",
+            "completed_at": "2026-11-16T02:35:12Z"
+          },
+          {
+            "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 18,
+            "started_at": "2026-11-16T02:35:12Z",
+            "completed_at": "2026-11-16T02:35:12Z"
+          },
+          {
+            "name": "Qualify original codex source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 19,
+            "started_at": "2026-11-16T02:35:12Z",
+            "completed_at": "2026-11-16T02:35:12Z"
+          },
+          {
+            "name": "Qualify original claude source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20,
+            "started_at": "2026-11-16T02:35:12Z",
+            "completed_at": "2026-11-16T02:35:12Z"
+          },
+          {
+            "name": "Qualify original opencode source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21,
+            "started_at": "2026-11-16T02:35:12Z",
+            "completed_at": "2026-11-16T02:35:12Z"
+          },
+          {
+            "name": "Require completed original platform receipts and unchanged source",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 22,
+            "started_at": "2026-11-16T02:35:12Z",
+            "completed_at": "2026-11-16T02:35:14Z"
+          },
+          {
+            "name": "Preserve original process evidence including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 23,
+            "started_at": "2026-11-16T02:35:14Z",
+            "completed_at": "2026-11-16T02:35:16Z"
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 44,
+            "started_at": "2026-11-16T02:35:16Z",
+            "completed_at": "2026-11-16T02:36:46Z"
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 45,
+            "started_at": "2026-11-16T02:36:46Z",
+            "completed_at": "2026-11-16T02:36:46Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 46,
+            "started_at": "2026-11-16T02:36:46Z",
+            "completed_at": "2026-11-16T02:36:47Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 47,
+            "started_at": "2026-11-16T02:36:48Z",
+            "completed_at": "2026-11-16T02:36:49Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048605665",
+        "labels": [
+          "macos-15-intel"
+        ],
+        "runner_id": 1000375928,
+        "runner_name": "GitHub Actions 1000375928",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      },
+      "artifact": {
+        "id": 14192508608,
+        "name": "host-process-fixtures-darwin-x64-2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "size_in_bytes": 13229,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192508608",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192508608/zip",
+        "expired": false,
+        "created_at": "2026-11-16T02:35:16Z",
+        "expires_at": "2026-11-30T02:35:15Z",
+        "updated_at": "2026-11-16T02:35:16Z",
+        "digest": "sha256:bf48649836934772b34da0e17089dd16a287dca8710e3e6962ddabb2167c351b",
+        "workflow_run": {
+          "id": 43790825981,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+          "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+        }
+      },
+      "run": {
+        "id": 43790825981,
+        "event": "pull_request",
+        "attempt": 1,
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "workflow": ".github/workflows/host-process-acceptance.yml"
+      },
+      "raw": {
+        "sha256": "a1a0ca6bfe316e93e692744ef004628abbf323455746f846f8f9218318dc4bb3",
+        "bytes": 135439
+      },
+      "sourceBinding": {
+        "checkoutMatches": true,
+        "jobApiMatches": true,
+        "runApiMatches": true,
+        "artifactApiMatches": true,
+        "uploadSizeIdDigestMatch": true
+      }
+    },
+    {
+      "lane": "stage1",
+      "job": {
+        "id": 133048604828,
+        "run_id": 43790825753,
+        "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+        "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+        "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825753",
+        "run_attempt": 1,
+        "node_id": "CR_kwDORVTEtM8AAAAe-lCYnA",
+        "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048604828",
+        "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825753/job/133048604828",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-11-16T02:13:21Z",
+        "started_at": "2026-11-16T02:15:42Z",
+        "completed_at": "2026-11-16T02:36:05Z",
+        "name": "Embedded V2.1.4 original Host (win32-arm64)",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-11-16T02:15:43Z",
+            "completed_at": "2026-11-16T02:15:45Z"
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-11-16T02:15:45Z",
+            "completed_at": "2026-11-16T02:16:14Z"
+          },
+          {
+            "name": "Require immutable source HEAD and record actual runner tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-11-16T02:16:14Z",
+            "completed_at": "2026-11-16T02:16:14Z"
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-11-16T02:16:14Z",
+            "completed_at": "2026-11-16T02:16:55Z"
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-11-16T02:16:55Z",
+            "completed_at": "2026-11-16T02:17:07Z"
+          },
+          {
+            "name": "Install exact source workspace dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-11-16T02:17:07Z",
+            "completed_at": "2026-11-16T02:25:43Z"
+          },
+          {
+            "name": "Build original Host and its pinned provider implementation",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-11-16T02:25:43Z",
+            "completed_at": "2026-11-16T02:25:49Z"
+          },
+          {
+            "name": "Check original graph and custody boundaries",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-11-16T02:25:49Z",
+            "completed_at": "2026-11-16T02:26:00Z"
+          },
+          {
+            "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9,
+            "started_at": "2026-11-16T02:26:00Z",
+            "completed_at": "2026-11-16T02:26:09Z"
+          },
+          {
+            "name": "Prepare exact Bun, engine graph and original-process artifact",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10,
+            "started_at": "2026-11-16T02:26:09Z",
+            "completed_at": "2026-11-16T02:27:25Z"
+          },
+          {
+            "name": "Prove actual Darwin executable custody and adversarial cleanup",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 11,
+            "started_at": "2026-11-16T02:27:25Z",
+            "completed_at": "2026-11-16T02:27:25Z"
+          },
+          {
+            "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 12,
+            "started_at": "2026-11-16T02:27:25Z",
+            "completed_at": "2026-11-16T02:27:25Z"
+          },
+          {
+            "name": "Prove original Windows Job custody and surviving descendant cleanup",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13,
+            "started_at": "2026-11-16T02:27:25Z",
+            "completed_at": "2026-11-16T02:27:48Z"
+          },
+          {
+            "name": "Require exact Windows original-process evidence",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14,
+            "started_at": "2026-11-16T02:27:48Z",
+            "completed_at": "2026-11-16T02:27:49Z"
+          },
+          {
+            "name": "Check original Desktop private recipe composition",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 15,
+            "started_at": "2026-11-16T02:27:49Z",
+            "completed_at": "2026-11-16T02:27:49Z"
+          },
+          {
+            "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16,
+            "started_at": "2026-11-16T02:27:49Z",
+            "completed_at": "2026-11-16T02:31:39Z"
+          },
+          {
+            "name": "Exercise Windows automatic approval and cold Host Resume",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17,
+            "started_at": "2026-11-16T02:31:39Z",
+            "completed_at": "2026-11-16T02:35:11Z"
+          },
+          {
+            "name": "Exercise native catalog and model probe without tool allocation",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 18,
+            "started_at": "2026-11-16T02:35:11Z",
+            "completed_at": "2026-11-16T02:35:11Z"
+          },
+          {
+            "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 19,
+            "started_at": "2026-11-16T02:35:11Z",
+            "completed_at": "2026-11-16T02:35:11Z"
+          },
+          {
+            "name": "Exercise effective permissions and active Stop with a surviving sibling",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20,
+            "started_at": "2026-11-16T02:35:11Z",
+            "completed_at": "2026-11-16T02:35:11Z"
+          },
+          {
+            "name": "Exercise captured external MCP and app-only through the native Host",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21,
+            "started_at": "2026-11-16T02:35:11Z",
+            "completed_at": "2026-11-16T02:35:11Z"
+          },
+          {
+            "name": "Require complete native management and permission evidence",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 22,
+            "started_at": "2026-11-16T02:35:11Z",
+            "completed_at": "2026-11-16T02:35:11Z"
+          },
+          {
+            "name": "Require product-path Host proof after exact candidate qualification",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 23,
+            "started_at": "2026-11-16T02:35:11Z",
+            "completed_at": "2026-11-16T02:35:11Z"
+          },
+          {
+            "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 24,
+            "started_at": "2026-11-16T02:35:11Z",
+            "completed_at": "2026-11-16T02:35:11Z"
+          },
+          {
+            "name": "Preserve exact native evidence or candidate HOLD",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 25,
+            "started_at": "2026-11-16T02:35:11Z",
+            "completed_at": "2026-11-16T02:35:12Z"
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 48,
+            "started_at": "2026-11-16T02:35:12Z",
+            "completed_at": "2026-11-16T02:35:51Z"
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 49,
+            "started_at": "2026-11-16T02:35:51Z",
+            "completed_at": "2026-11-16T02:35:52Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 50,
+            "started_at": "2026-11-16T02:35:52Z",
+            "completed_at": "2026-11-16T02:35:56Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 51,
+            "started_at": "2026-11-16T02:35:56Z",
+            "completed_at": "2026-11-16T02:35:56Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048604828",
+        "labels": [
+          "windows-11-arm"
+        ],
+        "runner_id": 1000375869,
+        "runner_name": "GitHub Actions 1000375869",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      },
+      "artifact": {
+        "id": 14192914460,
+        "name": "opencode-v2-embedded-native-win32-arm64",
+        "size_in_bytes": 13444,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192914460",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192914460/zip",
+        "expired": false,
+        "created_at": "2026-11-16T02:35:12Z",
+        "expires_at": "2026-11-23T02:35:12Z",
+        "updated_at": "2026-11-16T02:35:12Z",
+        "digest": "sha256:5d45f88d33a05b38c3b48f2124c0b8813e47e08799930504cee755ba55e29662",
+        "workflow_run": {
+          "id": 43790825753,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+          "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+        }
+      },
+      "run": {
+        "id": 43790825753,
+        "event": "pull_request",
+        "attempt": 1,
+        "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "workflow": ".github/workflows/opencode-v2-stage1-preflight.yml"
+      },
+      "raw": {
+        "sha256": "dec882c8bdc8da7e24c5f39b1e97fbad43bc0ceb7d2797d155e53e828418db7b",
+        "bytes": 122884
+      },
+      "sourceBinding": {
+        "checkoutMatches": true,
+        "jobApiMatches": true,
+        "runApiMatches": true,
+        "artifactApiMatches": true,
+        "uploadSizeIdDigestMatch": true
+      }
+    }
+  ],
+  "source": {
+    "processWorkflow": "70202d22a5840401a00025cd60b797c514f3e455",
+    "stage1Workflow": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+    "originalWindowsProfile": "0486ca44781ab8b9da889df212f3aeeb3879b6c3",
+    "reservationOnlyScenario": "60548e4b0477924fd2c068283b9372f21946b198",
+    "originalWindowsReadinessBudgetMs": 15000
+  },
+  "observations": {
+    "processWinArm": {
+      "firstFailedStep": 19,
+      "firstFailure": "Original source Team readiness, Codex Team-A",
+      "readiness": [
+        {
+          "line": 2171,
+          "value": {
+            "kind": "TEST_SOURCE_READINESS",
+            "provider": "codex",
+            "source": {
+              "sourceId": "e7ff2ac1f9e99ef074ea046f310b907855028cf8172a2c85936cf63c890e427f",
+              "revision": "ea546040b9e466af2d74e00b7193877796fcd273b858df7e1bef4107d051a3be"
+            },
+            "image": "A",
+            "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+            "readCount": 100,
+            "elapsedMs": 14983.042899999999,
+            "lastRuntimeRead": {
+              "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+              "memberId": "alice-id",
+              "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+              "phase": "allocated",
+              "sealed": false,
+              "custody": "owned",
+              "nativeReady": false,
+              "attached": true
+            }
+          }
+        }
+      ],
+      "firstRefusal": [
+        {
+          "line": 2179,
+          "value": {
+            "kind": "TEST_SOURCE_FIRST_REFUSAL",
+            "provider": "codex",
+            "diagnostic": {
+              "status": "unknown",
+              "reason": "empty"
+            }
+          }
+        }
+      ],
+      "rawCleanupRows": [
+        {
+          "line": 2172,
+          "value": {
+            "kind": "TEST_SOURCE_CLEANUP",
+            "provider": "codex",
+            "mainEpoch": "df1f4013-a014-4fb7-ab8f-264918e8ed14",
+            "jobSlot": 0,
+            "source": null,
+            "rootCaptured": true,
+            "witnessCaptured": true,
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true,
+            "custodyTimings": {
+              "allocate": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 1.1592000000000553,
+                "firstStartMs": 3499.728,
+                "lastEndMs": 3500.8872
+              },
+              "prepare": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 330.8010000000004,
+                "firstStartMs": 3513.4582,
+                "lastEndMs": 3844.2592000000004
+              },
+              "resume": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 276.6779999999999,
+                "firstStartMs": 4126.4349,
+                "lastEndMs": 4403.1129
+              },
+              "stop": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 1.4802999999992608,
+                "firstStartMs": 4808.374900000001,
+                "lastEndMs": 4809.8552
+              },
+              "drain": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.357399999998961,
+                "firstStartMs": 4813.8544,
+                "lastEndMs": 4814.211799999999
+              },
+              "release": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 3.2801999999992404,
+                "firstStartMs": 4815.981900000001,
+                "lastEndMs": 4819.2621
+              }
+            },
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.1408000000001266,
+                "firstStartMs": 3506.969,
+                "lastEndMs": 3507.1098
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.5316000000002532,
+                "firstStartMs": 3510.0382,
+                "lastEndMs": 3510.5698
+              }
+            },
+            "firstCloseEntryMs": 24776.8635
+          }
+        },
+        {
+          "line": 2173,
+          "value": {
+            "kind": "TEST_SOURCE_CLEANUP",
+            "provider": "codex",
+            "mainEpoch": "df1f4013-a014-4fb7-ab8f-264918e8ed14",
+            "jobSlot": 1,
+            "source": {
+              "sourceId": "e7ff2ac1f9e99ef074ea046f310b907855028cf8172a2c85936cf63c890e427f",
+              "revision": "ea546040b9e466af2d74e00b7193877796fcd273b858df7e1bef4107d051a3be"
+            },
+            "rootCaptured": true,
+            "witnessCaptured": true,
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": false,
+            "custodyTimings": {
+              "allocate": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.2989000000015949,
+                "firstStartMs": 6441.323699999999,
+                "lastEndMs": 6441.622600000001
+              },
+              "prepare": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 606.8464999999997,
+                "firstStartMs": 6802.7147,
+                "lastEndMs": 7409.5612
+              },
+              "resume": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 302.7386000000006,
+                "firstStartMs": 8088.5057,
+                "lastEndMs": 8391.2443
+              },
+              "stop": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.9759999999987485,
+                "firstStartMs": 9003.9143,
+                "lastEndMs": 9004.8903
+              },
+              "drain": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.0907999999999447,
+                "firstStartMs": 9005.7122,
+                "lastEndMs": 9005.803
+              },
+              "release": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 2.612300000000687,
+                "firstStartMs": 9006.3653,
+                "lastEndMs": 9008.9776
+              }
+            },
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.08839999999872816,
+                "firstStartMs": 6542.4058,
+                "lastEndMs": 6542.494199999999
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.2665999999990163,
+                "firstStartMs": 6647.4341,
+                "lastEndMs": 6647.700699999999
+              }
+            },
+            "firstCloseEntryMs": 24776.8635
+          }
+        },
+        {
+          "line": 2174,
+          "value": {
+            "kind": "TEST_SOURCE_CLEANUP",
+            "provider": "codex",
+            "mainEpoch": "df1f4013-a014-4fb7-ab8f-264918e8ed14",
+            "jobSlot": 2,
+            "source": {
+              "sourceId": "e7ff2ac1f9e99ef074ea046f310b907855028cf8172a2c85936cf63c890e427f",
+              "revision": "ea546040b9e466af2d74e00b7193877796fcd273b858df7e1bef4107d051a3be"
+            },
+            "rootCaptured": true,
+            "witnessCaptured": true,
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": false,
+            "custodyTimings": {
+              "allocate": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.23869999999988067,
+                "firstStartMs": 10990.2887,
+                "lastEndMs": 10990.527399999999
+              },
+              "prepare": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 374.5485000000008,
+                "firstStartMs": 11092.6706,
+                "lastEndMs": 11467.2191
+              },
+              "resume": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 341.0753999999979,
+                "firstStartMs": 11844.7391,
+                "lastEndMs": 12185.814499999999
+              },
+              "stop": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 1.1801000000014028,
+                "firstStartMs": 12708.371099999998,
+                "lastEndMs": 12709.5512
+              },
+              "drain": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.25539999999818974,
+                "firstStartMs": 12711.123000000001,
+                "lastEndMs": 12711.3784
+              },
+              "release": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 2.8729000000021188,
+                "firstStartMs": 12712.180699999999,
+                "lastEndMs": 12715.053600000001
+              }
+            },
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.0783000000010361,
+                "firstStartMs": 11046.0333,
+                "lastEndMs": 11046.1116
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.24949999999989814,
+                "firstStartMs": 11065.3,
+                "lastEndMs": 11065.5495
+              }
+            },
+            "firstCloseEntryMs": 24776.8635
+          }
+        },
+        {
+          "line": 2175,
+          "value": {
+            "kind": "TEST_SOURCE_CLEANUP",
+            "provider": "codex",
+            "mainEpoch": "df1f4013-a014-4fb7-ab8f-264918e8ed14",
+            "jobSlot": 3,
+            "source": {
+              "sourceId": "e7ff2ac1f9e99ef074ea046f310b907855028cf8172a2c85936cf63c890e427f",
+              "revision": "ea546040b9e466af2d74e00b7193877796fcd273b858df7e1bef4107d051a3be"
+            },
+            "rootCaptured": true,
+            "witnessCaptured": true,
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": false,
+            "custodyTimings": {
+              "allocate": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.5531000000009954,
+                "firstStartMs": 13587.133499999998,
+                "lastEndMs": 13587.686599999999
+              },
+              "prepare": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 345.9292999999998,
+                "firstStartMs": 14002.0251,
+                "lastEndMs": 14347.9544
+              },
+              "resume": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 330.10989999999947,
+                "firstStartMs": 14985.9871,
+                "lastEndMs": 15316.097
+              },
+              "stop": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 19.070299999999406,
+                "firstStartMs": 24987.4234,
+                "lastEndMs": 25006.4937
+              },
+              "drain": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.07849999999962165,
+                "firstStartMs": 25026.158499999998,
+                "lastEndMs": 25026.237
+              },
+              "release": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 3.0046999999976833,
+                "firstStartMs": 25026.7633,
+                "lastEndMs": 25029.767999999996
+              }
+            },
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.07779999999911524,
+                "firstStartMs": 13703.76,
+                "lastEndMs": 13703.8378
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.5262000000002445,
+                "firstStartMs": 13844.3064,
+                "lastEndMs": 13844.8326
+              }
+            },
+            "firstCloseEntryMs": 24776.8635
+          }
+        },
+        {
+          "line": 2176,
+          "value": {
+            "kind": "TEST_SOURCE_CLEANUP",
+            "provider": "codex",
+            "mainEpoch": "df1f4013-a014-4fb7-ab8f-264918e8ed14",
+            "jobSlot": 4,
+            "source": {
+              "sourceId": "e7ff2ac1f9e99ef074ea046f310b907855028cf8172a2c85936cf63c890e427f",
+              "revision": "ea546040b9e466af2d74e00b7193877796fcd273b858df7e1bef4107d051a3be"
+            },
+            "rootCaptured": true,
+            "witnessCaptured": true,
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": false,
+            "custodyTimings": {
+              "allocate": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.6163999999989755,
+                "firstStartMs": 16833.992599999998,
+                "lastEndMs": 16834.608999999997
+              },
+              "prepare": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 334.6769999999997,
+                "firstStartMs": 16965.3689,
+                "lastEndMs": 17300.045899999997
+              },
+              "resume": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 299.8231999999989,
+                "firstStartMs": 17656.163399999998,
+                "lastEndMs": 17955.986599999997
+              },
+              "stop": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 1.1795000000020082,
+                "firstStartMs": 18450.7134,
+                "lastEndMs": 18451.8929
+              },
+              "drain": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.23890000000028522,
+                "firstStartMs": 18485.939400000003,
+                "lastEndMs": 18486.1783
+              },
+              "release": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 3.0024000000012165,
+                "firstStartMs": 18487.207000000002,
+                "lastEndMs": 18490.2094
+              }
+            },
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.07140000000072177,
+                "firstStartMs": 16885.280899999998,
+                "lastEndMs": 16885.3523
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.551500000001397,
+                "firstStartMs": 16904.375699999997,
+                "lastEndMs": 16904.9272
+              }
+            },
+            "firstCloseEntryMs": 24776.8635
+          }
+        },
+        {
+          "line": 2177,
+          "value": {
+            "kind": "TEST_SOURCE_CLEANUP",
+            "provider": "codex",
+            "mainEpoch": "df1f4013-a014-4fb7-ab8f-264918e8ed14",
+            "jobSlot": 5,
+            "source": {
+              "sourceId": "e7ff2ac1f9e99ef074ea046f310b907855028cf8172a2c85936cf63c890e427f",
+              "revision": "ea546040b9e466af2d74e00b7193877796fcd273b858df7e1bef4107d051a3be"
+            },
+            "rootCaptured": true,
+            "witnessCaptured": true,
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": false,
+            "custodyTimings": {
+              "allocate": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.26050000000032014,
+                "firstStartMs": 20515.9119,
+                "lastEndMs": 20516.172400000003
+              },
+              "prepare": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 331.8964999999989,
+                "firstStartMs": 20653.8612,
+                "lastEndMs": 20985.757700000002
+              },
+              "resume": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 284.47879999999714,
+                "firstStartMs": 21328.883800000003,
+                "lastEndMs": 21613.3626
+              },
+              "stop": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.7158999999992375,
+                "firstStartMs": 22111.7247,
+                "lastEndMs": 22112.4406
+              },
+              "drain": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.09259999999994761,
+                "firstStartMs": 22146.488299999997,
+                "lastEndMs": 22146.5809
+              },
+              "release": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 2.474999999998545,
+                "firstStartMs": 22147.2845,
+                "lastEndMs": 22149.7595
+              }
+            },
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.07679999999891152,
+                "firstStartMs": 20574.557099999998,
+                "lastEndMs": 20574.6339
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.23210000000108266,
+                "firstStartMs": 20592.742599999998,
+                "lastEndMs": 20592.9747
+              }
+            },
+            "firstCloseEntryMs": 24776.8635
+          }
+        },
+        {
+          "line": 2178,
+          "value": {
+            "kind": "TEST_SOURCE_CLEANUP",
+            "provider": "codex",
+            "mainEpoch": "df1f4013-a014-4fb7-ab8f-264918e8ed14",
+            "jobSlot": 6,
+            "source": {
+              "sourceId": "e7ff2ac1f9e99ef074ea046f310b907855028cf8172a2c85936cf63c890e427f",
+              "revision": "ea546040b9e466af2d74e00b7193877796fcd273b858df7e1bef4107d051a3be"
+            },
+            "rootCaptured": true,
+            "witnessCaptured": true,
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": false,
+            "custodyTimings": {
+              "allocate": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.25270000000091386,
+                "firstStartMs": 23574.8784,
+                "lastEndMs": 23575.1311
+              },
+              "prepare": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 354.1216000000022,
+                "firstStartMs": 23670.7929,
+                "lastEndMs": 24024.9145
+              },
+              "resume": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 317.68139999999767,
+                "firstStartMs": 24388.804600000003,
+                "lastEndMs": 24706.485999999997
+              },
+              "stop": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 23.357199999998556,
+                "firstStartMs": 24937.110200000003,
+                "lastEndMs": 24960.4674
+              },
+              "drain": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.5155000000013388,
+                "firstStartMs": 24991.333899999998,
+                "lastEndMs": 24991.8494
+              },
+              "release": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 4.294099999999162,
+                "firstStartMs": 24993.3592,
+                "lastEndMs": 24997.653299999998
+              }
+            },
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.07140000000072177,
+                "firstStartMs": 23626.829100000003,
+                "lastEndMs": 23626.900500000003
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.3595000000022992,
+                "firstStartMs": 23644.5933,
+                "lastEndMs": 23644.9528
+              }
+            },
+            "firstCloseEntryMs": 24776.8635
+          }
+        }
+      ],
+      "controller": [
+        {
+          "line": 2199,
+          "value": {
+            "gateController": "drained",
+            "rootExitCode": 1,
+            "activeProcesses": 0
+          }
+        },
+        {
+          "line": 2200,
+          "value": {
+            "kind": "TEST_SOURCE_CONTROLLER_EXIT",
+            "provider": "codex",
+            "exitCode": 104
+          }
+        }
+      ],
+      "unreachedSteps": [
+        20,
+        21,
+        22
+      ],
+      "counters": [
+        {
+          "line": 1058,
+          "text": "ℹ tests 167"
+        },
+        {
+          "line": 1060,
+          "text": "ℹ pass 164"
+        },
+        {
+          "line": 1061,
+          "text": "ℹ fail 0"
+        },
+        {
+          "line": 1062,
+          "text": "ℹ cancelled 0"
+        },
+        {
+          "line": 1063,
+          "text": "ℹ skipped 3"
+        },
+        {
+          "line": 1065,
+          "text": "ℹ duration_ms 29792.1027"
+        },
+        {
+          "line": 1073,
+          "text": " Test Files  3 passed (3)"
+        },
+        {
+          "line": 1074,
+          "text": "      Tests  53 passed (53)"
+        },
+        {
+          "line": 1136,
+          "text": " Test Files  8 passed (8)"
+        },
+        {
+          "line": 1137,
+          "text": "      Tests  81 passed (81)"
+        }
+      ],
+      "compilerCommands": [
+        "node node_modules/@typescript/native/bin/tsc -p packages/task-change-ledger/tsconfig.json",
+        "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.json",
+        "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json",
+        "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json",
+        "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json"
+      ],
+      "compilerJobStep8": "success",
+      "boundary": "The raw cleanup rows precede final HANDLE witness inspection. Their originalHandleAbsent false values do not establish final receipt absence or cleanup. No final ZIP receipt was read by this child."
+    },
+    "processDarwinX64": {
+      "wholeJob": "success",
+      "contractCounts": {
+        "tests": 167,
+        "pass": 165,
+        "fail": 0,
+        "skip": 2,
+        "cancelled": 0
+      },
+      "protocolVitest": {
+        "files": 3,
+        "pass": 53
+      },
+      "retainedMainVitest": {
+        "files": 8,
+        "pass": 81
+      },
+      "posixLifecycle": {
+        "tests": 27,
+        "pass": 27,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0
+      },
+      "platformVerifierStep22": "success",
+      "counters": [
+        {
+          "line": 946,
+          "text": "ℹ tests 167"
+        },
+        {
+          "line": 948,
+          "text": "ℹ pass 165"
+        },
+        {
+          "line": 949,
+          "text": "ℹ fail 0"
+        },
+        {
+          "line": 950,
+          "text": "ℹ cancelled 0"
+        },
+        {
+          "line": 951,
+          "text": "ℹ skipped 2"
+        },
+        {
+          "line": 953,
+          "text": "ℹ duration_ms 26695.458546"
+        },
+        {
+          "line": 961,
+          "text": " Test Files  3 passed (3)"
+        },
+        {
+          "line": 962,
+          "text": "      Tests  53 passed (53)"
+        },
+        {
+          "line": 1025,
+          "text": " Test Files  8 passed (8)"
+        },
+        {
+          "line": 1026,
+          "text": "      Tests  81 passed (81)"
+        },
+        {
+          "line": 1073,
+          "text": "ℹ tests 27"
+        },
+        {
+          "line": 1075,
+          "text": "ℹ pass 27"
+        },
+        {
+          "line": 1076,
+          "text": "ℹ fail 0"
+        },
+        {
+          "line": 1077,
+          "text": "ℹ cancelled 0"
+        },
+        {
+          "line": 1078,
+          "text": "ℹ skipped 0"
+        },
+        {
+          "line": 1080,
+          "text": "ℹ duration_ms 10767.748393"
+        }
+      ],
+      "compilerCommands": [
+        "node node_modules/@typescript/native/bin/tsc -p packages/task-change-ledger/tsconfig.json",
+        "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.json",
+        "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json",
+        "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json",
+        "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json"
+      ],
+      "boundary": "Original Process fixture acceptance only. The Darwin branch does not run Windows source scenarios or qualify native Darwin executable registration/P09."
+    },
+    "stage1WinArm": {
+      "wholeJob": "success",
+      "graphAndCustodyContracts": {
+        "tests": 58,
+        "pass": 57,
+        "fail": 0,
+        "skip": 1,
+        "cancelled": 0
+      },
+      "originalWindowsJobCustody": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0
+      },
+      "manualEmbeddedHost": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0
+      },
+      "automaticEmbeddedHost": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0
+      },
+      "productReceiptVerifierStep23": "success",
+      "counters": [
+        {
+          "line": 1013,
+          "text": "ℹ tests 58"
+        },
+        {
+          "line": 1015,
+          "text": "ℹ pass 57"
+        },
+        {
+          "line": 1016,
+          "text": "ℹ fail 0"
+        },
+        {
+          "line": 1017,
+          "text": "ℹ cancelled 0"
+        },
+        {
+          "line": 1018,
+          "text": "ℹ skipped 1"
+        },
+        {
+          "line": 1020,
+          "text": "ℹ duration_ms 10900.702"
+        },
+        {
+          "line": 1084,
+          "text": "ℹ tests 1"
+        },
+        {
+          "line": 1086,
+          "text": "ℹ pass 1"
+        },
+        {
+          "line": 1087,
+          "text": "ℹ fail 0"
+        },
+        {
+          "line": 1088,
+          "text": "ℹ cancelled 0"
+        },
+        {
+          "line": 1089,
+          "text": "ℹ skipped 0"
+        },
+        {
+          "line": 1091,
+          "text": "ℹ duration_ms 23541.2321"
+        },
+        {
+          "line": 1155,
+          "text": "ℹ tests 1"
+        },
+        {
+          "line": 1157,
+          "text": "ℹ pass 1"
+        },
+        {
+          "line": 1158,
+          "text": "ℹ fail 0"
+        },
+        {
+          "line": 1159,
+          "text": "ℹ cancelled 0"
+        },
+        {
+          "line": 1160,
+          "text": "ℹ skipped 0"
+        },
+        {
+          "line": 1162,
+          "text": "ℹ duration_ms 229802.346"
+        },
+        {
+          "line": 1188,
+          "text": "ℹ tests 1"
+        },
+        {
+          "line": 1190,
+          "text": "ℹ pass 1"
+        },
+        {
+          "line": 1191,
+          "text": "ℹ fail 0"
+        },
+        {
+          "line": 1192,
+          "text": "ℹ cancelled 0"
+        },
+        {
+          "line": 1193,
+          "text": "ℹ skipped 0"
+        },
+        {
+          "line": 1195,
+          "text": "ℹ duration_ms 212065.7147"
+        }
+      ],
+      "boundary": "Original finite TEST-model embedded Host path and custody verification; no actual Claude/Codex execution, vendor-auth, Desktop, release, Process readiness or P08 transfer."
+    }
+  },
+  "limits": [
+    "Read-only original attempt1 logs/API only; no rerun, replay, source/ref/PR/CI action or runtime by this child.",
+    "Raw files are retained whole with original BOM/CRLF; diagnostic excerpts and counters are subordinate to those bytes.",
+    "Artifact API/upload size and digest joins are not actual ZIP/member/CRC verification; root owns downloads and receipt inspection.",
+    "Original 15000ms Windows readiness failure remains a failure; no expanded observer-window PASS transfers.",
+    "Compiler commands are recorded from actual original Process step8, separately from the job result. No local compiler attempt occurred."
+  ],
+  "payloads": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1211-terminal-process-arm-darwin-stage1-arm/process-run-api.json",
+      "sha256": "9eb54bc53c4f552acb9c44224731c262d45ec25d460623f6180a9e58c929c412",
+      "bytes": 13838
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1211-terminal-process-arm-darwin-stage1-arm/process-jobs-api.json",
+      "sha256": "07d278884e3b2caa7f6058cd6db08fca2a2663a58844a52f986b72eff0a41e76",
+      "bytes": 20131
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1211-terminal-process-arm-darwin-stage1-arm/process-artifacts-api.json",
+      "sha256": "5684973acb7a2f46da72b514f6872b28de2c40894df0bf81582ba8f8117401a4",
+      "bytes": 2739
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1211-terminal-process-arm-darwin-stage1-arm/stage1-run-api.json",
+      "sha256": "2c85466bd164bbc7adf9ad3bf125874fa9a3dce9b0c01b46cb4c33cdd15a372b",
+      "bytes": 13860
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1211-terminal-process-arm-darwin-stage1-arm/stage1-jobs-api.json",
+      "sha256": "31c532a57acd494a57244c8dde7c338cfee7243b393ae3829f477fed8de6bee6",
+      "bytes": 34927
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1211-terminal-process-arm-darwin-stage1-arm/stage1-artifacts-api.json",
+      "sha256": "1b55ae70459713406f4d28d42c459edc28a35b1ddef3e50045609b457e23233a",
+      "bytes": 3506
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1211-terminal-process-arm-darwin-stage1-arm/job-133048605587.log",
+      "sha256": "10143fd06621daa536f2663b47fa82bf8228c55a8a1d123f233d34667d4cc5a6",
+      "bytes": 361674
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1211-terminal-process-arm-darwin-stage1-arm/job-133048605665.log",
+      "sha256": "a1a0ca6bfe316e93e692744ef004628abbf323455746f846f8f9218318dc4bb3",
+      "bytes": 135439
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1211-terminal-process-arm-darwin-stage1-arm/job-133048604828.log",
+      "sha256": "dec882c8bdc8da7e24c5f39b1e97fbad43bc0ceb7d2797d155e53e828418db7b",
+      "bytes": 122884
+    }
+  ]
+}

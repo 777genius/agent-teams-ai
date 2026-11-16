@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "kind": "original-pr1211-process-linux-terminal",
+  "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "tree": "0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103",
+  "runId": 43790825981,
+  "attempt": 1,
+  "event": "pull_request",
+  "jobId": 133048605315,
+  "startedAt": "2026-11-16T03:10:10Z",
+  "completedAt": "2026-11-16T03:13:28Z",
+  "conclusion": "success",
+  "artifactsRepresentation": "Exact structured artifact API result serialized as JSON with two-space indentation and one final LF; no ZIP bytes downloaded by this child.",
+  "artifact": {
+    "id": 14194717223,
+    "name": "host-process-fixtures-linux-x64-2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "size_in_bytes": 1522914,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14194717223",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14194717223/zip",
+    "expired": false,
+    "created_at": "2026-11-16T03:13:20Z",
+    "expires_at": "2026-11-30T03:13:19Z",
+    "updated_at": "2026-11-16T03:13:20Z",
+    "digest": "sha256:f429ba6adf58fe8aab358f57b00e55b10c0cd193b645d65ea0ea9078c8a53ef5",
+    "workflow_run": {
+      "id": 43790825981,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+      "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+    }
+  },
+  "payloads": [
+    {
+      "path": "process-linux-x64-full.log",
+      "sha": "43c92017eddec3509a3502c7b40491d0e45451e8",
+      "mode": "100644",
+      "type": "blob",
+      "sha256": "3d076539fef07235200b04da9756bf3a3152cd74c45dae42bae3d459ec6dac40",
+      "bytes": 139919
+    },
+    {
+      "path": "process-run-api.json",
+      "sha": "64f02450a3b54e5e6d8429b07a3f03722e0beb54",
+      "mode": "100644",
+      "type": "blob",
+      "sha256": "e8abaf67cc57e234ab6765aa01b5d2e43b8860d642875baa958e78843f4da00e",
+      "bytes": 13846
+    },
+    {
+      "path": "process-jobs-api.json",
+      "sha": "43d93d0bd58663d4c6d02de1e861b067ee7fc34e",
+      "mode": "100644",
+      "type": "blob",
+      "sha256": "dd07246874c2433fb965d135581630217f7da39e102c0c4b838f975dfa6c19f8",
+      "bytes": 30457
+    },
+    {
+      "path": "process-artifacts-api.json",
+      "sha": "b14752a63a8bf812fdd882fb4c81ab1838c5b67d",
+      "mode": "100644",
+      "type": "blob",
+      "sha256": "6d1104aa4c51c48fde97cd0449781114a6249e0b5381bbfad184ab2a40109db1",
+      "bytes": 4552
+    }
+  ],
+  "rawFacts": {
+    "checkoutExact": true,
+    "hostContracts": 167,
+    "protocol": 53,
+    "retainedMain": 81,
+    "posix": 27,
+    "nodeExecNode": 6,
+    "nodeExecElectron": 6,
+    "linuxCustodyVitest": 63,
+    "qualificationJsonRows": [
+      {
+        "n": 1058,
+        "parsed": {
+          "directory": "/home/runner/work/_temp/TEST-process-node24-43790825981/artifact",
+          "manifestSha256": "4a5d2c063a2d3e108b266b736e0f097964f253a1ebb179088962e99dbfdb4350",
+          "actor": "/home/runner/work/_temp/TEST-process-node24-43790825981/registered-process-actor",
+          "linuxChildExec": {
+            "manifestPath": "/home/runner/work/_temp/TEST-process-node24-43790825981/linux-child-exec/manifest.json",
+            "manifestSha256": "28ef39f98a0fa1ebe0b5291fac8ceb2e26694f41b769ba10d6fbf7b85dd3dbe6",
+            "binarySha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+          },
+          "completed": true,
+          "cleaned": true,
+          "automaticAndWarm": true,
+          "binarySha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217",
+          "libc": {
+            "family": "glibc",
+            "minimumVersion": "2.33"
+          },
+          "scope": "Linux automatic custody and retained pidfd native/Host proof; SDK, Desktop and older ABI remain separate"
+        }
+      },
+      {
+        "n": 1072,
+        "parsed": {
+          "directory": "/home/runner/work/_temp/TEST-process-electron-43790825981/artifact",
+          "manifestSha256": "4a5d2c063a2d3e108b266b736e0f097964f253a1ebb179088962e99dbfdb4350",
+          "actor": "/home/runner/work/_temp/TEST-process-electron-43790825981/registered-process-actor",
+          "linuxChildExec": {
+            "manifestPath": "/home/runner/work/_temp/TEST-process-electron-43790825981/linux-child-exec/manifest.json",
+            "manifestSha256": "28ef39f98a0fa1ebe0b5291fac8ceb2e26694f41b769ba10d6fbf7b85dd3dbe6",
+            "binarySha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+          },
+          "completed": true,
+          "cleaned": true,
+          "automaticAndWarm": true,
+          "binarySha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217",
+          "libc": {
+            "family": "glibc",
+            "minimumVersion": "2.33"
+          },
+          "scope": "Linux automatic custody and retained pidfd native/Host proof; SDK, Desktop and older ABI remain separate"
+        }
+      }
+    ],
+    "WindowsSteps15to21": "skipped by original platform predicates",
+    "originalReceiptVerifierStep22": "success",
+    "runCohort": {
+      "pass": 3,
+      "fail": 2
+    }
+  },
+  "limits": "Raw/API/upload source join only. Root owns ZIP member/CRC/receipt verification. No Windows 15-second, Darwin P09, packaged GUI, SDK or older-ABI qualification is transferred. No rerun/cancel/mutation or child runtime."
+}

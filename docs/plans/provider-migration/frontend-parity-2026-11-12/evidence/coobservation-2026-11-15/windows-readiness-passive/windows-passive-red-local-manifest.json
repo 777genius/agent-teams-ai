@@ -1,0 +1,159 @@
+{
+  "stage": "red",
+  "sourceHead": "534ab2e0e7367c20c7dbf8e046904990edf2dd5a",
+  "sourceTree": "dbb3ca99d06bd73a85e46943e396c26b0e3d3663",
+  "parent": "178a0cd27920a9d6fcf47b6807df3219c5d7cfae",
+  "publishedR1": "78baa7668cc67c96dc1629863b38c1cded2e8ed8",
+  "startedAt": "2026-11-16T03:58:49.211716+00:00",
+  "statusBefore": "clean",
+  "sourceFiles": [
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "gitBlob": "3b5a244c27d004af6e82fffa092fa83e1894de73",
+      "bytes": 22408,
+      "physicalLines": 581,
+      "sha256": "447a3ae82ab6ce0ec866305af2cd426619df3618fbec2397931212379d945784"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "gitBlob": "2fe449639596cdb07bf5ef39d8040c65d9d6538c",
+      "bytes": 11592,
+      "physicalLines": 294,
+      "sha256": "b5c6b9e8924c4eb897f14c2ac4a355e6d505f515fe811c86667144bba4e362f9"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "gitBlob": "0486ca44781ab8b9da889df212f3aeeb3879b6c3",
+      "bytes": 22544,
+      "physicalLines": 264,
+      "sha256": "0932f7d81666c65572f3f6c36ce86d79d668f25296983650a54adadad16a5ae8"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "gitBlob": "60548e4b0477924fd2c068283b9372f21946b198",
+      "bytes": 59303,
+      "physicalLines": 787,
+      "sha256": "39cc1b610688ba9b24e59a9f3567bc73f953f52000e949ed6cd6160783bf80ab"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "gitBlob": "a7e45d6cadba355ec46a516a68297d46147d741e",
+      "bytes": 6451,
+      "physicalLines": 86,
+      "sha256": "83d26a98fd977696a05aafbceae9e28a1fbf71c553bc9c1db565c20567fcf470"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/host-custody-recovery.test.ts",
+      "gitBlob": "c7dc0f97576ce03c9371d4bd62fe7cd993ac7773",
+      "bytes": 20855,
+      "physicalLines": 340,
+      "sha256": "197369c34c0fcab3c9c36a42c020811d681523c168715de11c484593997d27db"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "gitBlob": "e56cdabf97cfe2596b7622719237811560624bd6",
+      "bytes": 50451,
+      "physicalLines": 1190,
+      "sha256": "821423f25d0b70fe9e7824c8f85b8d031a24cd9d85944732a81b8fc05794d8fe"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "gitBlob": "43325a4e2b4d7ad2b69bacab51275a2a2af9bd8f",
+      "bytes": 234346,
+      "physicalLines": 4216,
+      "sha256": "79d421073338c10b7d09c969fc0786ffaf2a7a04b4d7a955456deb8545eb7cad"
+    }
+  ],
+  "nodeExecutable": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeVersion": "v24.21.0",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "pnpmVersion": "11.22.0",
+  "AGENT_TEAMS_INSTALL_PROFILE": "node-ci",
+  "AGENT_BACKEND_TEST_NODE": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "resourceFlags": {
+    "NODE_OPTIONS": null,
+    "GOMAXPROCS": null,
+    "GOMEMLIMIT": null
+  },
+  "buildReuse": {
+    "newBuildAttempts": 0,
+    "verifiedHostBuildSource": "67c7135fb4e7d656c8cb4d96ad07a04d33bec263",
+    "allInterveningNonDocsPaths": [
+      "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts",
+      "packages/legacy-agent-host/tests/host-custody-recovery.test.ts",
+      "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "scripts/e2e/teams-create-page-owned-processes.test.mjs",
+      "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts"
+    ],
+    "compiledDependencyInputsUnchanged": true,
+    "retainedCompiledArtifacts": [
+      {
+        "path": "packages/legacy-agent-host/dist/owned-process/HostWindowsLaunch.js",
+        "bytes": 21981,
+        "sha256": "975108117efd64201c73fb9f565ac890d8b156f7c0a06eb46d5bb6fc15018cb4"
+      },
+      {
+        "path": "packages/legacy-agent-host/dist/adapters/providers/CodexMemberProvider.js",
+        "bytes": 11949,
+        "sha256": "a3959cb29561c2d4ec820f996fdd3a3ad4982beff62de2c01b4f4cb54a8f4574"
+      },
+      {
+        "path": "packages/legacy-agent-host/dist/management/identity.js",
+        "bytes": 719,
+        "sha256": "ae3ec4ea11dfc4231080dca833904d2a51df9a3d400157c0aaaab46c61c1c400"
+      },
+      {
+        "path": "packages/legacy-agent-host/dist/adapters/providers/observeMemberProcessStderr.js",
+        "bytes": 8412,
+        "sha256": "5cb7e0122cbd8d9ebb3e224c7d0b2322df349c1f0a8092fe7aeaf8a19fd2d581"
+      },
+      {
+        "path": "packages/task-change-ledger/dist/index.js",
+        "bytes": 211,
+        "sha256": "1ce49dfb30b0d3e69024559da9e36060c81e8fd3fb90300102a57858f85f5353"
+      }
+    ],
+    "installedProviderArchives": [
+      {
+        "package": "provider-implementations",
+        "archiveBytes": 186398,
+        "archiveSha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+        "allArchiveRegularFilesEqualInstalled": true,
+        "comparedFiles": 253
+      },
+      {
+        "package": "provider-session-contracts",
+        "archiveBytes": 6230,
+        "archiveSha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+        "allArchiveRegularFilesEqualInstalled": true,
+        "comparedFiles": 12
+      }
+    ]
+  },
+  "steps": [
+    {
+      "name": "windows-passive-red-three-files.log",
+      "argv": [
+        "node",
+        "--test",
+        "packages/legacy-agent-host/tests/host-custody-recovery.test.ts",
+        "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts"
+      ],
+      "startedAt": "2026-11-16T03:58:49.319204+00:00",
+      "finishedAt": "2026-11-16T03:58:57.395135+00:00",
+      "durationSeconds": 8.075935161992675,
+      "exitCode": 1,
+      "bytes": 24932,
+      "sha256": "705ae3f1381e3f934d87e85c64c69d8a349487cd31a17d86cccf5669d2e842a8"
+    }
+  ],
+  "qualification": "Original finite Host/controlled-provider diagnostic baseline only; not Windows readiness, GUI, native platform or real-vendor qualification.",
+  "statusAfter": "",
+  "finishedAt": "2026-11-16T03:58:57.414406+00:00",
+  "allExecutedStepsExitZero": false,
+  "allAuthorizedStepsExecuted": true
+}

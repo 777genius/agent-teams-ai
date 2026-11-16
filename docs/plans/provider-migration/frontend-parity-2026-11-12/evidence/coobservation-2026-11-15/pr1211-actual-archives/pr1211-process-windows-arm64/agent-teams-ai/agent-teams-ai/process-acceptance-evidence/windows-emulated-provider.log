@@ -1,0 +1,12 @@
+gate-owned-sandbox:C:\Users\RUNNER~1\AppData\Local\Temp\opgE093.tmp
+{"nativeLauncherObservation":{"mode":"npm-node","phase":"start"}}
+{"nativeLauncherObservation":{"mode":"npm-node","phase":"close","exitCode":0,"stderrBytes":0,"capturedBytes":0,"stderrTruncated":false,"stderr":""}}
+{"nativeLauncherObservation":{"mode":"generated-bun","phase":"start"}}
+{"nativeLauncherObservation":{"mode":"generated-bun","phase":"close","exitCode":0,"stderrBytes":0,"capturedBytes":0,"stderrTruncated":false,"stderr":""}}
+{"nativeLauncherObservation":{"mode":"opaque-cmd","phase":"start"}}
+{"nativeLauncherObservation":{"mode":"opaque-cmd","phase":"close","exitCode":0,"stderrBytes":0,"capturedBytes":0,"stderrTruncated":false,"stderr":""}}
+{"nativeLauncherObservation":{"mode":"positional-bat","phase":"start"}}
+{"nativeLauncherObservation":{"mode":"positional-bat","phase":"close","exitCode":0,"stderrBytes":0,"capturedBytes":0,"stderrTruncated":false,"stderr":""}}
+{"nativeLauncherObservation":{"mode":"npm-native","phase":"start"}}
+{"nativeLauncherObservation":{"mode":"npm-native","phase":"close","exitCode":7,"stderrBytes":24,"capturedBytes":24,"stderrTruncated":false,"stderr":"TEST native stderr tail\n"}}
+{"gateController":"drained","rootExitCode":0,"activeProcesses":0}

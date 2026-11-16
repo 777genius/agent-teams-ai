@@ -1,0 +1,46 @@
+{
+  "artifactId": 14192508608,
+  "sourceCommit": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "zipBytes": 13229,
+  "zipSha256": "bf48649836934772b34da0e17089dd16a287dca8710e3e6962ddabb2167c351b",
+  "crcVerified": true,
+  "safeUniqueMemberPaths": true,
+  "members": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "bytes": 20755,
+      "sha256": "b76c56206a84e0b587f855cf4d7d0fc9a336d7084ff866afdb1a4df7cf790cff",
+      "gitBlobSha": "a8e2993d4b613888ab8d27dc77b98f3a798cf53b"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log",
+      "bytes": 5175,
+      "sha256": "203d745af54aa491d00c8efce3833e85c77b4ad70b0f636ca8b3f3239a5a9fb8",
+      "gitBlobSha": "28302d02252ee88ae53647f76ea33084fd053f88"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "bytes": 771,
+      "sha256": "0943a5e3689832ed9f999d52af8001deca0cbf6949e06111410bfb4bbf17345c",
+      "gitBlobSha": "59ed145cc0acd789ea85d29dbb6830294d75aba9"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "bytes": 9913,
+      "sha256": "47176e9b28068a2678fcc4c2536f8935da25d392362210fded4c3a7fff1a3a28",
+      "gitBlobSha": "be84326d334bf7769eb5d7aeb66a04a098610f65"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+      "bytes": 493,
+      "sha256": "219bb95ead1141ac370c7efdd1cb85cb73c95a4c74651fdd61e24f5d8139bbf8",
+      "gitBlobSha": "dc2ddeefccf4f834bfa6b8c253df7b639669a130"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "bytes": 41,
+      "sha256": "678ca33e75d73fda1619b6e84e09264639fdbe410f0265751b208eed3f84193b",
+      "gitBlobSha": "e7138e35ffe5c23df65f0dc6a922d79ae58b62c4"
+    }
+  ]
+}

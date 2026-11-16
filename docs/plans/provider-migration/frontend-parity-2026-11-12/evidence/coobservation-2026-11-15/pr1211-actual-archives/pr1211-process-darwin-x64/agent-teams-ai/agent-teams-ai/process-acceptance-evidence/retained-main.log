@@ -1,0 +1,64 @@
+
+[1m[46m RUN [49m[22m [36mv3.2.6 [39m[90m/Users/runner/work/agent-teams-ai/agent-teams-ai[39m
+
+[90mstdout[2m | test/features/agent-backend/desktopBackendFeature.test.ts
+[22m[39mDownloading Electron binary...
+
+{"kind":"TEST_LAZY_HOST_STARTUP_OBSERVATION","point":"case-finally","observations":[{"phase":"profile-validation-start","kind":"handshake","elapsedMs":22555},{"phase":"profile-validation-complete","kind":"handshake","elapsedMs":23003},{"phase":"child-captured","kind":"handshake","elapsedMs":23005},{"phase":"request-admitted","kind":"handshake","elapsedMs":23005},{"phase":"response-accepted","kind":"handshake","elapsedMs":24351},{"phase":"ready","kind":"handshake","elapsedMs":24351}],"dropped":0,"pending":{"state":"resolved-failure","code":"forbidden","outcome":"not-dispatched"}}
+ [32m✓[39m test/features/agent-backend/desktopBackendFeature.test.ts [2m([22m[2m16 tests[22m[2m)[22m[33m 12726[2mms[22m[39m
+   [33m[2m✓[22m[39m captures global and exact project provider scopes without Team handles or default-owner fallback [33m 1616[2mms[22m[39m
+   [33m[2m✓[22m[39m routes paired facade sends through the original captured owner with both immutable bindings [33m 802[2mms[22m[39m
+   [33m[2m✓[22m[39m uses two lazily captured subprocess hosts and captured context grants for finite IPC operations [33m 1760[2mms[22m[39m
+   [33m[2m✓[22m[39m connection discovery ignores renderer context claims and denies navigation/context changes during initialization [33m 699[2mms[22m[39m
+   [33m[2m✓[22m[39m keeps healthy owner discovery available after original transport loss [33m 1506[2mms[22m[39m
+   [33m[2m✓[22m[39m keeps malformed registry, binding conflicts and stale discovery context fatal [33m 1347[2mms[22m[39m
+   [33m[2m✓[22m[39m HTTP discovery uses the same captured context and rejects client context overrides [33m 739[2mms[22m[39m
+   [33m[2m✓[22m[39m rechecks captured context after lazy host startup before dispatching a finite command [33m 1826[2mms[22m[39m
+   [33m[2m✓[22m[39m rejects a lazy startup marker when the original selected Host closes first [33m 733[2mms[22m[39m
+   [33m[2m✓[22m[39m native health starts only the granted default owner and reports actual handshake without provider or Team work [33m 879[2mms[22m[39m
+ [32m✓[39m test/features/agent-backend/capturedHostClient.test.ts [2m([22m[2m33 tests[22m[2m)[22m[33m 45327[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mkeeps the original service intent and scope through late ACK and a successor Host [33m 2210[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mderives retained service absence only from the original whole-Job proof: job-membership [33m 1173[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mderives retained service absence only from the original whole-Job proof: no-local-dispatch [33m 1084[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mretains Main launch/stdio/receipt ownership across graceful Host close [33m 1725[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mretains Main launch/stdio/receipt ownership across crash Host close [33m 1766[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mqueues multi-member launch and graceful cleanup without caching capacity refusals [33m 1192[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mqueues multi-member launch and expired cleanup without caching capacity refusals [33m 1356[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mholds Main reply bytes before native effect, expiry=false [33m 968[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mholds Main reply bytes before native effect, expiry=true [33m 1016[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mkeeps the original TEST physical owner across Host loss, without replaying an unacknowledged write [33m 2384[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mreserves native control under full reverse request and shared reply-byte budgets [33m 1054[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mstarts the actual public CLI with the selected standalone Node artifact [33m 1077[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mhandshakes with the packed host, serves two inputs, then confirms scoped close [33m 941[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mkeeps a committed effect unknown after response loss and never replays it [33m 941[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mdoes not turn a generic remote exception after an effect into a rejection receipt [33m 894[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mrejects malformed frames before treating them as successful responses [33m 897[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mrejects oversized frames before treating them as successful responses [33m 930[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mrejects invalid UTF8 frames before treating them as successful responses [33m 963[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mrejects a handshake with 8 priority slots that cannot admit work [33m 907[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mrejects a handshake with 7 priority slots that cannot admit work [33m 1027[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mkeeps one work output slot alongside the full control reserve [33m 1151[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mreserves request capacity for control while work requests wait [33m 970[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mrequest timeout retains unknown outcome while independent control remains available [33m 1121[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mbounds notifications and exposes a gap without blocking responses [33m 1109[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mrejects changed selected bytes before host allocation [33m 567[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mrejects mismatched host build identity [33m 7587[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mseals pending startup before validation can spawn the host [33m 2508[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mrechecks shutdown after asynchronous Node launch resolution before original allocation [33m 619[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mshutdown does not kill an unrelated captured test child [33m 978[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mwaits for advertised cleanup budget 200 before signaling the original Host [33m 1049[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mwaits for advertised cleanup budget 6000 before signaling the original Host [33m 1031[2mms[22m[39m
+   [33m[2m✓[22m[39m captured legacy host client over real subprocess stdio[2m > [22mkeeps finite Host cleanup timeout distinct from confirmed child exit and provider release [33m 1068[2mms[22m[39m
+ [32m✓[39m test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 7596[2mms[22m[39m
+   [33m[2m✓[22m[39m pending original custody stays UNKNOWN after the existing drain bound and late release [33m 7109[2mms[22m[39m
+ [32m✓[39m test/features/agent-backend/capturedWindowsSourceHistory.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 394[2mms[22m[39m
+ [32m✓[39m test/features/agent-backend/capturedWindowsSelection.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 151[2mms[22m[39m
+ [32m✓[39m test/features/agent-backend/fileTeamModelProbeIntents.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 272[2mms[22m[39m
+ [32m✓[39m test/features/agent-backend/capturedWindowsSourcePending.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 57[2mms[22m[39m
+ [32m✓[39m test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m8 passed[39m[22m[90m (8)[39m
+[2m      Tests [22m [1m[32m81 passed[39m[22m[90m (81)[39m
+[2m   Start at [22m 02:33:25
+[2m   Duration [22m 95.45s[2m (transform 5.41s, setup 3.86s, collect 21.23s, tests 66.54s, environment 2ms, prepare 1.13s)[22m
+

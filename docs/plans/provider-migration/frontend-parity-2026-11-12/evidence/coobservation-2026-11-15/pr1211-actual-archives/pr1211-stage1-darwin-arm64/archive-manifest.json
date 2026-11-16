@@ -1,0 +1,37 @@
+{
+  "repository": "777genius/agent-teams-ai",
+  "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "run": 43790825753,
+  "job": 133048605067,
+  "artifact": 14193055858,
+  "archiveBytes": 10454,
+  "archiveSha256": "2251fa8fe2a1cdd3e091e35f0b376e7144352892f09f99d3cb1bbf8a9e3920ad",
+  "crcVerified": true,
+  "uniqueSafePaths": true,
+  "members": [
+    {
+      "path": "opencode-v2-embedded-inputs.json",
+      "bytes": 2374,
+      "sha256": "160c8b636c2efc67a41ebced121d1e0aa1e9eb1730b7a3a4b12c35d4bc5524ac",
+      "gitBlobSha1": "73f7787d681875429da9daa8c7276b82f207131e"
+    },
+    {
+      "path": "opencode-v2-darwin-custody.json",
+      "bytes": 1440,
+      "sha256": "02c0cebaad1b49d400ea3d12f3857c868dab726989b46ef953b6f0d10836cbdc",
+      "gitBlobSha1": "d85c9d222b3bf9fd0f96784efab92e0a40e19ec1"
+    },
+    {
+      "path": "opencode-v2-embedded-host.json",
+      "bytes": 94992,
+      "sha256": "d9f95644df7b1f26205d250ebf898f3dc13978942fc7100484ee5c25466dcb2d",
+      "gitBlobSha1": "b5e39cb1be3514b57c977a2a31d56a8250c7d4b4"
+    },
+    {
+      "path": "opencode-v2-posix-exec.json",
+      "bytes": 14566,
+      "sha256": "9a507d925e273c6228bc23c0552aa2c1f8c59bfdda240c8b19347ceb75b40d7f",
+      "gitBlobSha1": "e5063e8c2cb7981d3fdfd58b5fc217a21ea6efa8"
+    }
+  ]
+}

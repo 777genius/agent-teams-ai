@@ -1,0 +1,462 @@
+{
+  "schemaVersion": 1,
+  "runId": 43790825796,
+  "attempt": 1,
+  "event": "pull_request",
+  "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "job": {
+    "id": 133068178230,
+    "run_id": 43790825796,
+    "workflow_name": "Electron packaged CI",
+    "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+    "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825796",
+    "run_attempt": 1,
+    "node_id": "CR_kwDORVTEtM8AAAAe-3tDNg",
+    "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133068178230",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825796/job/133068178230",
+    "status": "completed",
+    "conclusion": "failure",
+    "created_at": "2026-11-16T03:15:23Z",
+    "started_at": "2026-11-16T03:20:14Z",
+    "completed_at": "2026-11-16T03:45:32Z",
+    "name": "packaged smoke (win32-arm64)",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-16T03:20:15Z",
+        "completed_at": "2026-11-16T03:20:18Z"
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-11-16T03:20:18Z",
+        "completed_at": "2026-11-16T03:20:59Z"
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-11-16T03:20:59Z",
+        "completed_at": "2026-11-16T03:21:26Z"
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-16T03:21:26Z",
+        "completed_at": "2026-11-16T03:24:27Z"
+      },
+      {
+        "name": "Run actions/setup-python@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-16T03:24:27Z",
+        "completed_at": "2026-11-16T03:26:29Z"
+      },
+      {
+        "name": "Install Linux packaging tools",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 6,
+        "started_at": "2026-11-16T03:26:29Z",
+        "completed_at": "2026-11-16T03:26:29Z"
+      },
+      {
+        "name": "Restore node-gyp executable bit",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7,
+        "started_at": "2026-11-16T03:26:29Z",
+        "completed_at": "2026-11-16T03:26:32Z"
+      },
+      {
+        "name": "Verify selected provider archives against frozen lock before install",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-16T03:26:32Z",
+        "completed_at": "2026-11-16T03:26:33Z"
+      },
+      {
+        "name": "Install frozen dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9,
+        "started_at": "2026-11-16T03:26:33Z",
+        "completed_at": "2026-11-16T03:37:18Z"
+      },
+      {
+        "name": "Verify managed Git pins and archive path safety",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10,
+        "started_at": "2026-11-16T03:37:18Z",
+        "completed_at": "2026-11-16T03:37:18Z"
+      },
+      {
+        "name": "Validate packaged OpenCode project-path smoke syntax early",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 11,
+        "started_at": "2026-11-16T03:37:18Z",
+        "completed_at": "2026-11-16T03:37:18Z"
+      },
+      {
+        "name": "Typecheck packaged CI policy with pinned compiler",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 12,
+        "started_at": "2026-11-16T03:37:18Z",
+        "completed_at": "2026-11-16T03:37:19Z"
+      },
+      {
+        "name": "Assert Electron binary was provisioned during install",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13,
+        "started_at": "2026-11-16T03:37:19Z",
+        "completed_at": "2026-11-16T03:37:20Z"
+      },
+      {
+        "name": "Test bundled undici security version policy",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 14,
+        "started_at": "2026-11-16T03:37:20Z",
+        "completed_at": "2026-11-16T03:37:20Z"
+      },
+      {
+        "name": "Verify CI Node and Electron built-in undici versions",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15,
+        "started_at": "2026-11-16T03:37:20Z",
+        "completed_at": "2026-11-16T03:37:23Z"
+      },
+      {
+        "name": "Verify native rebuild",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16,
+        "started_at": "2026-11-16T03:37:23Z",
+        "completed_at": "2026-11-16T03:39:27Z"
+      },
+      {
+        "name": "Stage bundled runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17,
+        "started_at": "2026-11-16T03:39:27Z",
+        "completed_at": "2026-11-16T03:39:36Z"
+      },
+      {
+        "name": "Stage terminal platform runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 18,
+        "started_at": "2026-11-16T03:39:36Z",
+        "completed_at": "2026-11-16T03:39:38Z"
+      },
+      {
+        "name": "Stage Windows console wrapper",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 19,
+        "started_at": "2026-11-16T03:39:38Z",
+        "completed_at": "2026-11-16T03:39:42Z"
+      },
+      {
+        "name": "Build app",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 20,
+        "started_at": "2026-11-16T03:39:42Z",
+        "completed_at": "2026-11-16T03:42:07Z"
+      },
+      {
+        "name": "Select exact Host Node for candidate staging",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 21,
+        "started_at": "2026-11-16T03:42:07Z",
+        "completed_at": "2026-11-16T03:42:19Z"
+      },
+      {
+        "name": "Prepare actual pinned V2 Bun, engine and admitted process custody",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 22,
+        "started_at": "2026-11-16T03:42:19Z",
+        "completed_at": "2026-11-16T03:43:35Z"
+      },
+      {
+        "name": "Prefill pinned macOS arm64 Host Node archive",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23,
+        "started_at": "2026-11-16T03:43:35Z",
+        "completed_at": "2026-11-16T03:43:35Z"
+      },
+      {
+        "name": "Stage V2 Host closure in existing candidate extraResources",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24,
+        "started_at": "2026-11-16T03:43:35Z",
+        "completed_at": "2026-11-16T03:45:07Z"
+      },
+      {
+        "name": "Typecheck and test packaged Host capture boundaries",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 25,
+        "started_at": "2026-11-16T03:45:07Z",
+        "completed_at": "2026-11-16T03:45:10Z"
+      },
+      {
+        "name": "Verify and stage original Windows scoped broker for packaged Retry",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 26,
+        "started_at": "2026-11-16T03:45:10Z",
+        "completed_at": "2026-11-16T03:45:10Z"
+      },
+      {
+        "name": "Package unsigned test bundle",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 27,
+        "started_at": "2026-11-16T03:45:10Z",
+        "completed_at": "2026-11-16T03:45:10Z"
+      },
+      {
+        "name": "Verify bundle native architecture",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 28,
+        "started_at": "2026-11-16T03:45:10Z",
+        "completed_at": "2026-11-16T03:45:10Z"
+      },
+      {
+        "name": "Smoke packaged SQLite and PTY modules",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 29,
+        "started_at": "2026-11-16T03:45:10Z",
+        "completed_at": "2026-11-16T03:45:10Z"
+      },
+      {
+        "name": "Smoke packaged Git without external installation",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 30,
+        "started_at": "2026-11-16T03:45:10Z",
+        "completed_at": "2026-11-16T03:45:10Z"
+      },
+      {
+        "name": "Smoke managed Git inside native Windows terminal",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 31,
+        "started_at": "2026-11-16T03:45:10Z",
+        "completed_at": "2026-11-16T03:45:10Z"
+      },
+      {
+        "name": "Smoke packaged MCP handshake",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 32,
+        "started_at": "2026-11-16T03:45:10Z",
+        "completed_at": "2026-11-16T03:45:10Z"
+      },
+      {
+        "name": "Verify macOS 13 minimum",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 33,
+        "started_at": "2026-11-16T03:45:10Z",
+        "completed_at": "2026-11-16T03:45:10Z"
+      },
+      {
+        "name": "Smoke packaged app",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 34,
+        "started_at": "2026-11-16T03:45:10Z",
+        "completed_at": "2026-11-16T03:45:10Z"
+      },
+      {
+        "name": "Qualify packaged macOS OpenCode project-path status and model list",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 35,
+        "started_at": "2026-11-16T03:45:10Z",
+        "completed_at": "2026-11-16T03:45:10Z"
+      },
+      {
+        "name": "Smoke packaged app under Xvfb",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 36,
+        "started_at": "2026-11-16T03:45:10Z",
+        "completed_at": "2026-11-16T03:45:10Z"
+      },
+      {
+        "name": "Qualify actual packaged V2 Host tools, MCP, Stop and cold Resume",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 37,
+        "started_at": "2026-11-16T03:45:10Z",
+        "completed_at": "2026-11-16T03:45:10Z"
+      },
+      {
+        "name": "Qualify packaged Windows same-Main Retry and original Processes UI Kill with finite peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 38,
+        "started_at": "2026-11-16T03:45:10Z",
+        "completed_at": "2026-11-16T03:45:10Z"
+      },
+      {
+        "name": "Qualify original packaged macOS app relaunch with finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 39,
+        "started_at": "2026-11-16T03:45:10Z",
+        "completed_at": "2026-11-16T03:45:10Z"
+      },
+      {
+        "name": "Preserve exact packaged Host evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 40,
+        "started_at": "2026-11-16T03:45:10Z",
+        "completed_at": "2026-11-16T03:45:12Z"
+      },
+      {
+        "name": "Post Select exact Host Node for candidate staging",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 76,
+        "started_at": "2026-11-16T03:45:12Z",
+        "completed_at": "2026-11-16T03:45:12Z"
+      },
+      {
+        "name": "Post Run actions/setup-python@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 77,
+        "started_at": "2026-11-16T03:45:12Z",
+        "completed_at": "2026-11-16T03:45:12Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 78,
+        "started_at": "2026-11-16T03:45:12Z",
+        "completed_at": "2026-11-16T03:45:12Z"
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 79,
+        "started_at": "2026-11-16T03:45:12Z",
+        "completed_at": "2026-11-16T03:45:12Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 80,
+        "started_at": "2026-11-16T03:45:12Z",
+        "completed_at": "2026-11-16T03:45:17Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 81,
+        "started_at": "2026-11-16T03:45:17Z",
+        "completed_at": "2026-11-16T03:45:17Z"
+      }
+    ],
+    "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133068178230",
+    "labels": [
+      "windows-11-arm"
+    ],
+    "runner_id": 1000376195,
+    "runner_name": "GitHub Actions 1000376195",
+    "runner_group_id": 0,
+    "runner_group_name": "GitHub Actions"
+  },
+  "artifact": {
+    "id": 14196440139,
+    "name": "packaged-v2-host-win32-arm64-2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "size_in_bytes": 344326,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14196440139",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14196440139/zip",
+    "expired": false,
+    "created_at": "2026-11-16T03:45:12Z",
+    "expires_at": "2026-11-23T03:45:11Z",
+    "updated_at": "2026-11-16T03:45:12Z",
+    "digest": "sha256:70b805d532d41ccfd73c27973b60f66c5ebe3b79c1d12ec0c2181e5d3fda37dd",
+    "workflow_run": {
+      "id": 43790825796,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+      "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+    }
+  },
+  "files": [
+    {
+      "path": "win32-arm64-full.log",
+      "sha": "80645990500263176c5e278c9b3993a6a4890e51",
+      "sha256": "ba34b2ef410f6d5b891de6ab1c2786aeaeff13b17fa84599e21a30148f186578",
+      "bytes": 178785
+    },
+    {
+      "path": "run-api.json",
+      "sha": "a501a3aa3ab5a43d3e1f44e9d9f0bd92eb63ddd1",
+      "sha256": "316b402db1c7f2382a3b267d254d2c261564489d43bfdd70ea2fa997b250af3d",
+      "bytes": 13826
+    },
+    {
+      "path": "jobs-api.json",
+      "sha": "eb63676f828d6e4497069eb156aa1089e4a73ab7",
+      "sha256": "f72ed1cb1cc002f869e4b23f90b39e6632695680357c3e6821ec6ea4ccc07ad0",
+      "bytes": 40258
+    },
+    {
+      "path": "artifacts-api.json",
+      "sha": "e26607b1c3f37e1c4c1e146bb6aad5df2ae0745c",
+      "sha256": "d41fb76c09fec1692b1dfe15055f79cc3b2c3d72f0a6cb52028c5f701dd75fe4",
+      "bytes": 3630
+    }
+  ],
+  "rawChecks": {
+    "checkout": true,
+    "sourceHead": true,
+    "soleTypeDiagnostic": true,
+    "diagnostic": "2026-11-16T03:45:10.8050460Z ##[error]scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts(1760,82): error TS2378: A 'get' accessor must return a value.\r",
+    "exit": "2026-11-16T03:45:10.8901633Z ##[error]Process completed with exit code 1.\r"
+  },
+  "limits": [
+    "Original step25 scripts compiler failed before its following Node command; no package/native/GUI/relaunch runtime was reached.",
+    "Original2ab/frozena78 getter1760 only; later current44cf line1762 plus reviewed return-keyword proposal are separate.",
+    "Run API is separately retained original snapshot; direct03:47:22 jobs API proves terminal job.",
+    "Original Linux platform remains queued. Edited-metadata43792074232 is not substituted.",
+    "Artifact API/raw upload match only; no child ZIP bytes inspected, no runtime or action."
+  ]
+}

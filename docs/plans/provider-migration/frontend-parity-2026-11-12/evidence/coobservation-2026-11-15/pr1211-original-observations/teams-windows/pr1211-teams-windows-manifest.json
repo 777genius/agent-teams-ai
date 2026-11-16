@@ -1,0 +1,289 @@
+{
+  "schemaVersion": 1,
+  "repository": "777genius/agent-teams-ai",
+  "pr": 1211,
+  "sourceHead": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "sourceTree": "0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103",
+  "runId": 43790825857,
+  "attempt": 1,
+  "job": {
+    "id": 133048605242,
+    "run_id": 43790825857,
+    "workflow_name": "Teams creation page Electron E2E",
+    "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+    "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825857",
+    "run_attempt": 1,
+    "node_id": "CR_kwDORVTEtM8AAAAe-lCaOg",
+    "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048605242",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825857/job/133048605242",
+    "status": "completed",
+    "conclusion": "failure",
+    "created_at": "2026-11-16T02:13:21Z",
+    "started_at": "2026-11-16T02:14:07Z",
+    "completed_at": "2026-11-16T02:21:20Z",
+    "name": "Creation page (windows-latest)",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-16T02:14:07Z",
+        "completed_at": "2026-11-16T02:14:08Z"
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-11-16T02:14:08Z",
+        "completed_at": "2026-11-16T02:14:23Z"
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-11-16T02:14:23Z",
+        "completed_at": "2026-11-16T02:14:23Z"
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-16T02:14:23Z",
+        "completed_at": "2026-11-16T02:14:38Z"
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-16T02:14:38Z",
+        "completed_at": "2026-11-16T02:14:47Z"
+      },
+      {
+        "name": "Prepare Linux virtual display and zh-TW font fallback",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 6,
+        "started_at": "2026-11-16T02:14:47Z",
+        "completed_at": "2026-11-16T02:14:47Z"
+      },
+      {
+        "name": "Install frozen dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7,
+        "started_at": "2026-11-16T02:14:47Z",
+        "completed_at": "2026-11-16T02:16:42Z"
+      },
+      {
+        "name": "Build isolated Host before Electron startup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-16T02:16:42Z",
+        "completed_at": "2026-11-16T02:16:46Z"
+      },
+      {
+        "name": "Stage pinned terminal-platform runtime before Electron startup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9,
+        "started_at": "2026-11-16T02:16:46Z",
+        "completed_at": "2026-11-16T02:16:50Z"
+      },
+      {
+        "name": "Ensure Electron binary before UI E2E",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10,
+        "started_at": "2026-11-16T02:16:50Z",
+        "completed_at": "2026-11-16T02:16:55Z"
+      },
+      {
+        "name": "Verify owned Windows process census and fail-closed teardown invariants",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11,
+        "started_at": "2026-11-16T02:16:55Z",
+        "completed_at": "2026-11-16T02:16:55Z"
+      },
+      {
+        "name": "Exercise actual Electron Create/Back/Resume/Copy/Launch",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 12,
+        "started_at": "2026-11-16T02:16:55Z",
+        "completed_at": "2026-11-16T02:21:16Z"
+      },
+      {
+        "name": "Upload sanitized evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13,
+        "started_at": "2026-11-16T02:21:16Z",
+        "completed_at": "2026-11-16T02:21:17Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 24,
+        "started_at": "2026-11-16T02:21:17Z",
+        "completed_at": "2026-11-16T02:21:17Z"
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 25,
+        "started_at": "2026-11-16T02:21:17Z",
+        "completed_at": "2026-11-16T02:21:17Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 26,
+        "started_at": "2026-11-16T02:21:17Z",
+        "completed_at": "2026-11-16T02:21:19Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 27,
+        "started_at": "2026-11-16T02:21:19Z",
+        "completed_at": "2026-11-16T02:21:19Z"
+      }
+    ],
+    "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048605242",
+    "labels": [
+      "windows-latest"
+    ],
+    "runner_id": 1000375860,
+    "runner_name": "GitHub Actions 1000375860",
+    "runner_group_id": 0,
+    "runner_group_name": "GitHub Actions"
+  },
+  "artifact": {
+    "id": 14192491795,
+    "node_id": "MDg6QXJ0aWZhY3QxNDE5MjQ5MTc5NQ==",
+    "name": "teams-create-page-windows-latest-2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "size_in_bytes": 1838753,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192491795",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192491795/zip",
+    "expired": false,
+    "digest": "sha256:5b16a06bd424999c34b61b627e1be2456d312c9938441be6dd21303dca07d281",
+    "created_at": "2026-11-16T02:21:17Z",
+    "updated_at": "2026-11-16T02:21:17Z",
+    "expires_at": "2026-11-30T02:21:16Z",
+    "workflow_run": {
+      "id": 43790825857,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+      "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+    }
+  },
+  "payloads": [
+    {
+      "path": "pr1211-teams-windows-job.log",
+      "gitBlob": "7ad39f580552754086a9cfd5acf3f9a8183ee768",
+      "bytes": 91464,
+      "sha256": "16c25583e714b11930f656e697c8874c17076545ade1f728dddcf1f32db0d36a"
+    },
+    {
+      "path": "pr1211-teams-windows-run-api.json",
+      "gitBlob": "f06f6caa2b086701d83456b4ccee0a623716fc5f",
+      "bytes": 13846,
+      "sha256": "cc3e388ab32b91dc4563d7175e87ccc8a8342cdc674489984a4c84960666f503"
+    },
+    {
+      "path": "pr1211-teams-windows-jobs-api.json",
+      "gitBlob": "d3928d9f2785ed5a4cac564dbd74e06736f17029",
+      "bytes": 8530,
+      "sha256": "6532b22dd2574931b578befe2bac46368bce00d786ac79c19f79f60782b8e9fa"
+    },
+    {
+      "path": "pr1211-teams-windows-artifacts-api.json",
+      "gitBlob": "5574bc70a0357ba5a844f0ad77045d16367bc595",
+      "bytes": 828,
+      "sha256": "31c48a3136d2323d7b258fdd65e6bd9b46e5cfd2e069bb3a7bc13ff3d3f65a35"
+    }
+  ],
+  "sourceJoin": [
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "gitBlob": "ef939f224a1642cb596906324c8d61441780ccc7"
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-desktop.mjs",
+      "gitBlob": "764d42763c8eab6592235acf75073253538cfe38"
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-owned-processes.test.mjs",
+      "gitBlob": "d3779ede535583c88f81fa5e747d008f45863c48"
+    }
+  ],
+  "actualPrerequisites": {
+    "ownedProcess": {
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "skip": 0,
+      "cancelled": 0,
+      "todo": 0
+    }
+  },
+  "firstFailure": {
+    "step": 12,
+    "kind": "timeout",
+    "message": "Timed out waiting for fully hydrated visible localized task detail in active native tab",
+    "site": "scripts/e2e/teams-create-page-desktop.mjs:1214:3",
+    "waiter": "scripts/e2e/teams-create-page-desktop.mjs:462:11",
+    "phase": "Original zh-TW task detail dialog→separate active task-tab hydration wait after earlier Create/Back/Resume/Copy/Launch/config/schedule steps."
+  },
+  "runSnapshot": {
+    "status": "queued",
+    "conclusion": null,
+    "event": "pull_request",
+    "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "run_attempt": 1,
+    "pull_requests": [
+      {
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1211",
+        "id": 5329837011,
+        "number": 1211,
+        "head": {
+          "ref": "ci/frontend-parity-logs-native-green-c714-20261116",
+          "sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        },
+        "base": {
+          "ref": "ci/frontend-parity-logs-native-base-c714-20261116",
+          "sha": "0b3fa6117b1856b947d799f95bae7aae0238061c",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        }
+      }
+    ]
+  },
+  "limits": [
+    "Actual failure and original prerequisite counts only; no overall GUI/native/cleanup PASS.",
+    "Full raw logs and API/upload artifact ID/size/digest joined. Child did not download, CRC-check or inspect actual ZIP bytes; root owns that step.",
+    "No source/ref/PR mutation, local execution, input replay, timeout change, CI rerun or cancellation.",
+    "Initial run metadata may lag the terminal job; no aggregate conclusion is inferred."
+  ]
+}

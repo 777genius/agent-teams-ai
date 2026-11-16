@@ -1,0 +1,1445 @@
+{
+  "started": {
+    "current_time": "2026-11-16 03:20:29 UTC"
+  },
+  "ended": {
+    "current_time": "2026-11-16 03:20:29 UTC"
+  },
+  "results": [
+    {
+      "name": "Announcements",
+      "id": 43790825705,
+      "data": {
+        "total_count": 1,
+        "jobs": [
+          {
+            "id": 133048604227,
+            "run_id": 43790825705,
+            "workflow_name": "Announcements Content",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825705",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCWQw",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048604227",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825705/job/133048604227",
+            "status": "completed",
+            "conclusion": "success",
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T03:14:21Z",
+            "completed_at": "2026-11-16T03:15:12Z",
+            "name": "announcements-content-check",
+            "steps": [
+              {
+                "name": "Set up job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 1,
+                "started_at": "2026-11-16T03:14:21Z",
+                "completed_at": "2026-11-16T03:14:26Z"
+              },
+              {
+                "name": "Run actions/checkout@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 2,
+                "started_at": "2026-11-16T03:14:26Z",
+                "completed_at": "2026-11-16T03:14:45Z"
+              },
+              {
+                "name": "Setup pnpm",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 3,
+                "started_at": "2026-11-16T03:14:45Z",
+                "completed_at": "2026-11-16T03:14:52Z"
+              },
+              {
+                "name": "Run actions/setup-node@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 4,
+                "started_at": "2026-11-16T03:14:52Z",
+                "completed_at": "2026-11-16T03:15:01Z"
+              },
+              {
+                "name": "Install announcement parser dependencies",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 5,
+                "started_at": "2026-11-16T03:15:01Z",
+                "completed_at": "2026-11-16T03:15:09Z"
+              },
+              {
+                "name": "Validate exact source against available Git base",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 6,
+                "started_at": "2026-11-16T03:15:09Z",
+                "completed_at": "2026-11-16T03:15:09Z"
+              },
+              {
+                "name": "Test publishing invariants",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 7,
+                "started_at": "2026-11-16T03:15:09Z",
+                "completed_at": "2026-11-16T03:15:11Z"
+              },
+              {
+                "name": "Generate static announcement artifacts",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 8,
+                "started_at": "2026-11-16T03:15:11Z",
+                "completed_at": "2026-11-16T03:15:11Z"
+              },
+              {
+                "name": "Post Run actions/setup-node@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 14,
+                "started_at": "2026-11-16T03:15:11Z",
+                "completed_at": "2026-11-16T03:15:11Z"
+              },
+              {
+                "name": "Post Setup pnpm",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 15,
+                "started_at": "2026-11-16T03:15:11Z",
+                "completed_at": "2026-11-16T03:15:11Z"
+              },
+              {
+                "name": "Post Run actions/checkout@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 16,
+                "started_at": "2026-11-16T03:15:11Z",
+                "completed_at": "2026-11-16T03:15:11Z"
+              },
+              {
+                "name": "Complete job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 17,
+                "started_at": "2026-11-16T03:15:11Z",
+                "completed_at": "2026-11-16T03:15:11Z"
+              }
+            ],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048604227",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": 1000376168,
+            "runner_name": "GitHub Actions 1000376168",
+            "runner_group_id": 0,
+            "runner_group_name": "GitHub Actions"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Landing",
+      "id": 43790825942,
+      "data": {
+        "total_count": 1,
+        "jobs": [
+          {
+            "id": 133048605255,
+            "run_id": 43790825942,
+            "workflow_name": "Deploy Landing to GitHub Pages",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825942",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCaRw",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048605255",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825942/job/133048605255",
+            "status": "queued",
+            "conclusion": null,
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T02:13:21Z",
+            "completed_at": null,
+            "name": "build",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048605255",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": 0,
+            "runner_name": "",
+            "runner_group_id": 0,
+            "runner_group_name": ""
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpdaterNative",
+      "id": 43790825963,
+      "data": {
+        "total_count": 4,
+        "jobs": [
+          {
+            "id": 133048605304,
+            "run_id": 43790825963,
+            "workflow_name": "Native updater feasibility (Linux predecessor)",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825963",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCaeA",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048605304",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825963/job/133048605304",
+            "status": "completed",
+            "conclusion": "success",
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T03:18:05Z",
+            "completed_at": "2026-11-16T03:19:53Z",
+            "name": "linux-appimage-tooling-quality",
+            "steps": [
+              {
+                "name": "Set up job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 1,
+                "started_at": "2026-11-16T03:18:06Z",
+                "completed_at": "2026-11-16T03:18:09Z"
+              },
+              {
+                "name": "Run actions/checkout@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 2,
+                "started_at": "2026-11-16T03:18:09Z",
+                "completed_at": "2026-11-16T03:18:20Z"
+              },
+              {
+                "name": "Run pnpm/action-setup@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 3,
+                "started_at": "2026-11-16T03:18:20Z",
+                "completed_at": "2026-11-16T03:18:28Z"
+              },
+              {
+                "name": "Run actions/setup-node@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 4,
+                "started_at": "2026-11-16T03:18:28Z",
+                "completed_at": "2026-11-16T03:18:32Z"
+              },
+              {
+                "name": "Run pnpm install --frozen-lockfile --ignore-scripts",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 5,
+                "started_at": "2026-11-16T03:18:32Z",
+                "completed_at": "2026-11-16T03:18:47Z"
+              },
+              {
+                "name": "Run pnpm typecheck",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 6,
+                "started_at": "2026-11-16T03:18:47Z",
+                "completed_at": "2026-11-16T03:19:23Z"
+              },
+              {
+                "name": "Run pnpm lint:fast:files -- scripts/e2e/release-updater/*.mts",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 7,
+                "started_at": "2026-11-16T03:19:23Z",
+                "completed_at": "2026-11-16T03:19:26Z"
+              },
+              {
+                "name": "Run pnpm lint:ci:files -- scripts/e2e/release-updater/*.mts",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 8,
+                "started_at": "2026-11-16T03:19:26Z",
+                "completed_at": "2026-11-16T03:19:50Z"
+              },
+              {
+                "name": "Post Run actions/setup-node@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 14,
+                "started_at": "2026-11-16T03:19:50Z",
+                "completed_at": "2026-11-16T03:19:50Z"
+              },
+              {
+                "name": "Post Run pnpm/action-setup@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 15,
+                "started_at": "2026-11-16T03:19:50Z",
+                "completed_at": "2026-11-16T03:19:50Z"
+              },
+              {
+                "name": "Post Run actions/checkout@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 16,
+                "started_at": "2026-11-16T03:19:50Z",
+                "completed_at": "2026-11-16T03:19:50Z"
+              },
+              {
+                "name": "Complete job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 17,
+                "started_at": "2026-11-16T03:19:50Z",
+                "completed_at": "2026-11-16T03:19:50Z"
+              }
+            ],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048605304",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": 1000376186,
+            "runner_name": "GitHub Actions 1000376186",
+            "runner_group_id": 0,
+            "runner_group_name": "GitHub Actions"
+          },
+          {
+            "id": 133048606576,
+            "run_id": 43790825963,
+            "workflow_name": "Native updater feasibility (Linux predecessor)",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825963",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCfcA",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048606576",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825963/job/133048606576",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T02:13:21Z",
+            "completed_at": "2026-11-16T02:13:21Z",
+            "name": "verified-inputs",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048606576",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133048606793,
+            "run_id": 43790825963,
+            "workflow_name": "Native updater feasibility (Linux predecessor)",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825963",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCgSQ",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048606793",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825963/job/133048606793",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T02:13:22Z",
+            "started_at": "2026-11-16T02:13:22Z",
+            "completed_at": "2026-11-16T02:13:21Z",
+            "name": "linux-native-ota",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048606793",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133048607797,
+            "run_id": 43790825963,
+            "workflow_name": "Native updater feasibility (Linux predecessor)",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825963",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCkNQ",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048607797",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825963/job/133048607797",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T02:13:22Z",
+            "started_at": "2026-11-16T02:13:22Z",
+            "completed_at": "2026-11-16T02:13:21Z",
+            "name": "linux-predecessor-availability",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048607797",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "Dependencies",
+      "id": 43790825860,
+      "data": {
+        "total_count": 1,
+        "jobs": [
+          {
+            "id": 133048604676,
+            "run_id": 43790825860,
+            "workflow_name": "Dependency Review",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825860",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCYBA",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048604676",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825860/job/133048604676",
+            "status": "completed",
+            "conclusion": "success",
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T03:11:05Z",
+            "completed_at": "2026-11-16T03:11:16Z",
+            "name": "dependency-review",
+            "steps": [
+              {
+                "name": "Set up job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 1,
+                "started_at": "2026-11-16T03:11:06Z",
+                "completed_at": "2026-11-16T03:11:06Z"
+              },
+              {
+                "name": "Checkout",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 2,
+                "started_at": "2026-11-16T03:11:06Z",
+                "completed_at": "2026-11-16T03:11:13Z"
+              },
+              {
+                "name": "Dependency Review",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 3,
+                "started_at": "2026-11-16T03:11:13Z",
+                "completed_at": "2026-11-16T03:11:15Z"
+              },
+              {
+                "name": "Post Checkout",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 6,
+                "started_at": "2026-11-16T03:11:15Z",
+                "completed_at": "2026-11-16T03:11:15Z"
+              },
+              {
+                "name": "Complete job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 7,
+                "started_at": "2026-11-16T03:11:15Z",
+                "completed_at": "2026-11-16T03:11:15Z"
+              }
+            ],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048604676",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": 1000376157,
+            "runner_name": "GitHub Actions 1000376157",
+            "runner_group_id": 0,
+            "runner_group_name": "GitHub Actions"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Windows",
+      "id": 43790825782,
+      "data": {
+        "total_count": 4,
+        "jobs": [
+          {
+            "id": 133048604743,
+            "run_id": 43790825782,
+            "workflow_name": "Windows native updater predecessor feasibility",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825782",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCYRw",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048604743",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825782/job/133048604743",
+            "status": "queued",
+            "conclusion": null,
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T02:13:21Z",
+            "completed_at": null,
+            "name": "tooling-quality",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048604743",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": 0,
+            "runner_name": "",
+            "runner_group_id": 0,
+            "runner_group_name": ""
+          },
+          {
+            "id": 133048605960,
+            "run_id": 43790825782,
+            "workflow_name": "Windows native updater predecessor feasibility",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825782",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCdCA",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048605960",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825782/job/133048605960",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T02:13:21Z",
+            "completed_at": "2026-11-16T02:13:21Z",
+            "name": "verified-windows-inputs",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048605960",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133048606341,
+            "run_id": 43790825782,
+            "workflow_name": "Windows native updater predecessor feasibility",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825782",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCehQ",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048606341",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825782/job/133048606341",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T02:13:21Z",
+            "completed_at": "2026-11-16T02:13:21Z",
+            "name": "legacy-windows-inputs",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048606341",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133048607168,
+            "run_id": 43790825782,
+            "workflow_name": "Windows native updater predecessor feasibility",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825782",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lChwA",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048607168",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825782/job/133048607168",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T02:13:22Z",
+            "started_at": "2026-11-16T02:13:22Z",
+            "completed_at": "2026-11-16T02:13:21Z",
+            "name": "windows-predecessor",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048607168",
+            "labels": [],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "OTA",
+      "id": 43790825821,
+      "data": {
+        "total_count": 7,
+        "jobs": [
+          {
+            "id": 133048604847,
+            "run_id": 43790825821,
+            "workflow_name": "Windows official installer fresh and native OTA",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825821",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCYrw",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048604847",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825821/job/133048604847",
+            "status": "queued",
+            "conclusion": null,
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T02:13:21Z",
+            "completed_at": null,
+            "name": "tooling-quality",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048604847",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": 0,
+            "runner_name": "",
+            "runner_group_id": 0,
+            "runner_group_name": ""
+          },
+          {
+            "id": 133048606244,
+            "run_id": 43790825821,
+            "workflow_name": "Windows official installer fresh and native OTA",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825821",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCeJA",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048606244",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825821/job/133048606244",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T02:13:21Z",
+            "completed_at": "2026-11-16T02:13:21Z",
+            "name": "legacy-windows-inputs",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048606244",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133048606500,
+            "run_id": 43790825821,
+            "workflow_name": "Windows official installer fresh and native OTA",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825821",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCfJA",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048606500",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825821/job/133048606500",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T02:13:21Z",
+            "completed_at": "2026-11-16T02:13:21Z",
+            "name": "windows-ota",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048606500",
+            "labels": [],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133048606625,
+            "run_id": 43790825821,
+            "workflow_name": "Windows official installer fresh and native OTA",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825821",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCfoQ",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048606625",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825821/job/133048606625",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T02:13:21Z",
+            "completed_at": "2026-11-16T02:13:21Z",
+            "name": "fresh-windows",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048606625",
+            "labels": [],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133048606680,
+            "run_id": 43790825821,
+            "workflow_name": "Windows official installer fresh and native OTA",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825821",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCf2A",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048606680",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825821/job/133048606680",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T02:13:21Z",
+            "completed_at": "2026-11-16T02:13:21Z",
+            "name": "windows-serializer-contract",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048606680",
+            "labels": [
+              "windows-2025"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133048606777,
+            "run_id": 43790825821,
+            "workflow_name": "Windows official installer fresh and native OTA",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825821",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCgOQ",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048606777",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825821/job/133048606777",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T02:13:21Z",
+            "completed_at": "2026-11-16T02:13:21Z",
+            "name": "windows-predecessor",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048606777",
+            "labels": [],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133048606897,
+            "run_id": 43790825821,
+            "workflow_name": "Windows official installer fresh and native OTA",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825821",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCgsQ",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048606897",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825821/job/133048606897",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T02:13:22Z",
+            "started_at": "2026-11-16T02:13:22Z",
+            "completed_at": "2026-11-16T02:13:21Z",
+            "name": "verified-windows-inputs",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048606897",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "Linux",
+      "id": 43790825873,
+      "data": {
+        "total_count": 3,
+        "jobs": [
+          {
+            "id": 133048604945,
+            "run_id": 43790825873,
+            "workflow_name": "Native Linux package updater",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825873",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCZEQ",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048604945",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825873/job/133048604945",
+            "status": "queued",
+            "conclusion": null,
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T02:13:21Z",
+            "completed_at": null,
+            "name": "linux-package-tooling-quality",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048604945",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": 0,
+            "runner_name": "",
+            "runner_group_id": 0,
+            "runner_group_name": ""
+          },
+          {
+            "id": 133048606368,
+            "run_id": 43790825873,
+            "workflow_name": "Native Linux package updater",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825873",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCeoA",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048606368",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825873/job/133048606368",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T02:13:21Z",
+            "completed_at": "2026-11-16T02:13:21Z",
+            "name": "inputs",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048606368",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133048606722,
+            "run_id": 43790825873,
+            "workflow_name": "Native Linux package updater",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825873",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCgAg",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048606722",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825873/job/133048606722",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T02:13:21Z",
+            "completed_at": "2026-11-16T02:13:21Z",
+            "name": "native",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048606722",
+            "labels": [
+              "ubuntu-22.04"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "Hetzner",
+      "id": 43790825845,
+      "data": {
+        "total_count": 1,
+        "jobs": [
+          {
+            "id": 133048604717,
+            "run_id": 43790825845,
+            "workflow_name": "Build Hetzner landing and docs release",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825845",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCYLQ",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048604717",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825845/job/133048604717",
+            "status": "queued",
+            "conclusion": null,
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T02:13:21Z",
+            "completed_at": null,
+            "name": "Exact-SHA production-domain static artifacts",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048604717",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": 0,
+            "runner_name": "",
+            "runner_group_id": 0,
+            "runner_group_name": ""
+          }
+        ]
+      }
+    },
+    {
+      "name": "General",
+      "id": 43790825790,
+      "data": {
+        "total_count": 15,
+        "jobs": [
+          {
+            "id": 133048605709,
+            "run_id": 43790825790,
+            "workflow_name": "CI proof: PR=1211 | head=2abcf83fddacbc1efedee83f9c1d203d12ed656e | base=0b3fa6117b1856b947d799f95bae7aae0238061c | merge=441e76ffe1cc5e288645877e15b312caf7b8c109 | action=opened | draft=true",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825790",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCcDQ",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048605709",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825790/job/133048605709",
+            "status": "completed",
+            "conclusion": "success",
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T03:12:08Z",
+            "completed_at": "2026-11-16T03:12:36Z",
+            "name": "plan",
+            "steps": [
+              {
+                "name": "Set up job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 1,
+                "started_at": "2026-11-16T03:12:09Z",
+                "completed_at": "2026-11-16T03:12:09Z"
+              },
+              {
+                "name": "Checkout",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 2,
+                "started_at": "2026-11-16T03:12:09Z",
+                "completed_at": "2026-11-16T03:12:28Z"
+              },
+              {
+                "name": "Setup Node.js",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 3,
+                "started_at": "2026-11-16T03:12:28Z",
+                "completed_at": "2026-11-16T03:12:33Z"
+              },
+              {
+                "name": "CI source proof: PR=1211 | base=0b3fa6117b1856b947d799f95bae7aae0238061c | head=2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 4,
+                "started_at": "2026-11-16T03:12:33Z",
+                "completed_at": "2026-11-16T03:12:33Z"
+              },
+              {
+                "name": "Plan feedback and verify reusable evidence",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 5,
+                "started_at": "2026-11-16T03:12:33Z",
+                "completed_at": "2026-11-16T03:12:33Z"
+              },
+              {
+                "name": "Post Setup Node.js",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 9,
+                "started_at": "2026-11-16T03:12:33Z",
+                "completed_at": "2026-11-16T03:12:33Z"
+              },
+              {
+                "name": "Post Checkout",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 10,
+                "started_at": "2026-11-16T03:12:33Z",
+                "completed_at": "2026-11-16T03:12:33Z"
+              },
+              {
+                "name": "Complete job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 11,
+                "started_at": "2026-11-16T03:12:33Z",
+                "completed_at": "2026-11-16T03:12:33Z"
+              }
+            ],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048605709",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": 1000376159,
+            "runner_name": "GitHub Actions 1000376159",
+            "runner_group_id": 0,
+            "runner_group_name": "GitHub Actions"
+          },
+          {
+            "id": 133048607085,
+            "run_id": 43790825790,
+            "workflow_name": "CI proof: PR=1211 | head=2abcf83fddacbc1efedee83f9c1d203d12ed656e | base=0b3fa6117b1856b947d799f95bae7aae0238061c | merge=441e76ffe1cc5e288645877e15b312caf7b8c109 | action=opened | draft=true",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825790",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lChbQ",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048607085",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825790/job/133048607085",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T02:13:22Z",
+            "started_at": "2026-11-16T02:13:22Z",
+            "completed_at": "2026-11-16T02:13:21Z",
+            "name": "Stage 1 source Desktop (${{ matrix.label }})",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048607085",
+            "labels": [
+              "namespace-profile-macos-15"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133048607162,
+            "run_id": 43790825790,
+            "workflow_name": "CI proof: PR=1211 | head=2abcf83fddacbc1efedee83f9c1d203d12ed656e | base=0b3fa6117b1856b947d799f95bae7aae0238061c | merge=441e76ffe1cc5e288645877e15b312caf7b8c109 | action=opened | draft=true",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825790",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lChug",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048607162",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825790/job/133048607162",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T02:13:22Z",
+            "started_at": "2026-11-16T02:13:22Z",
+            "completed_at": "2026-11-16T02:13:21Z",
+            "name": "Stage 1 current-tuple process and packed qualification",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048607162",
+            "labels": [
+              "namespace-profile-macos-15"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133048607327,
+            "run_id": 43790825790,
+            "workflow_name": "CI proof: PR=1211 | head=2abcf83fddacbc1efedee83f9c1d203d12ed656e | base=0b3fa6117b1856b947d799f95bae7aae0238061c | merge=441e76ffe1cc5e288645877e15b312caf7b8c109 | action=opened | draft=true",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825790",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCiXw",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048607327",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825790/job/133048607327",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T02:13:22Z",
+            "started_at": "2026-11-16T02:13:22Z",
+            "completed_at": "2026-11-16T02:13:21Z",
+            "name": "Stage 1 process tuple diagnostic (unqualified)",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048607327",
+            "labels": [
+              "namespace-profile-macos-15"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133067247693,
+            "run_id": 43790825790,
+            "workflow_name": "CI proof: PR=1211 | head=2abcf83fddacbc1efedee83f9c1d203d12ed656e | base=0b3fa6117b1856b947d799f95bae7aae0238061c | merge=441e76ffe1cc5e288645877e15b312caf7b8c109 | action=opened | draft=true",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825790",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-20QTQ",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133067247693",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825790/job/133067247693",
+            "status": "queued",
+            "conclusion": null,
+            "created_at": "2026-11-16T03:12:36Z",
+            "started_at": "2026-11-16T03:12:36Z",
+            "completed_at": null,
+            "name": "Fast feedback",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133067247693",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": 0,
+            "runner_name": "",
+            "runner_group_id": 0,
+            "runner_group_name": ""
+          },
+          {
+            "id": 133067248142,
+            "run_id": 43790825790,
+            "workflow_name": "CI proof: PR=1211 | head=2abcf83fddacbc1efedee83f9c1d203d12ed656e | base=0b3fa6117b1856b947d799f95bae7aae0238061c | merge=441e76ffe1cc5e288645877e15b312caf7b8c109 | action=opened | draft=true",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825790",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-20SDg",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133067248142",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825790/job/133067248142",
+            "status": "queued",
+            "conclusion": null,
+            "created_at": "2026-11-16T03:12:36Z",
+            "started_at": "2026-11-16T03:12:36Z",
+            "completed_at": null,
+            "name": "Full qualification",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133067248142",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": 0,
+            "runner_name": "",
+            "runner_group_id": 0,
+            "runner_group_name": ""
+          },
+          {
+            "id": 133067249343,
+            "run_id": 43790825790,
+            "workflow_name": "CI proof: PR=1211 | head=2abcf83fddacbc1efedee83f9c1d203d12ed656e | base=0b3fa6117b1856b947d799f95bae7aae0238061c | merge=441e76ffe1cc5e288645877e15b312caf7b8c109 | action=opened | draft=true",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825790",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-20Wvw",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133067249343",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825790/job/133067249343",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T03:12:36Z",
+            "started_at": "2026-11-16T03:12:36Z",
+            "completed_at": "2026-11-16T03:12:36Z",
+            "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata lint') || 'lint') }} (${{ matrix.scope }})",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133067249343",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133067249364,
+            "run_id": 43790825790,
+            "workflow_name": "CI proof: PR=1211 | head=2abcf83fddacbc1efedee83f9c1d203d12ed656e | base=0b3fa6117b1856b947d799f95bae7aae0238061c | merge=441e76ffe1cc5e288645877e15b312caf7b8c109 | action=opened | draft=true",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825790",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-20W1A",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133067249364",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825790/job/133067249364",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T03:12:36Z",
+            "started_at": "2026-11-16T03:12:36Z",
+            "completed_at": "2026-11-16T03:12:36Z",
+            "name": "Renderer source validation",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133067249364",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133067249387,
+            "run_id": 43790825790,
+            "workflow_name": "CI proof: PR=1211 | head=2abcf83fddacbc1efedee83f9c1d203d12ed656e | base=0b3fa6117b1856b947d799f95bae7aae0238061c | merge=441e76ffe1cc5e288645877e15b312caf7b8c109 | action=opened | draft=true",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825790",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-20W6w",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133067249387",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825790/job/133067249387",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T03:12:36Z",
+            "started_at": "2026-11-16T03:12:36Z",
+            "completed_at": "2026-11-16T03:12:36Z",
+            "name": "Retained OpenCode V1 and Host V2 original Desktop",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133067249387",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133067249441,
+            "run_id": 43790825790,
+            "workflow_name": "CI proof: PR=1211 | head=2abcf83fddacbc1efedee83f9c1d203d12ed656e | base=0b3fa6117b1856b947d799f95bae7aae0238061c | merge=441e76ffe1cc5e288645877e15b312caf7b8c109 | action=opened | draft=true",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825790",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-20XIQ",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133067249441",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825790/job/133067249441",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T03:12:36Z",
+            "started_at": "2026-11-16T03:12:36Z",
+            "completed_at": "2026-11-16T03:12:36Z",
+            "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata validate' || 'validate'",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133067249441",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133067249542,
+            "run_id": 43790825790,
+            "workflow_name": "CI proof: PR=1211 | head=2abcf83fddacbc1efedee83f9c1d203d12ed656e | base=0b3fa6117b1856b947d799f95bae7aae0238061c | merge=441e76ffe1cc5e288645877e15b312caf7b8c109 | action=opened | draft=true",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825790",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-20Xhg",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133067249542",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825790/job/133067249542",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T03:12:36Z",
+            "started_at": "2026-11-16T03:12:36Z",
+            "completed_at": "2026-11-16T03:12:36Z",
+            "name": "macOS DMG artwork end-to-end",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133067249542",
+            "labels": [
+              "macos-latest"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133067249562,
+            "run_id": 43790825790,
+            "workflow_name": "CI proof: PR=1211 | head=2abcf83fddacbc1efedee83f9c1d203d12ed656e | base=0b3fa6117b1856b947d799f95bae7aae0238061c | merge=441e76ffe1cc5e288645877e15b312caf7b8c109 | action=opened | draft=true",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825790",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-20Xmg",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133067249562",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825790/job/133067249562",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T03:12:36Z",
+            "started_at": "2026-11-16T03:12:36Z",
+            "completed_at": "2026-11-16T03:12:36Z",
+            "name": "Focused documentation and asset validation",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133067249562",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133067249601,
+            "run_id": 43790825790,
+            "workflow_name": "CI proof: PR=1211 | head=2abcf83fddacbc1efedee83f9c1d203d12ed656e | base=0b3fa6117b1856b947d799f95bae7aae0238061c | merge=441e76ffe1cc5e288645877e15b312caf7b8c109 | action=opened | draft=true",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825790",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-20XwQ",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133067249601",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825790/job/133067249601",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T03:12:36Z",
+            "started_at": "2026-11-16T03:12:36Z",
+            "completed_at": "2026-11-16T03:12:36Z",
+            "name": "Codex login Desktop (Linux x64)",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133067249601",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133067249664,
+            "run_id": 43790825790,
+            "workflow_name": "CI proof: PR=1211 | head=2abcf83fddacbc1efedee83f9c1d203d12ed656e | base=0b3fa6117b1856b947d799f95bae7aae0238061c | merge=441e76ffe1cc5e288645877e15b312caf7b8c109 | action=opened | draft=true",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825790",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-20YAA",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133067249664",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825790/job/133067249664",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T03:12:36Z",
+            "started_at": "2026-11-16T03:12:36Z",
+            "completed_at": "2026-11-16T03:12:36Z",
+            "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata test') || 'test') }} (${{ matrix.shard }}/4)",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133067249664",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          },
+          {
+            "id": 133067249856,
+            "run_id": 43790825790,
+            "workflow_name": "CI proof: PR=1211 | head=2abcf83fddacbc1efedee83f9c1d203d12ed656e | base=0b3fa6117b1856b947d799f95bae7aae0238061c | merge=441e76ffe1cc5e288645877e15b312caf7b8c109 | action=opened | draft=true",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825790",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-20YwA",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133067249856",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825790/job/133067249856",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T03:12:36Z",
+            "started_at": "2026-11-16T03:12:36Z",
+            "completed_at": "2026-11-16T03:12:36Z",
+            "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke'",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133067249856",
+            "labels": [
+              "windows-latest"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "Prepare",
+      "id": 43790825827,
+      "data": {
+        "total_count": 2,
+        "jobs": [
+          {
+            "id": 133048605063,
+            "run_id": 43790825827,
+            "workflow_name": "Prepare immutable Windows native updater inputs",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825827",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCZhw",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048605063",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825827/job/133048605063",
+            "status": "queued",
+            "conclusion": null,
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T02:13:21Z",
+            "completed_at": null,
+            "name": "producer-quality",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048605063",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": 0,
+            "runner_name": "",
+            "runner_group_id": 0,
+            "runner_group_name": ""
+          },
+          {
+            "id": 133048606513,
+            "run_id": 43790825827,
+            "workflow_name": "Prepare immutable Windows native updater inputs",
+            "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825827",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe-lCfMQ",
+            "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048606513",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825827/job/133048606513",
+            "status": "completed",
+            "conclusion": "skipped",
+            "created_at": "2026-11-16T02:13:21Z",
+            "started_at": "2026-11-16T02:13:21Z",
+            "completed_at": "2026-11-16T02:13:21Z",
+            "name": "prepare-windows-inputs",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048606513",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": null,
+            "runner_name": null,
+            "runner_group_id": null,
+            "runner_group_name": null
+          }
+        ]
+      }
+    }
+  ]
+}

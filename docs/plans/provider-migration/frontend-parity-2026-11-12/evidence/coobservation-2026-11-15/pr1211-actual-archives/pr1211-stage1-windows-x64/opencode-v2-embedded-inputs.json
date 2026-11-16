@@ -1,0 +1,18 @@
+{
+  "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+  "status": "READY",
+  "sourceHead": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "platform": "win32-x64",
+  "nodeVersion": "v24.21.0",
+  "productQualified": false,
+  "stage": "prepared",
+  "baseArchiveSha256": "fafa3d891922cb3a5df6d1bd7dec80cc105352c619b39e298761657add677f49",
+  "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+  "bun": {
+    "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\resources\\runtime\\bun\\bun.exe",
+    "sha256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+    "version": "1.4.3"
+  },
+  "supportArchiveSha256": "9cea106d78a0482a0ea8bd05b0a7cb44c604fcf4f6de3fdac5549a5ba552787c",
+  "manifestSha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628"
+}

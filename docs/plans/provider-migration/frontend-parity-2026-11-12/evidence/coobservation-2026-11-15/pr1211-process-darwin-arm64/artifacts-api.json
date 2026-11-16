@@ -1,0 +1,80 @@
+{
+  "artifacts": [
+    {
+      "id": 14193840538,
+      "name": "host-process-fixtures-darwin-arm64-2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+      "size_in_bytes": 12304,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14193840538",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14193840538/zip",
+      "expired": false,
+      "created_at": "2026-11-16T02:41:37Z",
+      "expires_at": "2026-11-30T02:41:36Z",
+      "updated_at": "2026-11-16T02:41:37Z",
+      "digest": "sha256:9ba9c12cebb0693196d43e8be713bc21cef2f8647ca6ab5c74879b814d03a058",
+      "workflow_run": {
+        "id": 43790825981,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+        "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+      }
+    },
+    {
+      "id": 14192769739,
+      "name": "host-process-fixtures-win32-arm64-2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+      "size_in_bytes": 33436,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192769739",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192769739/zip",
+      "expired": false,
+      "created_at": "2026-11-16T02:35:55Z",
+      "expires_at": "2026-11-30T02:35:55Z",
+      "updated_at": "2026-11-16T02:35:55Z",
+      "digest": "sha256:983f2720d7e793eb0b29ac55f64840067d335535e7bfcf3873ffdde19a6b5885",
+      "workflow_run": {
+        "id": 43790825981,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+        "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+      }
+    },
+    {
+      "id": 14192668388,
+      "name": "host-process-fixtures-win32-x64-2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+      "size_in_bytes": 55132,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192668388",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192668388/zip",
+      "expired": false,
+      "created_at": "2026-11-16T02:27:38Z",
+      "expires_at": "2026-11-30T02:27:37Z",
+      "updated_at": "2026-11-16T02:27:38Z",
+      "digest": "sha256:e7b07cff2c9a5acae69645f0fd8d9f92b691b49e65c03921f5baacc9b20f5a13",
+      "workflow_run": {
+        "id": 43790825981,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+        "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+      }
+    },
+    {
+      "id": 14192508608,
+      "name": "host-process-fixtures-darwin-x64-2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+      "size_in_bytes": 13229,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192508608",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192508608/zip",
+      "expired": false,
+      "created_at": "2026-11-16T02:35:16Z",
+      "expires_at": "2026-11-30T02:35:15Z",
+      "updated_at": "2026-11-16T02:35:16Z",
+      "digest": "sha256:bf48649836934772b34da0e17089dd16a287dca8710e3e6962ddabb2167c351b",
+      "workflow_run": {
+        "id": 43790825981,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+        "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+      }
+    }
+  ]
+}

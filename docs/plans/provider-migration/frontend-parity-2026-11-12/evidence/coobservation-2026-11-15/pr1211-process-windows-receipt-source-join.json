@@ -1,0 +1,594 @@
+{
+  "head": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "tree": "0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103",
+  "receipts": [
+    {
+      "key": "x64OpenCode",
+      "sha": "e434ca76b043aa2efe8586963879582426af4829",
+      "sha256": "0f91ba09fa95c1b2e8caef8c6cbd423bf92cb35c0ea34803e7eed07e3d1c1a4a",
+      "bytes": 17180,
+      "provider": "opencode",
+      "status": "INCOMPLETE",
+      "cleanup": true,
+      "innerCleanup": true,
+      "realProviderExecuted": false,
+      "lastLaunchReadiness": {
+        "source": {
+          "sourceId": "7e982ffed7f76c5e2579dbd80d32d1e2c33cbbf5a80a268db4bf40fe57c3d577",
+          "revision": "34b09c9d16ab407416021e2ee59ff28929ef1b3db2252347456a0a91494783a1"
+        },
+        "image": "A",
+        "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+        "readCount": 76,
+        "elapsedMs": 15018.760600000001,
+        "lastRuntimeRead": {
+          "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+          "memberId": "alice-id",
+          "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+          "phase": "held",
+          "sealed": false,
+          "custody": "unknown",
+          "nativeReady": false,
+          "attached": false,
+          "diagnostic": "open-unknown"
+        }
+      },
+      "runtimeProjection": {
+        "status": "observed",
+        "atomicWithFailure": false,
+        "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+        "bindingMatches": true,
+        "recordReady": false,
+        "providerReady": null,
+        "ownerCurrent": null,
+        "nativeReady": false
+      },
+      "firstRefusal": {
+        "status": "observed",
+        "observations": [
+          {
+            "kind": "reference",
+            "commandDigest": "66597a350fd7de006f72378a61e7b48a6f858b6593d8829513f46098c9394dbe",
+            "contextDigest": "428fda719291d4e9624f215fb742db095ac442b92a2269803f5eea10648b3072",
+            "phase": "probe-expiry",
+            "reason": "held",
+            "probeCutoff": 1794796053231,
+            "probeNow": 1794796053265,
+            "scopeCutoff": null,
+            "scopeNow": null,
+            "preparationCutoff": null,
+            "preparationNow": null,
+            "ordinal": 1,
+            "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+            "source": {
+              "sourceId": "7e982ffed7f76c5e2579dbd80d32d1e2c33cbbf5a80a268db4bf40fe57c3d577",
+              "revision": "34b09c9d16ab407416021e2ee59ff28929ef1b3db2252347456a0a91494783a1"
+            }
+          },
+          {
+            "kind": "consumer",
+            "actionDigest": "0999f35342307166abf6addfd3031950d31858d19f9b349ce1a23447a7d9253d",
+            "groupDigest": "3c6886a05cf6ee5d1c9115d3be1c3925553ef674826e44a3747f11da18482698",
+            "bindingDigest": "9b76571b8f012f4898564f86ac82837cc0fd1b4786b9178d37109d39b6341404",
+            "consumerId": "14a68c186303752f5612866054d65de2ce1d02b3be4f9315432c502578869c4c",
+            "phase": "reference",
+            "reason": "threw",
+            "cutoff": 1794796053231,
+            "observedAt": 1794796052839,
+            "ordinal": 2,
+            "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+            "source": {
+              "sourceId": "7e982ffed7f76c5e2579dbd80d32d1e2c33cbbf5a80a268db4bf40fe57c3d577",
+              "revision": "34b09c9d16ab407416021e2ee59ff28929ef1b3db2252347456a0a91494783a1"
+            }
+          },
+          {
+            "kind": "native",
+            "phase": "resume",
+            "reason": "current-false",
+            "dispatched": true,
+            "staged": true,
+            "rootCaptured": true,
+            "deadlineExpired": null,
+            "ordinal": 3,
+            "source": {
+              "sourceId": "7e982ffed7f76c5e2579dbd80d32d1e2c33cbbf5a80a268db4bf40fe57c3d577",
+              "revision": "34b09c9d16ab407416021e2ee59ff28929ef1b3db2252347456a0a91494783a1"
+            }
+          }
+        ]
+      },
+      "jobs": [
+        {
+          "epoch": "01ce3227-27ff-4b27-80ab-809e23193cfe",
+          "slot": 0,
+          "capability": "12f6467e-9136-4a83-8458-9c391560dc22",
+          "root": {
+            "pid": 7524,
+            "birth": "01dd7571ffc8e609"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 0,
+          "entryEnd": 1,
+          "threadEphemeral": []
+        },
+        {
+          "epoch": "01ce3227-27ff-4b27-80ab-809e23193cfe",
+          "slot": 1,
+          "capability": "e93f4b0e-4c7a-418d-9713-ec23285635c0",
+          "root": {
+            "pid": 4652,
+            "birth": "01dd757200d8f1d2"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 1,
+          "entryEnd": 2,
+          "threadEphemeral": []
+        },
+        {
+          "epoch": "01ce3227-27ff-4b27-80ab-809e23193cfe",
+          "slot": 2,
+          "capability": "4cc8131c-8aef-4997-a2b6-63b1a7d0fa8f",
+          "root": {
+            "pid": 7972,
+            "birth": "01dd757206c7d1d2"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 2,
+          "entryEnd": 3,
+          "threadEphemeral": []
+        }
+      ]
+    },
+    {
+      "key": "armCodex",
+      "sha": "f90c0968272c9b5f7863f7b068702738f0955c5b",
+      "sha256": "7cb7c142e65610fe954d8e55d0da1174ca8d59db3f6bd004c33ed497d789e985",
+      "bytes": 22298,
+      "provider": "codex",
+      "status": "INCOMPLETE",
+      "cleanup": true,
+      "innerCleanup": true,
+      "realProviderExecuted": false,
+      "lastLaunchReadiness": {
+        "source": {
+          "sourceId": "e7ff2ac1f9e99ef074ea046f310b907855028cf8172a2c85936cf63c890e427f",
+          "revision": "ea546040b9e466af2d74e00b7193877796fcd273b858df7e1bef4107d051a3be"
+        },
+        "image": "A",
+        "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+        "readCount": 100,
+        "elapsedMs": 14983.042899999999,
+        "lastRuntimeRead": {
+          "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+          "memberId": "alice-id",
+          "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+          "phase": "allocated",
+          "sealed": false,
+          "custody": "owned",
+          "nativeReady": false,
+          "attached": true
+        }
+      },
+      "runtimeProjection": {
+        "status": "observed",
+        "atomicWithFailure": false,
+        "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+        "bindingMatches": true,
+        "recordReady": false,
+        "providerReady": null,
+        "ownerCurrent": null,
+        "nativeReady": false
+      },
+      "firstRefusal": {
+        "status": "unknown",
+        "reason": "empty"
+      },
+      "jobs": [
+        {
+          "epoch": "df1f4013-a014-4fb7-ab8f-264918e8ed14",
+          "slot": 0,
+          "capability": "152b8090-87cc-4cc1-999d-14ee69147674",
+          "root": {
+            "pid": 11172,
+            "birth": "01dd757326e6bd22"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 0,
+          "entryEnd": 1,
+          "threadEphemeral": []
+        },
+        {
+          "epoch": "df1f4013-a014-4fb7-ab8f-264918e8ed14",
+          "slot": 1,
+          "capability": "e3293877-6d69-429b-a26b-bed34f68653c",
+          "root": {
+            "pid": 10864,
+            "birth": "01dd75732906e4d1"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 1,
+          "entryEnd": 2,
+          "threadEphemeral": []
+        },
+        {
+          "epoch": "df1f4013-a014-4fb7-ab8f-264918e8ed14",
+          "slot": 2,
+          "capability": "ff72a512-768f-4779-be4f-2f32e5e5d3ae",
+          "root": {
+            "pid": 3004,
+            "birth": "01dd75732b71ff11"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 2,
+          "entryEnd": 3,
+          "threadEphemeral": []
+        },
+        {
+          "epoch": "df1f4013-a014-4fb7-ab8f-264918e8ed14",
+          "slot": 3,
+          "capability": "3cb86cff-ff23-40ab-ac37-52e82006aa3c",
+          "root": {
+            "pid": 4532,
+            "birth": "01dd75732d295b64"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 3,
+          "entryEnd": 6,
+          "threadEphemeral": [
+            false
+          ]
+        },
+        {
+          "epoch": "df1f4013-a014-4fb7-ab8f-264918e8ed14",
+          "slot": 4,
+          "capability": "48187f4a-e990-4f34-a4e9-b7d49832457f",
+          "root": {
+            "pid": 4140,
+            "birth": "01dd75732eec076a"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 4,
+          "entryEnd": 5,
+          "threadEphemeral": []
+        },
+        {
+          "epoch": "df1f4013-a014-4fb7-ab8f-264918e8ed14",
+          "slot": 5,
+          "capability": "7f51fd59-d01e-407b-91c6-35cbd8269212",
+          "root": {
+            "pid": 4980,
+            "birth": "01dd7573311e7d14"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 5,
+          "entryEnd": 6,
+          "threadEphemeral": []
+        },
+        {
+          "epoch": "df1f4013-a014-4fb7-ab8f-264918e8ed14",
+          "slot": 6,
+          "capability": "a984f9a6-2bcb-48c4-a25a-25195297b521",
+          "root": {
+            "pid": 1004,
+            "birth": "01dd757332ee3818"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 6,
+          "entryEnd": 6,
+          "threadEphemeral": []
+        }
+      ]
+    }
+  ],
+  "repositorySourcePins": [
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "sha": "0486ca44781ab8b9da889df212f3aeeb3879b6c3",
+      "receipts": [
+        {
+          "key": "x64OpenCode",
+          "sha256": "ea6325f3f045cbaa198683b47aabb159a9c73b86680ec2e18b1e2861a3873112"
+        },
+        {
+          "key": "armCodex",
+          "sha256": "ea6325f3f045cbaa198683b47aabb159a9c73b86680ec2e18b1e2861a3873112"
+        }
+      ],
+      "gitBytes": 22544,
+      "lfSha256": "0932f7d81666c65572f3f6c36ce86d79d668f25296983650a54adadad16a5ae8",
+      "crlfSha256": "ea6325f3f045cbaa198683b47aabb159a9c73b86680ec2e18b1e2861a3873112",
+      "allLF": false,
+      "allCRLF": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "sha": "60548e4b0477924fd2c068283b9372f21946b198",
+      "receipts": [
+        {
+          "key": "x64OpenCode",
+          "sha256": "c2df517131dfa36975f334bee90feb98ab33e2947eec4389e7540cc6257257f2"
+        },
+        {
+          "key": "armCodex",
+          "sha256": "c2df517131dfa36975f334bee90feb98ab33e2947eec4389e7540cc6257257f2"
+        }
+      ],
+      "gitBytes": 59303,
+      "lfSha256": "39cc1b610688ba9b24e59a9f3567bc73f953f52000e949ed6cd6160783bf80ab",
+      "crlfSha256": "c2df517131dfa36975f334bee90feb98ab33e2947eec4389e7540cc6257257f2",
+      "allLF": false,
+      "allCRLF": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "sha": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+      "receipts": [
+        {
+          "key": "x64OpenCode",
+          "sha256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce"
+        },
+        {
+          "key": "armCodex",
+          "sha256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce"
+        }
+      ],
+      "gitBytes": 15213,
+      "lfSha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd",
+      "crlfSha256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce",
+      "allLF": false,
+      "allCRLF": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "sha": "67180ac5c567cbeb089d4ef3248391c792e1ba4d",
+      "receipts": [
+        {
+          "key": "x64OpenCode",
+          "sha256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961"
+        },
+        {
+          "key": "armCodex",
+          "sha256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961"
+        }
+      ],
+      "gitBytes": 7926,
+      "lfSha256": "8cdc9a1bcc80b61998e93813959f53542a85cb5953c93ae1feb2397e37d9080e",
+      "crlfSha256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961",
+      "allLF": false,
+      "allCRLF": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "sha": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+      "receipts": [
+        {
+          "key": "x64OpenCode",
+          "sha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6"
+        },
+        {
+          "key": "armCodex",
+          "sha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6"
+        }
+      ],
+      "gitBytes": 7278,
+      "lfSha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+      "crlfSha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+      "allLF": false,
+      "allCRLF": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.ts",
+      "sha": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+      "receipts": [
+        {
+          "key": "x64OpenCode",
+          "sha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4"
+        },
+        {
+          "key": "armCodex",
+          "sha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4"
+        }
+      ],
+      "gitBytes": 1367,
+      "lfSha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+      "crlfSha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+      "allLF": false,
+      "allCRLF": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "sha": "a7e45d6cadba355ec46a516a68297d46147d741e",
+      "receipts": [
+        {
+          "key": "x64OpenCode",
+          "sha256": "119802fbff75a78790b6b28e4e366b81ed266ddcf4005500e45c1b9772d1e0d2"
+        },
+        {
+          "key": "armCodex",
+          "sha256": "119802fbff75a78790b6b28e4e366b81ed266ddcf4005500e45c1b9772d1e0d2"
+        }
+      ],
+      "gitBytes": 6451,
+      "lfSha256": "83d26a98fd977696a05aafbceae9e28a1fbf71c553bc9c1db565c20567fcf470",
+      "crlfSha256": "119802fbff75a78790b6b28e4e366b81ed266ddcf4005500e45c1b9772d1e0d2",
+      "allLF": false,
+      "allCRLF": true
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+      "sha": "44c8cba99e4932905da77539a59c904a39da4e36",
+      "receipts": [
+        {
+          "key": "x64OpenCode",
+          "sha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc"
+        },
+        {
+          "key": "armCodex",
+          "sha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc"
+        }
+      ],
+      "gitBytes": 9569,
+      "lfSha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd",
+      "crlfSha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+      "allLF": false,
+      "allCRLF": true
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "sha": "76f5d1953816fd125f576a966c42caefcfc297e2",
+      "receipts": [
+        {
+          "key": "x64OpenCode",
+          "sha256": "1ea2bf4ba7cb932bdd3b59ad33d3761fdaa07edae4f53d550f4b4de72ba23e2d"
+        },
+        {
+          "key": "armCodex",
+          "sha256": "1ea2bf4ba7cb932bdd3b59ad33d3761fdaa07edae4f53d550f4b4de72ba23e2d"
+        }
+      ],
+      "gitBytes": 39026,
+      "lfSha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a",
+      "crlfSha256": "1ea2bf4ba7cb932bdd3b59ad33d3761fdaa07edae4f53d550f4b4de72ba23e2d",
+      "allLF": false,
+      "allCRLF": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "sha": "3b5a244c27d004af6e82fffa092fa83e1894de73",
+      "receipts": [
+        {
+          "key": "x64OpenCode",
+          "sha256": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748"
+        },
+        {
+          "key": "armCodex",
+          "sha256": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748"
+        }
+      ],
+      "gitBytes": 22408,
+      "lfSha256": "447a3ae82ab6ce0ec866305af2cd426619df3618fbec2397931212379d945784",
+      "crlfSha256": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748",
+      "allLF": false,
+      "allCRLF": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "sha": "b9dd573db23b3033b5f3db7024b317681ce31499",
+      "receipts": [
+        {
+          "key": "x64OpenCode",
+          "sha256": "f514e025dfd60394442348f9f0871592e4315072067779b0aef2ad55812f7cbc"
+        },
+        {
+          "key": "armCodex",
+          "sha256": "f514e025dfd60394442348f9f0871592e4315072067779b0aef2ad55812f7cbc"
+        }
+      ],
+      "gitBytes": 43732,
+      "lfSha256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14",
+      "crlfSha256": "f514e025dfd60394442348f9f0871592e4315072067779b0aef2ad55812f7cbc",
+      "allLF": false,
+      "allCRLF": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "sha": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+      "receipts": [
+        {
+          "key": "x64OpenCode",
+          "sha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361"
+        },
+        {
+          "key": "armCodex",
+          "sha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361"
+        }
+      ],
+      "gitBytes": 30721,
+      "lfSha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+      "crlfSha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361",
+      "allLF": false,
+      "allCRLF": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "sha": "65d53a2beff3b3a36d554601dcf57d67b086aa0f",
+      "receipts": [
+        {
+          "key": "x64OpenCode",
+          "sha256": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079"
+        },
+        {
+          "key": "armCodex",
+          "sha256": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079"
+        }
+      ],
+      "gitBytes": 3398,
+      "lfSha256": "352c62fcce347599a89658a5dc98d3d05d35d4a6d26618cc87faa6ece2f995df",
+      "crlfSha256": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079",
+      "allLF": false,
+      "allCRLF": true
+    }
+  ],
+  "joinKind": "Deterministic LF-to-CRLF conversion of exact frozen Git source; actual source payloads are not in these receipts and compiled/runtime/generated binaries are not rehashed from Git.",
+  "rootArchiveStatement": "Root reports actual original ZIP size/SHA/CRC/unique-safe-path verification; this child fetched the complete immutable JSON receipt bytes and independently joined their source pins. No child archive execution.",
+  "sourceBoundInterpretation": {
+    "x64": {
+      "failure": "Original source Team readiness; Team-A incomplete after76 reads/15018.7606ms",
+      "originalReferenceRefusal": "Consumer cutoff sampled392ms before saved cutoff; nested saved-probe expiry sampled34ms after same cutoff. This426ms span includes the existing retained read/inspect/admission chain; no per-operation cost attribution.",
+      "physicalVersusHost": "All3 physical resumes and final HANDLE absence are confirmed. The native projection validates a unique original capability internally then removes it, retaining only source, so it does not expose the refusal-to-slot/invocation join. Only for the same Host resume invocation with its accepted reply would a later current-false be the post-ACK406 guard.",
+      "sourceSites": {
+        "consumer": "prepareTeamModelReadiness.ts b9dd573db23b3033b5f3db7024b317681ce31499:341-380",
+        "reference": "ModelProbeOwner.ts a870a9c2c213b802ae43a3dee9a0694a67feda7e:186-237",
+        "hostResume": "HostWindowsLaunch.ts 3b5a244c27d004af6e82fffa092fa83e1894de73:391-408",
+        "projection": "nativeEmulatedSourceScenario.ts60548e4b0477924fd2c068283b9372f21946b198:769-778"
+      }
+    },
+    "arm": {
+      "failure": "Original Codex Team-A readiness incomplete at100reads/14983.0429ms; last sample allocated/owned/attached with nativeReadyfalse",
+      "recordBoundary": "Exact RuntimeOwner a566efc5987b6859d004a8531cb8e6bac80bec30 publishes attachment/owned/allocated after factory.open, then awaits checkReadiness before publishing nativeReady. The last sample and non-atomic final recordReadyfalse do not identify the exact unresolved D/native substep.",
+      "physicalBoundary": "All7 jobs resumed/stopped/drained/released and final original handles absent. Slot6 peer entryStart=entryEnd=6, so no additional fixture entry was retained over that original interval; no argv-role or startup-cause inference follows."
+    },
+    "conclusion": "No concrete safe removable currentness/ownership/nativeReady check, timeout extension, replay, cached-proof substitution or source optimization was established. Both original15-second business refusals remain failures while final physical cleanup is confirmed."
+  }
+}

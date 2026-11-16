@@ -1,0 +1,301 @@
+{
+  "schemaVersion": 1,
+  "repository": "777genius/agent-teams-ai",
+  "pr": 1211,
+  "sourceHead": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "sourceTree": "0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103",
+  "runId": 43790825857,
+  "attempt": 1,
+  "job": {
+    "id": 133048604950,
+    "run_id": 43790825857,
+    "workflow_name": "Teams creation page Electron E2E",
+    "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+    "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825857",
+    "run_attempt": 1,
+    "node_id": "CR_kwDORVTEtM8AAAAe-lCZFg",
+    "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048604950",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825857/job/133048604950",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-11-16T02:13:21Z",
+    "started_at": "2026-11-16T02:37:51Z",
+    "completed_at": "2026-11-16T02:41:15Z",
+    "name": "Creation page (ubuntu-latest)",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-16T02:37:52Z",
+        "completed_at": "2026-11-16T02:37:53Z"
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-11-16T02:37:53Z",
+        "completed_at": "2026-11-16T02:37:59Z"
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 3,
+        "started_at": "2026-11-16T02:37:59Z",
+        "completed_at": "2026-11-16T02:37:59Z"
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-16T02:37:59Z",
+        "completed_at": "2026-11-16T02:38:03Z"
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-16T02:38:03Z",
+        "completed_at": "2026-11-16T02:38:15Z"
+      },
+      {
+        "name": "Prepare Linux virtual display and zh-TW font fallback",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6,
+        "started_at": "2026-11-16T02:38:15Z",
+        "completed_at": "2026-11-16T02:38:27Z"
+      },
+      {
+        "name": "Install frozen dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7,
+        "started_at": "2026-11-16T02:38:27Z",
+        "completed_at": "2026-11-16T02:38:36Z"
+      },
+      {
+        "name": "Build isolated Host before Electron startup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-16T02:38:36Z",
+        "completed_at": "2026-11-16T02:38:39Z"
+      },
+      {
+        "name": "Stage pinned terminal-platform runtime before Electron startup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9,
+        "started_at": "2026-11-16T02:38:39Z",
+        "completed_at": "2026-11-16T02:38:40Z"
+      },
+      {
+        "name": "Ensure Electron binary before UI E2E",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10,
+        "started_at": "2026-11-16T02:38:40Z",
+        "completed_at": "2026-11-16T02:38:42Z"
+      },
+      {
+        "name": "Verify owned Windows process census and fail-closed teardown invariants",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11,
+        "started_at": "2026-11-16T02:38:42Z",
+        "completed_at": "2026-11-16T02:38:42Z"
+      },
+      {
+        "name": "Exercise actual Electron Create/Back/Resume/Copy/Launch",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 12,
+        "started_at": "2026-11-16T02:38:42Z",
+        "completed_at": "2026-11-16T02:41:11Z"
+      },
+      {
+        "name": "Upload sanitized evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13,
+        "started_at": "2026-11-16T02:41:11Z",
+        "completed_at": "2026-11-16T02:41:12Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24,
+        "started_at": "2026-11-16T02:41:12Z",
+        "completed_at": "2026-11-16T02:41:12Z"
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 25,
+        "started_at": "2026-11-16T02:41:12Z",
+        "completed_at": "2026-11-16T02:41:12Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 26,
+        "started_at": "2026-11-16T02:41:12Z",
+        "completed_at": "2026-11-16T02:41:12Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 27,
+        "started_at": "2026-11-16T02:41:12Z",
+        "completed_at": "2026-11-16T02:41:12Z"
+      }
+    ],
+    "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048604950",
+    "labels": [
+      "ubuntu-latest"
+    ],
+    "runner_id": 1000375965,
+    "runner_name": "GitHub Actions 1000375965",
+    "runner_group_id": 0,
+    "runner_group_name": "GitHub Actions"
+  },
+  "artifact": {
+    "id": 14193585514,
+    "node_id": "MDg6QXJ0aWZhY3QxNDE5MzU4NTUxNA==",
+    "name": "teams-create-page-ubuntu-latest-2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "size_in_bytes": 2866106,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14193585514",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14193585514/zip",
+    "expired": false,
+    "digest": "sha256:55312c163be5b7cf8f7439cec2e41ca80961e3a2523a024efd7149d1726ef58d",
+    "created_at": "2026-11-16T02:41:12Z",
+    "updated_at": "2026-11-16T02:41:12Z",
+    "expires_at": "2026-11-30T02:41:11Z",
+    "workflow_run": {
+      "id": 43790825857,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+      "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+    }
+  },
+  "payloads": [
+    {
+      "path": "pr1211-teams-ubuntu-job.log",
+      "gitBlob": "92a6f27405b368a534d4522fe7e919e50f75601d",
+      "bytes": 57237,
+      "sha256": "3733ea8401aef891b6f046876d6ccbb82c5ec259cc5fbb666318cf7de1fdf412"
+    },
+    {
+      "path": "pr1211-teams-ubuntu-run-api.json",
+      "gitBlob": "2aee90cb895cbcd4aa4b2c08047b85a8f6a06024",
+      "bytes": 13854,
+      "sha256": "9ffc0019bd22c14aeebc8645a2c5cc2768aab99650599359b997b671bcfe0557"
+    },
+    {
+      "path": "pr1211-teams-ubuntu-jobs-api.json",
+      "gitBlob": "3b22d308f7eaa5dacc8fe0f8bda80641c03499c7",
+      "bytes": 11954,
+      "sha256": "2f2bd93eb30621efe4d75da69203aef21d97c73bbcde4edc74ddfbe92fb79f6b"
+    },
+    {
+      "path": "pr1211-teams-ubuntu-artifacts-api.json",
+      "gitBlob": "56a28db79c06e8ef66cc02a387532b117566576f",
+      "bytes": 2419,
+      "sha256": "9d319f237263082be4ac67fbc19bef03760be722b8ce88793fddf33408f0fc0d"
+    }
+  ],
+  "actual": {
+    "ownedProcessTests": {
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0
+    },
+    "originalJourneyStdout": {
+      "success": true,
+      "scheduleUiEvidence": {
+        "scheduleLabel": "schedule-visual-e2e-fe718690",
+        "scheduleId": "d97d335c-c86e-4208-982f-b7a91b9b6a11",
+        "createdAndDeleted": true
+      },
+      "zhTwMcpUiEvidence": {
+        "locale": "zh-TW",
+        "taskDetailUiEvidence": {
+          "taskId": "77",
+          "locale": "zh-TW",
+          "dialogOpenTabAction": "在獨立分頁中開啟",
+          "dialogScreenshot": "teams-create-zh-tw-task-detail-dialog.png",
+          "tabScreenshot": "teams-create-zh-tw-task-detail-tab.png",
+          "nativeTaskTabVisible": true
+        },
+        "strictAllowlistVisible": true,
+        "placeholder": "github, sentry",
+        "parsedServerNames": [
+          "github",
+          "sentry"
+        ],
+        "screenshot": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+        "controlEditedThroughNativeCdp": true
+      },
+      "unique": "create-page-e2e-343a93f0",
+      "retainedAcrossBack": true,
+      "retainedAcrossTabSwitch": true,
+      "manageProvidersNavigationRetainsDraft": true,
+      "retainedAcrossProcessRestart": true,
+      "advancedCliRetainedAcrossRename": true,
+      "teammateModeOverridePersistedThroughNativeUi": true,
+      "teammateModeOverrideValidatedThroughNativeUi": true,
+      "missingRequiredCliValueRejectedThroughNativeUi": true,
+      "advancedCliRetainedAcrossPaneSplit": true,
+      "advancedCliRetainedAcrossBackRemount": true,
+      "advancedCliRestoresUneditedDefaults": true,
+      "unnamedAdvancedCliEditsRetained": true,
+      "launchStillModal": true,
+      "launchContentLoaded": true,
+      "configOnlyCreatedThroughUi": true,
+      "nativeConfigOnlyRejectionKeepsDraft": true,
+      "copiedTeamUsesSharedEditor": true,
+      "copiedDraftDoesNotReplaySeed": true,
+      "templateReplacementCancelledAndConfirmed": true,
+      "organizationPlacementPersistedViaNativeApi": true,
+      "duplicateNameValidationRecovered": true,
+      "themeDarkLightRendered": true,
+      "cssZoom200Rendered": true,
+      "nativeElectronZoom200Rendered": true,
+      "splitPaneSingleEditor": true,
+      "macInputSelectionFallbackCount": 0,
+      "sandboxRoot": "/tmp/teams-create-page-e2e-cfilpq",
+      "cleanup": {
+        "processGroupAbsent": true,
+        "windowsTaskkillExitedZero": null,
+        "windowsExactOwnedProcessesAbsent": null,
+        "windowsTeardowns": null,
+        "temporaryProfileRemoved": true
+      }
+    },
+    "scope": "Original Electron journey and its emitted assertions only."
+  },
+  "limits": {
+    "originalRunOnly": true,
+    "noReplayOrChildActions": true,
+    "childDownloadedOrInspectedZip": false,
+    "artifactDigestAndSizeAreOriginalUploadPlusApi": true,
+    "noWholeRunPassTransfer": true,
+    "skippedNotPass": true,
+    "noInstallerCleanupPass": false
+  }
+}

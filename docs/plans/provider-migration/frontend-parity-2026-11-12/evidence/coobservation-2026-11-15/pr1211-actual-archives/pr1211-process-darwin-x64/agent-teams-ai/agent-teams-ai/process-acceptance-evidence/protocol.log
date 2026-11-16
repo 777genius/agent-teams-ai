@@ -1,0 +1,12 @@
+
+[1m[46m RUN [49m[22m [36mv3.2.6 [39m[90m/Users/runner/work/agent-teams-ai/agent-teams-ai[39m
+
+ [32m✓[39m tools/owned-process-broker/protocol.test.ts [2m([22m[2m47 tests[22m[2m)[22m[32m 258[2mms[22m[39m
+ [32m✓[39m tools/owned-process-broker/nativeGateContext.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 311[2mms[22m[39m
+ [32m✓[39m tools/owned-process-broker/nativeGateEvents.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[32m53 passed[39m[22m[90m (53)[39m
+[2m   Start at [22m 02:33:20
+[2m   Duration [22m 3.94s[2m (transform 493ms, setup 0ms, collect 1.88s, tests 576ms, environment 1ms, prepare 494ms)[22m
+

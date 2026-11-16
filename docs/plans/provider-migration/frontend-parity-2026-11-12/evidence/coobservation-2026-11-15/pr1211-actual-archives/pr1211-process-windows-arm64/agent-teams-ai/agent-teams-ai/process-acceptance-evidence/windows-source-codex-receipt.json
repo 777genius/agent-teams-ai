@@ -1,0 +1,528 @@
+{
+  "kind": "TEST_WINDOWS_EMULATED_SOURCE_PARITY",
+  "sourceHead": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "platform": "win32-arm64",
+  "nodeVersion": "v24.21.0",
+  "status": "INCOMPLETE",
+  "pins": [
+    {
+      "path": "C:\\a\\_temp\\TEST-process-stage-arm64\\owned-process-broker.exe",
+      "sha256": "2dd92a9cf740057e408cad943d306c2cc3b51d65d7a8576cfa3341f41d1f663e"
+    },
+    {
+      "path": "C:\\a\\_temp\\TEST-process-build-arm64\\Release\\owned-process-fixture.exe",
+      "sha256": "0fe8d798659b89063bca63222ea6bf6e0a7f9729932d6a9f6a0517ec9dba5e87"
+    },
+    {
+      "path": "C:\\a\\_temp\\TEST-process-scoped-stage-arm64\\owned-process-broker.exe",
+      "sha256": "3656a49a37a1e37c4f7c9b840831a83952cd9a9a7e27728327e3269017008fec"
+    }
+  ],
+  "provider": "codex",
+  "sourceScenarios": [
+    {
+      "provider": "codex",
+      "status": "INCOMPLETE",
+      "stage": "Team-A",
+      "cleanup": true,
+      "realProviderExecuted": false,
+      "desktopQualified": false,
+      "releaseQualified": false,
+      "pins": [
+        {
+          "path": "C:\\hostedtoolcache\\windows\\node\\24.21.0\\arm64\\node.exe",
+          "sha256": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7"
+        },
+        {
+          "path": "C:\\a\\_temp\\TEST-process-scoped-stage-arm64\\owned-process-broker.exe",
+          "sha256": "3656a49a37a1e37c4f7c9b840831a83952cd9a9a7e27728327e3269017008fec"
+        },
+        {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\cli.js",
+          "sha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg7457.tmp\\TEST-desktop-backend-codex7e3381715557424ca63beb746f295dc8\\TEST-source-host.mjs",
+          "sha256": "ad7b09dbe5483468b27b5a3de0bbc51eb47879f3421e167c5c10b7ebb040641f"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg7457.tmp\\TEST-desktop-backend-codex7e3381715557424ca63beb746f295dc8\\TEST-source-profile.json",
+          "sha256": "46a143bcdbcbf1ba3cf7c10224121d1277a5d36d12a28d7678bd5fa97445cea7"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg7457.tmp\\TEST-desktop-backend-codex7e3381715557424ca63beb746f295dc8\\TEST-source-descriptor.json",
+          "sha256": "75e207fb303b98d426cbeaa4968cf1bc57fd423bfcc00d287f6d3c55b5eae730"
+        },
+        {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceProfile.ts",
+          "sha256": "ea6325f3f045cbaa198683b47aabb159a9c73b86680ec2e18b1e2861a3873112"
+        },
+        {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts",
+          "sha256": "c2df517131dfa36975f334bee90feb98ab33e2947eec4389e7540cc6257257f2"
+        },
+        {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProviderGate.ts",
+          "sha256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce"
+        },
+        {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProfile.ts",
+          "sha256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961"
+        },
+        {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeGateContext.ts",
+          "sha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6"
+        },
+        {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeGateEvents.ts",
+          "sha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4"
+        },
+        {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceReadiness.ts",
+          "sha256": "119802fbff75a78790b6b28e4e366b81ed266ddcf4005500e45c1b9772d1e0d2"
+        },
+        {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\fixtures\\providerPeer.mjs",
+          "sha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc"
+        },
+        {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\fixtures\\providerDesktopPeer.mjs",
+          "sha256": "1ea2bf4ba7cb932bdd3b59ad33d3761fdaa07edae4f53d550f4b4de72ba23e2d"
+        },
+        {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\owned-process\\HostWindowsLaunch.ts",
+          "sha256": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748"
+        },
+        {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\owned-process\\HostWindowsLaunch.js",
+          "sha256": "975108117efd64201c73fb9f565ac890d8b156f7c0a06eb46d5bb6fc15018cb4"
+        },
+        {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\composition\\prepareTeamModelReadiness.ts",
+          "sha256": "f514e025dfd60394442348f9f0871592e4315072067779b0aef2ad55812f7cbc"
+        },
+        {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\composition\\prepareTeamModelReadiness.js",
+          "sha256": "265208df5743490006ea59f2f4016ab3cd59619c37af575162576c319e2d416f"
+        },
+        {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\management\\ModelProbeOwner.ts",
+          "sha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361"
+        },
+        {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\management\\ModelProbeOwner.js",
+          "sha256": "7201def22b57f351f0c85f20270240c918e203691bb029a44b278580f6b25283"
+        },
+        {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\composition\\projectRuntimeMember.ts",
+          "sha256": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079"
+        },
+        {
+          "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\composition\\projectRuntimeMember.js",
+          "sha256": "371c569579af59881eaf03a3cd5a622a67a62b2fb780267d0ff78fd8e6fe6770"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg7457.tmp\\TEST-desktop-backend-codex7e3381715557424ca63beb746f295dc8\\bin\\TEST source A.cmd",
+          "sha256": "dbfa6fad0d3479b2ea452a2cbff56baf3cb4756df98524c241ad92c9a0eb1cce"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg7457.tmp\\TEST-desktop-backend-codex7e3381715557424ca63beb746f295dc8\\bin\\TEST-source-A.mjs",
+          "sha256": "502d2a89ee34660e660c1de18b80a2e4615956505e6dc61792c4c37b01078cfd"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg7457.tmp\\TEST-desktop-backend-codex7e3381715557424ca63beb746f295dc8\\bin\\TEST source B.cmd",
+          "sha256": "4e224fb53b87d0b0c8796044384e6fbccfdfbe9ff7c2f4a5caf18995eed4e90c"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg7457.tmp\\TEST-desktop-backend-codex7e3381715557424ca63beb746f295dc8\\bin\\TEST-source-B.mjs",
+          "sha256": "512b19b47bdd7d5e551edb5d5f20150bc2b7f7615276aa122426d1cf3f54a263"
+        }
+      ],
+      "versions": {
+        "A": "0.162.0",
+        "B": "0.162.0"
+      },
+      "lastLaunchReadiness": {
+        "source": {
+          "sourceId": "e7ff2ac1f9e99ef074ea046f310b907855028cf8172a2c85936cf63c890e427f",
+          "revision": "ea546040b9e466af2d74e00b7193877796fcd273b858df7e1bef4107d051a3be"
+        },
+        "image": "A",
+        "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+        "readCount": 100,
+        "elapsedMs": 14983.042899999999,
+        "lastRuntimeRead": {
+          "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+          "memberId": "alice-id",
+          "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+          "phase": "allocated",
+          "sealed": false,
+          "custody": "owned",
+          "nativeReady": false,
+          "attached": true
+        }
+      },
+      "epochs": [
+        {
+          "mainEpoch": "df1f4013-a014-4fb7-ab8f-264918e8ed14",
+          "pending": {
+            "admitted": 1,
+            "revoked": 1
+          },
+          "serviceOperations": 0,
+          "firstCloseEntryMs": 24776.8635,
+          "jobs": [
+            {
+              "capability": "152b8090-87cc-4cc1-999d-14ee69147674",
+              "stagingTimings": {
+                "launch-chunk": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.1408000000001266,
+                  "firstStartMs": 3506.969,
+                  "lastEndMs": 3507.1098
+                },
+                "launch-commit": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.5316000000002532,
+                  "firstStartMs": 3510.0382,
+                  "lastEndMs": 3510.5698
+                }
+              },
+              "origin": null,
+              "root": {
+                "pid": 11172,
+                "birth": "01dd757326e6bd22"
+              },
+              "resumed": true,
+              "stopped": true,
+              "drained": true,
+              "released": true,
+              "originalHandleAbsent": true,
+              "entryStart": 0,
+              "entryEnd": 1,
+              "threadEphemeral": []
+            },
+            {
+              "capability": "e3293877-6d69-429b-a26b-bed34f68653c",
+              "stagingTimings": {
+                "launch-chunk": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.08839999999872816,
+                  "firstStartMs": 6542.4058,
+                  "lastEndMs": 6542.494199999999
+                },
+                "launch-commit": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.2665999999990163,
+                  "firstStartMs": 6647.4341,
+                  "lastEndMs": 6647.700699999999
+                }
+              },
+              "origin": {
+                "sourceId": "e7ff2ac1f9e99ef074ea046f310b907855028cf8172a2c85936cf63c890e427f",
+                "revision": "ea546040b9e466af2d74e00b7193877796fcd273b858df7e1bef4107d051a3be",
+                "origin": {
+                  "kind": "runtime",
+                  "scope": {
+                    "teamId": "TEST-source-team-A",
+                    "projectId": "TEST-project",
+                    "workspaceId": "TEST-workspace"
+                  },
+                  "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg7457.tmp\\TEST-desktop-backend-codex7e3381715557424ca63beb746f295dc8\\workspace",
+                  "teamId": "TEST-source-team-A",
+                  "memberId": "alice-id",
+                  "recipeIdentity": "d0868b51e24127d1c558f46c53d05739955cf346dc59b1557c60888cb01eca28"
+                }
+              },
+              "root": {
+                "pid": 10864,
+                "birth": "01dd75732906e4d1"
+              },
+              "resumed": true,
+              "stopped": true,
+              "drained": true,
+              "released": true,
+              "originalHandleAbsent": true,
+              "entryStart": 1,
+              "entryEnd": 2,
+              "threadEphemeral": []
+            },
+            {
+              "capability": "ff72a512-768f-4779-be4f-2f32e5e5d3ae",
+              "stagingTimings": {
+                "launch-chunk": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.0783000000010361,
+                  "firstStartMs": 11046.0333,
+                  "lastEndMs": 11046.1116
+                },
+                "launch-commit": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.24949999999989814,
+                  "firstStartMs": 11065.3,
+                  "lastEndMs": 11065.5495
+                }
+              },
+              "origin": {
+                "sourceId": "e7ff2ac1f9e99ef074ea046f310b907855028cf8172a2c85936cf63c890e427f",
+                "revision": "ea546040b9e466af2d74e00b7193877796fcd273b858df7e1bef4107d051a3be",
+                "origin": {
+                  "kind": "runtime",
+                  "scope": {
+                    "teamId": "TEST-source-team-A",
+                    "projectId": "TEST-project",
+                    "workspaceId": "TEST-workspace"
+                  },
+                  "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg7457.tmp\\TEST-desktop-backend-codex7e3381715557424ca63beb746f295dc8\\workspace",
+                  "teamId": "TEST-source-team-A",
+                  "memberId": "alice-id",
+                  "recipeIdentity": "d0868b51e24127d1c558f46c53d05739955cf346dc59b1557c60888cb01eca28"
+                }
+              },
+              "root": {
+                "pid": 3004,
+                "birth": "01dd75732b71ff11"
+              },
+              "resumed": true,
+              "stopped": true,
+              "drained": true,
+              "released": true,
+              "originalHandleAbsent": true,
+              "entryStart": 2,
+              "entryEnd": 3,
+              "threadEphemeral": []
+            },
+            {
+              "capability": "3cb86cff-ff23-40ab-ac37-52e82006aa3c",
+              "stagingTimings": {
+                "launch-chunk": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.07779999999911524,
+                  "firstStartMs": 13703.76,
+                  "lastEndMs": 13703.8378
+                },
+                "launch-commit": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.5262000000002445,
+                  "firstStartMs": 13844.3064,
+                  "lastEndMs": 13844.8326
+                }
+              },
+              "origin": {
+                "sourceId": "e7ff2ac1f9e99ef074ea046f310b907855028cf8172a2c85936cf63c890e427f",
+                "revision": "ea546040b9e466af2d74e00b7193877796fcd273b858df7e1bef4107d051a3be",
+                "origin": {
+                  "kind": "runtime",
+                  "scope": {
+                    "teamId": "TEST-source-team-A",
+                    "projectId": "TEST-project",
+                    "workspaceId": "TEST-workspace"
+                  },
+                  "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg7457.tmp\\TEST-desktop-backend-codex7e3381715557424ca63beb746f295dc8\\workspace",
+                  "teamId": "TEST-source-team-A",
+                  "memberId": "alice-id",
+                  "recipeIdentity": "d0868b51e24127d1c558f46c53d05739955cf346dc59b1557c60888cb01eca28"
+                }
+              },
+              "root": {
+                "pid": 4532,
+                "birth": "01dd75732d295b64"
+              },
+              "resumed": true,
+              "stopped": true,
+              "drained": true,
+              "released": true,
+              "originalHandleAbsent": true,
+              "entryStart": 3,
+              "entryEnd": 6,
+              "threadEphemeral": [
+                false
+              ]
+            },
+            {
+              "capability": "48187f4a-e990-4f34-a4e9-b7d49832457f",
+              "stagingTimings": {
+                "launch-chunk": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.07140000000072177,
+                  "firstStartMs": 16885.280899999998,
+                  "lastEndMs": 16885.3523
+                },
+                "launch-commit": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.551500000001397,
+                  "firstStartMs": 16904.375699999997,
+                  "lastEndMs": 16904.9272
+                }
+              },
+              "origin": {
+                "sourceId": "e7ff2ac1f9e99ef074ea046f310b907855028cf8172a2c85936cf63c890e427f",
+                "revision": "ea546040b9e466af2d74e00b7193877796fcd273b858df7e1bef4107d051a3be",
+                "origin": {
+                  "kind": "runtime",
+                  "scope": {
+                    "teamId": "TEST-source-team-A",
+                    "projectId": "TEST-project",
+                    "workspaceId": "TEST-workspace"
+                  },
+                  "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg7457.tmp\\TEST-desktop-backend-codex7e3381715557424ca63beb746f295dc8\\workspace",
+                  "teamId": "TEST-source-team-A",
+                  "memberId": "alice-id",
+                  "recipeIdentity": "d0868b51e24127d1c558f46c53d05739955cf346dc59b1557c60888cb01eca28"
+                }
+              },
+              "root": {
+                "pid": 4140,
+                "birth": "01dd75732eec076a"
+              },
+              "resumed": true,
+              "stopped": true,
+              "drained": true,
+              "released": true,
+              "originalHandleAbsent": true,
+              "entryStart": 4,
+              "entryEnd": 5,
+              "threadEphemeral": []
+            },
+            {
+              "capability": "7f51fd59-d01e-407b-91c6-35cbd8269212",
+              "stagingTimings": {
+                "launch-chunk": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.07679999999891152,
+                  "firstStartMs": 20574.557099999998,
+                  "lastEndMs": 20574.6339
+                },
+                "launch-commit": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.23210000000108266,
+                  "firstStartMs": 20592.742599999998,
+                  "lastEndMs": 20592.9747
+                }
+              },
+              "origin": {
+                "sourceId": "e7ff2ac1f9e99ef074ea046f310b907855028cf8172a2c85936cf63c890e427f",
+                "revision": "ea546040b9e466af2d74e00b7193877796fcd273b858df7e1bef4107d051a3be",
+                "origin": {
+                  "kind": "runtime",
+                  "scope": {
+                    "teamId": "TEST-source-team-A",
+                    "projectId": "TEST-project",
+                    "workspaceId": "TEST-workspace"
+                  },
+                  "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg7457.tmp\\TEST-desktop-backend-codex7e3381715557424ca63beb746f295dc8\\workspace",
+                  "teamId": "TEST-source-team-A",
+                  "memberId": "alice-id",
+                  "recipeIdentity": "d0868b51e24127d1c558f46c53d05739955cf346dc59b1557c60888cb01eca28"
+                }
+              },
+              "root": {
+                "pid": 4980,
+                "birth": "01dd7573311e7d14"
+              },
+              "resumed": true,
+              "stopped": true,
+              "drained": true,
+              "released": true,
+              "originalHandleAbsent": true,
+              "entryStart": 5,
+              "entryEnd": 6,
+              "threadEphemeral": []
+            },
+            {
+              "capability": "a984f9a6-2bcb-48c4-a25a-25195297b521",
+              "stagingTimings": {
+                "launch-chunk": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.07140000000072177,
+                  "firstStartMs": 23626.829100000003,
+                  "lastEndMs": 23626.900500000003
+                },
+                "launch-commit": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.3595000000022992,
+                  "firstStartMs": 23644.5933,
+                  "lastEndMs": 23644.9528
+                }
+              },
+              "origin": {
+                "sourceId": "e7ff2ac1f9e99ef074ea046f310b907855028cf8172a2c85936cf63c890e427f",
+                "revision": "ea546040b9e466af2d74e00b7193877796fcd273b858df7e1bef4107d051a3be",
+                "origin": {
+                  "kind": "runtime",
+                  "scope": {
+                    "teamId": "TEST-source-team-A",
+                    "projectId": "TEST-project",
+                    "workspaceId": "TEST-workspace"
+                  },
+                  "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg7457.tmp\\TEST-desktop-backend-codex7e3381715557424ca63beb746f295dc8\\workspace",
+                  "teamId": "TEST-source-team-A",
+                  "memberId": "alice-id",
+                  "recipeIdentity": "d0868b51e24127d1c558f46c53d05739955cf346dc59b1557c60888cb01eca28"
+                }
+              },
+              "root": {
+                "pid": 1004,
+                "birth": "01dd757332ee3818"
+              },
+              "resumed": true,
+              "stopped": true,
+              "drained": true,
+              "released": true,
+              "originalHandleAbsent": true,
+              "entryStart": 6,
+              "entryEnd": 6,
+              "threadEphemeral": []
+            }
+          ]
+        }
+      ],
+      "runtimeProjection": {
+        "status": "observed",
+        "atomicWithFailure": false,
+        "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+        "bindingMatches": true,
+        "recordReady": false,
+        "providerReady": null,
+        "ownerCurrent": null,
+        "nativeReady": false
+      },
+      "firstRefusal": {
+        "status": "unknown",
+        "reason": "empty"
+      }
+    }
+  ],
+  "cleanup": true,
+  "realProviderExecuted": false,
+  "desktopQualified": false,
+  "releaseQualified": false
+}

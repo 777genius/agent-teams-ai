@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "platform": "win32",
+  "arch": "x64",
+  "file": "owned-process-broker.exe",
+  "sha256": "5d44c984e8dccfd5b7aae03624d1419de5812bca93932a1fc4e85db78ebcc3e3",
+  "protocol": 1
+}

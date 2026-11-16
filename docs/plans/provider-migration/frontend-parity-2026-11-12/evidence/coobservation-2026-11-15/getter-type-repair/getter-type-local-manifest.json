@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "kind": "getter-type-scoped-local-checks",
+  "head": "26d30dc4d4f9de444f0924f60fa2ee7630d821ec",
+  "tree": "c3298a08cc4ad8bf96f4df3a2935e071bc88b3a8",
+  "parent": "242770cba46f0a099062e042e9401557a4875120",
+  "publishedR1": "797533a5211911a9fb57202a1304abfe23ec8961",
+  "startedAt": "2026-11-16T03:37:09.404923+00:00",
+  "statusBefore": "clean",
+  "source": {
+    "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "gitBlob": "8e9884ea50b1aae54b50d6271367b495c1ca591e",
+    "bytes": 119247,
+    "lines": 1960,
+    "sha256": "40957ecc99cf92ec6f4e397c06c19d5c4fec9ffd8d65ffcc44be0e99f8e320b3"
+  },
+  "nodeExecutable": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeVersion": "v24.21.0",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "pnpmVersion": "11.22.0",
+  "resourceFlags": {
+    "NODE_OPTIONS": null,
+    "GOMAXPROCS": null,
+    "GOMEMLIMIT": null
+  },
+  "steps": [
+    {
+      "name": "getter-type-scoped-lint.log",
+      "argv": [
+        "pnpm",
+        "lint:fast:files",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "startedAt": "2026-11-16T03:37:09.790825+00:00",
+      "finishedAt": "2026-11-16T03:37:12.292127+00:00",
+      "durationSeconds": 2.5013101049989928,
+      "exitCode": 0,
+      "bytes": 164,
+      "sha256": "f8195f3eea5a97dbd40c1bfbc75b8a41128a335e4b20aafc9c262650c8d48fd7"
+    },
+    {
+      "name": "getter-type-scoped-diff.log",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "242770cba46f0a099062e042e9401557a4875120",
+        "26d30dc4d4f9de444f0924f60fa2ee7630d821ec",
+        "--",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "startedAt": "2026-11-16T03:37:12.292502+00:00",
+      "finishedAt": "2026-11-16T03:37:12.299179+00:00",
+      "durationSeconds": 0.006665376000455581,
+      "exitCode": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "qualification": "Exact seven-byte TEST correction and scoped lint/diff only. No runtime, compiler, build, packaged, native or GUI qualification.",
+  "statusAfter": "",
+  "finishedAt": "2026-11-16T03:37:12.321744+00:00",
+  "allAuthorizedChecksExecuted": true,
+  "allExecutedChecksExitZero": true
+}

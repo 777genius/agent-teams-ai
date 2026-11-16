@@ -1,0 +1,94 @@
+{
+  "artifactId": 14192769739,
+  "sourceCommit": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "zipBytes": 33436,
+  "zipSha256": "983f2720d7e793eb0b29ac55f64840067d335535e7bfcf3873ffdde19a6b5885",
+  "crcVerified": true,
+  "safeUniqueMemberPaths": true,
+  "members": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "bytes": 20528,
+      "sha256": "be663cf4777e540ab56df7dd54bb7f4ba8c5f9e838ff7e263d88fe9b0d4d4005",
+      "gitBlobSha": "fad3dcc11f13fb2671d0dbd4bca2102436172b89"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt",
+      "bytes": 1741,
+      "sha256": "14b631725a46fcc7ec3c090d453b15d2b21ecf3a07d41cedc43e9d61adda3fa1",
+      "gitBlobSha": "b2954144029ed8772906be4463fa924f548780e8"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "bytes": 757,
+      "sha256": "fc95092852086e87e1e2c3659a706e5dbf82f3db3db4f2285f0b21a80bfc343e",
+      "gitBlobSha": "e50e5b6bc790d63362aeef42349a03cccd37958e"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "bytes": 9713,
+      "sha256": "ae440c2175e00ddc9c9835e0d4684d711f160564ac45f571265dd4ff263e95bc",
+      "gitBlobSha": "541aacdbf54552b49021ae1987731ceb4f15f97d"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "bytes": 41,
+      "sha256": "678ca33e75d73fda1619b6e84e09264639fdbe410f0265751b208eed3f84193b",
+      "gitBlobSha": "e7138e35ffe5c23df65f0dc6a922d79ae58b62c4"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt",
+      "bytes": 1741,
+      "sha256": "14b631725a46fcc7ec3c090d453b15d2b21ecf3a07d41cedc43e9d61adda3fa1",
+      "gitBlobSha": "b2954144029ed8772906be4463fa924f548780e8"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+      "bytes": 89073,
+      "sha256": "167f148ffeab201c55f932d84b0c88ed4e481d271ff1beeb40bf10744e673a1d",
+      "gitBlobSha": "d5f6873e62d4408e273b88edaea49a04a4d8a7d1"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider-receipt.json",
+      "bytes": 2908,
+      "sha256": "9ba9696bd0a6a9903f15238cb25a1699f13c00952fbc09b30de41b43c7d84449",
+      "gitBlobSha": "a1725d11cedb1f8c56a2d6d12981680efa4e1a7d"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider.log",
+      "bytes": 1278,
+      "sha256": "5d8002632f0dea1647da41e43cda2e3bad5c202ff14267fb6cf4552ff6d2c37d",
+      "gitBlobSha": "c0c5e61776fb2bc40543774f7d9d0a066076ebe9"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json",
+      "bytes": 195,
+      "sha256": "0cb53f18e70966446e7e9702aae36211fca0dac2c00d17e8d0766967c9d1c103",
+      "gitBlobSha": "0609449dd0bcfa708387234fe82817db7db58dfa"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+      "bytes": 89040,
+      "sha256": "dfcf8955104960a7eae98e71c0fa448c92177aef79d8fc1142fd5e8ef42e40ba",
+      "gitBlobSha": "71d1d93233f6bfedff200b4f5f08f831029bbf93"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json",
+      "bytes": 232,
+      "sha256": "24c373006f23745c7437da69c2ecbc1856bf54226ada64710e8373eaab02203f",
+      "gitBlobSha": "028709143616bb343f1f409b7d434172a7f26fc2"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+      "bytes": 22298,
+      "sha256": "7cb7c142e65610fe954d8e55d0da1174ca8d59db3f6bd004c33ed497d789e985",
+      "gitBlobSha": "f90c0968272c9b5f7863f7b068702738f0955c5b"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+      "bytes": 14936,
+      "sha256": "309e64887b34c723278833209b23f8bf2e4707de6fc096cbeed1b5f7b38093ee",
+      "gitBlobSha": "aa885b6529bfec867f65b77a394f7af1ab89c02f"
+    }
+  ]
+}

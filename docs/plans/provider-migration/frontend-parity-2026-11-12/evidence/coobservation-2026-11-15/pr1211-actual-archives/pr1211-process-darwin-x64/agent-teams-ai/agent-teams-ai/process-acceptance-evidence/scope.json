@@ -1,0 +1,16 @@
+{
+  "kind": "TEST_HOST_PROCESS_FIXTURE_ACCEPTANCE",
+  "status": "PASS",
+  "sourceHead": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "platform": "darwin-x64",
+  "nodeVersion": "v24.21.0",
+  "controlledContracts": true,
+  "retainedMainTransport": true,
+  "posixProcessGroups": true,
+  "native": [],
+  "nativeProviderRuntimeQualified": false,
+  "darwinNativeRegistrationQualified": false,
+  "posixExecutableAdmissionQualified": false,
+  "desktopQualified": false,
+  "releaseQualified": false
+}

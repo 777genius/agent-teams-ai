@@ -1,0 +1,673 @@
+{
+  "kind": "TEST_WINDOWS_EMULATED_SOURCE_PARITY",
+  "sourceHead": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "platform": "win32-x64",
+  "nodeVersion": "v24.21.0",
+  "status": "PASS",
+  "pins": [
+    {
+      "path": "D:\\a\\_temp\\TEST-process-stage-x64\\owned-process-broker.exe",
+      "sha256": "5d44c984e8dccfd5b7aae03624d1419de5812bca93932a1fc4e85db78ebcc3e3"
+    },
+    {
+      "path": "D:\\a\\_temp\\TEST-process-build-x64\\Release\\owned-process-fixture.exe",
+      "sha256": "ed1aeca392fbdb2bd274839bb5681adb733cd5a785b228cc1bd4f768d626ad74"
+    },
+    {
+      "path": "D:\\a\\_temp\\TEST-process-scoped-stage-x64\\owned-process-broker.exe",
+      "sha256": "9a1b71904c021053d3a65a0eab2e9ef776e2a7ed181f324f092ddf5a77e20557"
+    }
+  ],
+  "provider": "claude",
+  "sourceScenarios": [
+    {
+      "provider": "claude",
+      "status": "PASS",
+      "stage": "complete",
+      "cleanup": true,
+      "realProviderExecuted": false,
+      "desktopQualified": false,
+      "releaseQualified": false,
+      "pins": [
+        {
+          "path": "C:\\hostedtoolcache\\windows\\node\\24.21.0\\x64\\node.exe",
+          "sha256": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32"
+        },
+        {
+          "path": "D:\\a\\_temp\\TEST-process-scoped-stage-x64\\owned-process-broker.exe",
+          "sha256": "9a1b71904c021053d3a65a0eab2e9ef776e2a7ed181f324f092ddf5a77e20557"
+        },
+        {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\cli.js",
+          "sha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgE196.tmp\\TEST-desktop-backend-claude6784c37a847843aa817315751c3f7fcc\\TEST-source-host.mjs",
+          "sha256": "d3150f9bf6f331b8b42ca1e8a3185105c030cd34e248d797a035cc91416ef08e"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgE196.tmp\\TEST-desktop-backend-claude6784c37a847843aa817315751c3f7fcc\\TEST-source-profile.json",
+          "sha256": "1afaf3da89828666a6e966ed1d394fce59c44435d990db71ad5d52baa994a7f9"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgE196.tmp\\TEST-desktop-backend-claude6784c37a847843aa817315751c3f7fcc\\TEST-source-descriptor.json",
+          "sha256": "dce5240d50efbd4e0ceba2311da77a840474225aa40a46fbf1249bf31813cb6c"
+        },
+        {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceProfile.ts",
+          "sha256": "ea6325f3f045cbaa198683b47aabb159a9c73b86680ec2e18b1e2861a3873112"
+        },
+        {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts",
+          "sha256": "c2df517131dfa36975f334bee90feb98ab33e2947eec4389e7540cc6257257f2"
+        },
+        {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProviderGate.ts",
+          "sha256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce"
+        },
+        {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProfile.ts",
+          "sha256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961"
+        },
+        {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeGateContext.ts",
+          "sha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6"
+        },
+        {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeGateEvents.ts",
+          "sha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4"
+        },
+        {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceReadiness.ts",
+          "sha256": "119802fbff75a78790b6b28e4e366b81ed266ddcf4005500e45c1b9772d1e0d2"
+        },
+        {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\fixtures\\claudeProviderPeer.mjs",
+          "sha256": "e5df2f06618adcdda1ad763db90268e6f5acfe4828db433e429526a6a6479fe6"
+        },
+        {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\owned-process\\HostWindowsLaunch.ts",
+          "sha256": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748"
+        },
+        {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\owned-process\\HostWindowsLaunch.js",
+          "sha256": "975108117efd64201c73fb9f565ac890d8b156f7c0a06eb46d5bb6fc15018cb4"
+        },
+        {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\composition\\prepareTeamModelReadiness.ts",
+          "sha256": "f514e025dfd60394442348f9f0871592e4315072067779b0aef2ad55812f7cbc"
+        },
+        {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\composition\\prepareTeamModelReadiness.js",
+          "sha256": "265208df5743490006ea59f2f4016ab3cd59619c37af575162576c319e2d416f"
+        },
+        {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\management\\ModelProbeOwner.ts",
+          "sha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361"
+        },
+        {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\management\\ModelProbeOwner.js",
+          "sha256": "7201def22b57f351f0c85f20270240c918e203691bb029a44b278580f6b25283"
+        },
+        {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\composition\\projectRuntimeMember.ts",
+          "sha256": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079"
+        },
+        {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\composition\\projectRuntimeMember.js",
+          "sha256": "371c569579af59881eaf03a3cd5a622a67a62b2fb780267d0ff78fd8e6fe6770"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgE196.tmp\\TEST-desktop-backend-claude6784c37a847843aa817315751c3f7fcc\\bin\\TEST source A.cmd",
+          "sha256": "bbed2377d0de1f511043907db58447a014a34bbbfb853a3e646be85076abdc37"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgE196.tmp\\TEST-desktop-backend-claude6784c37a847843aa817315751c3f7fcc\\bin\\TEST-source-A.mjs",
+          "sha256": "c345464de409403d224d567e4b07ac33bdde7163c666ae83ef11a0b04c0b24a4"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgE196.tmp\\TEST-desktop-backend-claude6784c37a847843aa817315751c3f7fcc\\bin\\TEST source B.cmd",
+          "sha256": "165cbbdc715f66fc63de0fe421c46522122c4f4a6ab2eef15701fe75dc3b9af6"
+        },
+        {
+          "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgE196.tmp\\TEST-desktop-backend-claude6784c37a847843aa817315751c3f7fcc\\bin\\TEST-source-B.mjs",
+          "sha256": "d369bcd42b9c446e8671502c6ae2fa06bad1ab718d6fd9b8cbc9f98c8ae0fe23"
+        }
+      ],
+      "versions": {
+        "A": "2.1.34",
+        "B": "2.1.34"
+      },
+      "lastLaunchReadiness": {
+        "source": {
+          "sourceId": "76c09e03c13a92d1fa9551be934bac9d8b576a7e703ca9de9365ea69952d8b31",
+          "revision": "35dbdd05864ab32abcd971d8a2707e13ffad77e5a74a098dd7c97d79e651ab39"
+        },
+        "image": "B",
+        "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+        "readCount": 20,
+        "elapsedMs": 2491.9909000000007,
+        "lastRuntimeRead": {
+          "viewDigest": "e9c711bebe8d482154970603455182c2f6ea79e5fe18e55d8428109bec781af6",
+          "memberId": "alice-id",
+          "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+          "phase": "allocated",
+          "sealed": false,
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true
+        }
+      },
+      "foreignScopeGrantRefusedBeforeAllocation": true,
+      "management": {
+        "source": {
+          "sourceId": "76c09e03c13a92d1fa9551be934bac9d8b576a7e703ca9de9365ea69952d8b31",
+          "revision": "35dbdd05864ab32abcd971d8a2707e13ffad77e5a74a098dd7c97d79e651ab39"
+        },
+        "metadataRead": true,
+        "modelProbeCompleted": true,
+        "modelProbeReplayAllocated": false,
+        "modelProbeInputs": 1,
+        "metadataHostRetained": false
+      },
+      "lastStandaloneCompletion": {
+        "source": {
+          "sourceId": "76c09e03c13a92d1fa9551be934bac9d8b576a7e703ca9de9365ea69952d8b31",
+          "revision": "35dbdd05864ab32abcd971d8a2707e13ffad77e5a74a098dd7c97d79e651ab39"
+        },
+        "runId": "TEST-source-standalone-B",
+        "scheduleId": "TEST-source-schedule-B",
+        "readCount": 21,
+        "elapsedMs": 1326.3230999999996,
+        "lastRunRead": {
+          "phase": "completed",
+          "cleanup": "confirmed",
+          "exitCode": 0
+        }
+      },
+      "standalone": {
+        "phase": "completed",
+        "source": {
+          "sourceId": "76c09e03c13a92d1fa9551be934bac9d8b576a7e703ca9de9365ea69952d8b31",
+          "revision": "35dbdd05864ab32abcd971d8a2707e13ffad77e5a74a098dd7c97d79e651ab39"
+        },
+        "inputDigest": "1ab1b43494306ba8f91987297c03b098c7af11a3ded77b0e8a301cf4f7ce68cd",
+        "limits": {
+          "maxTurns": 6,
+          "maxBudgetUsd": 0.25
+        },
+        "ephemeral": true,
+        "replayAllocated": false
+      },
+      "cold": {
+        "currentB": true,
+        "retainedA": true,
+        "lookup": true,
+        "physicalReplayAllocations": 0,
+        "sourcePublishPendingAdmission": {
+          "admitted": 1,
+          "revoked": 1
+        },
+        "originalInputsReplayed": false,
+        "sdkPeerCheckpointRestored": true,
+        "originalNativeSessionRetained": true,
+        "restoredGeneration": "restore-35bf5201d8733cb64586eef8a61e2caaaa9710400f9a9a4764b2048fb4c66379",
+        "newInputId": "eb257560-2492-58f7-817f-2fe500496140",
+        "source": {
+          "sourceId": "76c09e03c13a92d1fa9551be934bac9d8b576a7e703ca9de9365ea69952d8b31",
+          "revision": "32d3d07e3eaa01382d5f59a7844a8dfb56883906133a476c2d784e5556da3300"
+        }
+      },
+      "selections": {
+        "A": {
+          "sourceId": "76c09e03c13a92d1fa9551be934bac9d8b576a7e703ca9de9365ea69952d8b31",
+          "revision": "32d3d07e3eaa01382d5f59a7844a8dfb56883906133a476c2d784e5556da3300",
+          "profileId": "runtime-source:32d3d07e3eaa01382d5f59a7844a8dfb56883906133a476c2d784e5556da3300",
+          "configRevision": "runtime-source:32d3d07e3eaa01382d5f59a7844a8dfb56883906133a476c2d784e5556da3300",
+          "sourceKind": "app-managed",
+          "cliVersion": "2.1.34"
+        },
+        "B": {
+          "sourceId": "76c09e03c13a92d1fa9551be934bac9d8b576a7e703ca9de9365ea69952d8b31",
+          "revision": "35dbdd05864ab32abcd971d8a2707e13ffad77e5a74a098dd7c97d79e651ab39",
+          "profileId": "runtime-source:35dbdd05864ab32abcd971d8a2707e13ffad77e5a74a098dd7c97d79e651ab39",
+          "configRevision": "runtime-source:35dbdd05864ab32abcd971d8a2707e13ffad77e5a74a098dd7c97d79e651ab39",
+          "sourceKind": "app-managed",
+          "cliVersion": "2.1.34"
+        }
+      },
+      "teams": [
+        {
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+          "inputId": "544da93a-c469-5e6e-a73e-a3a6428b072f",
+          "captureDigest": "83dde4c1b9f9c038e9b2557255bd28a9d0b9389be7e147a93bc266e216349d99",
+          "source": {
+            "sourceId": "76c09e03c13a92d1fa9551be934bac9d8b576a7e703ca9de9365ea69952d8b31",
+            "revision": "32d3d07e3eaa01382d5f59a7844a8dfb56883906133a476c2d784e5556da3300"
+          }
+        },
+        {
+          "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+          "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+          "inputId": "60e4b3e5-e50e-507a-887a-5f11ae7044d4",
+          "captureDigest": "6358bb2c246be9947ae72d6ea7f4c9285e09f83dd2cd7569c1c7f58406bbcf6f",
+          "source": {
+            "sourceId": "76c09e03c13a92d1fa9551be934bac9d8b576a7e703ca9de9365ea69952d8b31",
+            "revision": "35dbdd05864ab32abcd971d8a2707e13ffad77e5a74a098dd7c97d79e651ab39"
+          }
+        }
+      ],
+      "epochs": [
+        {
+          "mainEpoch": "0cb0cc07-3f43-4e63-885e-f87e96dac77a",
+          "pending": {
+            "admitted": 2,
+            "revoked": 2
+          },
+          "serviceOperations": 0,
+          "firstCloseEntryMs": 14547.6693,
+          "jobs": [
+            {
+              "capability": "ec246ce7-9a75-4050-90d7-e6830ee310bf",
+              "stagingTimings": {
+                "launch-chunk": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.08800000000019281,
+                  "firstStartMs": 1461.3510999999999,
+                  "lastEndMs": 1461.4391
+                },
+                "launch-commit": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.4030999999999949,
+                  "firstStartMs": 1463.3418000000001,
+                  "lastEndMs": 1463.7449000000001
+                }
+              },
+              "origin": null,
+              "root": {
+                "pid": 6076,
+                "birth": "01dd7571f15edb10"
+              },
+              "resumed": true,
+              "stopped": true,
+              "drained": true,
+              "released": true,
+              "originalHandleAbsent": true,
+              "entryStart": 0,
+              "entryEnd": 1,
+              "threadEphemeral": []
+            },
+            {
+              "capability": "85850ecf-37f0-47a8-950d-001185854e0b",
+              "stagingTimings": {
+                "launch-chunk": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.07220000000052096,
+                  "firstStartMs": 2765.9134999999997,
+                  "lastEndMs": 2765.9857
+                },
+                "launch-commit": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.1827000000002954,
+                  "firstStartMs": 2810.6436999999996,
+                  "lastEndMs": 2810.8264
+                }
+              },
+              "origin": {
+                "sourceId": "76c09e03c13a92d1fa9551be934bac9d8b576a7e703ca9de9365ea69952d8b31",
+                "revision": "32d3d07e3eaa01382d5f59a7844a8dfb56883906133a476c2d784e5556da3300",
+                "origin": {
+                  "kind": "runtime",
+                  "scope": {
+                    "teamId": "TEST-source-team-A",
+                    "projectId": "TEST-project",
+                    "workspaceId": "TEST-workspace"
+                  },
+                  "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgE196.tmp\\TEST-desktop-backend-claude6784c37a847843aa817315751c3f7fcc\\workspace",
+                  "teamId": "TEST-source-team-A",
+                  "memberId": "alice-id",
+                  "recipeIdentity": "1055553b79e927bd43a4068739c0580d3367814f08b1f8cd9d3e4b0c97ca0e49"
+                }
+              },
+              "root": {
+                "pid": 6152,
+                "birth": "01dd7571f23dd5cf"
+              },
+              "resumed": true,
+              "stopped": true,
+              "drained": true,
+              "released": true,
+              "originalHandleAbsent": true,
+              "entryStart": 1,
+              "entryEnd": 8,
+              "threadEphemeral": []
+            },
+            {
+              "capability": "dae42fd8-dc4f-4430-b0c1-0629b8842542",
+              "stagingTimings": {
+                "launch-chunk": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.028400000000146974,
+                  "firstStartMs": 5908.2701,
+                  "lastEndMs": 5908.2985
+                },
+                "launch-commit": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.1620999999995547,
+                  "firstStartMs": 5909.0649,
+                  "lastEndMs": 5909.227
+                }
+              },
+              "origin": null,
+              "root": {
+                "pid": 6900,
+                "birth": "01dd7571f404a345"
+              },
+              "resumed": true,
+              "stopped": true,
+              "drained": true,
+              "released": true,
+              "originalHandleAbsent": true,
+              "entryStart": 2,
+              "entryEnd": 4,
+              "threadEphemeral": []
+            },
+            {
+              "capability": "9bd32913-13c8-4a6d-9143-efc25272d211",
+              "stagingTimings": {
+                "launch-chunk": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.026300000000446744,
+                  "firstStartMs": 6250.0224,
+                  "lastEndMs": 6250.0487
+                },
+                "launch-commit": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.13009999999940192,
+                  "firstStartMs": 6250.7667,
+                  "lastEndMs": 6250.8967999999995
+                }
+              },
+              "origin": null,
+              "root": {
+                "pid": 5572,
+                "birth": "01dd7571f43ae3ff"
+              },
+              "resumed": true,
+              "stopped": true,
+              "drained": true,
+              "released": true,
+              "originalHandleAbsent": true,
+              "entryStart": 3,
+              "entryEnd": 4,
+              "threadEphemeral": []
+            },
+            {
+              "capability": "4aff44d2-29a3-4d56-a581-4192fad8bc45",
+              "stagingTimings": {
+                "launch-chunk": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.029500000000552973,
+                  "firstStartMs": 6655.7832,
+                  "lastEndMs": 6655.8127
+                },
+                "launch-commit": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.14940000000024156,
+                  "firstStartMs": 6657.448,
+                  "lastEndMs": 6657.597400000001
+                }
+              },
+              "origin": {
+                "sourceId": "76c09e03c13a92d1fa9551be934bac9d8b576a7e703ca9de9365ea69952d8b31",
+                "revision": "35dbdd05864ab32abcd971d8a2707e13ffad77e5a74a098dd7c97d79e651ab39",
+                "origin": {
+                  "kind": "management",
+                  "profileId": "TEST-source-claude-management",
+                  "configRevision": "TEST-source-management-1"
+                }
+              },
+              "root": {
+                "pid": 3080,
+                "birth": "01dd7571f47aa606"
+              },
+              "resumed": true,
+              "stopped": true,
+              "drained": true,
+              "released": true,
+              "originalHandleAbsent": true,
+              "entryStart": 4,
+              "entryEnd": 5,
+              "threadEphemeral": []
+            },
+            {
+              "capability": "da7fbeff-4f9c-4185-81f1-ca70dfcadd3f",
+              "stagingTimings": {
+                "launch-chunk": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.03629999999975553,
+                  "firstStartMs": 7355.4985,
+                  "lastEndMs": 7355.534799999999
+                },
+                "launch-commit": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.16560000000026776,
+                  "firstStartMs": 7359.5169000000005,
+                  "lastEndMs": 7359.682500000001
+                }
+              },
+              "origin": {
+                "sourceId": "76c09e03c13a92d1fa9551be934bac9d8b576a7e703ca9de9365ea69952d8b31",
+                "revision": "35dbdd05864ab32abcd971d8a2707e13ffad77e5a74a098dd7c97d79e651ab39",
+                "origin": {
+                  "kind": "management",
+                  "profileId": "TEST-source-claude-management",
+                  "configRevision": "TEST-source-management-1"
+                }
+              },
+              "root": {
+                "pid": 2892,
+                "birth": "01dd7571f4e8c37a"
+              },
+              "resumed": true,
+              "stopped": true,
+              "drained": true,
+              "released": true,
+              "originalHandleAbsent": true,
+              "entryStart": 5,
+              "entryEnd": 6,
+              "threadEphemeral": []
+            },
+            {
+              "capability": "29928f64-f6cf-4263-ab13-c05e502cc8e9",
+              "stagingTimings": {
+                "launch-chunk": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 1.2047999999995227,
+                  "firstStartMs": 9008.436,
+                  "lastEndMs": 9009.6408
+                },
+                "launch-commit": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.20150000000103319,
+                  "firstStartMs": 9103.2992,
+                  "lastEndMs": 9103.5007
+                }
+              },
+              "origin": {
+                "sourceId": "76c09e03c13a92d1fa9551be934bac9d8b576a7e703ca9de9365ea69952d8b31",
+                "revision": "35dbdd05864ab32abcd971d8a2707e13ffad77e5a74a098dd7c97d79e651ab39",
+                "origin": {
+                  "kind": "runtime",
+                  "scope": {
+                    "teamId": "TEST-source-team-B",
+                    "projectId": "TEST-project",
+                    "workspaceId": "TEST-workspace"
+                  },
+                  "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgE196.tmp\\TEST-desktop-backend-claude6784c37a847843aa817315751c3f7fcc\\workspace",
+                  "teamId": "TEST-source-team-B",
+                  "memberId": "alice-id",
+                  "recipeIdentity": "1055553b79e927bd43a4068739c0580d3367814f08b1f8cd9d3e4b0c97ca0e49"
+                }
+              },
+              "root": {
+                "pid": 6328,
+                "birth": "01dd7571f600aec2"
+              },
+              "resumed": true,
+              "stopped": true,
+              "drained": true,
+              "released": true,
+              "originalHandleAbsent": true,
+              "entryStart": 6,
+              "entryEnd": 8,
+              "threadEphemeral": []
+            },
+            {
+              "capability": "724efa65-1fd1-44f8-a839-d96155dc9732",
+              "stagingTimings": {
+                "launch-chunk": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.08669999999983702,
+                  "firstStartMs": 12804.946,
+                  "lastEndMs": 12805.0327
+                },
+                "launch-commit": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.20119999999951688,
+                  "firstStartMs": 12812.5941,
+                  "lastEndMs": 12812.7953
+                }
+              },
+              "origin": {
+                "sourceId": "76c09e03c13a92d1fa9551be934bac9d8b576a7e703ca9de9365ea69952d8b31",
+                "revision": "35dbdd05864ab32abcd971d8a2707e13ffad77e5a74a098dd7c97d79e651ab39",
+                "origin": {
+                  "kind": "runtime",
+                  "scope": {
+                    "teamId": "TEST-source-team-B",
+                    "projectId": "TEST-project",
+                    "workspaceId": "TEST-workspace"
+                  },
+                  "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgE196.tmp\\TEST-desktop-backend-claude6784c37a847843aa817315751c3f7fcc\\workspace",
+                  "teamId": "TEST-source-team-B",
+                  "memberId": "alice-id",
+                  "recipeIdentity": "1055553b79e927bd43a4068739c0580d3367814f08b1f8cd9d3e4b0c97ca0e49"
+                }
+              },
+              "root": {
+                "pid": 4440,
+                "birth": "01dd7571f82a8f89"
+              },
+              "resumed": true,
+              "stopped": true,
+              "drained": true,
+              "released": true,
+              "originalHandleAbsent": true,
+              "entryStart": 7,
+              "entryEnd": 8,
+              "threadEphemeral": []
+            }
+          ]
+        },
+        {
+          "mainEpoch": "28ec2919-01ef-4368-9c82-e9a37821f50a",
+          "pending": {
+            "admitted": 1,
+            "revoked": 1
+          },
+          "serviceOperations": 0,
+          "firstCloseEntryMs": 6451.0465,
+          "jobs": [
+            {
+              "capability": "da8c6c4c-4eb9-4948-b9dd-54d6fc99e5a9",
+              "stagingTimings": {
+                "launch-chunk": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.052099999997153645,
+                  "firstStartMs": 2222.5085,
+                  "lastEndMs": 2222.560599999997
+                },
+                "launch-commit": {
+                  "calls": 1,
+                  "settled": 1,
+                  "returned": 1,
+                  "totalMs": 0.3065999999998894,
+                  "firstStartMs": 2263.5913,
+                  "lastEndMs": 2263.8979
+                }
+              },
+              "origin": {
+                "sourceId": "76c09e03c13a92d1fa9551be934bac9d8b576a7e703ca9de9365ea69952d8b31",
+                "revision": "32d3d07e3eaa01382d5f59a7844a8dfb56883906133a476c2d784e5556da3300",
+                "origin": {
+                  "kind": "runtime",
+                  "scope": {
+                    "teamId": "TEST-source-team-A",
+                    "projectId": "TEST-project",
+                    "workspaceId": "TEST-workspace"
+                  },
+                  "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opgE196.tmp\\TEST-desktop-backend-claude6784c37a847843aa817315751c3f7fcc\\workspace",
+                  "teamId": "TEST-source-team-A",
+                  "memberId": "alice-id",
+                  "recipeIdentity": "1055553b79e927bd43a4068739c0580d3367814f08b1f8cd9d3e4b0c97ca0e49"
+                }
+              },
+              "root": {
+                "pid": 7912,
+                "birth": "01dd7571fad2aebe"
+              },
+              "resumed": true,
+              "stopped": true,
+              "drained": true,
+              "released": true,
+              "originalHandleAbsent": true,
+              "entryStart": 8,
+              "entryEnd": 9,
+              "threadEphemeral": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "cleanup": true,
+  "realProviderExecuted": false,
+  "desktopQualified": false,
+  "releaseQualified": false
+}

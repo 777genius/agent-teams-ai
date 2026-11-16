@@ -1,0 +1,250 @@
+{
+  "artifactId": 14192491795,
+  "sourceCommit": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "zipBytes": 1838753,
+  "zipSha256": "5b16a06bd424999c34b61b627e1be2456d312c9938441be6dd21303dca07d281",
+  "crcVerified": true,
+  "safeUniqueMemberPaths": true,
+  "members": [
+    {
+      "path": "teams-create-config-only-created.png",
+      "bytes": 35449,
+      "sha256": "eb604168cb869bc7579a8a1f4a2c75b22e71e9160328d845f60fa559854db57e",
+      "gitBlobSha": "2717006aec0842e1516d1ebea3227b3c3df9330b"
+    },
+    {
+      "path": "teams-create-css-zoom-200.png",
+      "bytes": 45840,
+      "sha256": "74c91b82476506104f9ef6ce68a9d349c2c4eaa0fa784fb8523482fa075ed927",
+      "gitBlobSha": "405d5bdc9305ac519087b00ff35404f220d409c4"
+    },
+    {
+      "path": "teams-create-copy-resumed-edits.png",
+      "bytes": 52139,
+      "sha256": "7d226d1317b67c51281154f5394042cdb5b0a89da59f02ae8a079f6c11ba23dc",
+      "gitBlobSha": "14a4f38bf483572c9ff6f1f2a8cb92af34feb56d"
+    },
+    {
+      "path": "teams-create-edited.png",
+      "bytes": 52961,
+      "sha256": "bbbda2564c505aa6284c902acd062ee54305afcced72b4328f06fcacfbea5e6e",
+      "gitBlobSha": "1534c90c586f5f2d18c270e7f74f5f0ec7c63c21"
+    },
+    {
+      "path": "teams-create-failure.png",
+      "bytes": 51809,
+      "sha256": "fbb8927ae57f2fef80ba17ad5cc845e2b93d80d107d8451424532eea0e0cef4d",
+      "gitBlobSha": "c60632977c241144cb6775ab290c65a2b905d82e"
+    },
+    {
+      "path": "teams-create-launch-controls-loaded.png",
+      "bytes": 58709,
+      "sha256": "8a2510c13b4dd8857b6f7e9d4fefb8190c8136a45ba352dc3b681030adf78443",
+      "gitBlobSha": "fd6ad8c0d5347ecf3ee06b2a83344cc353d1c154"
+    },
+    {
+      "path": "teams-create-launch-still-modal.png",
+      "bytes": 54728,
+      "sha256": "6b8e8f6923d0eba92fd06447d43c9f9e100e98e33dcd2a57bf0cbf530562f8f9",
+      "gitBlobSha": "e88141f29c019e0f82d4a761ff3a67bf9a4d73e7"
+    },
+    {
+      "path": "teams-create-missing-cli-value-validated.png",
+      "bytes": 52716,
+      "sha256": "4730a76c1b598b384c7f1b75737feb5d73f1f21e1c51fa5ca91fb99ebe514b34",
+      "gitBlobSha": "92c8cb89bba8bda11384f7014d687f8cc7c46883"
+    },
+    {
+      "path": "teams-create-native-electron-zoom-200.png",
+      "bytes": 50791,
+      "sha256": "f24bb72d67286805eac141c38cbcfd3bfae08dc9a3b1b8500cf5a2fdc025f8a3",
+      "gitBlobSha": "49c8bab7963f1ee74130f710fdea6a8a6d557f79"
+    },
+    {
+      "path": "teams-create-opened.png",
+      "bytes": 49034,
+      "sha256": "24821e7dc039e8a7f475058a8868b44c81bcdb9bb0a22eed740f883188257b3e",
+      "gitBlobSha": "6b0847853aa37be1e3ada5f7f34b22cc1d7e7ce0"
+    },
+    {
+      "path": "teams-create-organization-created.png",
+      "bytes": 27640,
+      "sha256": "b4651bdca9b1152a3a6db30699a3ec3d0e1ef4a2324f9bb1a10dcf66eed30a73",
+      "gitBlobSha": "62ba443c0e6775a6e261c7f970974999d5ae01f7"
+    },
+    {
+      "path": "teams-create-organization-entry.png",
+      "bytes": 53590,
+      "sha256": "5867d27b53b7f9bd4abbefaa459b782751dcfd594a20dde3bcb883fdc8e11bc3",
+      "gitBlobSha": "0102b1029de68ec96a7f0b84ac0ee4b961cd53dd"
+    },
+    {
+      "path": "teams-create-provider-refreshed.png",
+      "bytes": 54265,
+      "sha256": "50b34be9e205d4b96546cc8740042b52b1c77f7a1a27b71af1ef64b7f7fd5979",
+      "gitBlobSha": "9e4be5a5f04124952346cb1c316fe547d86d6930"
+    },
+    {
+      "path": "teams-create-restarted.png",
+      "bytes": 49695,
+      "sha256": "7d01f5830cb0df1db89559150bd61f3cdf37a56f2720526e7481b32dd255db3e",
+      "gitBlobSha": "ae6bc49f9775756cc6972525eb7ced2e1f5f4ed4"
+    },
+    {
+      "path": "teams-create-resumed.png",
+      "bytes": 56058,
+      "sha256": "80aa4860f5966d4c05e65add5795a4b2b749a5cf8e3a743eabcbee242f319f8b",
+      "gitBlobSha": "b4d3845f0554ca2d372d8a67a10ff014d5f156ba"
+    },
+    {
+      "path": "teams-create-save-rejected.png",
+      "bytes": 42111,
+      "sha256": "46bdad683ecd9fe6887afd5faa944ea29801011acc84e4e5549dd3d5d2897b78",
+      "gitBlobSha": "2dc7601bd1ac1f796f2653d6014f3fc90bd7b0c2"
+    },
+    {
+      "path": "teams-create-schedules-delete-confirm.png",
+      "bytes": 45968,
+      "sha256": "1be55d10b18e3800fa70c2006a8253b0fa8272c8651bcc708581bd8001fb3e51",
+      "gitBlobSha": "64263ba501d8680ba8b03e3e1ac46aace883f5e4"
+    },
+    {
+      "path": "teams-create-schedules-deleted.png",
+      "bytes": 29604,
+      "sha256": "3d01de1c4225cd1409f3678a1e31d576965278ab76cdb0d40e160becce4590a0",
+      "gitBlobSha": "d2c3538baf9facbff62cf018fe0a97da5e15d013"
+    },
+    {
+      "path": "teams-create-schedules-edit.png",
+      "bytes": 48085,
+      "sha256": "113004754966a7279ebc58eadcca3e6b68b5d5e8a3ebf5ddd5b614170537a2da",
+      "gitBlobSha": "4445b2f3de1d26744997acd2f47cc76a1f073382"
+    },
+    {
+      "path": "teams-create-schedules-editor-opened.png",
+      "bytes": 82063,
+      "sha256": "283a2aae57332e5762c95d2b073cb14ffe89f2e78e198717c45e939dff307b24",
+      "gitBlobSha": "0205fdea68dcf33b589f766af066342e72733c87"
+    },
+    {
+      "path": "teams-create-schedules-invalid-cron.png",
+      "bytes": 50122,
+      "sha256": "a739c12491b24f209b613f1249064aaad6848c678871c52e21e6ab32851f1c13",
+      "gitBlobSha": "b78766eebc4e1a4ddf5cf63ff44304fadae5e1b7"
+    },
+    {
+      "path": "teams-create-schedules-list-dark.png",
+      "bytes": 35223,
+      "sha256": "d19a1d166a9777592a970c030f23c7a2abe59949854c8b76bccdd2424609a54c",
+      "gitBlobSha": "5896e81f00873549ded74f346ef62c1dba55a45f"
+    },
+    {
+      "path": "teams-create-schedules-list-light.png",
+      "bytes": 35274,
+      "sha256": "154da0be0db7a4bf31ad19a5c988bf1da624895c844dcdd245697bc4f9e19148",
+      "gitBlobSha": "659493e8fc410bd51017478b5a8e746f0c8a83c6"
+    },
+    {
+      "path": "teams-create-schedules-list-narrow-700.png",
+      "bytes": 31875,
+      "sha256": "10722fca5ac1c2e77870acc261746e7aba893c0455a94912577daa516624c6b7",
+      "gitBlobSha": "ba0d22ce837106d4ae5175fff9a610073cefa71d"
+    },
+    {
+      "path": "teams-create-schedules-list-native-electron-zoom-200.png",
+      "bytes": 54092,
+      "sha256": "527215381fa42d1ad144cacd93d019f16fff2f406f9395b046fec51918ae8386",
+      "gitBlobSha": "467ff39c6765f12ef5bd58057abb707c3a13729a"
+    },
+    {
+      "path": "teams-create-schedules-old-prompt-review.png",
+      "bytes": 49634,
+      "sha256": "15911e80807be4bc29fe5b39e107869ae8c25bc4c57a23ac2ffd99959788e41c",
+      "gitBlobSha": "69a50b6e89111da8da40452027512f5b9be2745c"
+    },
+    {
+      "path": "teams-create-schedules-paused.png",
+      "bytes": 36036,
+      "sha256": "1f0481836f05f5e6dc96b8c98838d88cbf971996f8c16f645a887678df7d0c3f",
+      "gitBlobSha": "2c76cd240ddc679dec925da8c9dc3eeb66e50727"
+    },
+    {
+      "path": "teams-create-schedules-ready-to-create.png",
+      "bytes": 41746,
+      "sha256": "b1c7570be591687d5efc3992459c1cb6f2b7eb08cd8be9e787c2b9b0e6daf2ca",
+      "gitBlobSha": "2131dcdb4d49b86b1c60997c9837790b491a2371"
+    },
+    {
+      "path": "teams-create-schedules-pristine-submit-validation.png",
+      "bytes": 42169,
+      "sha256": "3e8ab0c3656f5eaf490f4dc42e039495a33ecd6090413966302ee151b4360305",
+      "gitBlobSha": "97d9537fc91258a26185fe34c5c13487dd7ff6bb"
+    },
+    {
+      "path": "teams-create-schedules-resumed.png",
+      "bytes": 36766,
+      "sha256": "eddb438ff09700eb2f64c366541372cbcbacf32fd1c304aaa7b4d32a9fc91ef5",
+      "gitBlobSha": "d1350d0b5eebda8c4e73f7a3a57f1ee0f3bb8e44"
+    },
+    {
+      "path": "teams-create-schedules-run-history.png",
+      "bytes": 39174,
+      "sha256": "375db1760aa552ed9ec25acd486a27059f1ceecbe7face1e0412891862ac5dab",
+      "gitBlobSha": "a9bb3710ee6dfd9603b59b45268a8649b5b001ac"
+    },
+    {
+      "path": "teams-create-schedules-run-log.png",
+      "bytes": 45201,
+      "sha256": "082626855d6b9cbe6e9602e6b8e29f0a799aa4d81152494c4bcc6959d018c239",
+      "gitBlobSha": "17a80f6ba34ba37328c667f7bf65bc40bd1035fa"
+    },
+    {
+      "path": "teams-create-split-pane.png",
+      "bytes": 59941,
+      "sha256": "0a41f41c1a6efffe2182c94980e0baa364a5f78dc3a2ae09303051eca3d0a196",
+      "gitBlobSha": "02ea2317a6fa2bd21fcc414907cd085d9b73d48c"
+    },
+    {
+      "path": "teams-create-teammate-mode-override.png",
+      "bytes": 53709,
+      "sha256": "6cfbba8c6fee1ddb392431cbf07faeeb064ae351d8da0f5e284f0e2cf651d22c",
+      "gitBlobSha": "79b42888d3bb69d8906276e5858c9075b1379593"
+    },
+    {
+      "path": "teams-create-teammate-mode-validated.png",
+      "bytes": 53795,
+      "sha256": "fb02a7f8974e9093e8457b688db0810f3b564903e56ae30685fa6f721bd909e7",
+      "gitBlobSha": "283e60b3f9463aa2e0eeee0324ac1dbadb3744d6"
+    },
+    {
+      "path": "teams-create-template-confirmed.png",
+      "bytes": 61557,
+      "sha256": "c1c4f71342aafc05a6985149bf515a3d8096b62030374762c9807d331556d0b5",
+      "gitBlobSha": "3d9d5dd39f40cd3f7114b67bc69bdadb5e0884de"
+    },
+    {
+      "path": "teams-create-theme-dark.png",
+      "bytes": 53600,
+      "sha256": "adf99495970a4f4e5bb99665489862275e053c09a8e73bc36a9240868a16519c",
+      "gitBlobSha": "52c821c47c3c80c7d16bae3a68551cd2b2e9c46a"
+    },
+    {
+      "path": "teams-create-theme-light.png",
+      "bytes": 53948,
+      "sha256": "645a08cf8b8afbbed7bbaedbc0e6721be4aac643656ced2c2276d1f499e1901b",
+      "gitBlobSha": "e3957f7c22181edf3075bd4912cb245955eb3c0d"
+    },
+    {
+      "path": "teams-create-zh-tw-task-detail-dialog.png",
+      "bytes": 51597,
+      "sha256": "67a84d42ee4e71994447327aea0aed7386942a0c5e528fca9f31108d1edfdbf7",
+      "gitBlobSha": "94112cb4b847321bd2590b65924f9e91cf67210b"
+    },
+    {
+      "path": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+      "bytes": 66675,
+      "sha256": "ba75e6e3a665173398193719a692462fea65c6017b9e0ecb8ff9503ed95ad720",
+      "gitBlobSha": "45ba41116cd82f68440d2009b82be0d497a835d8"
+    }
+  ]
+}

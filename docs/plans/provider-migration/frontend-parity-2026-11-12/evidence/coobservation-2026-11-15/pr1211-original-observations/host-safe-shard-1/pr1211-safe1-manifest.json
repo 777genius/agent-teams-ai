@@ -1,0 +1,234 @@
+{
+  "schemaVersion": 1,
+  "repository": "777genius/agent-teams-ai",
+  "pr": 1211,
+  "sourceHead": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "sourceTree": "0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103",
+  "runId": 43790825919,
+  "attempt": 1,
+  "job": {
+    "id": 133048605736,
+    "run_id": 43790825919,
+    "workflow_name": "Host Emulated Acceptance",
+    "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+    "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43790825919",
+    "run_attempt": 1,
+    "node_id": "CR_kwDORVTEtM8AAAAe-lCcKA",
+    "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133048605736",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43790825919/job/133048605736",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-11-16T02:13:21Z",
+    "started_at": "2026-11-16T03:15:11Z",
+    "completed_at": "2026-11-16T03:21:04Z",
+    "name": "Offline frontend tests (1/4)",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-16T03:15:12Z",
+        "completed_at": "2026-11-16T03:15:16Z"
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-11-16T03:15:16Z",
+        "completed_at": "2026-11-16T03:15:27Z"
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-11-16T03:15:27Z",
+        "completed_at": "2026-11-16T03:15:36Z"
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-16T03:15:36Z",
+        "completed_at": "2026-11-16T03:15:39Z"
+      },
+      {
+        "name": "Verify source and capture the original Host test runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-16T03:15:39Z",
+        "completed_at": "2026-11-16T03:15:39Z"
+      },
+      {
+        "name": "Setup the original workspace test runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6,
+        "started_at": "2026-11-16T03:15:39Z",
+        "completed_at": "2026-11-16T03:15:56Z"
+      },
+      {
+        "name": "Prepare original test prerequisites",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7,
+        "started_at": "2026-11-16T03:15:56Z",
+        "completed_at": "2026-11-16T03:16:21Z"
+      },
+      {
+        "name": "Run the complete safe frontend shard",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-16T03:16:21Z",
+        "completed_at": "2026-11-16T03:20:59Z"
+      },
+      {
+        "name": "Preserve original test results, including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9,
+        "started_at": "2026-11-16T03:20:59Z",
+        "completed_at": "2026-11-16T03:21:00Z"
+      },
+      {
+        "name": "Post Setup the original workspace test runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15,
+        "started_at": "2026-11-16T03:21:00Z",
+        "completed_at": "2026-11-16T03:21:00Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16,
+        "started_at": "2026-11-16T03:21:00Z",
+        "completed_at": "2026-11-16T03:21:00Z"
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17,
+        "started_at": "2026-11-16T03:21:00Z",
+        "completed_at": "2026-11-16T03:21:01Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 18,
+        "started_at": "2026-11-16T03:21:01Z",
+        "completed_at": "2026-11-16T03:21:01Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 19,
+        "started_at": "2026-11-16T03:21:01Z",
+        "completed_at": "2026-11-16T03:21:01Z"
+      }
+    ],
+    "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133048605736",
+    "labels": [
+      "ubuntu-latest"
+    ],
+    "runner_id": 1000376173,
+    "runner_name": "GitHub Actions 1000376173",
+    "runner_group_id": 0,
+    "runner_group_name": "GitHub Actions"
+  },
+  "artifact": {
+    "id": 14195141264,
+    "node_id": "MDg6QXJ0aWZhY3QxNDE5NTE0MTI2NA==",
+    "name": "host-offline-tests-2abcf83fddacbc1efedee83f9c1d203d12ed656e-1",
+    "size_in_bytes": 294429,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14195141264",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14195141264/zip",
+    "expired": false,
+    "digest": "sha256:13c8d5d442c2470e998efec9ad58484c911b3213d662acee17a3cdf9242a1ff9",
+    "created_at": "2026-11-16T03:21:00Z",
+    "updated_at": "2026-11-16T03:21:00Z",
+    "expires_at": "2026-11-30T03:20:59Z",
+    "workflow_run": {
+      "id": 43790825919,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+      "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+    }
+  },
+  "payloads": [
+    {
+      "path": "pr1211-safe1-job.log",
+      "gitBlob": "b43b550313d8ca73f01d242391aa0f234f4a35f1",
+      "bytes": 167117,
+      "sha256": "dede5daa3679630a60be19682fd9ebc382d82c760e57fc778f0e0b1beb793c4a"
+    },
+    {
+      "path": "pr1211-safe1-run-api.json",
+      "gitBlob": "fe12a001587326f50d324643e9134beb3c3af7fd",
+      "bytes": 13832,
+      "sha256": "2bf08adec2e5cf80a33a66249e71eb36d3651b6c4119d29ece968ac0bc1e5507"
+    },
+    {
+      "path": "pr1211-safe1-jobs-api.json",
+      "gitBlob": "b0a801140fd589c91d2afdf222300b5b16784d4b",
+      "bytes": 112988,
+      "sha256": "4b2fc0768c0cb8293b2f30a5ac9bf12bd18112ba6ce3432484356275c4326ac6"
+    },
+    {
+      "path": "pr1211-safe1-artifacts-api.json",
+      "gitBlob": "3c81ab8788165301556f3814541baaa1b257bee5",
+      "bytes": 12747,
+      "sha256": "19f3039e5bf2b9c0ec56114c71595095309531e5503da2341b7a22b27aa413b5"
+    }
+  ],
+  "actual": {
+    "testFiles": {
+      "passed": 541,
+      "skipped": 0,
+      "total": 541
+    },
+    "tests": {
+      "passed": 6222,
+      "skipped": 6,
+      "failed": 0,
+      "total": 6228
+    },
+    "runtime": "v26.12.1",
+    "capturedBackendRuntime": "v24.21.0",
+    "durationSecondsReported": 276.39,
+    "scope": "Original complete frontend shard 1/4 only."
+  },
+  "sourceJoin": {
+    "workflow": {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "sha": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+    },
+    "checkoutHeadInFullLog": true,
+    "artifactUploadAndApiIdentityMatch": true
+  },
+  "limits": {
+    "originalRunOnly": true,
+    "noReplayOrChildActions": true,
+    "childDownloadedOrInspectedZip": false,
+    "artifactDigestAndSizeAreOriginalUploadPlusApi": true,
+    "wholeRunOrOtherJobQualification": false,
+    "skipIsNotPass": true,
+    "actualSourceAndAttemptOnly": true,
+    "aggregateRunSnapshot": {
+      "status": "queued",
+      "conclusion": null
+    },
+    "laterManagementFixQualificationTransferred": false
+  }
+}

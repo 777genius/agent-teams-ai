@@ -1,0 +1,37 @@
+
+Algorithm : SHA256
+Hash      : BC093F931E112E6B652FA32B22DEE7058E139F30257CA9DABAA47EF6C04B0DFF
+Path      : C:\a\_temp\TEST-process-build-arm64\Release\owned-process-broker-accounting-failure.exe
+
+Algorithm : SHA256
+Hash      : F2EA51D5B35380E014165FF524D529AF0AC8EDEDCE8533EE5434C313965E1E84
+Path      : C:\a\_temp\TEST-process-build-arm64\Release\owned-process-broker-birth-failure.exe
+
+Algorithm : SHA256
+Hash      : 6E4939CDC4B35BB472664A1BA565D79C665573B367C12D4F74B641C4850E3F90
+Path      : C:\a\_temp\TEST-process-build-arm64\Release\owned-process-broker-debug-service.exe
+
+Algorithm : SHA256
+Hash      : EA9D613ADA2B9D5C5AC5BE5609AB5538BB47E1D17770EF8438CE23A0A38BF474
+Path      : C:\a\_temp\TEST-process-build-arm64\Release\owned-process-broker-release-delay.exe
+
+Algorithm : SHA256
+Hash      : 3656A49A37A1E37C4F7C9B840831A83952CD9A9A7E27728327E3269017008FEC
+Path      : C:\a\_temp\TEST-process-build-arm64\Release\owned-process-broker-service-scopes.exe
+
+Algorithm : SHA256
+Hash      : 2DD92A9CF740057E408CAD943D306C2CC3B51D65D7A8576CFA3341F41D1F663E
+Path      : C:\a\_temp\TEST-process-build-arm64\Release\owned-process-broker.exe
+
+Algorithm : SHA256
+Hash      : 0FE8D798659B89063BCA63222EA6BF6E0A7F9729932D6A9F6A0517EC9DBA5E87
+Path      : C:\a\_temp\TEST-process-build-arm64\Release\owned-process-fixture.exe
+
+Algorithm : SHA256
+Hash      : 8CA47ACBEF3DD4992F78B5F7A4CF714D532CEA369EC2276D6EEE01857F1AB58E
+Path      : C:\a\_temp\TEST-process-build-arm64\Release\owned-process-gate-controller.exe
+
+Algorithm : SHA256
+Hash      : 746F55AB603B5C6618FE7A4B38876AE06E7A9D3675C703E3ACC6BAF6D84FDE24
+Path      : C:\a\_temp\TEST-process-build-arm64\Release\owned-process-pending-write-fixture.exe
+

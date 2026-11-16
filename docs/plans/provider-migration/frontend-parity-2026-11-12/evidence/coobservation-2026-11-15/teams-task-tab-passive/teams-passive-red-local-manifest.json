@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "kind": "teams-passive-observation-local-gates",
+  "stage": "red",
+  "head": "178a0cd27920a9d6fcf47b6807df3219c5d7cfae",
+  "tree": "1b4a155755540445e4167bd99649323c956c6022",
+  "parent": "26d30dc4d4f9de444f0924f60fa2ee7630d821ec",
+  "publishedR1": "706f7d72786311ebc2a4fc5f2e005a84562d8005",
+  "startedAt": "2026-11-16T03:45:25.180836+00:00",
+  "statusBefore": "clean",
+  "files": [
+    {
+      "path": "scripts/e2e/teams-create-page-owned-processes.test.mjs",
+      "gitBlob": "186bc50c143cf582bebc91df69a8284c23e5c6f4",
+      "bytes": 21001,
+      "lines": 340,
+      "sha256": "ec69b9c215efb5e3d66f8903ec3fcedd770251e192d71ee6f8b3df22f568e46c"
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-desktop.mjs",
+      "gitBlob": "764d42763c8eab6592235acf75073253538cfe38",
+      "bytes": 103360,
+      "lines": 2105,
+      "sha256": "e1c09e6efffa777bd7f042c813f49cb93d20957d07bed45582474a2930312c1e"
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-owned-processes.mjs",
+      "gitBlob": "d73d56bdbc40e3abc70b53ad5db1690c53ed4c5a",
+      "bytes": 1349,
+      "lines": 30,
+      "sha256": "4acd26c18441682b134edc480b6659c72f9033904bf5b1110d73285f2f65bc69"
+    }
+  ],
+  "nodeExecutable": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeVersion": "v24.21.0",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "pnpmVersion": "11.22.0",
+  "resourceFlags": {
+    "NODE_OPTIONS": null,
+    "GOMAXPROCS": null,
+    "GOMEMLIMIT": null
+  },
+  "newBuildOrCompilerAttempts": 0,
+  "steps": [
+    {
+      "name": "teams-passive-red-whole-file.log",
+      "argv": [
+        "node",
+        "--test",
+        "scripts/e2e/teams-create-page-owned-processes.test.mjs"
+      ],
+      "startedAt": "2026-11-16T03:45:25.309447+00:00",
+      "finishedAt": "2026-11-16T03:45:25.510763+00:00",
+      "durationSeconds": 0.20132322100107558,
+      "exitCode": 1,
+      "bytes": 5733,
+      "sha256": "7d6fb65cd99df2bc89d29013bbec01171cf448282d23527ded29756b0e96cfaf"
+    }
+  ],
+  "qualification": "Actual-source finite Teams observer regression only; original GUI/platform result remains separate. No Electron/native/vendor/CI execution.",
+  "stoppedAfterNonzero": "teams-passive-red-whole-file.log",
+  "statusAfter": "",
+  "finishedAt": "2026-11-16T03:45:25.531865+00:00",
+  "allAuthorizedStepsExecuted": true,
+  "allExecutedStepsExitZero": false
+}

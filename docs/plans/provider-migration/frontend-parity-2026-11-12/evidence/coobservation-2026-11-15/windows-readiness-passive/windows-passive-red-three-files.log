@@ -1,0 +1,445 @@
+✔ Codex observes only original stderr before initialization completes and retains the final tail (32.100013ms)
+✔ Codex profile is a finite private union and requires captured namespace paths (9.048661ms)
+✔ Codex profile enforces native 1 MiB ceiling before allocation and preserves Claude bounds (5.445337ms)
+✔ Codex 0.162.0 enforces tuple eligibility before selected-config tools, attributed inputs and exact interrupt (24.467024ms)
+✔ Codex 0.169.0 enforces tuple eligibility before selected-config tools, attributed inputs and exact interrupt (4.463976ms)
+✔ Codex missingTools setup failure cleans captured handles before throwing (5.223376ms)
+✔ Codex failInitialize setup failure cleans captured handles before throwing (6.322432ms)
+✔ Codex checkpoint setup failure cleans captured handles before throwing (8.086228ms)
+✔ seal or lost allocation authority prevents a Codex process allocation (4.926845ms)
+✔ Host Codex adapter awaits its captured original-input baseline and terminal observer through real public D (7.282321ms)
+✔ captured Codex options preserve none across each input and true-only Fast config (5.862788ms)
+✔ captured Codex options preserve minimal across each input and true-only Fast config (7.666764ms)
+✔ captured Codex options preserve ultra across each input and true-only Fast config (7.11299ms)
+✔ captured Codex options preserve TEST-future-native-effort across each input and true-only Fast config (8.306095ms)
+✔ Codex Default/absent options preserve the captured recipe; explicit false adds no native Fast override (15.345586ms)
+✔ managed Codex 0.162.0 appOnly enforces tuple eligibility and retained-thread restore across Host endpoint rotation (30.342151ms)
+✔ managed Codex 0.162.0 inherited enforces tuple eligibility and retained-thread restore across Host endpoint rotation (15.896555ms)
+✔ managed Codex 0.169.0 appOnly enforces tuple eligibility and retained-thread restore across Host endpoint rotation (1.068771ms)
+✔ managed Codex 0.169.0 inherited enforces tuple eligibility and retained-thread restore across Host endpoint rotation (0.937275ms)
+✔ captured appOnly launches veto original plugin names and exact native gate precedes thread allocation (10.259554ms)
+✔ changed original native census refuses before app-server allocation and without a thread (4.85012ms)
+✔ new captured selection without original native census refuses before process custody (0.934241ms)
+✔ captured Codex argv reaches only the selected app-server launch, preserving managed flags (4.196377ms)
+✔ captured Codex managed aliases and positional prompts refuse before custody allocation (3.901598ms)
+✖ original Codex open and readiness retain captured await boundaries without extra provider work (13.465967ms)
+✖ original Codex catalogue same retains the pending boundary and original readiness result (6.92508ms)
+✖ original Codex catalogue different retains the pending boundary and original readiness result (5.100143ms)
+✖ original Codex catalogue throws retains the pending boundary and original readiness result (8.653033ms)
+✔ Codex diagnostic publication failure and missing identity preserve ordinary readiness and cleanup (11.165792ms)
+✖ Codex finite observation saturation stops diagnostics once while all original readiness calls continue (5.540147ms)
+✖ actual Codex readiness wrapper preserves proof/error identity and original short-circuit operand order (0.666312ms)
+✔ new readiness during an empty original read wakes the same stream after its reply (5.951961ms)
+✔ readiness capacity follows retained producers instead of simultaneous requests (7.631952ms)
+✔ Main retries an unconfirmed original cleanup on the next close with a new attempt (1.537969ms)
+✔ incomplete native drain replies before the original queued Host deadline and permits only genuine release (20.501622ms)
+✖ original Windows resume refusal identifies before-owner false without extra guards (2.674972ms)
+✖ original Windows resume refusal identifies before-owner throwing without extra guards (1.472813ms)
+✖ original Windows resume refusal identifies after-owner false without extra guards (0.887922ms)
+✖ original Windows resume refusal identifies after-owner throwing without extra guards (0.744599ms)
+✖ original Windows resume refusal identifies request-builder false without extra guards (0.939158ms)
+✖ original Windows resume refusal identifies request-builder throwing without extra guards (0.942754ms)
+✖ original Windows resume refusal identifies after-reply false without extra guards (1.130202ms)
+✖ original Windows resume refusal identifies after-reply throwing without extra guards (1.2291ms)
+✖ a refused original resume reply has no guard-site attribution and performs no native resume (1.357981ms)
+✔ failure of the original refusal publisher cannot replace a currentness throw or add resume work (1.179796ms)
+✔ ordinary lead replies replace their original signed conversation row without inbox writes or product feed churn (207.691146ms)
+✔ never-opened lead and an original no-allocation Skip retain an empty conversation without creating Runtime state (42.619028ms)
+✔ ordinary long replies preserve 30 KiB snapshots and 300 KiB Unicode through signed fragments and cold reads (523.390127ms)
+✔ task recovery never returns a prior receipt for a changed command with unavailable attachments (53.475871ms)
+✔ mixed Host boots V2 Session SPI profile without invoking V1 management registration (498.116201ms)
+✔ two captured teams may share an original run ID without sharing launch ownership (65.468615ms)
+✔ cold unavailable Team history retains original resources while an independent Team still captures and runs (299.272225ms)
+✔ a superseded unstarted capture cannot inject its prompt into a newer launch with the same product revision (60.721538ms)
+✔ saved configuration captures fresh native identities, preserves historical launches and replays after cold restart (193.643984ms)
+✔ capture rejects stale product sources, missing recipes and protected args before native allocation (20.952783ms)
+✔ NDJSON saved roster edits preserve product APIs across stale runtime capture/restart without allocation (40.230262ms)
+✔ NDJSON roster replacement refuses live allocation, then saves only after confirmed stop (1878.51293ms)
+✔ captured-run OpenCode live Add reaches its original model probe and preserves failed-probe refusal (535.395482ms)
+✔ NDJSON unknown native cleanup keeps the saved roster and its original grants bound (216.533342ms)
+✔ stopped fresh capture admits its exact probe profile and cold replay retains the original check (105.065357ms)
+✔ Team model preflight requires current control authority and exact launch selection before any provider allocation (59.506021ms)
+✔ NDJSON human messages auto-admit once and terminal events pump the next input without dispatch RPC (81.854532ms)
+✔ member HTTP MCP and Desktop transport share canonical Tasks and enforce member/scope authority (111.631758ms)
+✔ runtime projections redact private provider identities; missing human control and revoked member grants refuse allocation (86.976251ms)
+✔ dispose seals a pending provider open before late allocation and retains unknown custody as cleanup debt (24.934467ms)
+✔ pending open cleanup precedes readiness: late-driver (24.517168ms)
+✔ pending open cleanup precedes readiness: unknown-driver (24.757396ms)
+✔ pending open cleanup precedes readiness: factory-rejection (32.185785ms)
+✔ pending provider cleanup survives stop before dispose (28.012321ms)
+✔ pending provider cleanup survives reconcile before dispose (26.62716ms)
+✔ allocated driver checkpoint and close precede captured process cleanup (50.915668ms)
+✔ expired MCP proof holds the next admitted input; disposing a never-opened profile performs no allocation (102.584878ms)
+✔ Codex Host cost reports retained usage once without native dispatch or private snapshot leakage (408.370711ms)
+ℹ TEST restore state: /tmp/TEST-runtime-team-host-qK4ujw
+✔ composed original stderr survives failed startup before Runtime installs a native session (31.163072ms)
+✔ composed original stderr accepts closing diagnostics without settling Runtime state or inputs (46.922723ms)
+✔ composed original stderr rejects changed member authority, revocation and a sealed Host (37.94598ms)
+✔ activity RPC pages normalized native observations with opaque cursor, bounded snapshots and explicit gaps (278.190712ms)
+✔ activity snapshot/feed recheck current human read grants and reject authority overrides (11.43293ms)
+✔ production aggregate launch RPC preserves configured and missing roster members and idempotent scoped progress (48.475204ms)
+✔ launch options are durably selected before provider creation and replay survives Host restart without new allocation (110.124944ms)
+✔ launch options refuse allocated state and compile every selected provider before any publication or allocation (135.291668ms)
+✔ selected checkpoint resumes through a new Host/generation, retains Team delivery ownership and fences stale controls (533.522615ms)
+ℹ TEST restore state: /tmp/TEST-runtime-team-host-4O1rUZ
+ℹ TEST restore state: /tmp/TEST-runtime-team-host-YObHZu
+✔ Runtime projection privately observes only evaluated readiness operands and preserves the original view and errors (1.241218ms)
+✔ the original passive Runtime projection receiver writes only bounded exit facts and keeps ambiguous evidence unknown (13.056257ms)
+✔ source Scenario distinguishes a genuinely released never-prepared reservation from physical HANDLE proof (34.283147ms)
+✔ full original Process verifier accepts only authority-bound no-dispatch evidence without losing any jobs (31.802515ms)
+✖ original exit projection is preserved beside a bounded source-bound Codex await ledger (1.506453ms)
+ℹ tests 87
+ℹ suites 0
+ℹ pass 71
+ℹ fail 16
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8028.407542
+
+✖ failing tests:
+
+test at packages/legacy-agent-host/tests/codex-member-provider.test.ts:1045:1
+✖ original Codex open and readiness retain captured await boundaries without extra provider work (13.465967ms)
+  AssertionError [ERR_ASSERTION]: successful original calls must publish closed Codex await observations
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/codex-member-provider.test.ts:1070:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/codex-member-provider.test.ts:1090:3
+✖ original Codex catalogue same retains the pending boundary and original readiness result (6.92508ms)
+  AssertionError [ERR_ASSERTION]: an outstanding original catalogue has no fabricated after-await or return
+  + actual - expected
+  
+  + []
+  - [
+  -   [
+  -     'readiness',
+  -     'before-await'
+  -   ],
+  -   [
+  -     'catalog',
+  -     'before-await'
+  -   ]
+  - ]
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/codex-member-provider.test.ts:1110:14)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ [ 'readiness', 'before-await' ], [ 'catalog', 'before-await' ] ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/codex-member-provider.test.ts:1090:3
+✖ original Codex catalogue different retains the pending boundary and original readiness result (5.100143ms)
+  AssertionError [ERR_ASSERTION]: an outstanding original catalogue has no fabricated after-await or return
+  + actual - expected
+  
+  + []
+  - [
+  -   [
+  -     'readiness',
+  -     'before-await'
+  -   ],
+  -   [
+  -     'catalog',
+  -     'before-await'
+  -   ]
+  - ]
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/codex-member-provider.test.ts:1110:14)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ [ 'readiness', 'before-await' ], [ 'catalog', 'before-await' ] ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/codex-member-provider.test.ts:1090:3
+✖ original Codex catalogue throws retains the pending boundary and original readiness result (8.653033ms)
+  AssertionError [ERR_ASSERTION]: an outstanding original catalogue has no fabricated after-await or return
+  + actual - expected
+  
+  + []
+  - [
+  -   [
+  -     'readiness',
+  -     'before-await'
+  -   ],
+  -   [
+  -     'catalog',
+  -     'before-await'
+  -   ]
+  - ]
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/codex-member-provider.test.ts:1110:14)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ [ 'readiness', 'before-await' ], [ 'catalog', 'before-await' ] ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/codex-member-provider.test.ts:1143:1
+✖ Codex finite observation saturation stops diagnostics once while all original readiness calls continue (5.540147ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   {
+  -     bindingDigest: 'c10f44f955f958663e171f9894321229139c94bfa74c1efa00eeb1a8358b98d9',
+  -     limit: true,
+  -     schemaVersion: 1,
+  -     sourceId: '1111111111111111111111111111111111111111111111111111111111111111',
+  -     sourceRevision: '2222222222222222222222222222222222222222222222222222222222222222'
+  -   }
+  - ]
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/codex-member-provider.test.ts:1153:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ { schemaVersion: 1, bindingDigest: 'c10f44f955f958663e171f9894321229139c94bfa74c1efa00eeb1a8358b98d9', sourceId: '1111111111111111111111111111111111111111111111111111111111111111', sourceRevision: '2222222222222222222222222222222222222222222222222222222222222222', limit: true } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/codex-member-provider.test.ts:1161:1
+✖ actual Codex readiness wrapper preserves proof/error identity and original short-circuit operand order (0.666312ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  -   'before-await',
+      'source',
+  -   'after-await',
+      'proof',
+      'current',
+  -   'returned'
+    ]
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/codex-member-provider.test.ts:1186:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'source', 'proof', 'current' ],
+    expected: [ 'before-await', 'source', 'after-await', 'proof', 'current', 'returned' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/host-custody-recovery.test.ts:292:5
+✖ original Windows resume refusal identifies before-owner false without extra guards (2.674972ms)
+  AssertionError [ERR_ASSERTION]: the original refusal must retain its own guard site
+  + actual - expected
+  
+  + undefined
+  - 'before-owner'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/host-custody-recovery.test.ts:312:16)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'before-owner',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/host-custody-recovery.test.ts:292:5
+✖ original Windows resume refusal identifies before-owner throwing without extra guards (1.472813ms)
+  AssertionError [ERR_ASSERTION]: the original refusal must retain its own guard site
+  + actual - expected
+  
+  + undefined
+  - 'before-owner'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/host-custody-recovery.test.ts:312:16)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'before-owner',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/host-custody-recovery.test.ts:292:5
+✖ original Windows resume refusal identifies after-owner false without extra guards (0.887922ms)
+  AssertionError [ERR_ASSERTION]: the original refusal must retain its own guard site
+  + actual - expected
+  
+  + undefined
+  - 'after-owner'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/host-custody-recovery.test.ts:312:16)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'after-owner',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/host-custody-recovery.test.ts:292:5
+✖ original Windows resume refusal identifies after-owner throwing without extra guards (0.744599ms)
+  AssertionError [ERR_ASSERTION]: the original refusal must retain its own guard site
+  + actual - expected
+  
+  + undefined
+  - 'after-owner'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/host-custody-recovery.test.ts:312:16)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'after-owner',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/host-custody-recovery.test.ts:292:5
+✖ original Windows resume refusal identifies request-builder false without extra guards (0.939158ms)
+  AssertionError [ERR_ASSERTION]: the original refusal must retain its own guard site
+  + actual - expected
+  
+  + undefined
+  - 'request-builder'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/host-custody-recovery.test.ts:312:16)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'request-builder',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/host-custody-recovery.test.ts:292:5
+✖ original Windows resume refusal identifies request-builder throwing without extra guards (0.942754ms)
+  AssertionError [ERR_ASSERTION]: the original refusal must retain its own guard site
+  + actual - expected
+  
+  + undefined
+  - 'request-builder'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/host-custody-recovery.test.ts:312:16)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'request-builder',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/host-custody-recovery.test.ts:292:5
+✖ original Windows resume refusal identifies after-reply false without extra guards (1.130202ms)
+  AssertionError [ERR_ASSERTION]: the original refusal must retain its own guard site
+  + actual - expected
+  
+  + undefined
+  - 'after-reply'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/host-custody-recovery.test.ts:312:16)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'after-reply',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/host-custody-recovery.test.ts:292:5
+✖ original Windows resume refusal identifies after-reply throwing without extra guards (1.2291ms)
+  AssertionError [ERR_ASSERTION]: the original refusal must retain its own guard site
+  + actual - expected
+  
+  + undefined
+  - 'after-reply'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/host-custody-recovery.test.ts:312:16)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'after-reply',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/host-custody-recovery.test.ts:316:1
+✖ a refused original resume reply has no guard-site attribution and performs no native resume (1.357981ms)
+  AssertionError [ERR_ASSERTION]: a request refusal is not attributed to a currentness guard
+  + actual - expected
+  
+  + undefined
+  - null
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/host-custody-recovery.test.ts:327:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/runtime-team-host.test.ts:3992:1
+✖ original exit projection is preserved beside a bounded source-bound Codex await ledger (1.506453ms)
+  AssertionError [ERR_ASSERTION]: the original successful exit must also retain the separate Codex boundary ledger
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/runtime-team-host.test.ts:4039:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
