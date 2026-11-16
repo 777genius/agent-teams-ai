@@ -1,43 +1,22 @@
-import { execFile, type ChildProcess } from 'node:child_process';
-import path from 'node:path';
+import type { ChildProcess } from 'node:child_process';
+
+import { isOwnedWindowsTeamRuntimeWrapperProcess } from './TeamProvisioningWindowsRuntimeLauncher';
 
 /** Native Windows process-stop adapter wired by the provisioning composition root. */
 const WINDOWS_ORIGINAL_MEMBER_EXIT_TIMEOUT_MS = 15_000;
 
 /**
- * Drain the original teammate's tool descendants before signalling its root.
- * Its retained libuv ChildProcess handle prevents a recycled PID being adopted.
+ * The separately staged teammate.exe owns a KILL_ON_JOB_CLOSE Windows Job.
+ * Killing the original wrapper through libuv's process HANDLE closes that Job,
+ * retiring its descendants. PID-only taskkill /T /PID can race PID reuse and
+ * terminate an unrelated process tree; never use it as kill authority.
  */
-function stopOriginalWindowsMemberTree(child: ChildProcess): Promise<void> {
-  const pid = child.pid;
-  if (typeof pid !== 'number' || !Number.isSafeInteger(pid) || pid <= 0) {
-    return Promise.reject(new Error('Original Windows member process handle has no valid PID'));
-  }
+function verifyOwnedWindowsMemberTree(child: ChildProcess): Promise<void> {
   if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
-
-  return new Promise<void>((resolve, reject) => {
-    const taskkillPath = path.join(
-      process.env.SystemRoot ?? 'C:\\Windows',
-      'System32',
-      'taskkill.exe'
-    );
-    execFile(
-      taskkillPath,
-      ['/T', '/F', '/PID', String(pid)],
-      { windowsHide: true, timeout: WINDOWS_ORIGINAL_MEMBER_EXIT_TIMEOUT_MS },
-      (error) => {
-        if (error) {
-          reject(
-            new Error('Original Windows teammate process-tree termination not confirmed', {
-              cause: error,
-            })
-          );
-        } else {
-          resolve();
-        }
-      }
-    );
-  });
+  if (!isOwnedWindowsTeamRuntimeWrapperProcess(child)) {
+    return Promise.reject(new Error('Original Windows teammate lacks verified owned Job wrapper'));
+  }
+  return Promise.resolve();
 }
 
 /** Kill by the original ChildProcess handle; a recycled PID never grants authority. */
@@ -81,9 +60,9 @@ function killOriginalWindowsDirectMember(child: ChildProcess): Promise<void> {
 }
 
 /**
- * Await tree stop before original-handle fallback. Even when the tree attempt
- * fails, retire every owned handle and propagate the failure: an orphaned tool
- * may still be running, so Stop cannot report success.
+ * Verify owned Job custody before signalling the original handle.
+ * On missing custody, still retire the direct handle but fail closed:
+ * descendant cleanup cannot be reported successful.
  */
 async function stopWindowsMemberTreeThenHandle(
   child: ChildProcess,
@@ -112,7 +91,7 @@ async function stopWindowsMemberTreeThenHandle(
 export async function stopOriginalWindowsDirectMembers(
   processes: ReadonlySet<ChildProcess> | undefined,
   platform: NodeJS.Platform = process.platform,
-  stopTree: (child: ChildProcess) => Promise<void> = stopOriginalWindowsMemberTree
+  stopTree: (child: ChildProcess) => Promise<void> = verifyOwnedWindowsMemberTree
 ): Promise<void> {
   if (platform !== 'win32' || !processes?.size) return;
   const results = await Promise.allSettled(

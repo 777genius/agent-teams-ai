@@ -204,7 +204,14 @@ describe('team provisioning stop flow', () => {
     expect(bob.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
   });
 
-  it('awaits tree-kill completion before falling back to the original Windows handle', async () => {
+  it('fails closed without a verified Job wrapper while killing the original handle', async () => {
+    const bob = originalChild(8222, 'exit');
+    await expect(stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32'))
+      .rejects.toThrow('lacks verified owned Job wrapper');
+    expect(bob.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
+  });
+
+  it('awaits custody verification before killing the original Windows handle', async () => {
     const bob = originalChild(8300, 'exit');
     let finishTree!: () => void;
     const stopTree = vi.fn(() => new Promise<void>((resolve) => { finishTree = resolve; }));

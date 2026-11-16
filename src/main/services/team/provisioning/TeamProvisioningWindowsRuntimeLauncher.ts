@@ -3,10 +3,16 @@ import path from 'node:path';
 
 import { spawnCli } from '@main/utils/childProcess';
 
-import type { SpawnOptions } from 'node:child_process';
+import type { ChildProcess, SpawnOptions } from 'node:child_process';
 
 const WRAPPER_PATH = ['runtime', 'teammate-console', 'teammate.exe'] as const;
 const TARGET_ENV = 'AGENT_TEAMS_TEAMMATE_WRAPPER_TARGET';
+const ownedWindowsTeammateWrappers = new WeakSet<ChildProcess>();
+
+/** Only processes spawned through our staged Job wrapper have native tree custody. */
+export function isOwnedWindowsTeamRuntimeWrapperProcess(child: ChildProcess): boolean {
+  return ownedWindowsTeammateWrappers.has(child);
+}
 
 /**
  * Infrastructure implementation of the existing team provisioning spawn port.
@@ -21,10 +27,12 @@ export function spawnWindowsTeamRuntimeCli(
     requireWrapper: process.env.AGENT_TEAMS_REQUIRE_TEAMMATE_WRAPPER === '1',
   });
   if (!launch.targetEnv) return spawnCli(launch.binaryPath, args, options);
-  return spawnCli(launch.binaryPath, args, {
+  const child = spawnCli(launch.binaryPath, args, {
     ...options,
     env: { ...(options.env ?? process.env), ...launch.targetEnv },
   });
+  ownedWindowsTeammateWrappers.add(child);
+  return child;
 }
 
 export interface WindowsTeamRuntimeLaunch {
