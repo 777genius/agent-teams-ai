@@ -537,7 +537,7 @@ describe('team-fs-worker integration', () => {
     await fs.mkdir(tasksDir, { recursive: true });
     const taskPath = path.join(tasksDir, 'reviewed.json');
     const timestamp = '2026-11-16T00:00:00.000Z';
-    const events = [
+    const events: Record<string, unknown>[] = [
       { id: 'request-1', timestamp, type: 'review_requested', from: 'none', to: 'review', reviewer: 'alice' },
       { id: 'completed-1', timestamp: '2026-11-16T00:01:00.000Z',
         type: 'review_completed', from: 'review', to: 'reviewed',
