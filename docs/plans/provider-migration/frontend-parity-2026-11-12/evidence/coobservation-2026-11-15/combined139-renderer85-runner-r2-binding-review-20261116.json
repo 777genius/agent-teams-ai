@@ -1,0 +1,1767 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-complete-exact-combined139-renderer85-runner-and-red-binding-r2",
+  "reviewer": "/root/combined_binding_review",
+  "repository": "777genius/agent-teams-ai",
+  "reviewedAtUtc": "2026-11-16T21:52:42.874Z",
+  "accepted": true,
+  "verdict": "ACCEPT exact runner906d8b49218f64037b71a7642bfa1bd4254befbd and RED bindingf7c78d18f79cf7781aad840ae35f7464faa7542d for selected R2 code/data review. No remaining blocker in this review. Exact publication and complete actual readback remain required before any selected staging, materialization or execution.",
+  "subjects": {
+    "runner": {
+      "bytes": 89953,
+      "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+      "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+    },
+    "binding": {
+      "bytes": 4898503,
+      "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+      "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+    },
+    "selectedR1": {
+      "bytes": 77830,
+      "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+      "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+    },
+    "legacyRunner": {
+      "bytes": 52074,
+      "sha256": "fa3920cdf633c585db18c2fc30fa0e97f2103c5ae00a133145f1e069105753cd",
+      "gitBlob": "b961d5e8283a775ae66afcb5475247c55b859547"
+    },
+    "legacyBinding": {
+      "bytes": 3385634,
+      "sha256": "cd0556c67d0275061a834c08ac901dd34f26c11b3367a85adaecdd623344f5e7",
+      "gitBlob": "0186765f4d0dacf349efda2a0c45fd7333227fb0"
+    }
+  },
+  "method": {
+    "completeRunnerRead": true,
+    "completeBindingRead": true,
+    "allRawSubjectIdentitiesRecomputed": true,
+    "all1531NonterminalRunnerLinesInspected": true,
+    "all33FullReviewBodiesHashed": true,
+    "all18FullOverlayBodiesHashed": true,
+    "canonicalNineRowVectorIndependentlyReconstructed": true,
+    "oldFunctionsComparedCompletely": true,
+    "ownShellOrRuntimeInvocations": 0,
+    "packageNativeProviderEvaluations": 0,
+    "sourceOrRunnerAuthorship": 0,
+    "selectedControlWrites": 0,
+    "refOrCIChanges": 0,
+    "artifactOnly": "Bare review blob"
+  },
+  "rootDataChecks": {
+    "exactFinalAst": {
+      "bytes": 3005,
+      "sha256": "aa52618da8b296d45873551c832a32153b87ad97509249f89649a17ff1b1ec23",
+      "gitBlob": "1b6d82177c14d53f2080cda807753b6d2cc5d38b"
+    },
+    "prospectiveSourceAndEnvironmentData": {
+      "bytes": 9646,
+      "sha256": "8779b7f90af67f5b316724c03d096519b203559c887c3704bbd9a892b413d097",
+      "gitBlob": "dffe6e02029ed669ad298a785a9d39e64b22e839"
+    },
+    "qualification": "Root's final AST record binds exact906d/f7c, stdlibAST parse only without execution. Earlierprospectivedata ASTsubject1770 wasunselecteddraft, and is notusedasfinalASTproof. Actualstaticpins/env/absences inthatreport are joined asdata; futurefreshchecks remainrequired."
+  },
+  "inheritedFunctions": {
+    "count": 30,
+    "byteIdentical": [
+      "identity",
+      "canonical",
+      "utc",
+      "write_new",
+      "process_rows",
+      "package_values",
+      "transport_values",
+      "admit_environment",
+      "tooling",
+      "file_row",
+      "directory_manifest_entry",
+      "directory_manifest",
+      "dependencies",
+      "compiled",
+      "toolchain_inventory",
+      "verify_pnpm",
+      "group_members",
+      "interrupt",
+      "terminate_captured",
+      "git_read",
+      "provider_archives",
+      "control_snapshot",
+      "source_metadata_snapshot",
+      "ordinary_completion",
+      "primary_cleanup_seconds"
+    ],
+    "selectedChanged": [
+      "environment_check",
+      "run_child",
+      "source_snapshot",
+      "input_snapshot",
+      "preserved"
+    ],
+    "allowedChangeExplanation": {
+      "environment_check": "addrendererenvironmentextension+receiptfield",
+      "run_child": "addsourcevector/effectiveenv/bindingidentityrecordfields",
+      "source_snapshot": "setactivefullnine-rowvectorbeforemetadata",
+      "input_snapshot": "addrendererstaticread",
+      "preserved": "addrendererRuntimewholeequality"
+    },
+    "unchangedCaptureSignalAlgorithms": true,
+    "unchangedReaderAndFileIdentityCodec": true
+  },
+  "automatedDataAssertions": {
+    "all33BodiesExact": true,
+    "first21LiteralExact": true,
+    "inputFilesUnchanged": true,
+    "R1BodyLiteralExact": true,
+    "R1IdentityExact": true,
+    "commandVectorsR1Exact": true,
+    "sourcePinsExact": true,
+    "sourceVectorIdentityExact": true,
+    "currentGateRedAbsent": true,
+    "currentGateGreenAbsent": true,
+    "producerReviewedFalse": true,
+    "producerActualFalse": true,
+    "activeHistoricalGatesAbsent": true,
+    "nodeNamesExactProposal": true,
+    "rendererNamesExactProposal": true,
+    "nodeNameGuideIdentity": true,
+    "rendererNameGuideIdentity": true,
+    "all18OverlayBodiesExact": true,
+    "nodePrefixExact": true,
+    "rendererInsertionInverseExact": true,
+    "onlyTwoWholeTestsChange": true,
+    "allNinePreimagesR1": true,
+    "allSevenRedProducersUnchanged": true,
+    "nativeCodeExact": true,
+    "exactNativeArgvPrefix": true,
+    "rendererRawEnvExactProspectiveData": true,
+    "rendererAbsentPathsExactProspectiveData": true,
+    "allStaticPinsExactProspectiveData": true,
+    "allStaticLinksExactProspectiveData": true,
+    "rootAstExactRunner": true,
+    "rootDataExactBinding": true,
+    "allStaticPinsJoinRetainedAdmissionOrFreshFullData": true,
+    "nativePinsExactSelectedR1": true,
+    "nodeNamesMatchSelectedR1Tail": true,
+    "rendererNamesMatchSelectedR1": true,
+    "authorshipGateUsesExactR1": true,
+    "allCurrentPointerBodiesJoined": true
+  },
+  "automatedAssertionCount": 37,
+  "allAutomatedAssertionsPass": true,
+  "reviewedAssertions": [
+    {
+      "id": "R1-and-subject-gates",
+      "status": "PASS",
+      "evidence": "1061–1095, published combinedR1/currenttestreadbacks",
+      "finding": "Exact runner/binding/fullR1 identities; activecf6547/d52 and currenttestsubject935e; phase/red-only currentbinding; all roots exact. Closed historical results are retained as provenance, never currentRED/GREEN authorization."
+    },
+    {
+      "id": "eight-input-controls",
+      "status": "PASS",
+      "evidence": "1096–1122; unchanged inputFiles",
+      "finding": "All eight exact path/fullidentity/regular/no-symlink inputs preserved, setupR1/amendment bodies rehashed, bootstrap7e6f andamendment0042 constants remain. FullC5tree/index11567/source8798/deps122773/compiled1454 joins preserved."
+    },
+    {
+      "id": "source-vector",
+      "status": "PASS",
+      "evidence": "1123–1161, 460–505",
+      "finding": "Allnine complete bodies before/after exact and mode100644; fourfixedproducers neverchange, REDthreeproducerpreimages exact; tests896c/7649. SortedsourcePins/canonicalidentityrecomputed. Exactauthorized2testdiff plus physical5→6 roots."
+    },
+    {
+      "id": "future-producer-gates",
+      "status": "PASS",
+      "evidence": "1178–1225",
+      "finding": "FutureGREEN requires fully accepted/publishedcombinedRED receipt, actualouter0, same runner/testidentities and REDsourcevector equalbeforeGREEN. ProducerR2/publication flagsrequired. CurrentREDbinding has nullcombinedresults andfalseproducerflags. FutureGREENbindingsremainunseen/unapproved."
+    },
+    {
+      "id": "materialization",
+      "status": "PASS",
+      "evidence": "1203–1221, 1296–1319",
+      "finding": "Exactprevioussourcebyte check beforeeach2testwrite, fullpostread andfullsourceboundary; unchangedmetadatainputs enforced. Runtimeinputs honestlyUNINSPECTED/false/null forsource-only. Eachruntime readsfull materializationreceipt, joinsbinding/subject/tests/vector/writtenpaths/cleanup andpinsitsbytesascontrolthroughpackage."
+    },
+    {
+      "id": "historical-provenance",
+      "status": "PASS",
+      "evidence": "acceptedReviewBodies1–33 and historicalRecoveryProvenance",
+      "finding": "All21old complete reviewobjects retainedliterally; all33fullbodies hashed. Old whole133results and886same-before/after represented onlyhistorically. Activeimport admission explicitlyextends139builtin andrenderer85 paths."
+    },
+    {
+      "id": "command-vectors",
+      "status": "PASS",
+      "evidence": "1173–1175, 1270–1277",
+      "finding": "Allcommands equal publishedR1 byte-for-byte asJSONarrays. Nodewhole139unfiltered; directcanonicalVitestwholefile85unfiltered, prescribeddefault+JSON options, originaltestTimeout15000, noinstall/build/probes. Validationfour exactcommands andpnpmflags retained."
+    },
+    {
+      "id": "transport-environment",
+      "status": "PASS",
+      "evidence": "120–179, 642–666,1162–1175",
+      "finding": "Originalpackage/proxykeysets, normalizedidentitygroups/loopbackconstraints/aliases/absentconfigs remain exact. New rawrenderer sensitivekeys/valueidentities equalprospectivedata; rawNODE_PATH mustmatchthenremoved, rawCIabsent→effectiveCItrue; allVITE/DENO/rendererprefix overrides refused. Full effectivevalueidentities recorded atbothboundaries; HOME/CODEX_HOMEpreserved."
+    },
+    {
+      "id": "tools-pnpm",
+      "status": "PASS",
+      "evidence": "181–321",
+      "finding": "Alltoolactualbyte+realpath/currentPython/currentPATHNodechecks unchanged. Completepnpm11.22.0toolchain/archive/launcher andnoshadow checks acrosssevenworkspaces unchanged. Nocache/install/substitutionshortcut."
+    },
+    {
+      "id": "full-manifest-reader",
+      "status": "PASS",
+      "evidence": "195–303",
+      "finding": "file_row, directory_manifest_entry, entire8-worker/32pendingdirectory_manifest androots/functions are byte-identical tob961. Fullbyte/link/mode census deterministic, allsubmittedfuturesaccounted, threadsjoined, firsterrorlatched, signalsrefuse beforeprimary."
+    },
+    {
+      "id": "source-tree-index",
+      "status": "PASS",
+      "evidence": "460–505",
+      "finding": "OriginalcompleteHEAD/tree/index11567/no-staged-untracked-unmerged/full8798read/exactactualchangedset/localGitconfig/42workflow gates preserved. Onlyactivevectorreference addition."
+    },
+    {
+      "id": "providers-cache",
+      "status": "PASS",
+      "evidence": "508–535,566–599",
+      "finding": "Originalfullproviderarchives, safecomplete membertraversal/installedbyte+modeequality preserved; all122773dependencyrows1454compiledrowsfreshbefore/after; sevenoriginalbootstrapcacheentries rehashedunchanged. No ignoredpath orreuseofearliermanifest."
+    },
+    {
+      "id": "static-renderer-route",
+      "status": "PASS",
+      "evidence": "668–694 and binding staticpins/links",
+      "finding": "All13staticfilepins joinretainedadmissionorrootfullprospectivedata. Nativepins equalR1. Bothnative importerlinks/literaltargethashes/resolvedpaths exact; canonicalVitestentry androotlink checked; fullsourcecensus establishesuniqueexactpositionalfile. Config/setup unchanged; .env/workspace/.vite/override/downloadfallbacklexistsfalse gates."
+    },
+    {
+      "id": "native-metadata",
+      "status": "PASS",
+      "evidence": "905,1037–1058,1175",
+      "finding": "Exactcode/argvboundedpinnedNode builtins only. os.endianness andplatform/arch/v24.22.1/execPath/cwd/Deno/PnP/requireModule checked; actualreportheader firstnullishonlyretry and finalGNU predicate reproduced; fullraw+emptyseparatestderr/session/30smetadata gate. No package/nativecodeevaluation or nativequalification claim."
+    },
+    {
+      "id": "node-semantics",
+      "status": "PASS",
+      "evidence": "907–974",
+      "finding": "FullrawidentityUTF8/noESC; one139ordereduniqueinitialcensus; exact8summaryfields; zero cancel/skip/todo; RED134P5F ordinals134,135,136,138,139, GREEN139P. Exact5registration/assertion/operator blocks and fullrawdetails, original133allPASS. Onlyboundedknownbuiltinwarning/tracehintallowed; semantic fixturefailuresdistinctfromsetup/importerrors."
+    },
+    {
+      "id": "renderer-semantics",
+      "status": "PASS",
+      "evidence": "976–1035",
+      "finding": "Fullrawidentity+singleownedregularJSON; exact85orderedtitles/fullnames/ancestor identities/statuses; RED82P3F only81–83at5722:28/5781:30withtrue→falsemessage; GREEN85P. Oneabsolutefile, 2suitesexact, nosnapshotmutations/pending/todo. Defaultoutputrejectsunhandled/uncaught/close/startup/resolve/native/console/warning/reportwrite diagnostics; JSON alone neveraccepts."
+    },
+    {
+      "id": "per-primary-capture",
+      "status": "PASS",
+      "evidence": "357–446",
+      "finding": "run_child algorithm is retained withonly3recordidentityfields added:sourcevector/effectiveenv/binding. Originalprelaunchabsoluteclock, capturePID/session/group, signal/launchtracker, unknownspawnrefusal, rawcapture/finalization, groupquiescence, abnormalcleanuplatched, finalreceiptremain."
+    },
+    {
+      "id": "node-to-renderer-admission",
+      "status": "PASS",
+      "evidence": "1355–1407",
+      "finding": "Nodeordinaryexpectedexitplusfullsemanticadmission andentireTMPDIRempty gate required beforeanyrendererorfiledeletion. Cheapnine-pin recheck, knownfinalizedcapturedsessions empty, metadata gate, absentvitepaths, exclusiveownedvitecreation precederenderer. FailurepermanentlyleavesrendererUNREACHEDthisattempt."
+    },
+    {
+      "id": "owned-output-capture",
+      "status": "PASS",
+      "evidence": "696–903",
+      "finding": "Exclusiveownedrootdevice/inode/mode/uid/gid; no-followfd-basedcompletefwalkwithonerrorraise; everydirectoryvisited; fullregularbytes/base64/hash andliteral links retained. Completecapturemustrepeatexact beforedelete; type/family/ancestry/name/fdidentitychecks; onlyenumeratedentriesdeleted, dirsremovedonlyempty. Unrecognized/special/mutatedentries refuseandremainphysicallyretained."
+    },
+    {
+      "id": "renderer-cleanup-admission",
+      "status": "PASS",
+      "evidence": "1418–1444",
+      "finding": "Renderercleanup requirespreviousNodezero-debt, no unknownlaunches, allcapturedgroupsempty; spawnedrendererfinalraw/receipt/hash/finalizationrequired. Unreachedrenderer permits onlyemptyownedroots. VitecapturethenTMPcapture; actualviteabsence beforefullpostflight. Earlierfailures remainlatched."
+    },
+    {
+      "id": "timing",
+      "status": "PASS",
+      "evidence": "1323–1345,1378–1404",
+      "finding": "Eachprimary startsown180sclockbeforestart/raw/spawn andretainsitthroughsemantic/finaladmission; requiredcapturedprocesscleanup inrun_child. 30smetadata capretained. Fullinputhash andsurvivingfilecapture timesreportedseparately; no single180swholepackageclaim."
+    },
+    {
+      "id": "one-package-preservation",
+      "status": "PASS",
+      "evidence": "1296–1307,1445–1474",
+      "finding": "Exactlyonefullfreshbefore andafter perruntimepackage. No independentfullinputboundarybetweenprimariesclaimed. Preserved extendsoriginalkeyswithrendererRuntime, neverdropsoldkeys. Allsource/dep/compiled/provider/tool/pnpm/env/control/cache checkscomplete."
+    },
+    {
+      "id": "validation-sequencing",
+      "status": "PASS",
+      "evidence": "1270–1273,1320–1354",
+      "finding": "FuturevalidationrequirescurrentcombinedGREENactualacceptedreceipt; fourorderedcommands, priorordinary0/finalraw/emptycapturedgroup/TMP gate beforeeachnext, separate180s; nounreachedcommandmaybeaccepted. CurrentREDbindingcannotselectvalidation."
+    },
+    {
+      "id": "once-only-output",
+      "status": "PASS",
+      "evidence": "1226–1247",
+      "finding": "Commonownedroot exactmarker, exclusiveeachphaseOUT/TMP andattemptfile; oldrootsnotused. Nooverwrite/resume/retrybranch. ROOTselectedcontrols andoutputsstillabsent inrootdataread; R2publication/readback gates remainbeforestaging."
+    },
+    {
+      "id": "signal-finalization",
+      "status": "PASS",
+      "evidence": "326–355,1476–1531",
+      "finding": "Managedsignalinterruptionlatched; protectedcleanup/postflight; blockedpendingcutoffrecorded; finalscope requiresfullinput/semantic/finalreceipt/emptyknownsessions+allTMP+viteabsence/noerror/nointerruptions. Separatelyobservedactualouter0 remainscontinuationgate; no receipt-onlyphysicalabsenceclaim."
+    },
+    {
+      "id": "scope-limits",
+      "status": "PASS",
+      "evidence": "binding.executionScope,receipt.qualification",
+      "finding": "No realClaude/Codex, providerCLIversionprobe, frozenCIaction, defaultmerge/Ready/release, broadernativeGUIqualification or wholeE2Ecompletion. Rootsoleexecutor. Reviewdoesnotapproveunseenfuturebindings, actualpublication or runtimeoutcomes."
+    }
+  ],
+  "reviewedAssertionCount": 26,
+  "reviewBodies": {
+    "count": 33,
+    "totalBytes": 3269222,
+    "first21LiteralExact": true,
+    "rows": [
+      {
+        "i": 0,
+        "role": "freshBootstrapGuardActualReview",
+        "identity": {
+          "bytes": 32514,
+          "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+          "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 1,
+        "role": "freshSdkIndependentReview",
+        "identity": {
+          "bytes": 84719,
+          "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+          "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 2,
+        "role": "freshMcpIndependentReview",
+        "identity": {
+          "bytes": 155439,
+          "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+          "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 3,
+        "role": "crossR1ActualPublicationReadback",
+        "identity": {
+          "bytes": 24775,
+          "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+          "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 4,
+        "role": "crossTestGuardR2",
+        "identity": {
+          "bytes": 35700,
+          "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+          "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 5,
+        "role": "crossTestParityR2",
+        "identity": {
+          "bytes": 98112,
+          "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+          "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 6,
+        "role": "crossTestActualPublicationReadback",
+        "identity": {
+          "bytes": 56894,
+          "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+          "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 7,
+        "role": "crossActualRedGuard",
+        "identity": {
+          "bytes": 140038,
+          "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+          "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 8,
+        "role": "crossActualRedPrimarySemantic",
+        "identity": {
+          "bytes": 190694,
+          "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+          "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 9,
+        "role": "crossActualRedSemanticClosure",
+        "identity": {
+          "bytes": 86249,
+          "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+          "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 10,
+        "role": "crossProducerGuardR2",
+        "identity": {
+          "bytes": 121044,
+          "sha256": "438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339",
+          "gitBlob": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 11,
+        "role": "crossProducerParityR2",
+        "identity": {
+          "bytes": 109607,
+          "sha256": "da402e2bc50d090cc5b2a57ff1eac0dc5d6767b77876d97f301937db7197536b",
+          "gitBlob": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 12,
+        "role": "crossProducerActualPublicationReadback",
+        "identity": {
+          "bytes": 31670,
+          "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+          "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 13,
+        "role": "crossActualGreenFullGuard",
+        "identity": {
+          "bytes": 209270,
+          "sha256": "b56c4d2a4328f11a679a73de100d13af4ec7e8ccc6fe8f6333de98dec4d2d329",
+          "gitBlob": "848e6efd0b924e4415848551cfea034f22b84221"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 14,
+        "role": "crossActualGreenFinalSemantic",
+        "identity": {
+          "bytes": 140647,
+          "sha256": "74936b31eeefd735ec329d286ae145b2eddb16fa025e5fb8cc6f715c5b133fd3",
+          "gitBlob": "4a49adfedbc84301e88d524d71b766a7ad785d14"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 15,
+        "role": "crossActualGreenFullEnvelope",
+        "identity": {
+          "bytes": 166444,
+          "sha256": "c1ec7ed1270235d520b436e28cbdeb0988bc1af4c8473b5226e34b081b305981",
+          "gitBlob": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 16,
+        "role": "crossOriginalValidationIncompleteGuard",
+        "identity": {
+          "bytes": 146237,
+          "sha256": "22813b7c3fa165d506e7eb487b5be229ea7910d4208c73a930a9621978a4703e",
+          "gitBlob": "736df253a457b9a7260febbd74071ed2615be2bd"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 17,
+        "role": "crossOriginalValidationIncompleteParity",
+        "identity": {
+          "bytes": 169081,
+          "sha256": "0863878d6085e61a91e8f96d970bdb9cd83a3ea6ce0a174c80bf0a0eb5cd9175",
+          "gitBlob": "7567c92bcc194c2de5e26abfed0a8604522fe589"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 18,
+        "role": "isolatedRecoveryR1Guard",
+        "identity": {
+          "bytes": 167262,
+          "sha256": "9375e23aeba4b871ad016c82c76ae539f769bea1a5f2ab72c63a8d615af24585",
+          "gitBlob": "0fdbe9a84daa354332d61c13a532090199d50c88"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 19,
+        "role": "isolatedRecoveryR1Parity",
+        "identity": {
+          "bytes": 133047,
+          "sha256": "d94fb2464c47195fadfcaf311732025c578e8084b9b7ef701dd52c76e6aeca77",
+          "gitBlob": "97bfd42e46bc1dd2160f8c9826de68219303b67d"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 20,
+        "role": "isolatedRecoveryR1CompositeActualPublicationReadback",
+        "identity": {
+          "bytes": 231365,
+          "sha256": "393a6ee912d88ff0faf979c8229a705578e1bd6723a3cf58769449205dbe2335",
+          "gitBlob": "e695dd8aca0559256e01175166317ab905f467a4"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 21,
+        "role": "combinedR1RootActual",
+        "identity": {
+          "bytes": 25481,
+          "sha256": "54c837bf45a6318cf43452ba3b6e66e341d7c4153a1d4d5d93a323bb24b9196d",
+          "gitBlob": "72db8984a98696287225899a3bf0c31bfd57a71f"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 22,
+        "role": "combinedR1IndependentActual",
+        "identity": {
+          "bytes": 80224,
+          "sha256": "aa8a8c7f6fa8b49593a9e233ae8ae9b0eb4848365915dde71bb7cb81b19e1f4e",
+          "gitBlob": "0669feaf0e8759ad2fd4330efe315c5540b55252"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 23,
+        "role": "combinedTestGuardR2",
+        "identity": {
+          "bytes": 25359,
+          "sha256": "dc7aebf5607cb8150b04c23b5e5a36f83735e5081ba18b78586ef30283d77843",
+          "gitBlob": "4d3004a5c76544dc8e47b842e981f22e7fbcdcc3"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 24,
+        "role": "combinedTestRendererR2",
+        "identity": {
+          "bytes": 97016,
+          "sha256": "9b67a3fa8a4fa07231f986881698b13ffc75c2171f18ed9f919a30e7875d145b",
+          "gitBlob": "6580a4f45747c0f079e37e0f3db042eca6c33c9e"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 25,
+        "role": "combinedTestRootActual",
+        "identity": {
+          "bytes": 29341,
+          "sha256": "fe81d1f6216e3aa89c456d22cd0a8c7ff735fb255902cfc99e915fae030875e8",
+          "gitBlob": "19ae837ffe2a9b1caaa2496cb08ac24841900752"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 26,
+        "role": "combinedTestIndependentActual",
+        "identity": {
+          "bytes": 57841,
+          "sha256": "a8736b98140b38c92578210fd9064f6952a96e3ea07df5471d9f88b11849f37e",
+          "gitBlob": "156f7b1977379568bcd7aa487be21d7ef95880f1"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 27,
+        "role": "rendererInitialInstalledAdmission",
+        "identity": {
+          "bytes": 156717,
+          "sha256": "76e5d3440254a5e778eb700eb306251a779d0f5a8c6dfe8c47e740895b316154",
+          "gitBlob": "a342571a13ce31b46e9782356cc23527c61ee644"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 28,
+        "role": "rendererAdditionalInstalledAdmission",
+        "identity": {
+          "bytes": 167326,
+          "sha256": "c880352c1d6cc0ac0c2c37bfb4d18d3a9718170298e814cb884f67fbc7e0413b",
+          "gitBlob": "e37de06a48b2d958fbd54de599ca5f933e3c23b0"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 29,
+        "role": "rendererCombinedFeasibility",
+        "identity": {
+          "bytes": 53474,
+          "sha256": "1ce3d9e96b5a8a100bccb1caa7bb1ab2ee8f234cb2afd35e940eb298c64c1238",
+          "gitBlob": "6ee0aadb457acd58e35df41c8fa8492ff6654933"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 30,
+        "role": "rendererPathDataAdmission",
+        "identity": {
+          "bytes": 8151,
+          "sha256": "9ceef73e09588b59852323fba2d2396cd83b2a524849a8cfb20b4bb278daa323",
+          "gitBlob": "d688c295815c064fad5e6d4f3a7481c083c6cd06"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 31,
+        "role": "combinedSemanticSourceGuide",
+        "identity": {
+          "bytes": 13467,
+          "sha256": "fd44402a9555871ddc2d26aa4ff87337c2591995f78f6642eab63142e8645254",
+          "gitBlob": "969d58ae7fb9788b0266ff6cefd8c9cd2aad7231"
+        },
+        "fullBodyReadAndRehashed": true
+      },
+      {
+        "i": 32,
+        "role": "combinedWholeTestsR2Proposal",
+        "identity": {
+          "bytes": 24017,
+          "sha256": "1532df713cd8c75025fccaaecbc7041e05f3ced87d1894f041a97a01e6d8f9a1",
+          "gitBlob": "061cb0545b58d847ef69b05baa2b140065456730"
+        },
+        "fullBodyReadAndRehashed": true
+      }
+    ]
+  },
+  "currentPointerJoins": [
+    {
+      "label": "combinedR1ActualReadbackEvidence.root",
+      "identity": {
+        "bytes": 25481,
+        "sha256": "54c837bf45a6318cf43452ba3b6e66e341d7c4153a1d4d5d93a323bb24b9196d",
+        "gitBlob": "72db8984a98696287225899a3bf0c31bfd57a71f"
+      },
+      "role": "combinedR1RootActual"
+    },
+    {
+      "label": "combinedR1ActualReadbackEvidence.independent",
+      "identity": {
+        "bytes": 80224,
+        "sha256": "aa8a8c7f6fa8b49593a9e233ae8ae9b0eb4848365915dde71bb7cb81b19e1f4e",
+        "gitBlob": "0669feaf0e8759ad2fd4330efe315c5540b55252"
+      },
+      "role": "combinedR1IndependentActual"
+    },
+    {
+      "label": "actualPublishedSubjectReadbackEvidence.root",
+      "identity": {
+        "bytes": 29341,
+        "sha256": "fe81d1f6216e3aa89c456d22cd0a8c7ff735fb255902cfc99e915fae030875e8",
+        "gitBlob": "19ae837ffe2a9b1caaa2496cb08ac24841900752"
+      },
+      "role": "combinedTestRootActual"
+    },
+    {
+      "label": "actualPublishedSubjectReadbackEvidence.independent",
+      "identity": {
+        "bytes": 57841,
+        "sha256": "a8736b98140b38c92578210fd9064f6952a96e3ea07df5471d9f88b11849f37e",
+        "gitBlob": "156f7b1977379568bcd7aa487be21d7ef95880f1"
+      },
+      "role": "combinedTestIndependentActual"
+    },
+    {
+      "label": "renderer85.installedAdmissions[0]",
+      "identity": {
+        "bytes": 156717,
+        "sha256": "76e5d3440254a5e778eb700eb306251a779d0f5a8c6dfe8c47e740895b316154",
+        "gitBlob": "a342571a13ce31b46e9782356cc23527c61ee644"
+      },
+      "role": "rendererInitialInstalledAdmission"
+    },
+    {
+      "label": "renderer85.installedAdmissions[1]",
+      "identity": {
+        "bytes": 167326,
+        "sha256": "c880352c1d6cc0ac0c2c37bfb4d18d3a9718170298e814cb884f67fbc7e0413b",
+        "gitBlob": "e37de06a48b2d958fbd54de599ca5f933e3c23b0"
+      },
+      "role": "rendererAdditionalInstalledAdmission"
+    },
+    {
+      "label": "renderer85.installedAdmissions[2]",
+      "identity": {
+        "bytes": 53474,
+        "sha256": "1ce3d9e96b5a8a100bccb1caa7bb1ab2ee8f234cb2afd35e940eb298c64c1238",
+        "gitBlob": "6ee0aadb457acd58e35df41c8fa8492ff6654933"
+      },
+      "role": "rendererCombinedFeasibility"
+    },
+    {
+      "label": "renderer85.installedAdmissions[3]",
+      "identity": {
+        "bytes": 8151,
+        "sha256": "9ceef73e09588b59852323fba2d2396cd83b2a524849a8cfb20b4bb278daa323",
+        "gitBlob": "d688c295815c064fad5e6d4f3a7481c083c6cd06"
+      },
+      "role": "rendererPathDataAdmission"
+    },
+    {
+      "label": "testReviews[0]",
+      "identity": {
+        "bytes": 25359,
+        "sha256": "dc7aebf5607cb8150b04c23b5e5a36f83735e5081ba18b78586ef30283d77843",
+        "gitBlob": "4d3004a5c76544dc8e47b842e981f22e7fbcdcc3"
+      },
+      "role": "combinedTestGuardR2"
+    },
+    {
+      "label": "testReviews[1]",
+      "identity": {
+        "bytes": 97016,
+        "sha256": "9b67a3fa8a4fa07231f986881698b13ffc75c2171f18ed9f919a30e7875d145b",
+        "gitBlob": "6580a4f45747c0f079e37e0f3db042eca6c33c9e"
+      },
+      "role": "combinedTestRendererR2"
+    }
+  ],
+  "inputFiles": {
+    "setupBinding": {
+      "path": "/tmp/c714-fresh-bootstrap-review/binding.json",
+      "bytes": 2790411,
+      "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+      "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+    },
+    "sourceFull": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/source-restore-source-after.json",
+      "bytes": 3451167,
+      "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+      "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+    },
+    "sourceNonDoc": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-source-after.json",
+      "bytes": 2478318,
+      "sha256": "59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751",
+      "gitBlob": "51bf0d0962e07fcc7843fcd65c3202ec9133a607"
+    },
+    "dependencies": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json",
+      "bytes": 39168001,
+      "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+      "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+    },
+    "compiled": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-compiled-after.json",
+      "bytes": 400300,
+      "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+      "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+    },
+    "pnpm": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/pnpm-inventory.json",
+      "bytes": 253936,
+      "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+      "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c"
+    },
+    "currentBoundary": {
+      "path": "/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json",
+      "bytes": 3654,
+      "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+      "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+    },
+    "providers": {
+      "path": "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json",
+      "bytes": 789090,
+      "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+      "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+    }
+  },
+  "overlays": [
+    {
+      "array": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "identity": {
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      "mode": "100644"
+    },
+    {
+      "array": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "identity": {
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      "mode": "100644"
+    },
+    {
+      "array": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "identity": {
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      "mode": "100644"
+    },
+    {
+      "array": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "identity": {
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      "mode": "100644"
+    },
+    {
+      "array": "beforeSourceOverlay",
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "identity": {
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      },
+      "mode": "100644"
+    },
+    {
+      "array": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "identity": {
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+      },
+      "mode": "100644"
+    },
+    {
+      "array": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "identity": {
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+      },
+      "mode": "100644"
+    },
+    {
+      "array": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "identity": {
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      "mode": "100644"
+    },
+    {
+      "array": "beforeSourceOverlay",
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "identity": {
+        "bytes": 180091,
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+        "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978"
+      },
+      "mode": "100644"
+    },
+    {
+      "array": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "identity": {
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      "mode": "100644"
+    },
+    {
+      "array": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "identity": {
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      "mode": "100644"
+    },
+    {
+      "array": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "identity": {
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      "mode": "100644"
+    },
+    {
+      "array": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "identity": {
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      "mode": "100644"
+    },
+    {
+      "array": "sourceOverlay",
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "identity": {
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      },
+      "mode": "100644"
+    },
+    {
+      "array": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "identity": {
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+      },
+      "mode": "100644"
+    },
+    {
+      "array": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "identity": {
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+      },
+      "mode": "100644"
+    },
+    {
+      "array": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "identity": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "mode": "100644"
+    },
+    {
+      "array": "sourceOverlay",
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "identity": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      },
+      "mode": "100644"
+    }
+  ],
+  "sourceVector": {
+    "pins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    ],
+    "identity": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "physicalBefore": 5,
+    "physicalAfter": 6,
+    "exactChangedPaths": [
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+    ],
+    "allSevenRedProducersUnchanged": true,
+    "futurePhysicalAfterProducers": 9,
+    "futureProducerBindingReviewed": false
+  },
+  "tests": {
+    "identities": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    },
+    "nodeNamesIdentity": {
+      "bytes": 11285,
+      "sha256": "3364f9a0bc12536ef2c26174a1341f8f8d4183cb6cb0795a6c339d1dd9cc6226",
+      "gitBlob": "96bf8a32335853f8721251c8131e534fab668aac"
+    },
+    "rendererNamesIdentity": {
+      "bytes": 6272,
+      "sha256": "dd9fb1089574c01f484d8a6fd7c9776dca0dfc3a15529a751e54c41a24c00658",
+      "gitBlob": "801ce3534f74703fd5e5bbc41b0a8fc892ef9d92"
+    },
+    "nodeCounts": {
+      "total": 139,
+      "redPass": 134,
+      "redFail": 5,
+      "greenPass": 139
+    },
+    "rendererCounts": {
+      "total": 85,
+      "redPass": 82,
+      "redFail": 3,
+      "greenPass": 85
+    },
+    "nodeFailureSites": [
+      {
+        "ordinal": 134,
+        "registration": [
+          2591,
+          4
+        ],
+        "assertion": [
+          2593,
+          3
+        ],
+        "operator": "rejects"
+      },
+      {
+        "ordinal": 135,
+        "registration": [
+          2591,
+          4
+        ],
+        "assertion": [
+          2593,
+          3
+        ],
+        "operator": "rejects"
+      },
+      {
+        "ordinal": 136,
+        "registration": [
+          2591,
+          4
+        ],
+        "assertion": [
+          2593,
+          3
+        ],
+        "operator": "rejects"
+      },
+      {
+        "ordinal": 138,
+        "registration": [
+          2678,
+          1
+        ],
+        "assertion": [
+          2682,
+          5
+        ],
+        "operator": "rejects"
+      },
+      {
+        "ordinal": 139,
+        "registration": [
+          2688,
+          1
+        ],
+        "assertion": [
+          2692,
+          12
+        ],
+        "operator": "deepStrictEqual"
+      }
+    ],
+    "rendererFailureSites": {
+      "81": [
+        5722,
+        28
+      ],
+      "82": [
+        5781,
+        30
+      ],
+      "83": [
+        5781,
+        30
+      ]
+    },
+    "original133And80Preserved": true,
+    "resultsAreProspective": true
+  },
+  "commands": {
+    "node": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--test",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+    ],
+    "rendererRed": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/vitest.mjs",
+      "run",
+      "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "--root=/workspace/scratch/c714-fresh-20261116/source",
+      "--config=/workspace/scratch/c714-fresh-20261116/source/vitest.config.ts",
+      "--configLoader=bundle",
+      "--mode=test",
+      "--pool=forks",
+      "--poolOptions.forks.singleFork",
+      "--poolOptions.forks.isolate",
+      "--no-file-parallelism",
+      "--maxWorkers=1",
+      "--minWorkers=1",
+      "--no-cache",
+      "--reporter=default",
+      "--reporter=json",
+      "--outputFile.json=/tmp/c714-combined139-85-evidence/red/renderer-results.json",
+      "--no-watch",
+      "--no-allowOnly",
+      "--no-passWithNoTests",
+      "--no-dangerouslyIgnoreUnhandledErrors",
+      "--retry=0",
+      "--bail=0",
+      "--no-silent",
+      "--no-hideSkippedTests",
+      "--no-coverage",
+      "--no-typecheck",
+      "--browser.enabled=false",
+      "--no-api",
+      "--no-ui",
+      "--no-open",
+      "--no-update",
+      "--no-color",
+      "--no-clearScreen"
+    ],
+    "rendererGreen": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/vitest.mjs",
+      "run",
+      "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "--root=/workspace/scratch/c714-fresh-20261116/source",
+      "--config=/workspace/scratch/c714-fresh-20261116/source/vitest.config.ts",
+      "--configLoader=bundle",
+      "--mode=test",
+      "--pool=forks",
+      "--poolOptions.forks.singleFork",
+      "--poolOptions.forks.isolate",
+      "--no-file-parallelism",
+      "--maxWorkers=1",
+      "--minWorkers=1",
+      "--no-cache",
+      "--reporter=default",
+      "--reporter=json",
+      "--outputFile.json=/tmp/c714-combined139-85-evidence/green/renderer-results.json",
+      "--no-watch",
+      "--no-allowOnly",
+      "--no-passWithNoTests",
+      "--no-dangerouslyIgnoreUnhandledErrors",
+      "--retry=0",
+      "--bail=0",
+      "--no-silent",
+      "--no-hideSkippedTests",
+      "--no-coverage",
+      "--no-typecheck",
+      "--browser.enabled=false",
+      "--no-api",
+      "--no-ui",
+      "--no-open",
+      "--no-update",
+      "--no-color",
+      "--no-clearScreen"
+    ],
+    "validation": [
+      [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "lint:fast:files",
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "lint:fast:files",
+        "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+      ],
+      [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "guard:source-file-size"
+      ],
+      [
+        "/usr/local/bin/git",
+        "diff",
+        "--check",
+        "--",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+      ]
+    ]
+  },
+  "nativeMetadata": {
+    "argv": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--input-type=commonjs",
+      "-e",
+      "'use strict';\nconst os = require('node:os');\nlet reads = 1;\nlet header = process.report.getReport().header;\nconst firstHeaderNullish = header == null;\nif (firstHeaderNullish) {\n  reads++;\n  header = process.report.getReport().header;\n}\nconst finalHeaderFalsy = !header;\nconst glibcVersionRuntime = header && header.glibcVersionRuntime || null;\nprocess.stdout.write(JSON.stringify({\n  platform: process.platform, arch: process.arch, nodeVersion: process.version,\n  endianness: os.endianness(), execPath: process.execPath, cwd: process.cwd(),\n  denoAbsent: typeof process.versions.deno === 'undefined' && typeof globalThis.Deno === 'undefined',\n  pnpAbsent: typeof process.versions.pnp === 'undefined',\n  requireModule: process.features.require_module === true,\n  reportReads: reads, firstHeaderNullish, finalHeaderFalsy, glibcVersionRuntime,\n  selectedRollupGnu: finalHeaderFalsy || Boolean(glibcVersionRuntime)\n}) + '\\n');\n"
+    ],
+    "codeIdentity": {
+      "bytes": 923,
+      "sha256": "f1d7790a54f3a84815bd4169d4b63885c2eb634ba529a978a7fbdd4c02db967a",
+      "gitBlob": "2f4dc4eb967813da67e88f48f8fd2a844d809c54"
+    },
+    "builtinOnly": true,
+    "actualObservationStillRequired": true
+  },
+  "environment": {
+    "rawPins": {
+      "AGENT_TEAMS_VITEST_TEMP_CLEANUP_DONE": null,
+      "AGENT_TEAMS_VITEST_STALE_HOME_MAX_AGE_MS": null,
+      "CI": null,
+      "DEBUG": null,
+      "ESBUILD_BINARY_PATH": null,
+      "FORCE_COLOR": null,
+      "FORCE_TTY": null,
+      "MEMBER_WORK_SYNC_RECOVERY_KEEP_TEMP": null,
+      "MEMBER_WORK_SYNC_RECOVERY_LIVE": null,
+      "NODE_COMPILE_CACHE": null,
+      "NODE_COMPILE_CACHE_PORTABLE": null,
+      "NODE_ENV": null,
+      "NODE_OPTIONS": null,
+      "NODE_PATH": {
+        "bytes": 72,
+        "sha256": "dbc7bc884f72c70bb3d320e868da710a56a621286fba48b3c6b610776b41b4fd",
+        "gitBlob": "a0fe26d3ac294c939edc951dde9fbcab84ee0ee9"
+      },
+      "NODE_V8_COVERAGE": null,
+      "TEST": null,
+      "UPDATE_SNAPSHOT": null,
+      "VITEST_SKIP_INSTALL_CHECKS": null,
+      "VITE_NODE_DEBUG_DUMP": null,
+      "VITE_NODE_DEPS_MODULE_DIRECTORIES": null,
+      "VITE_USER_NODE_ENV": null,
+      "NODE_EXTRA_CA_CERTS": {
+        "bytes": 47,
+        "sha256": "28dd638d515beb42559e271b6ed14f64e52e400f4994891ed6f18af1b4c92631",
+        "gitBlob": "26c71aa9bf4cbfda3b4e37b9b81abb5752dacbe0"
+      },
+      "NODE_USE_ENV_PROXY": {
+        "bytes": 1,
+        "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+        "gitBlob": "56a6051ca2b02b04ef92d5150c9ef600403cb1de"
+      },
+      "NO_COLOR": {
+        "bytes": 1,
+        "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+        "gitBlob": "56a6051ca2b02b04ef92d5150c9ef600403cb1de"
+      }
+    },
+    "effectiveAbsent": [
+      "AGENT_TEAMS_VITEST_TEMP_CLEANUP_DONE",
+      "AGENT_TEAMS_VITEST_STALE_HOME_MAX_AGE_MS",
+      "DEBUG",
+      "ESBUILD_BINARY_PATH",
+      "FORCE_COLOR",
+      "FORCE_TTY",
+      "MEMBER_WORK_SYNC_RECOVERY_KEEP_TEMP",
+      "MEMBER_WORK_SYNC_RECOVERY_LIVE",
+      "NODE_COMPILE_CACHE",
+      "NODE_COMPILE_CACHE_PORTABLE",
+      "NODE_ENV",
+      "NODE_OPTIONS",
+      "NODE_PATH",
+      "NODE_V8_COVERAGE",
+      "TEST",
+      "UPDATE_SNAPSHOT",
+      "VITEST_SKIP_INSTALL_CHECKS",
+      "VITE_NODE_DEBUG_DUMP",
+      "VITE_NODE_DEPS_MODULE_DIRECTORIES",
+      "VITE_USER_NODE_ENV"
+    ],
+    "fullEffectiveValueIdentitiesBeforeAfter": true,
+    "ci": true,
+    "homeAndCodexHomePreserved": true
+  },
+  "rendererStatic": {
+    "pins": [
+      {
+        "path": "node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/bin/esbuild",
+        "mode": "100755",
+        "bytes": 11407472,
+        "sha256": "0c6588b092a2c291a72bab90659f3c9e0e25e0fe59c9ac12b4dae4d945e5548c",
+        "gitBlob": "71fe4f8318ca6039f84b0165618f921eb3cab609"
+      },
+      {
+        "path": "node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/package.json",
+        "mode": "100644",
+        "bytes": 372,
+        "sha256": "2332dc7d04175b16730f136b5bf32b31203eecea5be03b66e9453a4658b3d971",
+        "gitBlob": "1ce7bc3bed21efe1a508f0ac6cafb28c8771685c"
+      },
+      {
+        "path": "node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/package.json",
+        "mode": "100644",
+        "bytes": 480,
+        "sha256": "119bf5922da37602ead3a4c40f2b6279a1501388d6fe944c0be18b16e95a35af",
+        "gitBlob": "1ca44457535e1981d2537169d41daad15e66e6fb"
+      },
+      {
+        "path": "node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/rollup.linux-x64-gnu.node",
+        "mode": "100644",
+        "bytes": 2030680,
+        "sha256": "c3aedeb1740b7363287f97013b4e03e3485bf0a74c442e90862e8cf53c9144f5",
+        "gitBlob": "59216bda58fc192ff0f5eac32719a884fa74a03c"
+      },
+      {
+        "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js",
+        "mode": "100644",
+        "bytes": 97214,
+        "sha256": "8331fe1d8b3a07381f33cc425fcfaa94776e263113653f80ec3ba433e9657e73",
+        "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b"
+      },
+      {
+        "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/package.json",
+        "mode": "100644",
+        "bytes": 3980,
+        "sha256": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a",
+        "gitBlob": "628583884bffe38c662c1806c474c22009d9bafa"
+      },
+      {
+        "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js",
+        "mode": "100644",
+        "bytes": 4787,
+        "sha256": "93c3da450b25ba485bb3de20dded405aa9c105951e8d31964eeb49633c2b16ea",
+        "gitBlob": "962a10163ad9a8289ef4661070b526f886293dff"
+      },
+      {
+        "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/package.json",
+        "mode": "100644",
+        "bytes": 12026,
+        "sha256": "d2b8a7290987a7989c993f4f9adb2939de7d4030e7eb9ec252bc505fcb0b90f3",
+        "gitBlob": "971d21ebd6ff8ecac75305d5156ee178c611b54b"
+      },
+      {
+        "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/package.json",
+        "mode": "100644",
+        "bytes": 5251,
+        "sha256": "08aa811517022c5b83c52c63dc435d2aa725a64fe4e3cfa6f351affa6b9ed9de",
+        "gitBlob": "3b6d03c4ebc634c5c2ea5a05f9d8cafda1da6a23"
+      },
+      {
+        "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/package.json",
+        "mode": "100644",
+        "bytes": 5029,
+        "sha256": "86c8529110b6690e7ed95e243c867ee9b3118ac91d8ae8857d22f228666252c4",
+        "gitBlob": "a276177c1a9924d071831bed62c42f7f6bb5dd11"
+      },
+      {
+        "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/vitest.mjs",
+        "mode": "100755",
+        "bytes": 43,
+        "sha256": "39db22f579acf5639bbb17a261408debbde03f4692c0c439e77e7f13aeba74d6",
+        "gitBlob": "02dd4714b90340442ab2b2b72a704a99c9b5e4b8"
+      },
+      {
+        "path": "test/setup.ts",
+        "mode": "100644",
+        "bytes": 5297,
+        "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b",
+        "gitBlob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c"
+      },
+      {
+        "path": "vitest.config.ts",
+        "mode": "100644",
+        "bytes": 1187,
+        "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+        "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3"
+      }
+    ],
+    "links": [
+      {
+        "pin": {
+          "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/@esbuild/linux-x64",
+          "mode": "120000",
+          "bytes": 66,
+          "sha256": "d9d2b2af4cbb49175d7784f39432ddeec04505d978f4fe86f5a0681d5ea0ba81",
+          "gitBlob": "d3d87753592b0fa1840c0bf6bda46e7f10926c4b",
+          "target": "../../../@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64"
+        },
+        "resolved": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64"
+      },
+      {
+        "pin": {
+          "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu",
+          "mode": "120000",
+          "bytes": 86,
+          "sha256": "d0c2b21cea2f55759c3a6286572b0bcc7d94557dcfbe96332879fbe8649b325d",
+          "gitBlob": "b6ded27b883614dd57b66a584a4e3711c2d415e0",
+          "target": "../../../@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu"
+        },
+        "resolved": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu"
+      }
+    ],
+    "absences": [
+      "node_modules/.vite-temp",
+      "node_modules/.vite",
+      ".env",
+      ".env.local",
+      ".env.test",
+      ".env.test.local",
+      "vitest.workspace.ts",
+      "vitest.workspace.js",
+      "vitest.workspace.mjs",
+      "vitest.workspace.json",
+      "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/rollup.linux-x64-gnu.node",
+      "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/downloaded-@esbuild-linux-x64-esbuild"
+    ],
+    "config": {
+      "sourceConfig": {
+        "path": "vitest.config.ts",
+        "mode": "100644",
+        "bytes": 1187,
+        "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+        "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3"
+      },
+      "sourceSetup": {
+        "path": "test/setup.ts",
+        "mode": "100644",
+        "bytes": 5297,
+        "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b",
+        "gitBlob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c"
+      },
+      "environment": "happy-dom",
+      "testTimeout": 15000,
+      "mode": "test",
+      "configLoader": "bundle",
+      "pool": "forks",
+      "singleFork": true,
+      "isolate": true,
+      "fileParallelism": false,
+      "minWorkers": 1,
+      "maxWorkers": 1,
+      "resultCache": false,
+      "effectiveSupervisorCI": "true",
+      "initialNodeEnv": "ABSENT",
+      "workerNodeEnv": "test",
+      "workerTest": "true",
+      "workerVitest": "true",
+      "workerMode": "RUN",
+      "workerConditions": [
+        "node",
+        "development"
+      ],
+      "requireModuleActualMetadataRequired": true,
+      "viteIsProduction": false,
+      "envDefines": {
+        "BASE_URL": "/",
+        "MODE": "test",
+        "DEV": true,
+        "PROD": false
+      },
+      "testDefines": {},
+      "snapshotUpdate": "none",
+      "optimizer": "Reviewed Vite6 disabled/noDiscovery/include[] route; no universal normalized optimizer.enabled claim.",
+      "scope": "Source-derived effective configuration; actual runtime gates and whole inventory required."
+    },
+    "admissionJoins": [
+      {
+        "path": "node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/bin/esbuild",
+        "identity": {
+          "bytes": 11407472,
+          "sha256": "0c6588b092a2c291a72bab90659f3c9e0e25e0fe59c9ac12b4dae4d945e5548c",
+          "gitBlob": "71fe4f8318ca6039f84b0165618f921eb3cab609"
+        },
+        "joins": [
+          "rendererAdditionalInstalledAdmission.evidence.newNativeFiles.identityRows[0]",
+          "rendererAdditionalInstalledAdmission.fourGapResults[1].nativeIdentity",
+          "rendererAdditionalInstalledAdmission.completeMembershipEvidence.records[0].completeOriginalCensusRow",
+          "rendererCombinedFeasibility.inputContract.nativeMetadataGate.esbuildIdentity"
+        ]
+      },
+      {
+        "path": "node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/package.json",
+        "identity": {
+          "bytes": 372,
+          "sha256": "2332dc7d04175b16730f136b5bf32b31203eecea5be03b66e9453a4658b3d971",
+          "gitBlob": "1ce7bc3bed21efe1a508f0ac6cafb28c8771685c"
+        },
+        "joins": [
+          "rendererAdditionalInstalledAdmission.evidence.newLiteralTextBodies.verificationRows[8]",
+          "rendererAdditionalInstalledAdmission.completeMembershipEvidence.records[1].completeOriginalCensusRow",
+          "rendererAdditionalInstalledAdmission.newTextPins[8]"
+        ]
+      },
+      {
+        "path": "node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/package.json",
+        "identity": {
+          "bytes": 480,
+          "sha256": "119bf5922da37602ead3a4c40f2b6279a1501388d6fe944c0be18b16e95a35af",
+          "gitBlob": "1ca44457535e1981d2537169d41daad15e66e6fb"
+        },
+        "joins": [
+          "rendererAdditionalInstalledAdmission.evidence.newLiteralTextBodies.verificationRows[24]",
+          "rendererAdditionalInstalledAdmission.completeMembershipEvidence.records[2].completeOriginalCensusRow",
+          "rendererAdditionalInstalledAdmission.newTextPins[24]"
+        ]
+      },
+      {
+        "path": "node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/rollup.linux-x64-gnu.node",
+        "identity": {
+          "bytes": 2030680,
+          "sha256": "c3aedeb1740b7363287f97013b4e03e3485bf0a74c442e90862e8cf53c9144f5",
+          "gitBlob": "59216bda58fc192ff0f5eac32719a884fa74a03c"
+        },
+        "joins": [
+          "rendererAdditionalInstalledAdmission.evidence.newNativeFiles.identityRows[1]",
+          "rendererAdditionalInstalledAdmission.fourGapResults[2].nativeCandidateIdentity",
+          "rendererAdditionalInstalledAdmission.completeMembershipEvidence.records[3].completeOriginalCensusRow",
+          "rendererCombinedFeasibility.inputContract.nativeMetadataGate.rollupIdentity"
+        ]
+      },
+      {
+        "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js",
+        "identity": {
+          "bytes": 97214,
+          "sha256": "8331fe1d8b3a07381f33cc425fcfaa94776e263113653f80ec3ba433e9657e73",
+          "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b"
+        },
+        "joins": [
+          "rendererInitialInstalledAdmission.boundedRemainingDataGaps[0].knownBody",
+          "rendererInitialInstalledAdmission.referencedInstalledPins[0]"
+        ]
+      },
+      {
+        "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/package.json",
+        "identity": {
+          "bytes": 3980,
+          "sha256": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a",
+          "gitBlob": "628583884bffe38c662c1806c474c22009d9bafa"
+        },
+        "joins": [
+          "rendererInitialInstalledAdmission.findings[9].packagePin",
+          "rendererInitialInstalledAdmission.referencedInstalledPins[1]"
+        ]
+      },
+      {
+        "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js",
+        "identity": {
+          "bytes": 4787,
+          "sha256": "93c3da450b25ba485bb3de20dded405aa9c105951e8d31964eeb49633c2b16ea",
+          "gitBlob": "962a10163ad9a8289ef4661070b526f886293dff"
+        },
+        "joins": [
+          "rendererAdditionalInstalledAdmission.evidence.newLiteralTextBodies.verificationRows[9]",
+          "rendererAdditionalInstalledAdmission.completeMembershipEvidence.records[25].completeOriginalCensusRow",
+          "rendererAdditionalInstalledAdmission.newTextPins[9]"
+        ]
+      },
+      {
+        "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/package.json",
+        "identity": {
+          "bytes": 12026,
+          "sha256": "d2b8a7290987a7989c993f4f9adb2939de7d4030e7eb9ec252bc505fcb0b90f3",
+          "gitBlob": "971d21ebd6ff8ecac75305d5156ee178c611b54b"
+        },
+        "joins": [
+          "rendererAdditionalInstalledAdmission.evidence.newLiteralTextBodies.verificationRows[3]",
+          "rendererAdditionalInstalledAdmission.completeMembershipEvidence.records[26].completeOriginalCensusRow",
+          "rendererAdditionalInstalledAdmission.newTextPins[3]"
+        ]
+      },
+      {
+        "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/package.json",
+        "identity": {
+          "bytes": 5251,
+          "sha256": "08aa811517022c5b83c52c63dc435d2aa725a64fe4e3cfa6f351affa6b9ed9de",
+          "gitBlob": "3b6d03c4ebc634c5c2ea5a05f9d8cafda1da6a23"
+        },
+        "joins": [
+          "rendererInitialInstalledAdmission.referencedInstalledPins[16]"
+        ]
+      },
+      {
+        "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/package.json",
+        "identity": {
+          "bytes": 5029,
+          "sha256": "86c8529110b6690e7ed95e243c867ee9b3118ac91d8ae8857d22f228666252c4",
+          "gitBlob": "a276177c1a9924d071831bed62c42f7f6bb5dd11"
+        },
+        "joins": []
+      },
+      {
+        "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/vitest.mjs",
+        "identity": {
+          "bytes": 43,
+          "sha256": "39db22f579acf5639bbb17a261408debbde03f4692c0c439e77e7f13aeba74d6",
+          "gitBlob": "02dd4714b90340442ab2b2b72a704a99c9b5e4b8"
+        },
+        "joins": []
+      },
+      {
+        "path": "test/setup.ts",
+        "identity": {
+          "bytes": 5297,
+          "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b",
+          "gitBlob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c"
+        },
+        "joins": [
+          "rendererInitialInstalledAdmission.fullProjectSourceEvidence[1]"
+        ]
+      },
+      {
+        "path": "vitest.config.ts",
+        "identity": {
+          "bytes": 1187,
+          "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+          "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3"
+        },
+        "joins": [
+          "rendererInitialInstalledAdmission.fullProjectSourceEvidence[0]"
+        ]
+      }
+    ],
+    "directReadForVitestMissingFromInitialPinSubset": {
+      "manifest": {
+        "bytes": 5029,
+        "sha256": "86c8529110b6690e7ed95e243c867ee9b3118ac91d8ae8857d22f228666252c4",
+        "gitBlob": "a276177c1a9924d071831bed62c42f7f6bb5dd11"
+      },
+      "entry": {
+        "bytes": 43,
+        "sha256": "39db22f579acf5639bbb17a261408debbde03f4692c0c439e77e7f13aeba74d6",
+        "gitBlob": "02dd4714b90340442ab2b2b72a704a99c9b5e4b8"
+      },
+      "prior14Inventory": {
+        "bytes": 7713,
+        "sha256": "7dc84404eba4d6ce406662a3a5ba04b7a5c9feb8a79da9d83eee150714b8c291",
+        "gitBlob": "28efd09a0199e8b789d0557ae8cb86946c1f9fcb"
+      }
+    },
+    "allProspectiveDataPinsMatch": true
+  },
+  "normalAndExceptionalPaths": {
+    "normal": "source-onlymaterializationthenindependentactualacceptance/publication; REDfullpreflight→Node139exactsemantics+no-debt→builtinmetadata→renderer85exactsemantics→fullsurvivingownedcapture/exactcleanup→fullpostflight→blockedcutoff→actualouter0→independentacceptance",
+    "preflightFailure": "executionErrorlatched; no primary or next suiteadmitted, wholeattemptspent",
+    "nodeUnexpected": "Nodefailurelatches andrenderer remainsUNREACHED; no supervisorfiledeletion caneraseTMPdebt",
+    "metadataFailure": "RendererUNREACHED, failed30smetadata evidence retained",
+    "unknownLaunch": "Primary tracker records attemptedspawnwithoutPID; cleanuprefusedandfinalscopefalse",
+    "rendererUnexpected": "Completeknownfinalizedcapturedsessionmayallowownedtransientcaptureandcleanup, butoriginalerrororsemanticfailure remainslatched",
+    "captureMutation": "No broad deletion; errorlatched, unknown/mutated/unattributedphysicalentries retained, postflight cannotacceptunchangedruntimeinputs",
+    "signal": "Originalsignalprotectionandfinalpendingcutoff; anycaptured/pendinginterruptionrefuses; outer0separate",
+    "postflightFailure": "Inputsfalse,scopefalse, noadvance/replay"
+  },
+  "blockers": [],
+  "failedAssertions": [],
+  "remainingGates": [
+    "Publish exact reviewed runner and full RED binding with immediatepush",
+    "Complete root and independent actual publication/readback",
+    "Exclusive exact localcontrolstaging",
+    "One source-onlytwo-testmaterialization with complete actualsource/metadata/lifetimeevidence andouter0, independentacceptance andpublication/readback",
+    "One exactcombinedREDpackage withfreshfullbefore/after/raw+JSON/capture+cleanup andobservedouter0",
+    "Independent fullactualREDacceptance pluspublication/readback beforethreeproducerpostimageauthorship",
+    "Future exactproducerandGREEN/validationbindings requireownR2/publication/readback; no unseenpostimage approval"
+  ],
+  "preservedOpenGates": [
+    "Canonical typecheck/build",
+    "Windows original15s/10s",
+    "Fresh CrossGUI",
+    "StrictDarwinP09",
+    "LaterP11/genuineM16",
+    "Incomingintegration",
+    "Full frontend/provider E2E"
+  ],
+  "scopeNotice": "This R2 accepts the exact inspected prospective runner and RED binding only. It does not label predicted outcomes as observed, prove current native/GUI qualification, approve future unseen producer/binding postimages, or close whole E2E."
+}

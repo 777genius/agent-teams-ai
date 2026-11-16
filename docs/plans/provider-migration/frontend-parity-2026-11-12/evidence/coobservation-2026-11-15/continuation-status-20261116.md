@@ -193,3 +193,10 @@ R1 d52bf425109d265914631ddea62f2d67e979cff5 selects the three narrow P11/Review/
 ## Exact whole139 / whole85 tests published; execution pending
 
 Test R2 proposal061cb054 is accepted by Guard4d3004a5 and renderer6580a4f4. Node896c587 retains all133 old cases plus6, and renderer76495189 retains all80 old cases plus5 by exact inverse. Only the two test sources change in this checkpoint. No local materialization, runtime or producer postimage occurs. Exact runner/binding R2 and complete publication readback still precede execution; actual combined RED still precedes every producer fix. All broader E2E gates remain OPEN.
+
+
+## Combined execution controls accepted; actual execution pending
+
+Exact runner906d8b49 and RED bindingf7c78d18 have accepted full Guard7e167aa1, semantic067403c4 and binding05b729d3 R2 reviews. Root AST/data check1b6d8217 confirms exact code/data without evaluation. The two test-publication actual readbacks19ae837f/156f7b19 are complete. All inherited runtime inputs, four fixed producers, three producer preimages, full139/85 census, original clocks and captured cleanup remain bound.
+
+No selected controls were staged, no source was materialized, no current package ran and no producer fix was authored. Full actual controls publication readback precedes exclusive staging and source-only materialize-tests; complete actual materialization acceptance/publication/readback precedes the once-only combinedRED. Expected RED counts are predictions. Wider E2E gates remain OPEN.

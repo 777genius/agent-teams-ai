@@ -1,0 +1,224 @@
+{
+  "runtimeEvaluated": false,
+  "sourceWritten": false,
+  "runnerAstParsed": {
+    "bytes": 88355,
+    "sha256": "85a27cc517b7552ed919382dc36897ea86ecd8073ce55ec1e3d12f8323e7194f",
+    "gitBlob": "1770fa4f668300e0e4965c4c39010e9b450d9830"
+  },
+  "selectedDataPins": [
+    {
+      "pin": {
+        "path": "node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/package.json",
+        "mode": "100644",
+        "bytes": 372,
+        "sha256": "2332dc7d04175b16730f136b5bf32b31203eecea5be03b66e9453a4658b3d971",
+        "gitBlob": "1ce7bc3bed21efe1a508f0ac6cafb28c8771685c"
+      },
+      "resolved": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/package.json"
+    },
+    {
+      "pin": {
+        "path": "node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/package.json",
+        "mode": "100644",
+        "bytes": 480,
+        "sha256": "119bf5922da37602ead3a4c40f2b6279a1501388d6fe944c0be18b16e95a35af",
+        "gitBlob": "1ca44457535e1981d2537169d41daad15e66e6fb"
+      },
+      "resolved": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/package.json"
+    },
+    {
+      "pin": {
+        "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/@esbuild/linux-x64",
+        "mode": "120000",
+        "bytes": 66,
+        "sha256": "d9d2b2af4cbb49175d7784f39432ddeec04505d978f4fe86f5a0681d5ea0ba81",
+        "gitBlob": "d3d87753592b0fa1840c0bf6bda46e7f10926c4b",
+        "target": "../../../@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64"
+      },
+      "resolved": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64"
+    },
+    {
+      "pin": {
+        "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js",
+        "mode": "100644",
+        "bytes": 97214,
+        "sha256": "8331fe1d8b3a07381f33cc425fcfaa94776e263113653f80ec3ba433e9657e73",
+        "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b"
+      },
+      "resolved": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js"
+    },
+    {
+      "pin": {
+        "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/package.json",
+        "mode": "100644",
+        "bytes": 3980,
+        "sha256": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a",
+        "gitBlob": "628583884bffe38c662c1806c474c22009d9bafa"
+      },
+      "resolved": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/package.json"
+    },
+    {
+      "pin": {
+        "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu",
+        "mode": "120000",
+        "bytes": 86,
+        "sha256": "d0c2b21cea2f55759c3a6286572b0bcc7d94557dcfbe96332879fbe8649b325d",
+        "gitBlob": "b6ded27b883614dd57b66a584a4e3711c2d415e0",
+        "target": "../../../@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu"
+      },
+      "resolved": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu"
+    },
+    {
+      "pin": {
+        "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js",
+        "mode": "100644",
+        "bytes": 4787,
+        "sha256": "93c3da450b25ba485bb3de20dded405aa9c105951e8d31964eeb49633c2b16ea",
+        "gitBlob": "962a10163ad9a8289ef4661070b526f886293dff"
+      },
+      "resolved": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js"
+    },
+    {
+      "pin": {
+        "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/package.json",
+        "mode": "100644",
+        "bytes": 12026,
+        "sha256": "d2b8a7290987a7989c993f4f9adb2939de7d4030e7eb9ec252bc505fcb0b90f3",
+        "gitBlob": "971d21ebd6ff8ecac75305d5156ee178c611b54b"
+      },
+      "resolved": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/package.json"
+    },
+    {
+      "pin": {
+        "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/package.json",
+        "mode": "100644",
+        "bytes": 5251,
+        "sha256": "08aa811517022c5b83c52c63dc435d2aa725a64fe4e3cfa6f351affa6b9ed9de",
+        "gitBlob": "3b6d03c4ebc634c5c2ea5a05f9d8cafda1da6a23"
+      },
+      "resolved": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/package.json"
+    },
+    {
+      "pin": {
+        "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/package.json",
+        "mode": "100644",
+        "bytes": 5029,
+        "sha256": "86c8529110b6690e7ed95e243c867ee9b3118ac91d8ae8857d22f228666252c4",
+        "gitBlob": "a276177c1a9924d071831bed62c42f7f6bb5dd11"
+      },
+      "resolved": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/package.json"
+    }
+  ],
+  "regularPins": [
+    {
+      "path": "vitest.config.ts",
+      "mode": "100644",
+      "bytes": 1187,
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+      "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3"
+    },
+    {
+      "path": "test/setup.ts",
+      "mode": "100644",
+      "bytes": 5297,
+      "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b",
+      "gitBlob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/vitest.mjs",
+      "mode": "100755",
+      "bytes": 43,
+      "sha256": "39db22f579acf5639bbb17a261408debbde03f4692c0c439e77e7f13aeba74d6",
+      "gitBlob": "02dd4714b90340442ab2b2b72a704a99c9b5e4b8"
+    },
+    {
+      "path": "node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/rollup.linux-x64-gnu.node",
+      "mode": "100644",
+      "bytes": 2030680,
+      "sha256": "c3aedeb1740b7363287f97013b4e03e3485bf0a74c442e90862e8cf53c9144f5",
+      "gitBlob": "59216bda58fc192ff0f5eac32719a884fa74a03c"
+    },
+    {
+      "path": "node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/bin/esbuild",
+      "mode": "100755",
+      "bytes": 11407472,
+      "sha256": "0c6588b092a2c291a72bab90659f3c9e0e25e0fe59c9ac12b4dae4d945e5548c",
+      "gitBlob": "71fe4f8318ca6039f84b0165618f921eb3cab609"
+    }
+  ],
+  "rawSensitiveEnvironment": {
+    "AGENT_TEAMS_VITEST_TEMP_CLEANUP_DONE": null,
+    "AGENT_TEAMS_VITEST_STALE_HOME_MAX_AGE_MS": null,
+    "CI": null,
+    "DEBUG": null,
+    "ESBUILD_BINARY_PATH": null,
+    "FORCE_COLOR": null,
+    "FORCE_TTY": null,
+    "MEMBER_WORK_SYNC_RECOVERY_KEEP_TEMP": null,
+    "MEMBER_WORK_SYNC_RECOVERY_LIVE": null,
+    "NODE_COMPILE_CACHE": null,
+    "NODE_COMPILE_CACHE_PORTABLE": null,
+    "NODE_ENV": null,
+    "NODE_OPTIONS": null,
+    "NODE_PATH": {
+      "bytes": 72,
+      "sha256": "dbc7bc884f72c70bb3d320e868da710a56a621286fba48b3c6b610776b41b4fd",
+      "gitBlob": "a0fe26d3ac294c939edc951dde9fbcab84ee0ee9"
+    },
+    "NODE_V8_COVERAGE": null,
+    "TEST": null,
+    "UPDATE_SNAPSHOT": null,
+    "VITEST_SKIP_INSTALL_CHECKS": null,
+    "VITE_NODE_DEBUG_DUMP": null,
+    "VITE_NODE_DEPS_MODULE_DIRECTORIES": null,
+    "VITE_USER_NODE_ENV": null,
+    "NODE_EXTRA_CA_CERTS": {
+      "bytes": 47,
+      "sha256": "28dd638d515beb42559e271b6ed14f64e52e400f4994891ed6f18af1b4c92631",
+      "gitBlob": "26c71aa9bf4cbfda3b4e37b9b81abb5752dacbe0"
+    },
+    "NODE_USE_ENV_PROXY": {
+      "bytes": 1,
+      "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+      "gitBlob": "56a6051ca2b02b04ef92d5150c9ef600403cb1de"
+    },
+    "NO_COLOR": {
+      "bytes": 1,
+      "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+      "gitBlob": "56a6051ca2b02b04ef92d5150c9ef600403cb1de"
+    }
+  },
+  "rawPrefixValues": {
+    "NODE_EXTRA_CA_CERTS": {
+      "bytes": 47,
+      "sha256": "28dd638d515beb42559e271b6ed14f64e52e400f4994891ed6f18af1b4c92631",
+      "gitBlob": "26c71aa9bf4cbfda3b4e37b9b81abb5752dacbe0"
+    },
+    "NODE_USE_ENV_PROXY": {
+      "bytes": 1,
+      "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+      "gitBlob": "56a6051ca2b02b04ef92d5150c9ef600403cb1de"
+    },
+    "NODE_PATH": {
+      "bytes": 72,
+      "sha256": "dbc7bc884f72c70bb3d320e868da710a56a621286fba48b3c6b610776b41b4fd",
+      "gitBlob": "a0fe26d3ac294c939edc951dde9fbcab84ee0ee9"
+    }
+  },
+  "absentPaths": [
+    "node_modules/.vite-temp",
+    "node_modules/.vite",
+    ".env",
+    ".env.local",
+    ".env.test",
+    ".env.test.local",
+    "vitest.workspace.ts",
+    "vitest.workspace.js",
+    "vitest.workspace.mjs",
+    "vitest.workspace.json",
+    "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/rollup.linux-x64-gnu.node",
+    "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/downloaded-@esbuild-linux-x64-esbuild"
+  ],
+  "selectedRootsAbsent": true
+}

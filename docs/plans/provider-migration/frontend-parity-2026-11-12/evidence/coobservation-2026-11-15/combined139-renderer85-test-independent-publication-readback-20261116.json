@@ -1,0 +1,1520 @@
+{
+  "schemaVersion": 1,
+  "kind": "Independent complete actual two-test publication readback",
+  "reviewer": "recovery_parity_v2",
+  "repository": "777genius/agent-teams-ai",
+  "reviewedAtUtc": "2026-11-16T21:21:06.926Z",
+  "accepted": true,
+  "blockers": [],
+  "subject": {
+    "branch": "fix/frontend-parity-coobservation-c714-20261115",
+    "commit": "935e057f85d31a316706b6942310695719503fc1",
+    "tree": "f74fa718137b5c518989f7efcb1c937019a24e3a",
+    "soleParent": "cf6547aa79cc903a5833fa950a2de3178194c429",
+    "parentTree": "8d31b9a94c6869af2596585d786db5ab0dd97e12",
+    "manifest": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-publication-manifest-20261116.json",
+      "bytes": 7698,
+      "sha256": "d83765e147ef5f038a63df4bfbe1ce3275ffa554b0120f413a47c9133a44cb73",
+      "gitBlob": "ee6f9abe119d6d543e38a44f5f33ce9c001fe549",
+      "fullFetchedAndRehashed": true
+    },
+    "initialRefExact": true,
+    "finalRefExact": true
+  },
+  "method": [
+    "Fresh read-only Git commit, own-branch ref, full root and every unique recursive root subtree; all responses untruncated.",
+    "Fresh complete immutable blob fetch of every changed body, five complete parent/preimage bodies and selected R1; independent UTF-8 byte count, SHA256 and Git framed SHA1 of every body.",
+    "Complete actual leaf maps compared across current and parent; exact manifest equality, all source preservation and full documentation prefix/inverse/catalog comparisons.",
+    "Pure inert-data V8 string/JSON/hash operations only; no target module evaluated or target runtime executed.",
+    "This focused publication gate does not recursively repeat already accepted historical source/runtime audits contained in preserved prior review documents."
+  ],
+  "completeCensus": {
+    "current": {
+      "totalLeaves": 11789,
+      "docsLeaves": 2991,
+      "sourceLeaves": 8798,
+      "workflows": 42,
+      "duplicatePaths": 0
+    },
+    "parent": {
+      "totalLeaves": 11782,
+      "docsLeaves": 2984,
+      "sourceLeaves": 8798,
+      "workflows": 42,
+      "duplicatePaths": 0
+    },
+    "counts": {
+      "sourceModified": 2,
+      "docsAdded": 7,
+      "docsModified": 3,
+      "deleted": 0,
+      "modeChanged": 0
+    }
+  },
+  "treeEnumeration": {
+    "rootEntryCount": 54,
+    "parentRootEntryCount": 54,
+    "allRootEntriesExceptDocsScriptsTestExact": true,
+    "unchangedRootEntries": 51,
+    "uniqueRecursiveSubtrees": 19,
+    "allUntruncated": true,
+    "subtrees": [
+      {
+        "path": ".github",
+        "sha": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "entries": 55,
+        "leaves": 52,
+        "truncated": false
+      },
+      {
+        "path": ".husky",
+        "sha": "665211222b358904b557bd356a129f1ff938ca7e",
+        "entries": 1,
+        "leaves": 1,
+        "truncated": false
+      },
+      {
+        "path": "agent-teams-controller",
+        "sha": "1ef9482608cbaa5b7f28dc42812820cba96b953e",
+        "entries": 78,
+        "leaves": 73,
+        "truncated": false
+      },
+      {
+        "path": "bin",
+        "sha": "e6b29ba2f2fda222d5831b3c672e88b72f5f7383",
+        "entries": 1,
+        "leaves": 1,
+        "truncated": false
+      },
+      {
+        "path": "docker",
+        "sha": "7e4007a72bc3fdba8d94e8f5eebc3586f110c16e",
+        "entries": 3,
+        "leaves": 3,
+        "truncated": false
+      },
+      {
+        "path": "docs",
+        "sha": "63e75383bafeefb8b8adaa26fffa554ae28525c3",
+        "entries": 3397,
+        "leaves": 2991,
+        "truncated": false
+      },
+      {
+        "path": "landing",
+        "sha": "193513230f45a135704f1b34dbfa0792e6823e26",
+        "entries": 441,
+        "leaves": 371,
+        "truncated": false
+      },
+      {
+        "path": "mcp-server",
+        "sha": "6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5",
+        "entries": 46,
+        "leaves": 40,
+        "truncated": false
+      },
+      {
+        "path": "packages",
+        "sha": "3934729cd387940917b79992f2579bf6269d157c",
+        "entries": 1117,
+        "leaves": 1044,
+        "truncated": false
+      },
+      {
+        "path": "patches",
+        "sha": "8eb2e6aaa216638cbe6c072d79802733d43f500d",
+        "entries": 20,
+        "leaves": 20,
+        "truncated": false
+      },
+      {
+        "path": "resources",
+        "sha": "69acacf60db94f62dbe4a99ed308aab59310e905",
+        "entries": 36,
+        "leaves": 25,
+        "truncated": false
+      },
+      {
+        "path": "scripts",
+        "sha": "144090e99c2d91d49073e0ea17d7cf6be9ea053e",
+        "entries": 634,
+        "leaves": 600,
+        "truncated": false
+      },
+      {
+        "path": "src",
+        "sha": "ed69e62618e57d88c2e5237f98074a1ff8853e6f",
+        "entries": 5445,
+        "leaves": 4659,
+        "truncated": false
+      },
+      {
+        "path": "test",
+        "sha": "92519c914f57ec6cee13c2e4b0b2be568a56f641",
+        "entries": 1980,
+        "leaves": 1695,
+        "truncated": false
+      },
+      {
+        "path": "tools",
+        "sha": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+        "entries": 57,
+        "leaves": 53,
+        "truncated": false
+      },
+      {
+        "path": "vendor",
+        "sha": "bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f",
+        "entries": 169,
+        "leaves": 123,
+        "truncated": false
+      },
+      {
+        "path": "docs",
+        "sha": "a2216d499f657556f193d968edb542c39374b47f",
+        "entries": 3390,
+        "leaves": 2984,
+        "truncated": false
+      },
+      {
+        "path": "scripts",
+        "sha": "24b93023dde0aa5f543547ddf3289527c5e7689c",
+        "entries": 634,
+        "leaves": 600,
+        "truncated": false
+      },
+      {
+        "path": "test",
+        "sha": "c771c2bb9ec6d147d4974361cb5730897f7653d6",
+        "entries": 1980,
+        "leaves": 1695,
+        "truncated": false
+      }
+    ],
+    "currentLeafMapDigest": {
+      "bytes": 2152359,
+      "sha256": "fed5b49d1b28a47fae45d6cdb74ae8a86f0f66f50f521694766c72c1f35a75ae",
+      "gitBlob": "f63fd0ae8567612a2165447dfc412d322b48ade4"
+    },
+    "parentLeafMapDigest": {
+      "bytes": 2150571,
+      "sha256": "1c76ada37568e9d9a45cf315d15a438a54a68838106b46569a955352762b8117",
+      "gitBlob": "9fb189e9d1c6dddcf0cda0017384b71105314843"
+    },
+    "digestSerialization": "JSON array of complete actual non-tree leaf records {path,mode,type,sha,size-if-present}, sorted by UTF-16 lexical full path, plus final LF; these are derived census identities, not Git tree hashes."
+  },
+  "completeActualDelta": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "before": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3258fb9b6591f044103ca27badb31e6dcd8891a7",
+        "size": 2531686
+      },
+      "after": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "73d1d8a03175783d616d315f750a9684ddae9d0b",
+        "size": 2533285
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-r1-independent-publication-readback-20261116.json",
+      "before": null,
+      "after": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-r1-independent-publication-readback-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0669feaf0e8759ad2fd4330efe315c5540b55252",
+        "size": 80224
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-r1-root-publication-readback-20261116.json",
+      "before": null,
+      "after": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-r1-root-publication-readback-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "72db8984a98696287225899a3bf0c31bfd57a71f",
+        "size": 25481
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-publication-composition-20261116.json",
+      "before": null,
+      "after": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-publication-composition-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "264ce9aacf7d75a02bb021abbc32a40a35a97fb7",
+        "size": 5098
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-publication-manifest-20261116.json",
+      "before": null,
+      "after": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-publication-manifest-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ee6f9abe119d6d543e38a44f5f33ce9c001fe549",
+        "size": 7698
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-r2-20261116.json",
+      "before": null,
+      "after": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-r2-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "061cb0545b58d847ef69b05baa2b140065456730",
+        "size": 24017
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-r2-guard-review-20261116.json",
+      "before": null,
+      "after": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-r2-guard-review-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4d3004a5c76544dc8e47b842e981f22e7fbcdcc3",
+        "size": 25359
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-r2-renderer-review-20261116.json",
+      "before": null,
+      "after": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-r2-renderer-review-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6580a4f45747c0f079e37e0f3db042eca6c33c9e",
+        "size": 97016
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "before": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "55351b7991a16046a276832797c5d291eb92ab2d",
+        "size": 35592
+      },
+      "after": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3e990f400456f7450da46cd68bf2735d582c3a0b",
+        "size": 36137
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "before": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9314c014d31e474a802551a274c410616bdc6814",
+        "size": 107808
+      },
+      "after": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "baff9fa788e5eeb912af4deb681d8ae6daa9c9c8",
+        "size": 111635
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "before": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+        "size": 155423
+      },
+      "after": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "896c587e077da56a98a314a175fb3cba0353d6ee",
+        "size": 164965
+      }
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "before": {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+        "size": 180091
+      },
+      "after": {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+        "size": 187890
+      }
+    }
+  ],
+  "changedFiles": 12,
+  "added": 7,
+  "modified": 5,
+  "removed": 0,
+  "modeChanges": 0,
+  "sourceModified": 2,
+  "docsAdded": 7,
+  "docsModified": 3,
+  "completeActualBodies": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+      "fullFetchedAndRehashed": true
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+      "fullFetchedAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-r2-20261116.json",
+      "bytes": 24017,
+      "sha256": "1532df713cd8c75025fccaaecbc7041e05f3ced87d1894f041a97a01e6d8f9a1",
+      "gitBlob": "061cb0545b58d847ef69b05baa2b140065456730",
+      "fullFetchedAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-r2-guard-review-20261116.json",
+      "bytes": 25359,
+      "sha256": "dc7aebf5607cb8150b04c23b5e5a36f83735e5081ba18b78586ef30283d77843",
+      "gitBlob": "4d3004a5c76544dc8e47b842e981f22e7fbcdcc3",
+      "fullFetchedAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-r2-renderer-review-20261116.json",
+      "bytes": 97016,
+      "sha256": "9b67a3fa8a4fa07231f986881698b13ffc75c2171f18ed9f919a30e7875d145b",
+      "gitBlob": "6580a4f45747c0f079e37e0f3db042eca6c33c9e",
+      "fullFetchedAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-r1-root-publication-readback-20261116.json",
+      "bytes": 25481,
+      "sha256": "54c837bf45a6318cf43452ba3b6e66e341d7c4153a1d4d5d93a323bb24b9196d",
+      "gitBlob": "72db8984a98696287225899a3bf0c31bfd57a71f",
+      "fullFetchedAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-r1-independent-publication-readback-20261116.json",
+      "bytes": 80224,
+      "sha256": "aa8a8c7f6fa8b49593a9e233ae8ae9b0eb4848365915dde71bb7cb81b19e1f4e",
+      "gitBlob": "0669feaf0e8759ad2fd4330efe315c5540b55252",
+      "fullFetchedAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-publication-composition-20261116.json",
+      "bytes": 5098,
+      "sha256": "b7ef438b8b073f3dffff4eeec669fcb1cb661f87a6b9d9f7447c2cf3575cda89",
+      "gitBlob": "264ce9aacf7d75a02bb021abbc32a40a35a97fb7",
+      "fullFetchedAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2533285,
+      "sha256": "3154e2e3e5fe8469a59bcea2aa6a51e7cb0469a8ccbd6263286a6d2eb97da0bd",
+      "gitBlob": "73d1d8a03175783d616d315f750a9684ddae9d0b",
+      "fullFetchedAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 36137,
+      "sha256": "06b8f3f5eb3040a46f6fab6d596921f902ceb49031d7f0dda7aaabde401ba1ce",
+      "gitBlob": "3e990f400456f7450da46cd68bf2735d582c3a0b",
+      "fullFetchedAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 111635,
+      "sha256": "ab1180439798469adc4d9aa790d536f1ab05a84de8a46ca2a976f858ef86eb1a",
+      "gitBlob": "baff9fa788e5eeb912af4deb681d8ae6daa9c9c8",
+      "fullFetchedAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-publication-manifest-20261116.json",
+      "bytes": 7698,
+      "sha256": "d83765e147ef5f038a63df4bfbe1ce3275ffa554b0120f413a47c9133a44cb73",
+      "gitBlob": "ee6f9abe119d6d543e38a44f5f33ce9c001fe549",
+      "fullFetchedAndRehashed": true
+    }
+  ],
+  "completeChangedBodyBytes": 3298805,
+  "completeParentBodyIdentities": {
+    "plan": {
+      "bytes": 2531686,
+      "sha256": "40378d864237f3a86b884dcb4bcc2684a0ad47454ca3c1eba6429e7d3a28f56e",
+      "gitBlob": "3258fb9b6591f044103ca27badb31e6dcd8891a7"
+    },
+    "status": {
+      "bytes": 35592,
+      "sha256": "2bf918d1a436856affc1cdcc95623fa66814c9f8bf61252384cd72b5e982dfc7",
+      "gitBlob": "55351b7991a16046a276832797c5d291eb92ab2d"
+    },
+    "catalog": {
+      "bytes": 107808,
+      "sha256": "18af1f900994013c7fe973a245caab4750031df4e8459a94856ae08e37f67bea",
+      "gitBlob": "9314c014d31e474a802551a274c410616bdc6814"
+    }
+  },
+  "testPreimages": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 180091,
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+      "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978"
+    }
+  ],
+  "completeTestPreservation": {
+    "node": {
+      "preimage": {
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      "postimage": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "entireOriginalBodyIsExactPrefix": true,
+      "exactAppend": {
+        "bytes": 9542,
+        "sha256": "e0900d02f3294294c63f97c85eb073d635007635b5e9f70e60faa09a490312e3",
+        "gitBlob": "52b16c18eca119b8eb104257c870c37a26496a4d"
+      },
+      "allOld133NamesOrderMultiplicityMatchHistoricalCompleteRaw": "d38f2ae2851555b35970a892ce38674221147437",
+      "oldCases": 133,
+      "addedCases": 6,
+      "totalCases": 139,
+      "newNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+        "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+        "original review correction refuses missing or false live edit authority before any input action",
+        "original review correction admits current authority with one original insertion and submit"
+      ],
+      "newRegistrationStructure": "Three literal P11 scenarios through one registration loop plus three ordinary registrations; full original133 prefix exact."
+    },
+    "renderer": {
+      "preimage": {
+        "bytes": 180091,
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+        "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978"
+      },
+      "postimage": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      },
+      "exactInsertion": {
+        "bytes": 7799,
+        "sha256": "97709ff796be1678dae58cee0ca2fc34f9f59a12b75ea0ad3237d59185f640bc",
+        "gitBlob": "3ed3c02182c07da18e9a67a12b74d878884d243a",
+        "offsetUtf16": 180087,
+        "offsetBytes": 180087
+      },
+      "inverseRecoversEveryOriginalByte": true,
+      "unchangedSuffix": "});\n",
+      "oldCases": 80,
+      "addedCases": 5,
+      "totalCases": 85,
+      "newNames": [
+        "clears loading for the current silent refresh and refuses a stale response",
+        "clears pending loading when the current silent refresh ends with response-error",
+        "clears pending loading when the current silent refresh ends with rejection",
+        "keeps a silent view completion inert after newer-request",
+        "keeps a silent view completion inert after unmounted"
+      ],
+      "newRegistrationStructure": "One ordinary case plus two literal two-entry it.each blocks; complete old80 body exactly recovered.",
+      "finalLoadingAssertionSites": {
+        "currentSilentSuccess": "5722:28",
+        "currentSilentResponseError": "5781:30",
+        "currentSilentRejection": "5781:30"
+      },
+      "bothNullErrorAssertionsPresent": true
+    },
+    "completeFinalProposalEqualsSpecialistEmbeddedObject": true,
+    "completeAppendAndInsertionEqualSpecialistEmbeddedLiterals": true,
+    "observedRuntime": false
+  },
+  "completeParentPrefixes": {
+    "plan": {
+      "parent": {
+        "bytes": 2531686,
+        "sha256": "40378d864237f3a86b884dcb4bcc2684a0ad47454ca3c1eba6429e7d3a28f56e",
+        "gitBlob": "3258fb9b6591f044103ca27badb31e6dcd8891a7"
+      },
+      "current": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "bytes": 2533285,
+        "sha256": "3154e2e3e5fe8469a59bcea2aa6a51e7cb0469a8ccbd6263286a6d2eb97da0bd",
+        "gitBlob": "73d1d8a03175783d616d315f750a9684ddae9d0b",
+        "fullFetchedAndRehashed": true
+      },
+      "exactWholeParentPrefix": true,
+      "append": {
+        "bytes": 1599,
+        "sha256": "0698d8493bc2cf6421b1ca89d5241eecb2ff8d69ef01ccea1a3c85b84c2cd98f",
+        "gitBlob": "44fb1eaba23c42225801ea8d6c8553a8c397957f"
+      }
+    },
+    "status": {
+      "parent": {
+        "bytes": 35592,
+        "sha256": "2bf918d1a436856affc1cdcc95623fa66814c9f8bf61252384cd72b5e982dfc7",
+        "gitBlob": "55351b7991a16046a276832797c5d291eb92ab2d"
+      },
+      "current": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "bytes": 36137,
+        "sha256": "06b8f3f5eb3040a46f6fab6d596921f902ceb49031d7f0dda7aaabde401ba1ce",
+        "gitBlob": "3e990f400456f7450da46cd68bf2735d582c3a0b",
+        "fullFetchedAndRehashed": true
+      },
+      "exactWholeParentPrefix": true,
+      "append": {
+        "bytes": 545,
+        "sha256": "dc46519c371c89a86700237666d12add03182e931f0f7aa60d44ff0b71668eaf",
+        "gitBlob": "7bb962125ca24eac99b42af302388aa072a56d49"
+      }
+    }
+  },
+  "catalogPreservation": {
+    "oldKeyCount": 42,
+    "newKeyCount": 44,
+    "removedKeys": [],
+    "changedOldKeys": [
+      "currentCombinedNodeRendererStage"
+    ],
+    "addedKeys": [
+      "combined139Renderer85TestEvidenceFiles",
+      "priorCombinedNodeRendererStageAtTestPublication"
+    ],
+    "allOtherOldValuesDeepExact": true,
+    "entireFormerCurrentStageExactlyCopiedTo": "priorCombinedNodeRendererStageAtTestPublication",
+    "priorStage": {
+      "stage": "exact R1 published; complete actual readback required before authorship",
+      "r1": {
+        "bytes": 77830,
+        "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+        "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+      },
+      "guardReview": {
+        "bytes": 30734,
+        "sha256": "523467e4750781010a1d274c863045c2e814924d33b5c783429de9cb168e3fef",
+        "gitBlob": "3b3a3d2117405b44e6499ca418edd95768dcc727"
+      },
+      "rendererReview": {
+        "bytes": 119695,
+        "sha256": "68e587a63a7e93eb4e35a99ad4faa28b6a5d5dbb813e715c88b1d2ebfc339c9a",
+        "gitBlob": "6094fb81fcf688b48c5535ac4678446ba6cbcaf6"
+      },
+      "prerequisiteCompletionPublication": "356a919a66818e03e62664930a4d74086fd2e11d",
+      "sourcePostimagesAuthored": false,
+      "executed": false,
+      "sourceRows": 8798,
+      "workflows": 42,
+      "wholeCases": {
+        "node": 139,
+        "renderer": 85
+      },
+      "originalCasesPreserved": {
+        "node": 133,
+        "renderer": 80
+      },
+      "next": "Complete actual R1 publication readback, exact test/runner R2 and readback, source-only test materialization, complete actual RED before any of three producer postimages.",
+      "open": [
+        "Windows Process15s",
+        "Windows Packaged10s",
+        "strict Darwin P09",
+        "later P11/genuine M16",
+        "fresh GUI/platform",
+        "canonical typecheck/build",
+        "new-head integration",
+        "whole E2E"
+      ]
+    },
+    "currentStage": {
+      "stage": "exact two tests published; runner/materialization/runtime still pending",
+      "proposal": {
+        "bytes": 24017,
+        "sha256": "1532df713cd8c75025fccaaecbc7041e05f3ced87d1894f041a97a01e6d8f9a1",
+        "gitBlob": "061cb0545b58d847ef69b05baa2b140065456730"
+      },
+      "tests": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        {
+          "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+          "bytes": 187890,
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+        }
+      ],
+      "reviews": {
+        "guard": {
+          "bytes": 25359,
+          "sha256": "dc7aebf5607cb8150b04c23b5e5a36f83735e5081ba18b78586ef30283d77843",
+          "gitBlob": "4d3004a5c76544dc8e47b842e981f22e7fbcdcc3"
+        },
+        "renderer": {
+          "bytes": 97016,
+          "sha256": "9b67a3fa8a4fa07231f986881698b13ffc75c2171f18ed9f919a30e7875d145b",
+          "gitBlob": "6580a4f45747c0f079e37e0f3db042eca6c33c9e"
+        }
+      },
+      "materialized": false,
+      "executed": false,
+      "producerPostimagesAuthored": false,
+      "next": "Complete actual test publication readback and separately reviewed/published/read-back exact runner/binding before source-only materialization or runtime. Producer fixes remain gated on complete independently accepted actual combined RED."
+    },
+    "sixNewEvidenceFilesExactlyJoinPublishedBodies": true,
+    "exactEvidenceKey": "combined139Renderer85TestEvidenceFiles"
+  },
+  "sourcePreservation": {
+    "allOther8796SourceLeavesExact": true,
+    "sourceLeaves": 8798,
+    "workflows": 42,
+    "productionCount": 5020,
+    "productionCountBasis": "Unchanged producer/source inventory except two tests; no validation command rerun.",
+    "cap": 800,
+    "frozenExceptions": 141,
+    "allSevenProducerRowsExact": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "expected": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        "actual": {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+          "size": 28974
+        },
+        "parent": {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+          "size": 28974
+        },
+        "unchanged": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "expected": {
+          "bytes": 24759,
+          "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+          "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+        },
+        "actual": {
+          "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "cf93da72a198dac636658e512093eef7828b5927",
+          "size": 24759
+        },
+        "parent": {
+          "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "cf93da72a198dac636658e512093eef7828b5927",
+          "size": 24759
+        },
+        "unchanged": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "expected": {
+          "bytes": 8457,
+          "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+          "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+        },
+        "actual": {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+          "size": 8457
+        },
+        "parent": {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+          "size": 8457
+        },
+        "unchanged": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "expected": {
+          "bytes": 36260,
+          "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+          "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+        },
+        "actual": {
+          "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+          "size": 36260
+        },
+        "parent": {
+          "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+          "size": 36260
+        },
+        "unchanged": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "expected": {
+          "bytes": 74351,
+          "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+          "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+        },
+        "actual": {
+          "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+          "size": 74351
+        },
+        "parent": {
+          "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+          "size": 74351
+        },
+        "unchanged": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "expected": {
+          "bytes": 45707,
+          "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+          "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+        },
+        "actual": {
+          "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+          "size": 45707
+        },
+        "parent": {
+          "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+          "size": 45707
+        },
+        "unchanged": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "expected": {
+          "bytes": 32845,
+          "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+          "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+        },
+        "actual": {
+          "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "d65706646743798f2646421105f2f6a75819f143",
+          "size": 32845
+        },
+        "parent": {
+          "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "d65706646743798f2646421105f2f6a75819f143",
+          "size": 32845
+        },
+        "unchanged": true
+      }
+    ],
+    "sourceExecutionOrMaterializationPerformedByReviewer": false
+  },
+  "acceptedExactReviews": {
+    "guard": {
+      "bytes": 25359,
+      "sha256": "dc7aebf5607cb8150b04c23b5e5a36f83735e5081ba18b78586ef30283d77843",
+      "gitBlob": "4d3004a5c76544dc8e47b842e981f22e7fbcdcc3",
+      "accepted": true,
+      "checks": 38,
+      "failedChecks": 0,
+      "exactFinalProposalAndTests": true
+    },
+    "renderer": {
+      "bytes": 97016,
+      "sha256": "9b67a3fa8a4fa07231f986881698b13ffc75c2171f18ed9f919a30e7875d145b",
+      "gitBlob": "6580a4f45747c0f079e37e0f3db042eca6c33c9e",
+      "accepted": true,
+      "checks": 44,
+      "failedChecks": 0,
+      "exactFinalProposalAndTests": true
+    },
+    "selectedR1": {
+      "bytes": 77830,
+      "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+      "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+    },
+    "rootR1Readback": {
+      "bytes": 25481,
+      "sha256": "54c837bf45a6318cf43452ba3b6e66e341d7c4153a1d4d5d93a323bb24b9196d",
+      "gitBlob": "72db8984a98696287225899a3bf0c31bfd57a71f"
+    },
+    "independentR1Readback": {
+      "bytes": 80224,
+      "sha256": "aa8a8c7f6fa8b49593a9e233ae8ae9b0eb4848365915dde71bb7cb81b19e1f4e",
+      "gitBlob": "0669feaf0e8759ad2fd4330efe315c5540b55252"
+    },
+    "gatePublishedCommit": "cf6547aa79cc903a5833fa950a2de3178194c429",
+    "recordedGateClosureBeforeAuthorship": true,
+    "chronologyQualification": "Joined retained timestamps and identities; not an independently observed earlier clock."
+  },
+  "completePointerJoins": [
+    {
+      "identity": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "method": "fresh complete immutable blob fetch and rehash",
+      "label": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "referencedBy": [
+        "manifest.entries[0].identity",
+        "proposal.tests[0].postimage",
+        "composition.testSources[0].postimage",
+        "guard.exactReviewedSubjects.nodePost",
+        "renderer.subject.node.postimage",
+        "catalog.currentStage.tests[0]"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      "method": "fresh complete immutable blob fetch and rehash",
+      "label": "preimage-scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "referencedBy": [
+        "manifest.entries[0].preimage",
+        "proposal.tests[0].preimage",
+        "composition.testSources[0].preimage",
+        "guard.exactReviewedSubjects.nodePre",
+        "renderer.subject.node.preimage"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      },
+      "method": "fresh complete immutable blob fetch and rehash",
+      "label": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "referencedBy": [
+        "manifest.entries[1].identity",
+        "proposal.tests[1].postimage",
+        "composition.testSources[1].postimage",
+        "guard.exactReviewedSubjects.rendererPost",
+        "renderer.subject.renderer.postimage",
+        "catalog.currentStage.tests[1]"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 180091,
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+        "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978"
+      },
+      "method": "fresh complete immutable blob fetch and rehash",
+      "label": "preimage-test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "referencedBy": [
+        "manifest.entries[1].preimage",
+        "proposal.tests[1].preimage",
+        "composition.testSources[1].preimage",
+        "guard.exactReviewedSubjects.rendererPre",
+        "renderer.subject.renderer.preimage"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 24017,
+        "sha256": "1532df713cd8c75025fccaaecbc7041e05f3ced87d1894f041a97a01e6d8f9a1",
+        "gitBlob": "061cb0545b58d847ef69b05baa2b140065456730"
+      },
+      "method": "fresh complete immutable blob fetch and rehash",
+      "label": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-r2-20261116.json",
+      "referencedBy": [
+        "manifest.entries[2].identity",
+        "composition.proposal",
+        "guard.exactReviewedSubjects.proposal",
+        "renderer.subject.proposal",
+        "catalog.currentStage.proposal",
+        "catalog.testEvidenceFiles[0]"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 25359,
+        "sha256": "dc7aebf5607cb8150b04c23b5e5a36f83735e5081ba18b78586ef30283d77843",
+        "gitBlob": "4d3004a5c76544dc8e47b842e981f22e7fbcdcc3"
+      },
+      "method": "fresh complete immutable blob fetch and rehash",
+      "label": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-r2-guard-review-20261116.json",
+      "referencedBy": [
+        "manifest.entries[3].identity",
+        "composition.reviews.guard",
+        "catalog.currentStage.reviews.guard",
+        "catalog.testEvidenceFiles[1]"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 97016,
+        "sha256": "9b67a3fa8a4fa07231f986881698b13ffc75c2171f18ed9f919a30e7875d145b",
+        "gitBlob": "6580a4f45747c0f079e37e0f3db042eca6c33c9e"
+      },
+      "method": "fresh complete immutable blob fetch and rehash",
+      "label": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-r2-renderer-review-20261116.json",
+      "referencedBy": [
+        "manifest.entries[4].identity",
+        "composition.reviews.renderer",
+        "catalog.currentStage.reviews.renderer",
+        "catalog.testEvidenceFiles[2]"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 25481,
+        "sha256": "54c837bf45a6318cf43452ba3b6e66e341d7c4153a1d4d5d93a323bb24b9196d",
+        "gitBlob": "72db8984a98696287225899a3bf0c31bfd57a71f"
+      },
+      "method": "fresh complete immutable blob fetch and rehash",
+      "label": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-r1-root-publication-readback-20261116.json",
+      "referencedBy": [
+        "manifest.entries[5].identity",
+        "proposal.gate.root",
+        "composition.gate.root",
+        "guard.exactReviewedSubjects.r1RootReadback",
+        "catalog.testEvidenceFiles[3]"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 80224,
+        "sha256": "aa8a8c7f6fa8b49593a9e233ae8ae9b0eb4848365915dde71bb7cb81b19e1f4e",
+        "gitBlob": "0669feaf0e8759ad2fd4330efe315c5540b55252"
+      },
+      "method": "fresh complete immutable blob fetch and rehash",
+      "label": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-r1-independent-publication-readback-20261116.json",
+      "referencedBy": [
+        "manifest.entries[6].identity",
+        "proposal.gate.independent",
+        "composition.gate.independent",
+        "guard.exactReviewedSubjects.r1IndependentReadback",
+        "catalog.testEvidenceFiles[4]"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 5098,
+        "sha256": "b7ef438b8b073f3dffff4eeec669fcb1cb661f87a6b9d9f7447c2cf3575cda89",
+        "gitBlob": "264ce9aacf7d75a02bb021abbc32a40a35a97fb7"
+      },
+      "method": "fresh complete immutable blob fetch and rehash",
+      "label": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-publication-composition-20261116.json",
+      "referencedBy": [
+        "manifest.entries[7].identity",
+        "catalog.testEvidenceFiles[5]"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 2533285,
+        "sha256": "3154e2e3e5fe8469a59bcea2aa6a51e7cb0469a8ccbd6263286a6d2eb97da0bd",
+        "gitBlob": "73d1d8a03175783d616d315f750a9684ddae9d0b"
+      },
+      "method": "fresh complete immutable blob fetch and rehash",
+      "label": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "referencedBy": [
+        "manifest.entries[8].identity"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 36137,
+        "sha256": "06b8f3f5eb3040a46f6fab6d596921f902ceb49031d7f0dda7aaabde401ba1ce",
+        "gitBlob": "3e990f400456f7450da46cd68bf2735d582c3a0b"
+      },
+      "method": "fresh complete immutable blob fetch and rehash",
+      "label": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "referencedBy": [
+        "manifest.entries[9].identity"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 111635,
+        "sha256": "ab1180439798469adc4d9aa790d536f1ab05a84de8a46ca2a976f858ef86eb1a",
+        "gitBlob": "baff9fa788e5eeb912af4deb681d8ae6daa9c9c8"
+      },
+      "method": "fresh complete immutable blob fetch and rehash",
+      "label": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "referencedBy": [
+        "manifest.entries[10].identity"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 2531686,
+        "sha256": "40378d864237f3a86b884dcb4bcc2684a0ad47454ca3c1eba6429e7d3a28f56e",
+        "gitBlob": "3258fb9b6591f044103ca27badb31e6dcd8891a7"
+      },
+      "method": "fresh complete immutable blob fetch and rehash",
+      "label": "parent-plan",
+      "referencedBy": [
+        "manifest.parentBodies.plan"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 35592,
+        "sha256": "2bf918d1a436856affc1cdcc95623fa66814c9f8bf61252384cd72b5e982dfc7",
+        "gitBlob": "55351b7991a16046a276832797c5d291eb92ab2d"
+      },
+      "method": "fresh complete immutable blob fetch and rehash",
+      "label": "parent-status",
+      "referencedBy": [
+        "manifest.parentBodies.status"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 107808,
+        "sha256": "18af1f900994013c7fe973a245caab4750031df4e8459a94856ae08e37f67bea",
+        "gitBlob": "9314c014d31e474a802551a274c410616bdc6814"
+      },
+      "method": "fresh complete immutable blob fetch and rehash",
+      "label": "parent-catalog",
+      "referencedBy": [
+        "manifest.parentBodies.catalog"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 1599,
+        "sha256": "0698d8493bc2cf6421b1ca89d5241eecb2ff8d69ef01ccea1a3c85b84c2cd98f",
+        "gitBlob": "44fb1eaba23c42225801ea8d6c8553a8c397957f"
+      },
+      "method": "complete current body minus full exact parent prefix",
+      "label": "plan",
+      "referencedBy": [
+        "manifest.appends.plan"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 545,
+        "sha256": "dc46519c371c89a86700237666d12add03182e931f0f7aa60d44ff0b71668eaf",
+        "gitBlob": "7bb962125ca24eac99b42af302388aa072a56d49"
+      },
+      "method": "complete current body minus full exact parent prefix",
+      "label": "status",
+      "referencedBy": [
+        "manifest.appends.status"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 7698,
+        "sha256": "d83765e147ef5f038a63df4bfbe1ce3275ffa554b0120f413a47c9133a44cb73",
+        "gitBlob": "ee6f9abe119d6d543e38a44f5f33ce9c001fe549"
+      },
+      "method": "fresh complete immutable blob fetch and rehash",
+      "label": "manifest",
+      "referencedBy": [
+        "actual publication manifest"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 77830,
+        "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+        "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+      },
+      "method": "fresh complete immutable blob fetch and rehash",
+      "label": "selected exact R1",
+      "referencedBy": [
+        "proposal.sourceR1",
+        "proposal.gate.r1",
+        "composition.gate.r1",
+        "guard.exactReviewedSubjects.publishedR1",
+        "renderer.subject.r1"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 9542,
+        "sha256": "e0900d02f3294294c63f97c85eb073d635007635b5e9f70e60faa09a490312e3",
+        "gitBlob": "52b16c18eca119b8eb104257c870c37a26496a4d"
+      },
+      "method": "complete current body minus full exact parent prefix; equals specialist full embedded literal",
+      "label": "nodeAppend",
+      "referencedBy": [
+        "proposal.tests[0].append",
+        "guard.exactReviewedSubjects.nodeAppend",
+        "renderer.subject.node.append"
+      ],
+      "allReferencesExact": true
+    },
+    {
+      "identity": {
+        "bytes": 7799,
+        "sha256": "97709ff796be1678dae58cee0ca2fc34f9f59a12b75ea0ad3237d59185f640bc",
+        "gitBlob": "3ed3c02182c07da18e9a67a12b74d878884d243a"
+      },
+      "method": "complete current/postimage and parent/preimage inverse; equals specialist full embedded literal",
+      "label": "rendererInsertion",
+      "referencedBy": [
+        "proposal.tests[1].insertion",
+        "guard.exactReviewedSubjects.rendererInsertion",
+        "renderer.subject.renderer.insertion"
+      ],
+      "allReferencesExact": true
+    }
+  ],
+  "pointerJoinCount": 68,
+  "uniqueJoinedBodies": 22,
+  "derivedBodyNote": "Plan/status append, Node append and renderer insertion hashes are complete derived byte identities. Direct bare-blob fetches for these four digests returned 404; their complete bytes are recovered from fully fetched published current/parent bodies. The Node append and renderer insertion additionally equal the complete literal bodies retained in the accepted renderer review. No acceptance depends on a standalone derived blob existing.",
+  "assertions": [
+    {
+      "name": "manifest identity matches requested exact body",
+      "pass": true
+    },
+    {
+      "name": "actual commit has exact tree and sole parent",
+      "pass": true
+    },
+    {
+      "name": "parent commit resolves exact manifest base tree",
+      "pass": true
+    },
+    {
+      "name": "own branch points to exact published commit",
+      "pass": true
+    },
+    {
+      "name": "full body rehash: scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "pass": true
+    },
+    {
+      "name": "full body rehash: test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "pass": true
+    },
+    {
+      "name": "full body rehash: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-r2-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "full body rehash: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-r2-guard-review-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "full body rehash: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-r2-renderer-review-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "full body rehash: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-r1-root-publication-readback-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "full body rehash: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-r1-independent-publication-readback-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "full body rehash: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-test-publication-composition-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "full body rehash: docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "pass": true
+    },
+    {
+      "name": "full body rehash: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "pass": true
+    },
+    {
+      "name": "full body rehash: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "full body rehash: parent-plan",
+      "pass": true
+    },
+    {
+      "name": "full body rehash: parent-status",
+      "pass": true
+    },
+    {
+      "name": "full body rehash: parent-catalog",
+      "pass": true
+    },
+    {
+      "name": "full body rehash: preimage-scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "pass": true
+    },
+    {
+      "name": "full body rehash: preimage-test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "pass": true
+    },
+    {
+      "name": "complete root and all 19 unique recursive subtrees untruncated",
+      "pass": true
+    },
+    {
+      "name": "actual final full census exact",
+      "pass": true
+    },
+    {
+      "name": "actual parent full census exact",
+      "pass": true
+    },
+    {
+      "name": "exact 12 changed actual leaves match complete manifest including itself",
+      "pass": true
+    },
+    {
+      "name": "delta is two test modifications, seven docs additions, three docs modifications only",
+      "pass": true
+    },
+    {
+      "name": "all other 8796 source leaves exactly unchanged",
+      "pass": true
+    },
+    {
+      "name": "only docs/scripts/test root subtree identities changed",
+      "pass": true
+    },
+    {
+      "name": "entire parent plan remains exact prefix",
+      "pass": true
+    },
+    {
+      "name": "exact plan append identity",
+      "pass": true
+    },
+    {
+      "name": "entire parent status remains exact prefix",
+      "pass": true
+    },
+    {
+      "name": "exact status append identity",
+      "pass": true
+    },
+    {
+      "name": "Node entire original 155423-byte body remains exact prefix",
+      "pass": true
+    },
+    {
+      "name": "Node exact append matches proposal and specialist retained full append",
+      "pass": true
+    },
+    {
+      "name": "renderer exact single insertion inverse recovers all 180091 original bytes",
+      "pass": true
+    },
+    {
+      "name": "renderer full exact insertion matches proposal and specialist retained body",
+      "pass": true
+    },
+    {
+      "name": "catalog preserves every prior key exactly except designated current stage",
+      "pass": true
+    },
+    {
+      "name": "catalog adds only designated prior-stage copy and named combined test-evidence map",
+      "pass": true
+    },
+    {
+      "name": "catalog preserved entire former current-stage object exactly",
+      "pass": true
+    },
+    {
+      "name": "fresh full direct body join: selectedR1",
+      "pass": true
+    },
+    {
+      "name": "all seven exact producer rows preserved in complete actual tree",
+      "pass": true
+    },
+    {
+      "name": "Guard review accepts exact final proposal and both published test identities",
+      "pass": true
+    },
+    {
+      "name": "all 38 retained Guard checks pass",
+      "pass": true
+    },
+    {
+      "name": "renderer review accepts exact final proposal and both complete test objects",
+      "pass": true
+    },
+    {
+      "name": "all 44 retained renderer checks pass",
+      "pass": true
+    },
+    {
+      "name": "renderer retained complete final proposal equals fetched published proposal",
+      "pass": true
+    },
+    {
+      "name": "composition exact tests and producer state match proposal and actual tree",
+      "pass": true
+    },
+    {
+      "name": "catalog current stage binds exact published proposal/tests/reviews and pending execution",
+      "pass": true
+    },
+    {
+      "name": "catalog new evidence files map to all six published evidence bodies",
+      "pass": true
+    },
+    {
+      "name": "all old and new case-name arrays preserved exactly from reviewed proposal",
+      "pass": true
+    },
+    {
+      "name": "Node original133 exact ordered names bind historical complete raw",
+      "pass": true
+    },
+    {
+      "name": "source counts and prospective counts remain qualified",
+      "pass": true
+    },
+    {
+      "name": "final renderer intended loading sites are exact 5722:28 and5781:30",
+      "pass": true
+    },
+    {
+      "name": "fresh root and independent R1 readbacks are accepted and bind exact parent/R1",
+      "pass": true
+    },
+    {
+      "name": "published R1 is an unchanged actual parent/current docs leaf",
+      "pass": true
+    },
+    {
+      "name": "proposal/reviews/composition consume exact same R1 gate and record authorship after its closure",
+      "pass": true
+    },
+    {
+      "name": "all direct current publication/proposal/review/composition/catalog identity pointers join complete bytes",
+      "pass": true
+    },
+    {
+      "name": "fresh final branch read still resolves exact published commit",
+      "pass": true
+    }
+  ],
+  "assertionCount": 57,
+  "auditErrors": [],
+  "gateDisposition": "ACCEPT exact two-test publication/readback. Exact separately reviewed runner and complete binding publication/readback remain required before materialization or execution. No producer postimage is admitted before independently accepted actual combined RED and required publication/readback.",
+  "preservedBoundaries": {
+    "oldValidation81561": "INCOMPLETE/SPENT; aggregate, outer and physical-supervisor lifetime UNKNOWN unchanged",
+    "expectedRed": {
+      "node": "134P/5F",
+      "renderer": "82P/3F",
+      "observed": false
+    },
+    "expectedGreen": {
+      "node": "139P/0F",
+      "renderer": "85P/0F",
+      "observed": false
+    },
+    "wholeE2E": "OPEN",
+    "frozenPRsAndTerminalCIUntouched": true,
+    "noRealClaudeOrCodex": true
+  },
+  "reviewerActions": {
+    "shell": 0,
+    "targetRuntimeOrEval": 0,
+    "localStaging": 0,
+    "materialization": 0,
+    "testRuns": 0,
+    "sourceWrites": 0,
+    "refWrites": 0,
+    "prWrites": 0,
+    "ciActions": 0,
+    "bareFocusedReportRetentionOnly": true
+  }
+}

@@ -1,0 +1,1202 @@
+{
+  "schema": "c714-combined139-renderer85-runner-binding-semantic-r2-v1",
+  "reviewer": "/root/combined_semantic_review",
+  "reviewedAtUtc": "2026-11-16T21:50:49.696Z",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "runner": {
+      "bytes": 89953,
+      "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+      "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+    },
+    "binding": {
+      "bytes": 4898503,
+      "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+      "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+    },
+    "publishedTests": {
+      "commit": "935e057f85d31a316706b6942310695719503fc1",
+      "tree": "f74fa718137b5c518989f7efcb1c937019a24e3a",
+      "qualification": "Exact published two whole test postimages and unchanged seven producer rows; no current combined runtime qualification."
+    },
+    "r1Publication": "cf6547aa79cc903a5833fa950a2de3178194c429",
+    "r1": {
+      "bytes": 77830,
+      "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+      "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+    }
+  },
+  "verdict": "PASS_FOR_EXACT_SEMANTIC_R2",
+  "accepted": true,
+  "blockers": [],
+  "gateDisposition": "This closes independent semantic R2 of the exact unstaged runner/binding pair only. Exact full companion Guard R2, root acceptance, immediate-push publication and full root/independent actualpublicationreadback remain prerequisites to staging/execution. No runtime or producerpostimage is authorized by this report alone.",
+  "method": {
+    "completeRunnerAndBindingFetchedAndRehashed": true,
+    "completeEmbeddedReviewBodies": 33,
+    "embeddedReviewBodiesBytes": 3269222,
+    "allEmbeddedReviewBodiesRehashed": true,
+    "all18SourceOverlayBodiesRehashed": true,
+    "original21ReviewBodiesByteExact": true,
+    "eightInheritedInputPinsExact": true,
+    "packageCodeEvaluated": false,
+    "shellCommands": 0,
+    "runtimeExecutions": 0,
+    "sourceWrites": 0,
+    "refMutations": 0,
+    "ciActions": 0
+  },
+  "computedChecks": [
+    {
+      "name": "runner identity",
+      "pass": true
+    },
+    {
+      "name": "R1 full body hash",
+      "pass": true
+    },
+    {
+      "name": "R1 exact body",
+      "pass": true
+    },
+    {
+      "name": "review body freshBootstrapGuardActualReview",
+      "pass": true,
+      "details": {
+        "bytes": 32514,
+        "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+        "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075"
+      }
+    },
+    {
+      "name": "review body freshSdkIndependentReview",
+      "pass": true,
+      "details": {
+        "bytes": 84719,
+        "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+        "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6"
+      }
+    },
+    {
+      "name": "review body freshMcpIndependentReview",
+      "pass": true,
+      "details": {
+        "bytes": 155439,
+        "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+        "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239"
+      }
+    },
+    {
+      "name": "review body crossR1ActualPublicationReadback",
+      "pass": true,
+      "details": {
+        "bytes": 24775,
+        "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+        "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+      }
+    },
+    {
+      "name": "review body crossTestGuardR2",
+      "pass": true,
+      "details": {
+        "bytes": 35700,
+        "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+        "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+      }
+    },
+    {
+      "name": "review body crossTestParityR2",
+      "pass": true,
+      "details": {
+        "bytes": 98112,
+        "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+        "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+      }
+    },
+    {
+      "name": "review body crossTestActualPublicationReadback",
+      "pass": true,
+      "details": {
+        "bytes": 56894,
+        "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+        "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+      }
+    },
+    {
+      "name": "review body crossActualRedGuard",
+      "pass": true,
+      "details": {
+        "bytes": 140038,
+        "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+        "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+      }
+    },
+    {
+      "name": "review body crossActualRedPrimarySemantic",
+      "pass": true,
+      "details": {
+        "bytes": 190694,
+        "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+        "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+      }
+    },
+    {
+      "name": "review body crossActualRedSemanticClosure",
+      "pass": true,
+      "details": {
+        "bytes": 86249,
+        "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+        "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+      }
+    },
+    {
+      "name": "review body crossProducerGuardR2",
+      "pass": true,
+      "details": {
+        "bytes": 121044,
+        "sha256": "438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339",
+        "gitBlob": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637"
+      }
+    },
+    {
+      "name": "review body crossProducerParityR2",
+      "pass": true,
+      "details": {
+        "bytes": 109607,
+        "sha256": "da402e2bc50d090cc5b2a57ff1eac0dc5d6767b77876d97f301937db7197536b",
+        "gitBlob": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f"
+      }
+    },
+    {
+      "name": "review body crossProducerActualPublicationReadback",
+      "pass": true,
+      "details": {
+        "bytes": 31670,
+        "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+        "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+      }
+    },
+    {
+      "name": "review body crossActualGreenFullGuard",
+      "pass": true,
+      "details": {
+        "bytes": 209270,
+        "sha256": "b56c4d2a4328f11a679a73de100d13af4ec7e8ccc6fe8f6333de98dec4d2d329",
+        "gitBlob": "848e6efd0b924e4415848551cfea034f22b84221"
+      }
+    },
+    {
+      "name": "review body crossActualGreenFinalSemantic",
+      "pass": true,
+      "details": {
+        "bytes": 140647,
+        "sha256": "74936b31eeefd735ec329d286ae145b2eddb16fa025e5fb8cc6f715c5b133fd3",
+        "gitBlob": "4a49adfedbc84301e88d524d71b766a7ad785d14"
+      }
+    },
+    {
+      "name": "review body crossActualGreenFullEnvelope",
+      "pass": true,
+      "details": {
+        "bytes": 166444,
+        "sha256": "c1ec7ed1270235d520b436e28cbdeb0988bc1af4c8473b5226e34b081b305981",
+        "gitBlob": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b"
+      }
+    },
+    {
+      "name": "review body crossOriginalValidationIncompleteGuard",
+      "pass": true,
+      "details": {
+        "bytes": 146237,
+        "sha256": "22813b7c3fa165d506e7eb487b5be229ea7910d4208c73a930a9621978a4703e",
+        "gitBlob": "736df253a457b9a7260febbd74071ed2615be2bd"
+      }
+    },
+    {
+      "name": "review body crossOriginalValidationIncompleteParity",
+      "pass": true,
+      "details": {
+        "bytes": 169081,
+        "sha256": "0863878d6085e61a91e8f96d970bdb9cd83a3ea6ce0a174c80bf0a0eb5cd9175",
+        "gitBlob": "7567c92bcc194c2de5e26abfed0a8604522fe589"
+      }
+    },
+    {
+      "name": "review body isolatedRecoveryR1Guard",
+      "pass": true,
+      "details": {
+        "bytes": 167262,
+        "sha256": "9375e23aeba4b871ad016c82c76ae539f769bea1a5f2ab72c63a8d615af24585",
+        "gitBlob": "0fdbe9a84daa354332d61c13a532090199d50c88"
+      }
+    },
+    {
+      "name": "review body isolatedRecoveryR1Parity",
+      "pass": true,
+      "details": {
+        "bytes": 133047,
+        "sha256": "d94fb2464c47195fadfcaf311732025c578e8084b9b7ef701dd52c76e6aeca77",
+        "gitBlob": "97bfd42e46bc1dd2160f8c9826de68219303b67d"
+      }
+    },
+    {
+      "name": "review body isolatedRecoveryR1CompositeActualPublicationReadback",
+      "pass": true,
+      "details": {
+        "bytes": 231365,
+        "sha256": "393a6ee912d88ff0faf979c8229a705578e1bd6723a3cf58769449205dbe2335",
+        "gitBlob": "e695dd8aca0559256e01175166317ab905f467a4"
+      }
+    },
+    {
+      "name": "review body combinedR1RootActual",
+      "pass": true,
+      "details": {
+        "bytes": 25481,
+        "sha256": "54c837bf45a6318cf43452ba3b6e66e341d7c4153a1d4d5d93a323bb24b9196d",
+        "gitBlob": "72db8984a98696287225899a3bf0c31bfd57a71f"
+      }
+    },
+    {
+      "name": "review body combinedR1IndependentActual",
+      "pass": true,
+      "details": {
+        "bytes": 80224,
+        "sha256": "aa8a8c7f6fa8b49593a9e233ae8ae9b0eb4848365915dde71bb7cb81b19e1f4e",
+        "gitBlob": "0669feaf0e8759ad2fd4330efe315c5540b55252"
+      }
+    },
+    {
+      "name": "review body combinedTestGuardR2",
+      "pass": true,
+      "details": {
+        "bytes": 25359,
+        "sha256": "dc7aebf5607cb8150b04c23b5e5a36f83735e5081ba18b78586ef30283d77843",
+        "gitBlob": "4d3004a5c76544dc8e47b842e981f22e7fbcdcc3"
+      }
+    },
+    {
+      "name": "review body combinedTestRendererR2",
+      "pass": true,
+      "details": {
+        "bytes": 97016,
+        "sha256": "9b67a3fa8a4fa07231f986881698b13ffc75c2171f18ed9f919a30e7875d145b",
+        "gitBlob": "6580a4f45747c0f079e37e0f3db042eca6c33c9e"
+      }
+    },
+    {
+      "name": "review body combinedTestRootActual",
+      "pass": true,
+      "details": {
+        "bytes": 29341,
+        "sha256": "fe81d1f6216e3aa89c456d22cd0a8c7ff735fb255902cfc99e915fae030875e8",
+        "gitBlob": "19ae837ffe2a9b1caaa2496cb08ac24841900752"
+      }
+    },
+    {
+      "name": "review body combinedTestIndependentActual",
+      "pass": true,
+      "details": {
+        "bytes": 57841,
+        "sha256": "a8736b98140b38c92578210fd9064f6952a96e3ea07df5471d9f88b11849f37e",
+        "gitBlob": "156f7b1977379568bcd7aa487be21d7ef95880f1"
+      }
+    },
+    {
+      "name": "review body rendererInitialInstalledAdmission",
+      "pass": true,
+      "details": {
+        "bytes": 156717,
+        "sha256": "76e5d3440254a5e778eb700eb306251a779d0f5a8c6dfe8c47e740895b316154",
+        "gitBlob": "a342571a13ce31b46e9782356cc23527c61ee644"
+      }
+    },
+    {
+      "name": "review body rendererAdditionalInstalledAdmission",
+      "pass": true,
+      "details": {
+        "bytes": 167326,
+        "sha256": "c880352c1d6cc0ac0c2c37bfb4d18d3a9718170298e814cb884f67fbc7e0413b",
+        "gitBlob": "e37de06a48b2d958fbd54de599ca5f933e3c23b0"
+      }
+    },
+    {
+      "name": "review body rendererCombinedFeasibility",
+      "pass": true,
+      "details": {
+        "bytes": 53474,
+        "sha256": "1ce3d9e96b5a8a100bccb1caa7bb1ab2ee8f234cb2afd35e940eb298c64c1238",
+        "gitBlob": "6ee0aadb457acd58e35df41c8fa8492ff6654933"
+      }
+    },
+    {
+      "name": "review body rendererPathDataAdmission",
+      "pass": true,
+      "details": {
+        "bytes": 8151,
+        "sha256": "9ceef73e09588b59852323fba2d2396cd83b2a524849a8cfb20b4bb278daa323",
+        "gitBlob": "d688c295815c064fad5e6d4f3a7481c083c6cd06"
+      }
+    },
+    {
+      "name": "review body combinedSemanticSourceGuide",
+      "pass": true,
+      "details": {
+        "bytes": 13467,
+        "sha256": "fd44402a9555871ddc2d26aa4ff87337c2591995f78f6642eab63142e8645254",
+        "gitBlob": "969d58ae7fb9788b0266ff6cefd8c9cd2aad7231"
+      }
+    },
+    {
+      "name": "review body combinedWholeTestsR2Proposal",
+      "pass": true,
+      "details": {
+        "bytes": 24017,
+        "sha256": "1532df713cd8c75025fccaaecbc7041e05f3ced87d1894f041a97a01e6d8f9a1",
+        "gitBlob": "061cb0545b58d847ef69b05baa2b140065456730"
+      }
+    },
+    {
+      "name": "source before scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "pass": true,
+      "details": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+    },
+    {
+      "name": "source before scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "pass": true,
+      "details": "cf93da72a198dac636658e512093eef7828b5927"
+    },
+    {
+      "name": "source before scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "pass": true,
+      "details": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+    },
+    {
+      "name": "source before scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "pass": true,
+      "details": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+    },
+    {
+      "name": "source before src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "pass": true,
+      "details": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+    },
+    {
+      "name": "source before scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "pass": true,
+      "details": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+    },
+    {
+      "name": "source before scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "pass": true,
+      "details": "d65706646743798f2646421105f2f6a75819f143"
+    },
+    {
+      "name": "source before scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "pass": true,
+      "details": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    },
+    {
+      "name": "source before test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "pass": true,
+      "details": "6c31165af5b91090fa56bc89ddd286a68f84c978"
+    },
+    {
+      "name": "source after scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "pass": true,
+      "details": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+    },
+    {
+      "name": "source after scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "pass": true,
+      "details": "cf93da72a198dac636658e512093eef7828b5927"
+    },
+    {
+      "name": "source after scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "pass": true,
+      "details": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+    },
+    {
+      "name": "source after scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "pass": true,
+      "details": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+    },
+    {
+      "name": "source after src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "pass": true,
+      "details": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+    },
+    {
+      "name": "source after scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "pass": true,
+      "details": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+    },
+    {
+      "name": "source after scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "pass": true,
+      "details": "d65706646743798f2646421105f2f6a75819f143"
+    },
+    {
+      "name": "source after scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "pass": true,
+      "details": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    {
+      "name": "source after test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "pass": true,
+      "details": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+    },
+    {
+      "name": "Node139 exact names",
+      "pass": true
+    },
+    {
+      "name": "renderer85 exact names",
+      "pass": true
+    },
+    {
+      "name": "argv exact R1",
+      "pass": true
+    },
+    {
+      "name": "only two test modifications",
+      "pass": true
+    },
+    {
+      "name": "sourcePins exact9 sorted",
+      "pass": true
+    },
+    {
+      "name": "sourceVector Pythoncanonical exact",
+      "pass": true,
+      "details": {
+        "bytes": 2118,
+        "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+        "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+      }
+    },
+    {
+      "name": "Nodefail sites exact5ordered",
+      "pass": true
+    },
+    {
+      "name": "rendererfail sites exact3",
+      "pass": true
+    },
+    {
+      "name": "RED gate selected only",
+      "pass": true
+    },
+    {
+      "name": "R1 preimage scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "pass": true
+    },
+    {
+      "name": "R1 preimage scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "pass": true
+    },
+    {
+      "name": "R1 preimage scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "pass": true
+    },
+    {
+      "name": "R1 preimage scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "name": "R1 preimage src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "pass": true
+    },
+    {
+      "name": "R1 preimage scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "name": "R1 preimage scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "name": "R1 preimage scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "pass": true
+    },
+    {
+      "name": "R1 preimage test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "pass": true
+    },
+    {
+      "name": "native link data node_modules/.pnpm/esbuild@0.28.1/node_modules/@esbuild/linux-x64",
+      "pass": true
+    },
+    {
+      "name": "native link data node_modules/.pnpm/rollup@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu",
+      "pass": true
+    },
+    {
+      "name": "native pin in staticcensus node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/rollup.linux-x64-gnu.node",
+      "pass": true
+    },
+    {
+      "name": "native pin in staticcensus node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/bin/esbuild",
+      "pass": true
+    },
+    {
+      "name": "exact GNU native R1pin",
+      "pass": true
+    },
+    {
+      "name": "exact esbuild native R1pin",
+      "pass": true
+    },
+    {
+      "name": "native JS literal exactbinding",
+      "pass": true
+    },
+    {
+      "name": "native argv pinned builtin route",
+      "pass": true
+    },
+    {
+      "name": "publication subject935e",
+      "pass": true,
+      "details": "publishedSubject is the reviewed commit/tree/qualification object; equality in runner consistently compares the object."
+    },
+    {
+      "name": "R1 publication cf65",
+      "pass": true
+    },
+    {
+      "name": "eight exact inputFile pins inherited",
+      "pass": true
+    },
+    {
+      "name": "all21 inherited review bodies retained byte-exact in order",
+      "pass": true
+    },
+    {
+      "name": "sourceimport historical admission retained",
+      "pass": true
+    }
+  ],
+  "staticSemanticChecks": [
+    {
+      "id": "strict_node_whole_census",
+      "result": "PASS",
+      "detail": "Runner907–974 parses exactly139ordered unique names,7exact count fields plus duration,5expected fail ordinals inRED,zero skipped/cancelled/todo; GREEN139pass."
+    },
+    {
+      "id": "node_failure_blocks_complete",
+      "result": "PASS",
+      "detail": "Fivefailure-starts and fivebinding sites required; all5iterated with exactregistration/assertion/operator/error/actual checks and tracevalues for139; no zip truncation."
+    },
+    {
+      "id": "node_p11_90s_semantics",
+      "result": "PASS",
+      "detail": "134/135/136 assert missingreject at2593:3 for exactcutoff/latefirst/latepolled true;137 mustpass alltimely/currentness/readerror/cadence controls. Virtual90s is not changed to runtime180s."
+    },
+    {
+      "id": "node_review_authority_semantics",
+      "result": "PASS",
+      "detail": "138 missingreject at2682:5 and139 exactincorrectreadtrace at2692:12; report qualifications do not claim unreachednegative/insert-error branches passed."
+    },
+    {
+      "id": "node_unknown_output_bounded",
+      "result": "PASS",
+      "detail": "Unmatched initialoutput only exact builtinstripTypeScriptTypes warning/tracehint,atmost2lines. Exactsummary/failuretail prevents unrelated setup/import/runtime failures counting asRED."
+    },
+    {
+      "id": "renderer_census_and_states",
+      "result": "PASS",
+      "detail": "Exactly85ordered names,85uniquefullNames,oneabsolute testResults file,allstatuses; only81/82/83failed inRED; allold80pluscontrolsPASS."
+    },
+    {
+      "id": "renderer_suites_and_ancestors",
+      "result": "PASS",
+      "detail": "Counters2suites/1file consistent with installedreporter+collector. Ancestors exactlyoneouterdescribe; filemessageempty consistent with onlychild failures."
+    },
+    {
+      "id": "renderer_failure_sites",
+      "result": "PASS",
+      "detail": "Eachselected failure hasone message containingexpectedtruefalse andexactTESTpath5722:28 or5781:30; actualassertionstackused,notJSON.registrationlocation."
+    },
+    {
+      "id": "renderer_warning_title_collision_fixed",
+      "result": "PASS",
+      "detail": "FormerwholewordWARN/WARNINGscan removed. New anchoredwarningforms do notmatch exactpassedcase7/8 titles thatthedefaultreporter printswhenmodulefailed."
+    },
+    {
+      "id": "renderer_raw_retention_and_errors",
+      "result": "PASS",
+      "detail": "Fullrawidentityretained; rejects unhandled/uncaught/close/stillrunning/module/config/native/console/reportwrite diagnostics; exactJSONreportwrittenpath required. Finalindependentfullrawreview remainsrequired; no universal arbitrarydiagnosticparser claim."
+    },
+    {
+      "id": "renderer_snapshot_fields",
+      "result": "PASS",
+      "detail": "Installedsnapshotmanager90a36 defines selectedfields asnumeric0 andfailurefalse; whole7649renderer hasnosnapshotmatchers. Existinggate hasno observed static false-refusal for this source."
+    },
+    {
+      "id": "native_builtin_only_command",
+      "result": "PASS",
+      "detail": "Argv exactlypinnedNode,--input-type=commonjs,-e,923Bembeddedpayload. Onlynode:osrequire andprocessbuiltinobservations; no package/provider/nativeevaluation bymetadata."
+    },
+    {
+      "id": "native_rollup_nullish_retry",
+      "result": "PASS",
+      "detail": "Payloadobservesheaderonce,repeatsiffirstnullish,selectsGNUif finalheaderfalsy ORtruthyglibcVersionRuntime; matchesinstalledRollup962a tableinitializer/isMusl route onlinuxx64. Metadataexceptionfailsclosed; no fallback or machinecodequalification claim."
+    },
+    {
+      "id": "native_platform_and_conditions",
+      "result": "PASS",
+      "detail": "Actualmetadatamustestablishlinux,x64,littleendian,Nodev24.22.1,exactexecPath/cwd,absentDeno/PnP,require_moduletrue; separate30soriginaldeadline,capturedsession,emptyerrorstream andcompleteoutputidentity."
+    },
+    {
+      "id": "native_route_identity",
+      "result": "PASS",
+      "detail": "Bothnativepins matchselectedR1 exactly andoccurinstaticpinlist; exactimporter-localtargetbytes/resolvepaths checked; localRollupoverride/esbuilddownloadfallbackabsent."
+    },
+    {
+      "id": "config_and_positionalselection",
+      "result": "PASS",
+      "detail": "Fixedconfig/setup identities,canonicalVitestentry,sourcecensus uniqueincludeintersection,mode/pool/CI/defaultcondition/definevalues retained. ActualJSONrequiresoneexactabsolute file."
+    },
+    {
+      "id": "argv_preserved",
+      "result": "PASS",
+      "detail": "EveryNode/rendererRed/rendererGreen/fourvalidation argv isbyte-equivalent data toselectedR1 vectors; no timeout/name/location/shard/changed/projectfilter additions."
+    },
+    {
+      "id": "environment_bounded",
+      "result": "PASS",
+      "detail": "RawNODE_/VITE/DENO_/setuprecovery prefixes bound byfullkeyset/valuehashes;effectiveNODE_PATH/options/cache/testoverridesabsent;CItrue,NODE_DISABLE_COMPILE_CACHE1;supervisorHOME/CODEX_HOMEunchanged."
+    },
+    {
+      "id": "node_before_renderer_gate",
+      "result": "PASS",
+      "detail": "Nodeordinaryexit,raw/finalreceipt,whole semanticadmission,allcapturedsessionsgone,andentireownedTMPDIRempty beforeanysupervisordeletion; failuresleave rendererUNREACHED."
+    },
+    {
+      "id": "source_vector_no_boundary_drift",
+      "result": "PASS",
+      "detail": "Bothwholecommands useoneexact9row vector; cheap9row hashchecks precederenderer; completefreshsource8798/deps122773/compiled1454/tool/provider/bootstrap/control boundaries sharedperpackage."
+    },
+    {
+      "id": "original_clocks_preserved",
+      "result": "PASS",
+      "detail": "Distinctprelaunch180sperprimary; rawsemantic/finaladmission checkedunderthesameclock. Separate30smetadata; no reset/retry. Fullinputhashingseparatelytimed."
+    },
+    {
+      "id": "source_only_materialization",
+      "result": "PASS",
+      "detail": "REDwritesexactlytwofulltestpostimagesafterpreimage verification;pre/postsourceandmetadata checks; runtimeinputs explicitlyUNINSPECTED/null. Priorreceipt rehashedasruntimecontrol."
+    },
+    {
+      "id": "producer_authorship_gate",
+      "result": "PASS",
+      "detail": "Currentbinding literalphaseRED; acceptedCombinedRed/Greennull andproducerR2/actualfalse. Sevenproducerrows remainunchanged. FutureGREENrequiresacceptedactualREDsamevector andseparateproducerR2/readback."
+    },
+    {
+      "id": "cleanup_after_finalraw",
+      "result": "PASS",
+      "detail": "Strengthenedcleanuprequiresexactrendererfinalreceipt,completehashedraw,knownexit/signal,nofinalizationerror,andcapturedsessionemptiness beforecapturing/removingownedtransients. Unknownlaunch/livegroupretainoutputs."
+    },
+    {
+      "id": "scope_and_finalization",
+      "result": "PASS",
+      "detail": "Execution/postflight/transienterrors andinterruptions latch; allcommandsaccepted,fullboundaries/inputpreservation/emptyownedTMP/.vite-tempabsence/finalreceipt required; observedouter0 plusindependentactualreview remains externalgate."
+    },
+    {
+      "id": "no_runtime_qualification_transfer",
+      "result": "PASS",
+      "detail": "Code/binding callthisfiniteTESTactual-source/scopedguards; oldrecoveryresults arehistorical, notcurrentcombinedRED/GREEN/GUI/native/vendor/E2Eproof."
+    }
+  ],
+  "checkCount": 111,
+  "closedPriorFindings": [
+    {
+      "priorReview": "e7b83bc91b82d0256532775436f765294933674b",
+      "id": "renderer-warning-word-collides-with-unchanged-case-titles",
+      "closed": true,
+      "resolution": "906d's anchoredactualwarningpatterns avoid matching 'without a refresh warning' in exactdefaultreportercaselines,while retainingknown diagnosticrefusals."
+    },
+    {
+      "priorReview": "e7b83bc91b82d0256532775436f765294933674b",
+      "id": "node-failure-site-census",
+      "closed": true,
+      "resolution": "906drequireslen(starts)==len(cfg.nodeRedFailureSites)==5;f7containsall5correctorderedentries."
+    }
+  ],
+  "semanticExpectations": {
+    "node": {
+      "cases": 139,
+      "red": {
+        "pass": 134,
+        "fail": 5,
+        "failedOrdinals": [
+          134,
+          135,
+          136,
+          138,
+          139
+        ]
+      },
+      "green": {
+        "pass": 139,
+        "fail": 0
+      },
+      "failureSites": [
+        {
+          "ordinal": 134,
+          "registration": [
+            2591,
+            4
+          ],
+          "assertion": [
+            2593,
+            3
+          ],
+          "operator": "rejects"
+        },
+        {
+          "ordinal": 135,
+          "registration": [
+            2591,
+            4
+          ],
+          "assertion": [
+            2593,
+            3
+          ],
+          "operator": "rejects"
+        },
+        {
+          "ordinal": 136,
+          "registration": [
+            2591,
+            4
+          ],
+          "assertion": [
+            2593,
+            3
+          ],
+          "operator": "rejects"
+        },
+        {
+          "ordinal": 138,
+          "registration": [
+            2678,
+            1
+          ],
+          "assertion": [
+            2682,
+            5
+          ],
+          "operator": "rejects"
+        },
+        {
+          "ordinal": 139,
+          "registration": [
+            2688,
+            1
+          ],
+          "assertion": [
+            2692,
+            12
+          ],
+          "operator": "deepStrictEqual"
+        }
+      ],
+      "namesIdentity": {
+        "bytes": 11285,
+        "sha256": "3364f9a0bc12536ef2c26174a1341f8f8d4183cb6cb0795a6c339d1dd9cc6226",
+        "gitBlob": "96bf8a32335853f8721251c8131e534fab668aac"
+      }
+    },
+    "renderer": {
+      "cases": 85,
+      "red": {
+        "pass": 82,
+        "fail": 3,
+        "failedOrdinals": [
+          81,
+          82,
+          83
+        ]
+      },
+      "green": {
+        "pass": 85,
+        "fail": 0
+      },
+      "failureSites": {
+        "81": [
+          5722,
+          28
+        ],
+        "82": [
+          5781,
+          30
+        ],
+        "83": [
+          5781,
+          30
+        ]
+      },
+      "suites": 2,
+      "files": 1,
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "fileMessage": "",
+      "namesIdentity": {
+        "bytes": 6272,
+        "sha256": "dd9fb1089574c01f484d8a6fd7c9776dca0dfc3a15529a751e54c41a24c00658",
+        "gitBlob": "801ce3534f74703fd5e5bbc41b0a8fc892ef9d92"
+      }
+    }
+  },
+  "reachedAndUnreached": "Use exactsource guide969d58ae7fb9788b0266ff6cefd8c9cd2aad7231: REDNode138 stopsat{}afterNULLpass;139stopsatsecondbranchtrace;renderer81–83stopatfirstloadingassertion. GREENmustcompleteallvariants,originalerroridentity/stale/unmountassertions. AREDfailuredoesnotexerciseitslaterassertions.",
+  "sourceEvidence": [
+    {
+      "identity": {
+        "bytes": 80849,
+        "sha256": "59d12f5f70a230e6cf7d165a7ebba867675e992c49a7eb2308a032c6619d3870",
+        "gitBlob": "490fd49e092fb68f5413e2e721f1f82004f2def7"
+      },
+      "role": "FullinstalledBase/Default/JSONReporter source",
+      "passages": [
+        {
+          "firstLine": 219,
+          "lastLine": 282,
+          "text": "\tonTestModuleEnd(testModule) {\n\t\tif (testModule.state() === \"failed\") this.logFailedTask(testModule.task);\n\t\tthis.printTestModule(testModule);\n\t}\n\tlogFailedTask(task) {\n\t\tif (this.ctx.config.silent === \"passed-only\") for (const log of task.logs || []) this.onUserConsoleLog(log, \"failed\");\n\t}\n\tprintTestModule(testModule) {\n\t\tconst moduleState = testModule.state();\n\t\tif (moduleState === \"queued\" || moduleState === \"pending\") return;\n\t\tlet testsCount = 0;\n\t\tlet failedCount = 0;\n\t\tlet skippedCount = 0;\n\t\t// delaying logs to calculate the test stats first\n\t\t// which minimizes the amount of for loops\n\t\tconst logs = [];\n\t\tconst originalLog = this.log.bind(this);\n\t\tthis.log = (msg) => logs.push(msg);\n\t\tconst visit = (suiteState, children) => {\n\t\t\tfor (const child of children) if (child.type === \"suite\") {\n\t\t\t\tconst suiteState = child.state();\n\t\t\t\t// Skipped suites are hidden when --hideSkippedTests, print otherwise\n\t\t\t\tif (!this.ctx.config.hideSkippedTests || suiteState !== \"skipped\") this.printTestSuite(child);\n\t\t\t\tvisit(suiteState, child.children);\n\t\t\t} else {\n\t\t\t\tconst testResult = child.result();\n\t\t\t\ttestsCount++;\n\t\t\t\tif (testResult.state === \"failed\") failedCount++;\n\t\t\t\telse if (testResult.state === \"skipped\") skippedCount++;\n\t\t\t\tif (this.ctx.config.hideSkippedTests && suiteState === \"skipped\")\n // Skipped suites are hidden when --hideSkippedTests\n\t\t\t\tcontinue;\n\t\t\t\tthis.printTestCase(moduleState, child);\n\t\t\t}\n\t\t};\n\t\ttry {\n\t\t\tvisit(moduleState, testModule.children);\n\t\t} finally {\n\t\t\tthis.log = originalLog;\n\t\t}\n\t\tthis.log(this.getModuleLog(testModule, {\n\t\t\ttests: testsCount,\n\t\t\tfailed: failedCount,\n\t\t\tskipped: skippedCount\n\t\t}));\n\t\tlogs.forEach((log) => this.log(log));\n\t}\n\tprintTestCase(moduleState, test) {\n\t\tconst testResult = test.result();\n\t\tconst { duration, retryCount, repeatCount } = test.diagnostic() || {};\n\t\tconst padding = this.getTestIndentation(test.task);\n\t\tlet suffix = this.getDurationPrefix(test.task);\n\t\tif (retryCount != null && retryCount > 0) suffix += c.yellow(` (retry x${retryCount})`);\n\t\tif (repeatCount != null && repeatCount > 0) suffix += c.yellow(` (repeat x${repeatCount})`);\n\t\tif (testResult.state === \"failed\") {\n\t\t\tthis.log(c.red(` ${padding}${taskFail} ${this.getTestName(test.task, c.dim(\" > \"))}`) + suffix);\n\t\t\t// print short errors, full errors will be at the end in summary\n\t\t\ttestResult.errors.forEach((error) => {\n\t\t\t\tconst message = this.formatShortError(error);\n\t\t\t\tif (message) this.log(c.red(`   ${padding}${message}`));\n\t\t\t});\n\t\t} else if (duration && duration > this.ctx.config.slowTestThreshold) this.log(` ${padding}${c.yellow(c.dim(F_CHECK))} ${this.getTestName(test.task, c.dim(\" > \"))} ${suffix}`);\n\t\telse if (this.ctx.config.hideSkippedTests && testResult.state === \"skipped\") ; else if (testResult.state === \"skipped\" && testResult.note) this.log(` ${padding}${getStateSymbol(test.task)} ${this.getTestName(test.task, c.dim(\" > \"))}${c.dim(c.gray(` [${testResult.note}]`))}`);\n\t\telse if (this.renderSucceed || moduleState === \"failed\") this.log(` ${padding}${getStateSymbol(test.task)} ${this.getTestName(test.task, c.dim(\" > \"))}${suffix}`);"
+        },
+        {
+          "firstLine": 1698,
+          "lastLine": 1766,
+          "text": "\tasync logTasks(files, coverageMap) {\n\t\tconst suites = getSuites(files);\n\t\tconst numTotalTestSuites = suites.length;\n\t\tconst tests = getTests(files);\n\t\tconst numTotalTests = tests.length;\n\t\tconst numFailedTestSuites = suites.filter((s) => s.result?.state === \"fail\").length;\n\t\tconst numPendingTestSuites = suites.filter((s) => s.result?.state === \"run\" || s.result?.state === \"queued\" || s.mode === \"todo\").length;\n\t\tconst numPassedTestSuites = numTotalTestSuites - numFailedTestSuites - numPendingTestSuites;\n\t\tconst numFailedTests = tests.filter((t) => t.result?.state === \"fail\").length;\n\t\tconst numPassedTests = tests.filter((t) => t.result?.state === \"pass\").length;\n\t\tconst numPendingTests = tests.filter((t) => t.result?.state === \"run\" || t.result?.state === \"queued\" || t.mode === \"skip\" || t.result?.state === \"skip\").length;\n\t\tconst numTodoTests = tests.filter((t) => t.mode === \"todo\").length;\n\t\tconst testResults = [];\n\t\tconst success = !!(files.length > 0 || this.ctx.config.passWithNoTests) && numFailedTestSuites === 0 && numFailedTests === 0;\n\t\tfor (const file of files) {\n\t\t\tconst tests = getTests([file]);\n\t\t\tlet startTime = tests.reduce((prev, next) => Math.min(prev, next.result?.startTime ?? Number.POSITIVE_INFINITY), Number.POSITIVE_INFINITY);\n\t\t\tif (startTime === Number.POSITIVE_INFINITY) startTime = this.start;\n\t\t\tconst endTime = tests.reduce((prev, next) => Math.max(prev, (next.result?.startTime ?? 0) + (next.result?.duration ?? 0)), startTime);\n\t\t\tconst assertionResults = tests.map((t) => {\n\t\t\t\tconst ancestorTitles = [];\n\t\t\t\tlet iter = t.suite;\n\t\t\t\twhile (iter) {\n\t\t\t\t\tancestorTitles.push(iter.name);\n\t\t\t\t\titer = iter.suite;\n\t\t\t\t}\n\t\t\t\tancestorTitles.reverse();\n\t\t\t\treturn {\n\t\t\t\t\tancestorTitles,\n\t\t\t\t\tfullName: t.name ? [...ancestorTitles, t.name].join(\" \") : ancestorTitles.join(\" \"),\n\t\t\t\t\tstatus: StatusMap[t.result?.state || t.mode] || \"skipped\",\n\t\t\t\t\ttitle: t.name,\n\t\t\t\t\tduration: t.result?.duration,\n\t\t\t\t\tfailureMessages: t.result?.errors?.map((e) => e.stack || e.message) || [],\n\t\t\t\t\tlocation: t.location,\n\t\t\t\t\tmeta: t.meta\n\t\t\t\t};\n\t\t\t});\n\t\t\tif (tests.some((t) => t.result?.state === \"run\" || t.result?.state === \"queued\")) this.ctx.logger.warn(\"WARNING: Some tests are still running when generating the JSON report.This is likely an internal bug in Vitest.Please report it to https://github.com/vitest-dev/vitest/issues\");\n\t\t\tconst hasFailedTests = tests.some((t) => t.result?.state === \"fail\");\n\t\t\ttestResults.push({\n\t\t\t\tassertionResults,\n\t\t\t\tstartTime,\n\t\t\t\tendTime,\n\t\t\t\tstatus: file.result?.state === \"fail\" || hasFailedTests ? \"failed\" : \"passed\",\n\t\t\t\tmessage: file.result?.errors?.[0]?.message ?? \"\",\n\t\t\t\tname: file.filepath\n\t\t\t});\n\t\t}\n\t\tconst result = {\n\t\t\tnumTotalTestSuites,\n\t\t\tnumPassedTestSuites,\n\t\t\tnumFailedTestSuites,\n\t\t\tnumPendingTestSuites,\n\t\t\tnumTotalTests,\n\t\t\tnumPassedTests,\n\t\t\tnumFailedTests,\n\t\t\tnumPendingTests,\n\t\t\tnumTodoTests,\n\t\t\tsnapshot: this.ctx.snapshot.summary,\n\t\t\tstartTime: this.start,\n\t\t\tsuccess,\n\t\t\ttestResults,\n\t\t\tcoverageMap\n\t\t};\n\t\tawait this.writeReport(JSON.stringify(result));\n\t}\n\tasync onFinished(files = this.ctx.state.getFiles(), _errors = [], coverageMap) {\n\t\tawait this.logTasks(files, coverageMap);"
+        }
+      ]
+    },
+    {
+      "identity": {
+        "bytes": 80980,
+        "sha256": "5e0b0ece2242e3475a0312a375fac6e47287602792d7f4999d2d733ecda2d69a",
+        "gitBlob": "59908e26ff1e58a646673c14c2114609a035f54c"
+      },
+      "role": "Fullinstalledcollector source",
+      "passages": [
+        {
+          "firstLine": 540,
+          "lastLine": 545,
+          "text": "function createDefaultSuite(runner) {\n\tconst config = runner.config.sequence;\n\tconst collector = suite(\"\", { concurrent: config.concurrent }, () => {});\n\t// no parent suite for top-level tests\n\tdelete collector.suite;\n\treturn collector;"
+        },
+        {
+          "firstLine": 1329,
+          "lastLine": 1330,
+          "text": "function getSuites(suite) {\n\treturn toArray(suite).flatMap((s) => s.type === \"suite\" ? [s, ...getSuites(s.tasks)] : []);"
+        },
+        {
+          "firstLine": 1755,
+          "lastLine": 1758,
+          "text": "\t\t\t} else if (hasFailed(suite)) {\n\t\t\t\tsuite.result.state = \"fail\";\n\t\t\t} else {\n\t\t\t\tsuite.result.state = \"pass\";"
+        }
+      ]
+    },
+    {
+      "identity": {
+        "bytes": 1829,
+        "sha256": "b245530bee138adea2ad952b29ba6e4a6ca3131c98507b0579f2ae8f275fcfbe",
+        "gitBlob": "90a36a3ee3de3f7be3dc08a306e94ab317d74989"
+      },
+      "role": "Fullinstalledsnapshotmanager",
+      "body": "import { join, dirname, basename, resolve, isAbsolute } from 'pathe';\n\nclass SnapshotManager {\n\tsummary;\n\textension = \".snap\";\n\tconstructor(options) {\n\t\tthis.options = options;\n\t\tthis.clear();\n\t}\n\tclear() {\n\t\tthis.summary = emptySummary(this.options);\n\t}\n\tadd(result) {\n\t\taddSnapshotResult(this.summary, result);\n\t}\n\tresolvePath(testPath, context) {\n\t\tconst resolver = this.options.resolveSnapshotPath || (() => {\n\t\t\treturn join(join(dirname(testPath), \"__snapshots__\"), `${basename(testPath)}${this.extension}`);\n\t\t});\n\t\tconst path = resolver(testPath, this.extension, context);\n\t\treturn path;\n\t}\n\tresolveRawPath(testPath, rawPath) {\n\t\treturn isAbsolute(rawPath) ? rawPath : resolve(dirname(testPath), rawPath);\n\t}\n}\nfunction emptySummary(options) {\n\tconst summary = {\n\t\tadded: 0,\n\t\tfailure: false,\n\t\tfilesAdded: 0,\n\t\tfilesRemoved: 0,\n\t\tfilesRemovedList: [],\n\t\tfilesUnmatched: 0,\n\t\tfilesUpdated: 0,\n\t\tmatched: 0,\n\t\ttotal: 0,\n\t\tunchecked: 0,\n\t\tuncheckedKeysByFile: [],\n\t\tunmatched: 0,\n\t\tupdated: 0,\n\t\tdidUpdate: options.updateSnapshot === \"all\"\n\t};\n\treturn summary;\n}\nfunction addSnapshotResult(summary, result) {\n\tif (result.added) {\n\t\tsummary.filesAdded++;\n\t}\n\tif (result.fileDeleted) {\n\t\tsummary.filesRemoved++;\n\t}\n\tif (result.unmatched) {\n\t\tsummary.filesUnmatched++;\n\t}\n\tif (result.updated) {\n\t\tsummary.filesUpdated++;\n\t}\n\tsummary.added += result.added;\n\tsummary.matched += result.matched;\n\tsummary.unchecked += result.unchecked;\n\tif (result.uncheckedKeys && result.uncheckedKeys.length > 0) {\n\t\tsummary.uncheckedKeysByFile.push({\n\t\t\tfilePath: result.filepath,\n\t\t\tkeys: result.uncheckedKeys\n\t\t});\n\t}\n\tsummary.unmatched += result.unmatched;\n\tsummary.updated += result.updated;\n\tsummary.total += result.added + result.matched + result.unmatched + result.updated;\n}\n\nexport { SnapshotManager, addSnapshotResult, emptySummary };\n"
+    },
+    {
+      "identity": {
+        "bytes": 4787,
+        "sha256": "93c3da450b25ba485bb3de20dded405aa9c105951e8d31964eeb49633c2b16ea",
+        "gitBlob": "962a10163ad9a8289ef4661070b526f886293dff"
+      },
+      "role": "FullinstalledRollupnative.js fromfullyhashedacceptedinstalledadmission",
+      "body": "const { existsSync } = require('node:fs');\nconst path = require('node:path');\nconst { platform, arch, report } = require('node:process');\nconst { spawnSync } = require('node:child_process');\n\nconst getReportHeader = () => {\n\ttry {\n\t\tif (platform !== 'win32') {\n\t\t\treturn report.getReport().header;\n\t\t}\n\n\t\t// This is needed because report.getReport() crashes the process on Windows sometimes.\n\t\tconst script =\n\t\t\t\"console.log(JSON.stringify(require('node:process').report.getReport().header));\";\n\t\tconst child = spawnSync(process.execPath, ['-p', script], {\n\t\t\tencoding: 'utf8',\n\t\t\ttimeout: 3000,\n\t\t\twindowsHide: true\n\t\t});\n\n\t\tif (child.status !== 0) {\n\t\t\treturn null;\n\t\t}\n\n\t\t// The output from node -p might include a trailing 'undefined' and newline\n\t\tconst stdout = child.stdout?.replace(/undefined\\r?\\n?$/, '').trim();\n\t\tif (!stdout) {\n\t\t\treturn null;\n\t\t}\n\n\t\treturn JSON.parse(stdout);\n\t} catch {\n\t\treturn null;\n\t}\n};\n\nlet reportHeader;\nconst isMingw32 = () => {\n\treportHeader ??= getReportHeader();\n\n\treturn reportHeader?.osName?.startsWith('MINGW32_NT') ?? false;\n};\n\nconst isMusl = () => {\n\treportHeader ??= getReportHeader();\n\n\treturn reportHeader ? !reportHeader.glibcVersionRuntime : false;\n};\n\nconst bindingsByPlatformAndArch = {\n\tandroid: {\n\t\tarm: { base: 'android-arm-eabi' },\n\t\tarm64: { base: 'android-arm64' }\n\t},\n\tdarwin: {\n\t\tarm64: { base: 'darwin-arm64' },\n\t\tx64: { base: 'darwin-x64' }\n\t},\n\tfreebsd: {\n\t\tarm64: { base: 'freebsd-arm64' },\n\t\tx64: { base: 'freebsd-x64' }\n\t},\n\tlinux: {\n\t\tarm: { base: 'linux-arm-gnueabihf', musl: 'linux-arm-musleabihf' },\n\t\tarm64: { base: 'linux-arm64-gnu', musl: 'linux-arm64-musl' },\n\t\tloong64: { base: 'linux-loong64-gnu', musl: 'linux-loong64-musl' },\n\t\tppc64: { base: 'linux-ppc64-gnu', musl: 'linux-ppc64-musl' },\n\t\triscv64: { base: 'linux-riscv64-gnu', musl: 'linux-riscv64-musl' },\n\t\ts390x: { base: 'linux-s390x-gnu', musl: null },\n\t\tx64: { base: 'linux-x64-gnu', musl: 'linux-x64-musl' }\n\t},\n\topenbsd: {\n\t\tx64: { base: 'openbsd-x64' }\n\t},\n\topenharmony: {\n\t\tarm64: { base: 'openharmony-arm64' }\n\t},\n\twin32: {\n\t\tarm64: { base: 'win32-arm64-msvc' },\n\t\tia32: { base: 'win32-ia32-msvc' },\n\t\tx64: {\n\t\t\tbase: isMingw32() ? 'win32-x64-gnu' : 'win32-x64-msvc'\n\t\t}\n\t}\n};\n\nconst msvcLinkFilenameByArch = {\n\tarm64: 'vc_redist.arm64.exe',\n\tia32: 'vc_redist.x86.exe',\n\tx64: 'vc_redist.x64.exe'\n};\n\nconst packageBase = getPackageBase();\nconst localName = `./rollup.${packageBase}.node`;\nconst requireWithFriendlyError = id => {\n\ttry {\n\t\treturn require(id);\n\t} catch (error) {\n\t\tif (\n\t\t\tplatform === 'win32' &&\n\t\t\terror instanceof Error &&\n\t\t\terror.code === 'ERR_DLOPEN_FAILED' &&\n\t\t\terror.message.includes('The specified module could not be found')\n\t\t) {\n\t\t\tconst msvcDownloadLink = `https://aka.ms/vs/17/release/${msvcLinkFilenameByArch[arch]}`;\n\t\t\tthrow new Error(\n\t\t\t\t`Failed to load module ${id}. ` +\n\t\t\t\t\t'Required DLL was not found. ' +\n\t\t\t\t\t'This error usually happens when Microsoft Visual C++ Redistributable is not installed. ' +\n\t\t\t\t\t`You can download it from ${msvcDownloadLink}`,\n\t\t\t\t{ cause: error }\n\t\t\t);\n\t\t}\n\n\t\tthrow new Error(\n\t\t\t`Cannot find module ${id}. ` +\n\t\t\t\t`npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). ` +\n\t\t\t\t'Please try `npm i` again after removing both package-lock.json and node_modules directory.',\n\t\t\t{ cause: error }\n\t\t);\n\t}\n};\n\nconst { parse, parseAsync, xxhashBase64Url, xxhashBase36, xxhashBase16 } = requireWithFriendlyError(\n\texistsSync(path.join(__dirname, localName)) ? localName : `@rollup/rollup-${packageBase}`\n);\n\nfunction getPackageBase() {\n\tconst imported = bindingsByPlatformAndArch[platform]?.[arch];\n\tif (!imported) {\n\t\tthrowUnsupportedError(false);\n\t}\n\tif ('musl' in imported && isMusl()) {\n\t\treturn imported.musl || throwUnsupportedError(true);\n\t}\n\treturn imported.base;\n}\n\nfunction throwUnsupportedError(isMusl) {\n\tthrow new Error(\n\t\t`Your current platform \"${platform}${isMusl ? ' (musl)' : ''}\" and architecture \"${arch}\" combination is not yet supported by the native Rollup build. Please use the WASM build \"@rollup/wasm-node\" instead.\n\nThe following platform-architecture combinations are supported:\n${Object.entries(bindingsByPlatformAndArch)\n\t.flatMap(([platformName, architectures]) =>\n\t\tObject.entries(architectures).flatMap(([architectureName, { musl }]) => {\n\t\t\tconst name = `${platformName}-${architectureName}`;\n\t\t\treturn musl ? [name, `${name} (musl)`] : [name];\n\t\t})\n\t)\n\t.join('\\n')}\n\nIf this is important to you, please consider supporting Rollup to make a native build for your platform and architecture available.`\n\t);\n}\n\nmodule.exports.parse = parse;\nmodule.exports.parseAsync = parseAsync;\nmodule.exports.xxhashBase64Url = xxhashBase64Url;\nmodule.exports.xxhashBase36 = xxhashBase36;\nmodule.exports.xxhashBase16 = xxhashBase16;\n"
+    },
+    {
+      "identity": {
+        "bytes": 923,
+        "sha256": "f1d7790a54f3a84815bd4169d4b63885c2eb634ba529a978a7fbdd4c02db967a",
+        "gitBlob": "2f4dc4eb967813da67e88f48f8fd2a844d809c54"
+      },
+      "role": "Embeddedbuiltin-onlymetadataJSsource; identityisderived,notclaimedstandaloneGitblob",
+      "body": "'use strict';\nconst os = require('node:os');\nlet reads = 1;\nlet header = process.report.getReport().header;\nconst firstHeaderNullish = header == null;\nif (firstHeaderNullish) {\n  reads++;\n  header = process.report.getReport().header;\n}\nconst finalHeaderFalsy = !header;\nconst glibcVersionRuntime = header && header.glibcVersionRuntime || null;\nprocess.stdout.write(JSON.stringify({\n  platform: process.platform, arch: process.arch, nodeVersion: process.version,\n  endianness: os.endianness(), execPath: process.execPath, cwd: process.cwd(),\n  denoAbsent: typeof process.versions.deno === 'undefined' && typeof globalThis.Deno === 'undefined',\n  pnpAbsent: typeof process.versions.pnp === 'undefined',\n  requireModule: process.features.require_module === true,\n  reportReads: reads, firstHeaderNullish, finalHeaderFalsy, glibcVersionRuntime,\n  selectedRollupGnu: finalHeaderFalsy || Boolean(glibcVersionRuntime)\n}) + '\\n');\n"
+    }
+  ],
+  "limits": [
+    "No candidate runtime, AST evaluation, package/native execution or localfilesysteminspection was performed by this reviewer. Root ASTdata-only validation andcompanionownershipGuard are separate.",
+    "This review doesnot predict actual180stiming/nativeexecution/cleanup; unobserved/unreached outcomes remainUNKNOWN.",
+    "Completefullraw independentactual review remainsmandatory; boundeddiagnosticregexes arenotclaimedto classifyeverypossiblearbitraryoutputstring.",
+    "Full source/dependency/inputpre/post andphysicalcapturedsessioncleanup remainactualexecutionrequirements; staticpins are not nativecodequalification.",
+    "FrozenPRs/terminaloriginalCI untouched. No realClaude/Codexincluding--version,main/defaultmerge,Ready,release/defaultactivation,Stage2 orblanketqualification."
+  ],
+  "acceptedReviewBodyIdentities": [
+    {
+      "role": "freshBootstrapGuardActualReview",
+      "identity": {
+        "bytes": 32514,
+        "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+        "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075"
+      }
+    },
+    {
+      "role": "freshSdkIndependentReview",
+      "identity": {
+        "bytes": 84719,
+        "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+        "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6"
+      }
+    },
+    {
+      "role": "freshMcpIndependentReview",
+      "identity": {
+        "bytes": 155439,
+        "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+        "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239"
+      }
+    },
+    {
+      "role": "crossR1ActualPublicationReadback",
+      "identity": {
+        "bytes": 24775,
+        "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+        "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+      }
+    },
+    {
+      "role": "crossTestGuardR2",
+      "identity": {
+        "bytes": 35700,
+        "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+        "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+      }
+    },
+    {
+      "role": "crossTestParityR2",
+      "identity": {
+        "bytes": 98112,
+        "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+        "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+      }
+    },
+    {
+      "role": "crossTestActualPublicationReadback",
+      "identity": {
+        "bytes": 56894,
+        "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+        "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+      }
+    },
+    {
+      "role": "crossActualRedGuard",
+      "identity": {
+        "bytes": 140038,
+        "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+        "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+      }
+    },
+    {
+      "role": "crossActualRedPrimarySemantic",
+      "identity": {
+        "bytes": 190694,
+        "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+        "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+      }
+    },
+    {
+      "role": "crossActualRedSemanticClosure",
+      "identity": {
+        "bytes": 86249,
+        "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+        "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+      }
+    },
+    {
+      "role": "crossProducerGuardR2",
+      "identity": {
+        "bytes": 121044,
+        "sha256": "438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339",
+        "gitBlob": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637"
+      }
+    },
+    {
+      "role": "crossProducerParityR2",
+      "identity": {
+        "bytes": 109607,
+        "sha256": "da402e2bc50d090cc5b2a57ff1eac0dc5d6767b77876d97f301937db7197536b",
+        "gitBlob": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f"
+      }
+    },
+    {
+      "role": "crossProducerActualPublicationReadback",
+      "identity": {
+        "bytes": 31670,
+        "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+        "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+      }
+    },
+    {
+      "role": "crossActualGreenFullGuard",
+      "identity": {
+        "bytes": 209270,
+        "sha256": "b56c4d2a4328f11a679a73de100d13af4ec7e8ccc6fe8f6333de98dec4d2d329",
+        "gitBlob": "848e6efd0b924e4415848551cfea034f22b84221"
+      }
+    },
+    {
+      "role": "crossActualGreenFinalSemantic",
+      "identity": {
+        "bytes": 140647,
+        "sha256": "74936b31eeefd735ec329d286ae145b2eddb16fa025e5fb8cc6f715c5b133fd3",
+        "gitBlob": "4a49adfedbc84301e88d524d71b766a7ad785d14"
+      }
+    },
+    {
+      "role": "crossActualGreenFullEnvelope",
+      "identity": {
+        "bytes": 166444,
+        "sha256": "c1ec7ed1270235d520b436e28cbdeb0988bc1af4c8473b5226e34b081b305981",
+        "gitBlob": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b"
+      }
+    },
+    {
+      "role": "crossOriginalValidationIncompleteGuard",
+      "identity": {
+        "bytes": 146237,
+        "sha256": "22813b7c3fa165d506e7eb487b5be229ea7910d4208c73a930a9621978a4703e",
+        "gitBlob": "736df253a457b9a7260febbd74071ed2615be2bd"
+      }
+    },
+    {
+      "role": "crossOriginalValidationIncompleteParity",
+      "identity": {
+        "bytes": 169081,
+        "sha256": "0863878d6085e61a91e8f96d970bdb9cd83a3ea6ce0a174c80bf0a0eb5cd9175",
+        "gitBlob": "7567c92bcc194c2de5e26abfed0a8604522fe589"
+      }
+    },
+    {
+      "role": "isolatedRecoveryR1Guard",
+      "identity": {
+        "bytes": 167262,
+        "sha256": "9375e23aeba4b871ad016c82c76ae539f769bea1a5f2ab72c63a8d615af24585",
+        "gitBlob": "0fdbe9a84daa354332d61c13a532090199d50c88"
+      }
+    },
+    {
+      "role": "isolatedRecoveryR1Parity",
+      "identity": {
+        "bytes": 133047,
+        "sha256": "d94fb2464c47195fadfcaf311732025c578e8084b9b7ef701dd52c76e6aeca77",
+        "gitBlob": "97bfd42e46bc1dd2160f8c9826de68219303b67d"
+      }
+    },
+    {
+      "role": "isolatedRecoveryR1CompositeActualPublicationReadback",
+      "identity": {
+        "bytes": 231365,
+        "sha256": "393a6ee912d88ff0faf979c8229a705578e1bd6723a3cf58769449205dbe2335",
+        "gitBlob": "e695dd8aca0559256e01175166317ab905f467a4"
+      }
+    },
+    {
+      "role": "combinedR1RootActual",
+      "identity": {
+        "bytes": 25481,
+        "sha256": "54c837bf45a6318cf43452ba3b6e66e341d7c4153a1d4d5d93a323bb24b9196d",
+        "gitBlob": "72db8984a98696287225899a3bf0c31bfd57a71f"
+      }
+    },
+    {
+      "role": "combinedR1IndependentActual",
+      "identity": {
+        "bytes": 80224,
+        "sha256": "aa8a8c7f6fa8b49593a9e233ae8ae9b0eb4848365915dde71bb7cb81b19e1f4e",
+        "gitBlob": "0669feaf0e8759ad2fd4330efe315c5540b55252"
+      }
+    },
+    {
+      "role": "combinedTestGuardR2",
+      "identity": {
+        "bytes": 25359,
+        "sha256": "dc7aebf5607cb8150b04c23b5e5a36f83735e5081ba18b78586ef30283d77843",
+        "gitBlob": "4d3004a5c76544dc8e47b842e981f22e7fbcdcc3"
+      }
+    },
+    {
+      "role": "combinedTestRendererR2",
+      "identity": {
+        "bytes": 97016,
+        "sha256": "9b67a3fa8a4fa07231f986881698b13ffc75c2171f18ed9f919a30e7875d145b",
+        "gitBlob": "6580a4f45747c0f079e37e0f3db042eca6c33c9e"
+      }
+    },
+    {
+      "role": "combinedTestRootActual",
+      "identity": {
+        "bytes": 29341,
+        "sha256": "fe81d1f6216e3aa89c456d22cd0a8c7ff735fb255902cfc99e915fae030875e8",
+        "gitBlob": "19ae837ffe2a9b1caaa2496cb08ac24841900752"
+      }
+    },
+    {
+      "role": "combinedTestIndependentActual",
+      "identity": {
+        "bytes": 57841,
+        "sha256": "a8736b98140b38c92578210fd9064f6952a96e3ea07df5471d9f88b11849f37e",
+        "gitBlob": "156f7b1977379568bcd7aa487be21d7ef95880f1"
+      }
+    },
+    {
+      "role": "rendererInitialInstalledAdmission",
+      "identity": {
+        "bytes": 156717,
+        "sha256": "76e5d3440254a5e778eb700eb306251a779d0f5a8c6dfe8c47e740895b316154",
+        "gitBlob": "a342571a13ce31b46e9782356cc23527c61ee644"
+      }
+    },
+    {
+      "role": "rendererAdditionalInstalledAdmission",
+      "identity": {
+        "bytes": 167326,
+        "sha256": "c880352c1d6cc0ac0c2c37bfb4d18d3a9718170298e814cb884f67fbc7e0413b",
+        "gitBlob": "e37de06a48b2d958fbd54de599ca5f933e3c23b0"
+      }
+    },
+    {
+      "role": "rendererCombinedFeasibility",
+      "identity": {
+        "bytes": 53474,
+        "sha256": "1ce3d9e96b5a8a100bccb1caa7bb1ab2ee8f234cb2afd35e940eb298c64c1238",
+        "gitBlob": "6ee0aadb457acd58e35df41c8fa8492ff6654933"
+      }
+    },
+    {
+      "role": "rendererPathDataAdmission",
+      "identity": {
+        "bytes": 8151,
+        "sha256": "9ceef73e09588b59852323fba2d2396cd83b2a524849a8cfb20b4bb278daa323",
+        "gitBlob": "d688c295815c064fad5e6d4f3a7481c083c6cd06"
+      }
+    },
+    {
+      "role": "combinedSemanticSourceGuide",
+      "identity": {
+        "bytes": 13467,
+        "sha256": "fd44402a9555871ddc2d26aa4ff87337c2591995f78f6642eab63142e8645254",
+        "gitBlob": "969d58ae7fb9788b0266ff6cefd8c9cd2aad7231"
+      }
+    },
+    {
+      "role": "combinedWholeTestsR2Proposal",
+      "identity": {
+        "bytes": 24017,
+        "sha256": "1532df713cd8c75025fccaaecbc7041e05f3ced87d1894f041a97a01e6d8f9a1",
+        "gitBlob": "061cb0545b58d847ef69b05baa2b140065456730"
+      }
+    }
+  ]
+}
