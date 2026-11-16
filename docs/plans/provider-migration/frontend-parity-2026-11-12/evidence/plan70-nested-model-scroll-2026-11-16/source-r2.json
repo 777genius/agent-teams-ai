@@ -1,0 +1,443 @@
+{
+  "schemaVersion": 1,
+  "kind": "Plan70-independent-actual-source-R2",
+  "status": "ACCEPT_SOURCE_ONLY",
+  "reviewer": "installer_review",
+  "selectedParent": "f8d3b9d2fb07ec4cb26f28bb76d9fc15fa3b49ab",
+  "selectedTree": "360c8a92c25e65959cf1b53e00587a1911c225c8",
+  "selectedPlan": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/70-nested-model-scroll-and-adjacent-guard-2026-11-16.md",
+    "gitBlob": "61661bc95399364db94536924e55e182db2dacaa",
+    "sha256": "69396e4ccb4d167d333cf64c7d22033b3a6d2224346fcd7ec6b9162bc22a1208"
+  },
+  "packetBindings": [
+    {
+      "path": "frontend-proposal/nested-scroll-proposal/implementation/manifest.json",
+      "bytes": 2683,
+      "lines": 72,
+      "sha256": "13d7df5ac28f569c21d3653145f742e164ae520336fa915518b7bb1f52957c3d",
+      "gitBlob": "235bdb0dd435c04097a91c8877885b69d70555b4"
+    },
+    {
+      "path": "frontend-proposal/nested-scroll-proposal/implementation/candidate.patch",
+      "bytes": 16933,
+      "lines": 265,
+      "sha256": "92707c18a7da98d0603d9a8f15f6a9d64a10a023b3544f3442a0523478e07305",
+      "gitBlob": "9a3e78faf70b6284aae3ff0e6a7050eabd28f578"
+    },
+    {
+      "path": "frontend-proposal/nested-scroll-proposal/implementation/source-r1.md",
+      "bytes": 6433,
+      "lines": 43,
+      "sha256": "1849c8fa2d2c4954714d417ba78cc760acf50e444acc9ad136ed654c6196e042",
+      "gitBlob": "630a7796df1bac6b1d54f3b7cc345e0cf4ef96db"
+    },
+    {
+      "path": "frontend-proposal/nested-scroll-proposal/implementation/preservation-proof.json",
+      "bytes": 7206,
+      "lines": 240,
+      "sha256": "8fe94ab38abf9547a2f1e773d8438d31e61500b6549470416262b4667c497063",
+      "gitBlob": "636e1ab7c5058a169d7e6cb35787b2dd2ee85eef"
+    },
+    {
+      "path": "frontend-proposal/nested-scroll-proposal/implementation/official-preimages.json",
+      "bytes": 266613,
+      "lines": 1,
+      "sha256": "b8db2564c9fa0ac2528924480cacf94041d7cd0cf9268bc9278f08fbcf94c697",
+      "gitBlob": "cb8cc9d544f5850f7ae0f066a487b23cb1c556bb"
+    }
+  ],
+  "files": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "before": {
+        "bytes": 30733,
+        "lines": 548,
+        "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e",
+        "gitBlob": "1c11809c6458f829bd9bb6995aea2ad60b85511e"
+      },
+      "after": {
+        "bytes": 33220,
+        "lines": 585,
+        "sha256": "f3e80885a6855428d8223ba54544928c4675f9d121b440a876534cdf3334816e",
+        "gitBlob": "e05bb6778fe2618f94dd4310fe6dad3c10a83ae0"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "before": {
+        "bytes": 162195,
+        "lines": 2689,
+        "sha256": "e2c1fdbc87395de78a9faed0a1a9a50d1861e02d0bdb686e3530e20eb078fc02",
+        "gitBlob": "a67601fe1a6785b233aef6cacf494661100df472"
+      },
+      "after": {
+        "bytes": 174969,
+        "lines": 2893,
+        "sha256": "ba573ef65142ec600ea0067c7dfdd48468bdcbd53b3172402481bbc93b3379e9",
+        "gitBlob": "3eb5191149ed77e27365af1193ece1b9a437f23d"
+      }
+    }
+  ],
+  "patchProof": {
+    "paths": 2,
+    "hunks": 3,
+    "forwardExact": true,
+    "reverseExact": true,
+    "addedLines": 242,
+    "removedLines": 1
+  },
+  "originalRegions": {
+    "originalWaitRead": {
+      "bytes": 793,
+      "lines": 24,
+      "sha256": "a1b1d26ea3873cf48398642707799c26e672be2dcb1b59b146b425baae8c7d6c",
+      "gitBlob": "8e9e8df6ea7a3a9eb06536beb4c6056cfaa93262"
+    },
+    "originalPositiveBranchAndWheelLoop": {
+      "bytes": 1103,
+      "lines": 25,
+      "sha256": "4eefe2cbef4ee16bcf2a5c6ed2f1abed8d101c457cfb25502bd074b4cb43033e",
+      "gitBlob": "5d42d2d796f6db6b10167c44cfd4df4028ab4630"
+    },
+    "originalBeforeScrollTo": {
+      "bytes": 25018,
+      "lines": 431,
+      "sha256": "e3b89e33c15083df725f418360755e91ca338ec4b05aedb1abfdf65fde76f0eb",
+      "gitBlob": "18d958b258949247c519386263da48b19ad22b68"
+    },
+    "originalAfterScrollTo": {
+      "bytes": 3406,
+      "lines": 73,
+      "sha256": "ed5c1fef2fdff4cb30cd212e602dacd3b5aedb42717d09f5ebe62dbb650b75bb",
+      "gitBlob": "e11e67f21e9e80a957bf3e3d3d824f4dd9c6132d"
+    },
+    "completeOriginalSuitePrefix": {
+      "bytes": 162195,
+      "lines": 2689,
+      "sha256": "e2c1fdbc87395de78a9faed0a1a9a50d1861e02d0bdb686e3530e20eb078fc02",
+      "gitBlob": "a67601fe1a6785b233aef6cacf494661100df472"
+    },
+    "newFallback": {
+      "bytes": 2524,
+      "lines": 38,
+      "sha256": "8631080f45b9901421136eb874935f970e39299645cc594e7fae8f56968fbaaa",
+      "gitBlob": "45994a50af34ad409ab9e77ccaa716a844bd7bb0"
+    },
+    "appendedSuite": {
+      "bytes": 12774,
+      "lines": 204,
+      "sha256": "93f048fd4f895d9e2922031078436a7dde6cf9be7ab1b24b06fe2ccc11ac3718",
+      "gitBlob": "6ea9264181a29b94a783ffbbef9752624cdc54fb"
+    }
+  },
+  "checks": [
+    {
+      "check": "frozen manifest exact",
+      "pass": true
+    },
+    {
+      "check": "frozen patch exact",
+      "pass": true
+    },
+    {
+      "check": "author source R1 exact",
+      "pass": true
+    },
+    {
+      "check": "selected exact plan and prior independent R2",
+      "pass": true
+    },
+    {
+      "check": "plan body remains exact",
+      "pass": true
+    },
+    {
+      "check": "exactly selected two existing paths",
+      "pass": true
+    },
+    {
+      "check": "after directory has no extra source leaf",
+      "pass": true
+    },
+    {
+      "check": "two official selected-parent readbacks",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-ui-controls.ts exact before hash/bytes/lines",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-ui-controls.ts exact after hash/bytes/lines",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-ui-controls.ts official exact before bytes",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts exact before hash/bytes/lines",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts exact after hash/bytes/lines",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts official exact before bytes",
+      "pass": true
+    },
+    {
+      "check": "complete patch parses to two paths three hunks",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-ui-controls.ts full forward patch exact",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-ui-controls.ts full reverse patch exact",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts full forward patch exact",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts full reverse patch exact",
+      "pass": true
+    },
+    {
+      "check": "one outer guard removal only",
+      "pass": true
+    },
+    {
+      "check": "complete controls inverse recovers every original byte",
+      "pass": true
+    },
+    {
+      "check": "full waitRead bytes exact",
+      "pass": true
+    },
+    {
+      "check": "entire old positive branch and following wheel loop exact",
+      "pass": true
+    },
+    {
+      "check": "all controls before scrollTo exact",
+      "pass": true
+    },
+    {
+      "check": "all controls after scrollTo exact",
+      "pass": true
+    },
+    {
+      "check": "helper585 naturally below800",
+      "pass": true
+    },
+    {
+      "check": "full original162195-byte test file exact prefix",
+      "pass": true
+    },
+    {
+      "check": "suite appends204 lines with no original edits",
+      "pass": true
+    },
+    {
+      "check": "no skip/only/todo introduced",
+      "pass": true
+    },
+    {
+      "check": "original exact selector/count/text/nearest parent preserved",
+      "pass": true
+    },
+    {
+      "check": "new branch only empty viewport plus nonzero target",
+      "pass": true
+    },
+    {
+      "check": "finite positive exposed rectangle predicate",
+      "pass": true
+    },
+    {
+      "check": "original scrollability predicate reused",
+      "pass": true
+    },
+    {
+      "check": "fallback walks only original parent chain",
+      "pass": true
+    },
+    {
+      "check": "both relevant clipping axes respected",
+      "pass": true
+    },
+    {
+      "check": "candidate intersects original viewport",
+      "pass": true
+    },
+    {
+      "check": "all candidate clipping ancestors visited",
+      "pass": true
+    },
+    {
+      "check": "intervening non-scrollable clip constrains reveal",
+      "pass": true
+    },
+    {
+      "check": "multi-level offscreen scrollport becomes exposure target",
+      "pass": true
+    },
+    {
+      "check": "horizontal non-overlap refuses",
+      "pass": true
+    },
+    {
+      "check": "one exposed center point only",
+      "pass": true
+    },
+    {
+      "check": "hit candidate or descendant before owner join",
+      "pass": true
+    },
+    {
+      "check": "owner resolution starts at actual hit itself",
+      "pass": true
+    },
+    {
+      "check": "direction aims at current reveal port and clamps600",
+      "pass": true
+    },
+    {
+      "check": "direction capacity/nonfinite scrollTop refuses",
+      "pass": true
+    },
+    {
+      "check": "only fallback success is visiblefalse",
+      "pass": true
+    },
+    {
+      "check": "new calculation has no DOM scroll/focus/dispatch/await effects",
+      "pass": true
+    },
+    {
+      "check": "no added clock or timer in fallback",
+      "pass": true
+    },
+    {
+      "check": "ordinary exact wheel budget unchanged",
+      "pass": true
+    },
+    {
+      "check": "inner retained guard directly before every actual read",
+      "pass": true
+    },
+    {
+      "check": "no new post-evaluate pre-wheel guard claim",
+      "pass": true
+    },
+    {
+      "check": "new tests use actual controls and generated expression",
+      "pass": true
+    },
+    {
+      "check": "test fixture returns raw VM value and does not stub success",
+      "pass": true
+    },
+    {
+      "check": "test sends only original mouseWheel method/type",
+      "pass": true
+    },
+    {
+      "check": "test geometry mutation driven by recorded wheel",
+      "pass": true
+    },
+    {
+      "check": "visible inner remains no-hit/no-input with one read",
+      "pass": true
+    },
+    {
+      "check": "below and above cases share actual original loop",
+      "pass": true
+    },
+    {
+      "check": "self-hit and ordinary descendant both covered",
+      "pass": true
+    },
+    {
+      "check": "old positive branch adds no hit per successful scene",
+      "pass": true
+    },
+    {
+      "check": "multi-level expected500 distinguishes wrong inner aim",
+      "pass": true
+    },
+    {
+      "check": "two clipping ancestors/both axes exact point asserted",
+      "pass": true
+    },
+    {
+      "check": "twelve explicit refusal variants present",
+      "pass": true
+    },
+    {
+      "check": "refusal deadline uses existing fake Date and resets",
+      "pass": true
+    },
+    {
+      "check": "refused read asserts null and no wheel/step",
+      "pass": true
+    },
+    {
+      "check": "explicit wheel budget retains final read without second input",
+      "pass": true
+    },
+    {
+      "check": "changed ownership exact Error before next read/input",
+      "pass": true
+    }
+  ],
+  "inertChecksPassed": 66,
+  "blockingFindings": [],
+  "semanticReview": [
+    {
+      "topic": "Empty viewport only",
+      "conclusion": "The fallback is entered only for the formerly dead nearest-scrollport branch with a nonzero target. The original positive branch and wheel loop are byte-identical; a fallback result cannot satisfy target readiness."
+    },
+    {
+      "topic": "Clipping and owner",
+      "conclusion": "The exposed candidate rectangle is clipped by the viewport and every clipping ancestor on the relevant axes. Non-scrollable intermediate clips constrain the reveal rectangle. The single center hit must be in the candidate and resolve from the hit itself to that exact nearest vertical owner; foreign overlays or nested owners refuse."
+    },
+    {
+      "topic": "Multiple offscreen ports",
+      "conclusion": "An unexposed scrolling ancestor becomes the next reveal rectangle. The eventual delta follows that port rather than the originally clipped target contents. Both above-viewport and intermediate-port geometry are discriminated by exact expected deltas in appended actual-expression cases."
+    },
+    {
+      "topic": "Authority and bounds",
+      "conclusion": "Only the adjacent outer scrollTo guard is removed. The unchanged waitRead guard remains before every read/retry and next loop iteration. This does not create or claim a new post-evaluate pre-wheel guard. Wheel/read budgets, timing, exception behavior and all other controls remain exact."
+    },
+    {
+      "topic": "Regression meaning",
+      "conclusion": "The complete old162195-byte suite remains a prefix. Appended fixtures execute the real generated expression, change geometry only after recorded wheel commands, assert exact command/step/guard sequences, exercise twelve refusals and preserve the final-read budget. These are reviewed source assertions, not executed passes."
+    }
+  ],
+  "qualificationLimits": [
+    "No canonical TypeScript/lint/unit/E2E execution was performed; resulting-head original CI remains required.",
+    "No exclusive historic Resume failure cause, packaged Windows10-second recovery guarantee or ARM Retry attribution is claimed.",
+    "Conservative refusal at the exposed center remains intentional; no alternate point search, global fallback, DOM scroll assignment, physical click retry or provider policy change is selected.",
+    "Original failed receipts remain failures; source acceptance does not transfer runtime qualification."
+  ],
+  "execution": {
+    "project": false,
+    "compiler": false,
+    "linter": false,
+    "test": false,
+    "provider": false,
+    "native": false,
+    "gui": false,
+    "ciObservation": false,
+    "ciAction": false,
+    "remoteMutation": false,
+    "sourceEdits": false
+  }
+}

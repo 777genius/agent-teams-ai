@@ -1,0 +1,520 @@
+{
+  "kind": "original-active-quit75cf-failure-r1",
+  "status": "INCOMPLETE_ORIGINAL",
+  "head": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "runId": 43959134362,
+  "jobId": 133621515713,
+  "artifactId": 14281003349,
+  "platform": "darwin-arm64",
+  "archive": {
+    "path": "desktop-v2-active-quit-75cf/original-artifact.zip",
+    "bytes": 254907,
+    "sha256": "29a2302d0625c34b4cc917a6d0ab8b0d6638e4aef7a88e15edcaa274e127a52e"
+  },
+  "jobLog": {
+    "path": "desktop-v2-active-quit-75cf/original-job.log",
+    "bytes": 148972,
+    "sha256": "1d0f42d99db006a88d0508b54e50b940b00d53c40221a997238bdd4674277338"
+  },
+  "receipt": {
+    "path": "desktop-v2-active-quit-75cf/extracted/TEST-desktop-backend-j7ffqN/desktop-backend-receipt.json",
+    "bytes": 729445,
+    "sha256": "3e84f6d80be56ea4ae3ed42f65ae1ba621a222519cb391415bff89b77de58484"
+  },
+  "members": [
+    {
+      "path": "TEST-desktop-backend-j7ffqN/desktop-app.log",
+      "bytes": 12429,
+      "sha256": "9e4a30c78a708b1db718b57f4265b4bd3671e319ab268bbecf82ff5d2dddac57",
+      "crc32": "b36fb4c0"
+    },
+    {
+      "path": "TEST-desktop-backend-j7ffqN/desktop-descriptor.json",
+      "bytes": 2511,
+      "sha256": "5c98844162a8ab35a03483142455bf6f307faeccc6ee003d3c68114f945f0de8",
+      "crc32": "a94cb924"
+    },
+    {
+      "path": "TEST-desktop-backend-j7ffqN/host-profile.json",
+      "bytes": 5787,
+      "sha256": "a0bdb17c041edef6f793e9b194fab1936c6e488e2fda4d8726105e259acdfbff",
+      "crc32": "4a46b72e"
+    },
+    {
+      "path": "TEST-desktop-backend-j7ffqN/desktop-backend-receipt.json",
+      "bytes": 729445,
+      "sha256": "3e84f6d80be56ea4ae3ed42f65ae1ba621a222519cb391415bff89b77de58484",
+      "crc32": "423c540a"
+    },
+    {
+      "path": "TEST-desktop-backend-j7ffqN/hoststore/management-commands/7bc9ffcd810865711a786aee02271b896b37d9b415d1c929c83c1db9994a495e.json",
+      "bytes": 2739,
+      "sha256": "490c0c2409a01e85f4199a94ae3e0aa6239633043790452580fafcdebed9ae89",
+      "crc32": "edc59c75"
+    },
+    {
+      "path": "TEST-desktop-backend-j7ffqN/hoststore/runtime-sources/index.json",
+      "bytes": 2135,
+      "sha256": "f9f4a71b19ce37d0a3b3fcc15858cf3848fb7fd4583acc229132fe00701013de",
+      "crc32": "6d7b0e0a"
+    },
+    {
+      "path": "TEST-desktop-backend-j7ffqN/hoststore/runtime-sessions/c2c947c4b9fd613e893bf7d74b03e50a7800670195fcaa782a0a9a752defa907/c471b7b558ad221cf349a98e9c2ba03c59a78062f56e1f9875f43e24e57170b6.json",
+      "bytes": 714,
+      "sha256": "4d9792b3f8a80c7656dc00fc9f64a3056275ece9f88d981e820e74ca17992828",
+      "crc32": "dc028c0a"
+    },
+    {
+      "path": "TEST-desktop-backend-j7ffqN/hoststore/tasks/test-desktop-backend/aa1d2764-b791-5177-8d24-dedbf67c0415.json",
+      "bytes": 868,
+      "sha256": "2b3d51e69766ef868214ae164aa11cd5296e990ed26b9794fa1a19d411639284",
+      "crc32": "31ec527f"
+    },
+    {
+      "path": "TEST-desktop-backend-j7ffqN/hoststore/teams/test-desktop-backend/.host-owner/commands/73d51a47022bad35094134a650a17f09916cdc1f2cab13ca2201e1ac8ef59773.json",
+      "bytes": 2335,
+      "sha256": "15dcae3a068836071335f4430fff6acafafd2dff4d95888742be03a4e8ec595c",
+      "crc32": "5ecd84c7"
+    },
+    {
+      "path": "TEST-desktop-backend-j7ffqN/hoststore/teams/test-desktop-backend/.host-owner/launches/b826d6db04163c93e17e0e0091381b56a109b420bf027af5f6064a05e139d5c8.json",
+      "bytes": 2094,
+      "sha256": "780e4cc1d7e42ed4bf5fd1765c56975c291a9954cb01168ded303f91c1e3058e",
+      "crc32": "20c79136"
+    },
+    {
+      "path": "TEST-desktop-backend-j7ffqN/hoststore/teams/test-desktop-backend/.host-owner/state.json",
+      "bytes": 1225,
+      "sha256": "e677c73997ed00f5f2c801cb61890707e8605364f761df70ca0aa6eb2f7961c9",
+      "crc32": "7b24fa79"
+    },
+    {
+      "path": "TEST-desktop-backend-j7ffqN/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+      "crc32": "9fc3bdb4"
+    },
+    {
+      "path": "TEST-desktop-backend-j7ffqN/ui-failure.png",
+      "bytes": 49411,
+      "sha256": "3e7164f842a8ea3ce37500c2556b4e37040cb38e98cbf629e0b9177824fe3396",
+      "crc32": "c0968651"
+    },
+    {
+      "path": "TEST-desktop-backend-j7ffqN/ui-seed-receipt.json",
+      "bytes": 2335,
+      "sha256": "15dcae3a068836071335f4430fff6acafafd2dff4d95888742be03a4e8ec595c",
+      "crc32": "5ecd84c7"
+    },
+    {
+      "path": "TEST-desktop-backend-j7ffqN/userData/logs/app-errors.ndjson",
+      "bytes": 29083,
+      "sha256": "c1a8217610f99a7b17ecb62e2ed473ff83753aad93eb1a76862277cb16d80301",
+      "crc32": "4ef616c4"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1090,
+      "sha256": "9fdabc3e7f33787e2c168eccd040883d033baf7919163d3cc040570da38d4ecd",
+      "crc32": "003c5a87"
+    },
+    {
+      "path": "host-emulated-opencode-v2-inputs.json",
+      "bytes": 2374,
+      "sha256": "ee62b2a806251bcd04423b676c42f24e229a79ed4e76c9bf4f33047967fa1883",
+      "crc32": "5f0f07fa"
+    },
+    {
+      "path": "host-emulated-opencode-v2-quit-active-ui.log",
+      "bytes": 655,
+      "sha256": "5d7f79675ff7fee35691209897d1a09581c4cf484ee30b9cd63571b57090ff22",
+      "crc32": "7019616a"
+    }
+  ],
+  "sources": [
+    {
+      "path": "frontend-proposal/plan63-prospective-r2/source/scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 55757,
+      "sha256": "bbd6647969c1ab0ae125b6a5e0685ca0f112dca05661a6c04b37c4fbee56a33e",
+      "repoPath": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "gitBlob": "9c724c3895e467bc1db062e5015ded70c30e65e4",
+      "originalPinPresent": true
+    },
+    {
+      "path": "frontend-proposal/v2-four-rows-r1/source/scripts/legacy-agent-host/desktop-captured-app.ts",
+      "bytes": 49613,
+      "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+      "repoPath": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "originalPinPresent": true
+    },
+    {
+      "path": "desktop-v2-pending-quit-75cf/source/scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "bytes": 29580,
+      "sha256": "2b954cec0846e30f530ae615e63ac05ae9a3969e0338e5d2ab03ec80a62a0f0d",
+      "repoPath": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "gitBlob": "d2f58f7dd6ce6b05ff6200fabe67a4945f94a506",
+      "originalPinPresent": true
+    },
+    {
+      "path": "desktop-v2-pending-quit-75cf/source/scripts/legacy-agent-host/desktop-proof-mode.ts",
+      "bytes": 26007,
+      "sha256": "e96f15e68a59f991034d68ca37b0125d4c798cd06eb34d58ceeb2f3e537966de",
+      "repoPath": "scripts/legacy-agent-host/desktop-proof-mode.ts",
+      "gitBlob": "e2e7029c56de6343eb4ad2a2395044efd009ae0b",
+      "originalPinPresent": true
+    },
+    {
+      "path": "desktop-v2-pending-quit-75cf/source/scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+      "bytes": 20245,
+      "sha256": "4f3c5460147352c8bbc472bac0e74ae54c646425d23ffb3a97bc0a8d9886b40e",
+      "repoPath": "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+      "gitBlob": "4415bad7752c91a0c0fbad789f5c712908643425",
+      "originalPinPresent": true
+    },
+    {
+      "path": "desktop-v2-review-75cf/source/scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+      "bytes": 17725,
+      "sha256": "fac4d4bf3d7b662efe23f921f05d5a76277f294ace34de3053c3447d0dd4347f",
+      "repoPath": "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+      "gitBlob": "79c288d8cd5f6dc432177a2047ce517f174d11b4",
+      "originalPinPresent": true
+    },
+    {
+      "path": "desktop-v2-pending-quit-75cf/source/scripts/e2e/comment-notification/cdp.mjs",
+      "bytes": 3704,
+      "sha256": "8e70fecbb1f2107abffa91d78644ee74f8e34546c8117587661f8376c27998aa",
+      "repoPath": "scripts/e2e/comment-notification/cdp.mjs",
+      "gitBlob": "9397505b7889db88ef103dca62287e3d02a88cc9",
+      "originalPinPresent": false
+    }
+  ],
+  "sourcePins": {
+    "before": 1777,
+    "after": 1777,
+    "arraysEqual": true,
+    "extraUnpinnedOriginalDependency": "scripts/e2e/comment-notification/cdp.mjs"
+  },
+  "inputPreparation": {
+    "evidence": {
+      "path": "desktop-v2-active-quit-75cf/extracted/host-emulated-opencode-v2-inputs.json",
+      "bytes": 2374,
+      "sha256": "ee62b2a806251bcd04423b676c42f24e229a79ed4e76c9bf4f33047967fa1883"
+    },
+    "status": "READY",
+    "productQualified": false,
+    "bunSha256": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+    "nativeCustodyManifestSha256": "89b0baf9c4fb0a9b408824ebd6936a756846b4072a02097d9460b3ea4fca0c55",
+    "embeddedManifestSha256": "a6091937d1c8686b7e1f125b2ef69c52146867b208517eb0fab4cb7ea18c2204"
+  },
+  "firstFailure": {
+    "message": "CDP command timed out: Runtime.evaluate",
+    "projectedFrames": [],
+    "originalRawStack": "scripts/e2e/comment-notification/cdp.mjs:58:16",
+    "sourceBoundary": "After captured binding/home success, before completed prepareDesktopNativeStop and before nativeQuitMode. Possible pending preparatory CDP calls are global catalog, launch read or project catalog; original expression/request correlation is unavailable.",
+    "firstActiveRuntimeOrInputProofReached": false,
+    "scenarioQuitReached": false,
+    "fallbackFailureCloseReached": true,
+    "coldReadbackReached": false
+  },
+  "snapshot": {
+    "selectedTeamName": null,
+    "inputEvents": [],
+    "dialogs": [],
+    "screenshot": {
+      "path": "desktop-v2-active-quit-75cf/extracted/TEST-desktop-backend-j7ffqN/ui-failure.png",
+      "bytes": 49411,
+      "sha256": "3e7164f842a8ea3ce37500c2556b4e37040cb38e98cbf629e0b9177824fe3396"
+    },
+    "dimensions": [
+      1024,
+      681
+    ],
+    "visual": "Dashboard with original TEST sidebar seed and passive provider loading; no selected Team/Composer"
+  },
+  "seed": {
+    "launch": {
+      "path": "desktop-v2-active-quit-75cf/extracted/TEST-desktop-backend-j7ffqN/hoststore/teams/test-desktop-backend/.host-owner/launches/b826d6db04163c93e17e0e0091381b56a109b420bf027af5f6064a05e139d5c8.json",
+      "bytes": 2094,
+      "sha256": "780e4cc1d7e42ed4bf5fd1765c56975c291a9954cb01168ded303f91c1e3058e"
+    },
+    "attempt": {
+      "attemptId": "initial-f08df4f8894318f7120d311d710c88a0b5734aafe8643491f9fe6e4ebada822b",
+      "hostIncarnation": "820298b6-48bd-4480-ab3b-ffc8f20b77b8",
+      "startedAtMs": 0,
+      "deadlineMs": 0,
+      "claimed": false,
+      "status": "not-started",
+      "reason": "not-started",
+      "nativeReady": false,
+      "contextApplied": false,
+      "everReady": false,
+      "usable": false,
+      "controlAvailable": false,
+      "noAllocation": false
+    },
+    "runtimeSession": {
+      "path": "desktop-v2-active-quit-75cf/extracted/TEST-desktop-backend-j7ffqN/hoststore/runtime-sessions/c2c947c4b9fd613e893bf7d74b03e50a7800670195fcaa782a0a9a752defa907/c471b7b558ad221cf349a98e9c2ba03c59a78062f56e1f9875f43e24e57170b6.json",
+      "bytes": 714,
+      "sha256": "4d9792b3f8a80c7656dc00fc9f64a3056275ece9f88d981e820e74ca17992828"
+    },
+    "phase": "closed",
+    "custody": "released",
+    "nativeReady": false,
+    "inputs": [],
+    "onlyCommand": {
+      "path": "desktop-v2-active-quit-75cf/extracted/TEST-desktop-backend-j7ffqN/hoststore/teams/test-desktop-backend/.host-owner/commands/73d51a47022bad35094134a650a17f09916cdc1f2cab13ca2201e1ac8ef59773.json",
+      "bytes": 2335,
+      "sha256": "15dcae3a068836071335f4430fff6acafafd2dff4d95888742be03a4e8ec595c"
+    }
+  },
+  "management": {
+    "journal": {
+      "path": "desktop-v2-active-quit-75cf/extracted/TEST-desktop-backend-j7ffqN/hoststore/management-commands/7bc9ffcd810865711a786aee02271b896b37d9b415d1c929c83c1db9994a495e.json",
+      "bytes": 2739,
+      "sha256": "490c0c2409a01e85f4199a94ae3e0aa6239633043790452580fafcdebed9ae89"
+    },
+    "kind": "runtime.source",
+    "phase": "published",
+    "resourceHeld": false,
+    "revision": "0add450b8610b23a7e69b0d36ffc4d29e6cb6379032565336d5dfa73545f84d0",
+    "profileHash": "e82eb3e4dba46dd9c340a3c8729e022234a827e060db93011cf9e92cf3f03937"
+  },
+  "metadata": {
+    "events": [
+      {
+        "timestamp": "2026-11-16T23:12:42.879Z",
+        "profileHash": "e82eb3e4dba46dd9c340a3c8729e022234a827e060db93011cf9e92cf3f03937",
+        "mode": "provider",
+        "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+        "pid": 11321,
+        "stage": "ready",
+        "startIdentityHash": "e04a58c0a1e0d71a21d4644be30bfada2ae4ef00f2b868c59957218fa00e0020",
+        "hostPid": 8816
+      },
+      {
+        "timestamp": "2026-11-16T23:12:45.071Z",
+        "profileHash": "e82eb3e4dba46dd9c340a3c8729e022234a827e060db93011cf9e92cf3f03937",
+        "mode": "provider",
+        "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+        "pid": 11321,
+        "stage": "released",
+        "startIdentityHash": "e04a58c0a1e0d71a21d4644be30bfada2ae4ef00f2b868c59957218fa00e0020",
+        "hostPid": 8816
+      },
+      {
+        "timestamp": "2026-11-16T23:12:50.739Z",
+        "profileHash": "e82eb3e4dba46dd9c340a3c8729e022234a827e060db93011cf9e92cf3f03937",
+        "mode": "directory",
+        "providerHash": null,
+        "stage": "read-failed",
+        "readStage": "native-client",
+        "reason": "unknown",
+        "elapsedMs": 5647,
+        "deadlineExpired": false,
+        "aborted": true,
+        "hostPid": 8816
+      }
+    ],
+    "matchedPairs": 1,
+    "cleanup": [
+      {
+        "timestamp": "2026-11-16T23:12:45.690Z",
+        "message": "Shutdown step wait started {\"label\":\"agent backend cleanup\"}"
+      },
+      {
+        "timestamp": "2026-11-16T23:12:50.895Z",
+        "message": "Shutdown step wait finished {\"label\":\"agent backend cleanup\"}"
+      },
+      {
+        "timestamp": "2026-11-16T23:12:50.950Z",
+        "message": "Shutdown stop all teams took 8ms; OpenCode lane stops confirmed=0 unconfirmed=0 pending=0 capturedStopAuthority=false"
+      }
+    ],
+    "requestCorrelationAbsent": true
+  },
+  "failureQuit": {
+    "attempted": true,
+    "scope": "Close only the verified TEST window before stopping its dev wrapper",
+    "reply": "unconfirmed",
+    "reason": "timeout",
+    "listenerAbsent": true
+  },
+  "quitRequested": true,
+  "cleanup": {
+    "processGroup": 7692,
+    "remaining": [],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostObserved": false,
+    "capturedHostAbsent": null,
+    "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+  },
+  "originalRequestedQuitExit": {
+    "initialExitCode": 0,
+    "initialSignalCode": null,
+    "exitCode": 0,
+    "signalCode": null
+  },
+  "beforeHarnessCleanup": [],
+  "finalSentinelCensus": {
+    "invocations": [
+      {
+        "executable": "claude-multimodel",
+        "allowed": true,
+        "argc": 1,
+        "command": null,
+        "flags": [
+          "--version"
+        ]
+      }
+    ],
+    "preQuitCount": null,
+    "postQuitOrCleanupInvocations": null,
+    "refusedInvocations": [],
+    "qualification": "Sentinels refuse nonversion commands without launching providers. Post-Quit/cleanup refusals are retained legacy maintenance gaps; they do not prove native execution or full fork-free/P5 qualification."
+  },
+  "limits": [
+    "Input preparation READY is not active Runtime/Quit or product acceptance.",
+    "No completed actual setup, Composer input pair, active/queued custody seal, normative Quit witness or cold readback.",
+    "The one observed metadata release pair is not a blanket all-child or captured-Host physical absence proof.",
+    "Outer hostPid assignment follows successful setup; its absent capture does not mean Host8816 never existed.",
+    "CDP awaitPromise timeout alone cannot distinguish renderer scheduling, IPC latency or exact pending catalog operation.",
+    "No source correction or afterimage selected. No local project/compiler/test/provider/GUI execution, CI polling or remote mutation."
+  ],
+  "checks": [
+    {
+      "check": "exact official archive metadata",
+      "pass": true
+    },
+    {
+      "check": "exact official decoded log metadata",
+      "pass": true
+    },
+    {
+      "check": "18 exact safe unique original members",
+      "pass": true
+    },
+    {
+      "check": "retained extracted bytes match original ZIP CRC data",
+      "pass": true
+    },
+    {
+      "check": "actual receipt hash",
+      "pass": true
+    },
+    {
+      "check": "exact immutable head and Darwin ARM64",
+      "pass": true
+    },
+    {
+      "check": "native preparation READY is not product qualification",
+      "pass": true
+    },
+    {
+      "check": "active Quit original mode",
+      "pass": true
+    },
+    {
+      "check": "first recorded failure is original CDP timeout",
+      "pass": true
+    },
+    {
+      "check": "raw stack retains original CDP origin",
+      "pass": true
+    },
+    {
+      "check": "native receipt source header not fabricated",
+      "pass": true
+    },
+    {
+      "check": "all1777 source rows unchanged",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-backend-smoke.ts: actual original source pin",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-captured-app.ts: actual original source pin",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts: actual original source pin",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-proof-mode.ts: actual original source pin",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts: actual original source pin",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts: actual original source pin",
+      "pass": true
+    },
+    {
+      "check": "original CDP dependency pin omission disclosed",
+      "pass": true
+    },
+    {
+      "check": "app binding and home completed",
+      "pass": true
+    },
+    {
+      "check": "no active Run/Input/Quit scenario proof retained",
+      "pass": true
+    },
+    {
+      "check": "Dashboard snapshot without Team/Composer actions",
+      "pass": true
+    },
+    {
+      "check": "only original offline seed command retained",
+      "pass": true
+    },
+    {
+      "check": "only seeded unclaimed not-started launch retained",
+      "pass": true
+    },
+    {
+      "check": "only static zero-input session is closed/released",
+      "pass": true
+    },
+    {
+      "check": "only global publication journal, no probe debt record",
+      "pass": true
+    },
+    {
+      "check": "one exact metadata ready/released pair",
+      "pass": true
+    },
+    {
+      "check": "metadata profile matches original published revision",
+      "pass": true
+    },
+    {
+      "check": "late directory error follows cleanup and is aborted",
+      "pass": true
+    },
+    {
+      "check": "failure close was attempted unconfirmed, not scenario Quit proof",
+      "pass": true
+    },
+    {
+      "check": "Quit requested and app/group cleanup retained",
+      "pass": true
+    },
+    {
+      "check": "captured Host final absence remains unqualified",
+      "pass": true
+    },
+    {
+      "check": "no cold readback receipt retained",
+      "pass": true
+    }
+  ],
+  "inertChecksPassed": 33
+}

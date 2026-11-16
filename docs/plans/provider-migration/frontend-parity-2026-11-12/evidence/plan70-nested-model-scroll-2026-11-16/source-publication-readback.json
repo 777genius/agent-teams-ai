@@ -1,0 +1,21 @@
+{
+  "commit": "6e9d65e06d38cbd1e30099f4e38e3811512fd04f",
+  "parent": "8728a7d32e7b879647d4190391f3df1cec635ac2",
+  "tree": "9a940587e595ef1933fd2b13d3fe3b92ab0486ce",
+  "leafCount": 11263,
+  "changes": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "before": "a67601fe1a6785b233aef6cacf494661100df472",
+      "after": "3eb5191149ed77e27365af1193ece1b9a437f23d"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "before": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+      "after": "e05bb6778fe2618f94dd4310fe6dad3c10a83ae0"
+    }
+  ],
+  "wholeTreeVerified": true,
+  "amendedSelection": "8728a7d32e7b879647d4190391f3df1cec635ac2",
+  "integrationR2": "a6ea3c9c239c6179003e1be3a8f898a7b71a5c83dd9a803d0729efddf6787c2d"
+}

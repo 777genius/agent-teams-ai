@@ -1,0 +1,465 @@
+{
+  "kind": "Independent prospective exact-document R2 for Plan72",
+  "reviewedAtUtc": "2026-11-16T23:45:55.308942+00:00",
+  "disposition": "ACCEPT_PROSPECTIVE_SIX_EXISTING_PATH_SCOPE",
+  "blockingFindings": [],
+  "selectedPlanCandidate": {
+    "path": "settings-credential-copy-proposal/plan.md",
+    "bytes": 10165,
+    "physicalLines": 57,
+    "sha256": "e93a37a980c9b9eaff235022f87b4a0c954c64b085a60ac7533015d274c895b5",
+    "gitBlob": "7084543a7c0d16ea0049d79892b619013acf23f6"
+  },
+  "authorR1": {
+    "path": "settings-credential-copy-proposal/r1.json",
+    "bytes": 15340,
+    "physicalLines": 360,
+    "sha256": "648c36e4779efe8fb1acdceb7a7d980d661f870331fb654121ee51d37e716dfe",
+    "gitBlob": "915c80d9a44610fbbea39818231611daeb0ca4da"
+  },
+  "sourceInventory": {
+    "path": "settings-credential-copy-proposal/source-bindings.json",
+    "bytes": 6911,
+    "physicalLines": 122,
+    "sha256": "f8a440da5a86322becb9c34a09afd2336bac5e6df1e866609d0e558f8d1799d7",
+    "gitBlob": "111dfdd4c9a502ecbca967f4714b1f1919ac7070"
+  },
+  "sourceBindings": [
+    {
+      "path": "settings-credential-copy-proposal/before/src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "bytes": 6481,
+      "physicalLines": 161,
+      "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0",
+      "gitBlob": "907fb16a613785324fdbd342c2993e08c8209a55",
+      "repositoryPath": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "role": "write-preimage"
+    },
+    {
+      "path": "settings-credential-copy-proposal/before/src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+      "bytes": 97366,
+      "physicalLines": 2584,
+      "sha256": "11871dd43b1c704230c83e722577ba4cdd4f4fd6c2eebce89cab02457b52b81a",
+      "gitBlob": "176344903eaee49ced9607a29f28a3c556e59f6e",
+      "repositoryPath": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+      "role": "write-preimage"
+    },
+    {
+      "path": "settings-credential-copy-proposal/before/test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts",
+      "bytes": 183020,
+      "physicalLines": 5126,
+      "sha256": "3057f23d318ec62a902bb869c288108f27800bdd354952faba21a875b4d97d6b",
+      "gitBlob": "162fb1fccf81b97d1c2b9c741189584016ff3667",
+      "repositoryPath": "test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts",
+      "role": "write-preimage"
+    },
+    {
+      "path": "settings-credential-copy-proposal/before/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 195789,
+      "physicalLines": 6034,
+      "sha256": "008d47eafc5f9113af654cd42c29bdc398ed1969695d15c3650898b281cbb195",
+      "gitBlob": "c9e19b14b433c58494c10b06eac9f82d5f5cd118",
+      "repositoryPath": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "role": "write-preimage"
+    },
+    {
+      "path": "settings-credential-copy-proposal/before/scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "bytes": 20435,
+      "physicalLines": 278,
+      "sha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6",
+      "gitBlob": "7f224d52e429bbdecb173d65b470a2ac154de475",
+      "repositoryPath": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "role": "write-preimage"
+    },
+    {
+      "path": "settings-credential-copy-proposal/before/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "bytes": 22434,
+      "physicalLines": 345,
+      "sha256": "651be27777eba7280304a791e52a088cec616e94b15d88734043c29c1adf234b",
+      "gitBlob": "e191694db8ccd8bbd2e05bcdbcacd8cb1703e23c",
+      "repositoryPath": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "role": "write-preimage"
+    },
+    {
+      "path": "settings-credential-copy-proposal/dependencies/scripts/ci/check-source-file-size.mjs",
+      "bytes": 8145,
+      "physicalLines": 231,
+      "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2",
+      "gitBlob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+      "repositoryPath": "scripts/ci/check-source-file-size.mjs",
+      "role": "read-only-dependency"
+    },
+    {
+      "path": "settings-credential-copy-proposal/dependencies/scripts/ci/source-file-size-baseline.json",
+      "bytes": 9635,
+      "physicalLines": 146,
+      "sha256": "8e4e373812efb4556e6261353fe9c8808fc93e6393f095fd00476a11fb5a6cae",
+      "gitBlob": "8f5deeed4e406894e1ee587ed541014bcb7dde77",
+      "repositoryPath": "scripts/ci/source-file-size-baseline.json",
+      "role": "read-only-dependency"
+    },
+    {
+      "path": "settings-credential-copy-proposal/dependencies/AGENTS.md",
+      "bytes": 8999,
+      "physicalLines": 93,
+      "sha256": "9a8bc5d8906292ca6949a3e7c9b969d72061aba020d8064c7e799351084fd8a7",
+      "gitBlob": "0c8a4a63abf24c1510c934990a025ebc99c9e435",
+      "repositoryPath": "AGENTS.md",
+      "role": "read-only-dependency"
+    },
+    {
+      "path": "settings-credential-copy-proposal/dependencies/src/shared/utils/opencodeModelRef.ts",
+      "bytes": 2726,
+      "physicalLines": 108,
+      "sha256": "7a337f9349bb13357764eb4d2dd950c2a4bb669e671e645cac703be3ef40ce69",
+      "gitBlob": "3da89e8154f8072873dc78035e2ea168bc42ca25",
+      "repositoryPath": "src/shared/utils/opencodeModelRef.ts",
+      "role": "read-only-dependency"
+    }
+  ],
+  "immutableBasis": "c4e7a936a4c13eb944eb80763c66b8cd1993d16b; root must rebind the six unchanged preimages at the actual published selection/source parent.",
+  "priorIndependentEvidence": {
+    "path": "installer-proposal/settings75-evidence-r2/evidence-r2.json",
+    "bytes": 34144,
+    "physicalLines": 844,
+    "sha256": "cf6860b0564123997ca829ee0070a49d77173b1cb4fce5ca23af66116a3eb28d",
+    "gitBlob": "992761ce5e84f86c78bea455d7f611f1abfb91b8"
+  },
+  "rootEvidence": {
+    "path": "desktop-v2-management-75cf/evidence-r1.json",
+    "bytes": 29666,
+    "physicalLines": 881,
+    "sha256": "5b5205bddf4ba05318611f564a20f8bae7264659a2a71788187ce2ed9abc6674",
+    "gitBlob": "4ce873834bfac45f8a8d1c8cf913d202a4a2f552"
+  },
+  "findings": [
+    {
+      "topic": "Demonstrated copy defect",
+      "assessment": "The original Settings PASS includes a private auth equality proving the rejected TEST credential remains until the later explicit replacement, while its retained rejection PNG says it was not kept. That proves the observed unconditional copy false. It does not select a new storage rollback/retention contract or qualify later membership."
+    },
+    {
+      "topic": "Small presentation repair",
+      "assessment": "Removing the same unsupported sentence from the three existing rejection branches preserves predicates, rejection reason/guidance, display substitution and raw error suffix/newline. The neutral saving-then-model-request progress describes the operation without promising cleanup or universally claiming retention. Existing cancellation, replacement refusal, empty response, API and storage behavior remain outside scope."
+    },
+    {
+      "topic": "Meaningful existing regression assertions",
+      "assessment": "The existing busy-status case keeps positive heading and model-request assertions, so the selected negative rollback-wording assertion is non-vacuous. The existing failing-connect hook keeps the actual submit, payload, input-draft and telemetry assertions, changing only the false sentence in its exact expected string. No new mock or duplicate suite is needed."
+    },
+    {
+      "topic": "Same original native UI read",
+      "assessment": "The current rejection observation requires an error element; the proposed same evaluation also rejects the three false retention/rollback phrases. It strengthens the same original bounded wait without new RPCs, deadline, retries or actions. The next private auth equality, screenshot and explicit replacement, all five original model intents and remaining journey/cleanup obligations remain."
+    },
+    {
+      "topic": "Finite source closure",
+      "assessment": "The four explicitly listed formatter/pure-dependency/test leaves are absent from both original source vectors and the current common roster. Appending these exact four ordered entries gives 257 to 261 without changing the Process or Windows Retry arrays. This is future capture closure; the formatter is not retroactively claimed as an original receipt pin. Its original75cf identity was independently fetched in the prior evidence R2."
+    },
+    {
+      "topic": "Existing caps and scope",
+      "assessment": "The actual panel baseline and current file are both 2584 physical lines; one same-line literal can preserve that frozen cap. Test paths are already excluded by the original guard. Other selected files remain below 800. No baseline exception, compression, new helper, routing or workflow change is selected."
+    }
+  ],
+  "actualSourceGate": [
+    "Publish the selected exact document and recheck six preimages before source preparation.",
+    "Independently inspect full frozen postimages and exact inverse: only three formatter literals, one panel literal, two existing test expectations, one original read predicate and four roster entries.",
+    "Preserve all operation/state code, existing tests beyond those expectations, ordered source prefixes, Process/Windows arrays, native actions, ownership/authority/custody, deadlines and cleanup bytes.",
+    "Run only original canonical checks and original Settings journey when normal CI reaches actual resulting source. Do not transfer original75cf PASS or predict PASS."
+  ],
+  "checks": [
+    {
+      "check": "SHA256 settings-credential-copy-proposal/plan.md",
+      "passed": true
+    },
+    {
+      "check": "Git blob settings-credential-copy-proposal/plan.md",
+      "passed": true
+    },
+    {
+      "check": "SHA256 settings-credential-copy-proposal/r1.json",
+      "passed": true
+    },
+    {
+      "check": "SHA256 settings-credential-copy-proposal/source-bindings.json",
+      "passed": true
+    },
+    {
+      "check": "Exactly six write preimages and four read-only dependencies",
+      "passed": true
+    },
+    {
+      "check": "SHA256 settings-credential-copy-proposal/before/src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "passed": true
+    },
+    {
+      "check": "Git blob settings-credential-copy-proposal/before/src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact bytes/lines for src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "passed": true
+    },
+    {
+      "check": "Immutable c4e source binding for src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "passed": true
+    },
+    {
+      "check": "SHA256 settings-credential-copy-proposal/before/src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+      "passed": true
+    },
+    {
+      "check": "Git blob settings-credential-copy-proposal/before/src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+      "passed": true
+    },
+    {
+      "check": "Exact bytes/lines for src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+      "passed": true
+    },
+    {
+      "check": "Immutable c4e source binding for src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+      "passed": true
+    },
+    {
+      "check": "SHA256 settings-credential-copy-proposal/before/test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts",
+      "passed": true
+    },
+    {
+      "check": "Git blob settings-credential-copy-proposal/before/test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact bytes/lines for test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts",
+      "passed": true
+    },
+    {
+      "check": "Immutable c4e source binding for test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts",
+      "passed": true
+    },
+    {
+      "check": "SHA256 settings-credential-copy-proposal/before/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "passed": true
+    },
+    {
+      "check": "Git blob settings-credential-copy-proposal/before/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact bytes/lines for test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "passed": true
+    },
+    {
+      "check": "Immutable c4e source binding for test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "passed": true
+    },
+    {
+      "check": "SHA256 settings-credential-copy-proposal/before/scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "passed": true
+    },
+    {
+      "check": "Git blob settings-credential-copy-proposal/before/scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact bytes/lines for scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "passed": true
+    },
+    {
+      "check": "Immutable c4e source binding for scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "passed": true
+    },
+    {
+      "check": "SHA256 settings-credential-copy-proposal/before/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "passed": true
+    },
+    {
+      "check": "Git blob settings-credential-copy-proposal/before/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact bytes/lines for scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "passed": true
+    },
+    {
+      "check": "Immutable c4e source binding for scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "passed": true
+    },
+    {
+      "check": "SHA256 settings-credential-copy-proposal/dependencies/scripts/ci/check-source-file-size.mjs",
+      "passed": true
+    },
+    {
+      "check": "Git blob settings-credential-copy-proposal/dependencies/scripts/ci/check-source-file-size.mjs",
+      "passed": true
+    },
+    {
+      "check": "Exact bytes/lines for scripts/ci/check-source-file-size.mjs",
+      "passed": true
+    },
+    {
+      "check": "Immutable c4e source binding for scripts/ci/check-source-file-size.mjs",
+      "passed": true
+    },
+    {
+      "check": "SHA256 settings-credential-copy-proposal/dependencies/scripts/ci/source-file-size-baseline.json",
+      "passed": true
+    },
+    {
+      "check": "Git blob settings-credential-copy-proposal/dependencies/scripts/ci/source-file-size-baseline.json",
+      "passed": true
+    },
+    {
+      "check": "Exact bytes/lines for scripts/ci/source-file-size-baseline.json",
+      "passed": true
+    },
+    {
+      "check": "Immutable c4e source binding for scripts/ci/source-file-size-baseline.json",
+      "passed": true
+    },
+    {
+      "check": "SHA256 settings-credential-copy-proposal/dependencies/AGENTS.md",
+      "passed": true
+    },
+    {
+      "check": "Git blob settings-credential-copy-proposal/dependencies/AGENTS.md",
+      "passed": true
+    },
+    {
+      "check": "Exact bytes/lines for AGENTS.md",
+      "passed": true
+    },
+    {
+      "check": "Immutable c4e source binding for AGENTS.md",
+      "passed": true
+    },
+    {
+      "check": "SHA256 settings-credential-copy-proposal/dependencies/src/shared/utils/opencodeModelRef.ts",
+      "passed": true
+    },
+    {
+      "check": "Git blob settings-credential-copy-proposal/dependencies/src/shared/utils/opencodeModelRef.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact bytes/lines for src/shared/utils/opencodeModelRef.ts",
+      "passed": true
+    },
+    {
+      "check": "Immutable c4e source binding for src/shared/utils/opencodeModelRef.ts",
+      "passed": true
+    },
+    {
+      "check": "Exactly three unsupported formatter sentence occurrences",
+      "passed": true
+    },
+    {
+      "check": "Formatter remains three existing distinct rejection branches",
+      "passed": true
+    },
+    {
+      "check": "Only actual runtime import of formatter is selected pure helper",
+      "passed": true
+    },
+    {
+      "check": "Pure helper has no imports and is 108 physical lines",
+      "passed": true
+    },
+    {
+      "check": "Only one selected old progress literal",
+      "passed": true
+    },
+    {
+      "check": "Selected exact neutral progress retains original model action description",
+      "passed": true
+    },
+    {
+      "check": "Old panel case and two positive assertions exist once",
+      "passed": true
+    },
+    {
+      "check": "Old restoration assertion exists exactly once",
+      "passed": true
+    },
+    {
+      "check": "New planned negative assertion is concrete and retains positive assertions",
+      "passed": true
+    },
+    {
+      "check": "Hook fixture keeps actual submit/payload/draft/telemetry assertions",
+      "passed": true
+    },
+    {
+      "check": "Selected hook body contains one false sentence",
+      "passed": true
+    },
+    {
+      "check": "One original rejection read and same next private auth assertion exist",
+      "passed": true
+    },
+    {
+      "check": "Original source order is rejection read, private auth equality, screenshot, explicit replacement",
+      "passed": true
+    },
+    {
+      "check": "Plan exact forbidden phrase regex and no extra request/deadline",
+      "passed": true
+    },
+    {
+      "check": "Current common roster has 257 unique entries",
+      "passed": true
+    },
+    {
+      "check": "Four selected new roster leaves are all absent",
+      "passed": true
+    },
+    {
+      "check": "Closed proposed roster is 261 unique entries",
+      "passed": true
+    },
+    {
+      "check": "Other arrays remain selected byte-preservation boundaries",
+      "passed": true
+    },
+    {
+      "check": "Original source vector size/preservation 1789",
+      "passed": true
+    },
+    {
+      "check": "Four new closure paths absent from original vector 1789",
+      "passed": true
+    },
+    {
+      "check": "Original source vector size/preservation 1777",
+      "passed": true
+    },
+    {
+      "check": "Four new closure paths absent from original vector 1777",
+      "passed": true
+    },
+    {
+      "check": "Panel exact current 2584 and frozen baseline 2584",
+      "passed": true
+    },
+    {
+      "check": "Tests excluded by unchanged original test-name and test-path rule",
+      "passed": true
+    },
+    {
+      "check": "Other selected non-test sources below natural 800 cap",
+      "passed": true
+    },
+    {
+      "check": "Prospective scope excludes operations/storage/API/cancellation changes",
+      "passed": true
+    },
+    {
+      "check": "Prospective source still absent",
+      "passed": true
+    },
+    {
+      "check": "SHA256 installer-proposal/settings75-evidence-r2/evidence-r2.json",
+      "passed": true
+    },
+    {
+      "check": "SHA256 desktop-v2-management-75cf/evidence-r1.json",
+      "passed": true
+    }
+  ],
+  "actions": "Retained files/JSON/text/hash review and new review report only. No source afterimage, no code or template evaluation, no project/compiler/linter/test/provider/native/GUI/CI/remote action; no secret values included in this report."
+}

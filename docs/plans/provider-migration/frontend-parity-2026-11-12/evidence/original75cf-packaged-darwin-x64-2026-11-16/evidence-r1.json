@@ -1,0 +1,803 @@
+{
+  "schemaVersion": 1,
+  "kind": "packaged75cf-darwin-x64-independent-evidence-r1",
+  "status": "ACCEPT_EXACT_SCOPED_POSITIVES",
+  "tuple": {
+    "repository": "777genius/agent-teams-ai",
+    "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "runId": 43959134974,
+    "jobId": 133638325274,
+    "artifactId": 14279088762,
+    "platform": "darwin-x64",
+    "originalJobConclusion": "success",
+    "jobIdSource": "root official job assignment; original log/upload independently join head/platform/run/artifact"
+  },
+  "archive": {
+    "path": "packaged-75cf-darwin-x64/original-artifact.zip",
+    "bytes": 804188,
+    "sha256": "2d42ddd59c57ca7802b305bfeee5a8d6528d988977499b261d3dbafd02ab1c3d",
+    "gitBlob": "1c90b3bb6abd1cf117af6b348d701e31cbb9d61e"
+  },
+  "jobLog": {
+    "path": "packaged-75cf-darwin-x64/original-job.log",
+    "bytes": 192945,
+    "sha256": "e3349a1d624f62c6a3023c9170c82ad741faea5fcd5bfaddb318d353db105124",
+    "gitBlob": "ae466a6dd0e2caa17f3149e0e999346e07e797f3"
+  },
+  "downloadManifest": {
+    "path": "packaged-75cf-darwin-x64/download-manifest.json",
+    "bytes": 2253,
+    "sha256": "36e7622aeea5e59946c363d145a379f6b7bf14b292e374bf0014f17594a79aa3",
+    "gitBlob": "1c8f553c275a9f6ec7dc492a61c1b1b221f259b7"
+  },
+  "members": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1155039,
+      "sha256": "91396561f8008080049961bcb73a73a4e1620df59c30fa354f565c6b64dc6bac",
+      "crc32": "06a1755f"
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-oDu77v/ui-automatic-app-relaunch-successor.png",
+      "bytes": 70581,
+      "sha256": "5a542415380cd7b3e60c9d12d0c8c663f00b7a8dc82989cdcd54d7c0ac418183",
+      "crc32": "9d852565"
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-oDu77v/ui-emulated-lifecycle-launch.png",
+      "bytes": 106914,
+      "sha256": "eeac304c68ff99fd4330ded6244b137e8d03ddcc39dc81f6853ee318f66a4e6a",
+      "crc32": "069fb15c"
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-oDu77v/ui-emulated-lifecycle-stopped.png",
+      "bytes": 98133,
+      "sha256": "d36a8b88c5d18d5923ba58f1945b0641f08d6d28b3a0119e55678857738b936e",
+      "crc32": "f4b7dc93"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-inputs.json",
+      "bytes": 2370,
+      "sha256": "562ea2d99560e2594e758da236e3f09ca613454a0e2fd802d6765ed0ed86e30b",
+      "crc32": "d7077799"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-native.json",
+      "bytes": 5306,
+      "sha256": "e134de43050671bf329238c2452f1270079175849b5c62859015e2ad2cb93615",
+      "crc32": "e3bada68"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged.json",
+      "bytes": 1187,
+      "sha256": "92211b80e7a7096ee05f1387198c8b493bee2647a6faf6ee1b4e3af42ff48ce3",
+      "crc32": "3f912e82"
+    },
+    {
+      "path": "_temp/packaged-app-relaunch.app.log",
+      "bytes": 4194,
+      "sha256": "6a16b1b9f41a62e43631539e294db4406503ec748da10d0a54c25a877bb2180d",
+      "crc32": "3ba4e18c"
+    },
+    {
+      "path": "_temp/packaged-app-relaunch.json",
+      "bytes": 705346,
+      "sha256": "8768d7057d6efeb2caf91b39629820837ec7ada849381a792198d5754929bf2a",
+      "crc32": "444195c5"
+    }
+  ],
+  "sourceBindings": [
+    {
+      "path": "frontend-proposal/plan63-prospective-r2/source/scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "bytes": 13285,
+      "sha256": "d9c331cfc2aed9a7aeaa7c815ce39de662a3b491cc31013df1e5f16ee029b514",
+      "gitBlob": "dd53c5b6c019dbe034dcde5375f03123b9b3e10a",
+      "repoPath": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "originalUiSourcePinPresent": true
+    },
+    {
+      "path": "frontend-proposal/v2-four-rows-r1/source/scripts/legacy-agent-host/desktop-captured-app.ts",
+      "bytes": 49613,
+      "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+      "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "repoPath": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "originalUiSourcePinPresent": true
+    },
+    {
+      "path": "p08-recovery-audit/source/scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+      "bytes": 23075,
+      "sha256": "757ac01781835c5a37f4a73b583c839dcf31a3a1315e2c95a2eb5343939e6c50",
+      "gitBlob": "2784d674428177fe89ed87a7b5b8fc3182dd8a80",
+      "repoPath": "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+      "originalUiSourcePinPresent": true
+    },
+    {
+      "path": "native-proposal/app-a07-claude-lifecycle/source/scripts/legacy-agent-host/desktop-emulated-lifecycle-records.ts",
+      "bytes": 4657,
+      "sha256": "454548d4a174a8d8e2a10bbe1b955e02fc45dee594b1796898ad33019f687058",
+      "gitBlob": "a53b2e82fd4230ada988fcf3e82d98981927a427",
+      "repoPath": "scripts/legacy-agent-host/desktop-emulated-lifecycle-records.ts",
+      "originalUiSourcePinPresent": true
+    },
+    {
+      "path": "frontend-proposal/review-triage-245/source/scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "bytes": 22082,
+      "sha256": "3aa149837f6686e8307ba1803984874b4c673d8211094bd3e8e52b9ddb3d70cd",
+      "gitBlob": "a9d725fbe11278dd98611b49d570c19d80684087",
+      "repoPath": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "originalUiSourcePinPresent": true
+    },
+    {
+      "path": "packaged-mac-review/boot-proposal/after/scripts/legacy-agent-host/desktop-emulated-boot-chat.ts",
+      "bytes": 1589,
+      "sha256": "ddb388b182f3b037ef88d2cdfe8a2e480fe0db05f61909e6dbc6cedbce566205",
+      "gitBlob": "00e61ff3a6228c33a59790f9ff997111a487d3e5",
+      "repoPath": "scripts/legacy-agent-host/desktop-emulated-boot-chat.ts",
+      "originalUiSourcePinPresent": true
+    },
+    {
+      "path": "frontend-proposal/plan63-prospective-r2/source/scripts/legacy-agent-host/desktop-source-freeze.ts",
+      "bytes": 3208,
+      "sha256": "b7db02503f45ee10136de234f96d4a0999d2dfbbfb421fefb499dfe7a27ec8f9",
+      "gitBlob": "4ef2cc07ede3172aa594e0eac614a1d473a5f705",
+      "repoPath": "scripts/legacy-agent-host/desktop-source-freeze.ts",
+      "originalUiSourcePinPresent": true
+    },
+    {
+      "path": "native-75cf-windows-review/source/packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "bytes": 15303,
+      "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01",
+      "gitBlob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5",
+      "repoPath": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "originalUiSourcePinPresent": true
+    },
+    {
+      "path": "packaged-75cf-darwin-x64/installer-review/source/scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+      "bytes": 14137,
+      "sha256": "b6f0893cda4210adaa754d7b2af96f3ddd43dc9af64e0656a5736e26e79060e4",
+      "gitBlob": "44ccc655c11bb48dd354b10c09acb3d0e2d65c91",
+      "repoPath": "scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+      "originalUiSourcePinPresent": true
+    },
+    {
+      "path": "packaged-75cf-darwin-x64/installer-review/source/scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+      "bytes": 17320,
+      "sha256": "74444f48ffc2ddd4ca4bae52c9cbd7c2bddaa465508169d026e193661ce25787",
+      "gitBlob": "27cf4112a25dec299a21d6f802a5c08d55e36f2d",
+      "repoPath": "scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+      "originalUiSourcePinPresent": true
+    },
+    {
+      "path": "native-75cf-windows-review/source/packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "bytes": 33259,
+      "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff",
+      "gitBlob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+      "repoPath": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "originalUiSourcePinPresent": false
+    },
+    {
+      "path": "packaged-75cf-winx64/installer-review/source/.github/workflows/electron-packaged-ci.yml",
+      "bytes": 19680,
+      "sha256": "13981d0a919eb7debdffbe57f12716db2ed0b754572643ff0ce2730f1e62d7ee",
+      "gitBlob": "8a39884bdf09fe22fe153c7a9fc3eae89dc749e8",
+      "repoPath": ".github/workflows/electron-packaged-ci.yml",
+      "originalUiSourcePinPresent": false
+    }
+  ],
+  "checks": [
+    {
+      "check": "exact official archive bytes and SHA256",
+      "pass": true
+    },
+    {
+      "check": "exact original decoded job log",
+      "pass": true
+    },
+    {
+      "check": "download manifest source/run/artifact tuple",
+      "pass": true
+    },
+    {
+      "check": "nine unique original ZIP members",
+      "pass": true
+    },
+    {
+      "check": "safe ZIP path and ordinary entry: agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "pass": true
+    },
+    {
+      "check": "CRC and retained original bytes: agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "pass": true
+    },
+    {
+      "check": "safe ZIP path and ordinary entry: _temp/TEST-desktop-backend-oDu77v/ui-automatic-app-relaunch-successor.png",
+      "pass": true
+    },
+    {
+      "check": "CRC and retained original bytes: _temp/TEST-desktop-backend-oDu77v/ui-automatic-app-relaunch-successor.png",
+      "pass": true
+    },
+    {
+      "check": "safe ZIP path and ordinary entry: _temp/TEST-desktop-backend-oDu77v/ui-emulated-lifecycle-launch.png",
+      "pass": true
+    },
+    {
+      "check": "CRC and retained original bytes: _temp/TEST-desktop-backend-oDu77v/ui-emulated-lifecycle-launch.png",
+      "pass": true
+    },
+    {
+      "check": "safe ZIP path and ordinary entry: _temp/TEST-desktop-backend-oDu77v/ui-emulated-lifecycle-stopped.png",
+      "pass": true
+    },
+    {
+      "check": "CRC and retained original bytes: _temp/TEST-desktop-backend-oDu77v/ui-emulated-lifecycle-stopped.png",
+      "pass": true
+    },
+    {
+      "check": "safe ZIP path and ordinary entry: _temp/opencode-v2-packaged-inputs.json",
+      "pass": true
+    },
+    {
+      "check": "CRC and retained original bytes: _temp/opencode-v2-packaged-inputs.json",
+      "pass": true
+    },
+    {
+      "check": "safe ZIP path and ordinary entry: _temp/opencode-v2-packaged-native.json",
+      "pass": true
+    },
+    {
+      "check": "CRC and retained original bytes: _temp/opencode-v2-packaged-native.json",
+      "pass": true
+    },
+    {
+      "check": "safe ZIP path and ordinary entry: _temp/opencode-v2-packaged.json",
+      "pass": true
+    },
+    {
+      "check": "CRC and retained original bytes: _temp/opencode-v2-packaged.json",
+      "pass": true
+    },
+    {
+      "check": "safe ZIP path and ordinary entry: _temp/packaged-app-relaunch.app.log",
+      "pass": true
+    },
+    {
+      "check": "CRC and retained original bytes: _temp/packaged-app-relaunch.app.log",
+      "pass": true
+    },
+    {
+      "check": "safe ZIP path and ordinary entry: _temp/packaged-app-relaunch.json",
+      "pass": true
+    },
+    {
+      "check": "CRC and retained original bytes: _temp/packaged-app-relaunch.json",
+      "pass": true
+    },
+    {
+      "check": "original log source/platform join",
+      "pass": true
+    },
+    {
+      "check": "original upload log size/hash/run/artifact join",
+      "pass": true
+    },
+    {
+      "check": "inputs exact source/platform",
+      "pass": true
+    },
+    {
+      "check": "candidate exact source/platform",
+      "pass": true
+    },
+    {
+      "check": "native exact source/platform",
+      "pass": true
+    },
+    {
+      "check": "outer exact source/platform",
+      "pass": true
+    },
+    {
+      "check": "UI exact source/platform",
+      "pass": true
+    },
+    {
+      "check": "prepared inputs retain product qualification limit",
+      "pass": true
+    },
+    {
+      "check": "native receipt digest matches actual retained bytes",
+      "pass": true
+    },
+    {
+      "check": "candidate measured manifest joins native/outer/UI",
+      "pass": true
+    },
+    {
+      "check": "ASAR joins native/outer/UI/original/successor",
+      "pass": true
+    },
+    {
+      "check": "actual packaged origin and harness join",
+      "pass": true
+    },
+    {
+      "check": "candidate metadata counts reconcile",
+      "pass": true
+    },
+    {
+      "check": "Host source/entry joins",
+      "pass": true
+    },
+    {
+      "check": "Node 24.21.0 darwin-x64 tuple joins",
+      "pass": true
+    },
+    {
+      "check": "Bun 1.4.4 and engine2.1.4 tuple joins",
+      "pass": true
+    },
+    {
+      "check": "unchanged c930 provider/SPI metadata joins",
+      "pass": true
+    },
+    {
+      "check": "Darwin native custody metadata joins",
+      "pass": true
+    },
+    {
+      "check": "native PASS six exact original steps",
+      "pass": true
+    },
+    {
+      "check": "native cleanup no cancellation/failure",
+      "pass": true
+    },
+    {
+      "check": "native 11 scripted model calls and manual permissions",
+      "pass": true
+    },
+    {
+      "check": "two terminal succeeded native inputs",
+      "pass": true
+    },
+    {
+      "check": "two resolved native permission interactions",
+      "pass": true
+    },
+    {
+      "check": "original native readiness observed before business",
+      "pass": true
+    },
+    {
+      "check": "two original Host exits 0/valid stdout",
+      "pass": true
+    },
+    {
+      "check": "explicit captured native model/project scope",
+      "pass": true
+    },
+    {
+      "check": "native coordination/Desktop/auth/release remain unqualified",
+      "pass": true
+    },
+    {
+      "check": "outer native PASS/cleanup/original exit0",
+      "pass": true
+    },
+    {
+      "check": "original native cleanup stages complete with no replacement failure",
+      "pass": true
+    },
+    {
+      "check": "source and legacy unavailable during native execution",
+      "pass": true
+    },
+    {
+      "check": "source/bundle/legacy restored after native cleanup",
+      "pass": true
+    },
+    {
+      "check": "outer native separate qualification limits",
+      "pass": true
+    },
+    {
+      "check": "finite UI exact PASS/mode/no vendor qualification",
+      "pass": true
+    },
+    {
+      "check": "finite TEST Claude SDK peer explicitly vendors disabled",
+      "pass": true
+    },
+    {
+      "check": "only original Launch/Stop proof is present",
+      "pass": true
+    },
+    {
+      "check": "one physical action original lifecycle Launch once",
+      "pass": true
+    },
+    {
+      "check": "one physical action original lifecycle Stop once",
+      "pass": true
+    },
+    {
+      "check": "original Runtime closed/released/sealed",
+      "pass": true
+    },
+    {
+      "check": "one Runtime business input terminal succeeded",
+      "pass": true
+    },
+    {
+      "check": "published checkpoint joins original Runtime",
+      "pass": true
+    },
+    {
+      "check": "exact original finite input effects probe+boot",
+      "pass": true
+    },
+    {
+      "check": "relaunch scope observer-only",
+      "pass": true
+    },
+    {
+      "check": "original relaunch attempted and acknowledged",
+      "pass": true
+    },
+    {
+      "check": "original captured Main exit0/no signal",
+      "pass": true
+    },
+    {
+      "check": "original Host exit codes stay unavailable",
+      "pass": true
+    },
+    {
+      "check": "old writer lease observed absent and Host absent",
+      "pass": true
+    },
+    {
+      "check": "separately observed successor same executable",
+      "pass": true
+    },
+    {
+      "check": "new exclusive writer PID/token",
+      "pass": true
+    },
+    {
+      "check": "writer receipt preserves release-mechanism uncertainty",
+      "pass": true
+    },
+    {
+      "check": "successor new renderer and same public binding/home",
+      "pass": true
+    },
+    {
+      "check": "original Runtime retained at relaunch boundary",
+      "pass": true
+    },
+    {
+      "check": "one successor Quit attempted but reply unconfirmed",
+      "pass": true
+    },
+    {
+      "check": "successor app/Host/listener/writer all observed absent",
+      "pass": true
+    },
+    {
+      "check": "successor natural exit remains unqualified",
+      "pass": true
+    },
+    {
+      "check": "outer quitRequested false retained",
+      "pass": true
+    },
+    {
+      "check": "old group empty and Host absent with no cleanup failure",
+      "pass": true
+    },
+    {
+      "check": "all five finite peers absent",
+      "pass": true
+    },
+    {
+      "check": "post-relaunch finite inputs unchanged",
+      "pass": true
+    },
+    {
+      "check": "no restored/new runtime peer after relaunch",
+      "pass": true
+    },
+    {
+      "check": "final sentinel empty and package inputs unchanged",
+      "pass": true
+    },
+    {
+      "check": "1780 source vectors preserve exact ordered equality",
+      "pass": true
+    },
+    {
+      "check": "no recorded source/final/cleanup error keys",
+      "pass": true
+    },
+    {
+      "check": "exact original screenshot hash ui-emulated-lifecycle-launch.png",
+      "pass": true
+    },
+    {
+      "check": "exact original screenshot hash ui-emulated-lifecycle-stopped.png",
+      "pass": true
+    },
+    {
+      "check": "source bytes join original UI pin: scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "pass": true
+    },
+    {
+      "check": "source bytes join original UI pin: scripts/legacy-agent-host/desktop-captured-app.ts",
+      "pass": true
+    },
+    {
+      "check": "source bytes join original UI pin: scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+      "pass": true
+    },
+    {
+      "check": "source bytes join original UI pin: scripts/legacy-agent-host/desktop-emulated-lifecycle-records.ts",
+      "pass": true
+    },
+    {
+      "check": "source bytes join original UI pin: scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "pass": true
+    },
+    {
+      "check": "source bytes join original UI pin: scripts/legacy-agent-host/desktop-emulated-boot-chat.ts",
+      "pass": true
+    },
+    {
+      "check": "source bytes join original UI pin: scripts/legacy-agent-host/desktop-source-freeze.ts",
+      "pass": true
+    },
+    {
+      "check": "source bytes join original UI pin: packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "pass": true
+    },
+    {
+      "check": "source bytes join original UI pin: scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+      "pass": true
+    },
+    {
+      "check": "source bytes join original UI pin: scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+      "pass": true
+    },
+    {
+      "check": "runner rejects cancellation and requires native cleanup before restore",
+      "pass": true
+    },
+    {
+      "check": "runner original model/Host exit oracles preserved",
+      "pass": true
+    },
+    {
+      "check": "reader checks actual file digests and unlisted entries",
+      "pass": true
+    },
+    {
+      "check": "finite packaged path forbids harness restart",
+      "pass": true
+    },
+    {
+      "check": "Stop-only branch returns before cold Resume",
+      "pass": true
+    },
+    {
+      "check": "source validates boot reply and two-row checkpoint transcript",
+      "pass": true
+    },
+    {
+      "check": "source uses one relaunch and one successor Quit call",
+      "pass": true
+    },
+    {
+      "check": "observer-only source refuses old-group signals on debt",
+      "pass": true
+    },
+    {
+      "check": "successor original input journals preserved before/after Quit",
+      "pass": true
+    },
+    {
+      "check": "outer Quit flag belongs only to failure-close observer",
+      "pass": true
+    },
+    {
+      "check": "native source exact permission/image/replay oracles",
+      "pass": true
+    },
+    {
+      "check": "workflow has two separate packaged native/UI modes",
+      "pass": true
+    },
+    {
+      "check": "both original final PASS log records present",
+      "pass": true
+    },
+    {
+      "check": "archive does not retain actual ASAR/Node/raw Runtime journals",
+      "pass": true
+    }
+  ],
+  "inertChecksPassed": 110,
+  "blockingFindings": [],
+  "nativePackaged": {
+    "status": "PASS",
+    "scope": "Original packaged extraResources Node/Host, embedded OpenCode 2.1.4, localhost scripted model",
+    "steps": [
+      "original_host_embedded_native_and_mcp_ready",
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+      "changed_project_config_did_not_retarget_running_native_session",
+      "original_uploaded_PNG_native_image_inference_and_public_readback",
+      "checkpoint_and_original_host_native_cleanup_confirmed",
+      "cold_host_restored_native_history_without_model_or_tool_replay"
+    ],
+    "approvalMode": "manual",
+    "modelRequests": 11,
+    "terminalInputs": 2,
+    "resolvedPermissions": 2,
+    "originalHosts": [
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      },
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      }
+    ],
+    "cleanup": true,
+    "cancelled": false,
+    "elapsedMs": 337817,
+    "inputReadCount": 276,
+    "lastInputSnapshotIsPreStopObservation": true,
+    "sourceCheckoutAndLegacyUnavailable": true,
+    "sourceBundleLegacyRestored": true,
+    "appAsarSha256": "25939d9332d908059f4e91e14f90789b527136e343adfbf583c22297727f4a12",
+    "candidateManifestSha256": "91396561f8008080049961bcb73a73a4e1620df59c30fa354f565c6b64dc6bac",
+    "node": {
+      "schemaVersion": 1,
+      "platform": "darwin-x64",
+      "version": "24.21.0",
+      "archiveSha256": "1462cb3b3046b815cf8ea436d3da450ec1a9f11dac7e5a46b0ada5305d7e8097",
+      "binarySha256": "7abcf39bd37ab251015337ff75304d7555f0d8e88c6e0fbf04bce8ce34636f49",
+      "executable": "node",
+      "source": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-darwin-x64.tar.gz"
+    },
+    "bun": {
+      "path": "native/opencode-v2/bun",
+      "sha256": "c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab",
+      "version": "1.4.4"
+    },
+    "engine": {
+      "directory": "native/opencode-v2/engine",
+      "manifestSha256": "7690030a5aba3026544e65f000475dd20f83213383e9bfddad3d98c1134a65fb",
+      "version": "2.1.4"
+    },
+    "providerArtifacts": [
+      {
+        "name": "@agent-teams/provider-implementations",
+        "sha256": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41"
+      },
+      {
+        "name": "@agent-teams/provider-session-contracts",
+        "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+      }
+    ],
+    "processCustody": {
+      "directory": "process-custody",
+      "manifestSha256": "160c3052dda74b45ed6d78e8f1553091f52587399e5912590c01484b6b37e10e",
+      "binarySha256": "50e8af2e01f9a79387b13548d2d84f963e543baaa5c3fc842f4a38580ed6c973"
+    },
+    "metadataPackages": 120,
+    "metadataFiles": 8133,
+    "coordinationQualified": false,
+    "desktopJourneyQualified": false,
+    "vendorAuthQualified": false,
+    "releaseQualified": false
+  },
+  "finitePackagedUi": {
+    "status": "PASS",
+    "mode": "emulated-claude-lifecycle-ui",
+    "peer": "finite TEST Claude SDK peer; no genuine Claude executable",
+    "originalLaunchClicks": 1,
+    "originalStopClicks": 1,
+    "businessInputs": 1,
+    "modelProbeInputs": 1,
+    "businessInputReplayAfterRelaunch": false,
+    "runtime": {
+      "phase": "closed",
+      "custody": "released",
+      "sealed": true,
+      "publishedCheckpoints": 1
+    },
+    "sourcePinsBeforeAfter": {
+      "count": 1780,
+      "orderedEquality": true
+    },
+    "packagedInputsUnchanged": true,
+    "realVendorExecutions": 0,
+    "fullColdResumeQualified": false,
+    "activeOrQueuedQuitQualified": false,
+    "rawRuntimeCheckpointFilesRetained": false
+  },
+  "relaunch": {
+    "attempted": true,
+    "reply": "acknowledged",
+    "originalCapturedMainPid": 45999,
+    "originalCapturedMainExit": {
+      "code": 0,
+      "signal": null
+    },
+    "originalHostPid": 46264,
+    "originalHostAbsent": true,
+    "originalHostExitCode": "unavailable",
+    "oldLeaseObservedAbsent": true,
+    "newExclusiveLeaseObserved": true,
+    "writerTokenChanged": true,
+    "writerPublicationLimit": "no inference between ordinary release and dead-owner recovery",
+    "successorObservedPid": 47594,
+    "successorHostPid": 47859,
+    "sameExecutableAsarBindingAndHome": true,
+    "newRendererTarget": true,
+    "successorNativeCustody": false,
+    "numericPidSignalsAuthorized": false,
+    "successorQuitAttempted": true,
+    "successorQuitReply": "unconfirmed; no retry or signal",
+    "successorAbsence": {
+      "listenerAbsent": true,
+      "observedPidAbsent": true,
+      "HostPidAbsent": true,
+      "writerLockAbsent": true,
+      "exitCode": "unavailable",
+      "signalCode": "unavailable",
+      "naturalExitQualified": false
+    },
+    "outerQuitRequested": false,
+    "outerQuitFlagExplanation": "The outer flag records only failure-close attempts. The successful path delegates one successor public Quit to observePackedAppRelaunch."
+  },
+  "cleanup": {
+    "nativeHostsAndModel": true,
+    "originalCapturedMainExitZero": true,
+    "oldGroupEmptyBeforeHarnessCleanup": true,
+    "originalHostAbsent": true,
+    "finitePeers": 5,
+    "finitePeersAbsent": true,
+    "sentinelEvents": 0,
+    "successorListenerAppHostWriterAbsent": true,
+    "successorNaturalExitQualified": false,
+    "providerRootCleanupQualification": "outside observer-only successor lifecycle scope; finite peer absence separately observed"
+  },
+  "limits": [
+    "Only original source 75cf and Darwin x64 job are qualified; no transfer to a later candidate.",
+    "Native cold Host restore passed. The separate finite UI stopped before its full cold Resume/active-or-queued Quit branch.",
+    "Successor Quit response is unconfirmed. Observed absence satisfies the selected observer-only contract; successor exit status, natural exit and native custody remain unqualified.",
+    "Archive holds candidate metadata/digests, not the 8133 payload files, ASAR, Node, harness binary or raw Runtime/checkpoint journals. This audit does not independently rehash absent payloads.",
+    "The app log contains GPU/XPC/startup routing messages despite scoped PASS; no blanket error-free application claim.",
+    "No P09 POSIX source-writer, Windows same-Main Retry/Stop, genuine Claude/Codex execution, vendor auth, signing/notarization or release qualification."
+  ],
+  "newRepairProposal": null,
+  "execution": {
+    "artifactRedownload": false,
+    "project": false,
+    "compiler": false,
+    "test": false,
+    "linter": false,
+    "provider": false,
+    "native": false,
+    "gui": false,
+    "ciObservation": false,
+    "ciAction": false,
+    "remoteMutation": false,
+    "sourceAfterimage": false
+  }
+}

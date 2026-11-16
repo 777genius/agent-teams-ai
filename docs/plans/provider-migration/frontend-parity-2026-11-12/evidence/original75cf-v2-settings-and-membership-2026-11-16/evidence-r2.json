@@ -1,0 +1,844 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-Settings75cf-root-evidence-R2",
+  "status": "ACCEPT_WITH_SOURCE_BINDING_PRECISION",
+  "reviewedRootReports": [
+    {
+      "path": "desktop-v2-management-75cf/evidence-r1.json",
+      "bytes": 29666,
+      "sha256": "5b5205bddf4ba05318611f564a20f8bae7264659a2a71788187ce2ed9abc6674",
+      "gitBlob": "4ce873834bfac45f8a8d1c8cf913d202a4a2f552"
+    },
+    {
+      "path": "desktop-v2-management-75cf/evidence-r1.md",
+      "bytes": 2173,
+      "sha256": "24772252ba72f86f3a4a3fe716b8ebcb93fc8d38ba723b3442c0409fff231621",
+      "gitBlob": "476717003a09edd2ead745d24f666920edb994d4"
+    }
+  ],
+  "tuple": {
+    "source": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "runId": 43959134362,
+    "jobId": 133621515611,
+    "artifactId": 14280940415
+  },
+  "archive": {
+    "path": "desktop-v2-management-75cf/artifact.zip",
+    "bytes": 1348641,
+    "sha256": "dd6453b55d46671ae1502b55000db2cc9305632388a367a28742be381078f732",
+    "gitBlob": "c05ac5238c04a7ce0fb0065fdec2ada75382d6a8"
+  },
+  "jobLog": {
+    "path": "desktop-v2-management-75cf/job.log",
+    "bytes": 137738,
+    "sha256": "7b2a9b250cf595579aadf0a061155c1532a02beec5aa83e4afe6a3a7e92c1d2e",
+    "gitBlob": "b95aabf33cef15066d8c42b5eab14a840183e71d"
+  },
+  "archiveMembers": [
+    {
+      "path": "TEST-desktop-backend-NKzavo/TEST-peer-claude-scope/effects.ndjson",
+      "bytes": 1014,
+      "sha256": "837738bbafabb474d0fd7baf9481b9b420efa8d1fdf999b3b8cf8c9cd645c05a"
+    },
+    {
+      "path": "TEST-desktop-backend-NKzavo/desktop-app.log",
+      "bytes": 6210,
+      "sha256": "ee95b315ddd35b907a637b81fb22b4c0be4564cf0cb2e1cdead49329d5eff5c1"
+    },
+    {
+      "path": "TEST-desktop-backend-NKzavo/TEST-peer-codex-scope/effects.ndjson",
+      "bytes": 522,
+      "sha256": "e1f0b1ddc2595a1e0d3bdd7bdd48583d2839f19f6361996684a129b079016b82"
+    },
+    {
+      "path": "TEST-desktop-backend-NKzavo/desktop-backend-receipt.json",
+      "bytes": 889253,
+      "sha256": "cda77ced96027db2a4a644c877229218c5d25b2ff4dc5344bd541e368cabda84"
+    },
+    {
+      "path": "TEST-desktop-backend-NKzavo/desktop-descriptor.json",
+      "bytes": 4080,
+      "sha256": "c87611358d3bd2867a039dc8033f7388731a8cac78ed535d08a9f5612539bf4e"
+    },
+    {
+      "path": "TEST-desktop-backend-NKzavo/host-profile.json",
+      "bytes": 14945,
+      "sha256": "12a4a35fdeb230da89a0118a77b55215d30dc35597b12840fc592207078b0555"
+    },
+    {
+      "path": "TEST-desktop-backend-NKzavo/hoststore/management-commands/6264d18b7b0204c1c84b9bea5d6d21ed4f3e6b3be6be74ad4ac60baf0baeb55e.json",
+      "bytes": 915,
+      "sha256": "9a8f56af43ffda6c9e1c878f4df8c8fed714df0aca9aea1bc01d8deb723352f8"
+    },
+    {
+      "path": "TEST-desktop-backend-NKzavo/hoststore/management-commands/bd6e1b0e700560a33ac276b0004e527e60656ff9f77633f92250a0c02166b627.json",
+      "bytes": 2871,
+      "sha256": "b3135f9cfaf46ded950cbffd27de6e526473fae96d2de254ae4b5fd4be4bbeb1"
+    },
+    {
+      "path": "TEST-desktop-backend-NKzavo/hoststore/management-commands/c98ba8397e70bf603973c8a55a990f6f10c733a68685b6f4bcddf39558ffe5da.json",
+      "bytes": 3276,
+      "sha256": "235550adac372a05cd38dce4453bda0e59efdc8d3e789ba70701a234a46e5dc9"
+    },
+    {
+      "path": "TEST-desktop-backend-NKzavo/hoststore/runtime-sessions/d37f2a3ee25010e111bb40283d54bec4f8d77458f2b8c0a06a9d34bedca969b0/2750f0284d4f26e12728c0d0de6b94b93aeff7a5304eca05a7d234de1bf6af1d.json",
+      "bytes": 714,
+      "sha256": "0a63b1bdb8ea50a882cbaebf14d46fafca596f5dc6664f3bce509b96c7e54493"
+    },
+    {
+      "path": "TEST-desktop-backend-NKzavo/hoststore/runtime-sources/index.json",
+      "bytes": 4730,
+      "sha256": "3bfdb58e909252fe65a0087635c9ca47545b92f2c2b420644eec7f48392d54fa"
+    },
+    {
+      "path": "TEST-desktop-backend-NKzavo/hoststore/teams/test-desktop-backend/.host-owner/launches/2402d5f361fcb9d89cbcd02e4fad0364032675a1ee391455c7934450fdeb3ffb.json",
+      "bytes": 2092,
+      "sha256": "c8831ef2cd881f35db2903615b57d5b9322dd654f8799fdd7afcaf3cac7ea748"
+    },
+    {
+      "path": "TEST-desktop-backend-NKzavo/hoststore/teams/test-desktop-backend/.host-owner/state.json",
+      "bytes": 1025,
+      "sha256": "b3618c376807465de76667ad30b1a1c27e1494150f0a79063acd7849b73fb05b"
+    },
+    {
+      "path": "TEST-desktop-backend-NKzavo/mixed-models.json",
+      "bytes": 529,
+      "sha256": "f4952200d24c8049beb472fb08a587de42ccaae365a5bf45c506b6ec79e64462"
+    },
+    {
+      "path": "TEST-desktop-backend-NKzavo/sentinel-invocations.ndjson",
+      "bytes": 338,
+      "sha256": "e2324d54a83b2b94596c0b90dc00796aa1d3843476600f47acfef50324c38692"
+    },
+    {
+      "path": "TEST-desktop-backend-NKzavo/userData/logs/app-errors.ndjson",
+      "bytes": 56873,
+      "sha256": "67da820846d73abd947d2dbe2b46e9fd6099ffad54dbe0872cb7dedded5c24b5"
+    },
+    {
+      "path": "TEST-desktop-backend-NKzavo/ui-failure.png",
+      "bytes": 90222,
+      "sha256": "778d4137f53aabc4e9d4be9bf328aeccdc8ddc429d0a1b239ce9b4d537753049"
+    },
+    {
+      "path": "TEST-desktop-backend-NKzavo/workspace/opencode.json",
+      "bytes": 453,
+      "sha256": "acc07e19a2716a3f72a427fae6bf0d6148bfed289296c6c611dbda49aa6f13ac"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/desktop-backend-app.log",
+      "bytes": 16190,
+      "sha256": "1e4fcbe7758a02c4e46c082542c1c003b046ae39682de54281d4817a805f55dc"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/desktop-descriptor.json",
+      "bytes": 3319,
+      "sha256": "3fe2314ab1d8510c0b5447ae28dba4c270eb2296989a7c0e8ccb2feed49d8017"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/desktop-backend-receipt.json",
+      "bytes": 860677,
+      "sha256": "a297113fb281ffb402511aeeb3d87094cf45458eeeb7b5a886d6457efd4da6da"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/host-profile.json",
+      "bytes": 5011,
+      "sha256": "170f0c1c3cca2593b3316ce41758c811090f4ddef0ef0279947e48a32bb1ad45"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/hoststore/management-commands/05b83e3c70478fed10470abb8a03588b4df3fa634809616c23c43957f889adce.json",
+      "bytes": 3216,
+      "sha256": "3ed3e858845d3e334d020722dc45619c9ee617603c7a497956a64dd59bd4b6a6"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/hoststore/management-commands/622c1c71bf2816ab55c8ed13b4cca72161471e0951d95e44bc54c7fc47072ac8.json",
+      "bytes": 812,
+      "sha256": "18c46c384e17089e4b43b503a562ec03059eda8d77c95c825520bf9517b9ceb2"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/hoststore/management-commands/6c8f0a8ee269b3ee9f2943beeb23a8a4131c08abf4972000b640be72b144b67a.json",
+      "bytes": 3245,
+      "sha256": "bd4cdf6446ef5dbcd3f6a313e36aaf971fe264add732fc3b43142c6152b9f444"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/hoststore/management-commands/7a6cbcfd69cbe53c0c949085674d62859c5090fffae10b272272f5e80b90cec4.json",
+      "bytes": 2832,
+      "sha256": "15bc1f77c7d5db8537be3d4bf0856e0fca0d2a6606e1eb5bb7491ef63fdc86d8"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/hoststore/management-commands/8b031535cfab4b1b6ded0d74d5fb221fbfb26dd782235bfd87527111a7cb47e7.json",
+      "bytes": 1370,
+      "sha256": "176a315c3acc10ffe1dcbae6f659d68107fc5a9cf42586a7c6355082f54e744a"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/hoststore/management-commands/8bd841a8e102e520ba6a60122de36dc46c9a9ff9548c0bd19a6d70a2fc752deb.json",
+      "bytes": 804,
+      "sha256": "03270e3fe74b2bff0e2c1e684ad7e0127c9055e5cebc0506149ad1ae4fe57877"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/hoststore/management-commands/8f6b32aa2f2d7678590b4a82609f6d9ef6a4ba9bb512fa13c9fcd8da15f4bec7.json",
+      "bytes": 1345,
+      "sha256": "b7536ddbbe5ffcccb1f7ff3a58e9f7ecf70157697e6099a3d6b49945e36ddf6a"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/hoststore/management-commands/cc8e0653fb76a9f27e37fa840057c9dbacbad88b76f809532be862e2327de0ab.json",
+      "bytes": 3237,
+      "sha256": "9fd6eb3af54418e60b8b7836c1da6a9f2b69af42d675c5c2c15f77bbca7e97b2"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/hoststore/management-commands/d27e7620599cf2d36ccc3fc4f7311fedf3c76095664a276b79fd2b542e48dbe2.json",
+      "bytes": 2811,
+      "sha256": "643f32bc12c72cb8483eb2ffdbfde915c88b1be6545159350ecccf1ea9d7c9c6"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/hoststore/management-commands/da5bd309782129afd3616f61ed14bb899d00373818238cffb2f3061a3e8169ce.json",
+      "bytes": 812,
+      "sha256": "c84b9d3fead354c128510ee59889afc0a09f6d19a94fca8a7719ad1a172f3e69"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/hoststore/management-commands/f473efb6cb08c62fbb473fffb4a8ebb66116b582be2f128a3080d4993badad0b.json",
+      "bytes": 3237,
+      "sha256": "a870fa4c7808dc230421cb054b22a758b14850e4dc1f693bd7c23823bcaeca68"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/hoststore/management-commands/fd3bffa8e8ad6071f284ddacf906751df651c8362b8d82bdd41309067f4f2c61.json",
+      "bytes": 3267,
+      "sha256": "bebba4e48d431da383ff430c5c94ecc2d380632c9b21340a481414dd4be90d94"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/hoststore/runtime-sources/index.json",
+      "bytes": 15919,
+      "sha256": "b4845a1029a042ba681ef7dd681bb9d94caf307859ab0a28e6f77b4e896a6323"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/hoststore/tasks/test-desktop-backend/06c44b88-fd3b-5d7f-beec-f1dc8a7a7b0e.json",
+      "bytes": 868,
+      "sha256": "14478a9ba6907d103e2e38ac55b252bea2320c0cc11f899de6de5630e6cbaa01"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/hoststore/teams/test-desktop-backend/.host-owner/commands/73d51a47022bad35094134a650a17f09916cdc1f2cab13ca2201e1ac8ef59773.json",
+      "bytes": 2037,
+      "sha256": "520ccdd3bff90c3ec8bb3a4410d061330b0e8b2e7a16294ddf9915d0ae29a2f7"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/hoststore/teams/test-desktop-backend/.host-owner/state.json",
+      "bytes": 567,
+      "sha256": "becbfc7490a432942e4cfbe3122ef3bce92730188fd96268c8e7a76b5db6c5b2"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/preferences/global/global-runtime-preferences.json",
+      "bytes": 142,
+      "sha256": "454e8a8739fdb223d627e08b9c2db467c0eabbc91b6cb176da02eb0eda54c60a"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/preferences/workspace/agent-teams-runtime-preferences.json",
+      "bytes": 123,
+      "sha256": "5172b91ae8d4e6490fc9d655745a530c285f09de2dda92251bdf3de9407c0167"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/sentinel-invocations.ndjson",
+      "bytes": 686,
+      "sha256": "22f07046b2d6f9156c8345612fe82234eb4057899a9424d22ebad0a36d56e2fd"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/ui-seed-receipt.json",
+      "bytes": 2037,
+      "sha256": "520ccdd3bff90c3ec8bb3a4410d061330b0e8b2e7a16294ddf9915d0ae29a2f7"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/ui-v2-management-connected.png",
+      "bytes": 98233,
+      "sha256": "d82ac3b7caa12102006dd187a0b48f995c2f3b810370da9c036deff88c6009ab"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/ui-v2-management-inherited.png",
+      "bytes": 84469,
+      "sha256": "3d53c31d6ee9d201e1859b1b9678003d9d5487e95fad039d9869db67b2b0aeaa"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/ui-v2-management-project-override.png",
+      "bytes": 85828,
+      "sha256": "f1cd3574c322e9a8f2f544479fc9dbd383ba58eff89c5f96344da3b29bfdf61e"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/ui-v2-management-rejected-key.png",
+      "bytes": 118392,
+      "sha256": "c3824336f05c5958f029db55ca3eb865977b3d66f7f3d99319c39f31a9767d85"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/ui-v2-management-reloaded.png",
+      "bytes": 84369,
+      "sha256": "9a3148601b32da9be15aefe01145197f3ef839cf51a9189bc5187262dfb2ec78"
+    },
+    {
+      "path": "TEST-desktop-backend-e993LC/userData/logs/app-errors.ndjson",
+      "bytes": 80135,
+      "sha256": "9a67c0b3ae0828ba543b6e48ef04f75b2f0f709b2a9ab00ee04ae33824d8af67"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-fwA47q/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-fwA47q/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1838,
+      "sha256": "70474d1130f4f9c7b54b2e861f30bd4139e8d7f3321e92f455882bd344b72a4d"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "sha256": "bab02477cdc823919ed1b4dbb1f7ef193b2a05ddc07fc48d7ca0562b69f3bff2"
+    },
+    {
+      "path": "host-emulated-opencode-v2-inputs.json",
+      "bytes": 783,
+      "sha256": "1a7bca823a63a78333653fbad0814d19c233ba7a3001a1fa325d18fd10081d2b"
+    },
+    {
+      "path": "host-emulated-opencode-v2-live-membership-ui.log",
+      "bytes": 2215,
+      "sha256": "02f5445e31f6b587b180be92a645b49894e8d3c8cba318f320f962dba7556330"
+    },
+    {
+      "path": "host-emulated-opencode-v2-management-ui.log",
+      "bytes": 6731,
+      "sha256": "08e2f85eab90025097b861ae4b0b84d9737303a8af34896996431e99995c6edd"
+    },
+    {
+      "path": "host-emulated-opencode-v2-management-ui-verified.json",
+      "bytes": 402,
+      "sha256": "4b56b7a2e1c78d7bc2fd90b935dbd7bbdf613ed397b42d19b0b01b3a5bc070ac"
+    }
+  ],
+  "receipts": {
+    "settings": {
+      "path": "desktop-v2-management-75cf/extracted/TEST-desktop-backend-e993LC/desktop-backend-receipt.json",
+      "bytes": 860677,
+      "sha256": "a297113fb281ffb402511aeeb3d87094cf45458eeeb7b5a886d6457efd4da6da"
+    },
+    "liveMembership": {
+      "path": "desktop-v2-management-75cf/extracted/TEST-desktop-backend-NKzavo/desktop-backend-receipt.json",
+      "bytes": 889253,
+      "sha256": "cda77ced96027db2a4a644c877229218c5d25b2ff4dc5344bd541e368cabda84"
+    }
+  },
+  "sourceBindings": [
+    {
+      "path": "desktop-v2-management-75cf/source/scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+      "bytes": 12371,
+      "sha256": "3e221532ec7b77b71f2f55a847a2de9a0363f48af0b813119c73ed5a5db1fc58",
+      "gitBlob": "ba950ee03787427aaa837a0b77608c6a8760cab9",
+      "repoPath": "scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+      "binding": "original receipt pin"
+    },
+    {
+      "path": "desktop-v2-management-75cf/source/scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "bytes": 20435,
+      "sha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6",
+      "gitBlob": "7f224d52e429bbdecb173d65b470a2ac154de475",
+      "repoPath": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "binding": "original receipt pin"
+    },
+    {
+      "path": "desktop-v2-management-75cf/source/scripts/legacy-agent-host/desktop-opencode-v2-management-records.ts",
+      "bytes": 12815,
+      "sha256": "356fde85403680c557633ba90e4df4840d69bfea4e8c58b39ad6855e3e2596ab",
+      "gitBlob": "4cb498c7846dd6b24c46b987266e148065add852",
+      "repoPath": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.ts",
+      "binding": "original receipt pin"
+    },
+    {
+      "path": "desktop-v2-management-75cf/source/scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "bytes": 30843,
+      "sha256": "0bc2e2d5b3d36cc6e59dd1b91a2caf8c6ef8397719aca85bf4aa27321657509e",
+      "gitBlob": "602c2fe5d57cc67a8b18fe0c193b61e58293f508",
+      "repoPath": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "binding": "original receipt pin"
+    },
+    {
+      "path": "desktop-v2-management-75cf/source/tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "bytes": 32221,
+      "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+      "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+      "repoPath": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "binding": "original receipt pin"
+    },
+    {
+      "path": "desktop-v2-management-75cf/source/src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+      "bytes": 7477,
+      "sha256": "c4d8333cc5b562b7eb8de8398bde8275d579fdb7775c59c3d1ae5123e88cfdc8",
+      "gitBlob": "c0bd14811e8cd76dd34bcf42afac2785769e37ad",
+      "repoPath": "src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+      "binding": "original receipt pin"
+    },
+    {
+      "path": "desktop-v2-management-75cf/source/src/features/runtime-provider-management/main/adapters/output/withCapturedClaudeAuthentication.ts",
+      "bytes": 12443,
+      "sha256": "9de801a25b311c742315caad4a64e0196d2f942e6c5760e6ff5abbcc56c76dcd",
+      "gitBlob": "b90aee0a35d713d0fe9564e0d1e766db4f1098d0",
+      "repoPath": "src/features/runtime-provider-management/main/adapters/output/withCapturedClaudeAuthentication.ts",
+      "binding": "original receipt pin"
+    },
+    {
+      "path": "desktop-v2-management-75cf/source/src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts",
+      "bytes": 15353,
+      "sha256": "606098a4895f1715ea58677cfff11337790d5bbcf1be3fcdf3efcdf171b59aab",
+      "gitBlob": "500b04c5a0b9e15bc8f4401d5f7bdc0d4267e2a6",
+      "repoPath": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts",
+      "binding": "original receipt pin"
+    },
+    {
+      "path": "desktop-v2-management-75cf/source/src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+      "bytes": 97366,
+      "sha256": "11871dd43b1c704230c83e722577ba4cdd4f4fd6c2eebce89cab02457b52b81a",
+      "gitBlob": "176344903eaee49ced9607a29f28a3c556e59f6e",
+      "repoPath": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+      "binding": "original receipt pin"
+    },
+    {
+      "path": "desktop-v2-management-75cf/source/src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "bytes": 72914,
+      "sha256": "346f753b0bf13234c21299631fca1c1cf15a3373ab1d62c59d058acc363237d2",
+      "gitBlob": "48a951b2ddec9970fcaa1efa64be061e8e00b3d2",
+      "repoPath": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "binding": "original receipt pin"
+    },
+    {
+      "path": "desktop-v2-management-75cf/source/src/shared/utils/providerStatusAuthority.ts",
+      "bytes": 4567,
+      "sha256": "67241d584fdbef940ad2a0ef7eb459eb85af618bd907710d42c005821c2fa4fa",
+      "gitBlob": "56a1d52d3ba392ec00f60ccf6b7aedaffe6ba570",
+      "repoPath": "src/shared/utils/providerStatusAuthority.ts",
+      "binding": "original receipt pin"
+    },
+    {
+      "path": "desktop-v2-management-75cf/source/src/renderer/store/slices/cliInstallerStatusReconciliation.ts",
+      "bytes": 9017,
+      "sha256": "363bd187bf5ac466c9e8e9bd5b535c7b9a7e52f62bbadd1d6db01ba8317f732e",
+      "gitBlob": "c3347aaded7d5705b775b8aa1ca29f6d37a58c8e",
+      "repoPath": "src/renderer/store/slices/cliInstallerStatusReconciliation.ts",
+      "binding": "original receipt pin"
+    },
+    {
+      "path": "desktop-v2-management-75cf/source/src/renderer/components/team/dialogs/useTeamModelProviderStatus.ts",
+      "bytes": 2531,
+      "sha256": "79f08aaaffc5385e5d4faf2e562e412e5465ac91a6c6c0a7a17ecb5ccbabef1b",
+      "gitBlob": "9bc83ce4c5983c7200cf436cd6772796cdc6355c",
+      "repoPath": "src/renderer/components/team/dialogs/useTeamModelProviderStatus.ts",
+      "binding": "original receipt pin"
+    },
+    {
+      "path": "desktop-v2-management-75cf/source/packages/legacy-agent-host/src/composition/ClaudeManagementCoordinator.ts",
+      "bytes": 8939,
+      "sha256": "63612e0762f67f1631795547fb57e35eb72007352d52369181a57f1461b3482d",
+      "gitBlob": "40e4b8297dfcddeea4685b6f0187d598e1071c4c",
+      "repoPath": "packages/legacy-agent-host/src/composition/ClaudeManagementCoordinator.ts",
+      "binding": "original receipt pin"
+    },
+    {
+      "path": "desktop-v2-management-75cf/source/packages/legacy-agent-host/src/adapters/providers/ClaudeManagementHost.ts",
+      "bytes": 6977,
+      "sha256": "62e74e6cbdf1bdb94d828b84b31eff58e9a36a5b2290c6578a3b266dd19da568",
+      "gitBlob": "12d3ce0c8b8423cc86abbe1f39feb0cdd46562d2",
+      "repoPath": "packages/legacy-agent-host/src/adapters/providers/ClaudeManagementHost.ts",
+      "binding": "original receipt pin"
+    }
+  ],
+  "additionalImmutableSource": {
+    "path": "desktop-v2-management-75cf/source/src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+    "bytes": 6481,
+    "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0",
+    "gitBlob": "907fb16a613785324fdbd342c2993e08c8209a55",
+    "binding": "official immutable75cf body; absent from both original receipt source vectors",
+    "officialReadback": {
+      "path": "installer-proposal/settings75-evidence-r2/formatter-official-readback.json",
+      "bytes": 7095,
+      "sha256": "8786666e631677bc7f5090c658255e8dce63fb73bab577b46fb66c28e8248ad0",
+      "gitBlob": "e3e74d0c8b5122b77c8c8c62bad4ff93b87f1894"
+    }
+  },
+  "checks": [
+    {
+      "check": "exact root R1 JSON",
+      "pass": true
+    },
+    {
+      "check": "exact root R1 MD",
+      "pass": true
+    },
+    {
+      "check": "root report preserves whole-job failure",
+      "pass": true
+    },
+    {
+      "check": "exact original archive",
+      "pass": true
+    },
+    {
+      "check": "exact original log",
+      "pass": true
+    },
+    {
+      "check": "archive members unique",
+      "pass": true
+    },
+    {
+      "check": "all original archive members safe CRC and exact extracted bytes",
+      "pass": true
+    },
+    {
+      "check": "retained settings receipt exact bytes",
+      "pass": true
+    },
+    {
+      "check": "retained liveMembership receipt exact bytes",
+      "pass": true
+    },
+    {
+      "check": "Settings actual PASS and mode",
+      "pass": true
+    },
+    {
+      "check": "68 original Settings steps",
+      "pass": true
+    },
+    {
+      "check": "exact five finite request intents",
+      "pass": true
+    },
+    {
+      "check": "one rejected and four successful finite requests",
+      "pass": true
+    },
+    {
+      "check": "all finite requests retain exact request match predicates",
+      "pass": true
+    },
+    {
+      "check": "all five effect receipts match intent order",
+      "pass": true
+    },
+    {
+      "check": "original rejected key held without held resource",
+      "pass": true
+    },
+    {
+      "check": "remaining four effects completed and no held resource",
+      "pass": true
+    },
+    {
+      "check": "seven original source publications",
+      "pass": true
+    },
+    {
+      "check": "global default project inheritance retained",
+      "pass": true
+    },
+    {
+      "check": "original close Main0 no signal group Host native absent",
+      "pass": true
+    },
+    {
+      "check": "Settings final native children absent and finite model closed",
+      "pass": true
+    },
+    {
+      "check": "settings before-after ordered source equality",
+      "pass": true
+    },
+    {
+      "check": "membership before-after ordered source equality",
+      "pass": true
+    },
+    {
+      "check": "exact retained source scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+      "pass": true
+    },
+    {
+      "check": "original management pin scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+      "pass": true
+    },
+    {
+      "check": "exact retained source scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "pass": true
+    },
+    {
+      "check": "original management pin scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "pass": true
+    },
+    {
+      "check": "exact retained source scripts/legacy-agent-host/desktop-opencode-v2-management-records.ts",
+      "pass": true
+    },
+    {
+      "check": "original management pin scripts/legacy-agent-host/desktop-opencode-v2-management-records.ts",
+      "pass": true
+    },
+    {
+      "check": "exact retained source scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "check": "original management pin scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "check": "original membership pin scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "check": "exact retained source tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "pass": true
+    },
+    {
+      "check": "original management pin tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "pass": true
+    },
+    {
+      "check": "original membership pin tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "pass": true
+    },
+    {
+      "check": "exact retained source src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+      "pass": true
+    },
+    {
+      "check": "original management pin src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+      "pass": true
+    },
+    {
+      "check": "original membership pin src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+      "pass": true
+    },
+    {
+      "check": "exact retained source src/features/runtime-provider-management/main/adapters/output/withCapturedClaudeAuthentication.ts",
+      "pass": true
+    },
+    {
+      "check": "original management pin src/features/runtime-provider-management/main/adapters/output/withCapturedClaudeAuthentication.ts",
+      "pass": true
+    },
+    {
+      "check": "original membership pin src/features/runtime-provider-management/main/adapters/output/withCapturedClaudeAuthentication.ts",
+      "pass": true
+    },
+    {
+      "check": "exact retained source src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts",
+      "pass": true
+    },
+    {
+      "check": "original management pin src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts",
+      "pass": true
+    },
+    {
+      "check": "original membership pin src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts",
+      "pass": true
+    },
+    {
+      "check": "exact retained source src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+      "pass": true
+    },
+    {
+      "check": "original management pin src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+      "pass": true
+    },
+    {
+      "check": "original membership pin src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+      "pass": true
+    },
+    {
+      "check": "exact retained source src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "pass": true
+    },
+    {
+      "check": "original management pin src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "pass": true
+    },
+    {
+      "check": "original membership pin src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "pass": true
+    },
+    {
+      "check": "exact retained source src/shared/utils/providerStatusAuthority.ts",
+      "pass": true
+    },
+    {
+      "check": "original management pin src/shared/utils/providerStatusAuthority.ts",
+      "pass": true
+    },
+    {
+      "check": "original membership pin src/shared/utils/providerStatusAuthority.ts",
+      "pass": true
+    },
+    {
+      "check": "exact retained source src/renderer/store/slices/cliInstallerStatusReconciliation.ts",
+      "pass": true
+    },
+    {
+      "check": "original management pin src/renderer/store/slices/cliInstallerStatusReconciliation.ts",
+      "pass": true
+    },
+    {
+      "check": "original membership pin src/renderer/store/slices/cliInstallerStatusReconciliation.ts",
+      "pass": true
+    },
+    {
+      "check": "exact retained source src/renderer/components/team/dialogs/useTeamModelProviderStatus.ts",
+      "pass": true
+    },
+    {
+      "check": "original management pin src/renderer/components/team/dialogs/useTeamModelProviderStatus.ts",
+      "pass": true
+    },
+    {
+      "check": "original membership pin src/renderer/components/team/dialogs/useTeamModelProviderStatus.ts",
+      "pass": true
+    },
+    {
+      "check": "exact retained source packages/legacy-agent-host/src/composition/ClaudeManagementCoordinator.ts",
+      "pass": true
+    },
+    {
+      "check": "original management pin packages/legacy-agent-host/src/composition/ClaudeManagementCoordinator.ts",
+      "pass": true
+    },
+    {
+      "check": "original membership pin packages/legacy-agent-host/src/composition/ClaudeManagementCoordinator.ts",
+      "pass": true
+    },
+    {
+      "check": "exact retained source packages/legacy-agent-host/src/adapters/providers/ClaudeManagementHost.ts",
+      "pass": true
+    },
+    {
+      "check": "original management pin packages/legacy-agent-host/src/adapters/providers/ClaudeManagementHost.ts",
+      "pass": true
+    },
+    {
+      "check": "original membership pin packages/legacy-agent-host/src/adapters/providers/ClaudeManagementHost.ts",
+      "pass": true
+    },
+    {
+      "check": "original line208 asserts rejected key still stored",
+      "pass": true
+    },
+    {
+      "check": "rejection capture follows storage assertion before explicit replacement",
+      "pass": true
+    },
+    {
+      "check": "successful explicit replacement has its own stored-key assertion",
+      "pass": true
+    },
+    {
+      "check": "formatter immutable75cf readback exact",
+      "pass": true
+    },
+    {
+      "check": "formatter is not retroactively an original receipt pin",
+      "pass": true
+    },
+    {
+      "check": "three unconditional false retention sentences",
+      "pass": true
+    },
+    {
+      "check": "formatter branches are invalid key/policy/auth-failed",
+      "pass": true
+    },
+    {
+      "check": "busy progress promises temporary save and removal/restoration",
+      "pass": true
+    },
+    {
+      "check": "actual hook formats error without storage-disposition input",
+      "pass": true
+    },
+    {
+      "check": "viewed original PNG hash ui-v2-management-rejected-key.png",
+      "pass": true
+    },
+    {
+      "check": "viewed original PNG hash ui-failure.png",
+      "pass": true
+    },
+    {
+      "check": "later membership incomplete before model selection",
+      "pass": true
+    },
+    {
+      "check": "membership source exact refusal frames",
+      "pass": true
+    },
+    {
+      "check": "only original Create Team/model expansion steps retained",
+      "pass": true
+    },
+    {
+      "check": "catalog authority/freshness absent from retained store snapshot",
+      "pass": true
+    },
+    {
+      "check": "membership failure Quit acknowledged",
+      "pass": true
+    },
+    {
+      "check": "membership captured Main0 empty group but Host not attested",
+      "pass": true
+    },
+    {
+      "check": "membership finite original peers absent",
+      "pass": true
+    },
+    {
+      "check": "original upload log binds source/artifact/run",
+      "pass": true
+    }
+  ],
+  "inertChecksPassed": 84,
+  "blockingFindings": [],
+  "visualInspection": [
+    {
+      "path": "desktop-v2-management-75cf/extracted/TEST-desktop-backend-e993LC/ui-v2-management-rejected-key.png",
+      "sha256": "c3824336f05c5958f029db55ca3eb865977b3d66f7f3d99319c39f31a9767d85",
+      "observed": "Actual rejection alert says the new credential was not kept. API key field remains masked; no key value was read or copied."
+    },
+    {
+      "path": "desktop-v2-management-75cf/extracted/TEST-desktop-backend-NKzavo/ui-failure.png",
+      "sha256": "778d4137f53aabc4e9d4be9bf328aeccdc8ddc429d0a1b239ce9b4d537753049",
+      "observed": "Create Team displays static Anthropic cards including selected Opus4.8; the finite TEST Claude Sonnet choice is not visible."
+    }
+  ],
+  "conclusions": [
+    "Settings PASS is a valid bounded scripted positive for five original intents, explicit replacement, defaults/inheritance/reload and its recorded cleanup. It is not a truthful-storage-copy oracle.",
+    "The rejected-key assertion immediately precedes the original rejection screenshot and explicit replacement. Together with the visible alert this proves the presentation mismatch, without inferring a missing backend rollback obligation.",
+    "The formatter adds the same unconditional retention claim in three failure branches; the progress copy separately promises rollback. Removing unsupported disposition claims is narrower than changing storage, API, provider behavior or cancellation semantics.",
+    "The later live-membership failure is a separate incomplete scenario. The retained store snapshot omits the selected catalog authority/freshness state, so no cause or selector/TTL repair is established.",
+    "Membership captured Host absence remains unqualified despite Main exit0, empty group and finite-peer absence.",
+    "Formatter907fb16a is verified against immutable75cf source but was not an original receipt pin. Plan72 must not rewrite history; its selected supplementary-roster append can bind the resulting source leaf."
+  ],
+  "notReaudited": [
+    "No independent execution of the original tests or provider operations.",
+    "No transfer of any positive result to a later source head.",
+    "No new analysis of cancellation/empty-connected-response storage claims beyond noting they are separate unselected branches."
+  ],
+  "execution": {
+    "artifactRedownload": false,
+    "project": false,
+    "compiler": false,
+    "tests": false,
+    "providers": false,
+    "native": false,
+    "guiInteraction": false,
+    "retainedImageViewing": true,
+    "ciObservation": false,
+    "remoteMutation": false,
+    "sourceAfterimages": false
+  }
+}

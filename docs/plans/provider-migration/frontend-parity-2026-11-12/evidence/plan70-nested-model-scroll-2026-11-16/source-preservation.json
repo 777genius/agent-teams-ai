@@ -1,0 +1,240 @@
+{
+  "status": "SOURCE_ONLY_PRESERVATION",
+  "selectedParent": "f8d3b9d2fb07ec4cb26f28bb76d9fc15fa3b49ab",
+  "checks": [
+    {
+      "name": "scripts/legacy-agent-host/desktop-ui-controls.ts exact selected official ref",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-ui-controls.ts exact official bytes",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-ui-controls.ts exact official blob",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-ui-controls.ts LF domain preserved",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-ui-controls.ts full patch forward exact",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-ui-controls.ts full patch reverse exact",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-ui-controls.ts added lines have no trailing whitespace",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts exact selected official ref",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts exact official bytes",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts exact official blob",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts LF domain preserved",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts full patch forward exact",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts full patch reverse exact",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts added lines have no trailing whitespace",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "controls full inverse is only selected fallback and one adjacent line",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "complete old positive viewport and original action loop exact",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "full waitRead guard deadlines and exception behavior byte-identical",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "all controls before scrollTo byte-identical",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "all controls after scrollTo byte-identical",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "exactly one ownership assertion removed",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "fallback only empty nearest viewport with positive target dimensions",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "actual ancestor chain only",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "all clipping ancestors visited",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "finite positive exposed rectangle required",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "horizontal and vertical clipping retained independently",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "original-chain hit self or descendant and exact closest owner",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "fallback has exactly one hit point",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "both directional capacities and finite scroll offset checked",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "multilevel reveal goal advances to offscreen port",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "fallback cannot assert target visible",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "no added CDP timers mutation dispatch or geometry assignment",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "original suite is complete byte-identical prefix",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "all original import bytes retained",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "new cases evaluate actual generated expression",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "original positive branch now has explicit one-guard no-hit case",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "self-hit and descendant exact input assertions present",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "above direction differs from clipped target content direction",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "multilevel delta assertion distinguishes exposed middle from target",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "clipping test depends on both ancestors and axes",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "missing duplicate wrong text zero size and foreign hit refusal cases",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "negative cases expire unchanged original deadline after actual read",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "final original read and original wheel bound asserted",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "fresh guard rejects exact Error across wheel await",
+      "result": true,
+      "kind": "inert-source-check"
+    },
+    {
+      "name": "helper naturally under established source cap",
+      "result": true,
+      "kind": "inert-source-check"
+    }
+  ],
+  "allChecksSatisfied": true,
+  "originalSuitePrefix": {
+    "gitBlob": "a67601fe1a6785b233aef6cacf494661100df472",
+    "sha256": "e2c1fdbc87395de78a9faed0a1a9a50d1861e02d0bdb686e3530e20eb078fc02",
+    "bytes": 162195,
+    "lines": 2689
+  },
+  "appendedSuite": {
+    "gitBlob": "6ea9264181a29b94a783ffbbef9752624cdc54fb",
+    "sha256": "93f048fd4f895d9e2922031078436a7dde6cf9be7ab1b24b06fe2ccc11ac3718",
+    "bytes": 12774,
+    "lines": 204
+  },
+  "execution": "No project, compiler, lint, test, provider, browser, GUI or CI execution. Checks parse only source and metadata bytes."
+}

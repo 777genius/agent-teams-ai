@@ -1,0 +1,122 @@
+[
+  {
+    "ref": "c4e7a936a4c13eb944eb80763c66b8cd1993d16b",
+    "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+    "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+    "encoding": "utf-8",
+    "characters": 6481,
+    "url": "https://github.com/777genius/agent-teams-ai/blob/c4e7a936a4c13eb944eb80763c66b8cd1993d16b/src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+    "localPath": "/workspace/scratch/20ba97c23d57/settings-credential-copy-proposal/before/src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+    "bytes": 6481,
+    "lines": 161,
+    "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+  },
+  {
+    "ref": "c4e7a936a4c13eb944eb80763c66b8cd1993d16b",
+    "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+    "blob": "176344903eaee49ced9607a29f28a3c556e59f6e",
+    "encoding": "utf-8",
+    "characters": 97365,
+    "url": "https://github.com/777genius/agent-teams-ai/blob/c4e7a936a4c13eb944eb80763c66b8cd1993d16b/src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+    "localPath": "/workspace/scratch/20ba97c23d57/settings-credential-copy-proposal/before/src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+    "bytes": 97366,
+    "lines": 2584,
+    "sha256": "11871dd43b1c704230c83e722577ba4cdd4f4fd6c2eebce89cab02457b52b81a"
+  },
+  {
+    "ref": "c4e7a936a4c13eb944eb80763c66b8cd1993d16b",
+    "path": "test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts",
+    "blob": "162fb1fccf81b97d1c2b9c741189584016ff3667",
+    "encoding": "utf-8",
+    "characters": 183017,
+    "url": "https://github.com/777genius/agent-teams-ai/blob/c4e7a936a4c13eb944eb80763c66b8cd1993d16b/test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts",
+    "localPath": "/workspace/scratch/20ba97c23d57/settings-credential-copy-proposal/before/test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts",
+    "bytes": 183020,
+    "lines": 5126,
+    "sha256": "3057f23d318ec62a902bb869c288108f27800bdd354952faba21a875b4d97d6b"
+  },
+  {
+    "ref": "c4e7a936a4c13eb944eb80763c66b8cd1993d16b",
+    "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+    "blob": "c9e19b14b433c58494c10b06eac9f82d5f5cd118",
+    "encoding": "utf-8",
+    "characters": 195789,
+    "url": "https://github.com/777genius/agent-teams-ai/blob/c4e7a936a4c13eb944eb80763c66b8cd1993d16b/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+    "localPath": "/workspace/scratch/20ba97c23d57/settings-credential-copy-proposal/before/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+    "bytes": 195789,
+    "lines": 6034,
+    "sha256": "008d47eafc5f9113af654cd42c29bdc398ed1969695d15c3650898b281cbb195"
+  },
+  {
+    "ref": "c4e7a936a4c13eb944eb80763c66b8cd1993d16b",
+    "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+    "blob": "7f224d52e429bbdecb173d65b470a2ac154de475",
+    "encoding": "utf-8",
+    "characters": 20435,
+    "url": "https://github.com/777genius/agent-teams-ai/blob/c4e7a936a4c13eb944eb80763c66b8cd1993d16b/scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+    "localPath": "/workspace/scratch/20ba97c23d57/settings-credential-copy-proposal/before/scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+    "bytes": 20435,
+    "lines": 278,
+    "sha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6"
+  },
+  {
+    "ref": "c4e7a936a4c13eb944eb80763c66b8cd1993d16b",
+    "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+    "blob": "e191694db8ccd8bbd2e05bcdbcacd8cb1703e23c",
+    "encoding": "utf-8",
+    "characters": 22434,
+    "url": "https://github.com/777genius/agent-teams-ai/blob/c4e7a936a4c13eb944eb80763c66b8cd1993d16b/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+    "localPath": "/workspace/scratch/20ba97c23d57/settings-credential-copy-proposal/before/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+    "bytes": 22434,
+    "lines": 345,
+    "sha256": "651be27777eba7280304a791e52a088cec616e94b15d88734043c29c1adf234b"
+  },
+  {
+    "ref": "c4e7a936a4c13eb944eb80763c66b8cd1993d16b",
+    "path": "scripts/ci/check-source-file-size.mjs",
+    "blob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+    "encoding": "utf-8",
+    "characters": 8145,
+    "url": "https://github.com/777genius/agent-teams-ai/blob/c4e7a936a4c13eb944eb80763c66b8cd1993d16b/scripts/ci/check-source-file-size.mjs",
+    "localPath": "/workspace/scratch/20ba97c23d57/settings-credential-copy-proposal/dependencies/scripts/ci/check-source-file-size.mjs",
+    "bytes": 8145,
+    "lines": 231,
+    "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2"
+  },
+  {
+    "ref": "c4e7a936a4c13eb944eb80763c66b8cd1993d16b",
+    "path": "scripts/ci/source-file-size-baseline.json",
+    "blob": "8f5deeed4e406894e1ee587ed541014bcb7dde77",
+    "encoding": "utf-8",
+    "characters": 9635,
+    "url": "https://github.com/777genius/agent-teams-ai/blob/c4e7a936a4c13eb944eb80763c66b8cd1993d16b/scripts/ci/source-file-size-baseline.json",
+    "localPath": "/workspace/scratch/20ba97c23d57/settings-credential-copy-proposal/dependencies/scripts/ci/source-file-size-baseline.json",
+    "bytes": 9635,
+    "lines": 146,
+    "sha256": "8e4e373812efb4556e6261353fe9c8808fc93e6393f095fd00476a11fb5a6cae"
+  },
+  {
+    "ref": "c4e7a936a4c13eb944eb80763c66b8cd1993d16b",
+    "path": "AGENTS.md",
+    "blob": "0c8a4a63abf24c1510c934990a025ebc99c9e435",
+    "encoding": "utf-8",
+    "characters": 8999,
+    "url": "https://github.com/777genius/agent-teams-ai/blob/c4e7a936a4c13eb944eb80763c66b8cd1993d16b/AGENTS.md",
+    "localPath": "/workspace/scratch/20ba97c23d57/settings-credential-copy-proposal/dependencies/AGENTS.md",
+    "bytes": 8999,
+    "lines": 93,
+    "sha256": "9a8bc5d8906292ca6949a3e7c9b969d72061aba020d8064c7e799351084fd8a7"
+  },
+  {
+    "ref": "c4e7a936a4c13eb944eb80763c66b8cd1993d16b",
+    "path": "src/shared/utils/opencodeModelRef.ts",
+    "blob": "3da89e8154f8072873dc78035e2ea168bc42ca25",
+    "encoding": "utf-8",
+    "characters": 2726,
+    "url": "https://github.com/777genius/agent-teams-ai/blob/c4e7a936a4c13eb944eb80763c66b8cd1993d16b/src/shared/utils/opencodeModelRef.ts",
+    "localPath": "/workspace/scratch/20ba97c23d57/settings-credential-copy-proposal/dependencies/src/shared/utils/opencodeModelRef.ts",
+    "bytes": 2726,
+    "lines": 108,
+    "sha256": "7a337f9349bb13357764eb4d2dd950c2a4bb669e671e645cac703be3ef40ce69"
+  }
+]

@@ -1,0 +1,72 @@
+{
+  "status": "FROZEN_SOURCE_R1_ONLY",
+  "selectedParent": "f8d3b9d2fb07ec4cb26f28bb76d9fc15fa3b49ab",
+  "selectedTree": "360c8a92c25e65959cf1b53e00587a1911c225c8",
+  "plan": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/70-nested-model-scroll-and-adjacent-guard-2026-11-16.md",
+    "gitBlob": "61661bc95399364db94536924e55e182db2dacaa",
+    "sha256": "69396e4ccb4d167d333cf64c7d22033b3a6d2224346fcd7ec6b9162bc22a1208"
+  },
+  "prospectiveR2Sha256": "889091426525e8110378d832eeaf87051b17dceecd54ec960dd9012f4a028519",
+  "files": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "before": {
+        "gitBlob": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+        "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e",
+        "bytes": 30733,
+        "lines": 548
+      },
+      "after": {
+        "gitBlob": "e05bb6778fe2618f94dd4310fe6dad3c10a83ae0",
+        "sha256": "f3e80885a6855428d8223ba54544928c4675f9d121b440a876534cdf3334816e",
+        "bytes": 33220,
+        "lines": 585
+      },
+      "addedLines": 38,
+      "removedLines": 1
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "before": {
+        "gitBlob": "a67601fe1a6785b233aef6cacf494661100df472",
+        "sha256": "e2c1fdbc87395de78a9faed0a1a9a50d1861e02d0bdb686e3530e20eb078fc02",
+        "bytes": 162195,
+        "lines": 2689
+      },
+      "after": {
+        "gitBlob": "3eb5191149ed77e27365af1193ece1b9a437f23d",
+        "sha256": "ba573ef65142ec600ea0067c7dfdd48468bdcbd53b3172402481bbc93b3379e9",
+        "bytes": 174969,
+        "lines": 2893
+      },
+      "addedLines": 204,
+      "removedLines": 0
+    }
+  ],
+  "exactChangedSourcePaths": 2,
+  "patch": {
+    "path": "candidate.patch",
+    "gitBlob": "9a3e78faf70b6284aae3ff0e6a7050eabd28f578",
+    "sha256": "92707c18a7da98d0603d9a8f15f6a9d64a10a023b3544f3442a0523478e07305",
+    "bytes": 16933,
+    "lines": 265
+  },
+  "officialPreimages": {
+    "path": "official-preimages.json",
+    "gitBlob": "cb8cc9d544f5850f7ae0f066a487b23cb1c556bb",
+    "sha256": "b8db2564c9fa0ac2528924480cacf94041d7cd0cf9268bc9278f08fbcf94c697",
+    "bytes": 266613,
+    "lines": 1
+  },
+  "preservation": {
+    "path": "preservation-proof.json",
+    "gitBlob": "636e1ab7c5058a169d7e6cb35787b2dd2ee85eef",
+    "sha256": "8fe94ab38abf9547a2f1e773d8438d31e61500b6549470416262b4667c497063",
+    "bytes": 7206,
+    "lines": 240,
+    "checks": 44
+  },
+  "execution": "none; inert source/hash/patch review only",
+  "remainingGate": "Independent exact-source R2 and original canonical CI/E2E on the published resulting source; original failures remain failures."
+}

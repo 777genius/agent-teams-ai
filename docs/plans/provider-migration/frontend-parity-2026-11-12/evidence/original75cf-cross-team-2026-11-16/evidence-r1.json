@@ -1,0 +1,1437 @@
+{
+  "kind": "ORIGINAL_75CF_CROSS_TEAM_SOURCE_R1",
+  "status": "SEALED_ORIGINAL_LANE_INCOMPLETE",
+  "runId": 43959134362,
+  "jobId": 133621515860,
+  "artifactId": 14281122548,
+  "head": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "artifact": {
+    "path": "desktop-cross-team-75cf/original-artifact.zip",
+    "bytes": 2829525,
+    "sha256": "59a67cf0928cbc4585740e7ee29b2def6a1f6be71a5d3a6fa967059cf45ce5ca"
+  },
+  "jobLog": {
+    "path": "desktop-cross-team-75cf/original-job.log",
+    "bytes": 193767,
+    "sha256": "ad1bf32e4c73c13b5d28907d1027721ecb3f3bb3f90daab19ec05d24223b15a8"
+  },
+  "receipt": {
+    "path": "/workspace/scratch/20ba97c23d57/desktop-cross-team-75cf/extracted/TEST-desktop-backend-rOHXt5/desktop-backend-receipt.json",
+    "bytes": 21065316,
+    "sha256": "3d3c805369bb0fd920161eafcc7b4dd64006a9ce065b6c0b6f1ddacc95fe4ce9"
+  },
+  "checks": [
+    {
+      "name": "original bytes original-artifact.zip",
+      "pass": true,
+      "evidence": {
+        "bytes": 2829525,
+        "sha256": "59a67cf0928cbc4585740e7ee29b2def6a1f6be71a5d3a6fa967059cf45ce5ca"
+      }
+    },
+    {
+      "name": "original bytes original-job.log",
+      "pass": true,
+      "evidence": {
+        "bytes": 193767,
+        "sha256": "ad1bf32e4c73c13b5d28907d1027721ecb3f3bb3f90daab19ec05d24223b15a8"
+      }
+    },
+    {
+      "name": "official packet association",
+      "pass": true,
+      "evidence": "Root-retained original download manifest; no new API/CI reads."
+    },
+    {
+      "name": "member count and unique paths",
+      "pass": true,
+      "evidence": "44 original members."
+    },
+    {
+      "name": "safe paths and no links",
+      "pass": true,
+      "evidence": "No extraction or binary execution."
+    },
+    {
+      "name": "CRC verification",
+      "pass": true,
+      "evidence": "Independent read-only CRC verification."
+    },
+    {
+      "name": "member TEST-desktop-backend-eNK4O8/host-profile.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 560,
+        "sha256": "1b7bbd9260ba656b83a7a3f53f118af43da633acad924b79bcd1aba27c2706c1"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/desktop-backend-receipt.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 21065316,
+        "sha256": "3d3c805369bb0fd920161eafcc7b4dd64006a9ce065b6c0b6f1ddacc95fe4ce9"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/desktop-app.log",
+      "pass": true,
+      "evidence": {
+        "bytes": 35743,
+        "sha256": "30823d34f59acc8d9fbe49df1b3789b518523be53da1ff588c3060553084e8e4"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/desktop-descriptor.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 4700,
+        "sha256": "c5d50ee91a3bf55710e191571e494d4670afc9594702caa6f7b2d35e9a030190"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/host-profile.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 2618,
+        "sha256": "bb55a91729434759ab93355ddcebd4be4eac39398d7dc1da0a66ab8fa8748c11"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/hoststore/tasks/test-desktop-backend/0d6b4f21-de99-5d76-a76d-74945ada35c2.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 5736,
+        "sha256": "bde4baf4f135fb9113649620ac0201e9c4e6eec102985d0724e2e46e6eada665"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/hoststore/tasks/test-desktop-backend/bfe3920c-852d-53c0-8f5e-2db6fc705ecf.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 602048,
+        "sha256": "444b5354df2bc676da7707d70b416281b17446e13efca4ef08e11bd97b3762a9"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/hoststore/tasks/test-desktop-backend/c8e75aba-e3f1-573d-920d-95e170d96fad.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 858,
+        "sha256": "84f421e2d9383e6b647c0a91cdda139798c79580d836020cf44a9c0827504b51"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/hoststore/tasks/test-desktop-backend/d9148b3d-0df6-5708-ab2d-b5425e5ccf5b.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 868,
+        "sha256": "10494b3b9fc39e3fd165e2c8c1fed4aacfff4016e0cf5703f7ab329d51b58a26"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/hoststore/teams/test-cross-beta/inboxes/team-lead.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 1733,
+        "sha256": "0199ebaf03dc66f714c87faa55ac965392b4f79d22fdc79c9a67da68e5c19b11"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/hoststore/teams/test-cross-alpha/inboxes/team-lead.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 1863,
+        "sha256": "1ec94d62a49bf709d6e6a4d1de4c466d3cec0d7eb48755a12beb21ca0f55071a"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/hoststore/teams/test-desktop-backend/group-chats.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 340,
+        "sha256": "b5ec0548172a16d57a08c1475988c90cf029f0616c06920ddc98b568854601b9"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 4633,
+        "sha256": "c7cf037d7feebdc471fba2d6f776c05a07a58b10a6eb63c2913092e71b687f9d"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/owner-routing-default-b.log",
+      "pass": true,
+      "evidence": {
+        "bytes": 17859,
+        "sha256": "8a4f1b0e9d89a592bbe426b2bd2a6554f514abe56fde8316f4ac5370ca3c43dc"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/owner-routing-rollback-a-failure.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 84958,
+        "sha256": "50fa3a3ccd229fb6ab169d3e4571b0b350dfe674ede1658e8f2c53bab005e188"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/owner-routing-rollback-a.log",
+      "pass": true,
+      "evidence": {
+        "bytes": 13569,
+        "sha256": "b11413812f94070b8edf003e929b4d6292a65a11fe48901caaccb0d4b3ecf46d"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/owner-routing-unavailable-a.log",
+      "pass": true,
+      "evidence": {
+        "bytes": 17946,
+        "sha256": "f987da03ad1ceddfaa232a3616db3ba6b632d9b2818285b0c9f3449ebc205276"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/sentinel-invocations.ndjson",
+      "pass": true,
+      "evidence": {
+        "bytes": 384,
+        "sha256": "84573dede733753d58cb4f24a9a6e3065888b86f8f053787e84cd79228581468"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-cross-team-reply.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 116412,
+        "sha256": "db7255ba6bcb4890b01a9083d9f5c151cf22f074e55fb675a083df2a62018114"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-group-seed-receipt.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 593,
+        "sha256": "67894e38b07549996f29e20093c9119fdf7949c04536d45b4b6e9bcd1227bbff"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-owner-routing-task-opened.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 109367,
+        "sha256": "a852eb78e3e0be2ac7ecc6f9621ff72ad674706366f5e0809f2d2076d940bd80"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-owner-routing-tasks-filtered.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 115560,
+        "sha256": "c1c5f7cd6f1ccce05dadf9afa9ef850e34128d8bcfce844dcdc6c0e55ff510bc"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-owner-routing-tasks.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 114935,
+        "sha256": "5405a1eadb8912dd0504981862ffc25c4dbd06a1b3e21f924699d360f3fd90a2"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-owner-routing-teams-filtered.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 83159,
+        "sha256": "b0cf0bac79ab701413386cad9645da56bbafd4074b35fffd769aeb3a840c186f"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-seed-receipt.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 2197,
+        "sha256": "5e6c4bc65e96b966966383ff8f1666b07cd279fc53f43311ff171abbee15c20d"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-task-board-assigned-blocked.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 109224,
+        "sha256": "8f9d90554ee1ff8fa83ff1c589c32b495318a2001aec668fd8fbc9d31cd4561f"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-owner-routing-teams.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 88607,
+        "sha256": "0d4f77ddf35d2830b0ee38311f5233ed020a459fb24bac8c3bf6fd5b6075cbc3"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-task-board-attachment-added.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 127241,
+        "sha256": "346738f7b6c918eb1b1a8447d8579eee1bf55c8beaffc13738fa5492a5a3613d"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-task-board-attachment-removed.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 116310,
+        "sha256": "c88a1706d19ca8d35f1a9770528ac18ff7acecdcfb555ac08cf98b4f273f86d6"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-task-board-attachments-reloaded.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 114918,
+        "sha256": "e638d009211d7171addafac5af29b7be9391d28e2bc64976edccd297bb236381"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-task-board-blocked-start.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 132382,
+        "sha256": "00663598e24b7f7f7425131685b8558b3600f335b66cbc50b2537581b7781e23"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-task-board-initial.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 103044,
+        "sha256": "93160a9e137240f5f527a06b4e4bbbe97b5c58c2a9adb460cf3bc7500010c5bb"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-task-board-reloaded.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 123953,
+        "sha256": "69245082d7913828215735c299ef561a36c4baa39a22e6e6fbc5d4b952e1b359"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-task-board-reordered.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 132070,
+        "sha256": "0d96c19bbf1a1d3c565ed65b4a8d94e0cb3d065500ae15b0206b0a963c1ab8cd"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-task-large-comment-cold-readback.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 77728,
+        "sha256": "70d5358cdeded0000b8783ae9acad38fbf0e61fd5b6cb8e3cca6151693c94f84"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-task-notification-quick-actions.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 120284,
+        "sha256": "fcdf5a74ad7bc03dd409db8c010b4376a19a89d3410825ec1fd339e3822b8ded"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-task-review-approved.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 100974,
+        "sha256": "c1dde180911d8511ce9603e4d11e776ab51f7473d0495d0a425e656698f59b13"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/ui-task-trash-original-row.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 103047,
+        "sha256": "bc56b4bc44ca665a13f005458c9e45cc7d4e3a7f012d2868b3cdc6e19db6820a"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-rOHXt5/userData/logs/app-errors.ndjson",
+      "pass": true,
+      "evidence": {
+        "bytes": 110306,
+        "sha256": "bc5193f645805d001c4d884424bb434fbdc8952b9116fb75aea66d21549fb390"
+      }
+    },
+    {
+      "name": "member TEST-emulated-ui-inputs-t2bZvv/linux-child-exec/linux-child-exec",
+      "pass": true,
+      "evidence": {
+        "bytes": 790608,
+        "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+      }
+    },
+    {
+      "name": "member TEST-emulated-ui-inputs-t2bZvv/linux-child-exec/manifest.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 2408,
+        "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+      }
+    },
+    {
+      "name": "member host-emulated-inputs.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 1803,
+        "sha256": "e8ebc068953f2462a07d33bdbe7ab4cd6b8775b20ecfa05b775952007c318d41"
+      }
+    },
+    {
+      "name": "member host-emulated-linux-child-exec-selection.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 271,
+        "sha256": "d504f72c6ab788862c13dd94fc43630e6fc466fd8390ae48125aed3220454839"
+      }
+    },
+    {
+      "name": "member host-emulated-task-board-cross-team-ui.log",
+      "pass": true,
+      "evidence": {
+        "bytes": 2407,
+        "sha256": "df1940c3d7740294ecabd78b304bcc6a817bb659c9c9fbfc2b256ccb6fe645e2"
+      }
+    },
+    {
+      "name": "exact source and mode",
+      "pass": true,
+      "evidence": {
+        "source": {
+          "head": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+          "dirty": false
+        },
+        "mode": "task-board-cross-team-ui",
+        "status": "INCOMPLETE"
+      }
+    },
+    {
+      "name": "source freeze stable",
+      "pass": true,
+      "evidence": "All1777 captured before/after source hashes equal; no future-source qualification."
+    },
+    {
+      "name": "official source scripts/legacy-agent-host/desktop-owner-routing-ui-smoke.ts",
+      "pass": true,
+      "evidence": {
+        "blob": "b0863b23171786c2bcaa127c415e1df102241164",
+        "sha256": "3f6fca400262952bec3fdbde3047049973f04ea71e6e40b6adffbce0926df564"
+      }
+    },
+    {
+      "name": "official source scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "pass": true,
+      "evidence": {
+        "blob": "9c724c3895e467bc1db062e5015ded70c30e65e4",
+        "sha256": "bbd6647969c1ab0ae125b6a5e0685ca0f112dca05661a6c04b37c4fbee56a33e"
+      }
+    },
+    {
+      "name": "official source scripts/legacy-agent-host/desktop-owner-routing-epoch.ts",
+      "pass": true,
+      "evidence": {
+        "blob": "be0e7434575a22d4d15230aa997009f50695181c",
+        "sha256": "0be302b884538c6156fd20b6ef8e6a27d73a525058c503f5a2b685b89be76aec"
+      }
+    },
+    {
+      "name": "official source scripts/legacy-agent-host/desktop-owner-routing-fixture.ts",
+      "pass": true,
+      "evidence": {
+        "blob": "eb267a1a5852a1beacdf19b3b2dd376cc6a92dd3",
+        "sha256": "a709c413e0c558bf1432381630fd9178541952ca7ecdb3dbce69dc6bd928253d"
+      }
+    },
+    {
+      "name": "exact original shared UI reader",
+      "pass": true,
+      "evidence": {
+        "blob": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+        "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e"
+      }
+    },
+    {
+      "name": "earlier proof taskBoardUiProof",
+      "pass": true,
+      "evidence": {
+        "status": "PASS",
+        "steps": 100
+      }
+    },
+    {
+      "name": "earlier proof taskReviewCycleUiProof",
+      "pass": true,
+      "evidence": {
+        "status": "PASS",
+        "steps": 61
+      }
+    },
+    {
+      "name": "earlier proof taskNotificationUiProof",
+      "pass": true,
+      "evidence": {
+        "status": "PASS",
+        "steps": 10
+      }
+    },
+    {
+      "name": "earlier proof crossTeamUiProof",
+      "pass": true,
+      "evidence": {
+        "status": "PASS",
+        "steps": 40
+      }
+    },
+    {
+      "name": "earlier proof oversizedCommentUiProof",
+      "pass": true,
+      "evidence": {
+        "status": "PASS",
+        "steps": 0
+      }
+    },
+    {
+      "name": "earlier proof f08ReadTimingProof",
+      "pass": true,
+      "evidence": {
+        "status": "PASS",
+        "steps": 33
+      }
+    },
+    {
+      "name": "earlier proof taskTrashRestoreUiProof",
+      "pass": true,
+      "evidence": {
+        "status": "PASS",
+        "steps": 19
+      }
+    },
+    {
+      "name": "oversized original comment bytes",
+      "pass": true,
+      "evidence": {
+        "textSha256": "5968038a7bc48ca6a631182a4662cc1ef91917813e05871b555328e31aa2efcb",
+        "steps": 22
+      }
+    },
+    {
+      "name": "cross-Team command identities",
+      "pass": true,
+      "evidence": {
+        "commands": [
+          "8c595e27-d25e-4d09-8ff4-073c2ded8967",
+          "9b215197-f2c7-41a4-a97d-3bacadbff953"
+        ],
+        "conversationId": "66fd8fdb-a11d-4d96-bd56-c178e06a113b"
+      }
+    },
+    {
+      "name": "owner epoch order and exact partial result",
+      "pass": true,
+      "evidence": "No owner continuation final PASS."
+    },
+    {
+      "name": "original 12 minute continuation budget",
+      "pass": true,
+      "evidence": "nonrenewable continuation bound within the unchanged 45-minute existing job; original cold startup/action bounds are not increased"
+    },
+    {
+      "name": "first owner A mutation completed",
+      "pass": true,
+      "evidence": "Original A task under B default was accepted before save-only B creation."
+    },
+    {
+      "name": "original unavailable A was not dispatched",
+      "pass": true,
+      "evidence": {
+        "ok": false,
+        "code": "unavailable",
+        "outcome": "not-dispatched"
+      }
+    },
+    {
+      "name": "A unavailable read-only proof retained",
+      "pass": true,
+      "evidence": "A and B product snapshots retained; original availability UI and B Task selection reached."
+    },
+    {
+      "name": "A restored profile identity",
+      "pass": true,
+      "evidence": "Same original A profile restored before rollback epoch."
+    },
+    {
+      "name": "rollback original A task completed",
+      "pass": true,
+      "evidence": "The A task is an actual committed prior effect, not an unexecuted suffix."
+    },
+    {
+      "name": "uploaded canonical A task matches receipt",
+      "pass": true,
+      "evidence": {
+        "path": "TEST-desktop-backend-rOHXt5/hoststore/tasks/test-desktop-backend/d9148b3d-0df6-5708-ab2d-b5425e5ccf5b.json",
+        "sha256": "10494b3b9fc39e3fd165e2c8c1fed4aacfff4016e0cf5703f7ab329d51b58a26",
+        "commandId": "e34cf39c-ac17-43d9-915f-1ffbf4009b44"
+      }
+    },
+    {
+      "name": "first failure remains original geometry assertion",
+      "pass": true,
+      "evidence": "Original UI target moved after ownership check\n+ actual - expected\n\n  [\n    193.328125,\n+   489,\n-   619,\n    'DIV'\n  ]\n"
+    },
+    {
+      "name": "last action is exact B card hover only",
+      "pass": true,
+      "evidence": {
+        "selector": "[role=\"button\"][data-team-name=\"host-team:adcc8059-add9-5017-a4f9-fe6e66d9270e\"]",
+        "action": "mouseMoved",
+        "label": "hover open exact original Team card",
+        "steps": 17
+      }
+    },
+    {
+      "name": "precise original five geometry samples",
+      "pass": true,
+      "evidence": {
+        "samples": [
+          {
+            "phase": "initial",
+            "unavailable": false,
+            "x": 193.328125,
+            "y": 619,
+            "tag": null,
+            "targetRect": [
+              16,
+              499,
+              354.65625,
+              240
+            ],
+            "dialogRect": null,
+            "targetAnimations": 0,
+            "dialogAnimations": null,
+            "fonts": "loaded"
+          },
+          {
+            "phase": "after-hover",
+            "unavailable": false,
+            "x": 193.328125,
+            "y": 619,
+            "tag": null,
+            "targetRect": [
+              16,
+              499,
+              354.65625,
+              240
+            ],
+            "dialogRect": null,
+            "targetAnimations": 5,
+            "dialogAnimations": null,
+            "fonts": "loaded"
+          },
+          {
+            "phase": "stable",
+            "unavailable": false,
+            "x": 193.328125,
+            "y": 619,
+            "tag": null,
+            "targetRect": [
+              16,
+              499,
+              354.65625,
+              240
+            ],
+            "dialogRect": null,
+            "targetAnimations": 0,
+            "dialogAnimations": null,
+            "fonts": "loaded"
+          },
+          {
+            "phase": "stable",
+            "unavailable": false,
+            "x": 193.328125,
+            "y": 619,
+            "tag": null,
+            "targetRect": [
+              16,
+              499,
+              354.65625,
+              240
+            ],
+            "dialogRect": null,
+            "targetAnimations": 0,
+            "dialogAnimations": null,
+            "fonts": "loaded"
+          },
+          {
+            "phase": "final",
+            "unavailable": false,
+            "x": 193.328125,
+            "y": 489,
+            "tag": null,
+            "targetRect": [
+              16,
+              369,
+              354.65625,
+              240
+            ],
+            "dialogRect": null,
+            "targetAnimations": 0,
+            "dialogAnimations": null,
+            "fonts": "loaded"
+          }
+        ],
+        "overflow": false
+      }
+    },
+    {
+      "name": "same size with 130px upward translation",
+      "pass": true,
+      "evidence": "No inference about which ancestor/layout producer moved."
+    },
+    {
+      "name": "rollback later suffix absent",
+      "pass": true,
+      "evidence": "B task create, two-way preservation summary and final rollback publication assertions not reached."
+    },
+    {
+      "name": "original stack and refusal time",
+      "pass": true,
+      "evidence": "Trace at23:12:50.7206062Z; thrown stack at23:12:53.1069757Z."
+    },
+    {
+      "name": "earlier PASS line and later aggregate refusal",
+      "pass": true,
+      "evidence": "Initial main flow completed, then continuation deliberately reset receipt status; aggregate rejects actual final state."
+    },
+    {
+      "name": "base original natural Quit and cleanup",
+      "pass": true,
+      "evidence": {
+        "cleanup": {
+          "processGroup": 4259,
+          "remaining": [],
+          "appExitCode": 0,
+          "appSignalCode": null,
+          "capturedHostObserved": true,
+          "capturedHostAbsent": true,
+          "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+        },
+        "originalExitedGroup": {
+          "settled": true,
+          "reason": "original-natural-exit-and-fresh-absence",
+          "initialMembers": [
+            {
+              "pid": 4332,
+              "ppid": 1,
+              "pgid": 4259
+            }
+          ],
+          "remaining": [],
+          "capturedHostAbsent": true,
+          "capturedDescendantsAbsent": true,
+          "appExitCode": 0,
+          "appSignalCode": null
+        }
+      }
+    },
+    {
+      "name": "epoch physical cleanup default-b",
+      "pass": true,
+      "evidence": {
+        "remaining": [],
+        "hosts": [
+          {
+            "pid": 11636,
+            "ppid": 11478,
+            "pgid": 11354
+          },
+          {
+            "pid": 11649,
+            "ppid": 11478,
+            "pgid": 11354
+          }
+        ],
+        "hostsAbsent": true,
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "quitAttempted": true,
+        "signalAttempted": false,
+        "scope": "Guarded original app close and established exact-identity wrapper cleanup; no universal natural-exit qualification"
+      }
+    },
+    {
+      "name": "epoch verified window close default-b",
+      "pass": true,
+      "evidence": {
+        "attempted": true,
+        "scope": "Close only the verified TEST window before stopping its dev wrapper",
+        "reply": "acknowledged",
+        "listenerAbsent": true
+      }
+    },
+    {
+      "name": "epoch physical cleanup unavailable-a",
+      "pass": true,
+      "evidence": {
+        "remaining": [],
+        "hosts": [
+          {
+            "pid": 13110,
+            "ppid": 12958,
+            "pgid": 12839
+          }
+        ],
+        "hostsAbsent": true,
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "quitAttempted": true,
+        "signalAttempted": false,
+        "scope": "Guarded original app close and established exact-identity wrapper cleanup; no universal natural-exit qualification"
+      }
+    },
+    {
+      "name": "epoch verified window close unavailable-a",
+      "pass": true,
+      "evidence": {
+        "attempted": true,
+        "scope": "Close only the verified TEST window before stopping its dev wrapper",
+        "reply": "acknowledged",
+        "listenerAbsent": true
+      }
+    },
+    {
+      "name": "epoch physical cleanup rollback-a",
+      "pass": true,
+      "evidence": {
+        "remaining": [],
+        "hosts": [
+          {
+            "pid": 15696,
+            "ppid": 15543,
+            "pgid": 15425
+          },
+          {
+            "pid": 15706,
+            "ppid": 15543,
+            "pgid": 15425
+          }
+        ],
+        "hostsAbsent": true,
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "quitAttempted": true,
+        "signalAttempted": false,
+        "scope": "Guarded original app close and established exact-identity wrapper cleanup; no universal natural-exit qualification"
+      }
+    },
+    {
+      "name": "epoch verified window close rollback-a",
+      "pass": true,
+      "evidence": {
+        "attempted": true,
+        "scope": "Close only the verified TEST window before stopping its dev wrapper",
+        "reply": "acknowledged",
+        "listenerAbsent": true
+      }
+    },
+    {
+      "name": "no cleanup or source-freeze error",
+      "pass": true,
+      "evidence": "All observed physical cleanup checks completed; acceptance incompleteness is separate."
+    },
+    {
+      "name": "original bundle bytes equal across four epochs",
+      "pass": true,
+      "evidence": "14 actual compiled main/preload hashes per epoch; no reproducible rebuild claim."
+    },
+    {
+      "name": "offline profile TEST-desktop-backend-rOHXt5",
+      "pass": true,
+      "evidence": {
+        "sha256": "bb55a91729434759ab93355ddcebd4be4eac39398d7dc1da0a66ab8fa8748c11",
+        "keys": [
+          "schemaVersion",
+          "owner",
+          "principalId",
+          "teams",
+          "creation"
+        ]
+      }
+    },
+    {
+      "name": "offline profile TEST-desktop-backend-eNK4O8",
+      "pass": true,
+      "evidence": {
+        "sha256": "1b7bbd9260ba656b83a7a3f53f118af43da633acad924b79bcd1aba27c2706c1",
+        "keys": [
+          "schemaVersion",
+          "owner",
+          "principalId",
+          "creation",
+          "teams"
+        ]
+      }
+    },
+    {
+      "name": "final descriptor belongs to rollback epoch",
+      "pass": true,
+      "evidence": {
+        "baseDescriptorSha256": "6f8f32797f2c8cf0fadf8d622f825cc9de4fced8cae483dc8522d81d6d826f25",
+        "rollbackDescriptorSha256": "c5d50ee91a3bf55710e191571e494d4670afc9594702caa6f7b2d35e9a030190",
+        "note": "Expected cold descriptor installation; do not compare final bytes to initial original A descriptor pin."
+      }
+    },
+    {
+      "name": "only original metadata sentinel calls",
+      "pass": true,
+      "evidence": {
+        "calls": 4,
+        "role": "Private finite metadata sentinel; not genuine Claude/Codex."
+      }
+    },
+    {
+      "name": "base native provider exclusion",
+      "pass": true,
+      "evidence": {
+        "only": true,
+        "runtimeConfigured": false,
+        "managementConfigured": false,
+        "noNativeHostChildrenBeforeUi": true,
+        "noNativeHostChildren": true
+      }
+    },
+    {
+      "name": "pinned provider archive remains selected",
+      "pass": true,
+      "evidence": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41"
+    },
+    {
+      "name": "strict final geometry check precedes click record",
+      "pass": true,
+      "evidence": "The failed assertion precedes both mouseClick record and physical button dispatch."
+    },
+    {
+      "name": "owner failure source order",
+      "pass": true,
+      "evidence": "Original one-shot selection, owner effect order and PASS gate retained."
+    },
+    {
+      "name": "base PASS then explicit continuation reset",
+      "pass": true,
+      "evidence": "Earlier PASS line cannot qualify later owner rollback."
+    }
+  ],
+  "checkCount": 99,
+  "sourceBindings": [
+    {
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": "scripts/legacy-agent-host/desktop-owner-routing-ui-smoke.ts",
+      "blob": "b0863b23171786c2bcaa127c415e1df102241164",
+      "localPath": "/workspace/scratch/20ba97c23d57/desktop-cross-team-75cf/source-r1/source/scripts/legacy-agent-host/desktop-owner-routing-ui-smoke.ts",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/scripts/legacy-agent-host/desktop-owner-routing-ui-smoke.ts",
+      "characters": 34664,
+      "sha256": "3f6fca400262952bec3fdbde3047049973f04ea71e6e40b6adffbce0926df564",
+      "bytes": 34664,
+      "lines": 790
+    },
+    {
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "blob": "9c724c3895e467bc1db062e5015ded70c30e65e4",
+      "localPath": "/workspace/scratch/20ba97c23d57/desktop-cross-team-75cf/source-r1/source/scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "characters": 55757,
+      "sha256": "bbd6647969c1ab0ae125b6a5e0685ca0f112dca05661a6c04b37c4fbee56a33e",
+      "bytes": 55757,
+      "lines": 798
+    },
+    {
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": "scripts/legacy-agent-host/desktop-owner-routing-epoch.ts",
+      "blob": "be0e7434575a22d4d15230aa997009f50695181c",
+      "localPath": "/workspace/scratch/20ba97c23d57/desktop-cross-team-75cf/source-r1/source/scripts/legacy-agent-host/desktop-owner-routing-epoch.ts",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/scripts/legacy-agent-host/desktop-owner-routing-epoch.ts",
+      "characters": 5254,
+      "sha256": "0be302b884538c6156fd20b6ef8e6a27d73a525058c503f5a2b685b89be76aec",
+      "bytes": 5254,
+      "lines": 139
+    },
+    {
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": "scripts/legacy-agent-host/desktop-owner-routing-fixture.ts",
+      "blob": "eb267a1a5852a1beacdf19b3b2dd376cc6a92dd3",
+      "localPath": "/workspace/scratch/20ba97c23d57/desktop-cross-team-75cf/source-r1/source/scripts/legacy-agent-host/desktop-owner-routing-fixture.ts",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/scripts/legacy-agent-host/desktop-owner-routing-fixture.ts",
+      "characters": 9339,
+      "sha256": "a709c413e0c558bf1432381630fd9178541952ca7ecdb3dbce69dc6bd928253d",
+      "bytes": 9339,
+      "lines": 211
+    },
+    {
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "blob": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+      "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e",
+      "bytes": 30733,
+      "lines": 548,
+      "localPath": "/workspace/scratch/20ba97c23d57/desktop-cross-team-75cf/source-r1/source/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/scripts/legacy-agent-host/desktop-ui-controls.ts"
+    }
+  ],
+  "earlierScopedPassProofs": [
+    {
+      "key": "taskBoardUiProof",
+      "status": "PASS",
+      "scope": "Original Create Task dependency picker, Task assignee/Mark resolved, sortable TODO cards and blocked Start/Complete controls; offline canonical Host persistence",
+      "excluded": [
+        "native agents/inference",
+        "logs or runtime readiness",
+        "nonexistent add/remove relationship UI",
+        "full Stage1",
+        "visual signoff before screenshot review"
+      ],
+      "steps": 100,
+      "sourceSha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7"
+    },
+    {
+      "key": "taskReviewCycleUiProof",
+      "status": "PASS",
+      "scope": "Same original UI-created Task: Complete, Request review, Request Changes, Start, correction comment, Complete, Request review, Approve, canonical history/notifications and reload; original Disapprove returns approved Task to Done",
+      "excluded": [
+        "native inference/execution",
+        "code edits",
+        "visible history widget qualification",
+        "atomic multi-file publication",
+        "crash/replay qualification",
+        "Stage2"
+      ],
+      "steps": 61,
+      "sourceSha256": "8c7221ec684dfb04bf92c2d5ffdb3fedcdf80b130f824d01899474f29e0acdb7"
+    },
+    {
+      "key": "taskNotificationUiProof",
+      "status": "PASS",
+      "scope": "Existing original Task-created notification hover View in session/Delete; conditional unread Mark as read",
+      "excluded": [
+        "native OS notifications",
+        "review approve/request-changes from notification",
+        "native agents",
+        "Stage2"
+      ],
+      "steps": 10,
+      "sourceSha256": "8c7221ec684dfb04bf92c2d5ffdb3fedcdf80b130f824d01899474f29e0acdb7"
+    },
+    {
+      "key": "crossTeamUiProof",
+      "status": "PASS",
+      "scope": "Original existing Messages cross-Team selector/Send, target Reply through same Composer, canonical source/target receipts and reload",
+      "excluded": [
+        "native provider input/response",
+        "cross-owner protocol",
+        "full M05",
+        "Stage2"
+      ],
+      "steps": 40,
+      "sourceSha256": "cab98f75e7c63f214b46e3ad86a680dee687847f121fd906796a5c0393b5ae40"
+    },
+    {
+      "key": "oversizedCommentUiProof",
+      "status": "PASS",
+      "scope": null,
+      "excluded": [],
+      "steps": 0,
+      "sourceSha256": null
+    },
+    {
+      "key": "f08ReadTimingProof",
+      "status": "PASS",
+      "scope": "Same actual Electron shared adapter: one original Task comment, uniquely named public getData product snapshot refused across its mutation boundary, same-A old feed delivered unchanged after newer real snapshot acceptance, real read response loss, actual Host cursor gap and late public observer resync; separate original selected-Team read held across original target navigation",
+      "excluded": [
+        "first global snapshot-subscription race",
+        "stale original teamSlice refresh response across an in-flight mutation",
+        "transport reconnect or Host restart",
+        "live default-owner switch",
+        "unavailable A physical fault",
+        "cross-owner routing",
+        "full F08/M18/Stage1"
+      ],
+      "steps": 33,
+      "sourceSha256": null
+    },
+    {
+      "key": "taskTrashRestoreUiProof",
+      "status": "PASS",
+      "scope": "Original seeded Task Delete hover control, themed confirmation, count-only Task Trash, exact subject/display-ID row and original Restore task; canonical restore returns pending",
+      "excluded": [
+        "native providers",
+        "global Trash UI",
+        "crash/replay qualification",
+        "full Stage1"
+      ],
+      "steps": 19,
+      "sourceSha256": "21bcac42433bedee315a11017e389f1994d7a2121c6c12247df243bd24fbb0aa"
+    }
+  ],
+  "ownerEpochs": [
+    {
+      "phase": "default-b",
+      "status": "PASS",
+      "descriptor": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-rOHXt5/owner-routing/default-b-descriptor.json",
+        "sha256": "22f9e279e0e4e8ffc83a2140b27c11154d81d5be9182c0841d45830dc89a6669"
+      },
+      "startedAtMs": 1794870600384,
+      "steps": 45,
+      "aProfile": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-rOHXt5/host-profile.json",
+        "present": true,
+        "sha256": "bb55a91729434759ab93355ddcebd4be4eac39398d7dc1da0a66ab8fa8748c11"
+      },
+      "bProfile": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-eNK4O8/host-profile.json",
+        "sha256": "1b7bbd9260ba656b83a7a3f53f118af43da633acad924b79bcd1aba27c2706c1"
+      },
+      "cleanup": {
+        "remaining": [],
+        "hosts": [
+          {
+            "pid": 11636,
+            "ppid": 11478,
+            "pgid": 11354
+          },
+          {
+            "pid": 11649,
+            "ppid": 11478,
+            "pgid": 11354
+          }
+        ],
+        "hostsAbsent": true,
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "quitAttempted": true,
+        "signalAttempted": false,
+        "scope": "Guarded original app close and established exact-identity wrapper cleanup; no universal natural-exit qualification"
+      },
+      "windowClose": {
+        "attempted": true,
+        "scope": "Close only the verified TEST window before stopping its dev wrapper",
+        "reply": "acknowledged",
+        "listenerAbsent": true
+      },
+      "aTask": {
+        "id": "c8e75aba-e3f1-573d-920d-95e170d96fad",
+        "subject": "TEST A Task under default B",
+        "commandId": "42f42c79-7327-49c0-bf77-f7d98ede7887",
+        "phase": "completed"
+      }
+    },
+    {
+      "phase": "unavailable-a",
+      "status": "PASS",
+      "descriptor": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-rOHXt5/owner-routing/unavailable-a-descriptor.json",
+        "sha256": "22f9e279e0e4e8ffc83a2140b27c11154d81d5be9182c0841d45830dc89a6669"
+      },
+      "startedAtMs": 1794870660381,
+      "steps": 22,
+      "aProfile": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-rOHXt5/host-profile.json",
+        "present": false,
+        "withheldPath": "/home/runner/work/_temp/TEST-desktop-backend-rOHXt5/owner-routing/owner-a-withheld-profile.json",
+        "withheldSha256": "bb55a91729434759ab93355ddcebd4be4eac39398d7dc1da0a66ab8fa8748c11"
+      },
+      "bProfile": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-eNK4O8/host-profile.json",
+        "sha256": "1b7bbd9260ba656b83a7a3f53f118af43da633acad924b79bcd1aba27c2706c1"
+      },
+      "cleanup": {
+        "remaining": [],
+        "hosts": [
+          {
+            "pid": 13110,
+            "ppid": 12958,
+            "pgid": 12839
+          }
+        ],
+        "hostsAbsent": true,
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "quitAttempted": true,
+        "signalAttempted": false,
+        "scope": "Guarded original app close and established exact-identity wrapper cleanup; no universal natural-exit qualification"
+      },
+      "windowClose": {
+        "attempted": true,
+        "scope": "Close only the verified TEST window before stopping its dev wrapper",
+        "reply": "acknowledged",
+        "listenerAbsent": true
+      },
+      "aRefusal": {
+        "request": {
+          "handle": {
+            "handleId": "TEST-desktop-handle-TEST-desktop-backend-rOHXt5"
+          },
+          "commandId": "TEST-unavailable-a-57a82ab4-cc55-42b6-b143-aab1429e1ca7",
+          "operation": "task.create",
+          "payload": {
+            "subject": "TEST unavailable original A command must not reach B"
+          }
+        },
+        "result": {
+          "ok": false,
+          "code": "unavailable",
+          "outcome": "not-dispatched"
+        },
+        "noRetry": true
+      }
+    },
+    {
+      "phase": "rollback-a",
+      "status": "INCOMPLETE",
+      "descriptor": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-rOHXt5/owner-routing/rollback-a-descriptor.json",
+        "sha256": "c5d50ee91a3bf55710e191571e494d4670afc9594702caa6f7b2d35e9a030190"
+      },
+      "startedAtMs": 1794870725244,
+      "steps": 17,
+      "aProfile": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-rOHXt5/host-profile.json",
+        "present": true,
+        "sha256": "bb55a91729434759ab93355ddcebd4be4eac39398d7dc1da0a66ab8fa8748c11"
+      },
+      "bProfile": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-eNK4O8/host-profile.json",
+        "sha256": "1b7bbd9260ba656b83a7a3f53f118af43da633acad924b79bcd1aba27c2706c1"
+      },
+      "cleanup": {
+        "remaining": [],
+        "hosts": [
+          {
+            "pid": 15696,
+            "ppid": 15543,
+            "pgid": 15425
+          },
+          {
+            "pid": 15706,
+            "ppid": 15543,
+            "pgid": 15425
+          }
+        ],
+        "hostsAbsent": true,
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "quitAttempted": true,
+        "signalAttempted": false,
+        "scope": "Guarded original app close and established exact-identity wrapper cleanup; no universal natural-exit qualification"
+      },
+      "windowClose": {
+        "attempted": true,
+        "scope": "Close only the verified TEST window before stopping its dev wrapper",
+        "reply": "acknowledged",
+        "listenerAbsent": true
+      },
+      "aTask": {
+        "id": "d9148b3d-0df6-5708-ab2d-b5425e5ccf5b",
+        "subject": "TEST A Task after owner rollback",
+        "commandId": "e34cf39c-ac17-43d9-915f-1ffbf4009b44",
+        "phase": "completed"
+      }
+    }
+  ],
+  "firstFailure": {
+    "kind": "ERR_ASSERTION",
+    "message": "Original UI target moved after ownership check\n+ actual - expected\n\n  [\n    193.328125,\n+   489,\n-   619,\n    'DIV'\n  ]\n",
+    "geometry": {
+      "samples": [
+        {
+          "phase": "initial",
+          "unavailable": false,
+          "x": 193.328125,
+          "y": 619,
+          "tag": null,
+          "targetRect": [
+            16,
+            499,
+            354.65625,
+            240
+          ],
+          "dialogRect": null,
+          "targetAnimations": 0,
+          "dialogAnimations": null,
+          "fonts": "loaded"
+        },
+        {
+          "phase": "after-hover",
+          "unavailable": false,
+          "x": 193.328125,
+          "y": 619,
+          "tag": null,
+          "targetRect": [
+            16,
+            499,
+            354.65625,
+            240
+          ],
+          "dialogRect": null,
+          "targetAnimations": 5,
+          "dialogAnimations": null,
+          "fonts": "loaded"
+        },
+        {
+          "phase": "stable",
+          "unavailable": false,
+          "x": 193.328125,
+          "y": 619,
+          "tag": null,
+          "targetRect": [
+            16,
+            499,
+            354.65625,
+            240
+          ],
+          "dialogRect": null,
+          "targetAnimations": 0,
+          "dialogAnimations": null,
+          "fonts": "loaded"
+        },
+        {
+          "phase": "stable",
+          "unavailable": false,
+          "x": 193.328125,
+          "y": 619,
+          "tag": null,
+          "targetRect": [
+            16,
+            499,
+            354.65625,
+            240
+          ],
+          "dialogRect": null,
+          "targetAnimations": 0,
+          "dialogAnimations": null,
+          "fonts": "loaded"
+        },
+        {
+          "phase": "final",
+          "unavailable": false,
+          "x": 193.328125,
+          "y": 489,
+          "tag": null,
+          "targetRect": [
+            16,
+            369,
+            354.65625,
+            240
+          ],
+          "dialogRect": null,
+          "targetAnimations": 0,
+          "dialogAnimations": null,
+          "fonts": "loaded"
+        }
+      ],
+      "overflow": false
+    },
+    "selector": "[role=\"button\"][data-team-name=\"host-team:adcc8059-add9-5017-a4f9-fe6e66d9270e\"]",
+    "stoppedBeforeClick": true,
+    "rollbackATaskPersisted": true,
+    "rollbackBTaskAttempted": false,
+    "rootLayoutCauseEstablished": false
+  },
+  "physicalCleanupDebtObserved": false,
+  "originalBaseCleanup": {
+    "processGroup": 4259,
+    "remaining": [],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostObserved": true,
+    "capturedHostAbsent": true,
+    "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+  },
+  "originalBaseNaturalExit": {
+    "settled": true,
+    "reason": "original-natural-exit-and-fresh-absence",
+    "initialMembers": [
+      {
+        "pid": 4332,
+        "ppid": 1,
+        "pgid": 4259
+      }
+    ],
+    "remaining": [],
+    "capturedHostAbsent": true,
+    "capturedDescendantsAbsent": true,
+    "appExitCode": 0,
+    "appSignalCode": null
+  },
+  "sourceFreezeCount": 1777,
+  "compiledBundlesPerEpoch": 14,
+  "pins": {
+    "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+    "corepackPackageSha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+    "corepackLibrarySha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+    "pnpmStubSha256": "369529a8a45d66b9ea322f0b0ab3155a7457e0c27af106389930e96657c88474",
+    "profileSha256": "bb55a91729434759ab93355ddcebd4be4eac39398d7dc1da0a66ab8fa8748c11",
+    "descriptorSha256": "6f8f32797f2c8cf0fadf8d622f825cc9de4fced8cae483dc8522d81d6d826f25",
+    "sentinelSha256": "7fa637730aa7cf63e2ac5a1632fcc30b55b39c8551252b8eefc8f33e59c930a5",
+    "shellProbeSha256": "5942f327c85ec85da8a4c77a0146447ef78f06a464da28cb18909d752391b247",
+    "providerArchiveSha256": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41",
+    "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+    "electronSha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+    "smokeSourceSha256": "bbd6647969c1ab0ae125b6a5e0685ca0f112dca05661a6c04b37c4fbee56a33e",
+    "fixtureSourceSha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+    "uiSourceSha256": "0bc2e2d5b3d36cc6e59dd1b91a2caf8c6ef8397719aca85bf4aa27321657509e"
+  },
+  "manualFindings": [
+    {
+      "finding": "causal boundary",
+      "source": "desktop-ui-controls.ts:353–391; desktop-owner-routing-ui-smoke.ts:425–454,637–662",
+      "conclusion": "Strict final-target refusal before B card click. No duplicate selector, timeout, backend Task create refusal or stale-owner dispatch is established."
+    },
+    {
+      "finding": "movement origin remains unknown",
+      "conclusion": "Five samples and the final screenshot establish target translation, not the identity of the DOM ancestor or async update responsible. No source-proven repair, geometry relaxation, extra stability budget or click retry is selected."
+    },
+    {
+      "finding": "scoped earlier positives",
+      "source": "desktop-backend-smoke.ts:473–483,641,774–789; original proof fields",
+      "conclusion": "Seven earlier offline UI proofs PASS and the original app cleanup completed before the separate three-epoch owner continuation. Respect each proof explicit exclusions; no native provider, full M05/F08/M18/Stage1 or release qualification."
+    },
+    {
+      "finding": "owner continuation partial acceptance",
+      "source": "desktop-owner-routing-ui-smoke.ts:245–303,402–423,600–686,723–789",
+      "conclusion": "Default/creation B and unavailable A epochs PASS. Rollback restored A, joined original B startup backup, completed A Task, and then failed before B Task. Per-epoch and final rollback binding/product/command assertions after that point remain unreached."
+    },
+    {
+      "finding": "physical cleanup limit",
+      "source": "desktop-owner-routing-epoch.ts:35–138",
+      "conclusion": "All three recorded captured owner groups and Hosts absent; app exit0, no harness signal; no physical cleanup debt observed. Helper explicitly does not claim universal natural exit. Base app separately records original-natural-exit-and-fresh-absence. No Runtime UNKNOWN-release result is inferred."
+    },
+    {
+      "finding": "retention limit",
+      "conclusion": "Exact original receipt and44 artifact members retained. The separately copied original-epoch receipt and every owner-routing snapshot file are not independent archive members; several details are embedded in the final receipt. Hashes in those embedded facts are preserved, not represented as independently rehashed missing files."
+    },
+    {
+      "finding": "execution boundary",
+      "conclusion": "Only source/evidence reads and inert byte/JSON checks; no source afterimages, native/vendor/project/compiler/test/GUI execution, CI observation/actions or downloads."
+    }
+  ],
+  "sourceFixSelected": false,
+  "afterimagesCreated": false,
+  "futureHeadQualified": false
+}

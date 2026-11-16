@@ -1,0 +1,881 @@
+{
+  "schemaVersion": 1,
+  "status": "ORIGINAL_EVIDENCE_ONLY_PARTIAL_POSITIVE_WITH_UNRESOLVED_LANE_FAILURE",
+  "source": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "runId": 43959134362,
+  "jobId": 133621515611,
+  "artifactId": 14280940415,
+  "archive": {
+    "path": "desktop-v2-management-75cf/artifact.zip",
+    "bytes": 1348641,
+    "sha256": "dd6453b55d46671ae1502b55000db2cc9305632388a367a28742be381078f732"
+  },
+  "log": {
+    "path": "desktop-v2-management-75cf/job.log",
+    "bytes": 137738,
+    "sha256": "7b2a9b250cf595579aadf0a061155c1532a02beec5aa83e4afe6a3a7e92c1d2e"
+  },
+  "receipts": {
+    "settings": {
+      "path": "desktop-v2-management-75cf/extracted/TEST-desktop-backend-e993LC/desktop-backend-receipt.json",
+      "bytes": 860677,
+      "sha256": "a297113fb281ffb402511aeeb3d87094cf45458eeeb7b5a886d6457efd4da6da"
+    },
+    "liveMembership": {
+      "path": "desktop-v2-management-75cf/extracted/TEST-desktop-backend-NKzavo/desktop-backend-receipt.json",
+      "bytes": 889253,
+      "sha256": "cda77ced96027db2a4a644c877229218c5d25b2ff4dc5344bd541e368cabda84"
+    }
+  },
+  "checkCount": 127,
+  "checks": [
+    {
+      "name": "original artifact exact size",
+      "pass": true
+    },
+    {
+      "name": "original artifact exact SHA256",
+      "pass": true
+    },
+    {
+      "name": "original job exact CRLF-preserved digest",
+      "pass": true
+    },
+    {
+      "name": "original archive CRC",
+      "pass": true
+    },
+    {
+      "name": "original 56 members",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-NKzavo/TEST-peer-claude-scope/effects.ndjson",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-NKzavo/desktop-app.log",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-NKzavo/TEST-peer-codex-scope/effects.ndjson",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-NKzavo/desktop-backend-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-NKzavo/desktop-descriptor.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-NKzavo/host-profile.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-NKzavo/hoststore/management-commands/6264d18b7b0204c1c84b9bea5d6d21ed4f3e6b3be6be74ad4ac60baf0baeb55e.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-NKzavo/hoststore/management-commands/bd6e1b0e700560a33ac276b0004e527e60656ff9f77633f92250a0c02166b627.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-NKzavo/hoststore/management-commands/c98ba8397e70bf603973c8a55a990f6f10c733a68685b6f4bcddf39558ffe5da.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-NKzavo/hoststore/runtime-sessions/d37f2a3ee25010e111bb40283d54bec4f8d77458f2b8c0a06a9d34bedca969b0/2750f0284d4f26e12728c0d0de6b94b93aeff7a5304eca05a7d234de1bf6af1d.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-NKzavo/hoststore/runtime-sources/index.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-NKzavo/hoststore/teams/test-desktop-backend/.host-owner/launches/2402d5f361fcb9d89cbcd02e4fad0364032675a1ee391455c7934450fdeb3ffb.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-NKzavo/hoststore/teams/test-desktop-backend/.host-owner/state.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-NKzavo/mixed-models.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-NKzavo/sentinel-invocations.ndjson",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-NKzavo/userData/logs/app-errors.ndjson",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-NKzavo/ui-failure.png",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-NKzavo/workspace/opencode.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/desktop-backend-app.log",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/desktop-descriptor.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/desktop-backend-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/host-profile.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/hoststore/management-commands/05b83e3c70478fed10470abb8a03588b4df3fa634809616c23c43957f889adce.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/hoststore/management-commands/622c1c71bf2816ab55c8ed13b4cca72161471e0951d95e44bc54c7fc47072ac8.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/hoststore/management-commands/6c8f0a8ee269b3ee9f2943beeb23a8a4131c08abf4972000b640be72b144b67a.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/hoststore/management-commands/7a6cbcfd69cbe53c0c949085674d62859c5090fffae10b272272f5e80b90cec4.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/hoststore/management-commands/8b031535cfab4b1b6ded0d74d5fb221fbfb26dd782235bfd87527111a7cb47e7.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/hoststore/management-commands/8bd841a8e102e520ba6a60122de36dc46c9a9ff9548c0bd19a6d70a2fc752deb.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/hoststore/management-commands/8f6b32aa2f2d7678590b4a82609f6d9ef6a4ba9bb512fa13c9fcd8da15f4bec7.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/hoststore/management-commands/cc8e0653fb76a9f27e37fa840057c9dbacbad88b76f809532be862e2327de0ab.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/hoststore/management-commands/d27e7620599cf2d36ccc3fc4f7311fedf3c76095664a276b79fd2b542e48dbe2.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/hoststore/management-commands/da5bd309782129afd3616f61ed14bb899d00373818238cffb2f3061a3e8169ce.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/hoststore/management-commands/f473efb6cb08c62fbb473fffb4a8ebb66116b582be2f128a3080d4993badad0b.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/hoststore/management-commands/fd3bffa8e8ad6071f284ddacf906751df651c8362b8d82bdd41309067f4f2c61.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/hoststore/runtime-sources/index.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/hoststore/tasks/test-desktop-backend/06c44b88-fd3b-5d7f-beec-f1dc8a7a7b0e.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/hoststore/teams/test-desktop-backend/.host-owner/commands/73d51a47022bad35094134a650a17f09916cdc1f2cab13ca2201e1ac8ef59773.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/hoststore/teams/test-desktop-backend/.host-owner/state.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/preferences/global/global-runtime-preferences.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/preferences/workspace/agent-teams-runtime-preferences.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/sentinel-invocations.ndjson",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/ui-seed-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/ui-v2-management-connected.png",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/ui-v2-management-inherited.png",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/ui-v2-management-project-override.png",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/ui-v2-management-rejected-key.png",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/ui-v2-management-reloaded.png",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-desktop-backend-e993LC/userData/logs/app-errors.ndjson",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-emulated-ui-inputs-fwA47q/linux-child-exec/linux-child-exec",
+      "pass": true
+    },
+    {
+      "name": "safe exact member TEST-emulated-ui-inputs-fwA47q/linux-child-exec/manifest.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member host-emulated-inputs.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member host-emulated-linux-child-exec-selection.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member host-emulated-opencode-v2-inputs.json",
+      "pass": true
+    },
+    {
+      "name": "safe exact member host-emulated-opencode-v2-live-membership-ui.log",
+      "pass": true
+    },
+    {
+      "name": "safe exact member host-emulated-opencode-v2-management-ui.log",
+      "pass": true
+    },
+    {
+      "name": "safe exact member host-emulated-opencode-v2-management-ui-verified.json",
+      "pass": true
+    },
+    {
+      "name": "management original PASS",
+      "pass": true
+    },
+    {
+      "name": "management original 68 steps",
+      "pass": true
+    },
+    {
+      "name": "management complete five original model intents",
+      "pass": true
+    },
+    {
+      "name": "model outcomes refusal then four successes",
+      "pass": true
+    },
+    {
+      "name": "zero tools and exact finite auth/prompt bindings",
+      "pass": true
+    },
+    {
+      "name": "no finite model failures",
+      "pass": true
+    },
+    {
+      "name": "same five model receipts",
+      "pass": true
+    },
+    {
+      "name": "no held management resources",
+      "pass": true
+    },
+    {
+      "name": "rejected command remains terminal-held",
+      "pass": true
+    },
+    {
+      "name": "replacement and model tests completed",
+      "pass": true
+    },
+    {
+      "name": "seven original source publications",
+      "pass": true
+    },
+    {
+      "name": "global default and project inheritance exact",
+      "pass": true
+    },
+    {
+      "name": "explicit replacement storage confirmed",
+      "pass": true
+    },
+    {
+      "name": "management configured without business runtime",
+      "pass": true
+    },
+    {
+      "name": "no genuine Claude or Codex configured",
+      "pass": true
+    },
+    {
+      "name": "original Host observed",
+      "pass": true
+    },
+    {
+      "name": "original natural Main exit0",
+      "pass": true
+    },
+    {
+      "name": "management exact process cleanup",
+      "pass": true
+    },
+    {
+      "name": "finite model completed and server closed",
+      "pass": true
+    },
+    {
+      "name": "original screenshot digest rejectionScreenshot",
+      "pass": true
+    },
+    {
+      "name": "original screenshot digest connectedScreenshot",
+      "pass": true
+    },
+    {
+      "name": "original screenshot digest projectScreenshot",
+      "pass": true
+    },
+    {
+      "name": "original screenshot digest inheritanceScreenshot",
+      "pass": true
+    },
+    {
+      "name": "original screenshot digest reloadedScreenshot",
+      "pass": true
+    },
+    {
+      "name": "membership original incomplete",
+      "pass": true
+    },
+    {
+      "name": "first exact missing TEST option timeout",
+      "pass": true
+    },
+    {
+      "name": "first source branch line269 retained",
+      "pass": true
+    },
+    {
+      "name": "last action lead model expand",
+      "pass": true
+    },
+    {
+      "name": "full mixed native qualification false",
+      "pass": true
+    },
+    {
+      "name": "membership zero initial peer business inputs",
+      "pass": true
+    },
+    {
+      "name": "two Claude metadata initialized",
+      "pass": true
+    },
+    {
+      "name": "finite peers absent after original cleanup",
+      "pass": true
+    },
+    {
+      "name": "failure Quit acknowledgement and listener absent",
+      "pass": true
+    },
+    {
+      "name": "membership Main0 but final Host absence unqualified",
+      "pass": true
+    },
+    {
+      "name": "failure snapshot omits actual provider statuses",
+      "pass": true
+    },
+    {
+      "name": "membership exact retained screenshot",
+      "pass": true
+    },
+    {
+      "name": "management unchanged complete source vector",
+      "pass": true
+    },
+    {
+      "name": "membership unchanged complete source vector",
+      "pass": true
+    },
+    {
+      "name": "management exact reviewed source scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+      "pass": true
+    },
+    {
+      "name": "management exact reviewed source scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "pass": true
+    },
+    {
+      "name": "management exact reviewed source scripts/legacy-agent-host/desktop-opencode-v2-management-records.ts",
+      "pass": true
+    },
+    {
+      "name": "management exact reviewed source scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "name": "membership exact reviewed source scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "name": "management exact reviewed source tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "pass": true
+    },
+    {
+      "name": "membership exact reviewed source tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "pass": true
+    },
+    {
+      "name": "management exact reviewed source src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+      "pass": true
+    },
+    {
+      "name": "membership exact reviewed source src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+      "pass": true
+    },
+    {
+      "name": "management exact reviewed source src/features/runtime-provider-management/main/adapters/output/withCapturedClaudeAuthentication.ts",
+      "pass": true
+    },
+    {
+      "name": "membership exact reviewed source src/features/runtime-provider-management/main/adapters/output/withCapturedClaudeAuthentication.ts",
+      "pass": true
+    },
+    {
+      "name": "management exact reviewed source src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts",
+      "pass": true
+    },
+    {
+      "name": "membership exact reviewed source src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts",
+      "pass": true
+    },
+    {
+      "name": "management exact reviewed source src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+      "pass": true
+    },
+    {
+      "name": "membership exact reviewed source src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+      "pass": true
+    },
+    {
+      "name": "management exact reviewed source src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "pass": true
+    },
+    {
+      "name": "membership exact reviewed source src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "pass": true
+    },
+    {
+      "name": "management exact reviewed source src/shared/utils/providerStatusAuthority.ts",
+      "pass": true
+    },
+    {
+      "name": "membership exact reviewed source src/shared/utils/providerStatusAuthority.ts",
+      "pass": true
+    },
+    {
+      "name": "management exact reviewed source src/renderer/store/slices/cliInstallerStatusReconciliation.ts",
+      "pass": true
+    },
+    {
+      "name": "membership exact reviewed source src/renderer/store/slices/cliInstallerStatusReconciliation.ts",
+      "pass": true
+    },
+    {
+      "name": "management exact reviewed source src/renderer/components/team/dialogs/useTeamModelProviderStatus.ts",
+      "pass": true
+    },
+    {
+      "name": "membership exact reviewed source src/renderer/components/team/dialogs/useTeamModelProviderStatus.ts",
+      "pass": true
+    },
+    {
+      "name": "management exact reviewed source packages/legacy-agent-host/src/composition/ClaudeManagementCoordinator.ts",
+      "pass": true
+    },
+    {
+      "name": "membership exact reviewed source packages/legacy-agent-host/src/composition/ClaudeManagementCoordinator.ts",
+      "pass": true
+    },
+    {
+      "name": "management exact reviewed source packages/legacy-agent-host/src/adapters/providers/ClaudeManagementHost.ts",
+      "pass": true
+    },
+    {
+      "name": "membership exact reviewed source packages/legacy-agent-host/src/adapters/providers/ClaudeManagementHost.ts",
+      "pass": true
+    },
+    {
+      "name": "membership original probe cancelled and released",
+      "pass": true
+    }
+  ],
+  "sourceBindings": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+      "sha256": "3e221532ec7b77b71f2f55a847a2de9a0363f48af0b813119c73ed5a5db1fc58",
+      "bytes": 12371,
+      "receiptVectors": [
+        "management"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "sha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6",
+      "bytes": 20435,
+      "receiptVectors": [
+        "management"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.ts",
+      "sha256": "356fde85403680c557633ba90e4df4840d69bfea4e8c58b39ad6855e3e2596ab",
+      "bytes": 12815,
+      "receiptVectors": [
+        "management"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "sha256": "0bc2e2d5b3d36cc6e59dd1b91a2caf8c6ef8397719aca85bf4aa27321657509e",
+      "bytes": 30843,
+      "receiptVectors": [
+        "management",
+        "membership"
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+      "bytes": 32221,
+      "receiptVectors": [
+        "management",
+        "membership"
+      ]
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+      "sha256": "c4d8333cc5b562b7eb8de8398bde8275d579fdb7775c59c3d1ae5123e88cfdc8",
+      "bytes": 7477,
+      "receiptVectors": [
+        "management",
+        "membership"
+      ]
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/adapters/output/withCapturedClaudeAuthentication.ts",
+      "sha256": "9de801a25b311c742315caad4a64e0196d2f942e6c5760e6ff5abbcc56c76dcd",
+      "bytes": 12443,
+      "receiptVectors": [
+        "management",
+        "membership"
+      ]
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts",
+      "sha256": "606098a4895f1715ea58677cfff11337790d5bbcf1be3fcdf3efcdf171b59aab",
+      "bytes": 15353,
+      "receiptVectors": [
+        "management",
+        "membership"
+      ]
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+      "sha256": "11871dd43b1c704230c83e722577ba4cdd4f4fd6c2eebce89cab02457b52b81a",
+      "bytes": 97366,
+      "receiptVectors": [
+        "management",
+        "membership"
+      ]
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "sha256": "346f753b0bf13234c21299631fca1c1cf15a3373ab1d62c59d058acc363237d2",
+      "bytes": 72914,
+      "receiptVectors": [
+        "management",
+        "membership"
+      ]
+    },
+    {
+      "path": "src/shared/utils/providerStatusAuthority.ts",
+      "sha256": "67241d584fdbef940ad2a0ef7eb459eb85af618bd907710d42c005821c2fa4fa",
+      "bytes": 4567,
+      "receiptVectors": [
+        "management",
+        "membership"
+      ]
+    },
+    {
+      "path": "src/renderer/store/slices/cliInstallerStatusReconciliation.ts",
+      "sha256": "363bd187bf5ac466c9e8e9bd5b535c7b9a7e52f62bbadd1d6db01ba8317f732e",
+      "bytes": 9017,
+      "receiptVectors": [
+        "management",
+        "membership"
+      ]
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/useTeamModelProviderStatus.ts",
+      "sha256": "79f08aaaffc5385e5d4faf2e562e412e5465ac91a6c6c0a7a17ecb5ccbabef1b",
+      "bytes": 2531,
+      "receiptVectors": [
+        "management",
+        "membership"
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/ClaudeManagementCoordinator.ts",
+      "sha256": "63612e0762f67f1631795547fb57e35eb72007352d52369181a57f1461b3482d",
+      "bytes": 8939,
+      "receiptVectors": [
+        "management",
+        "membership"
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeManagementHost.ts",
+      "sha256": "62e74e6cbdf1bdb94d828b84b31eff58e9a36a5b2290c6578a3b266dd19da568",
+      "bytes": 6977,
+      "receiptVectors": [
+        "management",
+        "membership"
+      ]
+    }
+  ],
+  "management": {
+    "status": "PASS original bounded script",
+    "steps": 68,
+    "modelRequests": [
+      {
+        "step": "reject-key",
+        "model": "TEST-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "refused"
+      },
+      {
+        "step": "connect-key",
+        "model": "TEST-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "OK"
+      },
+      {
+        "step": "global-default",
+        "model": "TEST-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "OK"
+      },
+      {
+        "step": "project-default",
+        "model": "TEST-project-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "OK"
+      },
+      {
+        "step": "project-test",
+        "model": "TEST-project-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "OK"
+      }
+    ],
+    "effects": [
+      {
+        "step": "reject-key",
+        "kind": "credential.set",
+        "phase": "held",
+        "resourceHeld": false
+      },
+      {
+        "step": "connect-key",
+        "kind": "credential.set",
+        "phase": "completed",
+        "resourceHeld": false
+      },
+      {
+        "step": "global-default",
+        "kind": "model.probe",
+        "phase": "completed",
+        "resourceHeld": false
+      },
+      {
+        "step": "project-default",
+        "kind": "model.probe",
+        "phase": "completed",
+        "resourceHeld": false
+      },
+      {
+        "step": "project-test",
+        "kind": "model.probe",
+        "phase": "completed",
+        "resourceHeld": false
+      }
+    ],
+    "sourcePublicationCount": 7,
+    "preferences": [
+      {
+        "scope": "global",
+        "sha256": "454e8a8739fdb223d627e08b9c2db467c0eabbc91b6cb176da02eb0eda54c60a",
+        "defaultModelId": "test-local/TEST-model"
+      },
+      {
+        "scope": "project",
+        "sha256": "5172b91ae8d4e6490fc9d655745a530c285f09de2dda92251bdf3de9407c0167",
+        "defaultModelId": null
+      },
+      {
+        "scope": "other",
+        "sha256": null,
+        "defaultModelId": null
+      }
+    ],
+    "credentials": {
+      "authSha256": "ec9a5ca72560031c0361d3b27c3c208ba5c1bc31a33bb78085a80d47ea40393a",
+      "rejectedKeyRetainedUntilExplicitReplacement": true,
+      "successfulReplacementVerified": true
+    },
+    "originalClose": {
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "groupRemaining": [],
+      "hostAbsent": true,
+      "nativeRemaining": []
+    },
+    "screenshots": [
+      {
+        "kind": "rejectionScreenshot",
+        "path": "desktop-v2-management-75cf/extracted/TEST-desktop-backend-e993LC/ui-v2-management-rejected-key.png",
+        "bytes": 118392,
+        "sha256": "c3824336f05c5958f029db55ca3eb865977b3d66f7f3d99319c39f31a9767d85",
+        "rootVisuallyInspected": true
+      },
+      {
+        "kind": "connectedScreenshot",
+        "path": "desktop-v2-management-75cf/extracted/TEST-desktop-backend-e993LC/ui-v2-management-connected.png",
+        "bytes": 98233,
+        "sha256": "d82ac3b7caa12102006dd187a0b48f995c2f3b810370da9c036deff88c6009ab",
+        "rootVisuallyInspected": false
+      },
+      {
+        "kind": "projectScreenshot",
+        "path": "desktop-v2-management-75cf/extracted/TEST-desktop-backend-e993LC/ui-v2-management-project-override.png",
+        "bytes": 85828,
+        "sha256": "f1cd3574c322e9a8f2f544479fc9dbd383ba58eff89c5f96344da3b29bfdf61e",
+        "rootVisuallyInspected": false
+      },
+      {
+        "kind": "inheritanceScreenshot",
+        "path": "desktop-v2-management-75cf/extracted/TEST-desktop-backend-e993LC/ui-v2-management-inherited.png",
+        "bytes": 84469,
+        "sha256": "3d53c31d6ee9d201e1859b1b9678003d9d5487e95fad039d9869db67b2b0aeaa",
+        "rootVisuallyInspected": false
+      },
+      {
+        "kind": "reloadedScreenshot",
+        "path": "desktop-v2-management-75cf/extracted/TEST-desktop-backend-e993LC/ui-v2-management-reloaded.png",
+        "bytes": 84369,
+        "sha256": "9a3148601b32da9be15aefe01145197f3ef839cf51a9189bc5187262dfb2ec78",
+        "rootVisuallyInspected": true
+      }
+    ],
+    "visualFinding": {
+      "kind": "FALSE_UNCONDITIONAL_ROLLBACK_COPY",
+      "screenshotSha256": "c3824336f05c5958f029db55ca3eb865977b3d66f7f3d99319c39f31a9767d85",
+      "observedClaim": "The new credential was not kept.",
+      "contradictingOriginalAssertion": "desktop-opencode-v2-management-ui.ts:208 checks rejected TEST key is retained before explicit replacement",
+      "progressCopy": "RuntimeProviderManagementPanelView.tsx:797 also promises removal and restoration without a disposition witness",
+      "sourceMessage": "runtimeProviderManagementPresentation.ts:121/127/130 unconditionally asserts rollback for invalid-key, policy and auth-failed branches",
+      "scopeLimit": "The scripted PASS does not establish that this user-facing storage claim is correct. No new behavior or UI fix has yet been selected."
+    }
+  },
+  "liveMembership": {
+    "status": "INCOMPLETE",
+    "failure": "UI read timed out: finite initial Sonnet choice; no mutation retry",
+    "frames": [
+      "scripts/legacy-agent-host/desktop-ui-controls.ts:204:11",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts:442:9",
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts:269:3",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:491:21",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:788:29"
+    ],
+    "reached": "Original Create Team form and lead-model expansion, before finite Sonnet selection, team creation, Add/Remove/Restore/Stop/cold",
+    "finiteClaudeInitialized": 2,
+    "finitePeerBusinessInputs": 0,
+    "finalScreenshot": {
+      "path": "desktop-v2-management-75cf/extracted/TEST-desktop-backend-NKzavo/ui-failure.png",
+      "bytes": 90222,
+      "sha256": "778d4137f53aabc4e9d4be9bf328aeccdc8ddc429d0a1b239ce9b4d537753049"
+    },
+    "visualObservation": "Original retained PNG shows eight static Anthropic cards including selected Opus4.8; TEST Claude Sonnet is absent. This differs from the Resume offscreen-present option.",
+    "catalogCause": "Unresolved. Snapshot omits actual global/scoped provider-status and catalog freshness/authority facts. Auth-held/probe-unavailable diagnostics do not prove which selector status was current during the read.",
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "cleanup": {
+      "processGroup": 16250,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null,
+      "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+    },
+    "finitePeersAbsent": true
+  },
+  "qualificationLimits": [
+    "Settings script positive, later live-membership failure and false credential copy remain separate. Whole job is failure.",
+    "Global/scoped catalogue absence versus staleness versus refresh/request selection is not inferred from static fallback alone. No TTL or selector relaxation selected.",
+    "Membership final Host physical absence remains unqualified despite Main0, empty process group and finite peers absent.",
+    "No genuine Claude/Codex, authentication, default activation, Ready, release or Stage2 qualification."
+  ],
+  "execution": {
+    "project": false,
+    "compiler": false,
+    "tests": false,
+    "providers": false,
+    "native": false,
+    "GUI": false,
+    "CI": false
+  }
+}

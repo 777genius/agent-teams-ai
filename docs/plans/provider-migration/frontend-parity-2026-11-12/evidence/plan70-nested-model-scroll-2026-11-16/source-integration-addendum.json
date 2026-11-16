@@ -1,0 +1,160 @@
+{
+  "kind": "Plan70 actual-source R2 integration addendum",
+  "reviewedAtUtc": "2026-11-16T23:44:04.420093+00:00",
+  "disposition": "ACCEPT_EXACT_FROZEN_SOURCE_UNDER_PUBLISHED_OBSERVATION_BOUNDARY_AMENDMENT",
+  "blockingFindings": [],
+  "publishedSelection": {
+    "commit": "8728a7d32e7b879647d4190391f3df1cec635ac2",
+    "publicationEvidence": "Root supplied exact published document and verified whole-tree readback; this addendum independently rehashes retained bytes and does not claim another remote ref/tree read.",
+    "original": {
+      "path": "frontend-proposal/nested-scroll-proposal/plan.md",
+      "bytes": 10821,
+      "sha256": "69396e4ccb4d167d333cf64c7d22033b3a6d2224346fcd7ec6b9162bc22a1208",
+      "gitBlob": "61661bc95399364db94536924e55e182db2dacaa"
+    },
+    "amended": {
+      "path": "incoming-8728-plan70/70-nested-model-scroll-and-adjacent-guard-2026-11-16.md",
+      "bytes": 13643,
+      "sha256": "e32ce5a5bb8f4bbc3798e78716e78914fa74ee09c75aa2b4031fe646693c2374",
+      "gitBlob": "02c4b0eae4c47d1e8878de45df213c97064f1f0b"
+    }
+  },
+  "unchangedPriorReview": {
+    "json": {
+      "path": "installer-proposal/plan70-source-r2/source-r2.json",
+      "bytes": 14149,
+      "sha256": "de1a316532a62c6693a7bbb3c3db45cf03b91be382fe33c2a719ef59acad9669",
+      "gitBlob": "06f9c24186cb01af0aba51bfef99145d52c9fa33"
+    },
+    "markdown": {
+      "path": "installer-proposal/plan70-source-r2/source-r2.md",
+      "bytes": 3003,
+      "sha256": "b5e0dad53df1078ba22b1ec9b7a57d0daf40b24ed0d2e0f685a8cdcf650971a9",
+      "gitBlob": "f9678214ae1c37cc588eb5397a4abfacf4a00fd0"
+    },
+    "chronology": "The earlier source R2 remains immutable. This later integration addendum binds its exact source findings to the subsequently published clarified selection; it does not backdate the amendment or alter earlier review chronology."
+  },
+  "supportingIndependentReviews": {
+    "amendment": {
+      "path": "incoming-8728-plan70/observation-boundary-amendment-r2.json",
+      "bytes": 6187,
+      "sha256": "287e45a57165a7304d36157dd741bd0d5f6cfa9e864284733c8c20c2fa2abc1a",
+      "gitBlob": "a3176ce7a4b05c694db0ebc2d571bf62c0ebb808"
+    },
+    "originalContract": {
+      "path": "incoming-8728-plan70/observation-boundary-original-contract-r2.json",
+      "bytes": 17215,
+      "sha256": "1aec256b4ee9f459016f3f04e3895c8678768ae59e0ebeb5747e04245ea816f1",
+      "gitBlob": "981176dc7424837cd2d6652ea9ed694519d71d4b"
+    }
+  },
+  "frozenSource": {
+    "manifest": {
+      "path": "frontend-proposal/nested-scroll-proposal/implementation/manifest.json",
+      "bytes": 2683,
+      "sha256": "13d7df5ac28f569c21d3653145f742e164ae520336fa915518b7bb1f52957c3d",
+      "gitBlob": "235bdb0dd435c04097a91c8877885b69d70555b4"
+    },
+    "patch": {
+      "path": "frontend-proposal/nested-scroll-proposal/implementation/candidate.patch",
+      "bytes": 16933,
+      "sha256": "92707c18a7da98d0603d9a8f15f6a9d64a10a023b3544f3442a0523478e07305",
+      "gitBlob": "9a3e78faf70b6284aae3ff0e6a7050eabd28f578"
+    },
+    "controls": {
+      "path": "frontend-proposal/nested-scroll-proposal/implementation/after/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 33220,
+      "sha256": "f3e80885a6855428d8223ba54544928c4675f9d121b440a876534cdf3334816e",
+      "gitBlob": "e05bb6778fe2618f94dd4310fe6dad3c10a83ae0"
+    },
+    "suite": {
+      "path": "frontend-proposal/nested-scroll-proposal/implementation/after/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 174969,
+      "sha256": "ba573ef65142ec600ea0067c7dfdd48468bdcbd53b3172402481bbc93b3379e9",
+      "gitBlob": "3eb5191149ed77e27365af1193ece1b9a437f23d"
+    }
+  },
+  "integrationFindings": [
+    "Section 6 expressly supersedes only the earlier Plan30 promise to preserve the outer scrollTo ownership invocation at original line 440. Correction A and the reviewed tests/budgets retain their original selected scope.",
+    "Removing the outer callback reduces sampling across every caller of the shared helper. Its own transient observation, lineage/history update, early refusal or first captured ancestor can be lost. The earliest error and accumulated history may differ. No all-sample, all-refusal, history or continuous-observation equivalence is claimed.",
+    "The unchanged waitRead callback at original line 190 still runs before each actual DOM evaluation, including retry/iteration reads. No positive ownership result is cached. The original helper has no extra post-evaluate guard immediately before its wheel, and neither the source nor this addendum introduces or claims one.",
+    "Every other existing guard, owner/source predicate, strict geometry/custody/receipt/screenshot/cleanup oracle and fixed budget remains required. This amendment authorizes no other guard deletion, no census-query change and no merging of Processes-row waits.",
+    "Removal changes work before the local read deadline starts and may change later scheduling. It does not renew the enclosing phase cutoff. Historical cost is not a resulting-source timing or PASS proof, and this is not a demonstrated ARM Retry repair."
+  ],
+  "qualification": "Source-only acceptance for the two exact frozen postimages under the now-published amended selection. Original failed receipts remain failed. Original resulting-source CI/E2E and fresh publication preimage/parent verification remain root responsibilities.",
+  "checks": [
+    {
+      "check": "SHA256: frontend-proposal/nested-scroll-proposal/plan.md",
+      "passed": true
+    },
+    {
+      "check": "SHA256: incoming-8728-plan70/70-nested-model-scroll-and-adjacent-guard-2026-11-16.md",
+      "passed": true
+    },
+    {
+      "check": "Git blob: incoming-8728-plan70/70-nested-model-scroll-and-adjacent-guard-2026-11-16.md",
+      "passed": true
+    },
+    {
+      "check": "SHA256: installer-proposal/plan70-source-r2/source-r2.json",
+      "passed": true
+    },
+    {
+      "check": "SHA256: installer-proposal/plan70-source-r2/source-r2.md",
+      "passed": true
+    },
+    {
+      "check": "SHA256: incoming-8728-plan70/observation-boundary-amendment-r2.json",
+      "passed": true
+    },
+    {
+      "check": "SHA256: incoming-8728-plan70/observation-boundary-original-contract-r2.json",
+      "passed": true
+    },
+    {
+      "check": "SHA256: frontend-proposal/nested-scroll-proposal/implementation/manifest.json",
+      "passed": true
+    },
+    {
+      "check": "SHA256: frontend-proposal/nested-scroll-proposal/implementation/candidate.patch",
+      "passed": true
+    },
+    {
+      "check": "SHA256: frontend-proposal/nested-scroll-proposal/implementation/after/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "passed": true
+    },
+    {
+      "check": "Git blob: frontend-proposal/nested-scroll-proposal/implementation/after/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "passed": true
+    },
+    {
+      "check": "SHA256: frontend-proposal/nested-scroll-proposal/implementation/after/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "passed": true
+    },
+    {
+      "check": "Git blob: frontend-proposal/nested-scroll-proposal/implementation/after/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "passed": true
+    },
+    {
+      "check": "Only original plan lines 3 and 36 change; all other original lines exact",
+      "passed": true
+    },
+    {
+      "check": "Only appended scope is blank separator and section 6",
+      "passed": true
+    },
+    {
+      "check": "All source before scrollTo, including waitRead, remains exact",
+      "passed": true
+    },
+    {
+      "check": "Exactly one options.assertOwnedRenderer callback invocation removed",
+      "passed": true
+    },
+    {
+      "check": "The complete original test file remains exact prefix",
+      "passed": true
+    }
+  ],
+  "actions": "Inert retained text/JSON reads, hashing, byte comparisons and this new addendum only. No old report or source mutation; no project, compiler, test, provider, GUI, native, CI, network or remote operation."
+}
