@@ -1,0 +1,2325 @@
+{
+  "schemaVersion": 1,
+  "status": "READ_ONLY_RECONCILIATION_REVIEW_NO_SOURCE_SELECTION_OR_EXECUTION",
+  "repository": "777genius/agent-teams-ai",
+  "scope": "Complete immutable tree/commit inventory for 0660→608ef; overlap with observed own c9; static review of sole incoming production change. This is not a history merge R1 or a merged postimage.",
+  "snapshots": {
+    "incomingBase": {
+      "commit": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "tree": "e70ccffc6d55ad42c2249518bf142e2ed32ddf91",
+      "leaves": 10056
+    },
+    "incomingHead": {
+      "commit": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "tree": "87e104735545a0860ec2bbcd9bf1ef2318dbbebb",
+      "leaves": 10334
+    },
+    "own": {
+      "commit": "c9b2c324fa76e9792791bf16777bb7833834c268",
+      "tree": "3ee2cc40cbbebb511f9908019aa0584e075cc51d",
+      "leaves": 10649,
+      "nonDocLeaves": 8798
+    },
+    "pr1192": {
+      "state": "open",
+      "draft": true,
+      "head": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "base": "def734338f13bcc3209e78079a0cedbc48f05a5b",
+      "updatedAt": "2026-11-16T02:57:46Z"
+    }
+  },
+  "ancestry": {
+    "status": "ahead",
+    "ahead": 4,
+    "behind": 0,
+    "mergeBase": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "commits": [
+      {
+        "sha": "85355e11fcd08ffe87f96be5003675305458a354",
+        "parents": [
+          "0660c748f88675063e3051fb0f8b2022e8f6f056"
+        ],
+        "message": "docs: preserve completed M evidence and stage dormant Installer observation plan",
+        "date": "2026-11-16T01:35:16Z",
+        "tree": "7c9757f1b13378f9f9a3a55ce317b19f757799c4",
+        "leafCount": 10120,
+        "changed": 65,
+        "added": 64,
+        "deleted": 0,
+        "docs": 65,
+        "nonDocs": [],
+        "doc29": [
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+            "before": "22f00c40d0da9b6b2b1354424270d78b1484af63",
+            "after": "dc27882b04fd71cf571eee863031e1c7c562653a"
+          }
+        ]
+      },
+      {
+        "sha": "9ead131e41ba806ce3ab47d3ad28feacc5fbd911",
+        "parents": [
+          "85355e11fcd08ffe87f96be5003675305458a354"
+        ],
+        "message": "docs: preserve original M privacy RED and reviewed one-helper correction",
+        "date": "2026-11-16T02:22:16Z",
+        "tree": "9404f42e9e9c83a3b199389f5bbc2e4386432f72",
+        "leafCount": 10244,
+        "changed": 125,
+        "added": 124,
+        "deleted": 0,
+        "docs": 125,
+        "nonDocs": [],
+        "doc29": [
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+            "before": "dc27882b04fd71cf571eee863031e1c7c562653a",
+            "after": "509a2c0456d2163531cf225d07a559b367cd8342"
+          }
+        ]
+      },
+      {
+        "sha": "6ff83bb45af88f660d8b124e7467664ad2ddd590",
+        "parents": [
+          "9ead131e41ba806ce3ab47d3ad28feacc5fbd911"
+        ],
+        "message": "fix(host): hide held-value fragments after diagnostic syntax redaction",
+        "date": "2026-11-16T02:25:53Z",
+        "tree": "f7cd0a34bcbfba5a6fe30aa559a22dbbde2b2227",
+        "leafCount": 10244,
+        "changed": 1,
+        "added": 0,
+        "deleted": 0,
+        "docs": 0,
+        "nonDocs": [
+          {
+            "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+            "before": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+            "after": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9"
+          }
+        ],
+        "doc29": []
+      },
+      {
+        "sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+        "parents": [
+          "6ff83bb45af88f660d8b124e7467664ad2ddd590"
+        ],
+        "message": "docs(migration): retain post-helper original CI evidence and publication readbacks",
+        "date": "2026-11-16T02:49:35Z",
+        "tree": "87e104735545a0860ec2bbcd9bf1ef2318dbbebb",
+        "leafCount": 10334,
+        "changed": 91,
+        "added": 90,
+        "deleted": 0,
+        "docs": 91,
+        "nonDocs": [],
+        "doc29": [
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+            "before": "509a2c0456d2163531cf225d07a559b367cd8342",
+            "after": "ca171cbe7936f2e19214c0d61be34db671b54a1c"
+          }
+        ]
+      }
+    ],
+    "priorOwnHistoryMerge": "a2be16f835c10e7e6579ce5bbb9bc55a26810c4f",
+    "priorOwnOrderedParents": [
+      "88c20b2e33c3d83d8606cc45669db0a33099183f",
+      "0660c748f88675063e3051fb0f8b2022e8f6f056"
+    ]
+  },
+  "inventory": {
+    "allTreesNonTruncated": true,
+    "changedLeaves": 280,
+    "added": 278,
+    "modified": 2,
+    "deleted": 0,
+    "modeChanges": 0,
+    "documentationChanges": 279,
+    "nonDocumentationChanges": 1,
+    "addedDocumentationBytes": 39962670,
+    "ownAddedPathCollisions": [],
+    "countsByAddedDirectory": [
+      {
+        "directory": "stage-m-completed-and-dormant-installer-2026-11-16",
+        "files": 64,
+        "bytes": 10391410
+      },
+      {
+        "directory": "stage-m-next-current-ci-2026-11-16",
+        "files": 124,
+        "bytes": 15602940
+      },
+      {
+        "directory": "stage-m-post-helper-current-ci-2026-11-16",
+        "files": 90,
+        "bytes": 13968320
+      }
+    ],
+    "mappingMeasurement": "Path/mode/type/Git blob/size values are from complete Git tree APIs. This review does not claim full byte/SHA/CRC/materialization verification of the 39,962,670-byte documentary payload set."
+  },
+  "doc29": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "before": {
+      "blob": "22f00c40d0da9b6b2b1354424270d78b1484af63",
+      "utf16Characters": 1278080,
+      "utf8Bytes": 1278823,
+      "sha256": "c2d4bb45b780de5caa980a5455579d476feeee00032b645ce419deec673e050d"
+    },
+    "after": {
+      "blob": "ca171cbe7936f2e19214c0d61be34db671b54a1c",
+      "utf16Characters": 1462307,
+      "utf8Bytes": 1463115,
+      "sha256": "6ef10ec0e904b3b72fe76fbebe96eb79952b52181775086f910459c10bfbf405"
+    },
+    "suffix": {
+      "utf16Characters": 184227,
+      "utf8Bytes": 184292,
+      "sha256": "0bc25c811f6788320115bf182fdf7ff94d392d6bce32520e9c752f9e03c51006",
+      "leadingLFs": 3
+    },
+    "equation": "Full ca171 = full 22f00 + exact new suffix S; length(S)=184227 UTF-16 code units /184292 UTF-8 bytes. There is no extra delimiter in this equation: S already starts with three LF.",
+    "completePrefixEqual": true,
+    "forwardEqual": true,
+    "inverseEqual": true,
+    "insertions": 0,
+    "deletions": 0,
+    "scopeRead": "Complete blobs fetched; complete prefix/suffix identity measured. All new headings and the full privacy R1/publication sections were read. Documentary execution claims are retained as attributed incoming statements, not independently requalified by this inventory."
+  },
+  "soleProductionChange": {
+    "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+    "before": {
+      "blob": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+      "utf16Characters": 7855,
+      "utf8Bytes": 7855,
+      "sha256": "df315063bd119870f52b932daf72880ac4ea40340e023049a236fed79e505c37"
+    },
+    "incoming": {
+      "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "utf16Characters": 8310,
+      "utf8Bytes": 8310,
+      "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7"
+    },
+    "own": {
+      "blob": "6ea373c48119c94b796e28209a03602d0a438e86",
+      "utf16Characters": 8127,
+      "utf8Bytes": 8127,
+      "sha256": "d318e1fdf5daeb98f955d9c8a6578249be1302b5585c181307521dd5d298cc69"
+    },
+    "oldToIncomingHunks": [
+      {
+        "oldStart": 113,
+        "newStart": 113,
+        "remove": [
+          "    const text = redactPrivateValues(redactSyntax(value), secrets);"
+        ],
+        "add": [
+          "    const normalized = value.replace(/\\s+/g, ' ').trim();",
+          "    const sanitized = redactSyntax(value);",
+          "    // A syntax rewrite can remove only part of a held value. Without source spans,",
+          "    // hide the whole ambiguous line rather than guess which fragments survived.",
+          "    const ambiguous = sanitized !== normalized &&",
+          "      (redactPrivateValues(value, secrets) !== value ||",
+          "        redactPrivateValues(normalized, secrets) !== normalized);",
+          "    const text = ambiguous ? '[redacted]' : redactPrivateValues(sanitized, secrets);"
+        ]
+      }
+    ],
+    "ownToIncomingHunks": [
+      {
+        "oldStart": 100,
+        "newStart": 100,
+        "remove": [
+          "  let secrets: string[], normalizedSecrets: string[];",
+          "  try {",
+          "    secrets = privateValues(context, args);",
+          "    normalizedSecrets = secrets.map(secret => secret.replace(/\\s+/g, ' ').trim()).filter(Boolean);",
+          "  }"
+        ],
+        "add": [
+          "  let secrets: string[];",
+          "  try { secrets = privateValues(context, args); }"
+        ]
+      },
+      {
+        "oldStart": 116,
+        "newStart": 113,
+        "remove": [
+          "    const text = redactPrivateValues(redactSyntax(value), secrets);"
+        ],
+        "add": [
+          "    const normalized = value.replace(/\\s+/g, ' ').trim();",
+          "    const sanitized = redactSyntax(value);",
+          "    // A syntax rewrite can remove only part of a held value. Without source spans,",
+          "    // hide the whole ambiguous line rather than guess which fragments survived.",
+          "    const ambiguous = sanitized !== normalized &&",
+          "      (redactPrivateValues(value, secrets) !== value ||",
+          "        redactPrivateValues(normalized, secrets) !== normalized);",
+          "    const text = ambiguous ? '[redacted]' : redactPrivateValues(sanitized, secrets);"
+        ]
+      },
+      {
+        "oldStart": 119,
+        "newStart": 123,
+        "remove": [
+          "      : { kind: 'process-output', stream: 'stderr',",
+          "        text: text === redactSyntax(redactPrivateValues(value.replace(/\\s+/g, ' ').trim(), normalizedSecrets))",
+          "          ? text : '[redacted]' });"
+        ],
+        "add": [
+          "      : { kind: 'process-output', stream: 'stderr', text });"
+        ]
+      }
+    ],
+    "incomingPhysicalLines": 172,
+    "added": 8,
+    "removed": 1,
+    "disposition": "Do not substitute incoming 0b0 for own 6ea. Preserve incoming commit/history as reviewed alternate implementation; retain own 6ea and 27-case 2891."
+  },
+  "staticPrivacyFindings": [
+    {
+      "id": "post-mask-overflow-order",
+      "existingOracleBlob": "2891a53b464c400c64ab41dd99674ac6c463b39a",
+      "caseName": "post-mask expansion preserves the oversized gap before contextual ambiguity refusal",
+      "lines": [
+        295,
+        309
+      ],
+      "held": {
+        "API_KEY": "TEST_HELD_PREFIX TEST_HELD_SUFFIX",
+        "SHORT_TOKEN": "q"
+      },
+      "inputRecipe": "'q '.repeat(3000) + 'Bearer TEST_HELD_PREFIX\\tTEST_HELD_SUFFIX\\n'",
+      "analysis": "The framed line is below 24KiB. Existing exact masking expands each q to the marker, making original O exceed 24KiB. Incoming sanitized differs from normalized and its original-value masker detects held q; incoming selects the 10-byte marker before checking output size, therefore bypasses the required original oversized gap. Own 6ea tests original O-empty/O-byte size before ambiguity fallback.",
+      "classification": "Source-level predicted regression; this review executed no test on 0b0."
+    },
+    {
+      "id": "folded-json-escaped-held-form",
+      "existingOracleBlob": "2891a53b464c400c64ab41dd99674ac6c463b39a",
+      "caseName": "held escaped forms stay private after contextual whitespace normalization (true)",
+      "lines": [
+        279,
+        293
+      ],
+      "heldValueDescription": "TEST_PREFIX, two ASCII spaces, password=TEST_INNER, one space, TEST_SUFFIX, one actual tab, TEST_TAIL",
+      "inputRecipe": "'Bearer ' + JSON.stringify(held).slice(1,-1).replace(/\\s+/g,' ').trim() + '\\n'",
+      "analysis": "The existing collector retains raw/line/folded raw forms and their JSON/URI/syntax forms. The emitted form has one literal space where the raw escaped form had two and retains a literal backslash-t where the folded raw form has a space. Neither incoming raw nor normalized detection adds N(H), so neither detects this complete held form before syntax removes Bearer first token and password value. A suffix remains outside a complete held match. Own 6ea derives N for every already captured form and conservatively compares the alternate ordering; the exact regression is already in 2891.",
+      "classification": "Source-level predicted privacy regression; no execution or emitted-output evidence is asserted."
+    }
+  ],
+  "unchangedTest": {
+    "incomingAnd0660": "0727339627757c3a96d54da2933eb7c1b60685f7",
+    "own": "2891a53b464c400c64ab41dd99674ac6c463b39a",
+    "incoming24Cases": "unchanged",
+    "ownAdditionalOracles": [
+      "exact JSON-escaped held form",
+      "whitespace-folded JSON-escaped held form",
+      "post-mask expansion oversized gap"
+    ]
+  },
+  "archivedCodeShapedDocuments": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/dormant-installer-observer/candidate/.github/workflows/host-emulated-acceptance.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "db3508eb2b853d7b2bfba565145507758c47aaf4",
+      "size": 101804
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/dormant-installer-observer/candidate/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "24f14355aabbcf72274256a18a33331e9fcc9296",
+      "size": 113222
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/dormant-installer-observer/candidate/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3e1ed4b3671f55b013067d932296b69163416481",
+      "size": 26553
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/m-privacy-one-helper-green-r1/observeMemberProcessStderr.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "size": 8310
+    }
+  ],
+  "archiveSelection": {
+    "selectedAsSource": false,
+    "statement": "Four code-shaped files remain underneath docs/evidence. The archived Installer controls/test/workflow are dormant documentary proposals, not the actual source counterparts. Preserve their exact archival paths and never silently copy them into executable locations.",
+    "rootPackage": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+    "workspace": "a049a862742a85ba77faafea329fc221b3e500e4",
+    "rootTsconfig": "568952f5025a88c16b0568c7279d8e85a4288b43",
+    "scriptsTsconfig": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+    "vitest": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+    "sourceSize": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+    "eslint": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+    "eslintFast": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+    "facts": [
+      "Actual workspaces are six explicitly named roots, none docs. Root/scripts TS include roots and root Vitest include roots do not match these archive locations. Source-size explicitly excludes docs/. Nested .github/workflows beneath docs is not an actual root workflow path.",
+      "ESLint and fast-ESLint do NOT have a blanket docs exclusion; ordinary lint scripts select src/. Explicit file-oriented lint or an enlarged glob could still select archived TypeScript. No blanket lint-immunity claim, ignore change, broadened command or execution is made."
+    ]
+  },
+  "preservationRecommendation": {
+    "status": "Requires separate reviewed/published history-only R1 before authoring any merge postimage.",
+    "source": "Retain every actual publication-descendant non-doc leaf, not only the sole new overlap. Current own 42 nondoc divergences versus 0660 include vendor replacement paths and reviewed budget/custody/native/Teams/Installer/Management/test changes; the incoming four commits add no further source behavior except 0b0.",
+    "history": "A later ordinary merge with fresh own first parent and 608ef second parent would retain the four incoming commits without selecting their sole helper. Actual parents must be freshly captured, not predicted.",
+    "documents": "Preserve exact 278 added path/blob/mode/size identities after fresh collision review; retain complete then-current own Doc29 prefix and append exact incoming S with attribution, rejected-helper disposition and historical-source/budget limits. Plan30 and all other preexisting incoming paths are unchanged in this four-commit range.",
+    "qualification": "No incoming historical PASS transfers to own source; own c79 repair/archive, original 15s Process timing, P08/native budgets, all tests and active/frozen CI refs stay source-bound. This report authorizes no execution/retry/compiler/CI/ref/PR action."
+  },
+  "ownNonDocDivergenceAtSnapshot": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "old": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+      "own": "a93ff6ba1e5656523668694bca24910a468aebc7",
+      "incoming": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+      "newChanged": false
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "old": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "own": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+      "incoming": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "newChanged": false
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "old": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+      "own": "70202d22a5840401a00025cd60b797c514f3e455",
+      "incoming": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+      "newChanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "old": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "own": "42093f5cb1be431e383a2bbf97223a2bd8d54b49",
+      "incoming": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "newChanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "old": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+      "own": "6ea373c48119c94b796e28209a03602d0a438e86",
+      "incoming": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "newChanged": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "old": "414525958b459ccb9d4c20e4b185e03d71d46867",
+      "own": "e56cdabf97cfe2596b7622719237811560624bd6",
+      "incoming": "414525958b459ccb9d4c20e4b185e03d71d46867",
+      "newChanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts",
+      "old": "a370b8c16f18b21c34699114cd7d92ae801841b6",
+      "own": "342fab2bf377b7ca6acd6dbd180a946382c00c1a",
+      "incoming": "a370b8c16f18b21c34699114cd7d92ae801841b6",
+      "newChanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/host-custody-recovery.test.ts",
+      "old": "1d789db5229276aa98535c76cbe17c9e4ee3cdc2",
+      "own": "c7dc0f97576ce03c9371d4bd62fe7cd993ac7773",
+      "incoming": "1d789db5229276aa98535c76cbe17c9e4ee3cdc2",
+      "newChanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "old": "0727339627757c3a96d54da2933eb7c1b60685f7",
+      "own": "2891a53b464c400c64ab41dd99674ac6c463b39a",
+      "incoming": "0727339627757c3a96d54da2933eb7c1b60685f7",
+      "newChanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+      "old": "b0174217485fa7dadb4ba9692a3056798e2e3e9f",
+      "own": "aadc051d5514773ee81d76758c6bbd40c705df5e",
+      "incoming": "b0174217485fa7dadb4ba9692a3056798e2e3e9f",
+      "newChanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+      "old": "0b179a8b5fcf089de2f42dd90f8eef9a9160b992",
+      "own": "b19c8ff5a815a2c2034358f102e2af2cedc212e6",
+      "incoming": "0b179a8b5fcf089de2f42dd90f8eef9a9160b992",
+      "newChanged": false
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "old": "c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79",
+      "own": "43325a4e2b4d7ad2b69bacab51275a2a2af9bd8f",
+      "incoming": "c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79",
+      "newChanged": false
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "old": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "own": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+      "incoming": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "newChanged": false
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "old": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "own": "a049a862742a85ba77faafea329fc221b3e500e4",
+      "incoming": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "newChanged": false
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-desktop.mjs",
+      "old": "764d42763c8eab6592235acf75073253538cfe38",
+      "own": "f25331448f9e412619b6c7240e1302b823cd5afc",
+      "incoming": "764d42763c8eab6592235acf75073253538cfe38",
+      "newChanged": false
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-owned-processes.test.mjs",
+      "old": "d3779ede535583c88f81fa5e747d008f45863c48",
+      "own": "186bc50c143cf582bebc91df69a8284c23e5c6f4",
+      "incoming": "d3779ede535583c88f81fa5e747d008f45863c48",
+      "newChanged": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "old": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+      "own": "b47e3a6e0227e2c3521a4e0124074ce6ec94bae8",
+      "incoming": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+      "newChanged": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "old": "a9d725fbe11278dd98611b49d570c19d80684087",
+      "own": "7b5edfbd4967debe454387c7a8b6246e67216dc8",
+      "incoming": "a9d725fbe11278dd98611b49d570c19d80684087",
+      "newChanged": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "old": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+      "own": "d52680f4d848e58dee54f8a9a4beae9435c2b14c",
+      "incoming": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+      "newChanged": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "old": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+      "own": "85ff3d3927c2691fb1894d332cb3f27e8e36c831",
+      "incoming": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+      "newChanged": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "old": "217b189f231af2ea39b290d70568a1ae42379a53",
+      "own": "076fbd26bac85c4195312a83c1ae78067a8d742e",
+      "incoming": "217b189f231af2ea39b290d70568a1ae42379a53",
+      "newChanged": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "old": "dd53c5b6c019dbe034dcde5375f03123b9b3e10a",
+      "own": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+      "incoming": "dd53c5b6c019dbe034dcde5375f03123b9b3e10a",
+      "newChanged": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "old": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+      "own": "b52876e3215910eba3a3a24756f61c289a0965f9",
+      "incoming": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+      "newChanged": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "old": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+      "own": "8e9884ea50b1aae54b50d6271367b495c1ca591e",
+      "incoming": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+      "newChanged": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "old": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+      "own": "1e94339df46ef3bb963555fc3cc7253055766a78",
+      "incoming": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+      "newChanged": false
+    },
+    {
+      "path": "test/renderer/store/teamSlice.test.ts",
+      "old": "08fbd081d1a1cb4cac9a026d11313c165e776d17",
+      "own": "8b5bde2a0ac8a79b4563a810f1a66e21bc0df861",
+      "incoming": "08fbd081d1a1cb4cac9a026d11313c165e776d17",
+      "newChanged": false
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "old": "e3cb3ac88b3b46c8935f64bc2f2b0060e163676b",
+      "own": "cf20ceb57c06b71af1d25eac794fb92b15597930",
+      "incoming": "e3cb3ac88b3b46c8935f64bc2f2b0060e163676b",
+      "newChanged": false
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "old": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+      "own": "0486ca44781ab8b9da889df212f3aeeb3879b6c3",
+      "incoming": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+      "newChanged": false
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "old": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+      "own": "60548e4b0477924fd2c068283b9372f21946b198",
+      "incoming": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+      "newChanged": false
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "old": "ca0ded66441b8818bdf5726ee7d8ffa95abb8518",
+      "own": "a42f7513e9a5d2732c5c9f65fa1cc6cf1c970062",
+      "incoming": "ca0ded66441b8818bdf5726ee7d8ffa95abb8518",
+      "newChanged": false
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGate.ts",
+      "old": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d",
+      "own": "0d3c432774a928cd26ee0d27b2b5870cfe81f057",
+      "incoming": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d",
+      "newChanged": false
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "old": "034d2253e0649bdeb5db0b12244656446150c31c",
+      "own": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+      "incoming": "034d2253e0649bdeb5db0b12244656446150c31c",
+      "newChanged": false
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/README.md",
+      "old": "70c7bdfb85ea427f0e6ff8df99955a29648ce642",
+      "incoming": "70c7bdfb85ea427f0e6ff8df99955a29648ce642",
+      "newChanged": false
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+      "old": "7130609dd29851148c9e2106e2764b75982739b1",
+      "incoming": "7130609dd29851148c9e2106e2764b75982739b1",
+      "newChanged": false
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "old": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+      "incoming": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+      "newChanged": false
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/checked-artifact-receipt.json",
+      "old": "7fe2a65c8281598cc20dbd4f59d445ce18faab40",
+      "incoming": "7fe2a65c8281598cc20dbd4f59d445ce18faab40",
+      "newChanged": false
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/source-receipt.json",
+      "old": "c8eddea34318da263326df30169b53b8e1f9d07c",
+      "incoming": "c8eddea34318da263326df30169b53b8e1f9d07c",
+      "newChanged": false
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/README.md",
+      "own": "6e94db07c6ef01f38458abbdcba067f766229be9",
+      "newChanged": false
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz",
+      "own": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3",
+      "newChanged": false
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "own": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+      "newChanged": false
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/checked-artifact-receipt.json",
+      "own": "2136bb2a37863e4182ff264bf012220a8ae1bc13",
+      "newChanged": false
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/source-receipt.json",
+      "own": "a78d8a6619a358c79f88fc66886754eb2b6de9b2",
+      "newChanged": false
+    }
+  ],
+  "addedDocumentationLedger": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/appendices/Plan29-M-completed-evidence-and-dormant-R1.md",
+      "sha": "a4a0583e183891d0b019a8c54d91f25d649f14d2",
+      "mode": "100644",
+      "size": 10370
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/appendices/Plan29-completed-native-appendix.md",
+      "sha": "38c566d461715ca2dedab07502a1fe9af227e071",
+      "mode": "100644",
+      "size": 12041
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/appendices/Plan29-creation-macos-appendix.md",
+      "sha": "174bd6bfa667eceeda26c8e02cab2fc2f74de996",
+      "mode": "100644",
+      "size": 3819
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/appendices/Plan29-creation-ubuntu-appendix.md",
+      "sha": "4fba3738842ae7c34a76ddcc99bcf1b5623a2646",
+      "mode": "100644",
+      "size": 3955
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/appendices/Plan29-creation-windows-appendix.md",
+      "sha": "4a032d9650e6478b2acef5e309d820e5af3c11ab",
+      "mode": "100644",
+      "size": 3503
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/appendices/Plan29-installer-failure-appendix.md",
+      "sha": "8b82c7acf00b9642438d3dbf7e9a8c481c463fef",
+      "mode": "100644",
+      "size": 8427
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/appendices/Plan29-terminal-status-addendum-0033.md",
+      "sha": "daca171c83d6d6abc66e6d2c371fb843b80656ac",
+      "mode": "100644",
+      "size": 1481
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/appendices/Plan29-terminal-ui-status-addendum.md",
+      "sha": "4e568b8d9295e0c07011441d06fd556cc65aaa80",
+      "mode": "100644",
+      "size": 2512
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/appendices/R1-appendix.md",
+      "sha": "bf13222c0ee519945db20b9e027b2942ebac3d8e",
+      "mode": "100644",
+      "size": 14979
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/followup-open-prs-original-0119.json",
+      "sha": "577ca9e51429944b1e9b35c7a3af20059348ce36",
+      "mode": "100644",
+      "size": 779
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/general-jobs-0122.json",
+      "sha": "928a5f0582702686c3f512affe3119e4c6775254",
+      "mode": "100644",
+      "size": 1132
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/native-process-jobs-0121.json",
+      "sha": "902dd691dd342eeca8a55757ce7bd501fb3a2996",
+      "mode": "100644",
+      "size": 36050
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/native-v2-jobs-0121.json",
+      "sha": "540e96350ce15aac7021ff954c72c137be892f34",
+      "mode": "100644",
+      "size": 49096
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/prior-M-docs-independent-readback.json",
+      "sha": "29ec4562eb82e492cf7303b856ce3a3b0a38de35",
+      "mode": "100644",
+      "size": 12190
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/prior-M-docs-root-readback.json",
+      "sha": "bfb7521a52c761a7b6cb8d76641cfdfff83c486d",
+      "mode": "100644",
+      "size": 13686
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/prior-M-primary-fast-forward-receipt.json",
+      "sha": "f98793509cb0380df2b7d5dda95434d349f626ab",
+      "mode": "100644",
+      "size": 608
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/publication-route-observation.json",
+      "sha": "6e58277ca9f1bbd40e31ab6ee9e4591c8a56525b",
+      "mode": "100644",
+      "size": 5169
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/ui-full-api-jobs-0121.json",
+      "sha": "cc418d6ba5ccfa6e3c734ac34f1357b49785d297",
+      "mode": "100644",
+      "size": 19848
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/dormant-installer-observer/R1-appendix.md",
+      "sha": "bf13222c0ee519945db20b9e027b2942ebac3d8e",
+      "mode": "100644",
+      "size": 14979
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/dormant-installer-observer/candidate-metadata.json",
+      "sha": "120d7ab45405bf79ae148725a4b2b27b14b38b7d",
+      "mode": "100644",
+      "size": 2592
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/dormant-installer-observer/candidate.patch",
+      "sha": "00d54a32d0fb5669f2201c4f842ca6296609e74e",
+      "mode": "100644",
+      "size": 14029
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/dormant-installer-observer/candidate/.github/workflows/host-emulated-acceptance.yml",
+      "sha": "db3508eb2b853d7b2bfba565145507758c47aaf4",
+      "mode": "100644",
+      "size": 101804
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/dormant-installer-observer/candidate/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "sha": "24f14355aabbcf72274256a18a33331e9fcc9296",
+      "mode": "100644",
+      "size": 113222
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/dormant-installer-observer/candidate/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "sha": "3e1ed4b3671f55b013067d932296b69163416481",
+      "mode": "100644",
+      "size": 26553
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/dormant-installer-observer/independent-source-r1-review.json",
+      "sha": "9c17dfb278ad94c6e7ec22a4d40f6d2e4179b6e8",
+      "mode": "100644",
+      "size": 9519
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/inventory.json",
+      "sha": "d4ad29f07c626bfc7ff78997dbf85a3a6a675447",
+      "mode": "100644",
+      "size": 61775
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/general-edited9e-jobs-0112.json",
+      "sha": "f45dbbe11dcdb25fd961ef496faa3c7b384d93ca",
+      "mode": "100644",
+      "size": 9718
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/general-edited9e-jobs-0122.json",
+      "sha": "f45dbbe11dcdb25fd961ef496faa3c7b384d93ca",
+      "mode": "100644",
+      "size": 9718
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/general-edited9e-ledger-windows-independent-review.json",
+      "sha": "8d2a638a3f7deccf6d57170fdced769dde770928",
+      "mode": "100644",
+      "size": 35520
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/general-edited9e-ledger-windows-original-log-response.json",
+      "sha": "229e9a72a3be355d7e1d7649451dcf813fa0a06e",
+      "mode": "100644",
+      "size": 98479
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/general-edited9e-ledger-windows-original.log",
+      "sha": "db49cdd2027e66acde0fa94690d692b26009a15c",
+      "mode": "100644",
+      "size": 91159
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/general-edited9e-merge-commit-original.json",
+      "sha": "ef866594aca5b5e1508c45eac8372ecb09f93cdd",
+      "mode": "100644",
+      "size": 2653
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/general-edited9e-plan-original-log-response.json",
+      "sha": "9353fdabfb829c4b1dbaf04ce0b84444706bc232",
+      "mode": "100644",
+      "size": 118835
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/general-edited9e-plan-original.log",
+      "sha": "a97b54613c6c95bcf4b9d663a81ea8029a2ed4f9",
+      "mode": "100644",
+      "size": 117646
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/jobs-0035.json",
+      "sha": "4155e95ae82769586a1180034deb6409a0e919e9",
+      "mode": "100644",
+      "size": 6945
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/run-43776922765-terminal-0036.json",
+      "sha": "5742994c7d22e191a94c656e6cb81fbbdee83241",
+      "mode": "100644",
+      "size": 30535
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/sync9e-terminal-0036-record.json",
+      "sha": "5af97c239b9ceb09ae02d227d1a0d56941990cb2",
+      "mode": "100644",
+      "size": 1005
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/native/process-jobs-api-terminal-0033.json",
+      "sha": "1dc403153665cbd80c4bc81688269144527366fa",
+      "mode": "100644",
+      "size": 25267
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/native/process-run-api-terminal-0033.json",
+      "sha": "69b740c9ec2279451f2a4b8455fd1cbb57e5ab68",
+      "mode": "100644",
+      "size": 13831
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/native/terminal-checkpoint-20261116-0033.json",
+      "sha": "333a1ace249f57aa705a7c7586fd479900d669ff",
+      "mode": "100644",
+      "size": 4260
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/native/v2-jobs-api-terminal-0033.json",
+      "sha": "b22d392e3338263a50aabd4a99522195d3281e7f",
+      "mode": "100644",
+      "size": 34940
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/native/v2-run-api-terminal-0033.json",
+      "sha": "315dbea21ac505eb5b54b92ba19ae955b38a2268",
+      "mode": "100644",
+      "size": 13853
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/ui/full-api-jobs-final-0036.json",
+      "sha": "0bd588b324966e9ed29429eba41b2be8e622b900",
+      "mode": "100644",
+      "size": 23076
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/native/M0660-README.md",
+      "sha": "8246cb6e3140bbb8b19f0c99fedfed7f6dbf6909",
+      "mode": "100644",
+      "size": 1071
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/native/M0660-bundle-metadata.json",
+      "sha": "089ef0c469404b51b7ab8897086d91dfa8425233",
+      "mode": "100644",
+      "size": 1197
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/native/M0660-inventory.json",
+      "sha": "a61ec4204807982864575588113ac3302948ce17",
+      "mode": "100644",
+      "size": 20880
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/native/M0660-native-evidence.zip",
+      "sha": "04a9ee0dbf3364352cf9af2fa7b4d77b882ed284",
+      "mode": "100644",
+      "size": 664690
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/native/root-independent-arm64-original-review.json",
+      "sha": "aa91caffe01c961a082fea7da2748a3c748113d6",
+      "mode": "100644",
+      "size": 30913
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/native/root-independent-darwin-and-bundle-review.json",
+      "sha": "4f2c6860b20ec730bf855759e1758afb4ad8a4dd",
+      "mode": "100644",
+      "size": 69844
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/native/root-independent-x64-original-review.json",
+      "sha": "864a98ae2a9361ce08865c09d565463b9fe3cbe6",
+      "mode": "100644",
+      "size": 30887
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/native/static-windows-independent-review.json",
+      "sha": "73baf23a2193095bc538988632ac8c1a11545aef",
+      "mode": "100644",
+      "size": 5839
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/remaining-goal/acceptance-ledger-v2.json",
+      "sha": "3613696fefb2fec089db10b04ab3e49d70667db8",
+      "mode": "100644",
+      "size": 21923
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/remaining-goal/acceptance-ledger-v2.md",
+      "sha": "fe4a7062e4406103f4b6260e83bd19c6c72149c4",
+      "mode": "100644",
+      "size": 19979
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/remaining-goal/p11-v2-feasibility.json",
+      "sha": "cea8477925f9f35332bf7ce8fea8ea9e934b3dd7",
+      "mode": "100644",
+      "size": 11140
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/remaining-goal/p11-v2-feasibility.md",
+      "sha": "fca0b81170b65db1ec123eda0cb61a47cc35aad4",
+      "mode": "100644",
+      "size": 12842
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/ui/M0660-Creation-Ubuntu/M0660-Creation-Ubuntu.zip",
+      "sha": "2ded5e0e20ec60084e99adee5926dfeeb35eaa70",
+      "mode": "100644",
+      "size": 2895943
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/ui/M0660-Creation-Ubuntu/README.md",
+      "sha": "09674f7509c43935be085c3a876aa24d27bcd5df",
+      "mode": "100644",
+      "size": 656
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/ui/M0660-Creation-Ubuntu/bundle-metadata.json",
+      "sha": "19bcce308866648164f15d97a97e2d363c330f21",
+      "mode": "100644",
+      "size": 1229
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/ui/M0660-Creation-Ubuntu/inventory.json",
+      "sha": "a17934ed64fcccc02050205f3da97153d6d78009",
+      "mode": "100644",
+      "size": 4128
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/ui/M0660-Creation-win-mac-and-Installer/M0660-Creation-win-mac-and-Installer.zip",
+      "sha": "a7dba022626f8afb3d4204efca0e9d4ef120b24b",
+      "mode": "100644",
+      "size": 5321791
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/ui/M0660-Creation-win-mac-and-Installer/README.md",
+      "sha": "de12e8b273bf2de110193908deed4cccd40918ea",
+      "mode": "100644",
+      "size": 674
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/ui/M0660-Creation-win-mac-and-Installer/bundle-metadata.json",
+      "sha": "a788ddc4a06d02f154845a04e8f5889909069380",
+      "mode": "100644",
+      "size": 1308
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/ui/M0660-Creation-win-mac-and-Installer/inventory.json",
+      "sha": "1fb62127d67bd0b6bbb4f2de040887197d48b41d",
+      "mode": "100644",
+      "size": 11140
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/ui/independent-bundles-review.json",
+      "sha": "a230f2e164395fcdc3efdc57bbd973f9c93e6c5a",
+      "mode": "100644",
+      "size": 81778
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/appendices/Plan29-M-current-originals-and-privacy-transition.md",
+      "sha": "488b72ca3f85534c4806de0019c5621b74f9a4a4",
+      "mode": "100644",
+      "size": 14570
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/claude/Plan29-claude-runtime-appendix.md",
+      "sha": "2158456cb091d1c836d937bf63e9f1fb708a0cfa",
+      "mode": "100644",
+      "size": 7152
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/claude/archive-audit.json",
+      "sha": "c3467d42da01af00d4cb50a2f040693b77e3e7b6",
+      "mode": "100644",
+      "size": 12229
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/claude/artifact-14190144831.zip",
+      "sha": "eebb985568ec7243a666777813d89eae1937d2df",
+      "mode": "100644",
+      "size": 3709925
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/claude/audit.json",
+      "sha": "a9d70a07307db63bb2c1a7f29fce768bcb1ddea4",
+      "mode": "100644",
+      "size": 53087
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/claude/checkpoint-claude-runtime.json",
+      "sha": "363dcb52b21dfd7deee197446bdd947205d8e2b0",
+      "mode": "100644",
+      "size": 15397
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/claude/independent-runtime-review.json",
+      "sha": "195dded96024c86b22ac9acf7ae9d78c1b84888e",
+      "mode": "100644",
+      "size": 80011
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/claude/job-133017915929.log",
+      "sha": "3f55694c340ea18847dfb4e2b9ca32d061048b98",
+      "mode": "100644",
+      "size": 180960
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/frontend-all-shards/Plan29-frontend-all-shards-appendix.md",
+      "sha": "bea0a19cec3e4b83469c9b830c3ed64f29db1328",
+      "mode": "100644",
+      "size": 4319
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/frontend-all-shards/audit.json",
+      "sha": "e99488334fb7968d89ad084784b603906a2522ef",
+      "mode": "100644",
+      "size": 33685
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/frontend-all-shards/checkpoint.json",
+      "sha": "b9c78e7cd03c476398692d8e2792c49bc68f817d",
+      "mode": "100644",
+      "size": 8638
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/frontend-all-shards/independent-skip-source-review.json",
+      "sha": "d150760c64a8b89c3a45927dbf713c826b906396",
+      "mode": "100644",
+      "size": 61944
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/frontend-all-shards/root-independent-review.json",
+      "sha": "5406b3413eb7af39b322bb9b00d688c831154ccb",
+      "mode": "100644",
+      "size": 27627
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/frontend-shard1/archive-audit.json",
+      "sha": "3e3c11679dbb75c5e4b257ddc448bb85a496ccdb",
+      "mode": "100644",
+      "size": 811
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/frontend-shard1/artifact-14190745426.zip",
+      "sha": "5ff6dad00241cbc8318d65def521bde3f4ba69e9",
+      "mode": "100644",
+      "size": 295485
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/frontend-shard1/job-133017915679.log",
+      "sha": "abace879b7e556e4896c9d56dc401a668d950bdc",
+      "mode": "100644",
+      "size": 170100
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/frontend-shard1/source-identities.json",
+      "sha": "024dd0edb59966e87031e8e9808ccfd014622967",
+      "mode": "100644",
+      "size": 1921
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/frontend-shard2/archive-audit.json",
+      "sha": "fe1769beab4870be2f5aa8437e2d47ac8a6ec5fe",
+      "mode": "100644",
+      "size": 812
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/frontend-shard2/artifact-14190518295.zip",
+      "sha": "03cdaed16c1a6ce12be53e703d0b4c9a8b3207a6",
+      "mode": "100644",
+      "size": 312130
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/frontend-shard2/job-133017915909.log",
+      "sha": "be68dbe956fb04582ecf2ecb7422a91b059cd2ea",
+      "mode": "100644",
+      "size": 180180
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/frontend-shard3/archive-audit.json",
+      "sha": "ca3e26c515ad75d312486a71d8d174b7b84679e5",
+      "mode": "100644",
+      "size": 811
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/frontend-shard3/artifact-14191090316.zip",
+      "sha": "44ee292e19dc38d2d12458fe0bd865182668b27c",
+      "mode": "100644",
+      "size": 296995
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/frontend-shard3/job-133017915890.log",
+      "sha": "b701d82da57a7537f4c2912bf96c71281b2ebb70",
+      "mode": "100644",
+      "size": 162556
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/frontend-shard4/archive-audit.json",
+      "sha": "100ccc0b1c41d94cdc0c741ba6bd8d5b36e0341c",
+      "mode": "100644",
+      "size": 812
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/frontend-shard4/artifact-14191065996.zip",
+      "sha": "a532edf74714fb354e2799aa104fbdeb1fe7e397",
+      "mode": "100644",
+      "size": 317929
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/frontend-shard4/job-133017915894.log",
+      "sha": "68d1d51b510dacaf1ac8c363de598a1c0bf6470c",
+      "mode": "100644",
+      "size": 190645
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/full-api-jobs-0135.json",
+      "sha": "183b3edd9c69a111e634a8405da05240b0f80916",
+      "mode": "100644",
+      "size": 80872
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/full-api-jobs-0147.json",
+      "sha": "f63d8113e2091f5862c8b02c1873255d7161556e",
+      "mode": "100644",
+      "size": 148774
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/full-api-jobs-0152.json",
+      "sha": "7411ae35e8d202b049e03e1006e6c02fbf8100ac",
+      "mode": "100644",
+      "size": 167251
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/initial-api-runs-jobs-0038.json",
+      "sha": "8689e935e0ae5041a5bdc3c2d4e6b2169b529f5b",
+      "mode": "100644",
+      "size": 58753
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/opencode/Plan29-opencode-failure-appendix-v2.md",
+      "sha": "3355042930be89d70cccce47e1e36eafb1e7dcba",
+      "mode": "100644",
+      "size": 5950
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/opencode/Plan29-opencode-failure-appendix.md",
+      "sha": "5c380730fa85c05b8be829ff41d72a6eeb82edf7",
+      "mode": "100644",
+      "size": 5847
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/opencode/archive-audit.json",
+      "sha": "0e876a7df17a5f52ceebd6563941c571b1669e40",
+      "mode": "100644",
+      "size": 4175
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/opencode/artifact-14189374994.zip",
+      "sha": "087218fdd1ee26394fca0f1700171d87a955cd60",
+      "mode": "100644",
+      "size": 665565
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/opencode/audit.json",
+      "sha": "457d4d6f606f30381acd8cd669b3766e98ac87e7",
+      "mode": "100644",
+      "size": 27581
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/opencode/checkpoint-opencode-failure.json",
+      "sha": "4d945d84a45543d694a4138d3308dd854e1f6ad3",
+      "mode": "100644",
+      "size": 6728
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/opencode/job-133017915900.log",
+      "sha": "18de3a01b1af208e57279ba29317c6c12637911c",
+      "mode": "100644",
+      "size": 184267
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/opencode/job-terminal-api.json",
+      "sha": "b37f778a6b3bafdfaabad69687f7a8351a701038",
+      "mode": "100644",
+      "size": 6551
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/opencode/official-artifacts.json",
+      "sha": "a26686c153b488aa85ca8f935300c6d9b04fedb1",
+      "mode": "100644",
+      "size": 2701
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/opencode/original-run-identity.json",
+      "sha": "5519a8827aa8166efb61ae84db6ee49a2a0a501b",
+      "mode": "100644",
+      "size": 13832
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/opencode/root-independent-review.json",
+      "sha": "a2df7cbf79b0ed731c234f8732754d3e234fb5c9",
+      "mode": "100644",
+      "size": 21358
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "sha": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "mode": "100644",
+      "size": 583301
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/selection/Plan29-selection-appendix.md",
+      "sha": "13137f50f8037f21ab382ddbea730103a3cb0c33",
+      "mode": "100644",
+      "size": 5250
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/selection/archive-audit.json",
+      "sha": "b0677f8693ec0fe18127d1c20a2764dc19759d10",
+      "mode": "100644",
+      "size": 8427
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/selection/artifact-14190562781.zip",
+      "sha": "ff83df6b393e78b0cb518769f20484f2348dd481",
+      "mode": "100644",
+      "size": 1307479
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/selection/audit.json",
+      "sha": "c707366eef68af4677e99e24a0133138f1e641d0",
+      "mode": "100644",
+      "size": 20643
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/selection/checkpoint-selection.json",
+      "sha": "c1704d79043c84d847962d732e49a8f3ff342f28",
+      "mode": "100644",
+      "size": 10746
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/selection/job-133017915916.log",
+      "sha": "24219e78fa2bd846a7e91589d553b8293ec8cea3",
+      "mode": "100644",
+      "size": 180864
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/selection/job-terminal-api.json",
+      "sha": "b2ecb41d71e859ba02c57896c7a07e8700ef5731",
+      "mode": "100644",
+      "size": 6492
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/selection/root-independent-review.json",
+      "sha": "eeec84656302462c0400a5716369b36a9df804ea",
+      "mode": "100644",
+      "size": 29680
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/selection/source-pin-audit.json",
+      "sha": "669aec529a68b06c9aaa6908d6f32d904c99f309",
+      "mode": "100644",
+      "size": 312678
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/skills/Plan29-skills-appendix.md",
+      "sha": "2014ed36c50397271a37956c4db79339c56c2518",
+      "mode": "100644",
+      "size": 4597
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/skills/archive-audit.json",
+      "sha": "a589194c2b03fc6743437983e70a19a50b1adc95",
+      "mode": "100644",
+      "size": 7447
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/skills/artifact-14190383138.zip",
+      "sha": "aa0005723f1377c724ce9b7b05456fb27219b88f",
+      "mode": "100644",
+      "size": 1378321
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/skills/audit.json",
+      "sha": "2e77532a41a727e7bd1689eb38864f3adbc4b7b8",
+      "mode": "100644",
+      "size": 34616
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/skills/checkpoint-skills.json",
+      "sha": "5f1be826370975c7141819518283d05a29365fd8",
+      "mode": "100644",
+      "size": 10095
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/skills/independent-skills-review.json",
+      "sha": "93e25951e97594dbb0c36d1ab62366b490ce2d9d",
+      "mode": "100644",
+      "size": 36177
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/skills/job-133017915899.log",
+      "sha": "53f57e27537daf32dcabf1a130414ab7ca70bd44",
+      "mode": "100644",
+      "size": 180752
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/team-contracts/Plan29-Team-privacy-RED-appendix.md",
+      "sha": "ea47515d4083e53f9e126126bb0c39202dc46e2c",
+      "mode": "100644",
+      "size": 5512
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/team-contracts/audit.json",
+      "sha": "12610ec53882123bcb3b240deab17921a24c09d5",
+      "mode": "100644",
+      "size": 74840
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/team-contracts/checkpoint-Team-privacy-RED.json",
+      "sha": "66de09fc6c55d69ec84562d667bb4739573d24fc",
+      "mode": "100644",
+      "size": 2658
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/team-contracts/job-133017916079.log",
+      "sha": "a077622804d499d0a8ca20465aa6d7eba62b2b5c",
+      "mode": "100644",
+      "size": 123603
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/team-contracts/official-artifacts-0152.json",
+      "sha": "637c725b3944769b95d7ded2ae9c1e64d9a2934d",
+      "mode": "100644",
+      "size": 13430
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/team-contracts/root-independent-RED-review.json",
+      "sha": "1de904e8979598412383012fb3468c2be0b90ec5",
+      "mode": "100644",
+      "size": 68631
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-desktop-m0660/terminal-artifacts-0135.json",
+      "sha": "0643c77ab28f7b587a3238c565b5c82a2106a10d",
+      "mode": "100644",
+      "size": 8035
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-m-0660/general-M-jobs-0129.json",
+      "sha": "2f6a910085fc8e620236470843beab7309e9d7ae",
+      "mode": "100644",
+      "size": 5864
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-m-0660/general-M-merge-commit-original.json",
+      "sha": "897d1de9f2e0df346d594b545ab5f244e0c1f82e",
+      "mode": "100644",
+      "size": 6362
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-m-0660/general-M-plan-independent-review.json",
+      "sha": "935daf0c5fec60c112fc86fbe8b49a7023306a32",
+      "mode": "100644",
+      "size": 20278
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-m-0660/general-M-plan-original-log-response.json",
+      "sha": "91324302591f97a4c3959f3c9ed3ee5c218f91e1",
+      "mode": "100644",
+      "size": 118721
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-m-0660/general-M-plan-original.log",
+      "sha": "c134edada4731379f114fc07515ad096ddbb3d1d",
+      "mode": "100644",
+      "size": 117532
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/ci-m-0660/general-M-plan-source-review.json",
+      "sha": "1b5507dabe1e2029841a25a6afb11cd7af52e36f",
+      "mode": "100644",
+      "size": 6404
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/currentness/ci-desktop-m0660/full-api-jobs-0208.json",
+      "sha": "127bbdff4965e936abe6873284a693b66bf5e7bb",
+      "mode": "100644",
+      "size": 193597
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/currentness/ci-m-0660/general-9e-edited-jobs-021221.json",
+      "sha": "a3e8e9eaffd5065f1e401161061d3c4b3095f95b",
+      "mode": "100644",
+      "size": 8883
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/currentness/ci-m-0660/general-M-jobs-020513.json",
+      "sha": "575efa05b7bee1342ff6c0f726a001e4c6fedfa7",
+      "mode": "100644",
+      "size": 5355
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/currentness/ci-m-0660/general-M-jobs-021221.json",
+      "sha": "575efa05b7bee1342ff6c0f726a001e4c6fedfa7",
+      "mode": "100644",
+      "size": 5355
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/currentness/native-audit-M0660/v2-jobs-api-0209.json",
+      "sha": "33984122529217049de0809ccfb43d3900efbbdd",
+      "mode": "100644",
+      "size": 35928
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/currentness/preparation-followup-open-prs.json",
+      "sha": "9f6d1481614e10a934b7a03b1c4ea0b2d39d8bde",
+      "mode": "100644",
+      "size": 67
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/currentness/preparation-followup.json",
+      "sha": "64854b15533b3c834fe498adaef08a3eb14e1678",
+      "mode": "100644",
+      "size": 596
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/currentness/preparation-pr1192.json",
+      "sha": "57a7bcfff7182c7527fa344c07e37c249558f04e",
+      "mode": "100644",
+      "size": 67145
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/inventory.json",
+      "sha": "87080e43df97c038b8dcb7cf85f57fd0a74c3fa6",
+      "mode": "100644",
+      "size": 195285
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/m-privacy-one-helper-green-r1/R1-appendix.md",
+      "sha": "10c30b4146f8bd63152e9ba9533fb9d12fa6bc4f",
+      "mode": "100644",
+      "size": 8897
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/m-privacy-one-helper-green-r1/candidate-metadata.json",
+      "sha": "a1511df8732b4776ed8b5afffb5505d624b11028",
+      "mode": "100644",
+      "size": 3918
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/m-privacy-one-helper-green-r1/candidate.patch",
+      "sha": "958de68314a85da4ef85237c3af79d72d3d623d1",
+      "mode": "100644",
+      "size": 1081
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/m-privacy-one-helper-green-r1/independent-current-composition-review.json",
+      "sha": "fd440ca50d0b776edea3506f0705e7ef7c06bde4",
+      "mode": "100644",
+      "size": 13360
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/m-privacy-one-helper-green-r1/independent-source-r1-review.json",
+      "sha": "7bd700a2bfc148a56961e23271e03e446549fba5",
+      "mode": "100644",
+      "size": 8215
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/m-privacy-one-helper-green-r1/observeMemberProcessStderr.ts",
+      "sha": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "mode": "100644",
+      "size": 8310
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/http-discovery/Plan29-http-discovery-appendix.md",
+      "sha": "3d8451f4091ccc820a5c8990a7775d30f1cfa1aa",
+      "mode": "100644",
+      "size": 3604
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/http-discovery/archive.zip",
+      "sha": "f0e285a8c7613b1ac3942033f2c3839ab80e18fa",
+      "mode": "100644",
+      "size": 876
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/http-discovery/artifact-api.json",
+      "sha": "0611fa106edd597ee4880cfbcb766d61b70e03ac",
+      "mode": "100644",
+      "size": 783
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/http-discovery/audit.json",
+      "sha": "19a1e4176e1fa54b4800431474d84fea973d0f05",
+      "mode": "100644",
+      "size": 11815
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/http-discovery/checkpoint.json",
+      "sha": "39f88689db88eb55c2f372f97a56e414cd152974",
+      "mode": "100644",
+      "size": 2616
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/http-discovery/extracted/opencode-v2-http-persist.json",
+      "sha": "c4521fbb28a6b8e7b94707b5cd5b2bae0869ef4d",
+      "mode": "100644",
+      "size": 1851
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/http-discovery/job-api.json",
+      "sha": "228ec7130d88d9f08151368f36ff7ecf1d9322c2",
+      "mode": "100644",
+      "size": 6004
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/http-discovery/job.log",
+      "sha": "d8576d4b843246614861e11ec7fbd1f898896b62",
+      "mode": "100644",
+      "size": 73673
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/http-discovery/root-independent-review.json",
+      "sha": "c8996fd6b57b77a5cc807f0d00790f3d0d461549",
+      "mode": "100644",
+      "size": 14453
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/http-discovery/source-audit.json",
+      "sha": "c353dc8c5938635be9e2eff0912ebf27905504d3",
+      "mode": "100644",
+      "size": 5017
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/opencode-cleanup-source-review.json",
+      "sha": "81d6f5d878aaf99870f9bd094cec2f44a1ebcc18",
+      "mode": "100644",
+      "size": 17297
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/process-linux-x64/Plan29-linux-process-appendix.md",
+      "sha": "f335766cbbe2bcd3e1ef983f2dc4ba22cbf7c7e9",
+      "mode": "100644",
+      "size": 7011
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/process-linux-x64/archive-audit.json",
+      "sha": "399b6177fae2479e0529f3c1de5ad65f8e9807ca",
+      "mode": "100644",
+      "size": 15484
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/process-linux-x64/artifact-14191426901.zip",
+      "sha": "a234dc6df38c6bd1efbddb53542a0893b9502fb3",
+      "mode": "100644",
+      "size": 1523241
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/process-linux-x64/artifact-api.json",
+      "sha": "9547a2dafebb7ee430ec38e268c193d757ab35ae",
+      "mode": "100644",
+      "size": 818
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/process-linux-x64/audit.json",
+      "sha": "64f83d747cb01eb7178db4464ce21a8f80459204",
+      "mode": "100644",
+      "size": 62214
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/process-linux-x64/checkpoint.json",
+      "sha": "a40659d976162b1118274f68ea976cabc26ad104",
+      "mode": "100644",
+      "size": 2220
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/process-linux-x64/independent-process-review.json",
+      "sha": "a5a42a12483792108e91e3414feafd85231f8317",
+      "mode": "100644",
+      "size": 94414
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/process-linux-x64/job-133017913714.log",
+      "sha": "c9890985c7f3469140d3f87968045e020d002d11",
+      "mode": "100644",
+      "size": 137758
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/process-linux-x64/job-api.json",
+      "sha": "59ee7f9a37e880f1eec059d8e3cbfec38be34b0b",
+      "mode": "100644",
+      "size": 4412
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/process-linux-x64/source-audit.json",
+      "sha": "b0221a2c9c364ee2ed064a56bc1a6541da084d5f",
+      "mode": "100644",
+      "size": 17813
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/v2-linux-x64/Plan29-linux-v2-appendix-v2.md",
+      "sha": "4dde9192dc40e01f19622b4f83f86de7aa3dd42b",
+      "mode": "100644",
+      "size": 6688
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/v2-linux-x64/archive-audit.json",
+      "sha": "41d39fda430d6088002c4a0a89fe0795c6dffb31",
+      "mode": "100644",
+      "size": 2117
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/v2-linux-x64/artifact-14190847461.zip",
+      "sha": "31f3054bfbd2240d4e9f572acbe400a43dbb5951",
+      "mode": "100644",
+      "size": 23381
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/v2-linux-x64/artifact-api.json",
+      "sha": "99d8cbc0f2f9ed7e325c8645ed426e5a610c639f",
+      "mode": "100644",
+      "size": 781
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/v2-linux-x64/audit.json",
+      "sha": "1caeee97d39d7762c97fb51bb89f374fa39e784c",
+      "mode": "100644",
+      "size": 50591
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/v2-linux-x64/checkpoint-v2.json",
+      "sha": "13b7c1519324f8261a6dc215cbc599e477c87c50",
+      "mode": "100644",
+      "size": 3013
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/v2-linux-x64/job-133017915135.log",
+      "sha": "58edcb94c9ae0734a13385585093ec3cc75ba314",
+      "mode": "100644",
+      "size": 115540
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/v2-linux-x64/job-api.json",
+      "sha": "e64e4e852c6ffda19f0380509783c3602cbc8e0f",
+      "mode": "100644",
+      "size": 4837
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/v2-linux-x64/root-independent-review-v2.json",
+      "sha": "d59e9baa12626c29772e358b878e11e8942d6195",
+      "mode": "100644",
+      "size": 78804
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/v2-linux-x64/root-independent-review.json",
+      "sha": "0cdb09f2f15d4d9f8545159d2d02d861570db38d",
+      "mode": "100644",
+      "size": 78377
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/native-audit-M0660/v2-linux-x64/source-audit.json",
+      "sha": "abe8418cf17ad883df6895f92a49bb58a1090157",
+      "mode": "100644",
+      "size": 7340
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/opencode-first-target-source-review/independent-source-review.json",
+      "sha": "1abf06447d00f0005d433eb0ab4a867f2417e9d8",
+      "mode": "100644",
+      "size": 20818
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/provisional-inputs-v5.json",
+      "sha": "d108339b199c0f34433fff3e1cb91d7b6f1c9742",
+      "mode": "100644",
+      "size": 192027
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/stage-m-completed-evidence-independent-published-api.json",
+      "sha": "b61cb9522ce9ebaeeeff604615c48ade920aa566",
+      "mode": "100644",
+      "size": 3360
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/stage-m-completed-evidence-independent-published-review.json",
+      "sha": "be3c922b0cd96d1bddca336fa7c26404a0a0be6d",
+      "mode": "100644",
+      "size": 52229
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/stage-m-completed-evidence-publication/published-commit-and-normal-push-receipt.json",
+      "sha": "cdcc9c5db400b0d53118fb01e9ac6b9941e6ad36",
+      "mode": "100644",
+      "size": 145183
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-next-current-ci-2026-11-16/stage-m-completed-evidence-publication/root-actual-published-readback.json",
+      "sha": "d868ea7af62fd033b894a5178dbbfcd03af5feb7",
+      "mode": "100644",
+      "size": 28117
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/Plan29-collaboration-appendix-v2.md",
+      "sha": "5dea81733d0c100ca894488b29baaa8ad613715d",
+      "mode": "100644",
+      "size": 7705
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/Plan29-collaboration-appendix.md",
+      "sha": "b5f801fd7e5e7f7b93258c2f313e33ce0c04acac",
+      "mode": "100644",
+      "size": 6870
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/archive-audit.json",
+      "sha": "ee3127f57621a28f416510aef2eecc7ec37e87d1",
+      "mode": "100644",
+      "size": 13103
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/artifact-14191567899.zip",
+      "sha": "82e24692ea7234b89389500601bd46b18bbfcb10",
+      "mode": "100644",
+      "size": 1646654
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/audit-v2.json",
+      "sha": "d6e726a6673d46a4dbfc8106f56721acb1df09f3",
+      "mode": "100644",
+      "size": 73798
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/audit.json",
+      "sha": "0a1d56e3e05a10a8f63041bb995c68e99a609502",
+      "mode": "100644",
+      "size": 70873
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/checkpoint-collaboration-v2.json",
+      "sha": "46c9f31e147404d415dee1c3afa21fc51ca5299f",
+      "mode": "100644",
+      "size": 19121
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/checkpoint-collaboration.json",
+      "sha": "4ec69591887fb6a2c4783986726e159f0233d675",
+      "mode": "100644",
+      "size": 17754
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-claude-scope/effects.ndjson",
+      "sha": "894b3cb61af228a3bb6a1f1a0702ea942b5e8ad5",
+      "mode": "100644",
+      "size": 7015
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-codex-scope/effects.ndjson",
+      "sha": "7913d4b8220ca0dac76b04f8caad51887346990f",
+      "mode": "100644",
+      "size": 7265
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/TEST-peer-opencode-scope/effects.ndjson",
+      "sha": "aa842473bff516f87cdada2cac9af68546da1de8",
+      "mode": "100644",
+      "size": 6546
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/desktop-backend-receipt.json",
+      "sha": "574f8dbc0679d75a45d498ff71e1d874c4fdbb50",
+      "mode": "100644",
+      "size": 1012298
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/extracted/TEST-desktop-backend-mL97kT/ui-emulated-collaboration-effects.json",
+      "sha": "b6a815ae16f8653105ee107088de5a906be91fb3",
+      "mode": "100644",
+      "size": 27680
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/independent-collaboration-review.json",
+      "sha": "1b7b9e011f6fd192cd3d386cfebc79b26ec18ab5",
+      "mode": "100644",
+      "size": 93512
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/collaboration/job-133017916023.log",
+      "sha": "f71a175d26edb1726336519590e1928043abb163",
+      "mode": "100644",
+      "size": 181311
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/cross-team/Plan29-cross-team-failure-appendix.md",
+      "sha": "afbca9fed68bc56e5014d0c9cfffc86b09227752",
+      "mode": "100644",
+      "size": 6359
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/cross-team/archive-audit.json",
+      "sha": "bce68655c00f21159b04f8ad74b535a629912de1",
+      "mode": "100644",
+      "size": 6093
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/cross-team/artifact-14192410704.zip",
+      "sha": "0525b930a2e5fd5cd3d05c701ac3925c0288972f",
+      "mode": "100644",
+      "size": 1436127
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/cross-team/audit.json",
+      "sha": "f3cf04d5c7e16ddb485c897df02c0fe759f10417",
+      "mode": "100644",
+      "size": 169543
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/cross-team/checkpoint-cross-team.json",
+      "sha": "2bb04315249dd9c3f3e7d0111ac46c0069e07b23",
+      "mode": "100644",
+      "size": 9607
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/cross-team/independent-cross-review.json",
+      "sha": "b3c17e7b936f11061f786af153eac9a610a7fe16",
+      "mode": "100644",
+      "size": 83435
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/cross-team/job-133017916047.log",
+      "sha": "08a9bde4944bd24376ceaf09a87444231936be39",
+      "mode": "100644",
+      "size": 188846
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/full-api-jobs-0203.json",
+      "sha": "6e46a30c12b354171499b3d07089b1801d32eab7",
+      "mode": "100644",
+      "size": 184637
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/full-api-jobs-0215.json",
+      "sha": "ce23677db2bb7bd7b13466fc141f8354a709932b",
+      "mode": "100644",
+      "size": 210786
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/full-api-jobs-0225.json",
+      "sha": "73e6774f138b77b61aff42522ccf9e8065b1762f",
+      "mode": "100644",
+      "size": 210964
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/full-api-jobs-0237.json",
+      "sha": "8d9c02e05176a2c9c7a22b735cf27581e109f0b3",
+      "mode": "100644",
+      "size": 211160
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/official-artifacts-0203.json",
+      "sha": "4a9b4ebd7f7a1410184b5d5df605e574984c67a5",
+      "mode": "100644",
+      "size": 15080
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/official-artifacts-0215.json",
+      "sha": "699d3f9f470c9aba779664f159cefac43cbc4861",
+      "mode": "100644",
+      "size": 19753
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/official-packaged-artifacts-0220.json",
+      "sha": "14cbc8c0c56d232877a0934b966fdcf5b651904a",
+      "mode": "100644",
+      "size": 2023
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/Plan29-packaged-win-x64-failure-appendix.md",
+      "sha": "3b74ee93b197787c77e7368cf12e057566b08412",
+      "mode": "100644",
+      "size": 7512
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/archive-audit.json",
+      "sha": "1e1abb1589aaf3f421b2cd1fe61711a7de1679f9",
+      "mode": "100644",
+      "size": 2456
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/artifact-14192765823.zip",
+      "sha": "ed207c9bf138be138427abcd2f93066716e439b0",
+      "mode": "100644",
+      "size": 625025
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/audit.json",
+      "sha": "9e2d1e930560a228b4ab0a096074211851c2af32",
+      "mode": "100644",
+      "size": 96592
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/checkpoint-packaged-win-x64.json",
+      "sha": "5c94b5b2b064cb6ebf5de200d9c46a4ba21b06ef",
+      "mode": "100644",
+      "size": 7603
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/independent-byte-foundation.json",
+      "sha": "b51d14161c6cdb98c66e3f366fa489f2e0021e2c",
+      "mode": "100644",
+      "size": 14546
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/independent-custody-source-review.json",
+      "sha": "88f73005c5f578ee64a15ebcdeba744f4f5113e8",
+      "mode": "100644",
+      "size": 55527
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/independent-source-pin-audit.json",
+      "sha": "1e24dc0aff1b7092325864003d72238b99581210",
+      "mode": "100644",
+      "size": 769896
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/job-133040244339.log",
+      "sha": "54d03abce960911fabeea18886c7d307591245ef",
+      "mode": "100644",
+      "size": 312815
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/root-canonical-packet-review.json",
+      "sha": "93cd5ce0c84231fbaff49fa2e16376cba8246704",
+      "mode": "100644",
+      "size": 8364
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/packaged-win-x64/ui-phase-source-review.json",
+      "sha": "a5c6bcbffe16d2d699375e335be0a194704131c6",
+      "mode": "100644",
+      "size": 12686
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/taskboard/Plan29-taskboard-appendix.md",
+      "sha": "d6fcba1cd32bd8f8eb7fcca7dbb664488fc4b6a6",
+      "mode": "100644",
+      "size": 6699
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/taskboard/archive-audit.json",
+      "sha": "c154d376a25277c58a1f4183a70177c8a65907d9",
+      "mode": "100644",
+      "size": 7202
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/taskboard/artifact-14191310178.zip",
+      "sha": "0db3b255f2507e77caa6445ee7f2f9fee399aed6",
+      "mode": "100644",
+      "size": 1614938
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/taskboard/audit.json",
+      "sha": "37c190e87bb8ec05359bc00d5727f9a2bc2f713b",
+      "mode": "100644",
+      "size": 408306
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/taskboard/checkpoint-taskboard.json",
+      "sha": "5ea5b8536ac6dae74615037f86c1667aef3cbe5a",
+      "mode": "100644",
+      "size": 10755
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/taskboard/independent-taskboard-review.json",
+      "sha": "bdfa82938601f497a43f67c3a1e3c5ddc16055e1",
+      "mode": "100644",
+      "size": 116804
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/taskboard/job-133017916005.log",
+      "sha": "21cddcf6a8bceac1f187c2557365770d5c4fc166",
+      "mode": "100644",
+      "size": 180808
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/Plan29-v2-management-appendix.md",
+      "sha": "bbbbcba4d99893bd4b08bdf0b27aebc4b60c7b4f",
+      "mode": "100644",
+      "size": 6798
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/archive-audit.json",
+      "sha": "c262d1a35093b9f05916e6fb66c2033f7d04cc34",
+      "mode": "100644",
+      "size": 10267
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/artifact-14191785424.zip",
+      "sha": "7ab6151c0f069b5efbc06e55eb6906ef126a4bbb",
+      "mode": "100644",
+      "size": 1011648
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/audit.json",
+      "sha": "bc37513941f528e5cb21d7999706f6a249ee88b6",
+      "mode": "100644",
+      "size": 68126
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/checkpoint-v2-management.json",
+      "sha": "b852ef2ad40a43464ff4fe0d38158bfce485251a",
+      "mode": "100644",
+      "size": 14149
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/desktop-backend-receipt.json",
+      "sha": "dd5d95ca4b7baf611d21b9eda4a424c2d2aaa1aa",
+      "mode": "100644",
+      "size": 731095
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/job-133017916035.log",
+      "sha": "6af62654e11a977fd92b2c835ddcb35f60dcdbb1",
+      "mode": "100644",
+      "size": 108881
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/root-independent-review.json",
+      "sha": "1f73c76773446679700b924eec2d2f08b3cba1ec",
+      "mode": "100644",
+      "size": 104750
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/v2-management/source-pin-audit.json",
+      "sha": "c16e0d2aed256d193f444f1b200b4954f84da66c",
+      "mode": "100644",
+      "size": 3952
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-m-0660/general-9e-edited-jobs-023946.json",
+      "sha": "5b5fad6eef05e9a1cf5b7ebd3ded9177184b7c66",
+      "mode": "100644",
+      "size": 21984
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/inventory.json",
+      "sha": "78b948daf474d48e8b8dc188c7b5ca98867bde5c",
+      "mode": "100644",
+      "size": 171287
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/host-source-M0660-git-audit.json",
+      "sha": "c6f687fc66ecfbd5ab750c1fa657af628e2329e7",
+      "mode": "100644",
+      "size": 163123
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/Plan29-static-linux-appendix.md",
+      "sha": "6a5af5ad567a8a3da47efaf88f3a492f26e69192",
+      "mode": "100644",
+      "size": 5026
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/archive-audit.json",
+      "sha": "109aff4387ad75904c225dec78413b52b207c385",
+      "mode": "100644",
+      "size": 10169
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/artifact-14192610672.zip",
+      "sha": "196950086facc7b3839ebfe2715e56d556633a38",
+      "mode": "100644",
+      "size": 4000
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/audit.json",
+      "sha": "27afc1f8fdef94387a4fc4829fc4269ea36269f2",
+      "mode": "100644",
+      "size": 44928
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/checkpoint-static-linux.json",
+      "sha": "72934b09e045717ea627441b3b990a4535198cbb",
+      "mode": "100644",
+      "size": 13162
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/job-133017915059.log",
+      "sha": "a72ded1fdd1fad34911b158465b050cbb92aa86d",
+      "mode": "100644",
+      "size": 114635
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/official-artifacts-response.json",
+      "sha": "45df4e90dc67aeab76a22d1c84918f97e7814aac",
+      "mode": "100644",
+      "size": 6437
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/original-job-log-response.json",
+      "sha": "eff9b573f6fe735d041c51fd074175a08e745ea7",
+      "mode": "100644",
+      "size": 116598
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/root-independent-review.json",
+      "sha": "a6fc47aa9030d9ee7c338e6d7368df0f744ebe95",
+      "mode": "100644",
+      "size": 30308
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/static-linux/source-and-command-audit.json",
+      "sha": "a1881138200a09c6f9045b3d966808794e61ac21",
+      "mode": "100644",
+      "size": 12463
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/v2-jobs-api-0220.json",
+      "sha": "84caaf65ccc159ab08402d0448ef2cf7bb0812bb",
+      "mode": "100644",
+      "size": 42282
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/native-audit-M0660/v2-jobs-api-0231.json",
+      "sha": "c8060bc34b944637c34c33ce6a6014e66e90f520",
+      "mode": "100644",
+      "size": 45617
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-next-evidence-independent-assembly-review.json",
+      "sha": "0322d46e4939c70bb4929eafe66fcf8c34dfd8be",
+      "mode": "100644",
+      "size": 27660
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-next-evidence-independent-byte-review.json",
+      "sha": "1e16f9da887c0c7782bf73d2e03c0665088c69ce",
+      "mode": "100644",
+      "size": 147591
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-next-evidence-independent-published-readback.json",
+      "sha": "db7828fe7c3a2d1d68cffcdb2ef7e81505fa284d",
+      "mode": "100644",
+      "size": 89110
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-next-evidence-independent-route-review.json",
+      "sha": "e45dac2401cc76c41cbe6e3434d63b047e80439e",
+      "mode": "100644",
+      "size": 2716
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-next-evidence-publication/blob-upload-receipts.json",
+      "sha": "1df4c12068beb341edda864f94683099536cb060",
+      "mode": "100644",
+      "size": 42619
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-next-evidence-publication/published-commit-and-normal-push-receipt.json",
+      "sha": "07c5b971e5f9c375ff2b964b65ae720c65d0f631",
+      "mode": "100644",
+      "size": 137527
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-next-evidence-publication/root-actual-published-readback.json",
+      "sha": "30d4ebc862e9f6bd6b3d9f963315628819c95140",
+      "mode": "100644",
+      "size": 49704
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-next-evidence-publication/root-remote-tree-review.json",
+      "sha": "e6667877b760728d100e3c198619455d22bda112",
+      "mode": "100644",
+      "size": 1138
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-next-evidence-publication/upload-manifest.json",
+      "sha": "c524fe4c68895cd5770026486e12fbba5ccb19c3",
+      "mode": "100644",
+      "size": 110785
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-post-helper-current-ci-publication/Plan29-M-post-helper-currentness.md",
+      "sha": "ed4a07b18a6d8f1c60fb0fcb07d9122962b8b45f",
+      "mode": "100644",
+      "size": 9502
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-post-helper-current-ci-publication/preparation-followup-open-prs.json",
+      "sha": "b3a83ab52ed45bc87dd2b8583b12b2ca94097089",
+      "mode": "100644",
+      "size": 64
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-post-helper-current-ci-publication/preparation-followup.json",
+      "sha": "9f8b8be60fc895c96096032a2d19ab7f77eb646a",
+      "mode": "100644",
+      "size": 593
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-post-helper-current-ci-publication/preparation-pr1192.json",
+      "sha": "8bc70da07640baeda8ff9da34b8f22574572450a",
+      "mode": "100644",
+      "size": 67142
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-privacy-helper-independent-prospective-review.json",
+      "sha": "6153b1514d022af447cded5c1440ab53db26af78",
+      "mode": "100644",
+      "size": 6854
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-privacy-helper-independent-published-source-review.json",
+      "sha": "076e783719f83734b7f6155773046b7b0e417a57",
+      "mode": "100644",
+      "size": 54882
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-privacy-helper-publication/published-commit-and-normal-push-receipt.json",
+      "sha": "b2a3db2aa182fde8e7f51f089ac6002e130cd7be",
+      "mode": "100644",
+      "size": 142870
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-privacy-helper-publication/root-actual-published-readback.json",
+      "sha": "b05ae14bd5a56d6e77e955c82efb305a8f6d41af",
+      "mode": "100644",
+      "size": 5176
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-privacy-helper-publication/root-remote-tree-review.json",
+      "sha": "c6e94c27f1c6929ce3b4ffcbce979bb9e36b5497",
+      "mode": "100644",
+      "size": 1098
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/stage-m-privacy-helper-publication/source-manifest.json",
+      "sha": "24f809ac0c85de68bb2023783f356be6b42b991f",
+      "mode": "100644",
+      "size": 5152
+    }
+  ]
+}
