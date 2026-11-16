@@ -1,0 +1,318 @@
+{
+  "kind": "INERT_ORIGINAL_PACKAGED_EVIDENCE_R1",
+  "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "runId": 43959134974,
+  "jobId": 133638325211,
+  "artifact": {
+    "artifactId": 14274939857,
+    "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "runId": 43959134974,
+    "zipBytes": 1068313,
+    "zipSha256": "0814b035b0c76bab016bdd984046d824de946aac99552b0dc46a5cbfa6c24aa1",
+    "crcValid": true,
+    "files": [
+      {
+        "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+        "bytes": 1155049,
+        "sha256": "b599c9e094c5a4960a370402e23826f030d50b91f517894c668cf9fdca6c62ff"
+      },
+      {
+        "path": "_temp/TEST-desktop-backend-XTgu5H/ui-emulated-lifecycle-launch.png",
+        "bytes": 221799,
+        "sha256": "6b7b63a9930e21ba63b6619e8826f498e9f8c8e4f62d7f36ecb6b565f0b69db9"
+      },
+      {
+        "path": "_temp/TEST-desktop-backend-XTgu5H/ui-emulated-lifecycle-stopped.png",
+        "bytes": 199885,
+        "sha256": "755e084911733272e1862ffd5fb4ad1310b0acfb3f78c928f5b13d00faf1767d"
+      },
+      {
+        "path": "_temp/TEST-desktop-backend-XTgu5H/ui-automatic-app-relaunch-successor.png",
+        "bytes": 138339,
+        "sha256": "289d5782b3898d9c31e260e7eacadb4a090dc79acf5a07e3051ad6007ad1ae71"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-inputs.json",
+        "bytes": 2374,
+        "sha256": "296d96286e047607d6f1b429299e6ed210e0eef87c9bedf6626c9b6d80e5bfc8"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-native.json",
+        "bytes": 5286,
+        "sha256": "de9242309083e8fed0461d90b5c01459945e407e8f19ebdf2734419b047bdf39"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged.json",
+        "bytes": 1189,
+        "sha256": "8d3d8cddb85f71810587b322e2293717066bffe161eb2692a10b03511f8f138b"
+      },
+      {
+        "path": "_temp/packaged-app-relaunch.app.log",
+        "bytes": 3027,
+        "sha256": "74532b0775dcefad0e2f431e8135c54b95b1b56e2e5f61c71b0064ca730745a3"
+      },
+      {
+        "path": "_temp/packaged-app-relaunch.json",
+        "bytes": 702749,
+        "sha256": "9cf2d81d11873c7c81a1981a9786bdb29d39689780ceee8cd638879eb4658af7"
+      }
+    ]
+  },
+  "result": "ACCEPT_SCOPED_ORIGINAL_PASS",
+  "checks": [
+    {
+      "name": "original ZIP API digest and size",
+      "pass": true
+    },
+    {
+      "name": "original ZIP CRC",
+      "pass": true
+    },
+    {
+      "name": "nine original members rehashed",
+      "pass": true
+    },
+    {
+      "name": "all three receipts and candidate bind exact source",
+      "pass": true
+    },
+    {
+      "name": "all three receipt statuses PASS",
+      "pass": true
+    },
+    {
+      "name": "original Darwin ARM tuple",
+      "pass": true
+    },
+    {
+      "name": "original native Node/version/mode",
+      "pass": true
+    },
+    {
+      "name": "original native six phases completed",
+      "pass": true
+    },
+    {
+      "name": "eleven original model requests no model failure",
+      "pass": true
+    },
+    {
+      "name": "two succeeded original native inputs",
+      "pass": true
+    },
+    {
+      "name": "two original native Hosts clean exit",
+      "pass": true
+    },
+    {
+      "name": "actual packaged extraResources",
+      "pass": true
+    },
+    {
+      "name": "candidate digest joins both receipts",
+      "pass": true
+    },
+    {
+      "name": "native relay original receipt digest",
+      "pass": true
+    },
+    {
+      "name": "native child exit zero",
+      "pass": true
+    },
+    {
+      "name": "source and legacy runtime unavailable during native qualification",
+      "pass": true
+    },
+    {
+      "name": "source bundle and legacy runtime restored",
+      "pass": true
+    },
+    {
+      "name": "candidate Node and Host binary hashes join app",
+      "pass": true
+    },
+    {
+      "name": "native harness and node archive join candidate",
+      "pass": true
+    },
+    {
+      "name": "original and successor same app.asar",
+      "pass": true
+    },
+    {
+      "name": "finite Desktop no real vendor execution",
+      "pass": true
+    },
+    {
+      "name": "original source census unchanged unique1780",
+      "pass": true
+    },
+    {
+      "name": "original pre63 source roster and smoke bound",
+      "pass": true
+    },
+    {
+      "name": "original physical Launch and Stop each once",
+      "pass": true
+    },
+    {
+      "name": "one original finite model probe and business input",
+      "pass": true
+    },
+    {
+      "name": "all four original finite peer PIDs absent",
+      "pass": true
+    },
+    {
+      "name": "original runtime closed released and checkpoint published",
+      "pass": true
+    },
+    {
+      "name": "automatic relaunch acknowledged original app exited",
+      "pass": true
+    },
+    {
+      "name": "exclusive successor writer uses new original token",
+      "pass": true
+    },
+    {
+      "name": "successor observation only no numerical PID authority",
+      "pass": true
+    },
+    {
+      "name": "successor one public Quit retains unconfirmed reply",
+      "pass": true
+    },
+    {
+      "name": "successor physical absence without natural exit qualification",
+      "pass": true
+    },
+    {
+      "name": "final cleanup and sentinel census empty",
+      "pass": true
+    },
+    {
+      "name": "negative native Desktop and release qualifications retained",
+      "pass": true
+    }
+  ],
+  "native": {
+    "mode": "manual",
+    "version": "2.1.4",
+    "nodeVersion": "v24.21.0",
+    "steps": [
+      "original_host_embedded_native_and_mcp_ready",
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+      "changed_project_config_did_not_retarget_running_native_session",
+      "original_uploaded_PNG_native_image_inference_and_public_readback",
+      "checkpoint_and_original_host_native_cleanup_confirmed",
+      "cold_host_restored_native_history_without_model_or_tool_replay"
+    ],
+    "modelRequests": 11,
+    "hosts": [
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      },
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      }
+    ],
+    "cleanup": true,
+    "digests": {
+      "bun": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+      "manifest": "a6091937d1c8686b7e1f125b2ef69c52146867b208517eb0fab4cb7ea18c2204",
+      "node": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+      "hostSource": "d66151c6534dce86869bf0a088db51bf3d9a13683bf6f356b83e4f795d04bda5",
+      "hostDist": "53f8d64a58741e94c50b16b09fad5bde977e3ac975bfaa39531403ac65bf7f63",
+      "provider": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41"
+    },
+    "packaged": {
+      "executionOrigin": "packaged-extraResources",
+      "appAsarSha256": "10c17bea02fc6ca81e577e4f792d764c2277cf9bea2560b49feb49096564ef0b",
+      "candidateManifestSha256": "b599c9e094c5a4960a370402e23826f030d50b91f517894c668cf9fdca6c62ff",
+      "harnessSha256": "4333daaae6d7aa51b79d282bc851cb5074ae6f3af891f6abcdf2b5e9afe517fd",
+      "sourceCheckoutUnavailable": true,
+      "legacyRuntimeUnavailable": true,
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "nodeArchiveSha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
+      "providerArtifacts": [
+        {
+          "name": "@agent-teams/provider-implementations",
+          "sha256": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41"
+        },
+        {
+          "name": "@agent-teams/provider-session-contracts",
+          "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+        }
+      ],
+      "packages": 120,
+      "files": 8133
+    }
+  },
+  "desktop": {
+    "sourceCensusCount": 1780,
+    "physicalClickLabels": [
+      "sidebar task",
+      "Open team",
+      "original lifecycle saved Team Launch",
+      "expand original lifecycle saved settings",
+      "focus original lifecycle input",
+      "original lifecycle Launch once",
+      "original lifecycle lead chat",
+      "original lifecycle Stop once"
+    ],
+    "inputMarkers": [
+      "TEST_MODEL_PROBE",
+      "TEST_UI_BOOT"
+    ],
+    "peerCount": 4,
+    "relaunchAcknowledged": true,
+    "successorQuitReply": "unconfirmed; no retry or signal",
+    "successorAbsence": {
+      "listenerAbsent": true,
+      "observedPidAbsent": true,
+      "HostPidAbsent": true,
+      "writerLockAbsent": true,
+      "exitCode": "unavailable",
+      "signalCode": "unavailable",
+      "naturalExitQualified": false
+    },
+    "originalHostExit": "unavailable",
+    "cleanup": {
+      "remaining": [],
+      "capturedHostAbsent": true,
+      "hostPid": 9111
+    },
+    "negativeQualifications": {
+      "nativeProviderQualified": false,
+      "releaseQualified": false,
+      "successorNativeCustody": false,
+      "numericPidSignalsAuthorized": false
+    }
+  },
+  "manualImageReview": {
+    "completedBy": "root",
+    "images": [
+      "ui-emulated-lifecycle-stopped.png",
+      "ui-automatic-app-relaunch-successor.png"
+    ],
+    "observations": [
+      "Stopped Team is offline with Launch control, retained TEST boot reply and Task.",
+      "Successor shows Dashboard and the same persisted Task in sidebar."
+    ],
+    "limit": "Screenshot observations support only visible states, not Resume, native custody or unobserved actions."
+  },
+  "limits": [
+    "No cold Resume, active Quit or same-Main Windows Retry qualification.",
+    "Native V2 qualification and finite Desktop relaunch are separate original proofs; no full native Desktop parity is inferred.",
+    "Successor Quit reply and original Host exit status remain unavailable/unconfirmed; physical absence does not prove natural successor exit.",
+    "No vendor authentication, genuine Claude/Codex or release qualification.",
+    "No independent payload rehash beyond archived manifest and recorded original checks; no reproducible build claim."
+  ],
+  "execution": "Only inert archive/JSON/hash and original screenshot inspection; no project, provider, compiler, test, GUI or CI execution."
+}

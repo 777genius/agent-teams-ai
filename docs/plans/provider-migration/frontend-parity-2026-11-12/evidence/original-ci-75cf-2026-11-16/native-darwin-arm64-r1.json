@@ -1,0 +1,357 @@
+{
+  "kind": "DARWIN_ARM64_75CF_ORIGINAL_EVIDENCE_REVIEW",
+  "head": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "runId": 43959134948,
+  "jobId": 133621512718,
+  "artifact": {
+    "id": 14275648548,
+    "head": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "run": 43959134948,
+    "size": 10586,
+    "sha256": "09df07fd1b465d1810aef3a9741af77f9308fbe56d9710293b135b19a5848c2b",
+    "crcValid": true,
+    "files": [
+      {
+        "path": "opencode-v2-embedded-inputs.json",
+        "bytes": 2374,
+        "sha256": "4abd4e446fba9e84308c88d0da5a5dfce2f7000e243cf5ed5bca1246dd048cb4"
+      },
+      {
+        "path": "opencode-v2-darwin-custody.json",
+        "bytes": 1442,
+        "sha256": "d34371bc81c3f297706276937d40cb508ab003e80c15ced75169bcd63aca2215"
+      },
+      {
+        "path": "opencode-v2-embedded-host.json",
+        "bytes": 95066,
+        "sha256": "e43faa5d5db36070da33e20248698544f17b59f67deb701d9773547b7cd3ee58"
+      },
+      {
+        "path": "opencode-v2-posix-exec.json",
+        "bytes": 14583,
+        "sha256": "752b4f4966f08108238eca123bf8a7d06ac7077d2316e64d0a381b676c7f11ca"
+      }
+    ]
+  },
+  "logSha256": "eb42e1bfb954d87202e38d754af0885cdfad9a5839829dfc82a804d707df59e3",
+  "source": {
+    "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+    "blob": "19aca56c55a666654b04827b3c2446d2ad03ad8d",
+    "sha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9"
+  },
+  "passedInertChecks": 21,
+  "checks": [
+    {
+      "name": "exact-head-all-original-receipts",
+      "passed": true
+    },
+    {
+      "name": "original-source-body-pin",
+      "passed": true
+    },
+    {
+      "name": "native-host-pass-clean",
+      "passed": true
+    },
+    {
+      "name": "native-manual-tuple",
+      "passed": true
+    },
+    {
+      "name": "all-six-original-native-stages",
+      "passed": true
+    },
+    {
+      "name": "eleven-native-requests-no-model-failure",
+      "passed": true
+    },
+    {
+      "name": "two-inputs-terminal",
+      "passed": true
+    },
+    {
+      "name": "two-permissions-resolved",
+      "passed": true
+    },
+    {
+      "name": "both-original-hosts-closed",
+      "passed": true
+    },
+    {
+      "name": "native-no-broader-qualification",
+      "passed": true
+    },
+    {
+      "name": "provider-archive-unchanged",
+      "passed": true
+    },
+    {
+      "name": "custody-host-build-joins",
+      "passed": true
+    },
+    {
+      "name": "bun-input-custody-joins",
+      "passed": true
+    },
+    {
+      "name": "custody-scoped-pass",
+      "passed": true
+    },
+    {
+      "name": "p09-overall-incomplete",
+      "passed": true
+    },
+    {
+      "name": "p09-all-original-children-reaped",
+      "passed": true
+    },
+    {
+      "name": "p09-no-qualification",
+      "passed": true
+    },
+    {
+      "name": "adhoc-test-only:after-check",
+      "passed": true
+    },
+    {
+      "name": "adhoc-test-only:writer-open",
+      "passed": true
+    },
+    {
+      "name": "script-mutated-body-counterexample",
+      "passed": true
+    },
+    {
+      "name": "job-original-failing-assertion",
+      "passed": true
+    }
+  ],
+  "nativeHost": {
+    "status": "PASS",
+    "platform": "darwin-arm64",
+    "version": "2.1.4",
+    "approvalMode": "manual",
+    "digests": {
+      "bun": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+      "manifest": "a6091937d1c8686b7e1f125b2ef69c52146867b208517eb0fab4cb7ea18c2204",
+      "node": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+      "hostSource": "d66151c6534dce86869bf0a088db51bf3d9a13683bf6f356b83e4f795d04bda5",
+      "hostDist": "53f8d64a58741e94c50b16b09fad5bde977e3ac975bfaa39531403ac65bf7f63",
+      "provider": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41"
+    },
+    "steps": [
+      "original_host_embedded_native_and_mcp_ready",
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+      "changed_project_config_did_not_retarget_running_native_session",
+      "original_uploaded_PNG_native_image_inference_and_public_readback",
+      "checkpoint_and_original_host_native_cleanup_confirmed",
+      "cold_host_restored_native_history_without_model_or_tool_replay"
+    ],
+    "cleanup": true,
+    "hosts": [
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      },
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      }
+    ],
+    "modelRequests": 11,
+    "modelFailures": [],
+    "vendorAuthQualified": false,
+    "desktopQualified": false,
+    "releaseQualified": false
+  },
+  "posix": {
+    "status": "INCOMPLETE",
+    "cleanup": true,
+    "flags": {
+      "productQualified": false,
+      "installedRuntimeQualified": false,
+      "customExecutableQualified": false,
+      "scriptQualified": false,
+      "nativeFixtureQualified": false
+    },
+    "cases": [
+      {
+        "label": "compiler-default:plain",
+        "result": "PASS",
+        "stage": "plain-exit",
+        "errno": 0,
+        "mutationAfterCheckErrno": -1,
+        "resumed": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true
+      },
+      {
+        "label": "compiler-default:baseline",
+        "result": "PASS",
+        "stage": "exit",
+        "errno": 0,
+        "mutationAfterCheckErrno": -1,
+        "resumed": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true
+      },
+      {
+        "label": "adhoc-test-only:plain",
+        "result": "PASS",
+        "stage": "plain-exit",
+        "errno": 0,
+        "mutationAfterCheckErrno": -1,
+        "resumed": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true
+      },
+      {
+        "label": "adhoc-test-only:baseline",
+        "result": "PASS",
+        "stage": "exit",
+        "errno": 0,
+        "mutationAfterCheckErrno": -1,
+        "resumed": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true
+      },
+      {
+        "label": "adhoc-test-only:rename",
+        "result": "PASS",
+        "stage": "rejected-image",
+        "errno": 0,
+        "mutationAfterCheckErrno": -1,
+        "resumed": false,
+        "markerLines": [],
+        "exitCode": -1,
+        "exitSignal": 9,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true
+      },
+      {
+        "label": "adhoc-test-only:inplace",
+        "result": "PASS",
+        "stage": "rejected-image",
+        "errno": 0,
+        "mutationAfterCheckErrno": -1,
+        "resumed": false,
+        "markerLines": [],
+        "exitCode": -1,
+        "exitSignal": 9,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true
+      },
+      {
+        "label": "adhoc-test-only:after-check",
+        "result": "INCOMPLETE",
+        "stage": "exit",
+        "errno": 0,
+        "mutationAfterCheckErrno": 0,
+        "resumed": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true
+      },
+      {
+        "label": "adhoc-test-only:writer-open",
+        "result": "INCOMPLETE",
+        "stage": "exit",
+        "errno": 0,
+        "mutationAfterCheckErrno": 0,
+        "resumed": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true
+      },
+      {
+        "label": "script:plain",
+        "result": "PASS",
+        "stage": "plain-exit",
+        "errno": 0,
+        "mutationAfterCheckErrno": -1,
+        "resumed": true,
+        "markerLines": [
+          "SCRIPT:A"
+        ],
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true
+      },
+      {
+        "label": "script:script-negative",
+        "result": "COUNTEREXAMPLE",
+        "stage": "exit",
+        "errno": 0,
+        "mutationAfterCheckErrno": 0,
+        "resumed": true,
+        "markerLines": [
+          "SCRIPT:B"
+        ],
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true
+      }
+    ]
+  },
+  "conclusion": "Original manual native Host and scoped custody receipts pass, but full job fails the unchanged P09 mutable-byte assertion. All ten fixture processes are reaped; successful native behavior does not satisfy original-path image/script immutability. No A/B contract alternative selected and no source repair inferred.",
+  "limits": [
+    "No Desktop or release qualification.",
+    "No automatic native receipt was emitted on this Darwin row.",
+    "No failure or owner decision inferred from another head.",
+    "Only inert artifact/source inspection; no project/provider/compiler/native/GUI execution or CI mutation."
+  ]
+}

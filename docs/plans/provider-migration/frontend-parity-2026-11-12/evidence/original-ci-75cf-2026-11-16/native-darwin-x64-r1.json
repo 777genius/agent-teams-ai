@@ -1,0 +1,321 @@
+{
+  "kind": "DARWIN_X64_75CF_ORIGINAL_EVIDENCE_REVIEW",
+  "head": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "runId": 43959134948,
+  "jobId": 133621512559,
+  "artifact": {
+    "artifactId": 14277265071,
+    "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "runId": 43959134948,
+    "zipBytes": 10540,
+    "zipSha256": "ea478b086a65e2715302a4d5c745879fcf2a344a631ee42870cb3deae99ed9e8",
+    "crcValid": true,
+    "files": [
+      {
+        "path": "opencode-v2-embedded-inputs.json",
+        "bytes": 2370,
+        "sha256": "0f2da9399cfd68d45312ff8872c8f2f1b387826a7c2498c6a8f79490f541fea2"
+      },
+      {
+        "path": "opencode-v2-darwin-custody.json",
+        "bytes": 1444,
+        "sha256": "5657b78f9e3fdbdd91e45fa54545d15f7100abffe57fd772e31bcfe576d08a16"
+      },
+      {
+        "path": "opencode-v2-embedded-host.json",
+        "bytes": 95067,
+        "sha256": "33f220c388afa0bd443751c9cf5ef2e5940e5a5c37cf4f78d5bb9150718a5b88"
+      },
+      {
+        "path": "opencode-v2-posix-exec.json",
+        "bytes": 14538,
+        "sha256": "3c68dfe401fe52ea6a8c0423a4ff699c4b97e9e7dc374456e0e2bcfcf06770aa"
+      }
+    ]
+  },
+  "sourceSha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+  "jobLogSha256": "22ff4648f54cab9eb8b1f909a37de16f9bb0c04c013c2db27091826eb3ad58bc",
+  "inertChecks": [
+    {
+      "name": "all-original-heads",
+      "passed": true
+    },
+    {
+      "name": "native-manual-PASS-and-clean",
+      "passed": true
+    },
+    {
+      "name": "six-native-stages",
+      "passed": true
+    },
+    {
+      "name": "eleven-requests-and-two-inputs",
+      "passed": true
+    },
+    {
+      "name": "original-host-exits",
+      "passed": true
+    },
+    {
+      "name": "original-provider-pin",
+      "passed": true
+    },
+    {
+      "name": "custody-exact-build",
+      "passed": true
+    },
+    {
+      "name": "custody-pass-sibling-survived",
+      "passed": true
+    },
+    {
+      "name": "no-broader-claims",
+      "passed": true
+    },
+    {
+      "name": "same-immutable-P09-body",
+      "passed": true
+    },
+    {
+      "name": "P09-incomplete-and-clean",
+      "passed": true
+    },
+    {
+      "name": "P09-ten-originals-reaped",
+      "passed": true
+    },
+    {
+      "name": "P09-flags-false",
+      "passed": true
+    },
+    {
+      "name": "x64-baseline-kernel-image-refusal",
+      "passed": true
+    },
+    {
+      "name": "adhoc-test-only:after-check",
+      "passed": true
+    },
+    {
+      "name": "adhoc-test-only:writer-open",
+      "passed": true
+    },
+    {
+      "name": "actual-script-B-counterexample",
+      "passed": true
+    }
+  ],
+  "nativeHost": {
+    "status": "PASS",
+    "platform": "darwin-x64",
+    "version": "2.1.4",
+    "approvalMode": "manual",
+    "digests": {
+      "bun": "c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab",
+      "manifest": "7690030a5aba3026544e65f000475dd20f83213383e9bfddad3d98c1134a65fb",
+      "node": "7abcf39bd37ab251015337ff75304d7555f0d8e88c6e0fbf04bce8ce34636f49",
+      "hostSource": "d66151c6534dce86869bf0a088db51bf3d9a13683bf6f356b83e4f795d04bda5",
+      "hostDist": "53f8d64a58741e94c50b16b09fad5bde977e3ac975bfaa39531403ac65bf7f63",
+      "provider": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41"
+    },
+    "steps": [
+      "original_host_embedded_native_and_mcp_ready",
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+      "changed_project_config_did_not_retarget_running_native_session",
+      "original_uploaded_PNG_native_image_inference_and_public_readback",
+      "checkpoint_and_original_host_native_cleanup_confirmed",
+      "cold_host_restored_native_history_without_model_or_tool_replay"
+    ],
+    "cleanup": true,
+    "hosts": [
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      },
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      }
+    ],
+    "modelRequests": 11,
+    "modelFailures": [],
+    "vendorAuthQualified": false,
+    "desktopQualified": false,
+    "releaseQualified": false
+  },
+  "p09": {
+    "status": "INCOMPLETE",
+    "cleanup": true,
+    "allQualificationFlagsFalse": true,
+    "cases": [
+      {
+        "label": "compiler-default:plain",
+        "result": "PASS",
+        "stage": "plain-exit",
+        "errno": 0,
+        "codeSigningError": 0,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true
+      },
+      {
+        "label": "compiler-default:baseline",
+        "result": "INCOMPLETE",
+        "stage": "kernel-image-validity",
+        "errno": 13,
+        "codeSigningError": -67062,
+        "resumed": false,
+        "mutationAfterCheckErrno": -1,
+        "markerLines": [],
+        "exitCode": -1,
+        "exitSignal": 9,
+        "originalReaped": true,
+        "originalGroupAbsent": true
+      },
+      {
+        "label": "adhoc-test-only:plain",
+        "result": "PASS",
+        "stage": "plain-exit",
+        "errno": 0,
+        "codeSigningError": 0,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true
+      },
+      {
+        "label": "adhoc-test-only:baseline",
+        "result": "PASS",
+        "stage": "exit",
+        "errno": 0,
+        "codeSigningError": 0,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true
+      },
+      {
+        "label": "adhoc-test-only:rename",
+        "result": "PASS",
+        "stage": "rejected-image",
+        "errno": 0,
+        "codeSigningError": 0,
+        "resumed": false,
+        "mutationAfterCheckErrno": -1,
+        "markerLines": [],
+        "exitCode": -1,
+        "exitSignal": 9,
+        "originalReaped": true,
+        "originalGroupAbsent": true
+      },
+      {
+        "label": "adhoc-test-only:inplace",
+        "result": "PASS",
+        "stage": "rejected-image",
+        "errno": 0,
+        "codeSigningError": 0,
+        "resumed": false,
+        "mutationAfterCheckErrno": -1,
+        "markerLines": [],
+        "exitCode": -1,
+        "exitSignal": 9,
+        "originalReaped": true,
+        "originalGroupAbsent": true
+      },
+      {
+        "label": "adhoc-test-only:after-check",
+        "result": "INCOMPLETE",
+        "stage": "exit",
+        "errno": 0,
+        "codeSigningError": 0,
+        "resumed": true,
+        "mutationAfterCheckErrno": 0,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true
+      },
+      {
+        "label": "adhoc-test-only:writer-open",
+        "result": "INCOMPLETE",
+        "stage": "exit",
+        "errno": 0,
+        "codeSigningError": 0,
+        "resumed": true,
+        "mutationAfterCheckErrno": 0,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true
+      },
+      {
+        "label": "script:plain",
+        "result": "PASS",
+        "stage": "plain-exit",
+        "errno": 0,
+        "codeSigningError": 0,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "markerLines": [
+          "SCRIPT:A"
+        ],
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true
+      },
+      {
+        "label": "script:script-negative",
+        "result": "COUNTEREXAMPLE",
+        "stage": "exit",
+        "errno": 0,
+        "codeSigningError": 0,
+        "resumed": true,
+        "mutationAfterCheckErrno": 0,
+        "markerLines": [
+          "SCRIPT:B"
+        ],
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true
+      }
+    ]
+  },
+  "conclusion": "Native Host/scoped custody pass their original receipts; full job remains failed at unchanged P09 original-path image contract. Default unsigned baseline is refused, and the two post-check mutation cases plus changed script body remain explicit counterexamples. No contract alternative or code repair selected.",
+  "execution": "Inert original artifact/source inspection only. No project/compiler/provider/native/GUI execution or CI mutation."
+}

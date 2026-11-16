@@ -1,0 +1,1090 @@
+{
+  "status": "SOURCE_BOUND_ORIGINAL_FAILURE_R1_NO_REPAIR_SELECTED",
+  "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "runId": 43959135318,
+  "jobId": 133621515514,
+  "platform": "win32-x64",
+  "artifact": {
+    "id": 14274562719,
+    "path": "process-75cf-winx64/artifact.zip",
+    "bytes": 57963,
+    "sha256": "6995b0b51913a80e42aabd09ae930958a6f3ddca0b02cc2f463cf27c62e852b9",
+    "memberCount": 18,
+    "allCRCsAndExistingExtractedBytesVerified": true
+  },
+  "originalJobLog": {
+    "path": "process-75cf-winx64/original-job.log",
+    "bytes": 419422,
+    "sha256": "c3d565f2941adf471bde744b98fefd830085987aa627da310ca6fd055c6e25b8"
+  },
+  "checkedOriginalFiles": [
+    {
+      "path": "process-75cf-winx64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+      "bytes": 71848,
+      "sha256": "25c13da25e92d3dc76d5bed8ad89f3c6e158c238129ae39b1151398a3b46cdc4"
+    },
+    {
+      "path": "process-75cf-winx64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude-receipt.json",
+      "bytes": 28201,
+      "sha256": "2a97cce92631cce822fc9f199b086f70ca44db5b68c27f6f6f7cf8bc67020ab7"
+    },
+    {
+      "path": "process-75cf-winx64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode-receipt.json",
+      "bytes": 19008,
+      "sha256": "f3106b9fc96218619a86242dba41bf2f33a2a143571c8f4930cd1cd632956071"
+    },
+    {
+      "path": "process-75cf-winx64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+      "bytes": 49093,
+      "sha256": "64e46b68c48e3af26a247c93045f3cf26968500438e9a14a3b19d36297f2ca6e"
+    },
+    {
+      "path": "process-75cf-winx64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude.log",
+      "bytes": 18760,
+      "sha256": "b3492ebd87fcc586278ae93a7cd85b88758308d37d8e4a112aa3805c0577c3bd"
+    },
+    {
+      "path": "process-75cf-winx64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode.log",
+      "bytes": 12300,
+      "sha256": "30a44a998d36f377be0d61864d8ad414b71cf494fd580597c1bd1877a10579c0"
+    },
+    {
+      "path": "process-75cf-winx64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "bytes": 41,
+      "sha256": "1c5f0c0d47ba5bbc0eb768401e7a89c30b0ee37f0b9be3d46b1c796edce86ce3"
+    }
+  ],
+  "finitePositives": {
+    "codex": {
+      "receipt": {
+        "path": "process-75cf-winx64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+        "bytes": 71848,
+        "sha256": "25c13da25e92d3dc76d5bed8ad89f3c6e158c238129ae39b1151398a3b46cdc4"
+      },
+      "status": "PASS",
+      "versionsReportedByFinitePeer": {
+        "A": "0.162.0",
+        "B": "0.162.0"
+      },
+      "epochJobCounts": [
+        25,
+        0
+      ],
+      "allPhysicalFlagsTrue": true,
+      "management": {
+        "source": {
+          "sourceId": "0405146a5fb07bdda610b628f233ecf9430864a599c6321cc2e90238dc9cfb9a",
+          "revision": "6877a25553b45b736003d156e6315153e0b1bb63722d794237aacf57a53ca3d5"
+        },
+        "metadataRead": true,
+        "modelProbeCompleted": true,
+        "modelProbeReplayAllocated": false,
+        "modelProbeInputs": 1,
+        "metadataHostRetained": false
+      },
+      "standalone": {
+        "phase": "completed",
+        "source": {
+          "sourceId": "0405146a5fb07bdda610b628f233ecf9430864a599c6321cc2e90238dc9cfb9a",
+          "revision": "6877a25553b45b736003d156e6315153e0b1bb63722d794237aacf57a53ca3d5"
+        },
+        "inputDigest": "2cd003fe94b3921b8e4f0ca3e64752e9fa949f50cba8ccbd482de3ec4e5f087b",
+        "limits": null,
+        "ephemeral": true,
+        "replayAllocated": false
+      },
+      "cold": {
+        "currentB": true,
+        "retainedA": true,
+        "lookup": true,
+        "physicalReplayAllocations": 0,
+        "sourcePublishPendingAdmission": {
+          "admitted": 1,
+          "revoked": 1
+        },
+        "originalInputsReplayed": false,
+        "sdkPeerCheckpointRestored": false
+      },
+      "lastLaunchReadiness": {
+        "source": {
+          "sourceId": "0405146a5fb07bdda610b628f233ecf9430864a599c6321cc2e90238dc9cfb9a",
+          "revision": "6877a25553b45b736003d156e6315153e0b1bb63722d794237aacf57a53ca3d5"
+        },
+        "image": "B",
+        "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+        "readCount": 82,
+        "elapsedMs": 9783.328399999999,
+        "lastRuntimeRead": {
+          "viewDigest": "322d611415d1de09975bb832e4f366a34c8a315a2594c0d6f7e9444463a1c6a9",
+          "memberId": "alice-id",
+          "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+          "phase": "allocated",
+          "sealed": false,
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true
+        }
+      },
+      "selections": {
+        "A": {
+          "sourceId": "0405146a5fb07bdda610b628f233ecf9430864a599c6321cc2e90238dc9cfb9a",
+          "revision": "c98059e819bc8affbad0b0fb3cfdfe83c1048f462e9aa57a413ac1336d598fc0",
+          "profileId": "runtime-source:c98059e819bc8affbad0b0fb3cfdfe83c1048f462e9aa57a413ac1336d598fc0",
+          "configRevision": "runtime-source:c98059e819bc8affbad0b0fb3cfdfe83c1048f462e9aa57a413ac1336d598fc0",
+          "sourceKind": "app-managed",
+          "cliVersion": "0.162.0",
+          "nativeExecutableDigest": "870348673f408ce8a9c757ba259ac96be9c04ec193b03df6384bea6fb3ae56ac"
+        },
+        "B": {
+          "sourceId": "0405146a5fb07bdda610b628f233ecf9430864a599c6321cc2e90238dc9cfb9a",
+          "revision": "6877a25553b45b736003d156e6315153e0b1bb63722d794237aacf57a53ca3d5",
+          "profileId": "runtime-source:6877a25553b45b736003d156e6315153e0b1bb63722d794237aacf57a53ca3d5",
+          "configRevision": "runtime-source:6877a25553b45b736003d156e6315153e0b1bb63722d794237aacf57a53ca3d5",
+          "sourceKind": "app-managed",
+          "cliVersion": "0.162.0",
+          "nativeExecutableDigest": "c184757806c25920bfa2d3f6981ed22f7cabbca16c3d531b5f0d7248c734ec16"
+        }
+      },
+      "controller": {
+        "gateController": "drained",
+        "rootExitCode": 0,
+        "activeProcesses": 0
+      }
+    },
+    "claude": {
+      "receipt": {
+        "path": "process-75cf-winx64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude-receipt.json",
+        "bytes": 28201,
+        "sha256": "2a97cce92631cce822fc9f199b086f70ca44db5b68c27f6f6f7cf8bc67020ab7"
+      },
+      "status": "PASS",
+      "versionsReportedByFinitePeer": {
+        "A": "2.1.34",
+        "B": "2.1.34"
+      },
+      "epochJobCounts": [
+        8,
+        1
+      ],
+      "allPhysicalFlagsTrue": true,
+      "management": {
+        "source": {
+          "sourceId": "5d6acc7d50f730ada0d17794ec50b9d9e119b29badc82b848c355c458dd290a4",
+          "revision": "c761e3676d1d049083897eacf5a8e0021bc2a3fe663ad5f5eea1f97ac34181d8"
+        },
+        "metadataRead": true,
+        "modelProbeCompleted": true,
+        "modelProbeReplayAllocated": false,
+        "modelProbeInputs": 1,
+        "metadataHostRetained": false
+      },
+      "standalone": {
+        "phase": "completed",
+        "source": {
+          "sourceId": "5d6acc7d50f730ada0d17794ec50b9d9e119b29badc82b848c355c458dd290a4",
+          "revision": "c761e3676d1d049083897eacf5a8e0021bc2a3fe663ad5f5eea1f97ac34181d8"
+        },
+        "inputDigest": "f9555c62b30e852900843ad2e7620268627323480c8d491c3621dc88b4f57be2",
+        "limits": {
+          "maxTurns": 6,
+          "maxBudgetUsd": 0.25
+        },
+        "ephemeral": true,
+        "replayAllocated": false
+      },
+      "cold": {
+        "currentB": true,
+        "retainedA": true,
+        "lookup": true,
+        "physicalReplayAllocations": 0,
+        "sourcePublishPendingAdmission": {
+          "admitted": 1,
+          "revoked": 1
+        },
+        "originalInputsReplayed": false,
+        "sdkPeerCheckpointRestored": true,
+        "originalNativeSessionRetained": true,
+        "restoredGeneration": "restore-202b9d5e468359f990216ec40312c7416250eb9c222b43508ba0e9f0eb7a7254",
+        "newInputId": "b164c21c-9dc9-5046-8c33-ffeb823452f7",
+        "source": {
+          "sourceId": "5d6acc7d50f730ada0d17794ec50b9d9e119b29badc82b848c355c458dd290a4",
+          "revision": "30211d52460d93e3802b4271135ad0af6cd1008f746021a789223a177797a09a"
+        }
+      },
+      "lastLaunchReadiness": {
+        "source": {
+          "sourceId": "5d6acc7d50f730ada0d17794ec50b9d9e119b29badc82b848c355c458dd290a4",
+          "revision": "c761e3676d1d049083897eacf5a8e0021bc2a3fe663ad5f5eea1f97ac34181d8"
+        },
+        "image": "B",
+        "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+        "readCount": 20,
+        "elapsedMs": 3348.4615000000013,
+        "lastRuntimeRead": {
+          "viewDigest": "e9c711bebe8d482154970603455182c2f6ea79e5fe18e55d8428109bec781af6",
+          "memberId": "alice-id",
+          "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+          "phase": "allocated",
+          "sealed": false,
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true
+        }
+      },
+      "selections": {
+        "A": {
+          "sourceId": "5d6acc7d50f730ada0d17794ec50b9d9e119b29badc82b848c355c458dd290a4",
+          "revision": "30211d52460d93e3802b4271135ad0af6cd1008f746021a789223a177797a09a",
+          "profileId": "runtime-source:30211d52460d93e3802b4271135ad0af6cd1008f746021a789223a177797a09a",
+          "configRevision": "runtime-source:30211d52460d93e3802b4271135ad0af6cd1008f746021a789223a177797a09a",
+          "sourceKind": "app-managed",
+          "cliVersion": "2.1.34"
+        },
+        "B": {
+          "sourceId": "5d6acc7d50f730ada0d17794ec50b9d9e119b29badc82b848c355c458dd290a4",
+          "revision": "c761e3676d1d049083897eacf5a8e0021bc2a3fe663ad5f5eea1f97ac34181d8",
+          "profileId": "runtime-source:c761e3676d1d049083897eacf5a8e0021bc2a3fe663ad5f5eea1f97ac34181d8",
+          "configRevision": "runtime-source:c761e3676d1d049083897eacf5a8e0021bc2a3fe663ad5f5eea1f97ac34181d8",
+          "sourceKind": "app-managed",
+          "cliVersion": "2.1.34"
+        }
+      },
+      "controller": {
+        "gateController": "drained",
+        "rootExitCode": 0,
+        "activeProcesses": 0
+      }
+    }
+  },
+  "actualBrokerPositives": [
+    {
+      "log": {
+        "path": "process-75cf-winx64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+        "bytes": 93494,
+        "sha256": "e06ee458b0934f3beb4701b1494f63722bc3ae8476bc2456a253701089fac575"
+      },
+      "platform": "win32",
+      "arch": "x64",
+      "node": "24.21.0",
+      "electron": null,
+      "caseCount": 26,
+      "directI386Case": true,
+      "helperCount": 66,
+      "retainedCount": 9,
+      "allHelperStreamsEnded": true,
+      "controller": {
+        "gateController": "drained",
+        "rootExitCode": 0,
+        "activeProcesses": 0
+      }
+    },
+    {
+      "log": {
+        "path": "process-75cf-winx64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+        "bytes": 93529,
+        "sha256": "06ab933aeca8e1710e8525947113c056d811d7c6b721819a4d19469bad66eff0"
+      },
+      "platform": "win32",
+      "arch": "x64",
+      "node": "24.22.1",
+      "electron": "44.10.1",
+      "caseCount": 26,
+      "directI386Case": true,
+      "helperCount": 66,
+      "retainedCount": 9,
+      "allHelperStreamsEnded": true,
+      "controller": {
+        "gateController": "drained",
+        "rootExitCode": 0,
+        "activeProcesses": 0
+      }
+    }
+  ],
+  "actualContractResults": {
+    "nodeTests": 167,
+    "passed": 164,
+    "skipped": 3,
+    "failed": 0,
+    "protocolVitestPassed": 54,
+    "retainedMainVitestPassed": 93
+  },
+  "v1Failure": {
+    "versionsReportedByFinitePeer": {
+      "A": "1.19.4",
+      "B": "1.19.4"
+    },
+    "receipt": {
+      "path": "process-75cf-winx64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode-receipt.json",
+      "bytes": 19008,
+      "sha256": "f3106b9fc96218619a86242dba41bf2f33a2a143571c8f4930cd1cd632956071"
+    },
+    "stage": "Team-A",
+    "status": "INCOMPLETE",
+    "outerCleanup": true,
+    "scenarioCleanup": false,
+    "readiness": {
+      "source": {
+        "sourceId": "7777e42bc756e5c0559c1451e0426d226c4ba5fe3833b934a7af7194886f316e",
+        "revision": "6bbd4a7266c47b1286ebdcd1652de8eec1c6acbe134e3426cdf2133b5369853d"
+      },
+      "image": "A",
+      "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+      "readCount": 68,
+      "elapsedMs": 15007.854699999998,
+      "lastRuntimeRead": {
+        "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+        "memberId": "alice-id",
+        "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+        "phase": "held",
+        "sealed": false,
+        "custody": "unknown",
+        "nativeReady": false,
+        "attached": false,
+        "diagnostic": "open-unknown"
+      }
+    },
+    "firstRefusal": {
+      "status": "observed",
+      "observations": [
+        {
+          "kind": "reference",
+          "commandDigest": "28f7503944e2f26e603e8129e4fbcd1f854e00d051edce077e534090284d97d4",
+          "contextDigest": "4e4c4f876e9fbc87973c48e5a1e3788bce8bdcf12099bade2f6c228c19cfa3bc",
+          "phase": "probe-expiry",
+          "reason": "held",
+          "probeCutoff": 1794865298282,
+          "probeNow": 1794865298591,
+          "scopeCutoff": null,
+          "scopeNow": null,
+          "preparationCutoff": null,
+          "preparationNow": null,
+          "ordinal": 1,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "7777e42bc756e5c0559c1451e0426d226c4ba5fe3833b934a7af7194886f316e",
+            "revision": "6bbd4a7266c47b1286ebdcd1652de8eec1c6acbe134e3426cdf2133b5369853d"
+          }
+        },
+        {
+          "kind": "consumer",
+          "actionDigest": "0999f35342307166abf6addfd3031950d31858d19f9b349ce1a23447a7d9253d",
+          "groupDigest": "82f0e39c13beaa720c5aee744969c897710d99aa57c9ac8b2df8236d54e3f2e4",
+          "bindingDigest": "fec493d203d4348bdf25aa22b1269abd25ef6f38f4655734ec5da50a1722b86e",
+          "consumerId": "477474676b79723d6d82227d23d0719a169966c4bf3071b0e58fb5f3b0819a9d",
+          "phase": "reference",
+          "reason": "threw",
+          "cutoff": 1794865298282,
+          "observedAt": 1794865298039,
+          "currentCalls": {
+            "count": 18,
+            "totalMs": 10447,
+            "maxMs": 619,
+            "lastMs": 579,
+            "truncated": false,
+            "regions": {
+              "initialAuthorityCount": 18,
+              "initialAuthorityMs": 383,
+              "readConsumerCount": 18,
+              "readConsumerMs": 90,
+              "referenceCount": 18,
+              "referenceMs": 9630,
+              "finalAuthorityCount": 17,
+              "finalAuthorityMs": 356,
+              "referenceAccountCount": 18,
+              "referenceAccountMs": 5485,
+              "referenceAccountAuthorityCount": 18,
+              "referenceAccountAuthorityMs": 5103
+            }
+          },
+          "ordinal": 2,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "7777e42bc756e5c0559c1451e0426d226c4ba5fe3833b934a7af7194886f316e",
+            "revision": "6bbd4a7266c47b1286ebdcd1652de8eec1c6acbe134e3426cdf2133b5369853d"
+          }
+        },
+        {
+          "kind": "native",
+          "phase": "post-prepare",
+          "reason": "current-false",
+          "dispatched": true,
+          "staged": true,
+          "rootCaptured": true,
+          "deadlineExpired": null,
+          "ordinal": 3,
+          "source": {
+            "sourceId": "7777e42bc756e5c0559c1451e0426d226c4ba5fe3833b934a7af7194886f316e",
+            "revision": "6bbd4a7266c47b1286ebdcd1652de8eec1c6acbe134e3426cdf2133b5369853d"
+          }
+        },
+        {
+          "kind": "opencode-open",
+          "bindingDigest": "fec493d203d4348bdf25aa22b1269abd25ef6f38f4655734ec5da50a1722b86e",
+          "phase": "native-ready",
+          "reason": "threw",
+          "ordinal": 4,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "7777e42bc756e5c0559c1451e0426d226c4ba5fe3833b934a7af7194886f316e",
+            "revision": "6bbd4a7266c47b1286ebdcd1652de8eec1c6acbe134e3426cdf2133b5369853d"
+          }
+        }
+      ]
+    },
+    "runtimeProjection": {
+      "status": "observed",
+      "atomicWithFailure": false,
+      "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+      "bindingMatches": true,
+      "recordReady": false,
+      "providerReady": null,
+      "ownerCurrent": null,
+      "nativeReady": false
+    },
+    "physicalJobs": [
+      {
+        "root": {
+          "pid": 7588,
+          "birth": "01dd761338f60a38"
+        },
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "entryStart": 0,
+        "entryEnd": 1
+      },
+      {
+        "root": {
+          "pid": 1488,
+          "birth": "01dd76133a464d44"
+        },
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "entryStart": 1,
+        "entryEnd": 2
+      },
+      {
+        "root": {
+          "pid": 7308,
+          "birth": "01dd76134249abe8"
+        },
+        "resumed": false,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "entryStart": 2,
+        "entryEnd": 2
+      }
+    ],
+    "controller": {
+      "gateController": "drained",
+      "rootExitCode": 1,
+      "activeProcesses": 0
+    },
+    "interpretation": "The existing retained probe expires while the final currentness inspection runs; original post-prepare assertInput refuses before Resume. Every captured original HANDLE is now proven absent. The strict successful-custody predicate still refuses the unresumed member, so scenario cleanup=false and INCOMPLETE remain accurate acceptance results."
+  },
+  "plan56": {
+    "exactPublishedPostimagePresent": true,
+    "originalSourceReview": {
+      "path": "native-proposal/plan56-source-r2/review.json",
+      "bytes": 8174,
+      "sha256": "7db7f7296d55e0f01bdeee516baf9575a4c333ee6999a6b2e7d62a67a13407e3"
+    },
+    "staticCallbackContract": "Within an eligible successful private V1 inspection,19 full callbacks became15; original source readers retain leading/trailing full checks. Original focused source expectation38->30 and partial15->12. Native aggregate18 counts outer current() invocations, not15 owner callbacks.",
+    "executionLimit": "Original process-suite results above are real, but this report does not claim the targeted Node model-readiness regression suite ran in this job or that Plan56 solves this deadline."
+  },
+  "comparison": {
+    "oldHead": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+    "oldReceipt": {
+      "path": "process-3be-win64/artifact-audit/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode-receipt.json",
+      "bytes": 18988,
+      "sha256": "ce5ae1f2d42a8d26cb63df038323ba201961d4b8277730df3e4116f16dcd13af"
+    },
+    "oldAudit": {
+      "path": "process-3be-win64/artifact-audit/evidence-r2.json",
+      "bytes": 23655,
+      "sha256": "043a763ea80f68139b303bf3e4776abc77c63b8f7a07e7bc9d987735bbe2872b"
+    },
+    "metrics": {
+      "outerCurrentCalls": {
+        "old3be": 23,
+        "current75cf": 18
+      },
+      "currentTotalMs": {
+        "old3be": 10721,
+        "current75cf": 10447
+      },
+      "referenceMs": {
+        "old3be": 9842,
+        "current75cf": 9630
+      },
+      "nestedAccountMs": {
+        "old3be": 5604,
+        "current75cf": 5485
+      },
+      "nestedAccountAuthorityMs": {
+        "old3be": 5256,
+        "current75cf": 5103
+      },
+      "probeExpiryOverrunMs": {
+        "old3be": 250,
+        "current75cf": 309
+      }
+    },
+    "oldNativeFirstPhase": "resume",
+    "currentNativeFirstPhase": "post-prepare",
+    "oldMemberHandleAbsent": false,
+    "currentMemberHandleAbsent": true,
+    "interpretation": "These are different original runs, not matched performance experiments. Plan56 exact source is present, but this run does not qualify native readiness or establish a causal speedup/regression. Outer observation count is not the nested owner callback count. Nested durations overlap and must not be summed."
+  },
+  "sourceCallGraph": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "lines": "127-141",
+      "fact": "consumeMemberModelReadiness receives composite authority.assertCurrent then assertAllocation; setupCurrent calls readiness while record opening and unattached."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "lines": "393-436",
+      "fact": "Original initial authority, retained consumer, cutoff, fresh reference and final authority remain ordered; last failure throws in reference before final authority."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "lines": "198-209",
+      "fact": "Read retained probe -> fresh inspect -> admission/target/scope/retirement/completion -> original expiresAt comparison. First observed refusal is that probe comparison, not native launch deadline."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "lines": "370-407",
+      "fact": "Root identity is retained, post-prepare assertInput rechecks currentness, and failure returns failed preparation. Original owner-install/resume code remains later; no Resume occurred."
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "lines": "59-66,482-498,304-323",
+      "fact": "Original15s poll remains; cleanup waits exact original HANDLE even when resumed=false, then preserves unchanged strict custody acceptance."
+    }
+  ],
+  "sourceBindings": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "gitBlob": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d",
+      "sha256": "189b8a98f8708d22b1ffabc84ef235efd320a910bf7a9ee19c266846ccd3f1ac",
+      "bytes": 15423,
+      "lines": 315,
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "receiptSourcePins": []
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "gitBlob": "3de70853104e4c49685d870fc4977458f529bfea",
+      "sha256": "7a7419587a39e8f7473aea264903e0bb02bee694a79a5a3bfe2151953cf2b95c",
+      "bytes": 48528,
+      "lines": 783,
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "receiptSourcePins": [
+        {
+          "provider": "codex",
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\composition\\prepareTeamModelReadiness.ts",
+          "sha256": "24a08891949c22116e95b9540d51c3d93d2ad15cac622d4402eb63d3e879fd7b",
+          "checkoutNewlines": "CRLF"
+        },
+        {
+          "provider": "claude",
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\composition\\prepareTeamModelReadiness.ts",
+          "sha256": "24a08891949c22116e95b9540d51c3d93d2ad15cac622d4402eb63d3e879fd7b",
+          "checkoutNewlines": "CRLF"
+        },
+        {
+          "provider": "opencode",
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\composition\\prepareTeamModelReadiness.ts",
+          "sha256": "24a08891949c22116e95b9540d51c3d93d2ad15cac622d4402eb63d3e879fd7b",
+          "checkoutNewlines": "CRLF"
+        }
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+      "sha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+      "bytes": 30721,
+      "lines": 600,
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "receiptSourcePins": [
+        {
+          "provider": "codex",
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\management\\ModelProbeOwner.ts",
+          "sha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361",
+          "checkoutNewlines": "CRLF"
+        },
+        {
+          "provider": "claude",
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\management\\ModelProbeOwner.ts",
+          "sha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361",
+          "checkoutNewlines": "CRLF"
+        },
+        {
+          "provider": "opencode",
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\management\\ModelProbeOwner.ts",
+          "sha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361",
+          "checkoutNewlines": "CRLF"
+        }
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "gitBlob": "3b5a244c27d004af6e82fffa092fa83e1894de73",
+      "sha256": "447a3ae82ab6ce0ec866305af2cd426619df3618fbec2397931212379d945784",
+      "bytes": 22408,
+      "lines": 581,
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "receiptSourcePins": [
+        {
+          "provider": "codex",
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\owned-process\\HostWindowsLaunch.ts",
+          "sha256": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748",
+          "checkoutNewlines": "CRLF"
+        },
+        {
+          "provider": "claude",
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\owned-process\\HostWindowsLaunch.ts",
+          "sha256": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748",
+          "checkoutNewlines": "CRLF"
+        },
+        {
+          "provider": "opencode",
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\owned-process\\HostWindowsLaunch.ts",
+          "sha256": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748",
+          "checkoutNewlines": "CRLF"
+        }
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+      "sha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd",
+      "bytes": 15213,
+      "lines": 231,
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "receiptSourcePins": [
+        {
+          "provider": "codex",
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProviderGate.ts",
+          "sha256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce",
+          "checkoutNewlines": "CRLF"
+        },
+        {
+          "provider": "claude",
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProviderGate.ts",
+          "sha256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce",
+          "checkoutNewlines": "CRLF"
+        },
+        {
+          "provider": "opencode",
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProviderGate.ts",
+          "sha256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce",
+          "checkoutNewlines": "CRLF"
+        }
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "gitBlob": "e0a107ffb1f57b62396c725cef57e9cadb78c5b1",
+      "sha256": "ece91a5b47fb81afe2f271a2ec627e577615eca256f309c2a51dcce291d41767",
+      "bytes": 25025,
+      "lines": 291,
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "receiptSourcePins": [
+        {
+          "provider": "codex",
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceProfile.ts",
+          "sha256": "5925d830cf62e6a2c5c0e6d22fc20af993c9b17744e0df9fe95d9e2d3538fbf5",
+          "checkoutNewlines": "CRLF"
+        },
+        {
+          "provider": "claude",
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceProfile.ts",
+          "sha256": "5925d830cf62e6a2c5c0e6d22fc20af993c9b17744e0df9fe95d9e2d3538fbf5",
+          "checkoutNewlines": "CRLF"
+        },
+        {
+          "provider": "opencode",
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceProfile.ts",
+          "sha256": "5925d830cf62e6a2c5c0e6d22fc20af993c9b17744e0df9fe95d9e2d3538fbf5",
+          "checkoutNewlines": "CRLF"
+        }
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "gitBlob": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+      "sha256": "0a23987a84677fc2fc20f44f565cd20150ee6108111dc5793d52bcc9e01ff436",
+      "bytes": 59461,
+      "lines": 800,
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "receiptSourcePins": [
+        {
+          "provider": "codex",
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts",
+          "sha256": "d8a69f7d73640d62a5ea387259fdef3ed5c628f46ca16ee73bf33f485b452855",
+          "checkoutNewlines": "CRLF"
+        },
+        {
+          "provider": "claude",
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts",
+          "sha256": "d8a69f7d73640d62a5ea387259fdef3ed5c628f46ca16ee73bf33f485b452855",
+          "checkoutNewlines": "CRLF"
+        },
+        {
+          "provider": "opencode",
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts",
+          "sha256": "d8a69f7d73640d62a5ea387259fdef3ed5c628f46ca16ee73bf33f485b452855",
+          "checkoutNewlines": "CRLF"
+        }
+      ]
+    }
+  ],
+  "remainingUnknowns": [
+    "No per-invocation trace identifies which repeated complete owner/Team/store suboperation dominates the composite5103ms nested authority cost.",
+    "The9630ms reference span includes account5485ms; account includes authority5103ms. Rounded differences are not independent measurements and do not prove an eliminable duplicate.",
+    "Different source roots, runner load and observation positions preclude attributing old/new durations causally to Plan56.",
+    "No source-bound further repair has been established by this bounded evidence review. No timer/cache/guard/count relaxation is proposed."
+  ],
+  "notReached": [
+    "OpenCode successful Team-A readiness and its original role/input/effect assertions after poll",
+    "OpenCode Team-A business input",
+    "OpenCode source-B active switch, metadata/probe/standalone acceptance",
+    "OpenCode cold retained lookup or replay assertions",
+    "Workflow final all-providers aggregate acceptance"
+  ],
+  "qualificationLimits": [
+    "Finite version strings are intentional TEST peer protocol values, not genuine Claude/Codex/OpenCode CLI qualification.",
+    "Broker and finite source positives qualify only original75cf win32-x64 bytes, not future source or other OS/architecture.",
+    "OpenCode physical HANDLE absence does not turn strict scenario cleanup=false into PASS.",
+    "Runtime projection was read after confirmed Host exit and explicitly is not atomic with the first failure.",
+    "No tests, compiler, provider, native program or GUI executed during this audit. No CI observation/action, remote mutation or afterimage was performed."
+  ],
+  "checks": [
+    {
+      "name": "Original ZIP byte length and root-published SHA256",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Original job log length and SHA256",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Exactly eighteen original safe ZIP members",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "All ZIP member CRCs valid",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Every existing extracted member equals original archive bytes",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Original source-head member is exact75cf",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Original upload log joins exact artifact id/run/hash",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "codex: source/platform and one scenario bound",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "codex: explicit finite/non-desktop/non-release scope",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "codex: one naturally drained zero-membership controller",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "codex: original final status/cleanup PASS",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "codex: every original physical job completed Resume/Stop/drain/release/HANDLE absence",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "codex: original A/B + management/probe/standalone/cold present",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "codex: original replay refusal/foreign-scope refusal preserved",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "claude: source/platform and one scenario bound",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "claude: explicit finite/non-desktop/non-release scope",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "claude: one naturally drained zero-membership controller",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "claude: original final status/cleanup PASS",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "claude: every original physical job completed Resume/Stop/drain/release/HANDLE absence",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "claude: original A/B + management/probe/standalone/cold present",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "claude: original replay refusal/foreign-scope refusal preserved",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "opencode: source/platform and one scenario bound",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "opencode: explicit finite/non-desktop/non-release scope",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "opencode: one naturally drained zero-membership controller",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Finite Codex epoch job counts25+0",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Finite Claude epoch job counts8+1 and native SDK-peer checkpoint retained",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "V1 original INCOMPLETE TeamA and outer-only cleanup true",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "V1 one epoch and three captured original roots",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "V1 two resumed and third not resumed",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "V1 all3 Stop/drain/release/HANDLE absence confirmed",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "V1 member produced no finite peer entry",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "V1 final poll is held/open-unknown and unready",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Exactly four joined first-refusal observations",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Original probe expiry309ms late",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Consumer entered before same cutoff then reference threw",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Native first refusal post-prepare after root capture",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Outer current timings bounded and untruncated",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Final authority skipped only in throwing last reference",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Joined post-cleanup projection preserves non-atomic caveat",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Official75cf source Git blob: packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Official75cf source Git blob: packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "codex: original source pin joins prepareTeamModelReadiness.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "claude: original source pin joins prepareTeamModelReadiness.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "opencode: original source pin joins prepareTeamModelReadiness.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Official75cf source Git blob: packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "codex: original source pin joins ModelProbeOwner.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "claude: original source pin joins ModelProbeOwner.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "opencode: original source pin joins ModelProbeOwner.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Official75cf source Git blob: packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "codex: original source pin joins HostWindowsLaunch.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "claude: original source pin joins HostWindowsLaunch.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "opencode: original source pin joins HostWindowsLaunch.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Official75cf source Git blob: tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "codex: original source pin joins nativeEmulatedProviderGate.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "claude: original source pin joins nativeEmulatedProviderGate.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "opencode: original source pin joins nativeEmulatedProviderGate.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Official75cf source Git blob: tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "codex: original source pin joins nativeEmulatedSourceProfile.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "claude: original source pin joins nativeEmulatedSourceProfile.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "opencode: original source pin joins nativeEmulatedSourceProfile.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Official75cf source Git blob: tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "codex: original source pin joins nativeEmulatedSourceScenario.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "claude: original source pin joins nativeEmulatedSourceScenario.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "opencode: original source pin joins nativeEmulatedSourceScenario.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Actual producer is exact accepted Plan56 postimage",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "HANDLE wait now precedes unchanged strict resumed acceptance",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Original poll still15s and checks after awaited read",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "ModelProbe original expiry remains after completed/account inspection",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Original post-prepare assertion precedes prepared return",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Composite original owner then allocation assertion preserved",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Unchanged from3be: packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Unchanged from3be: packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Unchanged from3be: packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Original3be comparison receipt exact SHA256",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "windows-node24.log:26 cases and66closed helpers, zero-membership successful controller",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "windows-electron.log:26 cases and66closed helpers, zero-membership successful controller",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    },
+    {
+      "name": "Actual original contract counts164pass3skip plus54+93 Vitest",
+      "result": "PASS_INERT_DATA_OR_SOURCE_CHECK"
+    }
+  ],
+  "checkCount": 77
+}

@@ -1,0 +1,562 @@
+{
+  "review": "Independent original-evidence and source-bound R1; no repair selected",
+  "result": "FAILED_FINITE_CODEX_TEAM_A_READINESS_WITH_CONFIRMED_PHYSICAL_CLEANUP",
+  "repository": "777genius/agent-teams-ai",
+  "head": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "run": 43959135318,
+  "job": 133621515403,
+  "platform": "win32-arm64",
+  "artifact": {
+    "id": 14275503054,
+    "bytes": 34983,
+    "sha256": "d38d36284637f6fa295b9a6476c374497ba7fdba7ff79fa40afcbb06baf8b04d",
+    "crcValid": true,
+    "members": [
+      {
+        "path": "agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt",
+        "bytes": 1929,
+        "sha256": "650e50a192b938a949f3db0c12fc369d225dbc3d9119e8b4dad8d67748171569"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+        "bytes": 758,
+        "sha256": "5cbe53ad9bd835136c1443f72aa8d0f73ba9839816a2db9fb911c814bd1b396b"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+        "bytes": 20508,
+        "sha256": "6ab543782f8c0fb5897bc154778eb2b1d2fd12f5b3f368bd5f74c0fb930fd3ec"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+        "bytes": 9714,
+        "sha256": "0a8c89220d9664c9b08ddf942d5ed293b0fdde7da88003b5858ff35adcb88fc6"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+        "bytes": 41,
+        "sha256": "1c5f0c0d47ba5bbc0eb768401e7a89c30b0ee37f0b9be3d46b1c796edce86ce3"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt",
+        "bytes": 1929,
+        "sha256": "650e50a192b938a949f3db0c12fc369d225dbc3d9119e8b4dad8d67748171569"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+        "bytes": 93552,
+        "sha256": "b7eb53ab6deb3c41087d374bedd0d036489618c8c5eaa6cd372e6d4c67481263"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider-receipt.json",
+        "bytes": 2908,
+        "sha256": "e3e0b68b0a6d9988ad17e2bb69c91c1b720c17f8785ed6aaf4b486486c7fc182"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider.log",
+        "bytes": 1278,
+        "sha256": "50d661b794ec738471248bde829627fafc6df4ddcb4423a1f2e9afcba0727b81"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json",
+        "bytes": 195,
+        "sha256": "2ecd07984aa28ef0e9384de5b53b401379211c1f031f1dbb1c5b88076868c03d"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+        "bytes": 93581,
+        "sha256": "beb55b4e6f9ae4ac8235344e8ad82922f73fec66727ddf3c2b1c73010a616775"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json",
+        "bytes": 232,
+        "sha256": "cd0632a1bf081397390150663e8fe7d51335764944a0c26c8b727b5357e1adbf"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+        "bytes": 26017,
+        "sha256": "0bb0e443918a2fa033bc4242ad8f4df73e5e07ee875c5d790ac8f20ed9997712"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+        "bytes": 15052,
+        "sha256": "049c83766efe3acc588c9137da8aabda2a42f321f0f75a6a1576a40241f206e1"
+      }
+    ]
+  },
+  "originalLog": {
+    "path": "process-75cf-winarm64/original-job.log",
+    "bytes": 373409,
+    "sha256": "1ad8f296467fe0d2883a6e051afda70ac8fccb5dd3cea3493410cd29af8168c2"
+  },
+  "earlierCompletedChecks": {
+    "canonicalBuilds": "Original set-e step completed task-change-ledger, controller, Host source/test and owned-process/retained-host type commands before original test steps; no local compiler execution.",
+    "hostContracts": {
+      "tests": 167,
+      "pass": 164,
+      "fail": 0,
+      "skipped": 3
+    },
+    "protocol": {
+      "files": 3,
+      "pass": 54
+    },
+    "retainedMain": {
+      "files": 8,
+      "pass": 93,
+      "sourceHistoryCases": 9,
+      "windowsSelectionCases": 11
+    },
+    "nativeNodeAndElectron": [
+      {
+        "member": "windows-node24.log",
+        "node": "24.21.0",
+        "electron": null,
+        "results": [
+          "tree",
+          "root-first-tail-held-pipe",
+          "blocked-output-independent-stop",
+          "breakaway-denied",
+          "pre-resume-cancel-first-nonce",
+          "facade-private-stdin-after-native-owner-tail-exit",
+          "facade-pre-resume-cancel-no-private-input",
+          "captured-provider-native-argv-env-cwd-and-stop",
+          "captured-root-first-original-descendants-and-neighbor",
+          "TEST-only-debug-service-prebirth-nested-job-feasibility",
+          "TEST-only-scoped-stop-pending-create-isolation",
+          "TEST-only-wow64-root-child-startup-and-application-exceptions",
+          "TEST-only-direct-I386-root-startup-and-late-application-exceptions",
+          "birth-failure-unknown-first-nonce",
+          "owner-eof",
+          "accounting-failure-latched-unknown-distinct-reconciliation",
+          "post-launch-pending-read-genuine-prepared",
+          "released-ack-eof-exit-zero",
+          "watcher-lock-contention-released-ack-exit-zero",
+          "failure-winner-after-complete-ack-exit-74",
+          "broker-crash",
+          "wrong-generation",
+          "malformed",
+          "truncated",
+          "lost-prepared-no-resume-first-nonce",
+          "sentinel-isolation"
+        ],
+        "closedHelperCount": 66,
+        "retainedCapabilityCount": 9,
+        "expectedOwnerEofNegativeCount": 1,
+        "controller": {
+          "gateController": "drained",
+          "rootExitCode": 0,
+          "activeProcesses": 0
+        }
+      },
+      {
+        "member": "windows-electron.log",
+        "node": "24.22.1",
+        "electron": "44.10.1",
+        "results": [
+          "tree",
+          "root-first-tail-held-pipe",
+          "blocked-output-independent-stop",
+          "breakaway-denied",
+          "pre-resume-cancel-first-nonce",
+          "facade-private-stdin-after-native-owner-tail-exit",
+          "facade-pre-resume-cancel-no-private-input",
+          "captured-provider-native-argv-env-cwd-and-stop",
+          "captured-root-first-original-descendants-and-neighbor",
+          "TEST-only-debug-service-prebirth-nested-job-feasibility",
+          "TEST-only-scoped-stop-pending-create-isolation",
+          "TEST-only-wow64-root-child-startup-and-application-exceptions",
+          "TEST-only-direct-I386-root-startup-and-late-application-exceptions",
+          "birth-failure-unknown-first-nonce",
+          "owner-eof",
+          "accounting-failure-latched-unknown-distinct-reconciliation",
+          "post-launch-pending-read-genuine-prepared",
+          "released-ack-eof-exit-zero",
+          "watcher-lock-contention-released-ack-exit-zero",
+          "failure-winner-after-complete-ack-exit-74",
+          "broker-crash",
+          "wrong-generation",
+          "malformed",
+          "truncated",
+          "lost-prepared-no-resume-first-nonce",
+          "sentinel-isolation"
+        ],
+        "closedHelperCount": 66,
+        "retainedCapabilityCount": 9,
+        "expectedOwnerEofNegativeCount": 1,
+        "controller": {
+          "gateController": "drained",
+          "rootExitCode": 0,
+          "activeProcesses": 0
+        }
+      }
+    ],
+    "finiteProviderParity": {
+      "status": "PASS",
+      "cleanup": true,
+      "wrappers": [
+        "npm-node",
+        "generated-bun",
+        "opaque-cmd",
+        "positional-bat",
+        "npm-native"
+      ],
+      "providers": [
+        {
+          "provider": "codex",
+          "wrapper": "npm-node",
+          "counts": {
+            "allocate": 1,
+            "prepare": 1,
+            "resume": 1,
+            "stop": 1,
+            "release": 1,
+            "serviceCapture": 2,
+            "serviceStop": 2,
+            "serviceSettle": 2
+          },
+          "nativeReady": true,
+          "inputCompleted": true,
+          "registeredServices": 2,
+          "scopedStops": 2,
+          "neighborSurvivedPrimary": true,
+          "providerSurvivedScopedStops": true,
+          "cleanup": true
+        },
+        {
+          "provider": "opencode",
+          "wrapper": "opaque-cmd",
+          "counts": {
+            "allocate": 1,
+            "prepare": 1,
+            "resume": 1,
+            "stop": 1,
+            "release": 1,
+            "serviceCapture": 2,
+            "serviceStop": 2,
+            "serviceSettle": 2
+          },
+          "nativeReady": true,
+          "inputCompleted": true,
+          "registeredServices": 2,
+          "scopedStops": 2,
+          "neighborSurvivedPrimary": true,
+          "providerSurvivedScopedStops": true,
+          "cleanup": true
+        }
+      ],
+      "realProviderExecuted": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    }
+  },
+  "failedCase": {
+    "stage": "Team-A",
+    "status": "INCOMPLETE",
+    "readCount": 109,
+    "elapsedMs": 15033.373300000001,
+    "originalDeadlineMs": 15000,
+    "lastRuntimeRead": {
+      "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+      "phase": "allocated",
+      "sealed": false,
+      "custody": "owned",
+      "nativeReady": false,
+      "attached": true
+    },
+    "runtimeProjection": {
+      "status": "observed",
+      "atomicWithFailure": false,
+      "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+      "bindingMatches": true,
+      "recordReady": false,
+      "providerReady": null,
+      "ownerCurrent": null,
+      "nativeReady": false
+    },
+    "firstRefusal": {
+      "status": "unknown",
+      "reason": "empty"
+    },
+    "postCleanupPeerJournal": {
+      "events": 15,
+      "counts": {
+        "launch": 6,
+        "mcp-catalog": 5,
+        "managed-configuration-read": 3,
+        "connected": 1
+      },
+      "connectedToolCount": 51,
+      "truncated": false,
+      "atomicWithReadinessFailure": false,
+      "limitation": "No phase timestamps; post-cleanup observations do not establish which events preceded the final readiness sample."
+    },
+    "physicalCleanup": {
+      "cleanup": true,
+      "mainEpochs": 1,
+      "pending": {
+        "admitted": 1,
+        "revoked": 1
+      },
+      "serviceOperations": 0,
+      "originalJobs": 7,
+      "allRootCaptured": true,
+      "allResumedStoppedDrainedReleasedAndOriginalHandleAbsent": true,
+      "memberThreadEphemeral": false,
+      "firstCloseEntryMs": 24832.8348,
+      "controller": {
+        "gateController": "drained",
+        "rootExitCode": 1,
+        "activeProcesses": 0
+      },
+      "controllerExitCode": 104,
+      "interpretation": "Drained is emitted after original-root exit, zero membership, Job close and private sandbox removal. Code 104 also represents a nonzero root. The generic PowerShell cleanup error is not evidence of a leak. TEST_SOURCE_CLEANUP logs precede the HANDLE witness wait; the final receipt follows it."
+    },
+    "sourcePins": {
+      "count": 29,
+      "originalFinallyRechecksEveryFixturePin": true,
+      "limit": "Selected source pins only; no independent whole-repository or downloaded compiled-file rehash."
+    }
+  },
+  "old3beComparison": {
+    "head": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+    "run": 43933487270,
+    "job": 133531811624,
+    "artifactId": 14261277008,
+    "receiptSha256": "9ed0e2fd58aa63131f10f72e1bf7170e34c336f1ce180f4b545a37264786fb06",
+    "stage": "Team-A",
+    "readCount": 110,
+    "elapsedMs": 15251.4352,
+    "lastNativeReady": true,
+    "projectionAllLeavesTrue": true,
+    "cleanup": true,
+    "currentLastNativeReady": false,
+    "interpretation": "3be returned ready after the original deadline; 75cf still had recordReady=false. Both fail the unchanged post-await bound, but not an identical observed leaf.",
+    "sourceDifference": "Only witness-wait/cleanup assertion ordering differs; poll/launch deadlines and workflow/controller are preserved."
+  },
+  "sourceInference": {
+    "demonstrated": "The digest-joined last public view represents an allocated owned attached driver with recordReady not published. In the ordinary initial RuntimeOwner path this follows driverFactory.open and precedes its later checkReadiness publication.",
+    "notDemonstrated": [
+      "Specific stalled sub-await or its settlement time",
+      "Exclusion of source/owner refusal: providerReady/ownerCurrent were not evaluated and the empty refusal ledger is not proof of success",
+      "Removable duplicate fresh checks: mandatory factory readiness and later RuntimeOwner readiness are distinct required positions",
+      "Causal timing proof from post-cleanup effects or another platform passing"
+    ],
+    "missingObservation": "No timestamped original substage settlement joins the final public runtime snapshot to the in-flight readiness work.",
+    "repairProposal": null,
+    "policyChanged": false
+  },
+  "unreached": [
+    "Codex source-A TEST_UI_BOOT business input/terminal",
+    "Codex source-B publication/Team B and new source assertions",
+    "Codex standalone/source-retention/cold-read business completion",
+    "Subsequent finite Claude source A/B",
+    "Subsequent finite OpenCode source A/B",
+    "Final platform aggregate validation"
+  ],
+  "sourceBindings": [
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "bytes": 32370,
+      "gitBlob": "93606e49aedfe84b6452aee487efdf2055f45524",
+      "sha256": "1aa35cca543a731d88fb257522458e99f73964b1d18553c5118f4c8542815e7e",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/.github/workflows/host-process-acceptance.yml"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "bytes": 11640,
+      "gitBlob": "167e9748a1ff8f39ee73e4cfaf2e08d7f7a34a51",
+      "sha256": "355fde7ffe01926b7c9abf7da9abdf8410cb571bb2de38c7a54c409627da0eb9",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "bytes": 3398,
+      "gitBlob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f",
+      "sha256": "352c62fcce347599a89658a5dc98d3d05d35d4a6d26618cc87faa6ece2f995df",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "originalWindowsCRLFSha256": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "bytes": 30469,
+      "gitBlob": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+      "sha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/packages/legacy-agent-host/src/runtime/RuntimeOwner.ts"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "bytes": 39056,
+      "gitBlob": "078095a7dce0aa7d1c3981e208c71d8184fcf4ec",
+      "sha256": "685245ef96356ed46b3915420b8ae78b460de322200fd473e6763fa81a7a6db4",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "originalWindowsCRLFSha256": "f59f447a54788abae625acc9b285dcdef510fdd54a6a970c8e8998ed1cab3398"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+      "bytes": 9609,
+      "gitBlob": "00c0bbf1b31fea46a19920f38ff347f5ede025da",
+      "sha256": "6434d3246aaee59b4c3c485e2a943be344006120327f9731f1afe8be7673b4b9",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/tools/owned-process-broker/fixtures/providerPeer.mjs",
+      "originalWindowsCRLFSha256": "72f63bb021adfb0a924f81e811e2528192f890d2f3f2585ca0d6bf93209ab063"
+    },
+    {
+      "path": "tools/owned-process-broker/gateController.cpp",
+      "bytes": 5935,
+      "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+      "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/tools/owned-process-broker/gateController.cpp"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "bytes": 25025,
+      "gitBlob": "e0a107ffb1f57b62396c725cef57e9cadb78c5b1",
+      "sha256": "ece91a5b47fb81afe2f271a2ec627e577615eca256f309c2a51dcce291d41767",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "originalWindowsCRLFSha256": "5925d830cf62e6a2c5c0e6d22fc20af993c9b17744e0df9fe95d9e2d3538fbf5"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "bytes": 9425,
+      "gitBlob": "776bdfdab840a24d061001a58323b5232bcf160d",
+      "sha256": "3bf94dee56ca709e34bf1e3afb3f3f7e5202f1cad64bbfa5570d97df7e76d50f",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "originalWindowsCRLFSha256": "a8d9f5891b2ccfc7b015227c21b8f59e115db6c603df8fcfefa0d849b46a8d66"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "bytes": 59461,
+      "gitBlob": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+      "sha256": "0a23987a84677fc2fc20f44f565cd20150ee6108111dc5793d52bcc9e01ff436",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "url": "https://github.com/777genius/agent-teams-ai/blob/75cf2dcbfe2b540325ea50a022cb5195306a8c59/tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "originalWindowsCRLFSha256": "d8a69f7d73640d62a5ea387259fdef3ed5c628f46ca16ee73bf33f485b452855"
+    }
+  ],
+  "providerArchive": {
+    "source": "c930d3c8b9a213762528d6e28c9ed0172ab1fa27",
+    "bytes": 186425,
+    "sha256": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41",
+    "reviewedMembers": [
+      {
+        "member": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-factory.js",
+        "bytes": 3144,
+        "gitBlob": "dc1d1a269d33c22a61bd9f793e04df3bc63df25d",
+        "sha256": "708f3427816e4ba07fcf7d5bcb9f5b6d42fb0c419074fb448b9e19bb51d9d6a2"
+      },
+      {
+        "member": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-session.js",
+        "bytes": 21029,
+        "gitBlob": "24d352b690bc31c123784cdbd2fc63d2c5c960c5",
+        "sha256": "720e7a0c93d06c5694750ddf759bc3cf1d09f2df23079de96cf166461e4d68bc"
+      }
+    ]
+  },
+  "qualificationLimits": [
+    "Not a full process-acceptance PASS.",
+    "No Desktop/P08 same-Main Retry or cold UI proof.",
+    "No genuine Claude/Codex or release qualification.",
+    "No transfer to later heads or Plan62 source."
+  ],
+  "method": {
+    "inertChecks": 81,
+    "passed": 81,
+    "checks": [
+      "artifact source/run/id",
+      "ZIP bytes/hash",
+      "CRC",
+      "14 unique members",
+      "safe regular member agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt",
+      "archive/extracted/manifest match agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt",
+      "safe regular member agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "archive/extracted/manifest match agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "safe regular member agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "archive/extracted/manifest match agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "safe regular member agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "archive/extracted/manifest match agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "safe regular member agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "archive/extracted/manifest match agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "safe regular member agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt",
+      "archive/extracted/manifest match agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt",
+      "safe regular member agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+      "archive/extracted/manifest match agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+      "safe regular member agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider-receipt.json",
+      "archive/extracted/manifest match agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider-receipt.json",
+      "safe regular member agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider.log",
+      "archive/extracted/manifest match agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider.log",
+      "safe regular member agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json",
+      "archive/extracted/manifest match agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json",
+      "safe regular member agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+      "archive/extracted/manifest match agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+      "safe regular member agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json",
+      "archive/extracted/manifest match agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json",
+      "safe regular member agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+      "archive/extracted/manifest match agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+      "safe regular member agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+      "archive/extracted/manifest match agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+      "original log bytes/hash",
+      "source head member",
+      "source receipt incomplete scope",
+      "qualification flags false",
+      "read deadline failed",
+      "last view allocated owned attached not ready",
+      "projection digest and original short circuit",
+      "first refusal unknown-empty",
+      "bounded non-atomic postcleanup journal",
+      "journal counts",
+      "one Main epoch",
+      "7 original jobs finally confirmed absent",
+      "pending revoked no services",
+      "one non-ephemeral member thread",
+      "source controller drained failed root",
+      "actual failed postawait readiness assertion",
+      "29 source pins",
+      "windows-node24.log one gate/cleanup",
+      "windows-node24.log 26 native results",
+      "windows-node24.log 66 helpers closed",
+      "windows-node24.log passing controller",
+      "windows-node24.log preserved expected owner-eof negative",
+      "windows-electron.log one gate/cleanup",
+      "windows-electron.log 26 native results",
+      "windows-electron.log 66 helpers closed",
+      "windows-electron.log passing controller",
+      "windows-electron.log preserved expected owner-eof negative",
+      "finite parity exact positive",
+      "finite codex original counts",
+      "finite opencode original counts",
+      "protocol 3 files/54 pass",
+      "Main 8 files/93 pass plus 9 history and 11 selection",
+      "Host 164 pass/3 skip/0 fail",
+      "original Windows CRLF source pin packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "original Windows CRLF source pin tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "original Windows CRLF source pin tools/owned-process-broker/fixtures/providerPeer.mjs",
+      "original Windows CRLF source pin tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "original Windows CRLF source pin tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "original Windows CRLF source pin tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "old receipt exact binding",
+      "old late positive differs from current false",
+      "old/current exact .github/workflows/host-process-acceptance.yml",
+      "old/current exact tools/owned-process-broker/gateController.cpp",
+      "only original cleanup assertion order differs",
+      "original postawait absolute readiness cutoff",
+      "controller preserves root failure with 104",
+      "unchanged c930 original archive",
+      "archive member package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-factory.js",
+      "archive member package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-session.js"
+    ],
+    "localProjectExecution": false,
+    "compilerTestProviderGuiExecution": false,
+    "redownloads": 0,
+    "ciOrRemoteMutation": false,
+    "afterimagesCreated": false
+  }
+}
