@@ -678,7 +678,7 @@ describe('ProviderModelBadges', () => {
         root.render(
           <ProviderModelBadges
             providerId="opencode"
-            models={['very-long-model', ...models.slice(1)]}
+            models={['a-very-long-model', ...models.slice(1)]}
             collapseAfter={10}
             maxCollapsedRows={1}
           />
