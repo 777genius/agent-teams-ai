@@ -69,6 +69,8 @@ export function describeBoardTaskActivityLabel(input: BoardTaskActivityLabelInpu
       return 'Started review';
     case 'review_approve':
       return 'Approved review';
+    case 'review_complete':
+      return 'Completed AI review';
     case 'review_request_changes':
       return 'Requested changes';
     case 'review_request':

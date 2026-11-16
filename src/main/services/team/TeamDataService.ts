@@ -4014,7 +4014,7 @@ export class TeamDataService {
         // Only the desktop renderer's user action reaches this path. Agent tools
         // have no updateKanban/setHumanOnlyApproval endpoint; controller locks
         // and re-checks the policy before every approval mutation.
-        if ((taskBoard.getKanbanState() as KanbanState).humanOnlyApproval === true) {
+        if ((taskBoard.getKanbanState?.() as KanbanState | null)?.humanOnlyApproval === true) {
           taskBoard.approveAsHuman(taskId);
           return;
         }
