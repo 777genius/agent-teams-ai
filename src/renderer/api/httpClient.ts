@@ -11,6 +11,7 @@ import {
   createEmptyMemberLogStreamResponse,
   createEmptyMemberRuntimeLogTailResponse,
 } from '@features/member-log-stream/contracts';
+import { NATIVE_NEXT_PROMPT_UPDATED, type NativeNextPromptApi } from '@features/native-prompt-suggestions/contracts';
 import {
   type AssignOrganizationTeamRequest,
   type CreateOrganizationRequest,
@@ -163,7 +164,6 @@ import type {
 } from '@shared/types';
 import type { AgentConfig, MemberWorkSyncElectronApi } from '@shared/types/api';
 import type { EditorAPI, ProjectAPI } from '@shared/types/editor';
-import { NATIVE_NEXT_PROMPT_UPDATED, type NativeNextPromptApi } from '@features/native-prompt-suggestions/contracts/channel';
 import type { TerminalAPI } from '@shared/types/terminal';
 
 function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): string {

@@ -40,3 +40,6 @@ export interface NativeNextPromptViewContext extends NativeNextPromptIdentity {
   readonly hasOpenMentionOrCommand: boolean;
   readonly draftText: string;
 }
+
+export { NATIVE_NEXT_PROMPT_UPDATED } from './channel';
+export type { NativeNextPromptApi } from './channel';

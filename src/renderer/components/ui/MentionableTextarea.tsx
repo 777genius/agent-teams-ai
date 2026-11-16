@@ -28,9 +28,9 @@ import { getKnownSlashCommand, parseStandaloneSlashCommand } from '@shared/utils
 import { AutoResizeTextarea } from './auto-resize-textarea';
 import { ChipInteractionLayer } from './ChipInteractionLayer';
 import { CodeChipBadge } from './CodeChipBadge';
+import { parseMentionSegments } from './mentionableSegments';
 import { MentionInteractionLayer } from './MentionInteractionLayer';
 import { MentionSuggestionsPopup } from './MentionSuggestionsPopup';
-import { parseMentionSegments } from './mentionableSegments';
 import { SlashCommandInteractionLayer } from './SlashCommandInteractionLayer';
 import { TaskReferenceInteractionLayer } from './TaskReferenceInteractionLayer';
 import { UrlInteractionLayer } from './UrlInteractionLayer';

@@ -1,5 +1,5 @@
-import { getSuggestionInsertionText } from '@renderer/utils/mentionSuggestions';
 import type { MentionSuggestion } from '@renderer/types/mention';
+import { getSuggestionInsertionText } from '@renderer/utils/mentionSuggestions';
 
 type MentionTextSegment =
   | { type: 'text'; value: string }
