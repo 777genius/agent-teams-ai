@@ -197,6 +197,12 @@ export interface TaskReviewApprovedEvent extends TaskHistoryEventBase {
   note?: string;
 }
 
+export interface TaskHumanApprovedEvent extends TaskHistoryEventBase {
+  type: 'human_approved';
+  from: TeamReviewState;
+  to: 'approved';
+}
+
 export interface TaskReviewCompletedEvent extends TaskHistoryEventBase {
   type: 'review_completed';
   from: 'review';
@@ -219,6 +225,7 @@ export type TaskHistoryEvent =
   | TaskReviewChangesRequestedEvent
   | TaskReviewApprovedEvent
   | TaskReviewCompletedEvent
+  | TaskHumanApprovedEvent
   | TaskReviewStartedEvent;
 
 export type TaskCommentType = 'regular' | 'review_request' | 'review_approved';
@@ -705,6 +712,8 @@ export interface KanbanState {
   teamName: string;
   reviewers: string[];
   tasks: Record<string, KanbanTaskState>;
+  /** Optional for compatibility with existing persisted team states. Missing means false. */
+  humanOnlyApproval?: boolean;
   /** Порядок id задач по колонкам для отображения на канбан-доске (drag-and-drop). */
   columnOrder?: Partial<Record<KanbanColumnId, string[]>>;
 }

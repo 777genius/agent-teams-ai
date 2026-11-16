@@ -17,6 +17,7 @@ function createDefaultState(teamName: string): KanbanState {
     teamName,
     reviewers: [],
     tasks: {},
+    humanOnlyApproval: false,
   };
 }
 
@@ -61,6 +62,7 @@ function validateSafetyState(value: unknown, teamName: string): void {
       value.reviewers.some((name) => typeof name !== 'string' || !name.trim()))
   )
     return invalid();
+  if (value.humanOnlyApproval !== undefined && typeof value.humanOnlyApproval !== 'boolean') return invalid();
   for (const [taskId, task] of Object.entries(value.tasks)) {
     if (
       !taskId.trim() ||
@@ -137,6 +139,7 @@ export class TeamKanbanManager {
         ? parsed.reviewers.filter((r): r is string => typeof r === 'string' && r.trim().length > 0)
         : [],
       tasks: sanitizedTasks,
+      humanOnlyApproval: parsed.humanOnlyApproval === true,
       columnOrder: sanitizeColumnOrder(parsed.columnOrder),
     };
   }
@@ -226,6 +229,7 @@ export class TeamKanbanManager {
       teamName,
       reviewers: state.reviewers,
       tasks: state.tasks,
+      humanOnlyApproval: state.humanOnlyApproval === true,
       ...(state.columnOrder && Object.keys(state.columnOrder).length > 0
         ? { columnOrder: state.columnOrder }
         : {}),

@@ -36,6 +36,10 @@ function assertKanbanColumnAllowed(context, task, column, options = {}) {
   }
 
   if (column === 'approved') {
+    if (getKanbanState(context).humanOnlyApproval === true &&
+        (transition === 'manual_approve' || transition === 'approve_review')) {
+      throw new Error('Human approval required: use review_complete for AI review; only the app user may approve');
+    }
     if (transition === 'manual_approve') {
       if (reviewState !== 'none') {
         throw new Error(
@@ -141,6 +145,18 @@ function removeReviewer(context, reviewer) {
   });
 }
 
+function setHumanOnlyApproval(context, enabled) {
+  if (typeof enabled !== 'boolean') throw new Error('humanOnlyApproval must be a boolean');
+  return withTeamBoardLock(context.paths, () => {
+    const state = getKanbanState(context);
+    if (state.humanOnlyApproval === enabled) return state;
+    kanbanStore.writeKanbanState(context.paths, context.teamName, {
+      ...state, humanOnlyApproval: enabled,
+    });
+    return getKanbanState(context);
+  });
+}
+
 function updateColumnOrder(context, columnId, orderedTaskIds) {
   return withTeamBoardLock(context.paths, () => {
     const canonicalIds = orderedTaskIds.map((taskId) => tasks.resolveTaskId(context, taskId));
@@ -151,6 +167,7 @@ function updateColumnOrder(context, columnId, orderedTaskIds) {
 module.exports = {
   getKanbanState,
   setKanbanColumn,
+  setHumanOnlyApproval,
   clearKanban,
   listReviewers,
   addReviewer,

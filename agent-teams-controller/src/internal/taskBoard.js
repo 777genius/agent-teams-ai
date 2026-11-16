@@ -158,6 +158,14 @@ function completeReview(context, taskId, flags) {
   return review.completeReview(context, taskId, flags);
 }
 
+function approveAsHuman(context, taskId) {
+  return review.approveAsHuman(context, taskId);
+}
+
+function setHumanOnlyApproval(context, enabled) {
+  return kanban.setHumanOnlyApproval(context, enabled);
+}
+
 function requestChanges(context, taskId, flags) {
   return review.requestChanges(context, taskId, flags);
 }
@@ -167,6 +175,7 @@ module.exports = {
   addTaskAttachmentMeta,
   addTaskComment,
   approveReview,
+  approveAsHuman,
   attachCommentFile,
   attachTaskFile,
   clearKanban,
@@ -192,6 +201,7 @@ module.exports = {
   resolveTaskId,
   restoreTask,
   setKanbanColumn,
+  setHumanOnlyApproval,
   setNeedsClarification,
   setTaskOwner,
   setTaskStatus,

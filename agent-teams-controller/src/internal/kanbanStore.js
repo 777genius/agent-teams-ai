@@ -9,8 +9,9 @@ function nowIso() {
 function readJson(filePath, fallbackValue) {
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch {
-    return fallbackValue;
+  } catch (error) {
+    if (error && error.code === 'ENOENT') return fallbackValue;
+    throw error; // An unreadable policy must never silently turn approval restrictions off.
   }
 }
 
@@ -23,11 +24,16 @@ function getDefaultState(teamName) {
     teamName,
     reviewers: [],
     tasks: {},
+    humanOnlyApproval: false,
   };
 }
 
 function sanitizeState(teamName, rawState) {
-  const state = rawState && typeof rawState === 'object' ? rawState : {};
+  if (!rawState || typeof rawState !== 'object' || Array.isArray(rawState) ||
+      (rawState.humanOnlyApproval !== undefined && typeof rawState.humanOnlyApproval !== 'boolean')) {
+    throw new Error('Kanban approval policy is corrupt');
+  }
+  const state = rawState;
   const tasks = {};
   if (state.tasks && typeof state.tasks === 'object') {
     for (const [taskId, entry] of Object.entries(state.tasks)) {
@@ -53,6 +59,7 @@ function sanitizeState(teamName, rawState) {
       ? state.reviewers.filter((entry) => typeof entry === 'string' && entry.trim())
       : [],
     tasks,
+    humanOnlyApproval: state.humanOnlyApproval === true,
     ...(state.columnOrder && typeof state.columnOrder === 'object'
       ? { columnOrder: state.columnOrder }
       : {}),

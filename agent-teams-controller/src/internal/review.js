@@ -1,4 +1,5 @@
 const kanban = require('./kanban.js');
+const kanbanStore = require('./kanbanStore.js');
 const messages = require('./messages.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const reviewStateHelpers = require('./reviewState.js');
@@ -272,8 +273,7 @@ function getLatestReviewLifecycleEvent(task) {
       e.type === 'review_changes_requested' ||
       e.type === 'review_approved' ||
       e.type === 'review_completed' ||
-      e.type === 'review_started' ||
-      e.type === 'review_completed'
+      e.type === 'review_started'
     ) {
       return e;
     }
@@ -559,9 +559,56 @@ function completeReview(context, taskId, flags = {}) {
   return result.payload;
 }
 
+/**
+ * Main-process user action only. Never expose through agent MCP/CLI or HTTP.
+ * No caller-supplied "human" or actor flag can grant this authority.
+ */
+function approveAsHuman(context, taskId) {
+  const result = withTeamBoardLock(context.paths, () => {
+    if (kanban.getKanbanState(context).humanOnlyApproval !== true) {
+      throw new Error('Human-only approval policy is not enabled');
+    }
+    const task = tasks.getTask(context, taskId);
+    if (task.status !== 'completed') {
+      throw new Error(`Task #${task.displayId || task.id} must be completed before human approval`);
+    }
+    const prevReviewState = getEffectiveReviewState(context, task);
+    if (prevReviewState === 'approved') {
+      return { task: task, alreadyApproved: true };
+    }
+    const timestamp = new Date().toISOString();
+    // Placement and review history share the same board lock.
+    kanbanStore.setKanbanColumn(context.paths, context.teamName, task.id, 'approved');
+    tasks.updateTask(context, task.id, (current) => {
+      closeReviewIntervals(current, timestamp);
+      current.historyEvents = tasks.appendHistoryEvent(current.historyEvents, {
+        type: 'human_approved', from: prevReviewState, to: 'approved',
+        actor: 'user', timestamp,
+      });
+      current.reviewState = 'approved';
+      return current;
+    });
+    return { task: tasks.getTask(context, task.id), alreadyApproved: false };
+  });
+  if (!result.alreadyApproved) {
+    try {
+      tasks.notifyUnblockedOwners(context, result.task, {
+        reviewCycleId: [...(result.task.historyEvents || [])].reverse()
+          .find((event) => event.type === 'human_approved')?.id,
+      });
+    } catch (error) {
+      warnNonCritical('[review] dependency human approval notification failed', error);
+    }
+  }
+  return result.task;
+}
+
 function approveReview(context, taskId, flags = {}) {
   const result = withTeamBoardLock(context.paths, () => {
     const currentTask = tasks.getTask(context, taskId);
+    if (kanban.getKanbanState(context).humanOnlyApproval === true) {
+      throw new Error('Human approval required: reviewer must use review_complete');
+    }
     const nextFrom = getReviewDecisionActor(context, currentTask, flags, 'approve review');
     const nextNote =
       typeof flags.note === 'string' && flags.note.trim() ? flags.note.trim() : 'Approved';
@@ -742,6 +789,7 @@ function requestChanges(context, taskId, flags = {}) {
 
 module.exports = {
   approveReview,
+  approveAsHuman,
   completeReview,
   requestReview,
   requestChanges,
