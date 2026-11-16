@@ -1,0 +1,267 @@
+{
+  "disposition": "ACTUAL_ORIGINAL_A_SEMANTIC_RED",
+  "head": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "run": 43831885807,
+  "job": 133178913159,
+  "attempt": 1,
+  "event": "pull_request",
+  "lane": "linux-x64 taskboard",
+  "firstFailedStep": 8,
+  "originalEightFileCommand": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+  "counts": {
+    "tests": 123,
+    "pass": 120,
+    "fail": 3,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "durationMs": 9107.032314
+  },
+  "failures": [
+    {
+      "line": 830,
+      "status": "fail",
+      "name": "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+      "durationMs": 1.281537
+    },
+    {
+      "line": 831,
+      "status": "fail",
+      "name": "P11 keeps the original 90-second cutoff for first result after the cutoff",
+      "durationMs": 1.749049
+    },
+    {
+      "line": 832,
+      "status": "fail",
+      "name": "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+      "durationMs": 1.069523
+    }
+  ],
+  "fourthControl": {
+    "line": 833,
+    "status": "pass",
+    "name": "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+    "durationMs": 1.147017
+  },
+  "errorContract": {
+    "class": "AssertionError",
+    "code": "ERR_ASSERTION",
+    "message": "Missing expected rejection.",
+    "operator": "rejects",
+    "actual": "undefined",
+    "assertionSource": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:1937:3",
+    "occurrences": 3,
+    "functionalNotSetup": true,
+    "postRejectCountersInThreeFailingCasesReached": false
+  },
+  "preservation": {
+    "all119PriorCasesPass": true,
+    "nameAndMultiplicityComparedToOriginal578FullEight": true,
+    "whole95bPrefixPreservedByCurrent3c": true,
+    "onlyNonDocumentaryDeltaSince578": "phase A four cases and their actual-source extractor"
+  },
+  "preconditions": {
+    "checkout": {
+      "source": "72e6ec04444969d343d73834c70bc4e261100fc9",
+      "logLines": [
+        38,
+        154,
+        157,
+        254
+      ]
+    },
+    "runner": "linux-x64 verified by original step5",
+    "Node": "24.21.0",
+    "pnpm": "11.22.0",
+    "Electron": "44.10.1",
+    "installCommand": "node scripts/ci/install-dependencies-with-retry.mjs --child-concurrency=1",
+    "electronStrictAndRebuild": [
+      "node scripts/ensure-electron-install.cjs --strict",
+      "pnpm exec electron-rebuild --module-dir . --force --only better-sqlite3 --version 44.10.1"
+    ],
+    "buildCommands": [
+      "node scripts/build/buildLinuxNodeExec.mjs (original Linux conditional)",
+      "pnpm --filter @agent-teams/legacy-agent-host build (includes ledger)",
+      "pnpm --filter agent-teams-controller build",
+      "pnpm --filter agent-teams-mcp build"
+    ],
+    "buildEvidence": "original set-euo/pipefail sequence reaches all test cases; ledger/native tsc, controller build and successful MCP tsup output retained at700\u2013714; no independent dist-hash receipt claimed",
+    "noTestImportOrSyntaxFailure": true
+  },
+  "unreached": {
+    "printedButNotExecutedAfterFirstNodeFailure": "node --test test/scripts/installDependenciesWithRetry.test.mjs",
+    "metadataSkippedSteps": [
+      {
+        "name": "Verify original Runtime and Team conversation contracts",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 9
+      },
+      {
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 10
+      },
+      {
+        "name": "Capture package-manager and Host inputs without vendor executables",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 11
+      },
+      {
+        "name": "Capture original controlled Linux process input without a provider",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Exercise ordinary Team controls and renderer reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Exercise ordinary Taskboard controls and persistence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Exercise original Skills and cross-Team controls",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15
+      },
+      {
+        "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Exercise original Review after a cold Host and app restart",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Exercise saved next-launch selection while the original Team remains live",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 24
+      },
+      {
+        "name": "Exercise stock Codex Update while the original Team retains its captured source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 25
+      },
+      {
+        "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 26
+      },
+      {
+        "name": "Prepare exact OpenCode V2 Bun and engine graph",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 27
+      },
+      {
+        "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 28
+      },
+      {
+        "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 29
+      },
+      {
+        "name": "Verify exact source, original screenshots, receipts and cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 30
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 60
+      }
+    ],
+    "fullTenContracts": true,
+    "workspaceTypesAndTypedLint": true,
+    "ordinaryDesktopUIAndFullReceiptVerifier": true,
+    "BAndC": true
+  },
+  "artifactBoundary": {
+    "uploadStep": 31,
+    "result": "success step with original no-files warning at961; no GUI receipt or artifact download required",
+    "artifactDownloaded": false,
+    "desktopNaturalExitOrNativeCustodyQualified": false
+  },
+  "qualification": "Only original A semantic RED is established. The job is FAILURE and downstream type/UI/native/physical-cleanup gates remain unqualified; no result transfers to future B/C or geometry proposals.",
+  "rawLog": {
+    "bytes": 94289,
+    "blob": "4f7af0d5218f6c2b34457e63a4dcce05f4f2ce84",
+    "sha256": "79164ffcbff3edb86387a7d11786602b5e24f2e8fd159fb5b8cf409e4c1c9d97"
+  },
+  "captureMetadata": {
+    "bytes": 21812,
+    "blob": "9a21d51466a6156d474e383100f5116f406b256c",
+    "sha256": "05a8b235cd79d0feb4c95ab5a6fb58670d3eba2de4ce57b2896d79677222f35d"
+  },
+  "sourceBinding": {
+    "bytes": 7565,
+    "blob": "f004b5988b32e0444bb4c3d706142c839b57ed18",
+    "sha256": "218176b99508cad9fb30cc841fc0e104347308c8339dc022734ccae404a85a54"
+  },
+  "caseComparison": {
+    "bytes": 47214,
+    "blob": "1e123cc7f4975864d808d38b01ce306d5fe95e73",
+    "sha256": "151f089d33d644ede4eebcb4acbf8b8bfbf73a0ad1a37947f14d90346fd8fe45"
+  },
+  "actualObservationAt": "2026-11-16T09:26:46.9983267Z",
+  "auditProjectExecution": false
+}
