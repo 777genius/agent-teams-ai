@@ -304,7 +304,11 @@ test('original first failure retains one bounded stdout prefix before the unchan
   const start = '} catch (error) {\n  primaryError = error;', end = '} finally {\n  if (app && !quitStarted) {';
   assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
   const body = source.slice(source.indexOf(start) + '} catch (error) {\n'.length, source.indexOf(end));
-  const run = Function('environment', `const {error,errorText,proof,activePhase,Buffer,writeSync}=environment;
+  const formatterStart = 'const windowsUiFailureLine = ', formatterEnd = '\nconst repository = ';
+  assert.equal(source.split(formatterStart).length, 2); assert.equal(source.split(formatterEnd).length, 2);
+  const formatter = source.slice(source.indexOf(formatterStart), source.indexOf(formatterEnd));
+  const run = Function('environment', `const {error,errorText,proof,activePhase,Buffer,writeSync,assert}=environment;
+    ${formatter}
     let primaryError; ${body} return {primaryError,proof};`) as (environment: Record<string, unknown>) => {
       primaryError: unknown; proof: { error?: string } };
   const originalError = new Error('TEST original failure'), phase = 'actual-Host-A-exit-and-metadata-Refresh';
@@ -314,7 +318,7 @@ test('original first failure retains one bounded stdout prefix before the unchan
     const proof: { error?: string } = {};
     let result: ReturnType<typeof run> | undefined;
     try {
-      result = run({ error: originalError, proof, activePhase, Buffer,
+      result = run({ error: originalError, proof, activePhase, Buffer, assert,
         errorText: (error: unknown) => { calls.push('format'); assert.equal(error, originalError); return text; },
         writeSync: (fd: number, line: string) => { calls.push('write'); writes.push({ fd, line });
           if (sink === 'throw') throw new Error('TEST unavailable diagnostic sink');
