@@ -57,6 +57,7 @@ let stopped = false;
 let originalMember;
 let initialMember;
 let appManagedRosterAttachConfirmed = false;
+let addMemberIpcReceipt = null;
 let forceExitMember;
 let hwndObserver;
 let hwndObserverLog = '';
@@ -348,6 +349,11 @@ async function run() {
     client.evaluate('window.__winProductAttach?.done ? window.__winProductAttach : null'),
     180_000);
   if (attachResult.error) throw new Error('Product member attachment failed: ' + attachResult.error);
+  addMemberIpcReceipt = attachResult.value;
+  // teams.addMember returns IpcResult, not a rejecting Promise. Preserve the
+  // product's actual rejection instead of misreporting a 180-second event timeout.
+  assert(addMemberIpcReceipt?.success === true,
+    'Product member attachment IPC rejected: ' + JSON.stringify(addMemberIpcReceipt));
   // The original process_spawned event proves the exact app-managed launch
   // path. Runtime liveness projections can lag this original event on Windows;
   // neither a cached alive flag nor a numeric PID alone qualifies the launch.
@@ -529,6 +535,7 @@ try {
     schemaVersion: 1, success: false, phase, error: String(error),
     realProductTeammateLaunch: Boolean(originalMember),
     appManagedRosterAttachConfirmed,
+    addMemberIpcReceipt,
     toolResults: [...proofs.values()], usageImporterProcesses,
     stopFailurePidEvidence,
     modelErrors: model?.errors ?? [],
