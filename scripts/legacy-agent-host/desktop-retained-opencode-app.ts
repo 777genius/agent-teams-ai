@@ -504,7 +504,8 @@ export async function exerciseRetainedDonorHistory(input: {
         assert.deepEqual(await app.call('window.__TEST_retainedApi.teams.list()'), [], 'fresh donor has no seeded teams');
         await ui.click('button[aria-label="More actions"]', 'open existing More menu');
         await ui.click('button', 'open original Teams', 'Teams');
-        await ui.click('button', 'open original creation', 'Create Team');
+        await ui.click('div.mb-4:has(> div > div > h2) > div > div.ml-auto > button',
+          'open original creation', 'Create Team');
         const page = '[data-testid="create-team-page"]';
         await fill(page + ' #team-name', teamName);
         await ui.scrollTo('#solo-team', 'solo control visible');

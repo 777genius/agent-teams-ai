@@ -461,7 +461,8 @@ export async function runDesktopTaskBoardUiSmoke(
     'clear original clarification once'
   );
   await ui.waitRead(
-    `!document.querySelector('[role="dialog"]')?.textContent.includes('Awaiting clarification from you')`,
+    `(async()=>Boolean(await ${desktopTaskBoardAssignmentReadyExpression(options.handleId, taskId, { contextId, surfaceId })}) &&
+      !document.querySelector('[role="dialog"]')?.textContent.includes('Awaiting clarification from you'))()`,
     'clarification banner cleared'
   );
   assert.equal((await task(taskId)).needsClarification, undefined);

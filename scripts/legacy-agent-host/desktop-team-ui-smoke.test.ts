@@ -1411,6 +1411,54 @@ for (const requireCenterHit of [false, true]) {
   });
 }
 
+test('original scroll reveals an offscreen inner scroller before scrolling its clipped target', { timeout: 5000 }, async () => {
+  const selector = '#TEST-original-nested-model';
+  const selectors: string[] = [], visibility: unknown[] = [];
+  const dispatched: Record<string, unknown>[] = [];
+  let wheels = 0;
+  const outer = { parentElement: null, scrollHeight: 1600, clientHeight: 681,
+    getBoundingClientRect: () => ({ x: 0, top: 0, bottom: 681, width: 1024 }) };
+  const inner = { parentElement: outer, scrollHeight: 1200, clientHeight: 380,
+    getBoundingClientRect() {
+      const top = wheels === 0 ? 800 : 100;
+      return { x: 300, top, bottom: top + 380, width: 600 };
+    } };
+  const control = { parentElement: inner, contains: () => false,
+    getBoundingClientRect() {
+      const top = wheels === 0 ? 936 : wheels === 1 ? 500 : 200;
+      return { x: 320, y: top, top, bottom: top + 58, width: 300, height: 58 };
+    } };
+  const ui = createDesktopUiControls({
+    async evaluate(expression: string) {
+      const value = runInNewContext(expression, {
+        innerWidth: 1024, innerHeight: 681,
+        getComputedStyle: () => ({ overflowY: 'auto' }),
+        document: { documentElement: outer,
+          querySelectorAll(actual: string) { selectors.push(actual); return [control]; } },
+      }) as Record<string, unknown> | null;
+      assert.ok(value, 'the actual expression must find a visible wheel surface for the offscreen inner clip');
+      visibility.push(value.visible);
+      return value;
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      assert.equal(method, 'Input.dispatchMouseEvent');
+      assert.equal(params.type, 'mouseWheel', 'revealing the target performs no click, key or selection input');
+      dispatched.push({ method, ...params });
+      assert.ok(wheels < 2, 'the two original nested surfaces need only two wheels');
+      wheels++;
+      return {};
+    },
+  }, { assertOwnedRenderer() {}, step() {} });
+  await ui.scrollTo(selector, 'TEST original nested model');
+  assert.deepEqual(selectors, [selector, selector, selector]);
+  assert.deepEqual(visibility, [false, false, true],
+    'the target stays clipped after the outer wheel and becomes visible only after the inner wheel');
+  assert.deepEqual(dispatched, [
+    { method: 'Input.dispatchMouseEvent', type: 'mouseWheel', x: 512, y: 340.5, deltaX: 0, deltaY: 600 },
+    { method: 'Input.dispatchMouseEvent', type: 'mouseWheel', x: 600, y: 290, deltaX: 0, deltaY: 239 },
+  ], 'dispatch first to the visible outer dialog, then to the revealed inner model grid');
+});
+
 for (const [change, moved] of [['owner', false], ['cutoff', false], ['owner', true], ['cutoff', true]] as const) {
   test(`original desktop click rechecks ${change} after its pending final target read (moved=${moved})`, { timeout: 5000 }, async t => {
     if (change === 'cutoff') t.mock.timers.enable({ apis: ['Date'], now: 1000 });

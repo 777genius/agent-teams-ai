@@ -462,10 +462,25 @@ export function createDesktopUiControls(
         while(parent&&!(parent.scrollHeight>parent.clientHeight&&/auto|scroll/.test(getComputedStyle(parent).overflowY)))parent=parent.parentElement;
         const p=(parent??document.documentElement).getBoundingClientRect();
         const top=Math.max(0,p.top),bottom=Math.min(innerHeight,p.bottom);
-        if(bottom<=top||!r.width||!r.height)return null;
-        const x=Math.max(1,Math.min(innerWidth-1,p.x+p.width/2)),y=(top+bottom)/2;
+        if(!r.width||!r.height)return null;
+        // An offscreen inner clip still owns visibility; reveal it using an outer wheel.
+        let wheelRect=p;
+        if(bottom<=top){
+          let outer=parent?.parentElement;
+          while(outer){
+            if(outer.scrollHeight>outer.clientHeight&&/auto|scroll/.test(getComputedStyle(outer).overflowY)){
+              const rect=outer.getBoundingClientRect();
+              if(Math.min(innerHeight,rect.bottom)>Math.max(0,rect.top)){wheelRect=rect;break;}
+            }
+            outer=outer.parentElement;
+          }
+          if(!outer)wheelRect=document.documentElement.getBoundingClientRect();
+        }
+        const wheelTop=Math.max(0,wheelRect.top),wheelBottom=Math.min(innerHeight,wheelRect.bottom);
+        if(wheelBottom<=wheelTop)return null;
+        const x=Math.max(1,Math.min(innerWidth-1,wheelRect.x+wheelRect.width/2)),y=(wheelTop+wheelBottom)/2;
         const hit=${scrollOptions.requireCenterHit === true ? 'document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)' : 'e'};
-        return {visible:r.top>=top&&r.bottom<=bottom&&Boolean(hit&&(hit===e||e.contains(hit))),x,y,delta:Math.max(-600,Math.min(600,r.y+r.height/2-y))};
+        return {visible:bottom>top&&r.top>=top&&r.bottom<=bottom&&Boolean(hit&&(hit===e||e.contains(hit))),x,y,delta:Math.max(-600,Math.min(600,r.y+r.height/2-y))};
       })()`,
           label
         )
