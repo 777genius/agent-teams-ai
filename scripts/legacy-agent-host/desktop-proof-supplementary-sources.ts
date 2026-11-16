@@ -291,6 +291,7 @@ export const desktopProofSupplementarySources = [
   'src/shared/utils/logger.ts',
   'test/renderer/components/cli/CliStatusVisibility.test.ts',
   'scripts/e2e/comment-notification/cdp.mjs',
+  'src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */
