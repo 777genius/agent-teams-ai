@@ -47,7 +47,7 @@ type Selection = NativeProcessProfile & {
 type LimitChange = { providerId: string; modelId: string;
   limits: { contextTokens: number; outputTokens: number } };
 
-const invalid = (): never => { throw new Error('Captured Windows environment mismatch'); };
+const invalid: () => never = () => { throw new Error('Captured Windows environment mismatch'); };
 const row = (value: unknown): RecordValue =>
   value && typeof value === 'object' && !Array.isArray(value) ? value as RecordValue : invalid();
 const optionalRow = (value: unknown): RecordValue => value === undefined ? {} : row(value);
