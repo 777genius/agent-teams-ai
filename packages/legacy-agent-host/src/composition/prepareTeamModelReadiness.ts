@@ -173,7 +173,7 @@ function captureOpenCodeProbeAccountInspection(
   const current = () => {
     try { return nativeCurrent() && (policy?.isCurrent() ?? true); } catch { return false; }
   };
-  if (!(bracket ? nativeCurrent() : current())) held();
+  if (!bracket && !current()) held();
   if (configuration?.selectedFile) {
     // Initial scope commits the original source/selection but cannot invent its future native key.
     if (!original) return undefined;

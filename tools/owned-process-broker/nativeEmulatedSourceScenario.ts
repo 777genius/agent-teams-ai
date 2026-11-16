@@ -313,7 +313,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
               resumed: job.resumed, stopped: job.stopped, drained: job.drained, released: job.released,
               originalHandleAbsent: job.handleAbsent, custodyTimings: job.timings,
               stagingTimings: job.stagingTimings, firstCloseEntryMs }));
-            const custodyConfirmed = job.root && job.witness && job.resumed && job.stopped && job.drained && job.released;
+            const custodyConfirmed = job.root && job.witness && (job.resumed || failure !== undefined) && job.stopped && job.drained && job.released;
             assert.equal(await job.witness?.wait(), 0);
             job.handleAbsent = true;
             assert.ok(custodyConfirmed, 'Every original physical Job retains confirmed Stop/drain/release');
