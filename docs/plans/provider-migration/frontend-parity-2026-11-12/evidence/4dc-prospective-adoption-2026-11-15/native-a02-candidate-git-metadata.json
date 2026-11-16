@@ -1,0 +1,315 @@
+{
+  "schemaVersion": 1,
+  "kind": "read-only prospective native-adoption candidate; not source application or qualification",
+  "baselineCommit": "c28f1aa890c909c7b981254c5e30b874cbc84287",
+  "incomingHistory": [
+    "76a227d283ee9ee4d55d894c2b5d11dde64453e3",
+    "a02ab70edfdcb4169627e804f0337c9ad6b52af6"
+  ],
+  "candidateSourceHead": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+  "paths": [
+    {
+      "path": "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+      "preimage": {
+        "bytes": 9611,
+        "lines": 146,
+        "gitBlob": "865401e9e925d34d97c792a62fa345a9d85f0f80",
+        "sha256": "4493b4f04edae9185bf7920588ab5b520b7123afd8e03012f87a87b92643f4c2"
+      },
+      "incoming76": {
+        "bytes": 9710,
+        "lines": 147,
+        "gitBlob": "f6fdf6a32240c20d5e1cf6e4ea0ceaab9d38d242",
+        "sha256": "364704dbeef77c87178a18c0c1751c0d9202a43a30d8954a5d506d33ce97581a"
+      },
+      "candidate": {
+        "bytes": 9710,
+        "lines": 147,
+        "gitBlob": "f6fdf6a32240c20d5e1cf6e4ea0ceaab9d38d242",
+        "sha256": "364704dbeef77c87178a18c0c1751c0d9202a43a30d8954a5d506d33ce97581a"
+      },
+      "additions": 1,
+      "deletions": 0,
+      "sourceSizeGuardCap": 800,
+      "sourceSizeGuardReason": "existing default; no baseline amendment",
+      "originCommit": "76a227d283ee9ee4d55d894c2b5d11dde64453e3"
+    },
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "preimage": {
+        "bytes": 2715,
+        "lines": 51,
+        "gitBlob": "0fbfd352900f07ffe50db6c14701da07be7b4d38",
+        "sha256": "9e057f4ed22bddf4ef14886c8aea550522b854010b7d19e5d709010f6f907a53"
+      },
+      "incoming76": {
+        "bytes": 7264,
+        "lines": 153,
+        "gitBlob": "9edcec8fffca780706cbde634c35d7929552f9f6",
+        "sha256": "e2ad167bf03a8c4566d720a8bc23d9fff274971b2523397f02ac766d89d8944a"
+      },
+      "candidate": {
+        "bytes": 7264,
+        "lines": 153,
+        "gitBlob": "9edcec8fffca780706cbde634c35d7929552f9f6",
+        "sha256": "e2ad167bf03a8c4566d720a8bc23d9fff274971b2523397f02ac766d89d8944a"
+      },
+      "additions": 103,
+      "deletions": 1,
+      "sourceSizeGuardCap": null,
+      "sourceSizeGuardReason": "C++ extension excluded",
+      "originCommit": "76a227d283ee9ee4d55d894c2b5d11dde64453e3"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "preimage": {
+        "bytes": 13467,
+        "lines": 222,
+        "gitBlob": "bb4aea3f241c402c12d3b1759ddb91226c02070d",
+        "sha256": "ff19621e64b300cbbfee6501990ba5cdbee24a3d967c65f4c756b484d9c8ea43"
+      },
+      "incoming76": {
+        "bytes": 18341,
+        "lines": 300,
+        "gitBlob": "f6b2cd823c4fe2a86089b921479491e98211bfe2",
+        "sha256": "fb02f502b11e59443499e61b63c8b90bd281d86b238d1c2438d3f62faf7bb4a8"
+      },
+      "candidate": {
+        "bytes": 18211,
+        "lines": 294,
+        "gitBlob": "ee4066eaecbf8104c84a8d113eb42d3d6225e33e",
+        "sha256": "b5262755b152afc9be4c203b6da857ab70e639082276bce3cca8f830cda05eb2"
+      },
+      "additions": 93,
+      "deletions": 21,
+      "sourceSizeGuardCap": 800,
+      "sourceSizeGuardReason": "existing default; no baseline amendment",
+      "originCommit": "a02ab70edfdcb4169627e804f0337c9ad6b52af6"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "preimage": {
+        "bytes": 11008,
+        "lines": 207,
+        "gitBlob": "cafad66ab0933e9840ea359cb4a5af76e9aa233f",
+        "sha256": "10feceda1ad2522d1ffa754373cad3c67e65edc6bf046b6ded1d3a1865f981b3"
+      },
+      "incoming76": {
+        "bytes": 14498,
+        "lines": 277,
+        "gitBlob": "a0f14b7f5e6a100e275dc290ef939b55499567cb",
+        "sha256": "f55d081425b6be9f2955a36317e2341bc2e603b749df1546f4aa41ef3d64989d"
+      },
+      "candidate": {
+        "bytes": 14797,
+        "lines": 279,
+        "gitBlob": "8ec365bb41b94d7c238c46e6cb6a8e337b1e16a8",
+        "sha256": "f6b6c1ff8eadd27f68f602767f83625fa00757b4107b271fb5faa189e3c8937f"
+      },
+      "additions": 77,
+      "deletions": 5,
+      "sourceSizeGuardCap": null,
+      "sourceSizeGuardReason": "C++ extension excluded",
+      "originCommit": "a02ab70edfdcb4169627e804f0337c9ad6b52af6"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGate.ts",
+      "preimage": {
+        "bytes": 21782,
+        "lines": 580,
+        "gitBlob": "7172f9d90a97d1db8ebea150def22e1bf3ffb251",
+        "sha256": "f21333c4148f51365619a100962b13166cf45bc3597417ff9d15f05302e43e26"
+      },
+      "incoming76": {
+        "bytes": 22199,
+        "lines": 584,
+        "gitBlob": "a12e497e8439454502ea8ad07c197df213b64cc2",
+        "sha256": "eb1d1c638fd024d5236d0e8469ac515cb9130555d52c2a054e4c5491d8de520b"
+      },
+      "candidate": {
+        "bytes": 22199,
+        "lines": 584,
+        "gitBlob": "a12e497e8439454502ea8ad07c197df213b64cc2",
+        "sha256": "eb1d1c638fd024d5236d0e8469ac515cb9130555d52c2a054e4c5491d8de520b"
+      },
+      "additions": 4,
+      "deletions": 0,
+      "sourceSizeGuardCap": 800,
+      "sourceSizeGuardReason": "existing default; no baseline amendment",
+      "originCommit": "76a227d283ee9ee4d55d894c2b5d11dde64453e3"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.test.ts",
+      "preimage": {
+        "bytes": 4562,
+        "lines": 91,
+        "gitBlob": "a70f955276982ef6f13e1c6f41e3be8f6eccc122",
+        "sha256": "efb43ecea2832cc41a674ab2e36613ed6ba6a5bcb3777f91fa0ca882dd7fd800"
+      },
+      "incoming76": {
+        "bytes": 4745,
+        "lines": 95,
+        "gitBlob": "48d1c9752dddb3e5fa91c6c564912b0474312168",
+        "sha256": "4ad0525d402aac610a867e7011da52a4f85dc7d6055fb048d9c78995187f4778"
+      },
+      "candidate": {
+        "bytes": 4745,
+        "lines": 95,
+        "gitBlob": "48d1c9752dddb3e5fa91c6c564912b0474312168",
+        "sha256": "4ad0525d402aac610a867e7011da52a4f85dc7d6055fb048d9c78995187f4778"
+      },
+      "additions": 5,
+      "deletions": 1,
+      "sourceSizeGuardCap": null,
+      "sourceSizeGuardReason": "test file excluded",
+      "originCommit": "76a227d283ee9ee4d55d894c2b5d11dde64453e3"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateDiagnostics.ts",
+      "preimage": {
+        "bytes": 6314,
+        "lines": 218,
+        "gitBlob": "1717e066d2c2fe7e608ee22f308aa884556afa00",
+        "sha256": "0a7ddbb6776f0f3b7ab37b13fd06e171d9995269d6c7cf9be5754a9b67987b50"
+      },
+      "incoming76": {
+        "bytes": 6380,
+        "lines": 220,
+        "gitBlob": "22cf67a484f0a2a5a2b89639e38515cc0242a21a",
+        "sha256": "d963accfadeb14a93fd5d7e2b934a409212cca40e678b452d011c4a579f29237"
+      },
+      "candidate": {
+        "bytes": 6380,
+        "lines": 220,
+        "gitBlob": "22cf67a484f0a2a5a2b89639e38515cc0242a21a",
+        "sha256": "d963accfadeb14a93fd5d7e2b934a409212cca40e678b452d011c4a579f29237"
+      },
+      "additions": 2,
+      "deletions": 0,
+      "sourceSizeGuardCap": 800,
+      "sourceSizeGuardReason": "existing default; no baseline amendment",
+      "originCommit": "76a227d283ee9ee4d55d894c2b5d11dde64453e3"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "preimage": {
+        "bytes": 25478,
+        "lines": 611,
+        "gitBlob": "d94742582f0cc937118db5ed82c7ffef27bc9d50",
+        "sha256": "ce44f82715e6feefcea527ab6ebd61f0f71476dfd3b15fe449852645d74cc1cf"
+      },
+      "incoming76": {
+        "bytes": 25732,
+        "lines": 614,
+        "gitBlob": "d7a56276a6baa63ee65a357a98fc52c7cfe03bdd",
+        "sha256": "72eb24e9aca12f4bf283625a311cd60ce58c9c5b5c2e7beeaecc3a1b2185f8cc"
+      },
+      "candidate": {
+        "bytes": 25732,
+        "lines": 614,
+        "gitBlob": "d7a56276a6baa63ee65a357a98fc52c7cfe03bdd",
+        "sha256": "72eb24e9aca12f4bf283625a311cd60ce58c9c5b5c2e7beeaecc3a1b2185f8cc"
+      },
+      "additions": 6,
+      "deletions": 3,
+      "sourceSizeGuardCap": 800,
+      "sourceSizeGuardReason": "existing default; no baseline amendment",
+      "originCommit": "76a227d283ee9ee4d55d894c2b5d11dde64453e3"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeVendorGate.ts",
+      "preimage": {
+        "bytes": 13120,
+        "lines": 205,
+        "gitBlob": "bf4ee1f1c73b6ba9885f48dad9c5379fddd422e1",
+        "sha256": "823ed32aac0390101ec1f22a584b7daee4e642e62f2691e8d64085d06df7eb31"
+      },
+      "incoming76": {
+        "bytes": 13138,
+        "lines": 204,
+        "gitBlob": "f704852f8f01b03907502dbaba99fc16bcceeed4",
+        "sha256": "dd37859e4953e3121c80c9a39e4bde5019ba6a6120fbfa138cece23cb3e47dba"
+      },
+      "candidate": {
+        "bytes": 13138,
+        "lines": 204,
+        "gitBlob": "f704852f8f01b03907502dbaba99fc16bcceeed4",
+        "sha256": "dd37859e4953e3121c80c9a39e4bde5019ba6a6120fbfa138cece23cb3e47dba"
+      },
+      "additions": 7,
+      "deletions": 8,
+      "sourceSizeGuardCap": 800,
+      "sourceSizeGuardReason": "existing default; no baseline amendment",
+      "originCommit": "76a227d283ee9ee4d55d894c2b5d11dde64453e3"
+    },
+    {
+      "path": "tools/owned-process-broker/serviceDebugLoop.h",
+      "preimage": {
+        "bytes": 4760,
+        "lines": 89,
+        "gitBlob": "40256b58a3ec8f7cff78c5c2e73cc68a82c6b0a4",
+        "sha256": "51f5e1568d0a97e337e62a5621f0987bd713170b1572ecc1b34f153001bb78a6"
+      },
+      "incoming76": {
+        "bytes": 4891,
+        "lines": 93,
+        "gitBlob": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298",
+        "sha256": "b31ecf2118e467b07bb973736920b10109a03c831a2cc72364c1abdb8973a8d3"
+      },
+      "candidate": {
+        "bytes": 4891,
+        "lines": 93,
+        "gitBlob": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298",
+        "sha256": "b31ecf2118e467b07bb973736920b10109a03c831a2cc72364c1abdb8973a8d3"
+      },
+      "additions": 10,
+      "deletions": 6,
+      "sourceSizeGuardCap": null,
+      "sourceSizeGuardReason": "C++ extension excluded",
+      "originCommit": "76a227d283ee9ee4d55d894c2b5d11dde64453e3"
+    },
+    {
+      "path": "tools/owned-process-broker/serviceScopes.h",
+      "preimage": {
+        "bytes": 10905,
+        "lines": 268,
+        "gitBlob": "7a7fd19445532317d54b24870d598eede0b0024a",
+        "sha256": "78057e8056ce0ed5e83d6848646fc1b16621ddc568425a7720bcde91eae01e33"
+      },
+      "incoming76": {
+        "bytes": 15888,
+        "lines": 376,
+        "gitBlob": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+        "sha256": "cc6b60ac08081c1d14201391e912b1062967dadc25d4633b5329e9524550fb06"
+      },
+      "candidate": {
+        "bytes": 15888,
+        "lines": 376,
+        "gitBlob": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+        "sha256": "cc6b60ac08081c1d14201391e912b1062967dadc25d4633b5329e9524550fb06"
+      },
+      "additions": 120,
+      "deletions": 12,
+      "sourceSizeGuardCap": null,
+      "sourceSizeGuardReason": "C++ extension excluded",
+      "originCommit": "76a227d283ee9ee4d55d894c2b5d11dde64453e3"
+    }
+  ],
+  "pathCount": 11,
+  "totalAdditions": 428,
+  "totalDeletions": 57,
+  "patch": {
+    "bytes": 52325,
+    "lines": 922,
+    "gitBlob": "dd29fedf70528186a450c9ba2d56c16677f081eb",
+    "sha256": "e83a3af60599da49f6ceb30c210c63a4c4d61aad90c08ca2b60c22f45aaa9b82"
+  },
+  "validationExecuted": false,
+  "ciActionsTaken": false,
+  "trackedFilesModified": false,
+  "notes": [
+    "Nine candidate paths equal incoming76. Two exact API blobs replace only the a02 correction in the same paths.",
+    "No reviewed native leaf overlaps the isolated E-H seven-path cut.",
+    "This manifest selects existing incoming bytes; it does not approve unreviewed Desktop/workflow/completion paths or provide a past R1."
+  ]
+}

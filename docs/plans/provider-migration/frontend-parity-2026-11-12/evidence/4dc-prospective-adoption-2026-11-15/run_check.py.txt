@@ -1,0 +1,439 @@
+from pathlib import Path
+import datetime
+import hashlib
+import json
+import re
+import subprocess
+import sys
+import time
+
+root = Path('/workspace/scratch/82d3f9ba6b85')
+repo = root / 'agent-teams-e2e'
+out = root / 'a02-adoption-local'
+assert len(sys.argv) == 3
+stage, operation = sys.argv[1:3]
+assert stage == 'I'
+name = stage + '-' + operation
+
+def ident(raw):
+    return {'bytes': len(raw), 'blob': hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest(),
+            'sha256': hashlib.sha256(raw).hexdigest()}
+
+def digest(path):
+    value = ident(path.read_bytes())
+    return {'bytes': value['bytes'], 'sha256': value['sha256']}
+
+def git(*argv):
+    return subprocess.check_output(['git', *argv], cwd=repo, text=True).strip()
+
+def git_bytes(*argv):
+    return subprocess.check_output(['git', *argv], cwd=repo)
+
+def write_json(path, value):
+    with path.open('x') as stream:
+        json.dump(value, stream, indent=2)
+        stream.write('\n')
+
+def sha(value):
+    return isinstance(value, str) and re.fullmatch('[a-f0-9]{40}', value) is not None
+
+manifest_path = out / 'validation-manifest.json'
+manifest_raw = manifest_path.read_bytes()
+assert ident(manifest_raw)['blob'] == 'c12e7f2c56649cdd8d2d21b08884bb876fd3a6d9'
+manifest = json.loads(manifest_raw)
+host_path = Path(manifest['hostSourceClosure']['path'])
+host_raw = host_path.read_bytes()
+assert ident(host_raw) == {k: manifest['hostSourceClosure'][k] for k in ('bytes', 'blob', 'sha256')}
+expected_host = json.loads(host_raw)
+assert len(expected_host) == 615
+recorder_path = Path(__file__).resolve()
+recorder_raw = recorder_path.read_bytes()
+bindings_path = out / 'stage-bindings.json'
+bindings_raw = bindings_path.read_bytes()
+bindings = json.loads(bindings_raw)
+assert bindings['recorderBlob'] == ident(recorder_raw)['blob']
+binding = bindings['stages'][stage]
+expected_head, expected_tree = binding['head'], binding['tree']
+assert sha(expected_head) and sha(expected_tree) and binding['independentlyReviewed'] is True
+published = bindings['r1Published']
+assert all(sha(published[k]) for k in ('head', 'tree', 'planBlob'))
+assert published['fullReadbackExact'] is True and published['independentlyReviewed'] is True
+command = next(c for c in manifest['commands'] if c['stage'] == stage and c['name'] == operation)
+node = manifest['node']['path']
+cwd = Path(command['cwd'])
+assert cwd == repo
+proof_snapshots = {}
+
+def frozen(spec):
+    path = Path(spec['path'])
+    raw = path.read_bytes()
+    assert ident(raw) == {k: spec[k] for k in ('bytes', 'blob', 'sha256')}, str(path)
+    return raw
+
+def save_proof_identity(path):
+    path = Path(path)
+    value = ident(path.read_bytes())
+    key = str(path)
+    if key in proof_snapshots:
+        assert proof_snapshots[key] == value, key
+    proof_snapshots[key] = value
+    return value
+
+def resolved_argv(spec):
+    result = [value.replace('${R1_DOCS_HEAD}', published['head'])
+              .replace('${I_HEAD}', bindings['stages']['I']['head'] or '') for value in spec['argv']]
+    assert not any('${' in value or value == '' for value in result)
+    return result
+
+argv = resolved_argv(command)
+
+def reference_files():
+    for spec in manifest['references'].values():
+        frozen(spec)
+    for spec in manifest['builtOutputPolicy']['proofFiles'].values():
+        frozen(spec)
+    assert manifest_path.read_bytes() == manifest_raw
+    assert host_path.read_bytes() == host_raw
+    assert recorder_path.read_bytes() == recorder_raw
+    assert bindings_path.read_bytes() == bindings_raw
+    frozen(published['canonicalR1'])
+    for filename, expected in proof_snapshots.items():
+        assert ident(Path(filename).read_bytes()) == expected, filename
+
+def publication_state():
+    doc = manifest['documentationParent']
+    previous = manifest['referenceStageH']
+    assert doc['parentHead'] == previous['head']
+    assert git('rev-parse', previous['head'] + '^{tree}') == previous['tree']
+    assert git('show', '-s', '--format=%P', previous['head']).split() == previous['parents']
+    assert git('rev-parse', published['head'] + '^{tree}') == published['tree']
+    assert git('show', '-s', '--format=%P', published['head']).split() == [doc['parentHead']]
+    assert published['parents'] == [doc['parentHead']]
+    changed = git('diff', '--name-only', doc['parentHead'], published['head']).splitlines()
+    assert changed and all(path.startswith(doc['allowedChangedPrefix']) for path in changed)
+    assert git('rev-parse', published['head'] + ':' + doc['planPath']) == published['planBlob']
+    assert git('rev-parse', published['head'] + ':' + doc['unchangedPlan30Path']) == doc['unchangedPlan30Blob']
+    plan = git_bytes('show', published['head'] + ':' + doc['planPath'])
+    assert plan.startswith(git_bytes('cat-file', 'blob', doc['prefixBlob']))
+    for key in doc['requiredReviewedAppendices']:
+        assert plan.count(frozen(manifest['references'][key])) == 1, key
+    canonical = frozen(published['canonicalR1'])
+    assert canonical and plan.count(canonical) == 1
+    incoming = manifest['incoming']
+    assert git('rev-parse', incoming['head'] + '^{tree}') == incoming['tree']
+    assert git('show', '-s', '--format=%P', incoming['head']).split() == incoming['parents']
+    disposition = manifest['incomingHistoryDisposition']
+    baseline = disposition['sourceBaseline']
+    intermediate = disposition['documentationIntermediate']
+    assert incoming['parents'] == [intermediate['head']]
+    assert intermediate['parents'] == [baseline['head']]
+    for source in (baseline, intermediate):
+        assert git('rev-parse', source['head'] + '^{tree}') == source['tree']
+        assert git('show', '-s', '--format=%P', source['head']).split() == source['parents']
+    assert git('diff', '--name-only', baseline['head'], intermediate['head']).splitlines() == [disposition['planPath']]
+    assert sorted(git('diff', '--name-only', baseline['head'], incoming['head']).splitlines()) == disposition['allowedChangedPaths']
+    assert sorted(git('diff', '--name-only', intermediate['head'], incoming['head']).splitlines()) == disposition['allowedChangedPaths']
+    before_plan = git_bytes('show', baseline['head'] + ':' + disposition['planPath'])
+    intermediate_plan = git_bytes('show', intermediate['head'] + ':' + disposition['planPath'])
+    incoming_plan = git_bytes('show', incoming['head'] + ':' + disposition['planPath'])
+    assert ident(before_plan) == disposition['baselinePlan']
+    assert ident(intermediate_plan) == disposition['intermediatePlan']
+    assert ident(incoming_plan) == disposition['incomingPlan']
+    assert intermediate_plan.startswith(before_plan) and incoming_plan.startswith(intermediate_plan)
+    suffix = incoming_plan[len(before_plan):]
+    assert ident(suffix) == disposition['appendOnlySuffix']
+    assert len(suffix.splitlines()) == disposition['suffixPhysicalLines'] == 65
+    assert suffix and plan.count(suffix) == 1
+    for path in disposition['diagnosticPaths']:
+        selected = next(row for row in manifest['integrationLeaves'] if row['path'] == path)
+        assert ident(git_bytes('show', incoming['head'] + ':' + path)) == selected['I'], path
+
+def source_state():
+    reference_files()
+    publication_state()
+    assert git('rev-parse', 'HEAD') == expected_head
+    assert git('rev-parse', 'HEAD^{tree}') == expected_tree
+    expected_parents = [published['head'], manifest['incoming']['head']]
+    assert binding['parents'] == expected_parents
+    assert git('show', '-s', '--format=%P', 'HEAD').split() == expected_parents
+    assert git('status', '--short') == ''
+    changes = git('diff', '--name-only', published['head'], expected_head).splitlines()
+    assert sorted(changes) == sorted(manifest['stageDiffs']['I']['paths']), changes
+    assert len(changes) == manifest['integrationLeafCount'] == 20
+    tree = {}
+    previous_tree = {}
+    for head, target in (('HEAD', tree), (manifest['referenceStageH']['head'], previous_tree)):
+        for line in git('ls-tree', '-r', head).splitlines():
+            fields, path = line.split('\t', 1)
+            mode, kind, blob = fields.split()
+            target[path] = (mode, kind, blob)
+    selected = []
+    for spec in manifest['selectedSourceLeaves']:
+        path = spec['path']
+        actual = ident((repo / path).read_bytes())
+        assert actual == spec['I'], path
+        assert tree[path] == ('100644', 'blob', actual['blob']), path
+        if spec['HReference'] is None:
+            assert path not in previous_tree, path
+        else:
+            assert previous_tree[path] == ('100644', 'blob', spec['HReference']['blob']), path
+            assert ident(git_bytes('show', manifest['referenceStageH']['head'] + ':' + path)) == spec['HReference'], path
+        selected.append({'path': path, **actual})
+    assert len(selected) == manifest['selectedSourceCount'] == 76
+    integration = []
+    for spec in manifest['integrationLeaves']:
+        path = spec['path']
+        actual = ident((repo / path).read_bytes())
+        assert actual == spec['I'] and tree[path] == ('100644', 'blob', actual['blob']), path
+        integration.append({'path': path, **actual})
+    host_paths = sorted(path for path in tree if path.startswith('packages/legacy-agent-host/src/'))
+    assert host_paths == [row['path'] for row in expected_host]
+    for row in expected_host:
+        path = row['path']
+        assert tree[path] == (row['mode'], 'blob', row['blob'])
+        assert ident((repo / path).read_bytes()) == {k: row[k] for k in ('bytes', 'blob', 'sha256')}, path
+    def dependency_rows(rows):
+        result = []
+        for row in rows:
+            actual = {'path': row['path'], 'realpath': str((repo / row['path']).resolve()), **digest(repo / row['path'])}
+            assert actual == row, row['path']
+            result.append(actual)
+        return result
+    deps = dependency_rows(manifest['selectedDependencyInputs'])
+    yaml_deps = dependency_rows(manifest['additionalYamlDependencyInputs'])
+    assert len(deps) == manifest['dependencyCount'] == 17
+    assert len(yaml_deps) == manifest['additionalYamlDependencyCount'] == 77
+    assert len(deps) + len(yaml_deps) == manifest['totalSelectedDependencyCount'] == 94
+    yaml_root = repo / 'node_modules/yaml'
+    yaml_files = [yaml_root / 'package.json', yaml_root / 'bin.mjs'] + sorted(
+        path for path in (yaml_root / 'dist').rglob('*') if path.is_file() and path.suffix in ('.js', '.mjs'))
+    assert [path.relative_to(repo).as_posix() for path in yaml_files] == [row['path'] for row in yaml_deps]
+    inventory = json.loads(frozen(manifest['references']['yamlInputs']))
+    assert inventory['inputs'] == yaml_deps and inventory['inputCount'] == 77
+    assert (repo / 'packages/legacy-agent-host/node_modules/@agent-teams/task-change-ledger').resolve() == repo / 'packages/task-change-ledger'
+    for path in manifest['builtOutputPolicy']['ownedDirectories']:
+        assert (repo / path).resolve() == repo / path
+    return {'selectedSourceLeaves': selected, 'selectedDependencyInputs': deps,
+            'additionalYamlDependencyInputs': yaml_deps, 'integrationLeaves': integration,
+            'hostSourceCount': len(expected_host), 'hostSourceClosureSHA256': ident(host_raw)['sha256'],
+            'clean': True, 'sourceHead': expected_head, 'sourceTree': expected_tree, 'parents': expected_parents}
+
+def outputs():
+    rows = []
+    for dirname in manifest['builtOutputPolicy']['ownedDirectories']:
+        directory = repo / dirname
+        assert directory.resolve() == directory
+        for path in sorted(directory.rglob('*')):
+            assert not path.is_symlink(), str(path)
+            if path.is_file():
+                rows.append({'path': path.relative_to(repo).as_posix(), **digest(path)})
+    return sorted(rows, key=lambda row: row['path'])
+
+def same_d_build(current):
+    policy = manifest['builtOutputPolicy']
+    old_manifest = json.loads(frozen(manifest['references']['oldManifest']))
+    assert old_manifest['selectedDependencyInputs'] == manifest['selectedDependencyInputs']
+    assert old_manifest['builtOutputPolicy']['ownedDirectories'] == policy['ownedDirectories']
+    original_source = manifest['referenceStageD']
+    for family in ('ledger', 'host'):
+        rec = json.loads(frozen(policy['proofFiles'][family + 'Metadata']))
+        pre_raw = frozen(policy['proofFiles'][family + 'Preflight'])
+        pre = json.loads(pre_raw)
+        raw_log = frozen(policy['proofFiles'][family + 'Log'])
+        snapshot_raw = frozen(policy['proofFiles'][family + 'Outputs'])
+        saved = json.loads(snapshot_raw)
+        build = next(c for c in old_manifest['commands'] if c['stage'] == 'D' and c['name'] == family + '-build')
+        assert rec['sourceHead'] == original_source['head'] and rec['sourceTree'] == original_source['tree']
+        assert rec['parents'] == original_source['parents'] and rec['stage'] == 'D'
+        assert rec['commandName'] == 'D-' + family + '-build'
+        assert rec['argv'] == build['argv'] and rec['cwd'] == build['cwd']
+        assert rec['nodeSHA256'] == manifest['node']['sha256']
+        assert rec['nodeVersion'] == manifest['node']['expectedVersion']
+        assert rec['exitCode'] == 0 and rec['postflightExact'] is True and rec['freshSelectedOutputs'] is True
+        assert rec['preflightMetadataSHA256'] == ident(pre_raw)['sha256']
+        assert rec['logBytes'] == len(raw_log) and rec['logSHA256'] == ident(raw_log)['sha256']
+        assert pre['sourceHead'] == original_source['head'] and pre['sourceTree'] == original_source['tree']
+        assert pre['hostSourceCount'] == 615 and pre['hostSourceClosureSHA256'] == ident(host_raw)['sha256']
+        assert pre['selectedDependencyInputs'] == manifest['selectedDependencyInputs']
+        assert pre['selectedSourceLeaves'] == [{'path': row['path'], **row['D']} for row in old_manifest['selectedSourceLeaves']]
+        assert rec['outputInventoryAfter']['bytes'] == len(snapshot_raw)
+        assert rec['outputInventoryAfter']['sha256'] == ident(snapshot_raw)['sha256']
+        assert len(saved) == rec['outputInventoryAfter']['count'] == policy['count'] == 1446
+        assert len({row['path'] for row in saved}) == len(saved)
+        if family == 'ledger':
+            assert [row for row in current if row['path'].startswith('packages/task-change-ledger/')] == [
+                row for row in saved if row['path'].startswith('packages/task-change-ledger/')]
+        else:
+            assert current == saved, 'Built outputs differ from the complete source-bound D Host inventory'
+    return {'sourceHead': original_source['head'], 'sourceTree': original_source['tree'],
+            'outputCount': len(current), 'reusedOnly': True,
+            'outputInventory': policy['proofFiles']['hostOutputs'],
+            'originalHostBuildMetadata': policy['proofFiles']['hostMetadata'],
+            'originalLedgerBuildMetadata': policy['proofFiles']['ledgerMetadata']}
+
+def read_record(record_name, expected_exit):
+    previous_stage, previous_operation = record_name.split('-', 1)
+    spec = next(c for c in manifest['commands'] if c['stage'] == previous_stage and c['name'] == previous_operation)
+    meta_path = out / (record_name + '-metadata.json')
+    rec = json.loads(meta_path.read_bytes())
+    pre_path = out / (record_name + '-preflight.json')
+    pre_raw = pre_path.read_bytes()
+    pre = json.loads(pre_raw)
+    assert rec['exitCode'] == expected_exit and rec['postflightExact'] is True
+    assert rec['sourceHead'] == bindings['stages'][previous_stage]['head']
+    assert rec['sourceTree'] == bindings['stages'][previous_stage]['tree']
+    assert rec['commandName'] == record_name and rec['stage'] == previous_stage
+    assert rec['argv'] == resolved_argv(spec) and rec['cwd'] == spec['cwd']
+    assert rec['nodeSHA256'] == manifest['node']['sha256'] and rec['nodeVersion'] == manifest['node']['expectedVersion']
+    assert rec['validationManifest'] == ident(manifest_raw) and rec['recorder'] == ident(recorder_raw)
+    assert rec['nonBuildOutputBytesPreserved'] is True and rec['newBuildPerformed'] is False
+    assert rec['preflightMetadataSHA256'] == ident(pre_raw)['sha256']
+    assert pre['stageBinding'] == bindings['stages'][previous_stage] and pre['r1Published'] == published
+    assert pre['validationManifest'] == ident(manifest_raw) and pre['recorder'] == ident(recorder_raw)
+    assert digest(out / (record_name + '.log')) == {'bytes': rec['logBytes'], 'sha256': rec['logSHA256']}
+    for path in (meta_path, pre_path, out / (record_name + '.log')):
+        save_proof_identity(path)
+    for filename, identity in pre['proofSnapshots'].items():
+        assert ident(Path(filename).read_bytes()) == identity, filename
+        save_proof_identity(filename)
+    return rec
+
+def prior_h_validation():
+    policy = manifest['priorValidation']
+    approved = bindings['priorH']
+    h = manifest['referenceStageH']
+    assert approved['head'] == h['head'] and approved['tree'] == h['tree']
+    assert approved['rootApproved'] is True and approved['independentApproved'] is True
+    assert approved['stageBindings']['path'] == policy['bindingPath']
+    old_bindings = json.loads(frozen(approved['stageBindings']))
+    save_proof_identity(approved['stageBindings']['path'])
+    old_manifest_raw = frozen(manifest['references']['priorManifest'])
+    old_manifest = json.loads(old_manifest_raw)
+    old_recorder_raw = frozen(manifest['references']['priorRecorder'])
+    assert old_bindings['recorderBlob'] == ident(old_recorder_raw)['blob']
+    old_h = old_bindings['stages']['H']
+    assert old_h['head'] == h['head'] and old_h['tree'] == h['tree'] and old_h['parents'] == h['parents']
+    assert old_h['independentlyReviewed'] is True
+    assert [record['name'] for record in approved['records']] == policy['records']
+    review_spec = manifest['references'][policy['independentHReviewReference']]
+    review = json.loads(frozen(review_spec))
+    assert review['verdict'] == 'APPROVE' and review['stage'] == 'H'
+    assert review['head'] == h['head'] and review['tree'] == h['tree'] and review['parents'] == h['parents']
+    assert [item['name'] for item in review['commands']] == [name for name in policy['records'] if name.startswith('H-')]
+    assert review['selectedSourceCount'] == 32 and review['hostSourceCount'] == 615
+    assert review['selectedDependencyCount'] == 17 and review['builtOutputCount'] == 1446
+    assert review['newBuildPerformed'] is False and review['nodeSHA256'] == manifest['node']['sha256']
+    save_proof_identity(review_spec['path'])
+    prior_finished = None
+    retained = []
+    for row in approved['records']:
+        record_name = row['name']
+        old_stage, old_operation = record_name.split('-', 1)
+        original = next(c for c in old_manifest['commands'] if c['stage'] == old_stage and c['name'] == old_operation)
+        original_argv = [value.replace('${R1_DOCS_HEAD}', old_bindings['r1Published']['head'])
+                         .replace('${H_HEAD}', old_h['head']) for value in original['argv']]
+        for field, suffix in (('metadata', '-metadata.json'), ('preflight', '-preflight.json'), ('log', '.log')):
+            assert row[field]['path'] == str(Path(policy['directory']) / (record_name + suffix))
+        meta_raw = frozen(row['metadata'])
+        pre_raw = frozen(row['preflight'])
+        raw_log = frozen(row['log'])
+        rec, pre = json.loads(meta_raw), json.loads(pre_raw)
+        old_binding = old_bindings['stages'][old_stage]
+        assert old_binding['independentlyReviewed'] is True
+        assert rec['sourceHead'] == old_binding['head'] and rec['sourceTree'] == old_binding['tree']
+        assert git('rev-parse', rec['sourceHead'] + '^{tree}') == rec['sourceTree']
+        assert rec['parents'] == old_binding['parents']
+        assert git('show', '-s', '--format=%P', rec['sourceHead']).split() == rec['parents']
+        assert rec['stage'] == old_stage and rec['commandName'] == record_name
+        assert rec['exitCode'] == 0 and rec['postflightExact'] is True
+        assert rec['newBuildPerformed'] is False and rec['nonBuildOutputBytesPreserved'] is True
+        assert rec['argv'] == original_argv and rec['cwd'] == original['cwd']
+        assert rec['nodeVersion'] == manifest['node']['expectedVersion']
+        assert rec['nodeSHA256'] == manifest['node']['sha256']
+        assert rec['validationManifest'] == ident(old_manifest_raw) and rec['recorder'] == ident(old_recorder_raw)
+        assert rec['preflightMetadataSHA256'] == ident(pre_raw)['sha256']
+        assert rec['logBytes'] == len(raw_log) and rec['logSHA256'] == ident(raw_log)['sha256']
+        assert pre['sourceHead'] == rec['sourceHead'] and pre['sourceTree'] == rec['sourceTree']
+        assert pre['stageBinding'] == old_binding and pre['r1Published'] == old_bindings['r1Published']
+        assert pre['selectedDependencyInputs'] == manifest['selectedDependencyInputs']
+        assert pre['selectedSourceLeaves'] == [{'path': item['path'], **item[old_stage]} for item in old_manifest['selectedSourceLeaves']]
+        assert pre['hostSourceCount'] == 615 and pre['hostSourceClosureSHA256'] == ident(host_raw)['sha256']
+        if old_stage == 'H':
+            reviewed = next(item for item in review['commands'] if item['name'] == record_name)
+            assert reviewed['metadata'] == ident(meta_raw) and reviewed['preflight'] == ident(pre_raw)
+            assert reviewed['log'] == ident(raw_log) and reviewed['postflightExact'] is True
+            for key in ('sourceHead', 'sourceTree', 'argv', 'startedAtUTC', 'finishedAtUTC', 'elapsedSeconds', 'exitCode'):
+                assert reviewed[key] == rec[key], record_name + ': ' + key
+        start, finish = (datetime.datetime.fromisoformat(rec[key]) for key in ('startedAtUTC', 'finishedAtUTC'))
+        assert start <= finish and (prior_finished is None or prior_finished <= start)
+        prior_finished = finish
+        for field in ('metadata', 'preflight', 'log'):
+            save_proof_identity(row[field]['path'])
+        for filename, identity in pre['proofSnapshots'].items():
+            assert ident(Path(filename).read_bytes()) == identity, filename
+            save_proof_identity(filename)
+        retained.append({'record': record_name, 'sourceHead': rec['sourceHead'], 'sourceTree': rec['sourceTree'],
+                         'metadata': ident(meta_raw), 'preflight': ident(pre_raw), 'log': ident(raw_log)})
+    return {'referenceHead': h['head'], 'referenceTree': h['tree'],
+            'rootApproved': True, 'independentApproved': True, 'records': retained}
+
+pre_path = out / (name + '-preflight.json')
+log_path = out / (name + '.log')
+meta_path = out / (name + '-metadata.json')
+assert not any(path.exists() for path in (pre_path, log_path, meta_path)), 'No replay or overwrite of an actual command'
+before = source_state()
+assert digest(Path(node))['sha256'] == manifest['node']['sha256']
+version = subprocess.check_output([node, '--version'], text=True).strip()
+assert version == manifest['node']['expectedVersion']
+before_outputs = outputs()
+build_join = same_d_build(before_outputs)
+prior_validation = prior_h_validation()
+for requirement in command['requires']:
+    record = read_record(requirement['record'], requirement['exitCode'])
+reference_files()
+preflight = {**before, 'stage': stage, 'commandName': name, 'cwd': str(cwd), 'argv': argv,
+             'nodePath': node, 'nodeVersion': version, 'nodeSHA256': manifest['node']['sha256'],
+             'validationManifest': ident(manifest_raw), 'recorder': ident(recorder_raw), 'hostClosure': ident(host_raw),
+             'stageBinding': binding, 'stageBindingsSHA256': ident(bindings_raw)['sha256'], 'r1Published': published,
+             'buildReuse': build_join, 'priorHValidation': prior_validation, 'builtOutputsCountBefore': len(before_outputs),
+             'proofSnapshots': dict(proof_snapshots), 'dependencyLimit': manifest['dependencyLimit']}
+write_json(pre_path, preflight)
+start = datetime.datetime.now(datetime.timezone.utc).isoformat()
+clock = time.monotonic()
+with log_path.open('xb') as log:
+    result = subprocess.run(argv, cwd=cwd, stdout=log, stderr=subprocess.STDOUT)
+elapsed = time.monotonic() - clock
+end = datetime.datetime.now(datetime.timezone.utc).isoformat()
+after_outputs = None
+after = None
+postflight_error = None
+outputs_preserved = False
+postflight = False
+try:
+    after_outputs = outputs()
+    after = source_state()
+    same_d_build(after_outputs)
+    outputs_preserved = after_outputs == before_outputs
+    postflight = (after == before and outputs_preserved
+                  and digest(Path(node))['sha256'] == manifest['node']['sha256'])
+except Exception as error:
+    postflight_error = type(error).__name__ + ': ' + str(error)
+metadata = {'stage': stage, 'commandName': name, 'sourceHead': expected_head, 'sourceTree': expected_tree,
+            'parents': binding['parents'], 'cwd': str(cwd), 'argv': argv, 'nodeVersion': version,
+            'nodeSHA256': manifest['node']['sha256'], 'startedAtUTC': start, 'finishedAtUTC': end,
+            'elapsedSeconds': elapsed, 'exitCode': result.returncode,
+            'preflightMetadataSHA256': digest(pre_path)['sha256'], 'logBytes': log_path.stat().st_size,
+            'logSHA256': digest(log_path)['sha256'], 'postflightExact': postflight,
+            'postflightError': postflight_error, 'nonBuildOutputBytesPreserved': outputs_preserved,
+            'builtOutputsCountAfter': None if after_outputs is None else len(after_outputs),
+            'selectedSourceCount': len(before['selectedSourceLeaves']), 'hostSourceCount': len(expected_host),
+            'selectedDependencyCount': len(before['selectedDependencyInputs']),
+            'additionalYamlDependencyCount': len(before['additionalYamlDependencyInputs']),
+            'totalSelectedDependencyCount': len(before['selectedDependencyInputs']) + len(before['additionalYamlDependencyInputs']),
+            'validationManifest': ident(manifest_raw), 'recorder': ident(recorder_raw),
+            'newBuildPerformed': False, 'reusedBuild': build_join}
+write_json(meta_path, metadata)
+print(json.dumps(metadata, indent=2))
+print(log_path.read_text(errors='replace')[-18000:])
+assert postflight, 'Original command exit retained, source/dependency/build postflight differs'
+raise SystemExit(result.returncode)

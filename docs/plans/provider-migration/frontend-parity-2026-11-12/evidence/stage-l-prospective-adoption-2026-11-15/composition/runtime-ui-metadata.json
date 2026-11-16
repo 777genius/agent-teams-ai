@@ -1,0 +1,73 @@
+{
+  "kind": "Prospective one-file exact source composition; no source application or execution",
+  "sourceHead": "35cbd6e99b620e9b41802af936143d900f5e2aca",
+  "sourceEquivalentDocsHeads": [
+    "71d58a50edd4c8fbb8a49412f2beebef061e961a",
+    "1f9242563bec2641b25077c3aa83a999bd7f4871"
+  ],
+  "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+  "preimage": {
+    "bytes": 63953,
+    "blob": "345dc9a6b3fb9d197eaf2982e60840682d7b8fbd",
+    "sha256": "62be20083316c423e9f0814593aa8815b7abd56507138e84a473de3cd8791c92",
+    "lines": 739
+  },
+  "candidate": {
+    "bytes": 63441,
+    "blob": "8740d94021dd031b0be0248bc8654576484e6d1d",
+    "sha256": "f1c7645f19d8b4ab08da39a248ebff08b896fe85b49df0be1be945b24650e820",
+    "lines": 732
+  },
+  "delta": {
+    "insertions": 7,
+    "deletions": 14,
+    "bytes": -512,
+    "lines": -7
+  },
+  "physicalLineCap": 800,
+  "preservedKCorrection": {
+    "bytes": 57268,
+    "blob": "069111cf2e035c084d54caa0bf3753b47c86b5ba",
+    "sha256": "8ebfdb03d72c73cef19456fd8f74c6c2b7c671e0733edd996a61b9faedd3d411",
+    "lines": 659,
+    "original27Preimage": {
+      "bytes": 57780,
+      "blob": "cb3974254caf54d40d560eff2ad5419adcedae3c",
+      "sha256": "20d8cec4bfc143b51e6df5bce01c55fa3f4f7f5fc51973ce2bea5cad7eda3f12",
+      "lines": 666
+    },
+    "fullOriginal27ToKRecipeExact": true
+  },
+  "reconstruction": {
+    "recipe": "Three exact unique replacements reproduced the entire published K correction from its original27 preimage; apply the same three replacements to full incoming35. No other incoming bytes change.",
+    "strictForwardUnifiedPatchEqualsCandidate": true,
+    "strictReverseUnifiedPatchEqualsFullIncoming": true,
+    "fullUniqueReplacementReverseEqualsIncoming": true,
+    "patch": {
+      "bytes": 3433,
+      "blob": "6aabc88b8f3552516e8d8afb08b1140985bdca20",
+      "sha256": "07658ebe656d95c81913288f04a2706d49d2d9cf998ff2a413c638e789353eb3"
+    }
+  },
+  "semantics": [
+    "Preserve incoming35 data.kind includes thinking, exact eventId/sequence/kind and hostLogAnchor identity checks, including its captured leadSourceId.",
+    "Preserve all incoming35 partial/completed Thinking, filter, tool, owner/source, copy, reload, counters, no-replay, no-stderr-to-task and cleanup assertions outside the exact old incorrect Task pre branch.",
+    "Reuse actual rich-log DOM observation for both Task Activity and Task Log Stream within their original two iterations.",
+    "For Task only, require a freshly queried unique expanded source header in the existing final waitRead to equal the previously checked title and return its DOM-derived text as rendered.source.",
+    "Non-Task calls omit sourceTitle and issue no new source-header query.",
+    "Existing Task title/member/generation read, disclosure click and each later original business/provider/input/journal equality assertion remain byte-exact.",
+    "Existing waits, budgets, owner checks, scenario actions and effect counts stay as in the two reviewed parents; this is not an implementation of1f planned scheduled changes."
+  ],
+  "qualification": {
+    "sourceReviewOnly": true,
+    "projectOrNativeExecution": false,
+    "actualRedOrGreenClaim": false,
+    "unreferencedCandidateOnly": true,
+    "wholeResultingOriginalRuntimeUiAndRequiredChecksRemainMandatory": true
+  },
+  "sourceLimits": [
+    "K27 alone is distinct from incoming35 with its checked Thinking archives and normalization. This composition does not independently qualify that atomic pair.",
+    "No new row/cardinality relaxation, synthetic source field or cached-header substitution.",
+    "Fresh source field is derived during the existing final observation and does not make separate identity/geometry observations atomic."
+  ]
+}

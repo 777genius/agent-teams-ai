@@ -1,0 +1,15 @@
+{
+  "observedUtc": "2026-11-15T23:28:31.867782+00:00",
+  "limits": "Read after environment returned, no pre-attempt event counters are available and no cause is attributed.",
+  "/proc/meminfo": "MemTotal:       10206472 kB\nMemFree:         8611620 kB\nMemAvailable:    9349644 kB\nBuffers:           64816 kB\nCached:            99564 kB",
+  "/proc/self/cgroup": "0::/\n",
+  "/sys/fs/cgroup/memory.events": {
+    "error": "[Errno 2] No such file or directory: '/sys/fs/cgroup/memory.events'"
+  },
+  "/sys/fs/cgroup/memory.current": {
+    "error": "[Errno 2] No such file or directory: '/sys/fs/cgroup/memory.current'"
+  },
+  "/sys/fs/cgroup/memory.max": {
+    "error": "[Errno 2] No such file or directory: '/sys/fs/cgroup/memory.max'"
+  }
+}

@@ -1,0 +1,5 @@
+## Original General CI terminal observations after the I cutoff
+
+The original General workflow wrapper observations for source4dc (run43765103146), source332 (run43766707892) and source6e90 (run43768057449) each contain15 terminal jobs:12 cancelled and3 skipped. The first two snapshots were observed at22:00:40Z and22:13:55Z; the6e90 wrapper result was retained no later than22:20:57Z, with no more precise request clock recorded. All terminal cohorts were removed from further polling.
+
+The attached JSON files preserve the exact decoded tool objects, including names and job IDs. They are latest-attempt first-page wrapper data, not HTTP wire bytes or full job logs; null steps are not proof of zero work. Neither cancellation cause nor absence of partial work is inferred. These statuses establish no test PASS, no native/frontend parity and no qualification of I or J. A queued newer cohort is tracked separately and is not an owner blocker; no run was rerun, dispatched or cancelled by this observation.

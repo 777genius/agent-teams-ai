@@ -1,0 +1,27 @@
+{
+  "record": "G-journal-green",
+  "exitCode": 0,
+  "total": 115,
+  "pass": 115,
+  "fail": 0,
+  "skip": 0,
+  "cancelled": 0,
+  "rootApproved": true,
+  "independentApproved": true,
+  "sourceHead": "387fa7ab81ddd57bdd274f763b8be90cfaaae484",
+  "sourceTree": "0bf635e84287ce152a542bc4c06f25ec70b85dcb",
+  "logSHA256": "eef1f40546520534fc46a878b70762e6280c3c943df44b22ede84425ce7e5841",
+  "metadataSHA256": "a9744f9906caf3298d999dddd0d3c222d04cef4a979710a94601145e9abd26c7",
+  "independentReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/reconciled-c28-local/G-independent-actual-green-review.json",
+    "bytes": 3191,
+    "blob": "c5ba10a6d1f60589b1e2e792d64aa0ceb1ec50a0",
+    "sha256": "f9391f4b6e7a5415b81be75186a13754901627fa9978559a3b60a09c600bc427"
+  },
+  "limits": [
+    "Complete original eight helper files and actual finite fixtures only; no native/Windows/macOS/UI qualification.",
+    "The three formerly failing cases now reach and pass their post-rejection assertions; those assertions remain historically unexecuted at E.",
+    "Full immutable D output inventory reused; no G build claim or full dependency payload census.",
+    "Incoming76/a02 remain unadopted by this isolated source."
+  ]
+}

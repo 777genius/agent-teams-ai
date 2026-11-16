@@ -1,0 +1,365 @@
+{
+  "result": "APPROVE",
+  "role": "root complete actual published L docs readback",
+  "head": "6341437d2344bbba9cf63640d90502188216e759",
+  "tree": "bc5b96736dd7468d0fe436d8202eef9be92adf4b",
+  "parents": [
+    "e3b661974cb7131cd3b1f7b6eaf6ede647b326f4"
+  ],
+  "allPayloadBytesReadBackExact": true,
+  "files": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 1167540,
+      "blob": "be6b143fa7101fd78bcc8f8262f0e35343d42f9c",
+      "sha256": "f7bf3490d87cf9c7af9578d0d4862bd82cafc59b4095e2362f9dd0c86952edca"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md",
+      "bytes": 36690,
+      "blob": "2305bbd7b340418f82b39e5bdb28f302735f7237",
+      "sha256": "4ed58ea26bab62673809a5c123a85492355671b58803b273a7d9757fa83d59b1"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md",
+      "bytes": 26918,
+      "blob": "f5176d68c3e9fa81472d0a81f0cb324a210a4854",
+      "sha256": "37b6f1e4e05970db1acd1cb8c1edbc0ba99e087bd48f96a80b712d99280efbb5"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-build-failure-2026-11-15/Plan29-appendix-v2.md",
+      "bytes": 5642,
+      "blob": "e801ccaf08bc7ea68000b120fdc6fc24e7890831",
+      "sha256": "e0fab4d3b296248c26ae288e2f0752f3a7b977950a9ba3b914c2d071849e35d5"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-build-failure-2026-11-15/inventory-v2.json",
+      "bytes": 58745,
+      "blob": "38366678b82dbeabe391279fdf4db27c599ff1a6",
+      "sha256": "85e1ab972d8df25825e7e33379be3123e582f0503d12a92ea36c3dcdd784f034"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-build-failure-2026-11-15/proofs/independent-actual-review.json",
+      "bytes": 6812,
+      "blob": "7f56f0ab2958f62e41401b5054945ad9a24a1273",
+      "sha256": "38d4f5b508baba0c5c05432004e68b467024e03a256018d3cd10782d804a5f17"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-build-failure-2026-11-15/proofs/independent-published-docs-review.json",
+      "bytes": 24669,
+      "blob": "049a14269f52c8f81cf70a3f21e19490ca116bd3",
+      "sha256": "2234709192e9f05dbafd91ceae9bb0a7ddad72bc14bc9a7d4c5f42c0f493cbe8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-build-failure-2026-11-15/proofs/independent-published-source-review.json",
+      "bytes": 6477,
+      "blob": "7fb2bef17a431e0fb4411be9d287ef6723a99771",
+      "sha256": "fcc97aa6e0e21b86f25f1d4d6a7706107893d0f92e98c90513202ca354fadd2c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-build-failure-2026-11-15/raw/K-host-build-metadata.json",
+      "bytes": 2903,
+      "blob": "9ec6a5e321a5ac58f3738a4b8ff35aeb3633c618",
+      "sha256": "e245c64d0822872477d794601b1efd2a39a5c04196ffce7f86e0e19829aba7e5"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-build-failure-2026-11-15/raw/K-host-build-preflight.json",
+      "bytes": 144191,
+      "blob": "431597074dfd64d3b0034bc2134b3ef97e26cbce",
+      "sha256": "1c02d4c714299c0335a413486b230df78e5e743edad7b31393a1588d0eb759ba"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-build-failure-2026-11-15/raw/K-host-build.log",
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-build-failure-2026-11-15/raw/stage-bindings.json",
+      "bytes": 3213,
+      "blob": "22eefb047f14c9c3d2c3095531b0d98e52aba5cf",
+      "sha256": "070a7e982913cecad93f261bf62693f7fbbefb0d53186124200c24878bfa18ff"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/canonical-R1.md",
+      "bytes": 16135,
+      "blob": "43b41001269e32ccb6f3c4d4483faea7c63bc9cd",
+      "sha256": "1f517f360c100a8f5dc3bd12e1bd8c896dfa1af3f14af3541007c99fe7812d4a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/composition/runtime-team-test-metadata.json",
+      "bytes": 2912,
+      "blob": "c0c91ca17f6bccad4d35874328ac043b3a4b7d64",
+      "sha256": "a1b7ae5ce0ed1fb3dbaa598f92dcc3e2841334d052bd42f3649f6fa96a608314"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/composition/runtime-team-test.patch",
+      "bytes": 9544,
+      "blob": "354b8d40a747e7156ba185caabdec0dfe9aaeff6",
+      "sha256": "fa1cda07fb42098bb1debf280175c3227db07a104082a9986036bb23f9dc814b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/composition/runtime-ui-metadata.json",
+      "bytes": 3735,
+      "blob": "d6f6e7eba76588700e19a5da551178d1d2f71e5b",
+      "sha256": "afa219b93b16a51aa2dd6563f7dfd241a09aa4c632afbb3cf5e9981e2a6b4878"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/composition/runtime-ui.patch",
+      "bytes": 3433,
+      "blob": "6aabc88b8f3552516e8d8afb08b1140985bdca20",
+      "sha256": "07658ebe656d95c81913288f04a2706d49d2d9cf998ff2a413c638e789353eb3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/incoming-plan29-suffix.md",
+      "bytes": 1478,
+      "blob": "f315b62e1e36d8aaab10a9763292565c3afb30eb",
+      "sha256": "b29162a6753fda25ee16550f809eaf8afd118cfa61f257492811b06f29c1a41e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/independent-canonical-v2-review.json",
+      "bytes": 12555,
+      "blob": "4e59d2fe76ec47208e1c591e642f901b0bc10ce8",
+      "sha256": "5e713461f6b0d7fbee8d3dccc2aebdebef03f0a85b2b055518d374517ae1dd22"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/independent-source-composition-review.json",
+      "bytes": 32317,
+      "blob": "54d66c9c0c9f2d5783698b2076594a7e873c205b",
+      "sha256": "70e55feec597975467c588bc95ba732ab78e1963b9eac0de955d63e960b5d677"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/later-green-preview/packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts.txt",
+      "bytes": 8281,
+      "blob": "21aa3590f82939778a3fd657bbafa2d64c23d923",
+      "sha256": "eeec12dc4e1bfab70181c71c81aa05210b717cd18cb5261795d562d714925efd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/native-independent-canonical-v2-review.json",
+      "bytes": 2005,
+      "blob": "e70201ecdff2ea3fbcad2d30d0de4a9a836f06c5",
+      "sha256": "c57bf461ed9039f16a94d8741c92685b7560b8b1c79406b11363b0beefc4d32b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/prior-k/post-return-resource-observation.json",
+      "bytes": 743,
+      "blob": "1ee3c9592e77ba9b4a36166a7faa7da10d139f70",
+      "sha256": "e9200b85ea76637248ee10200d4e56f740a9c1b2783f7528daca22b792e7be11"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/prior-k/root-published-documentation-readback.json",
+      "bytes": 22462,
+      "blob": "4081c923f79ff577d9be2649b2729bad5048ebeb",
+      "sha256": "77017ada33ed39ce5d7bb04c0b81db90c2a7a2986467f91a3b151073662fe983"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/prior-k/root-published-source-readback.json",
+      "bytes": 15395,
+      "blob": "b99cca730450dbc1bb0f54b3230625226c97b5e3",
+      "sha256": "c1fc9c725a646b8274eb11e1171c5fc8b9276f2b5f216db2ef849e18363d200d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/prior-unpublished/canonical-R1-v1.md",
+      "bytes": 14838,
+      "blob": "9fbcaa6f29025870fbf9529b5fee4d8a94752a94",
+      "sha256": "b9ba33443c1a65036d9bb7cc576216c2ba2167b975939c1a2bc42396c4b81854"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/prior-unpublished/native-independent-canonical-v1-review.json",
+      "bytes": 3778,
+      "blob": "f9a92e43f073172743abd8d67f16503ff50fe866",
+      "sha256": "65e53dff6089b5882b921b8eac8557777df471b9965eec148278ce4c42031214"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/provider-9423/README.md",
+      "bytes": 3716,
+      "blob": "6800fdfabb0856142046a7e2f0606fc148232a70",
+      "sha256": "e8fa145609f89561e84f25a742a05bc85a322712c1ccf88152cd5c5f095ad4db"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/provider-9423/bundle-metadata.json",
+      "bytes": 1304,
+      "blob": "c65cdcd4f21b9274c5082f38f89844c0484edf1a",
+      "sha256": "612eaeca9ba22753529933f6b6beec3504b4a675f06faff6bfab31c6e5e34020"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/provider-9423/independent-root-bundle-review.json",
+      "bytes": 1584,
+      "blob": "a52da2f190364ce728f1e90efbd47c1c27cc781b",
+      "sha256": "1db71929650ac1ef02522ce4a1ea594857909edfc06ecb437466995f6f1dc8f8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/provider-9423/inventory.json",
+      "bytes": 85277,
+      "blob": "03016302374b01c66d1fd0f0f608f4e0148086b7",
+      "sha256": "e5beb9e4f25eb7fbc50e987aafbb876b644f802be15538e2f3daebcf166b5aee"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/provider-9423/provider-9423-original-evidence.zip",
+      "bytes": 535395,
+      "blob": "d3f67b210db6dd303bc293b83d07c9b741933267",
+      "sha256": "4d656ceea8c1df4ad47483e83d323494c7b2e25acb2d59efd8a1171009df89d2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/publication-envelope.json",
+      "bytes": 1697,
+      "blob": "a3c1dc78a45f288c7e04e337c337366508854808",
+      "sha256": "72bba936024b58adabc4f5304e1bc0170391c70f33382de4c7692c653d0bbd47"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/publication-inventory.json",
+      "bytes": 45629,
+      "blob": "4ef16f16d02692db93ea3d663f0a9d0c90f63bb7",
+      "sha256": "7cffa9224d75d18fd7c68431dfee7d3cc6b0dcbae27e940bba446ad63de08ab2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/reviews/L-dependency-venue-final-review.json",
+      "bytes": 10995,
+      "blob": "e4103104b054917f99d5d85025c8a4460b6e2664",
+      "sha256": "ed38faf483cd16301f440c54c32b464519064560445c24385e4e8b30ede98a13"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/reviews/L-roster-independent-review.json",
+      "bytes": 9280,
+      "blob": "40d2af3aa46a1c451f58718b6de3f9a2d564503e",
+      "sha256": "e47e8928de53ee993f1fcc8cf218f00b2e82c648e88c783ea9356251011ef185"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/reviews/incoming35-atomic-thinking-review.json",
+      "bytes": 10996,
+      "blob": "4f64e974acfcbdf7d2f778a7b86c585ce3cb5f5f",
+      "sha256": "57154fa35ed7cb9c5c112f31220e73c3725b76e6cce0b8d6ccb945a2144fdeb0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/reviews/native35-pending-create-source-review.json",
+      "bytes": 8702,
+      "blob": "af88cc7ff1d13c1b68b2c355c7d2a69b82e13d07",
+      "sha256": "47a879988fd4cda68d18a139864504a62f42e57466054584129729434832aba9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/security-proposal/candidate-metadata.json",
+      "bytes": 1927,
+      "blob": "d09469d58c94cd50f7eb1446bae0286133321c21",
+      "sha256": "1f66517f4e788cbfcbf1efda4d6e459f9c15e4dcd27ae77bc16b872a4409e188"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/security-proposal/candidate.patch",
+      "bytes": 3250,
+      "blob": "5bb0d1a3b011fcc66f009b6b5e9cf8f44f1af36b",
+      "sha256": "e3f8a21efa078c299f6686d30f8c245c7857564d9ec160ef11d1de470526818b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/security-proposal/independent-source-review.json",
+      "bytes": 6245,
+      "blob": "26a368e493e1e1c5c17921a015e9e04d3e39e2bf",
+      "sha256": "550ede31923e88bbdf53bdc9fa14c0dd18f7a8c5ac121bfac6f83af094b7fcdd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/security-proposal/original-R1-appendix.md",
+      "bytes": 9310,
+      "blob": "b0ddc336db50b6b9974fbb6f4e6bdfef753040c2",
+      "sha256": "4ee330cf75261d1f1152e744250b3da35c046fb7419ba9fce9c2fdff9cb328a8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/security-proposal/source-counterexample.json",
+      "bytes": 9556,
+      "blob": "0aa96da9aa27ec726f5061237a2182a29e7144b2",
+      "sha256": "92fbfd4abfb5ae0c9c2378ab6e4a701956854648ba026cc1f5e5dfaa2740f3fd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/source-and-history.json",
+      "bytes": 32233,
+      "blob": "0845a6c2f6623b15b1f2a4649b48e5d4f742e2c0",
+      "sha256": "c7d64f26c074825d7ba52630ef09200e9a1901ca62d372963ca1901e60311800"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/source-previews/packages/legacy-agent-host/tests/member-process-stderr.test.ts.txt",
+      "bytes": 14603,
+      "blob": "d1b52658270cc53a9e1ec345de55f840e7549011",
+      "sha256": "fd7504cd6196122a450cab25dc3bce50f5125c4ab589510c005f08e68c731510"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/source-previews/packages/legacy-agent-host/tests/runtime-team-host.test.ts.txt",
+      "bytes": 207427,
+      "blob": "c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79",
+      "sha256": "5ecb1c76b7a3cccf205b9856f183095ef7da3fa06cd7617c2f403c37e3f41d2d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/source-previews/scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts.txt",
+      "bytes": 63441,
+      "blob": "8740d94021dd031b0be0248bc8654576484e6d1d",
+      "sha256": "f1c7645f19d8b4ab08da39a248ebff08b896fe85b49df0be1be945b24650e820"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/source-previews/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "bytes": 20778,
+      "blob": "d8222627fd9f5ba303d1a2116246d63ba0d67516",
+      "sha256": "bfcc571e2c742ff2eb957bcc525c6a596ca9999e6d3d087cc2ca9dfab9e94681"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/source.patch",
+      "bytes": 89885,
+      "blob": "bd842192a0b0aa9c7d73d9568bd46c5ebaed071f",
+      "sha256": "acf698c2c5c4d40bbcf551ec5ed6a37a824dbd76500759727cc2d72850ff5cc4"
+    }
+  ],
+  "fileCount": 49,
+  "payloadBytes": 2806641,
+  "exactChangedPaths": [
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-build-failure-2026-11-15/Plan29-appendix-v2.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-build-failure-2026-11-15/inventory-v2.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-build-failure-2026-11-15/proofs/independent-actual-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-build-failure-2026-11-15/proofs/independent-published-docs-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-build-failure-2026-11-15/proofs/independent-published-source-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-build-failure-2026-11-15/raw/K-host-build-metadata.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-build-failure-2026-11-15/raw/K-host-build-preflight.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-build-failure-2026-11-15/raw/K-host-build.log",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-build-failure-2026-11-15/raw/stage-bindings.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/canonical-R1.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/composition/runtime-team-test-metadata.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/composition/runtime-team-test.patch",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/composition/runtime-ui-metadata.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/composition/runtime-ui.patch",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/incoming-plan29-suffix.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/independent-canonical-v2-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/independent-source-composition-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/later-green-preview/packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts.txt",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/native-independent-canonical-v2-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/prior-k/post-return-resource-observation.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/prior-k/root-published-documentation-readback.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/prior-k/root-published-source-readback.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/prior-unpublished/canonical-R1-v1.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/prior-unpublished/native-independent-canonical-v1-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/provider-9423/README.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/provider-9423/bundle-metadata.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/provider-9423/independent-root-bundle-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/provider-9423/inventory.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/provider-9423/provider-9423-original-evidence.zip",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/publication-envelope.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/publication-inventory.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/reviews/L-dependency-venue-final-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/reviews/L-roster-independent-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/reviews/incoming35-atomic-thinking-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/reviews/native35-pending-create-source-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/security-proposal/candidate-metadata.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/security-proposal/candidate.patch",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/security-proposal/independent-source-review.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/security-proposal/original-R1-appendix.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/security-proposal/source-counterexample.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/source-and-history.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/source-previews/packages/legacy-agent-host/tests/member-process-stderr.test.ts.txt",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/source-previews/packages/legacy-agent-host/tests/runtime-team-host.test.ts.txt",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/source-previews/scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts.txt",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/source-previews/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/source.patch"
+  ],
+  "unchangedPriorLeaves": 9934,
+  "completeLeaves": 9983,
+  "newLeaves": 46,
+  "sourceChanges": false,
+  "projectExecution": false,
+  "observedUtc": "2026-11-15T23:48:06.265015+00:00"
+}

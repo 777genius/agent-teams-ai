@@ -1,0 +1,44 @@
+{
+  "kind": "prospective4dc complete-history validation artifact inventory; frozen for independent review, not executed",
+  "artifacts": [
+    {
+      "name": "validation-manifest.json",
+      "path": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/validation-manifest.json",
+      "bytes": 114714,
+      "blob": "c12e7f2c56649cdd8d2d21b08884bb876fd3a6d9",
+      "sha256": "bbc34c4aea78ce3cec706a8be9ffeb47d39e5fa76e9b5eaea834f9a69e0277e6"
+    },
+    {
+      "name": "run_check.py",
+      "path": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/run_check.py",
+      "bytes": 26293,
+      "blob": "c3c983293c1ad0f2496b07b9d2262af71adb60c9",
+      "sha256": "acdea416258ae569c7d0891115697ffae201d799537d229fb775dc71c463aeb1"
+    },
+    {
+      "name": "yaml-input-inventory.json",
+      "path": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/yaml-input-inventory.json",
+      "bytes": 25556,
+      "blob": "c25d2cd21ffb93ae702400f47a47bd1e24b94209",
+      "sha256": "e72a2eee3d268c9efa3a06543d6b5cb600fe162c8cad8a70562b139703e21417"
+    },
+    {
+      "name": "stage-bindings.template.json",
+      "path": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/stage-bindings.template.json",
+      "bytes": 6337,
+      "blob": "ae58ab25dc1a1a6cda7fb85cf50ec451e3192ed3",
+      "sha256": "1740dd2c6822bd4ae0df8117e52fa8ca7868819a0f6549467b9f14fb2cf5bdd0"
+    },
+    {
+      "name": "execution-plan.md",
+      "path": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/execution-plan.md",
+      "bytes": 11350,
+      "blob": "9b0f070ce3b45adb5305b3e6f128613fec5f9464",
+      "sha256": "72b0f371581a472b4f613ece997606028740c217c47abefd5b7ad9d8915308fa"
+    }
+  ],
+  "supersededUnexecutedDirectory": "/workspace/scratch/82d3f9ba6b85/a02-adoption-local/draft-3957-unexecuted",
+  "projectCommandsExecuted": 0,
+  "trackedFilesModified": false,
+  "refsModified": false
+}

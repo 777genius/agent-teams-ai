@@ -1,0 +1,244 @@
+{
+  "schema": "read-only-dependency-venue-assessment/v1",
+  "observedAt": "2026-11-15T23:33:28Z",
+  "reviewer": "/root/native_failures",
+  "result": "No complete preexisting exact local pnpm11.22.0 venue established; prefer the unchanged original CI route for prospective L semantic RED after published R1/R2.",
+  "priorSourceOnlyAssessment": {
+    "bytes": 12457,
+    "blob": "1f3be23adda80c52156acdc7d72124246c15d921",
+    "sha256": "ef0a6a5d35083c4885402d61ec3377c5ced8c62d6a9e7a0c1ca6a8bcf82f530e",
+    "retainedUnreferencedBlob": "1f3be23adda80c52156acdc7d72124246c15d921"
+  },
+  "currentK": {
+    "source": "e3b661974cb7131cd3b1f7b6eaf6ede647b326f4",
+    "preserved": true,
+    "firstBuild": "Actual -9 SIGKILL; no retry; remaining eleven commands not run; no build-qualified new output."
+  },
+  "existingManagerRead": [
+    {
+      "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/pnpm/package.json",
+      "exists": true,
+      "bytes": 2349,
+      "sha256": "81ad221a244294ce48eb2b6d7185e316e66de890b82aeb4ec0c3524ae9e4cddd",
+      "package": {
+        "name": "pnpm",
+        "version": "11.25.0",
+        "bin": {
+          "pnpm": "bin/pnpm.mjs",
+          "pnpx": "bin/pnpx.mjs",
+          "pn": "bin/pnpm.mjs",
+          "pnx": "bin/pnpx.mjs"
+        },
+        "engines": {
+          "node": ">=22.13"
+        }
+      }
+    },
+    {
+      "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/pnpm/bin/pnpm.mjs",
+      "exists": true,
+      "bytes": 1464,
+      "sha256": "ff3224d46b47fbb24a7e9fe15fededef7e00892d07d4e376b6762d4899906bfd"
+    },
+    {
+      "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/lib/node_modules/corepack/package.json",
+      "exists": true,
+      "bytes": 2897,
+      "sha256": "ca4688703775d897ac1111c3cfec8eb9aa3801c08dfb02a59acde6225206cce9",
+      "package": {
+        "name": "corepack",
+        "version": "0.34.6",
+        "bin": {
+          "corepack": "./dist/corepack.js",
+          "pnpm": "./dist/pnpm.js",
+          "pnpx": "./dist/pnpx.js",
+          "yarn": "./dist/yarn.js",
+          "yarnpkg": "./dist/yarnpkg.js"
+        },
+        "engines": {
+          "node": "^20.10.0 || ^22.11.0 || >=24.0.0"
+        }
+      }
+    },
+    {
+      "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/lib/node_modules/corepack/dist/corepack.js",
+      "exists": true,
+      "bytes": 174,
+      "sha256": "3655bc798f300951f2070fee411b337d626b0c3ae80c2d24c46ccac4595d4bf9",
+      "text": "#!/usr/bin/env node\nprocess.env.COREPACK_ENABLE_DOWNLOAD_PROMPT??='0';\nrequire('module').enableCompileCache?.();\nrequire('./lib/corepack.cjs').runMain(process.argv.slice(2));"
+    },
+    {
+      "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/lib/node_modules/corepack/dist/lib/corepack.cjs",
+      "exists": true,
+      "bytes": 967004,
+      "sha256": "4c348070c8937f4693d6ccb128f7d034a2542932b9ed7968cbb9a3fe38158d4a"
+    },
+    {
+      "cacheRoot": "/home/agent/.cache/node/corepack",
+      "exists": false
+    },
+    {
+      "cacheRoot": "/home/agent/.local/share/pnpm",
+      "exists": false
+    },
+    {
+      "cacheRoot": "/workspace/scratch/82d3f9ba6b85/toolchain",
+      "exists": true,
+      "entries": [
+        "SHASUMS256.txt",
+        "node-v24.21.0-linux-x64.tar.xz",
+        "node24"
+      ]
+    }
+  ],
+  "capturedNodeCorepack": {
+    "directory": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/lib/node_modules/corepack",
+    "package": {
+      "bytes": 2808,
+      "sha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+      "name": "corepack",
+      "version": "0.36.0",
+      "engines": {
+        "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+      }
+    },
+    "entry": {
+      "bytes": 174,
+      "sha256": "3655bc798f300951f2070fee411b337d626b0c3ae80c2d24c46ccac4595d4bf9"
+    },
+    "library": {
+      "bytes": 530014,
+      "sha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e"
+    },
+    "qualification": "Read complete package/entry/library bytes only; no manager execution. This exact existing Corepack differs from runtime PATH Corepack0.34.6."
+  },
+  "additionalBoundedReads": {
+    "absentDirectories": [
+      "/home/agent/.cache/pnpm",
+      "/home/agent/.local/share/corepack"
+    ],
+    "knownVirtualStoresWithNoPnpmOrCorepackPackageDirectories": [
+      "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm",
+      "/workspace/scratch/5c17297e690d/agent-teams-ai/node_modules/.pnpm"
+    ],
+    "taskToolchainNodeModules": [
+      "corepack",
+      "npm"
+    ],
+    "taskCorepackEntries": [
+      "CHANGELOG.md",
+      "LICENSE.md",
+      "README.md",
+      "dist",
+      "package.json",
+      "shims"
+    ],
+    "limits": "This is a bounded inventory of known venues and standard cache paths, not a universal search of every cache or proof that no other author-owned venue exists."
+  },
+  "installedProviderBoundary": {
+    "rootVirtualStore": "K root node_modules/.pnpm remains a symlink into the c714 preexisting store.",
+    "providerImplementation": "Existing Host link still resolves the old opencode-selected file package; package0.0.0 SHA256ea236ac5ff4c43d5fa7628ee7615022c23b0fcd9a4fe3594e63f137971245e50.",
+    "knownProviderStoreDirectories": [
+      "@agent-teams+provider-implementations@file+vendor+provider-migration+opencode-selected-_046ca4d607e24622fed40712f11f6a5a",
+      "@agent-teams+provider-session-contracts@file+vendor+provider-migration+opencode-v2-host_ced2ec65b2ef33eee6815320af28a4e4"
+    ],
+    "qualified9423InstalledPair": false,
+    "warning": "Unchanged package version0.0.0 is not pair identity; neither the checked tarballs nor installed member-level equality has been substituted or adopted here."
+  },
+  "originalCiRedVenue": {
+    "workflow": {
+      "path": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/.github/workflows/host-emulated-acceptance.yml",
+      "bytes": 97517,
+      "blob": "ae2e48f5dc013c8c2dd2ce6021dba2afd4ad66d5",
+      "sha256": "0e70cd2ef2ab7658085e4dadaeedaddd3db6f8a94d08f995419fcd596b8ff336",
+      "routeLines": [
+        {
+          "line": 63,
+          "text": "      AGENT_TEAMS_INSTALL_PROFILE: node-ci"
+        },
+        {
+          "line": 75,
+          "text": "          node-version: 24.21.0"
+        },
+        {
+          "line": 92,
+          "text": "          node scripts/ci/install-dependencies-with-retry.mjs --child-concurrency=1"
+        },
+        {
+          "line": 109,
+          "text": "          node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts"
+        },
+        {
+          "line": 164,
+          "text": "          mkdir \"$selected_inputs/corepack\" \"$selected_inputs/cache\""
+        },
+        {
+          "line": 165,
+          "text": "          printf '{\"private\":true}\\n' > \"$selected_inputs/corepack/package.json\""
+        },
+        {
+          "line": 166,
+          "text": "          pnpm --dir \"$selected_inputs/corepack\" add --ignore-scripts --save-exact corepack@0.36.0"
+        },
+        {
+          "line": 167,
+          "text": "          COREPACK_HOME=\"$selected_inputs/cache\" node \"$selected_inputs/corepack/node_modules/corepack/dist/pnpm.js\" --version"
+        },
+        {
+          "line": 182,
+          "text": "          const corepack = realpathSync(join(selected, 'corepack/node_modules/corepack'));"
+        },
+        {
+          "line": 183,
+          "text": "          assert.equal(JSON.parse(readFileSync(join(corepack, 'package.json'), 'utf8')).version, '0.36.0');"
+        },
+        {
+          "line": 184,
+          "text": "          const pnpm = join(corepack, 'dist/pnpm.js');"
+        },
+        {
+          "line": 204,
+          "text": "            LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256: sha(join(corepack, 'package.json')),"
+        },
+        {
+          "line": 205,
+          "text": "            LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256: sha(join(corepack, 'dist/lib/corepack.cjs')),"
+        },
+        {
+          "line": 251,
+          "text": "            corepack: { entry: pin(pnpm), package: pin(join(dirname(pnpm), '../package.json')), library: pin(join(dirname(pnpm), 'lib/corepack.cjs')) }, processArtifact };"
+        },
+        {
+          "line": 1192,
+          "text": "      AGENT_TEAMS_INSTALL_PROFILE: node-ci"
+        },
+        {
+          "line": 1204,
+          "text": "          node-version: 24.21.0"
+        },
+        {
+          "line": 1220,
+          "text": "          node scripts/ci/install-dependencies-with-retry.mjs --child-concurrency=1"
+        }
+      ]
+    },
+    "route": [
+      "Existing original Host workflow uses pnpm/action-setup@v6, actions/setup-node@v6 Node24.21.0, and repository packageManager pnpm11.22.0.",
+      "Existing job environment AGENT_TEAMS_INSTALL_PROFILE=node-ci and command node scripts/ci/install-dependencies-with-retry.mjs --child-concurrency=1 retain the frozen-lockfile installation helper and its original classified retry policy.",
+      "Keep original explicit Electron install/rebuild and all original prerequisite builds/tests; no replacement lighter venue or removed prerequisite.",
+      "Original Team lane already runs the complete ten-file Node command including packages/legacy-agent-host/tests/member-process-stderr.test.ts; prospective candidate canaries must execute there on the exact resulting source and checked9423 pair.",
+      "An earlier prerequisite failure is not the expected semantic RED. Only the retained original canary assertion failures on the intended helper preimage qualify the planned RED."
+    ],
+    "sourceOnlyLimits": "This review changes no workflow selectors, permissions, setup steps, run command, tests, or CI action. Parent must publish exact prospective L R1 and obtain independent review before applying source; no manual dispatch/retry is authorized here."
+  },
+  "actions": {
+    "projectInvocations": 0,
+    "nodeOrManagerInvocations": 0,
+    "dependencyInstalls": 0,
+    "bootstraps": 0,
+    "sharedNodeModulesMutations": 0,
+    "ciActions": 0,
+    "trackedEdits": 0
+  },
+  "decisionBoundary": "The complete exact local venue would require an unperformed pnpm11.22.0 acquisition/setup plus a fresh isolated frozen install. Existing exact Corepack alone is insufficient. Do not invoke the runtime fallback shim or hand-swap checked packages into K."
+}

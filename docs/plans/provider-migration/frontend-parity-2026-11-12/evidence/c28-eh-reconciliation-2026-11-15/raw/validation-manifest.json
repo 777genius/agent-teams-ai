@@ -1,0 +1,1746 @@
+{
+  "kind": "reviewed-c28-proposed-serial-validation-no-execution",
+  "node": {
+    "path": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "expectedVersion": "v24.21.0",
+    "sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "versionEvidence": "Retained caller-diagnostic-local/red-test-preflight.json; no Node process invoked while preparing this manifest."
+  },
+  "references": {
+    "oldManifest": {
+      "path": "/workspace/scratch/82d3f9ba6b85/source-deadline-handoff-r1/validation-manifest.json",
+      "bytes": 46735,
+      "blob": "f460cdba964ceca57f99c7752bc8519c477fc9b2",
+      "sha256": "9cc33da77b7bd64abfa6d882bcfd89f2f90e2b24da543855635433b17aff4b74"
+    },
+    "oldRecorder": {
+      "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/run_check.py",
+      "bytes": 10606,
+      "blob": "40dd822fab131457747ed293230af578681328b1",
+      "sha256": "910b48fede377c05beaa6fc89d458aba5b7a566c89511013c868c587349fb0d9"
+    },
+    "canonicalR1": {
+      "path": "/workspace/scratch/82d3f9ba6b85/c28-canonical-reconciliation-r1/R1-appendix.md",
+      "bytes": 14929,
+      "blob": "affb8748f6808048f03975a4c3a7a34c2d48a9d2",
+      "sha256": "d331adc7e46507f65ac2a9a58ebf1e239a3568c6ba32e49f9cf4bf1ca6811f46"
+    },
+    "scenarioR1": {
+      "path": "/workspace/scratch/82d3f9ba6b85/c28-source-observer-reconciliation-r1/R1-appendix.md",
+      "bytes": 15901,
+      "blob": "339439f3bcff63b8549886b2fc9b5bb379b27ef4",
+      "sha256": "1abca9660df29aecadb8c0001e4d1302359e5b9ec5ab600eee2f7919a50f0763"
+    },
+    "journalR1": {
+      "path": "/workspace/scratch/82d3f9ba6b85/desktop-journal-validation-r1/R1-appendix.md",
+      "bytes": 12937,
+      "blob": "33ef7c5ec8cc4d447fd1775fbfad8a46f41700e5",
+      "sha256": "4f0876d1308facf32b41c84fe0e40e3b9f8c457b805ac896b6ccf5f9ff625105"
+    },
+    "markerR1": {
+      "path": "/workspace/scratch/82d3f9ba6b85/selection-marker-fix-r1/R1-appendix.md",
+      "bytes": 4541,
+      "blob": "809c2e5fc750724d8f5bc0d9d8364073e31dd289",
+      "sha256": "3a89df5ef139900c0c2432d686c783252d54d805b7566f48ce0d38abef9966cc"
+    }
+  },
+  "referenceStageD": {
+    "head": "7e8e37c282e9cc653efd79799dc862d116310065",
+    "tree": "e77d05767aa3cb4be469e3763b19236601dbc762",
+    "parents": [
+      "3184acb5f000c2ce2e368ff9babc6105c5adc5c1"
+    ]
+  },
+  "incoming": {
+    "head": "c28f1aa890c909c7b981254c5e30b874cbc84287",
+    "tree": "a08e7739da5bc8a31c921ca106565bc9167a9b3b",
+    "parents": [
+      "2cb0c0a92c954ab04d081b7a5672270d7484f4a7"
+    ]
+  },
+  "stageBindings": {
+    "E": {
+      "head": null,
+      "tree": null,
+      "parents": [
+        "PUBLISHED_REVIEWED_DOCS_HEAD",
+        "c28f1aa890c909c7b981254c5e30b874cbc84287"
+      ],
+      "independentlyReviewed": false
+    },
+    "F": {
+      "head": null,
+      "tree": null,
+      "parents": [
+        "E_HEAD"
+      ],
+      "independentlyReviewed": false
+    },
+    "G": {
+      "head": null,
+      "tree": null,
+      "parents": [
+        "F_HEAD"
+      ],
+      "independentlyReviewed": false
+    },
+    "H": {
+      "head": null,
+      "tree": null,
+      "parents": [
+        "G_HEAD"
+      ],
+      "independentlyReviewed": false
+    }
+  },
+  "bindingRule": "Root binds actual published heads/trees/ordered parents and R1 full readback only after independent source review. Nulls and predictions cannot authorize execution; never change an executed manifest or proof snapshot.",
+  "documentationParent": {
+    "parentHead": "7e8e37c282e9cc653efd79799dc862d116310065",
+    "planPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "prefixBlob": "e841ce552dbf0e5f367ced2dab45d9d233e54288",
+    "unchangedPlan30Path": "docs/plans/provider-migration/frontend-parity-2026-11-12/30-windows-same-main-retry-integration-2026-11-15.md",
+    "unchangedPlan30Blob": "eb68d2643eb11527594d546d8a5088f48f8e2865",
+    "allowedChangedPrefix": "docs/plans/provider-migration/frontend-parity-2026-11-12/"
+  },
+  "stageDiffs": {
+    "E": {
+      "base": "r1Published.head",
+      "paths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/completion-2026-11-13.md",
+        "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ]
+    },
+    "F": {
+      "base": "stages.E.head",
+      "paths": [
+        "tools/owned-process-broker/nativeEmulatedSourceScenario.ts"
+      ]
+    },
+    "G": {
+      "base": "stages.F.head",
+      "paths": [
+        "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts"
+      ]
+    },
+    "H": {
+      "base": "stages.G.head",
+      "paths": [
+        ".github/workflows/host-emulated-acceptance.yml"
+      ]
+    }
+  },
+  "integrationLeaves": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/completion-2026-11-13.md",
+      "DReference": {
+        "bytes": 40856,
+        "blob": "94f41cf156b3a4c76bf19786e83aea742fad22df",
+        "sha256": "03aea0201aa302b82295356e5aaa7f14b76c5beee2c630f9fb159998c93bb11c"
+      },
+      "E": {
+        "bytes": 45599,
+        "blob": "dfa8819f10940cce6d2c5c7c28f94c88a7cdab22",
+        "sha256": "e888e36cdc9b643c28c7303f166780d555cb72bd9da1e8db96e02bd827e09646"
+      },
+      "F": {
+        "bytes": 45599,
+        "blob": "dfa8819f10940cce6d2c5c7c28f94c88a7cdab22",
+        "sha256": "e888e36cdc9b643c28c7303f166780d555cb72bd9da1e8db96e02bd827e09646"
+      },
+      "G": {
+        "bytes": 45599,
+        "blob": "dfa8819f10940cce6d2c5c7c28f94c88a7cdab22",
+        "sha256": "e888e36cdc9b643c28c7303f166780d555cb72bd9da1e8db96e02bd827e09646"
+      },
+      "H": {
+        "bytes": 45599,
+        "blob": "dfa8819f10940cce6d2c5c7c28f94c88a7cdab22",
+        "sha256": "e888e36cdc9b643c28c7303f166780d555cb72bd9da1e8db96e02bd827e09646"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "DReference": {
+        "blob": "c30eda98e0860599d6e7026ba73e8fdf80d909d4",
+        "bytes": 55362,
+        "sha256": "a3a221384b5fe822cb15d7005b7697f6dbaf55bf860b41839b2d544c9bb25f08"
+      },
+      "E": {
+        "bytes": 56276,
+        "blob": "8b4f0e8840773aa29e94758688211ffe138ebe04",
+        "sha256": "b6fc6bcbeea221fbb9efc139a073d1cae633b8bdd33247edc18f748461bf6a2a"
+      },
+      "F": {
+        "bytes": 56556,
+        "blob": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+        "sha256": "3cba93b8d78463415511f25e2b86132801fd5a0059d168072e39e03a0ad624b0"
+      },
+      "G": {
+        "bytes": 56556,
+        "blob": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+        "sha256": "3cba93b8d78463415511f25e2b86132801fd5a0059d168072e39e03a0ad624b0"
+      },
+      "H": {
+        "bytes": 56556,
+        "blob": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+        "sha256": "3cba93b8d78463415511f25e2b86132801fd5a0059d168072e39e03a0ad624b0"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "DReference": {
+        "bytes": 19153,
+        "blob": "f2f299ea2457ce60a5044c44d190ad8e71c1e234",
+        "sha256": "bef43b5b921198c434a12cd713f698360343b89e96fd3fdcf2d01a86bf943a94"
+      },
+      "E": {
+        "bytes": 21655,
+        "blob": "4265b26ef0bab3a741e0e31631149b289bfe2337",
+        "sha256": "8a784f25d5a808bf2e6a9d2558e1715c21b759a744fcb32a024ef248cd74e30a"
+      },
+      "F": {
+        "bytes": 21655,
+        "blob": "4265b26ef0bab3a741e0e31631149b289bfe2337",
+        "sha256": "8a784f25d5a808bf2e6a9d2558e1715c21b759a744fcb32a024ef248cd74e30a"
+      },
+      "G": {
+        "bytes": 21808,
+        "blob": "6337cb07a04538d9e9ea1859a908efc554e2fc91",
+        "sha256": "8f56cd1d61ee0330082dd3c4a7fa1faf8c0acc294ee0cc18076a2e8b6ba0aad7"
+      },
+      "H": {
+        "bytes": 21808,
+        "blob": "6337cb07a04538d9e9ea1859a908efc554e2fc91",
+        "sha256": "8f56cd1d61ee0330082dd3c4a7fa1faf8c0acc294ee0cc18076a2e8b6ba0aad7"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "DReference": {
+        "blob": "e3f1eb2e81614d7136c4e685f93c99e68aed22d5",
+        "bytes": 44935,
+        "sha256": "9478a6cc8aa89040f389da7d527206ffdadb03fb66d1c6fe445e3f7fe22cdcf3"
+      },
+      "E": {
+        "bytes": 52461,
+        "blob": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+        "sha256": "ba8020eff1bc7bf80914b3d32cf7673d7a0ed763bb50e0aba7509b98d15bdcf7"
+      },
+      "F": {
+        "bytes": 52461,
+        "blob": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+        "sha256": "ba8020eff1bc7bf80914b3d32cf7673d7a0ed763bb50e0aba7509b98d15bdcf7"
+      },
+      "G": {
+        "bytes": 52461,
+        "blob": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+        "sha256": "ba8020eff1bc7bf80914b3d32cf7673d7a0ed763bb50e0aba7509b98d15bdcf7"
+      },
+      "H": {
+        "bytes": 52461,
+        "blob": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+        "sha256": "ba8020eff1bc7bf80914b3d32cf7673d7a0ed763bb50e0aba7509b98d15bdcf7"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "DReference": {
+        "blob": "a9ee7a1886c7bb4d1f289491c2a2a6fee8b19118",
+        "bytes": 189412,
+        "sha256": "ca00c5ca37e3b88af00838f633404c96013a6f210c9da5550a1ff492d5ceaec6"
+      },
+      "E": {
+        "bytes": 198908,
+        "blob": "c22601ad6648e7a5c47bf46d3214c0f8f3105e0f",
+        "sha256": "c5f732771761b0ebad511bdc8d407b146f9c9636be5f6542e0a356920a749f2c"
+      },
+      "F": {
+        "bytes": 198908,
+        "blob": "c22601ad6648e7a5c47bf46d3214c0f8f3105e0f",
+        "sha256": "c5f732771761b0ebad511bdc8d407b146f9c9636be5f6542e0a356920a749f2c"
+      },
+      "G": {
+        "bytes": 198908,
+        "blob": "c22601ad6648e7a5c47bf46d3214c0f8f3105e0f",
+        "sha256": "c5f732771761b0ebad511bdc8d407b146f9c9636be5f6542e0a356920a749f2c"
+      },
+      "H": {
+        "bytes": 198908,
+        "blob": "c22601ad6648e7a5c47bf46d3214c0f8f3105e0f",
+        "sha256": "c5f732771761b0ebad511bdc8d407b146f9c9636be5f6542e0a356920a749f2c"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "DReference": {
+        "blob": "d51935df74fc00f498dbe588515269ebfd9dd35a",
+        "bytes": 103556,
+        "sha256": "b799438e8031663783267eafad665522524e50908e13efc9df0890b4ebcbb000"
+      },
+      "E": {
+        "bytes": 103573,
+        "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+      },
+      "F": {
+        "bytes": 103573,
+        "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+      },
+      "G": {
+        "bytes": 103573,
+        "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+      },
+      "H": {
+        "bytes": 103573,
+        "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+      }
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "DReference": {
+        "blob": "4afbfc0ed5f388d07593198fc220073fafd96514",
+        "bytes": 96565,
+        "sha256": "7be5f3ece9c396cba8c09e0eef84c3bb9c216cadb0b301363ae48d9439ea2b70"
+      },
+      "E": {
+        "blob": "4afbfc0ed5f388d07593198fc220073fafd96514",
+        "bytes": 96565,
+        "sha256": "7be5f3ece9c396cba8c09e0eef84c3bb9c216cadb0b301363ae48d9439ea2b70"
+      },
+      "F": {
+        "blob": "4afbfc0ed5f388d07593198fc220073fafd96514",
+        "bytes": 96565,
+        "sha256": "7be5f3ece9c396cba8c09e0eef84c3bb9c216cadb0b301363ae48d9439ea2b70"
+      },
+      "G": {
+        "blob": "4afbfc0ed5f388d07593198fc220073fafd96514",
+        "bytes": 96565,
+        "sha256": "7be5f3ece9c396cba8c09e0eef84c3bb9c216cadb0b301363ae48d9439ea2b70"
+      },
+      "H": {
+        "bytes": 96718,
+        "blob": "41cd9e2ebd601765e47739fa58cc9933b2b93e18",
+        "sha256": "80b0e5d9684512936225d49dab59962c459bc4c6545d723f60bf801d39d5e4dc"
+      }
+    }
+  ],
+  "selectedSourceLeaves": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "DReference": {
+        "blob": "4afbfc0ed5f388d07593198fc220073fafd96514",
+        "bytes": 96565,
+        "sha256": "7be5f3ece9c396cba8c09e0eef84c3bb9c216cadb0b301363ae48d9439ea2b70"
+      },
+      "E": {
+        "blob": "4afbfc0ed5f388d07593198fc220073fafd96514",
+        "bytes": 96565,
+        "sha256": "7be5f3ece9c396cba8c09e0eef84c3bb9c216cadb0b301363ae48d9439ea2b70"
+      },
+      "F": {
+        "blob": "4afbfc0ed5f388d07593198fc220073fafd96514",
+        "bytes": 96565,
+        "sha256": "7be5f3ece9c396cba8c09e0eef84c3bb9c216cadb0b301363ae48d9439ea2b70"
+      },
+      "G": {
+        "blob": "4afbfc0ed5f388d07593198fc220073fafd96514",
+        "bytes": 96565,
+        "sha256": "7be5f3ece9c396cba8c09e0eef84c3bb9c216cadb0b301363ae48d9439ea2b70"
+      },
+      "H": {
+        "bytes": 96718,
+        "blob": "41cd9e2ebd601765e47739fa58cc9933b2b93e18",
+        "sha256": "80b0e5d9684512936225d49dab59962c459bc4c6545d723f60bf801d39d5e4dc"
+      }
+    },
+    {
+      "path": "eslint.fast.config.js",
+      "DReference": {
+        "blob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+        "bytes": 7268,
+        "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88"
+      },
+      "E": {
+        "blob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+        "bytes": 7268,
+        "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88"
+      },
+      "F": {
+        "blob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+        "bytes": 7268,
+        "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88"
+      },
+      "G": {
+        "blob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+        "bytes": 7268,
+        "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88"
+      },
+      "H": {
+        "blob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+        "bytes": 7268,
+        "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "DReference": {
+        "blob": "063d101c59bbdcc9a6bb9d9961d12b468a5a944b",
+        "bytes": 11847,
+        "sha256": "fdb818b611e7dbb24371397f53cbe8fdbd4c9d7c546abd9784f8a719cd3fca1e"
+      },
+      "E": {
+        "blob": "063d101c59bbdcc9a6bb9d9961d12b468a5a944b",
+        "bytes": 11847,
+        "sha256": "fdb818b611e7dbb24371397f53cbe8fdbd4c9d7c546abd9784f8a719cd3fca1e"
+      },
+      "F": {
+        "blob": "063d101c59bbdcc9a6bb9d9961d12b468a5a944b",
+        "bytes": 11847,
+        "sha256": "fdb818b611e7dbb24371397f53cbe8fdbd4c9d7c546abd9784f8a719cd3fca1e"
+      },
+      "G": {
+        "blob": "063d101c59bbdcc9a6bb9d9961d12b468a5a944b",
+        "bytes": 11847,
+        "sha256": "fdb818b611e7dbb24371397f53cbe8fdbd4c9d7c546abd9784f8a719cd3fca1e"
+      },
+      "H": {
+        "blob": "063d101c59bbdcc9a6bb9d9961d12b468a5a944b",
+        "bytes": 11847,
+        "sha256": "fdb818b611e7dbb24371397f53cbe8fdbd4c9d7c546abd9784f8a719cd3fca1e"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "DReference": {
+        "blob": "0482d11bb2a051a0710905c5393495ee7cec64bf",
+        "bytes": 14724,
+        "sha256": "bf1390ca8efbbcfffb4b61c138f1925d0c295f37def36d73c15377f013794438"
+      },
+      "E": {
+        "blob": "0482d11bb2a051a0710905c5393495ee7cec64bf",
+        "bytes": 14724,
+        "sha256": "bf1390ca8efbbcfffb4b61c138f1925d0c295f37def36d73c15377f013794438"
+      },
+      "F": {
+        "blob": "0482d11bb2a051a0710905c5393495ee7cec64bf",
+        "bytes": 14724,
+        "sha256": "bf1390ca8efbbcfffb4b61c138f1925d0c295f37def36d73c15377f013794438"
+      },
+      "G": {
+        "blob": "0482d11bb2a051a0710905c5393495ee7cec64bf",
+        "bytes": 14724,
+        "sha256": "bf1390ca8efbbcfffb4b61c138f1925d0c295f37def36d73c15377f013794438"
+      },
+      "H": {
+        "blob": "0482d11bb2a051a0710905c5393495ee7cec64bf",
+        "bytes": 14724,
+        "sha256": "bf1390ca8efbbcfffb4b61c138f1925d0c295f37def36d73c15377f013794438"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "DReference": {
+        "blob": "b9dd573db23b3033b5f3db7024b317681ce31499",
+        "bytes": 43732,
+        "sha256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14"
+      },
+      "E": {
+        "blob": "b9dd573db23b3033b5f3db7024b317681ce31499",
+        "bytes": 43732,
+        "sha256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14"
+      },
+      "F": {
+        "blob": "b9dd573db23b3033b5f3db7024b317681ce31499",
+        "bytes": 43732,
+        "sha256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14"
+      },
+      "G": {
+        "blob": "b9dd573db23b3033b5f3db7024b317681ce31499",
+        "bytes": 43732,
+        "sha256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14"
+      },
+      "H": {
+        "blob": "b9dd573db23b3033b5f3db7024b317681ce31499",
+        "bytes": 43732,
+        "sha256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/index.ts",
+      "DReference": {
+        "blob": "755158699496506a62132c540f19b225c5a6222d",
+        "bytes": 11111,
+        "sha256": "5710013cfeac12d61f6f93ba995df696395c583803b2226be79195dff7dff095"
+      },
+      "E": {
+        "blob": "755158699496506a62132c540f19b225c5a6222d",
+        "bytes": 11111,
+        "sha256": "5710013cfeac12d61f6f93ba995df696395c583803b2226be79195dff7dff095"
+      },
+      "F": {
+        "blob": "755158699496506a62132c540f19b225c5a6222d",
+        "bytes": 11111,
+        "sha256": "5710013cfeac12d61f6f93ba995df696395c583803b2226be79195dff7dff095"
+      },
+      "G": {
+        "blob": "755158699496506a62132c540f19b225c5a6222d",
+        "bytes": 11111,
+        "sha256": "5710013cfeac12d61f6f93ba995df696395c583803b2226be79195dff7dff095"
+      },
+      "H": {
+        "blob": "755158699496506a62132c540f19b225c5a6222d",
+        "bytes": 11111,
+        "sha256": "5710013cfeac12d61f6f93ba995df696395c583803b2226be79195dff7dff095"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "DReference": {
+        "blob": "a9ee7a1886c7bb4d1f289491c2a2a6fee8b19118",
+        "bytes": 189412,
+        "sha256": "ca00c5ca37e3b88af00838f633404c96013a6f210c9da5550a1ff492d5ceaec6"
+      },
+      "E": {
+        "bytes": 198908,
+        "blob": "c22601ad6648e7a5c47bf46d3214c0f8f3105e0f",
+        "sha256": "c5f732771761b0ebad511bdc8d407b146f9c9636be5f6542e0a356920a749f2c"
+      },
+      "F": {
+        "bytes": 198908,
+        "blob": "c22601ad6648e7a5c47bf46d3214c0f8f3105e0f",
+        "sha256": "c5f732771761b0ebad511bdc8d407b146f9c9636be5f6542e0a356920a749f2c"
+      },
+      "G": {
+        "bytes": 198908,
+        "blob": "c22601ad6648e7a5c47bf46d3214c0f8f3105e0f",
+        "sha256": "c5f732771761b0ebad511bdc8d407b146f9c9636be5f6542e0a356920a749f2c"
+      },
+      "H": {
+        "bytes": 198908,
+        "blob": "c22601ad6648e7a5c47bf46d3214c0f8f3105e0f",
+        "sha256": "c5f732771761b0ebad511bdc8d407b146f9c9636be5f6542e0a356920a749f2c"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "DReference": {
+        "blob": "bc0913e775d3e076518009c4fe7b5ee45f8c7e7b",
+        "bytes": 87973,
+        "sha256": "a5c97e6dc5ce77215a0fb8e6d86d62606ded0d62cc1cea0475299519ff35cd1a"
+      },
+      "E": {
+        "blob": "bc0913e775d3e076518009c4fe7b5ee45f8c7e7b",
+        "bytes": 87973,
+        "sha256": "a5c97e6dc5ce77215a0fb8e6d86d62606ded0d62cc1cea0475299519ff35cd1a"
+      },
+      "F": {
+        "blob": "bc0913e775d3e076518009c4fe7b5ee45f8c7e7b",
+        "bytes": 87973,
+        "sha256": "a5c97e6dc5ce77215a0fb8e6d86d62606ded0d62cc1cea0475299519ff35cd1a"
+      },
+      "G": {
+        "blob": "bc0913e775d3e076518009c4fe7b5ee45f8c7e7b",
+        "bytes": 87973,
+        "sha256": "a5c97e6dc5ce77215a0fb8e6d86d62606ded0d62cc1cea0475299519ff35cd1a"
+      },
+      "H": {
+        "blob": "bc0913e775d3e076518009c4fe7b5ee45f8c7e7b",
+        "bytes": 87973,
+        "sha256": "a5c97e6dc5ce77215a0fb8e6d86d62606ded0d62cc1cea0475299519ff35cd1a"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/transport.test.ts",
+      "DReference": {
+        "blob": "24c83547be0ee43bb6f2481618a4356a3855d832",
+        "bytes": 23731,
+        "sha256": "b49279f1685054763969aa51a08c294e0ea9acf5b640c7d94553cbcf59aa412c"
+      },
+      "E": {
+        "blob": "24c83547be0ee43bb6f2481618a4356a3855d832",
+        "bytes": 23731,
+        "sha256": "b49279f1685054763969aa51a08c294e0ea9acf5b640c7d94553cbcf59aa412c"
+      },
+      "F": {
+        "blob": "24c83547be0ee43bb6f2481618a4356a3855d832",
+        "bytes": 23731,
+        "sha256": "b49279f1685054763969aa51a08c294e0ea9acf5b640c7d94553cbcf59aa412c"
+      },
+      "G": {
+        "blob": "24c83547be0ee43bb6f2481618a4356a3855d832",
+        "bytes": 23731,
+        "sha256": "b49279f1685054763969aa51a08c294e0ea9acf5b640c7d94553cbcf59aa412c"
+      },
+      "H": {
+        "blob": "24c83547be0ee43bb6f2481618a4356a3855d832",
+        "bytes": 23731,
+        "sha256": "b49279f1685054763969aa51a08c294e0ea9acf5b640c7d94553cbcf59aa412c"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "DReference": {
+        "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+        "bytes": 456,
+        "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab"
+      },
+      "E": {
+        "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+        "bytes": 456,
+        "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab"
+      },
+      "F": {
+        "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+        "bytes": 456,
+        "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab"
+      },
+      "G": {
+        "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+        "bytes": 456,
+        "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab"
+      },
+      "H": {
+        "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+        "bytes": 456,
+        "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.test.json",
+      "DReference": {
+        "blob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+        "bytes": 174,
+        "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356"
+      },
+      "E": {
+        "blob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+        "bytes": 174,
+        "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356"
+      },
+      "F": {
+        "blob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+        "bytes": 174,
+        "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356"
+      },
+      "G": {
+        "blob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+        "bytes": 174,
+        "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356"
+      },
+      "H": {
+        "blob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+        "bytes": 174,
+        "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356"
+      }
+    },
+    {
+      "path": "packages/task-change-ledger/package.json",
+      "DReference": {
+        "blob": "0fac5843889e1b28d53712f353bce1b0bae855a4",
+        "bytes": 2714,
+        "sha256": "a0db21117b905b414e825862d8bc93cfe9280975c8b91e1afa6cca2e1570a132"
+      },
+      "E": {
+        "blob": "0fac5843889e1b28d53712f353bce1b0bae855a4",
+        "bytes": 2714,
+        "sha256": "a0db21117b905b414e825862d8bc93cfe9280975c8b91e1afa6cca2e1570a132"
+      },
+      "F": {
+        "blob": "0fac5843889e1b28d53712f353bce1b0bae855a4",
+        "bytes": 2714,
+        "sha256": "a0db21117b905b414e825862d8bc93cfe9280975c8b91e1afa6cca2e1570a132"
+      },
+      "G": {
+        "blob": "0fac5843889e1b28d53712f353bce1b0bae855a4",
+        "bytes": 2714,
+        "sha256": "a0db21117b905b414e825862d8bc93cfe9280975c8b91e1afa6cca2e1570a132"
+      },
+      "H": {
+        "blob": "0fac5843889e1b28d53712f353bce1b0bae855a4",
+        "bytes": 2714,
+        "sha256": "a0db21117b905b414e825862d8bc93cfe9280975c8b91e1afa6cca2e1570a132"
+      }
+    },
+    {
+      "path": "packages/task-change-ledger/tsconfig.json",
+      "DReference": {
+        "blob": "ff7683dc99c69dbf8c884ba138382468c9c86314",
+        "bytes": 378,
+        "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c"
+      },
+      "E": {
+        "blob": "ff7683dc99c69dbf8c884ba138382468c9c86314",
+        "bytes": 378,
+        "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c"
+      },
+      "F": {
+        "blob": "ff7683dc99c69dbf8c884ba138382468c9c86314",
+        "bytes": 378,
+        "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c"
+      },
+      "G": {
+        "blob": "ff7683dc99c69dbf8c884ba138382468c9c86314",
+        "bytes": 378,
+        "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c"
+      },
+      "H": {
+        "blob": "ff7683dc99c69dbf8c884ba138382468c9c86314",
+        "bytes": 378,
+        "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c"
+      }
+    },
+    {
+      "path": "scripts/ci/check-source-file-size.mjs",
+      "DReference": {
+        "blob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+        "bytes": 8145,
+        "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2"
+      },
+      "E": {
+        "blob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+        "bytes": 8145,
+        "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2"
+      },
+      "F": {
+        "blob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+        "bytes": 8145,
+        "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2"
+      },
+      "G": {
+        "blob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+        "bytes": 8145,
+        "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2"
+      },
+      "H": {
+        "blob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+        "bytes": 8145,
+        "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2"
+      }
+    },
+    {
+      "path": "scripts/ci/check-team-provisioning-architecture.mjs",
+      "DReference": {
+        "blob": "1fdae92a9123c6226ced3a66e716ca43d64cb230",
+        "bytes": 6579,
+        "sha256": "3e39047ef3dfdc3ad948f36c795aa3b5aa493916b03526a81f834199243f3cf6"
+      },
+      "E": {
+        "blob": "1fdae92a9123c6226ced3a66e716ca43d64cb230",
+        "bytes": 6579,
+        "sha256": "3e39047ef3dfdc3ad948f36c795aa3b5aa493916b03526a81f834199243f3cf6"
+      },
+      "F": {
+        "blob": "1fdae92a9123c6226ced3a66e716ca43d64cb230",
+        "bytes": 6579,
+        "sha256": "3e39047ef3dfdc3ad948f36c795aa3b5aa493916b03526a81f834199243f3cf6"
+      },
+      "G": {
+        "blob": "1fdae92a9123c6226ced3a66e716ca43d64cb230",
+        "bytes": 6579,
+        "sha256": "3e39047ef3dfdc3ad948f36c795aa3b5aa493916b03526a81f834199243f3cf6"
+      },
+      "H": {
+        "blob": "1fdae92a9123c6226ced3a66e716ca43d64cb230",
+        "bytes": 6579,
+        "sha256": "3e39047ef3dfdc3ad948f36c795aa3b5aa493916b03526a81f834199243f3cf6"
+      }
+    },
+    {
+      "path": "scripts/ci/source-file-size-baseline.json",
+      "DReference": {
+        "blob": "e827bccf455235b1ff7871e7b93450cdaa53eb54",
+        "bytes": 9635,
+        "sha256": "82080bdf23e0fae3ea087e8aea8c3622fa63a734fa9874e7d07e9d568087f072"
+      },
+      "E": {
+        "blob": "e827bccf455235b1ff7871e7b93450cdaa53eb54",
+        "bytes": 9635,
+        "sha256": "82080bdf23e0fae3ea087e8aea8c3622fa63a734fa9874e7d07e9d568087f072"
+      },
+      "F": {
+        "blob": "e827bccf455235b1ff7871e7b93450cdaa53eb54",
+        "bytes": 9635,
+        "sha256": "82080bdf23e0fae3ea087e8aea8c3622fa63a734fa9874e7d07e9d568087f072"
+      },
+      "G": {
+        "blob": "e827bccf455235b1ff7871e7b93450cdaa53eb54",
+        "bytes": 9635,
+        "sha256": "82080bdf23e0fae3ea087e8aea8c3622fa63a734fa9874e7d07e9d568087f072"
+      },
+      "H": {
+        "blob": "e827bccf455235b1ff7871e7b93450cdaa53eb54",
+        "bytes": 9635,
+        "sha256": "82080bdf23e0fae3ea087e8aea8c3622fa63a734fa9874e7d07e9d568087f072"
+      }
+    },
+    {
+      "path": "scripts/ci/team-provisioning-architecture-baseline.json",
+      "DReference": {
+        "blob": "7e3e458d224cb898cbb01345c0c47f9de85b7ab4",
+        "bytes": 15092,
+        "sha256": "b987bba5a4a8e6f1e2e62d2a19df2cec654f9ed89b753e2c99f79e8da3abcd30"
+      },
+      "E": {
+        "blob": "7e3e458d224cb898cbb01345c0c47f9de85b7ab4",
+        "bytes": 15092,
+        "sha256": "b987bba5a4a8e6f1e2e62d2a19df2cec654f9ed89b753e2c99f79e8da3abcd30"
+      },
+      "F": {
+        "blob": "7e3e458d224cb898cbb01345c0c47f9de85b7ab4",
+        "bytes": 15092,
+        "sha256": "b987bba5a4a8e6f1e2e62d2a19df2cec654f9ed89b753e2c99f79e8da3abcd30"
+      },
+      "G": {
+        "blob": "7e3e458d224cb898cbb01345c0c47f9de85b7ab4",
+        "bytes": 15092,
+        "sha256": "b987bba5a4a8e6f1e2e62d2a19df2cec654f9ed89b753e2c99f79e8da3abcd30"
+      },
+      "H": {
+        "blob": "7e3e458d224cb898cbb01345c0c47f9de85b7ab4",
+        "bytes": 15092,
+        "sha256": "b987bba5a4a8e6f1e2e62d2a19df2cec654f9ed89b753e2c99f79e8da3abcd30"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "DReference": {
+        "blob": "e3f1eb2e81614d7136c4e685f93c99e68aed22d5",
+        "bytes": 44935,
+        "sha256": "9478a6cc8aa89040f389da7d527206ffdadb03fb66d1c6fe445e3f7fe22cdcf3"
+      },
+      "E": {
+        "bytes": 52461,
+        "blob": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+        "sha256": "ba8020eff1bc7bf80914b3d32cf7673d7a0ed763bb50e0aba7509b98d15bdcf7"
+      },
+      "F": {
+        "bytes": 52461,
+        "blob": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+        "sha256": "ba8020eff1bc7bf80914b3d32cf7673d7a0ed763bb50e0aba7509b98d15bdcf7"
+      },
+      "G": {
+        "bytes": 52461,
+        "blob": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+        "sha256": "ba8020eff1bc7bf80914b3d32cf7673d7a0ed763bb50e0aba7509b98d15bdcf7"
+      },
+      "H": {
+        "bytes": 52461,
+        "blob": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+        "sha256": "ba8020eff1bc7bf80914b3d32cf7673d7a0ed763bb50e0aba7509b98d15bdcf7"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "DReference": {
+        "blob": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+        "bytes": 2115,
+        "sha256": "26da6d6f0ad5e089fb59b6a57e7d102e434ea442cb5a1b9ef089f1362a139f21"
+      },
+      "E": {
+        "blob": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+        "bytes": 2115,
+        "sha256": "26da6d6f0ad5e089fb59b6a57e7d102e434ea442cb5a1b9ef089f1362a139f21"
+      },
+      "F": {
+        "blob": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+        "bytes": 2115,
+        "sha256": "26da6d6f0ad5e089fb59b6a57e7d102e434ea442cb5a1b9ef089f1362a139f21"
+      },
+      "G": {
+        "blob": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+        "bytes": 2115,
+        "sha256": "26da6d6f0ad5e089fb59b6a57e7d102e434ea442cb5a1b9ef089f1362a139f21"
+      },
+      "H": {
+        "blob": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+        "bytes": 2115,
+        "sha256": "26da6d6f0ad5e089fb59b6a57e7d102e434ea442cb5a1b9ef089f1362a139f21"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+      "DReference": {
+        "blob": "b8b6760f5623f55387dba4fec288947bce707bc7",
+        "bytes": 20305,
+        "sha256": "8d19cb46ef2729e862a37f13c32c0239d0fd7e0148b15873c1f0d1fad87cc6e7"
+      },
+      "E": {
+        "blob": "b8b6760f5623f55387dba4fec288947bce707bc7",
+        "bytes": 20305,
+        "sha256": "8d19cb46ef2729e862a37f13c32c0239d0fd7e0148b15873c1f0d1fad87cc6e7"
+      },
+      "F": {
+        "blob": "b8b6760f5623f55387dba4fec288947bce707bc7",
+        "bytes": 20305,
+        "sha256": "8d19cb46ef2729e862a37f13c32c0239d0fd7e0148b15873c1f0d1fad87cc6e7"
+      },
+      "G": {
+        "blob": "b8b6760f5623f55387dba4fec288947bce707bc7",
+        "bytes": 20305,
+        "sha256": "8d19cb46ef2729e862a37f13c32c0239d0fd7e0148b15873c1f0d1fad87cc6e7"
+      },
+      "H": {
+        "blob": "b8b6760f5623f55387dba4fec288947bce707bc7",
+        "bytes": 20305,
+        "sha256": "8d19cb46ef2729e862a37f13c32c0239d0fd7e0148b15873c1f0d1fad87cc6e7"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "DReference": {
+        "bytes": 19153,
+        "blob": "f2f299ea2457ce60a5044c44d190ad8e71c1e234",
+        "sha256": "bef43b5b921198c434a12cd713f698360343b89e96fd3fdcf2d01a86bf943a94"
+      },
+      "E": {
+        "bytes": 21655,
+        "blob": "4265b26ef0bab3a741e0e31631149b289bfe2337",
+        "sha256": "8a784f25d5a808bf2e6a9d2558e1715c21b759a744fcb32a024ef248cd74e30a"
+      },
+      "F": {
+        "bytes": 21655,
+        "blob": "4265b26ef0bab3a741e0e31631149b289bfe2337",
+        "sha256": "8a784f25d5a808bf2e6a9d2558e1715c21b759a744fcb32a024ef248cd74e30a"
+      },
+      "G": {
+        "bytes": 21808,
+        "blob": "6337cb07a04538d9e9ea1859a908efc554e2fc91",
+        "sha256": "8f56cd1d61ee0330082dd3c4a7fa1faf8c0acc294ee0cc18076a2e8b6ba0aad7"
+      },
+      "H": {
+        "bytes": 21808,
+        "blob": "6337cb07a04538d9e9ea1859a908efc554e2fc91",
+        "sha256": "8f56cd1d61ee0330082dd3c4a7fa1faf8c0acc294ee0cc18076a2e8b6ba0aad7"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "DReference": {
+        "blob": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+        "bytes": 26261,
+        "sha256": "a4f1f19bd9ce451946309c5aa6ed2a1437a9244494741937699360a7fe6bab60"
+      },
+      "E": {
+        "blob": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+        "bytes": 26261,
+        "sha256": "a4f1f19bd9ce451946309c5aa6ed2a1437a9244494741937699360a7fe6bab60"
+      },
+      "F": {
+        "blob": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+        "bytes": 26261,
+        "sha256": "a4f1f19bd9ce451946309c5aa6ed2a1437a9244494741937699360a7fe6bab60"
+      },
+      "G": {
+        "blob": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+        "bytes": 26261,
+        "sha256": "a4f1f19bd9ce451946309c5aa6ed2a1437a9244494741937699360a7fe6bab60"
+      },
+      "H": {
+        "blob": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+        "bytes": 26261,
+        "sha256": "a4f1f19bd9ce451946309c5aa6ed2a1437a9244494741937699360a7fe6bab60"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "DReference": {
+        "blob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+        "bytes": 24968,
+        "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6"
+      },
+      "E": {
+        "blob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+        "bytes": 24968,
+        "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6"
+      },
+      "F": {
+        "blob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+        "bytes": 24968,
+        "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6"
+      },
+      "G": {
+        "blob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+        "bytes": 24968,
+        "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6"
+      },
+      "H": {
+        "blob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+        "bytes": 24968,
+        "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "DReference": {
+        "blob": "7628e511b2f219ad27e517d4a96ecb7aec604131",
+        "bytes": 19234,
+        "sha256": "f4ea5ccdfd127a0ea0271a4923a8da12fcc2bf542a30a152f0b2d34360f781fe"
+      },
+      "E": {
+        "blob": "7628e511b2f219ad27e517d4a96ecb7aec604131",
+        "bytes": 19234,
+        "sha256": "f4ea5ccdfd127a0ea0271a4923a8da12fcc2bf542a30a152f0b2d34360f781fe"
+      },
+      "F": {
+        "blob": "7628e511b2f219ad27e517d4a96ecb7aec604131",
+        "bytes": 19234,
+        "sha256": "f4ea5ccdfd127a0ea0271a4923a8da12fcc2bf542a30a152f0b2d34360f781fe"
+      },
+      "G": {
+        "blob": "7628e511b2f219ad27e517d4a96ecb7aec604131",
+        "bytes": 19234,
+        "sha256": "f4ea5ccdfd127a0ea0271a4923a8da12fcc2bf542a30a152f0b2d34360f781fe"
+      },
+      "H": {
+        "blob": "7628e511b2f219ad27e517d4a96ecb7aec604131",
+        "bytes": 19234,
+        "sha256": "f4ea5ccdfd127a0ea0271a4923a8da12fcc2bf542a30a152f0b2d34360f781fe"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+      "DReference": {
+        "blob": "7c84fc0167171b2d0cce7c002c660a93060444b8",
+        "bytes": 3804,
+        "sha256": "cb6cd06a6773f9533357c501d551f3ed04144900787f39291caba0abc1980290"
+      },
+      "E": {
+        "blob": "7c84fc0167171b2d0cce7c002c660a93060444b8",
+        "bytes": 3804,
+        "sha256": "cb6cd06a6773f9533357c501d551f3ed04144900787f39291caba0abc1980290"
+      },
+      "F": {
+        "blob": "7c84fc0167171b2d0cce7c002c660a93060444b8",
+        "bytes": 3804,
+        "sha256": "cb6cd06a6773f9533357c501d551f3ed04144900787f39291caba0abc1980290"
+      },
+      "G": {
+        "blob": "7c84fc0167171b2d0cce7c002c660a93060444b8",
+        "bytes": 3804,
+        "sha256": "cb6cd06a6773f9533357c501d551f3ed04144900787f39291caba0abc1980290"
+      },
+      "H": {
+        "blob": "7c84fc0167171b2d0cce7c002c660a93060444b8",
+        "bytes": 3804,
+        "sha256": "cb6cd06a6773f9533357c501d551f3ed04144900787f39291caba0abc1980290"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "DReference": {
+        "blob": "d51935df74fc00f498dbe588515269ebfd9dd35a",
+        "bytes": 103556,
+        "sha256": "b799438e8031663783267eafad665522524e50908e13efc9df0890b4ebcbb000"
+      },
+      "E": {
+        "bytes": 103573,
+        "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+      },
+      "F": {
+        "bytes": 103573,
+        "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+      },
+      "G": {
+        "bytes": 103573,
+        "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+      },
+      "H": {
+        "bytes": 103573,
+        "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+      "DReference": {
+        "blob": "e7731fd8ca546fd14ac6992d74ea78f3ad8e7981",
+        "bytes": 8676,
+        "sha256": "de8552ab68f316a41901b304e7315128c33ad848a059fd0d14a60de7d6bd4b9e"
+      },
+      "E": {
+        "blob": "e7731fd8ca546fd14ac6992d74ea78f3ad8e7981",
+        "bytes": 8676,
+        "sha256": "de8552ab68f316a41901b304e7315128c33ad848a059fd0d14a60de7d6bd4b9e"
+      },
+      "F": {
+        "blob": "e7731fd8ca546fd14ac6992d74ea78f3ad8e7981",
+        "bytes": 8676,
+        "sha256": "de8552ab68f316a41901b304e7315128c33ad848a059fd0d14a60de7d6bd4b9e"
+      },
+      "G": {
+        "blob": "e7731fd8ca546fd14ac6992d74ea78f3ad8e7981",
+        "bytes": 8676,
+        "sha256": "de8552ab68f316a41901b304e7315128c33ad848a059fd0d14a60de7d6bd4b9e"
+      },
+      "H": {
+        "blob": "e7731fd8ca546fd14ac6992d74ea78f3ad8e7981",
+        "bytes": 8676,
+        "sha256": "de8552ab68f316a41901b304e7315128c33ad848a059fd0d14a60de7d6bd4b9e"
+      }
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "DReference": {
+        "blob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+        "bytes": 32767,
+        "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138"
+      },
+      "E": {
+        "blob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+        "bytes": 32767,
+        "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138"
+      },
+      "F": {
+        "blob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+        "bytes": 32767,
+        "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138"
+      },
+      "G": {
+        "blob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+        "bytes": 32767,
+        "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138"
+      },
+      "H": {
+        "blob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+        "bytes": 32767,
+        "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138"
+      }
+    },
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "DReference": {
+        "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+        "bytes": 51981,
+        "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f"
+      },
+      "E": {
+        "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+        "bytes": 51981,
+        "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f"
+      },
+      "F": {
+        "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+        "bytes": 51981,
+        "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f"
+      },
+      "G": {
+        "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+        "bytes": 51981,
+        "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f"
+      },
+      "H": {
+        "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+        "bytes": 51981,
+        "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "DReference": {
+        "blob": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+        "bytes": 22666,
+        "sha256": "69f6948490d5f4c88f090135912bf8c8189c3558e2480eb1ee4ac69ac15a2c5c"
+      },
+      "E": {
+        "blob": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+        "bytes": 22666,
+        "sha256": "69f6948490d5f4c88f090135912bf8c8189c3558e2480eb1ee4ac69ac15a2c5c"
+      },
+      "F": {
+        "blob": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+        "bytes": 22666,
+        "sha256": "69f6948490d5f4c88f090135912bf8c8189c3558e2480eb1ee4ac69ac15a2c5c"
+      },
+      "G": {
+        "blob": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+        "bytes": 22666,
+        "sha256": "69f6948490d5f4c88f090135912bf8c8189c3558e2480eb1ee4ac69ac15a2c5c"
+      },
+      "H": {
+        "blob": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+        "bytes": 22666,
+        "sha256": "69f6948490d5f4c88f090135912bf8c8189c3558e2480eb1ee4ac69ac15a2c5c"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "DReference": {
+        "blob": "c30eda98e0860599d6e7026ba73e8fdf80d909d4",
+        "bytes": 55362,
+        "sha256": "a3a221384b5fe822cb15d7005b7697f6dbaf55bf860b41839b2d544c9bb25f08"
+      },
+      "E": {
+        "bytes": 56276,
+        "blob": "8b4f0e8840773aa29e94758688211ffe138ebe04",
+        "sha256": "b6fc6bcbeea221fbb9efc139a073d1cae633b8bdd33247edc18f748461bf6a2a"
+      },
+      "F": {
+        "bytes": 56556,
+        "blob": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+        "sha256": "3cba93b8d78463415511f25e2b86132801fd5a0059d168072e39e03a0ad624b0"
+      },
+      "G": {
+        "bytes": 56556,
+        "blob": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+        "sha256": "3cba93b8d78463415511f25e2b86132801fd5a0059d168072e39e03a0ad624b0"
+      },
+      "H": {
+        "bytes": 56556,
+        "blob": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+        "sha256": "3cba93b8d78463415511f25e2b86132801fd5a0059d168072e39e03a0ad624b0"
+      }
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "DReference": {
+        "blob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+        "bytes": 646,
+        "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306"
+      },
+      "E": {
+        "blob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+        "bytes": 646,
+        "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306"
+      },
+      "F": {
+        "blob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+        "bytes": 646,
+        "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306"
+      },
+      "G": {
+        "blob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+        "bytes": 646,
+        "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306"
+      },
+      "H": {
+        "blob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+        "bytes": 646,
+        "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306"
+      }
+    }
+  ],
+  "selectedSourceCount": 32,
+  "hostSourceClosure": {
+    "path": "/workspace/scratch/82d3f9ba6b85/source-deadline-handoff-r1/host-source-closure.json",
+    "count": 615,
+    "bytes": 144977,
+    "blob": "92fe358082aa8c5892c084798b2bdb8b5bdb106f",
+    "sha256": "288b4a26f4e81dc3d65bcaaab061b09af4800efafe575cb1e29e798f33234a10"
+  },
+  "selectedDependencyInputs": [
+    {
+      "path": "package.json",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/package.json",
+      "bytes": 26839,
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/pnpm-lock.yaml",
+      "bytes": 956809,
+      "sha256": "8ac1ad56c4856ade77cc3747bfc9ac6feb93def40b280b972fd7e0aeab2356b5"
+    },
+    {
+      "path": "vitest.config.ts",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/vitest.config.ts",
+      "bytes": 1187,
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc"
+    },
+    {
+      "path": "test/setup.ts",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/test/setup.ts",
+      "bytes": 5297,
+      "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b"
+    },
+    {
+      "path": "node_modules/.pnpm/lock.yaml",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/lock.yaml",
+      "bytes": 956809,
+      "sha256": "8ac1ad56c4856ade77cc3747bfc9ac6feb93def40b280b972fd7e0aeab2356b5"
+    },
+    {
+      "path": "node_modules/.modules.yaml",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/node_modules/.modules.yaml",
+      "bytes": 165605,
+      "sha256": "788c92a6d710a140815ca93fbe3cc4cea575d9bab25083babfe873dc433745e1"
+    },
+    {
+      "path": "node_modules/vitest/package.json",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/package.json",
+      "bytes": 5029,
+      "sha256": "86c8529110b6690e7ed95e243c867ee9b3118ac91d8ae8857d22f228666252c4"
+    },
+    {
+      "path": "node_modules/vitest/vitest.mjs",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/vitest.mjs",
+      "bytes": 43,
+      "sha256": "39db22f579acf5639bbb17a261408debbde03f4692c0c439e77e7f13aeba74d6"
+    },
+    {
+      "path": "node_modules/@typescript/native/package.json",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/package.json",
+      "bytes": 3087,
+      "sha256": "3722b30210616a13a3213ded11575ba6b2dbab10c32a5ef67afca8513e27017e"
+    },
+    {
+      "path": "packages/task-change-ledger/node_modules/@typescript/native/package.json",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/package.json",
+      "bytes": 3087,
+      "sha256": "3722b30210616a13a3213ded11575ba6b2dbab10c32a5ef67afca8513e27017e"
+    },
+    {
+      "path": "packages/task-change-ledger/node_modules/@typescript/native/bin/tsc",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc",
+      "bytes": 44,
+      "sha256": "2219f428a7e55aaf1f7ad85b9b0f0cf5078aeb76ccc9a7c6036c92d48f492ffd"
+    },
+    {
+      "path": "packages/legacy-agent-host/node_modules/@typescript/native/package.json",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/package.json",
+      "bytes": 3087,
+      "sha256": "3722b30210616a13a3213ded11575ba6b2dbab10c32a5ef67afca8513e27017e"
+    },
+    {
+      "path": "packages/legacy-agent-host/node_modules/@typescript/native/bin/tsc",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc",
+      "bytes": 44,
+      "sha256": "2219f428a7e55aaf1f7ad85b9b0f0cf5078aeb76ccc9a7c6036c92d48f492ffd"
+    },
+    {
+      "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/package.json",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/@agent-teams+provider-implementations@file+vendor+provider-migration+opencode-selected-_046ca4d607e24622fed40712f11f6a5a/node_modules/@agent-teams/provider-implementations/package.json",
+      "bytes": 2107,
+      "sha256": "ea236ac5ff4c43d5fa7628ee7615022c23b0fcd9a4fe3594e63f137971245e50"
+    },
+    {
+      "path": "node_modules/@typescript/native/bin/tsc",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc",
+      "bytes": 44,
+      "sha256": "2219f428a7e55aaf1f7ad85b9b0f0cf5078aeb76ccc9a7c6036c92d48f492ffd"
+    },
+    {
+      "path": "node_modules/eslint/package.json",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/eslint@9.39.4_jiti@1.21.7_supports-color@10.2.2/node_modules/eslint/package.json",
+      "bytes": 7225,
+      "sha256": "80a7caf2adf34963e47b32a1e75157de6d6814c3ae5a9d90358ddd9364833fe7"
+    },
+    {
+      "path": "node_modules/eslint/bin/eslint.js",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/eslint@9.39.4_jiti@1.21.7_supports-color@10.2.2/node_modules/eslint/bin/eslint.js",
+      "bytes": 5610,
+      "sha256": "6280b95e2a6ab3b04be45cbd3b1627654be518e6a4da163ec0adcbba9cd5fcd8"
+    }
+  ],
+  "dependencyCount": 17,
+  "dependencyLimit": "The exact previous14 selected inputs plus root compiler CLI and ESLint package/CLI; preserves the original9 frozen inputs. Not a full dependency payload census. All must be exact before and after; no pnpm shim or installation.",
+  "builtOutputPolicy": {
+    "ownedDirectories": [
+      "packages/task-change-ledger/dist",
+      "packages/legacy-agent-host/dist"
+    ],
+    "proofFiles": {
+      "ledgerMetadata": {
+        "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-ledger-build-metadata.json",
+        "bytes": 1620,
+        "blob": "35330f31c2c9a4d91d275270f4e9de5016870041",
+        "sha256": "8f30dd274ba8df816b01850217dca18cbe62a66e4227e95cf98cf92c85c3f2ba"
+      },
+      "ledgerPreflight": {
+        "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-ledger-build-preflight.json",
+        "bytes": 15373,
+        "blob": "c70be07ee32c4806b4c38ca2405fc2f7c3c2ce12",
+        "sha256": "c82945bf80708f4548af41de585693dd4380fcbe3f21a05f5f3b3963fa05c5a1"
+      },
+      "ledgerLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-ledger-build.log",
+        "bytes": 0,
+        "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "ledgerOutputs": {
+        "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-ledger-build-outputs-after.json",
+        "bytes": 280944,
+        "blob": "897c958cbb8e80120c22670e44614931f6436ba2",
+        "sha256": "babd0e295fbb1c79a3710f808bf6418f1b9e249f29085ee2d7a604ce72721dc8"
+      },
+      "hostMetadata": {
+        "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-host-build-metadata.json",
+        "bytes": 1613,
+        "blob": "46fcbd461387e4ecc280845f6610c53c3ad2790a",
+        "sha256": "85ecadb70ae10c23e84e994324bd9efe42f9f374c6a9261c59a98ba76c029f4a"
+      },
+      "hostPreflight": {
+        "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-host-build-preflight.json",
+        "bytes": 15369,
+        "blob": "75c6e1773a58a426c99f45251081f2edb89aaf72",
+        "sha256": "0ddbc0b6df3265266c5da10e329ce35c01d233c42fba1d0297ce892bf3aebde8"
+      },
+      "hostLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-host-build.log",
+        "bytes": 0,
+        "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "hostOutputs": {
+        "path": "/workspace/scratch/82d3f9ba6b85/reconciled-source-local/D-host-build-outputs-after.json",
+        "bytes": 280944,
+        "blob": "897c958cbb8e80120c22670e44614931f6436ba2",
+        "sha256": "babd0e295fbb1c79a3710f808bf6418f1b9e249f29085ee2d7a604ce72721dc8"
+      }
+    },
+    "count": 1446,
+    "reuse": "All E/F/G/H commands use the same source-bound actual D ledger/Host output inventory. Compare all615Host source/config+fullstagecomposition and all1446ownedoutput files before/after everycommand. No build command, automatic rebuild or newbuildclaim. Keep localdistownership and Host-to-ledger realpathjoin."
+  },
+  "commands": [
+    {
+      "stage": "E",
+      "name": "runtime-red",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--test",
+        "--test-concurrency=1",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts"
+      ],
+      "requires": [],
+      "expected": {
+        "exitCode": 1,
+        "total": 44,
+        "pass": 38,
+        "fail": 6,
+        "skip": 0,
+        "cancelled": 0,
+        "meaning": "Predicted only: two retained Team, two standalone deadline and two late-capture missing rejections; no unrelated/setup failure qualifies."
+      },
+      "status": "NOT RUN; source proposal only"
+    },
+    {
+      "stage": "E",
+      "name": "journal-red",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+        "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+        "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+        "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+        "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+        "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts"
+      ],
+      "requires": [
+        {
+          "record": "E-runtime-red",
+          "exitCode": 1
+        }
+      ],
+      "expected": {
+        "exitCode": 1,
+        "total": 115,
+        "pass": 112,
+        "fail": 3,
+        "skip": 0,
+        "cancelled": 0,
+        "meaning": "Predicted only: full original8 helpers; exactly three no-child journal missing-rejection failures; observations subset37=34P3F."
+      },
+      "status": "NOT RUN; source proposal only"
+    },
+    {
+      "stage": "F",
+      "name": "runtime-green",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--test",
+        "--test-concurrency=1",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts"
+      ],
+      "requires": [
+        {
+          "record": "E-journal-red",
+          "exitCode": 1
+        },
+        {
+          "record": "E-runtime-red",
+          "exitCode": 1,
+          "review": "runtime"
+        }
+      ],
+      "expected": {
+        "exitCode": 0,
+        "total": 44,
+        "pass": 44,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "meaning": "Required actual complete-file GREEN on Scenario-only correction; no native qualification."
+      },
+      "status": "NOT RUN; source proposal only"
+    },
+    {
+      "stage": "G",
+      "name": "journal-green",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+        "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+        "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+        "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+        "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+        "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts"
+      ],
+      "requires": [
+        {
+          "record": "F-runtime-green",
+          "exitCode": 0,
+          "review": "runtime-green"
+        },
+        {
+          "record": "E-journal-red",
+          "exitCode": 1,
+          "review": "journal"
+        }
+      ],
+      "expected": {
+        "exitCode": 0,
+        "total": 115,
+        "pass": 115,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "meaning": "Required actual full8 GREEN on fixture-only correction; corrected Selection cases included."
+      },
+      "status": "NOT RUN; source proposal only"
+    },
+    {
+      "stage": "H",
+      "name": "host-test-types",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--project",
+        "packages/legacy-agent-host/tsconfig.test.json"
+      ],
+      "requires": [
+        {
+          "record": "F-runtime-green",
+          "exitCode": 0,
+          "review": "runtime-green"
+        },
+        {
+          "record": "G-journal-green",
+          "exitCode": 0,
+          "review": "journal-green"
+        }
+      ],
+      "expected": {
+        "exitCode": 0,
+        "meaning": "Existing complete named static gate; not a native/backend-project qualification."
+      },
+      "status": "NOT RUN; source proposal only"
+    },
+    {
+      "stage": "H",
+      "name": "scripts-types",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--project",
+        "tsconfig.legacy-agent-host-scripts.json"
+      ],
+      "requires": [
+        {
+          "record": "H-host-test-types",
+          "exitCode": 0
+        }
+      ],
+      "expected": {
+        "exitCode": 0,
+        "meaning": "Existing complete named static gate; not a native/backend-project qualification."
+      },
+      "status": "NOT RUN; source proposal only"
+    },
+    {
+      "stage": "H",
+      "name": "scoped-fast-lint",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.fast.config.js",
+        "--cache",
+        "--cache-location",
+        ".eslintcache-fast",
+        "--cache-strategy",
+        "content",
+        "--",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "tools/owned-process-broker/nativeEmulatedSourceScenario.ts"
+      ],
+      "requires": [
+        {
+          "record": "H-scripts-types",
+          "exitCode": 0
+        }
+      ],
+      "expected": {
+        "exitCode": 0,
+        "meaning": "Existing complete named static gate; not a native/backend-project qualification."
+      },
+      "status": "NOT RUN; source proposal only"
+    },
+    {
+      "stage": "H",
+      "name": "size",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "./scripts/ci/check-source-file-size.mjs"
+      ],
+      "requires": [
+        {
+          "record": "H-scoped-fast-lint",
+          "exitCode": 0
+        }
+      ],
+      "expected": {
+        "exitCode": 0,
+        "meaning": "Existing complete named static gate; not a native/backend-project qualification."
+      },
+      "status": "NOT RUN; source proposal only"
+    },
+    {
+      "stage": "H",
+      "name": "architecture",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "./scripts/ci/check-team-provisioning-architecture.mjs"
+      ],
+      "requires": [
+        {
+          "record": "H-size",
+          "exitCode": 0
+        }
+      ],
+      "expected": {
+        "exitCode": 0,
+        "meaning": "Existing complete named static gate; not a native/backend-project qualification."
+      },
+      "status": "NOT RUN; source proposal only"
+    },
+    {
+      "stage": "H",
+      "name": "diff",
+      "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "${R1_DOCS_HEAD}..${H_HEAD}",
+        "--",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/completion-2026-11-13.md",
+        "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        ".github/workflows/host-emulated-acceptance.yml"
+      ],
+      "requires": [
+        {
+          "record": "H-architecture",
+          "exitCode": 0
+        }
+      ],
+      "expected": {
+        "exitCode": 0,
+        "meaning": "Existing complete named static gate; not a native/backend-project qualification."
+      },
+      "status": "NOT RUN; source proposal only"
+    }
+  ],
+  "commandCount": 10,
+  "reviewRules": {
+    "runtime": {
+      "record": "E-runtime-red",
+      "exitCode": 1,
+      "total": 44,
+      "pass": 38,
+      "expectedSemanticFailures": 6,
+      "skip": 0,
+      "cancelled": 0,
+      "unrelatedFailures": 0,
+      "setupFailures": 0,
+      "families": {
+        "team-deadline": 2,
+        "standalone-deadline": 2,
+        "late-capture": 2
+      }
+    },
+    "journal": {
+      "record": "E-journal-red",
+      "exitCode": 1,
+      "total": 115,
+      "pass": 112,
+      "expectedSemanticFailures": 3,
+      "skip": 0,
+      "cancelled": 0,
+      "unrelatedFailures": 0,
+      "setupFailures": 0,
+      "families": {
+        "no-child-journal": 3
+      }
+    },
+    "runtime-green": {
+      "record": "F-runtime-green",
+      "exitCode": 0,
+      "total": 44,
+      "pass": 44,
+      "fail": 0,
+      "skip": 0,
+      "cancelled": 0
+    },
+    "journal-green": {
+      "record": "G-journal-green",
+      "exitCode": 0,
+      "total": 115,
+      "pass": 115,
+      "fail": 0,
+      "skip": 0,
+      "cancelled": 0
+    }
+  },
+  "serialOnly": true,
+  "noReplay": true,
+  "recordingRules": [
+    "All source, dependency, pinnedNode, priorbuild and predecessorproof checks precede project invocation.",
+    "Fullrawlogs and original exit/times are saved before postflight acceptance; postflight errors are recorded and refuse acceptance.",
+    "Everycommand leaves existing build outputs byte-identical and gets immutable preflight/log/metadata; no outputs are rebuilt.",
+    "Referenceproof files, executable, manifest and recorder bytes stay exact; appendstagebindings only between serial commands.",
+    "Historical B/C/D results remain unchanged; expected RED/GREEN counts are never generated results.",
+    "Full Host and scripts compilers are separate from the dedicated backend testproject; no thirdlocal retry or native/provider/OS acceptance is invoked."
+  ]
+}

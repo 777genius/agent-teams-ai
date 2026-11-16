@@ -1,0 +1,762 @@
+{
+  "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+  "runId": 43751070783,
+  "attempt": 1,
+  "jobId": 132925032258,
+  "artifactId": 14177492593,
+  "archiveAudit": "archive-audit-v2-darwin-arm.json",
+  "jobLog": {
+    "path": "job-132925032258.log",
+    "bytes": 106911,
+    "sha256": "c342f23d33a50d296e6432743c4e62b49b6e35c47465c15d2f31d6e5a96b08cb"
+  },
+  "originalCommandSummaries": [
+    {
+      "line": 785,
+      "tests": 58,
+      "suites": 0,
+      "pass": 57,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 1,
+      "todo": 0
+    },
+    {
+      "line": 859,
+      "tests": 2,
+      "suites": 0,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 1,
+      "todo": 0
+    },
+    {
+      "line": 932,
+      "tests": 1,
+      "suites": 0,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "line": 966,
+      "tests": 1,
+      "suites": 0,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "line": 1069,
+      "tests": 1,
+      "suites": 0,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "inputs": {
+    "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+    "status": "READY",
+    "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+    "platform": "darwin-arm64",
+    "nodeVersion": "v24.21.0",
+    "productQualified": false,
+    "stage": "prepared",
+    "baseArchiveSha256": "facece83f619c4b1c1ec3a76cff25727d85a2b75d18812cbc3a5b729e855ecc9",
+    "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+    "bun": {
+      "path": "/Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+      "sha256": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+      "version": "1.4.4"
+    },
+    "osBuild": "24H232",
+    "productTupleAdmitted": true,
+    "processArtifact": {
+      "manifest": {
+        "schemaVersion": 1,
+        "abi": "napi-8",
+        "platform": "darwin",
+        "architecture": "arm64",
+        "osBuild": "24H232",
+        "library": "registered-process.node",
+        "sourceSha256": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5",
+        "binarySha256": "662b16ef15beb4aa2667c4a770ea4ffa17f15990bfc12f1a2444bf778ea76adc",
+        "compilerSha256": "4c458256bcdf913774de1bb4a37768244d3b41f32ad55afb2dfec3432f46f4fe",
+        "sdkSettingsSha256": "58a133735f0a55a624a1703067059f6e78925e51725ec6e1f966072e142c9c42",
+        "headers": [
+          {
+            "file": "node_api.h",
+            "sha256": "2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a"
+          },
+          {
+            "file": "node_api_types.h",
+            "sha256": "a25356630d3058f0a0c8937d9f297e9471e037fda58c2696d8a505c2bd99cb00"
+          },
+          {
+            "file": "js_native_api.h",
+            "sha256": "8808ef8899a1691411928ef5dd7dae0537aedc93d3a34e223b2d89692e79c788"
+          },
+          {
+            "file": "js_native_api_types.h",
+            "sha256": "4f19cb90d240765cc0961d92a1ee20f65fdc50db7de1ab0a5cb6bc227224e1a0"
+          },
+          {
+            "file": "node_version.h",
+            "sha256": "bd056729fddf4bfa58687036219f07417c334c4ecfcb513ac256fa254451bfc9"
+          }
+        ]
+      },
+      "manifestSha256": "89b0baf9c4fb0a9b408824ebd6936a756846b4072a02097d9460b3ea4fca0c55",
+      "directory": "/Users/runner/work/_temp/TEST-opencode-v2-inputs-bSx5BC/process-artifact"
+    },
+    "supportArchiveSha256": "63776ffeade65263c217042e431bbf71d3d75c0b0b59f6515a0e503e068f012b",
+    "manifestSha256": "a6091937d1c8686b7e1f125b2ef69c52146867b208517eb0fab4cb7ea18c2204"
+  },
+  "hostReceipt": {
+    "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+    "status": "PASS",
+    "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+    "platform": "darwin-arm64",
+    "version": "2.1.4",
+    "approvalMode": "manual",
+    "nodeVersion": "v24.21.0",
+    "modelSelection": {
+      "providerId": "TEST-local",
+      "modelId": "TEST-model-B",
+      "variant": "high"
+    },
+    "configurationSelection": {
+      "scope": "project",
+      "original": "project-A",
+      "later": "project-B"
+    },
+    "preferencesSelection": {
+      "nativeDefault": "TEST-local/TEST-model",
+      "appDefault": "TEST-local/TEST-model-B"
+    },
+    "digests": {
+      "bun": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+      "manifest": "a6091937d1c8686b7e1f125b2ef69c52146867b208517eb0fab4cb7ea18c2204",
+      "node": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+      "hostSource": "0e5ed9a8773aa652ef8a7c2b917a5480488635e815be43d1a6215be145dbffa4",
+      "hostDist": "6c8c4b0cc19b33f7c6db5e456e51708a29f70c97eda769cfc24f441d8b68b1ce",
+      "provider": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94"
+    },
+    "steps": [
+      "original_host_embedded_native_and_mcp_ready",
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+      "changed_project_config_did_not_retarget_running_native_session",
+      "original_uploaded_PNG_native_image_inference_and_public_readback",
+      "checkpoint_and_original_host_native_cleanup_confirmed",
+      "cold_host_restored_native_history_without_model_or_tool_replay"
+    ],
+    "cleanup": true,
+    "phaseElapsedMs": {
+      "original_host_embedded_native_and_mcp_ready": 22719,
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 42988,
+      "changed_project_config_did_not_retarget_running_native_session": 42988,
+      "original_uploaded_PNG_native_image_inference_and_public_readback": 42988,
+      "checkpoint_and_original_host_native_cleanup_confirmed": 43405,
+      "cold_host_restored_native_history_without_model_or_tool_replay": 65598
+    },
+    "elapsedMs": 67151,
+    "cancelled": false,
+    "inputObservation": {
+      "reads": 140,
+      "last": {
+        "phase": "allocated",
+        "custody": "owned",
+        "nativeReady": true,
+        "attached": true,
+        "sealed": false,
+        "diagnostic": null,
+        "inputs": [
+          {
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ],
+        "interactions": [
+          {
+            "kind": "permission",
+            "phase": "resolved"
+          },
+          {
+            "kind": "permission",
+            "phase": "resolved"
+          }
+        ]
+      }
+    },
+    "launchObservation": {
+      "openElapsedMs": 18455,
+      "afterOpen": {
+        "available": true,
+        "status": "ready",
+        "reason": "context-applied",
+        "elapsedSinceAttemptMs": 18137,
+        "capturedTimeoutMs": 120000,
+        "claimed": true,
+        "nativeReady": true,
+        "contextApplied": true,
+        "everReady": true,
+        "usable": true,
+        "controlAvailable": true,
+        "noAllocation": false
+      }
+    },
+    "failureCode": null,
+    "hosts": [
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      },
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      }
+    ],
+    "modelOrigin": "localhost-scripted",
+    "modelRequests": 11,
+    "coordination": {
+      "status": "unqualified",
+      "cleanup": null
+    },
+    "modelFailures": [],
+    "vendorAuthQualified": false,
+    "desktopQualified": false,
+    "releaseQualified": false
+  },
+  "passiveTrace": {
+    "rows": 254,
+    "epochs": [
+      1
+    ],
+    "eventCounts": {
+      "child-spawn": 1,
+      "child-ready": 1,
+      "request": 103,
+      "response": 103,
+      "request-send-headers": 18,
+      "request-body-sent": 18,
+      "response-end": 9,
+      "trace-limit": 1
+    },
+    "projectedBytes": 54836,
+    "maxProjectedRowBytes": 228,
+    "last": {
+      "epoch": 1,
+      "event": "trace-limit",
+      "atMs": 34026,
+      "child": null,
+      "request": null,
+      "route": null,
+      "method": null,
+      "durationMs": null,
+      "status": null,
+      "contentEncoding": null,
+      "stage": null,
+      "code": null,
+      "exitCode": null,
+      "signal": null
+    }
+  },
+  "separateCustodyReceipt": {
+    "kind": "TEST_DARWIN_CUSTODY_PRODUCT_PATH",
+    "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+    "hostBuild": {
+      "hostSourceDigest": "0e5ed9a8773aa652ef8a7c2b917a5480488635e815be43d1a6215be145dbffa4",
+      "hostDistDigest": "6c8c4b0cc19b33f7c6db5e456e51708a29f70c97eda769cfc24f441d8b68b1ce",
+      "providerDigest": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94"
+    },
+    "platform": "darwin",
+    "arch": "arm64",
+    "osBuild": "24H232",
+    "productQualified": false,
+    "bunSha256": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+    "processArtifactManifestSha256": "89b0baf9c4fb0a9b408824ebd6936a756846b4072a02097d9460b3ea4fca0c55",
+    "original": {
+      "executablePath": "/private/var/folders/2s/vty41l455yv698g4xkgfv7z00000gn/T/TEST-native-darwin-executable-hTf8PJ/bun",
+      "executableSha256": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+      "pid": 6922,
+      "startIdentity": "54A883D4-CC01-4685-A069-53FF9B6AE691:6922:12078:5840101738"
+    },
+    "sibling": {
+      "executablePath": "/Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+      "executableSha256": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+      "pid": 6923,
+      "startIdentity": "54A883D4-CC01-4685-A069-53FF9B6AE691:6923:12080:5843427139"
+    },
+    "replacementRefused": true,
+    "siblingSurvivedTargetStop": true,
+    "cleanup": "confirmed",
+    "status": "PASS"
+  },
+  "posixReceipt": {
+    "kind": "TEST_POSIX_PRE_USER_EXEC_IMAGE",
+    "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+    "sourceSha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+    "platform": "darwin",
+    "arch": "arm64",
+    "nodeVersion": "v24.21.0",
+    "osBuild": "24H232",
+    "tools": {
+      "compiler": "8291fbbbaa75761bb649970a16af2ef84b4afd5da0bc133f4d8915f0f2f63e98",
+      "hashTool": "0812595f981a26f813d98dc380af14d4af427626c9339eda29eb849ae13de1e3",
+      "node": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b"
+    },
+    "observations": [
+      {
+        "label": "compiler-default:plain",
+        "expectedSha256": "5c17398ef659a177b7aea12d5ebf0bff9ba58c423b2714d1f1b06464608943ed",
+        "replacementSha256": "54792f013e9a44b319b355bd745c217e8641b098cd82e5794d4ebf84e760d08a",
+        "stage": "plain-exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": false,
+        "payloadMarkersAbsentBeforeGate": false,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 0,
+        "codeSigningError": 0,
+        "originalPid": 8912,
+        "originalBirth": "0",
+        "originalDev": "16777231",
+        "originalIno": "3911133",
+        "kernelDev": "0",
+        "kernelIno": "0",
+        "originalSha256": "5c17398ef659a177b7aea12d5ebf0bff9ba58c423b2714d1f1b06464608943ed",
+        "kernelSha256": "",
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "outputBytes": 314,
+        "outputSha256": "927452d749c5342ac2e512d4f512556fda7486bbb574a3c445e842a33bc37de9",
+        "controllerInterrupted": false,
+        "result": "PASS"
+      },
+      {
+        "label": "compiler-default:baseline",
+        "expectedSha256": "5c17398ef659a177b7aea12d5ebf0bff9ba58c423b2714d1f1b06464608943ed",
+        "replacementSha256": "54792f013e9a44b319b355bd745c217e8641b098cd82e5794d4ebf84e760d08a",
+        "stage": "exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": true,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 570556417,
+        "codeSigningError": 0,
+        "originalPid": 8915,
+        "originalBirth": "7841839858",
+        "originalDev": "16777231",
+        "originalIno": "3911145",
+        "kernelDev": "16777231",
+        "kernelIno": "3911145",
+        "originalSha256": "5c17398ef659a177b7aea12d5ebf0bff9ba58c423b2714d1f1b06464608943ed",
+        "kernelSha256": "5c17398ef659a177b7aea12d5ebf0bff9ba58c423b2714d1f1b06464608943ed",
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "outputBytes": 314,
+        "outputSha256": "e09fdb6981a0fc0f5b36e32d6b865ad528ab5cb26901ab268d461196156a233b",
+        "controllerInterrupted": false,
+        "result": "PASS"
+      },
+      {
+        "label": "adhoc-test-only:plain",
+        "expectedSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+        "replacementSha256": "eaf3485b57fa0e9926937ef55d4d8701bb7d704eb59e461e1198b4f18068f158",
+        "stage": "plain-exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": false,
+        "payloadMarkersAbsentBeforeGate": false,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 0,
+        "codeSigningError": 0,
+        "originalPid": 8919,
+        "originalBirth": "0",
+        "originalDev": "16777231",
+        "originalIno": "3911152",
+        "kernelDev": "0",
+        "kernelIno": "0",
+        "originalSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+        "kernelSha256": "",
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "outputBytes": 314,
+        "outputSha256": "54e52dbe0a1e47b63a34754b617c1675ce85684f24d6f3bb913466d54590d5cf",
+        "controllerInterrupted": false,
+        "result": "PASS"
+      },
+      {
+        "label": "adhoc-test-only:baseline",
+        "expectedSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+        "replacementSha256": "eaf3485b57fa0e9926937ef55d4d8701bb7d704eb59e461e1198b4f18068f158",
+        "stage": "exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": true,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 570425345,
+        "codeSigningError": 0,
+        "originalPid": 8922,
+        "originalBirth": "7844835411",
+        "originalDev": "16777231",
+        "originalIno": "3911159",
+        "kernelDev": "16777231",
+        "kernelIno": "3911159",
+        "originalSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+        "kernelSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "outputBytes": 314,
+        "outputSha256": "9b0e8d17417e0d308ed0baacc3d8ab9facec699442dccdd6357d9a3d5baab8d6",
+        "controllerInterrupted": false,
+        "result": "PASS"
+      },
+      {
+        "label": "adhoc-test-only:rename",
+        "expectedSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+        "replacementSha256": "eaf3485b57fa0e9926937ef55d4d8701bb7d704eb59e461e1198b4f18068f158",
+        "stage": "rejected-image",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": false,
+        "resumed": false,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 570425345,
+        "codeSigningError": 0,
+        "originalPid": 8926,
+        "originalBirth": "7846686296",
+        "originalDev": "16777231",
+        "originalIno": "3911168",
+        "kernelDev": "16777231",
+        "kernelIno": "3911169",
+        "originalSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+        "kernelSha256": "eaf3485b57fa0e9926937ef55d4d8701bb7d704eb59e461e1198b4f18068f158",
+        "exitCode": -1,
+        "exitSignal": 9,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [],
+        "outputBytes": 0,
+        "outputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "controllerInterrupted": false,
+        "result": "PASS"
+      },
+      {
+        "label": "adhoc-test-only:inplace",
+        "expectedSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+        "replacementSha256": "eaf3485b57fa0e9926937ef55d4d8701bb7d704eb59e461e1198b4f18068f158",
+        "stage": "rejected-image",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": false,
+        "resumed": false,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 570425345,
+        "codeSigningError": 0,
+        "originalPid": 8930,
+        "originalBirth": "7848404303",
+        "originalDev": "16777231",
+        "originalIno": "3911174",
+        "kernelDev": "16777231",
+        "kernelIno": "3911174",
+        "originalSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+        "kernelSha256": "eaf3485b57fa0e9926937ef55d4d8701bb7d704eb59e461e1198b4f18068f158",
+        "exitCode": -1,
+        "exitSignal": 9,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [],
+        "outputBytes": 0,
+        "outputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "controllerInterrupted": false,
+        "result": "PASS"
+      },
+      {
+        "label": "adhoc-test-only:after-check",
+        "expectedSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+        "replacementSha256": "eaf3485b57fa0e9926937ef55d4d8701bb7d704eb59e461e1198b4f18068f158",
+        "stage": "exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": true,
+        "resumed": true,
+        "mutationAfterCheckErrno": 0,
+        "codeSigningFlags": 570425345,
+        "codeSigningError": 0,
+        "originalPid": 8936,
+        "originalBirth": "7850126933",
+        "originalDev": "16777231",
+        "originalIno": "3911182",
+        "kernelDev": "16777231",
+        "kernelIno": "3911182",
+        "originalSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+        "kernelSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "outputBytes": 314,
+        "outputSha256": "4e1c7ad6ba59f77923dbcc635e965a64adcf38fc664c0882dd4e5b611435998f",
+        "controllerInterrupted": false,
+        "result": "INCOMPLETE"
+      },
+      {
+        "label": "adhoc-test-only:writer-open",
+        "expectedSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+        "replacementSha256": "eaf3485b57fa0e9926937ef55d4d8701bb7d704eb59e461e1198b4f18068f158",
+        "stage": "exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": true,
+        "resumed": true,
+        "mutationAfterCheckErrno": 0,
+        "codeSigningFlags": 570425345,
+        "codeSigningError": 0,
+        "originalPid": 8940,
+        "originalBirth": "7852204929",
+        "originalDev": "16777231",
+        "originalIno": "3911190",
+        "kernelDev": "16777231",
+        "kernelIno": "3911190",
+        "originalSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+        "kernelSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "outputBytes": 314,
+        "outputSha256": "11561485332e40b1435d9eed5290e74e35df5e2e8021ebb8ec5276922d0871cd",
+        "controllerInterrupted": false,
+        "result": "INCOMPLETE"
+      },
+      {
+        "label": "script:plain",
+        "expectedSha256": "1ea2668c13c11caf71b5b9bb3a0cdf0bd7370550243829101ca23c01a173a3c8",
+        "replacementSha256": "791d676ecf89b15602d48544cf502c449229eb926902e2375fa86d24a31fed3e",
+        "stage": "plain-exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": false,
+        "payloadMarkersAbsentBeforeGate": false,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 0,
+        "codeSigningError": 0,
+        "originalPid": 8944,
+        "originalBirth": "0",
+        "originalDev": "16777231",
+        "originalIno": "3911198",
+        "kernelDev": "0",
+        "kernelIno": "0",
+        "originalSha256": "1ea2668c13c11caf71b5b9bb3a0cdf0bd7370550243829101ca23c01a173a3c8",
+        "kernelSha256": "",
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "SCRIPT:A"
+        ],
+        "outputBytes": 303,
+        "outputSha256": "fdcaf1b22424d483da57b66bbc5e49424305f855277d4806032403c6f2e08253",
+        "controllerInterrupted": false,
+        "result": "PASS"
+      },
+      {
+        "label": "script:script-negative",
+        "expectedSha256": "1ea2668c13c11caf71b5b9bb3a0cdf0bd7370550243829101ca23c01a173a3c8",
+        "replacementSha256": "791d676ecf89b15602d48544cf502c449229eb926902e2375fa86d24a31fed3e",
+        "stage": "exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": 0,
+        "codeSigningFlags": 637601793,
+        "codeSigningError": 0,
+        "originalPid": 8947,
+        "originalBirth": "7855737594",
+        "originalDev": "16777231",
+        "originalIno": "3911210",
+        "kernelDev": "16777231",
+        "kernelIno": "1152921500312519140",
+        "originalSha256": "1ea2668c13c11caf71b5b9bb3a0cdf0bd7370550243829101ca23c01a173a3c8",
+        "kernelSha256": "324f9aeacfe8e36831b4537765771ea2926af255d15440a9038008413006201d",
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "SCRIPT:B"
+        ],
+        "outputBytes": 303,
+        "outputSha256": "cc6e2669ba730470369c46f35a7fefbf67a405fa4c88921fc2fab9dcccb8c365",
+        "controllerInterrupted": false,
+        "result": "COUNTEREXAMPLE"
+      }
+    ],
+    "productQualified": false,
+    "installedRuntimeQualified": false,
+    "customExecutableQualified": false,
+    "scriptQualified": false,
+    "adhocSignerSha256": "1cdff754c0405ff031983ade8791ad0835777ae5787957d8d63090da0e159f88",
+    "binaryDigests": {
+      "controller": "9d85ae33319e73b5b2ef6909ab98242628459b56f98409196ffc62a21e2b00ac",
+      "compiler-default/libTESTsibling.dylib": "b596b12c77adb18889648ded97949ab9898b22f906d1be51748da12536a2475f",
+      "compiler-default/A": "5c17398ef659a177b7aea12d5ebf0bff9ba58c423b2714d1f1b06464608943ed",
+      "compiler-default/B": "54792f013e9a44b319b355bd745c217e8641b098cd82e5794d4ebf84e760d08a",
+      "adhoc-test-only/libTESTsibling.dylib": "83ff2404aa7ab6197c156ddff410b613d2472a0210762a701499e1885088cf87",
+      "adhoc-test-only/A": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+      "adhoc-test-only/B": "eaf3485b57fa0e9926937ef55d4d8701bb7d704eb59e461e1198b4f18068f158"
+    },
+    "cleanup": true,
+    "nativeFixtureQualified": false,
+    "status": "INCOMPLETE"
+  },
+  "sourceFiles": [
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "blob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+      "bytes": 33259,
+      "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/windows-job-custody.native.ts",
+      "blob": "a224b47e942a337e823135d0cfca0fa11cd475bd",
+      "bytes": 9536,
+      "sha256": "88ee29496c076870605d2e2c6849c92e9286a06809f00cb10444b033757f4687"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+      "blob": "f1e1d1145898e201723be343fa8768d73332fcb1",
+      "bytes": 27709,
+      "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+      "blob": "19aca56c55a666654b04827b3c2446d2ad03ad8d",
+      "bytes": 21219,
+      "sha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "blob": "625c6ddd74357abbdf565bf386388274cebd4068",
+      "bytes": 37181,
+      "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b"
+    }
+  ],
+  "firstThrownAssertion": {
+    "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+    "blob": "f1e1d1145898e201723be343fa8768d73332fcb1",
+    "line": 496,
+    "message": "no selected library or payload constructor may run after byte mutation",
+    "case": "adhoc-test-only:after-check",
+    "markerLines": [
+      "LIB",
+      "BIN:A",
+      "MAIN:A"
+    ],
+    "expected": ""
+  },
+  "limits": [
+    "Host flow PASS and separate native-custody PASS do not override original P09 failure.",
+    "Compiler-default baseline PASS on this ARM tuple is separate from x64 unsigned-baseline refusal; no cross-architecture extrapolation.",
+    "All original mutation observations remain, including deliberate script mismatch resume counterexample.",
+    "No source change, native rerun, binary reconstruction, writer-authority change or new mechanism authorized.",
+    "Global passive capture truncation prevents full later-epoch or cleanup-trace claims."
+  ]
+}

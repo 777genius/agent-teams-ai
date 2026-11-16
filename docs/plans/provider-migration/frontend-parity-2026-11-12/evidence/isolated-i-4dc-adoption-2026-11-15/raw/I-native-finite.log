@@ -1,0 +1,12 @@
+
+ RUN  v3.2.6 /workspace/scratch/82d3f9ba6b85/agent-teams-e2e
+
+ ✓ tools/owned-process-broker/protocol.test.ts (47 tests) 91ms
+ ✓ tools/owned-process-broker/nativeGateContext.test.ts (3 tests) 120ms
+ ✓ tools/owned-process-broker/nativeGateEvents.test.ts (3 tests) 3ms
+
+ Test Files  3 passed (3)
+      Tests  53 passed (53)
+   Start at  00:20:57
+   Duration  1.84s (transform 314ms, setup 0ms, collect 1.08s, tests 214ms, environment 0ms, prepare 300ms)
+

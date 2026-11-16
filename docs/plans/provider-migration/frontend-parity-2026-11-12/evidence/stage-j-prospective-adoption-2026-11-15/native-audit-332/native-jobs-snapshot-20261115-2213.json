@@ -1,0 +1,1461 @@
+{
+  "capturedAt": "2026-11-15 22:13:25 UTC",
+  "sourceHead": "332fbe3420c811c095dac4187d3f9664e8c47179",
+  "runs": [
+    {
+      "id": 43766708055,
+      "response": {
+        "total_count": 5,
+        "jobs": [
+          {
+            "id": 132973378700,
+            "run_id": 43766708055,
+            "workflow_name": "Host process fixture acceptance",
+            "head_branch": "fix/frontend-parity-completion-20261113",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43766708055",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe9dS8jA",
+            "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132973378700",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43766708055/job/132973378700",
+            "status": "completed",
+            "conclusion": "failure",
+            "created_at": "2026-11-15T21:59:32Z",
+            "started_at": "2026-11-15T22:07:22Z",
+            "completed_at": "2026-11-15T22:10:26Z",
+            "name": "Host process fixtures (win32-x64)",
+            "steps": [
+              {
+                "name": "Set up job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 1,
+                "started_at": "2026-11-15T22:07:23Z",
+                "completed_at": "2026-11-15T22:07:23Z"
+              },
+              {
+                "name": "Run actions/checkout@v7.0.1",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 2,
+                "started_at": "2026-11-15T22:07:23Z",
+                "completed_at": "2026-11-15T22:07:35Z"
+              },
+              {
+                "name": "Run actions/setup-node@v7.0.0",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 3,
+                "started_at": "2026-11-15T22:07:35Z",
+                "completed_at": "2026-11-15T22:07:42Z"
+              },
+              {
+                "name": "Select the pinned package manager with bundled Corepack",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 4,
+                "started_at": "2026-11-15T22:07:42Z",
+                "completed_at": "2026-11-15T22:07:50Z"
+              },
+              {
+                "name": "Run actions/setup-node@v7.0.0",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 5,
+                "started_at": "2026-11-15T22:07:50Z",
+                "completed_at": "2026-11-15T22:08:14Z"
+              },
+              {
+                "name": "Bind exact source and actual process tuple",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 6,
+                "started_at": "2026-11-15T22:08:14Z",
+                "completed_at": "2026-11-15T22:08:14Z"
+              },
+              {
+                "name": "Install frozen workspace without Desktop postinstall",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 7,
+                "started_at": "2026-11-15T22:08:14Z",
+                "completed_at": "2026-11-15T22:08:36Z"
+              },
+              {
+                "name": "Build existing controller and Host",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 8,
+                "started_at": "2026-11-15T22:08:36Z",
+                "completed_at": "2026-11-15T22:08:43Z"
+              },
+              {
+                "name": "Verify process contracts and retained Main Host transport",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 9,
+                "started_at": "2026-11-15T22:08:43Z",
+                "completed_at": "2026-11-15T22:09:54Z"
+              },
+              {
+                "name": "Verify original POSIX Node and shell lifecycle fixtures",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 10,
+                "started_at": "2026-11-15T22:09:54Z",
+                "completed_at": "2026-11-15T22:09:54Z"
+              },
+              {
+                "name": "Prepare pinned Electron for native process fixtures",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 11,
+                "started_at": "2026-11-15T22:09:54Z",
+                "completed_at": "2026-11-15T22:09:54Z"
+              },
+              {
+                "name": "Verify Linux Node exec descriptor closure under both original parents",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 12,
+                "started_at": "2026-11-15T22:09:54Z",
+                "completed_at": "2026-11-15T22:09:54Z"
+              },
+              {
+                "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 13,
+                "started_at": "2026-11-15T22:09:54Z",
+                "completed_at": "2026-11-15T22:09:54Z"
+              },
+              {
+                "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 14,
+                "started_at": "2026-11-15T22:09:54Z",
+                "completed_at": "2026-11-15T22:09:54Z"
+              },
+              {
+                "name": "Build original Windows product broker and C++ fixtures",
+                "status": "completed",
+                "conclusion": "failure",
+                "number": 15,
+                "started_at": "2026-11-15T22:09:54Z",
+                "completed_at": "2026-11-15T22:10:22Z"
+              },
+              {
+                "name": "Qualify original Windows Job and control under Host Node",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 16,
+                "started_at": "2026-11-15T22:10:22Z",
+                "completed_at": "2026-11-15T22:10:22Z"
+              },
+              {
+                "name": "Qualify original Windows Job and control under Electron Node",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 17,
+                "started_at": "2026-11-15T22:10:22Z",
+                "completed_at": "2026-11-15T22:10:22Z"
+              },
+              {
+                "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 18,
+                "started_at": "2026-11-15T22:10:22Z",
+                "completed_at": "2026-11-15T22:10:22Z"
+              },
+              {
+                "name": "Qualify original codex source A B with TEST peer",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 19,
+                "started_at": "2026-11-15T22:10:22Z",
+                "completed_at": "2026-11-15T22:10:22Z"
+              },
+              {
+                "name": "Qualify original claude source A B with TEST peer",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 20,
+                "started_at": "2026-11-15T22:10:22Z",
+                "completed_at": "2026-11-15T22:10:22Z"
+              },
+              {
+                "name": "Qualify original opencode source A B with TEST peer",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 21,
+                "started_at": "2026-11-15T22:10:22Z",
+                "completed_at": "2026-11-15T22:10:22Z"
+              },
+              {
+                "name": "Require completed original platform receipts and unchanged source",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 22,
+                "started_at": "2026-11-15T22:10:22Z",
+                "completed_at": "2026-11-15T22:10:22Z"
+              },
+              {
+                "name": "Preserve original process evidence including failures",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 23,
+                "started_at": "2026-11-15T22:10:22Z",
+                "completed_at": "2026-11-15T22:10:23Z"
+              },
+              {
+                "name": "Post Run actions/setup-node@v7.0.0",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 44,
+                "started_at": "2026-11-15T22:10:23Z",
+                "completed_at": "2026-11-15T22:10:23Z"
+              },
+              {
+                "name": "Post Run actions/setup-node@v7.0.0",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 45,
+                "started_at": "2026-11-15T22:10:23Z",
+                "completed_at": "2026-11-15T22:10:23Z"
+              },
+              {
+                "name": "Post Run actions/checkout@v7.0.1",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 46,
+                "started_at": "2026-11-15T22:10:23Z",
+                "completed_at": "2026-11-15T22:10:24Z"
+              },
+              {
+                "name": "Complete job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 47,
+                "started_at": "2026-11-15T22:10:24Z",
+                "completed_at": "2026-11-15T22:10:24Z"
+              }
+            ],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132973378700",
+            "labels": [
+              "windows-2022"
+            ],
+            "runner_id": 1000374623,
+            "runner_name": "GitHub Actions 1000374623",
+            "runner_group_id": 0,
+            "runner_group_name": "GitHub Actions"
+          },
+          {
+            "id": 132973378912,
+            "run_id": 43766708055,
+            "workflow_name": "Host process fixture acceptance",
+            "head_branch": "fix/frontend-parity-completion-20261113",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43766708055",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe9dS9YA",
+            "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132973378912",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43766708055/job/132973378912",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "created_at": "2026-11-15T21:59:32Z",
+            "started_at": "2026-11-15T21:59:32Z",
+            "completed_at": "2026-11-15T22:13:12Z",
+            "name": "Host process fixtures (linux-x64)",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132973378912",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": 0,
+            "runner_name": "",
+            "runner_group_id": 0,
+            "runner_group_name": ""
+          },
+          {
+            "id": 132973379009,
+            "run_id": 43766708055,
+            "workflow_name": "Host process fixture acceptance",
+            "head_branch": "fix/frontend-parity-completion-20261113",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43766708055",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe9dS9wQ",
+            "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132973379009",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43766708055/job/132973379009",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "created_at": "2026-11-15T21:59:32Z",
+            "started_at": "2026-11-15T21:59:32Z",
+            "completed_at": "2026-11-15T22:13:12Z",
+            "name": "Host process fixtures (darwin-x64)",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132973379009",
+            "labels": [
+              "macos-15-intel"
+            ],
+            "runner_id": 0,
+            "runner_name": "",
+            "runner_group_id": 0,
+            "runner_group_name": ""
+          },
+          {
+            "id": 132973379084,
+            "run_id": 43766708055,
+            "workflow_name": "Host process fixture acceptance",
+            "head_branch": "fix/frontend-parity-completion-20261113",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43766708055",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe9dS-DA",
+            "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132973379084",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43766708055/job/132973379084",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "created_at": "2026-11-15T21:59:32Z",
+            "started_at": "2026-11-15T21:59:32Z",
+            "completed_at": "2026-11-15T22:13:12Z",
+            "name": "Host process fixtures (darwin-arm64)",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132973379084",
+            "labels": [
+              "macos-15"
+            ],
+            "runner_id": 0,
+            "runner_name": "",
+            "runner_group_id": 0,
+            "runner_group_name": ""
+          },
+          {
+            "id": 132973379104,
+            "run_id": 43766708055,
+            "workflow_name": "Host process fixture acceptance",
+            "head_branch": "fix/frontend-parity-completion-20261113",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43766708055",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe9dS-IA",
+            "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132973379104",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43766708055/job/132973379104",
+            "status": "completed",
+            "conclusion": "failure",
+            "created_at": "2026-11-15T21:59:32Z",
+            "started_at": "2026-11-15T22:01:04Z",
+            "completed_at": "2026-11-15T22:12:55Z",
+            "name": "Host process fixtures (win32-arm64)",
+            "steps": [
+              {
+                "name": "Set up job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 1,
+                "started_at": "2026-11-15T22:01:05Z",
+                "completed_at": "2026-11-15T22:01:07Z"
+              },
+              {
+                "name": "Run actions/checkout@v7.0.1",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 2,
+                "started_at": "2026-11-15T22:01:07Z",
+                "completed_at": "2026-11-15T22:01:37Z"
+              },
+              {
+                "name": "Run actions/setup-node@v7.0.0",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 3,
+                "started_at": "2026-11-15T22:01:37Z",
+                "completed_at": "2026-11-15T22:01:53Z"
+              },
+              {
+                "name": "Select the pinned package manager with bundled Corepack",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 4,
+                "started_at": "2026-11-15T22:01:53Z",
+                "completed_at": "2026-11-15T22:02:05Z"
+              },
+              {
+                "name": "Run actions/setup-node@v7.0.0",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 5,
+                "started_at": "2026-11-15T22:02:05Z",
+                "completed_at": "2026-11-15T22:04:48Z"
+              },
+              {
+                "name": "Bind exact source and actual process tuple",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 6,
+                "started_at": "2026-11-15T22:04:48Z",
+                "completed_at": "2026-11-15T22:04:49Z"
+              },
+              {
+                "name": "Install frozen workspace without Desktop postinstall",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 7,
+                "started_at": "2026-11-15T22:04:49Z",
+                "completed_at": "2026-11-15T22:09:55Z"
+              },
+              {
+                "name": "Build existing controller and Host",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 8,
+                "started_at": "2026-11-15T22:09:55Z",
+                "completed_at": "2026-11-15T22:10:04Z"
+              },
+              {
+                "name": "Verify process contracts and retained Main Host transport",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 9,
+                "started_at": "2026-11-15T22:10:04Z",
+                "completed_at": "2026-11-15T22:12:00Z"
+              },
+              {
+                "name": "Verify original POSIX Node and shell lifecycle fixtures",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 10,
+                "started_at": "2026-11-15T22:12:00Z",
+                "completed_at": "2026-11-15T22:12:00Z"
+              },
+              {
+                "name": "Prepare pinned Electron for native process fixtures",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 11,
+                "started_at": "2026-11-15T22:12:00Z",
+                "completed_at": "2026-11-15T22:12:00Z"
+              },
+              {
+                "name": "Verify Linux Node exec descriptor closure under both original parents",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 12,
+                "started_at": "2026-11-15T22:12:00Z",
+                "completed_at": "2026-11-15T22:12:00Z"
+              },
+              {
+                "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 13,
+                "started_at": "2026-11-15T22:12:00Z",
+                "completed_at": "2026-11-15T22:12:00Z"
+              },
+              {
+                "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 14,
+                "started_at": "2026-11-15T22:12:00Z",
+                "completed_at": "2026-11-15T22:12:00Z"
+              },
+              {
+                "name": "Build original Windows product broker and C++ fixtures",
+                "status": "completed",
+                "conclusion": "failure",
+                "number": 15,
+                "started_at": "2026-11-15T22:12:00Z",
+                "completed_at": "2026-11-15T22:12:48Z"
+              },
+              {
+                "name": "Qualify original Windows Job and control under Host Node",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 16,
+                "started_at": "2026-11-15T22:12:48Z",
+                "completed_at": "2026-11-15T22:12:48Z"
+              },
+              {
+                "name": "Qualify original Windows Job and control under Electron Node",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 17,
+                "started_at": "2026-11-15T22:12:48Z",
+                "completed_at": "2026-11-15T22:12:48Z"
+              },
+              {
+                "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 18,
+                "started_at": "2026-11-15T22:12:48Z",
+                "completed_at": "2026-11-15T22:12:48Z"
+              },
+              {
+                "name": "Qualify original codex source A B with TEST peer",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 19,
+                "started_at": "2026-11-15T22:12:48Z",
+                "completed_at": "2026-11-15T22:12:48Z"
+              },
+              {
+                "name": "Qualify original claude source A B with TEST peer",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 20,
+                "started_at": "2026-11-15T22:12:48Z",
+                "completed_at": "2026-11-15T22:12:48Z"
+              },
+              {
+                "name": "Qualify original opencode source A B with TEST peer",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 21,
+                "started_at": "2026-11-15T22:12:48Z",
+                "completed_at": "2026-11-15T22:12:48Z"
+              },
+              {
+                "name": "Require completed original platform receipts and unchanged source",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 22,
+                "started_at": "2026-11-15T22:12:48Z",
+                "completed_at": "2026-11-15T22:12:48Z"
+              },
+              {
+                "name": "Preserve original process evidence including failures",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 23,
+                "started_at": "2026-11-15T22:12:48Z",
+                "completed_at": "2026-11-15T22:12:49Z"
+              },
+              {
+                "name": "Post Run actions/setup-node@v7.0.0",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 44,
+                "started_at": "2026-11-15T22:12:49Z",
+                "completed_at": "2026-11-15T22:12:49Z"
+              },
+              {
+                "name": "Post Run actions/setup-node@v7.0.0",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 45,
+                "started_at": "2026-11-15T22:12:49Z",
+                "completed_at": "2026-11-15T22:12:49Z"
+              },
+              {
+                "name": "Post Run actions/checkout@v7.0.1",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 46,
+                "started_at": "2026-11-15T22:12:49Z",
+                "completed_at": "2026-11-15T22:12:53Z"
+              },
+              {
+                "name": "Complete job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 47,
+                "started_at": "2026-11-15T22:12:53Z",
+                "completed_at": "2026-11-15T22:12:53Z"
+              }
+            ],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132973379104",
+            "labels": [
+              "windows-11-arm"
+            ],
+            "runner_id": 1000374597,
+            "runner_name": "GitHub Actions 1000374597",
+            "runner_group_id": 0,
+            "runner_group_name": "GitHub Actions"
+          }
+        ]
+      }
+    },
+    {
+      "id": 43766707964,
+      "response": {
+        "total_count": 9,
+        "jobs": [
+          {
+            "id": 132973378084,
+            "run_id": 43766707964,
+            "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+            "head_branch": "fix/frontend-parity-completion-20261113",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43766707964",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe9dS6JA",
+            "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132973378084",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43766707964/job/132973378084",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "created_at": "2026-11-15T21:59:31Z",
+            "started_at": "2026-11-15T21:59:31Z",
+            "completed_at": "2026-11-15T22:13:12Z",
+            "name": "Native V2.0.21 Host SPI instructions (Ubuntu TEST only)",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132973378084",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": 0,
+            "runner_name": "",
+            "runner_group_id": 0,
+            "runner_group_name": ""
+          },
+          {
+            "id": 132973378344,
+            "run_id": 43766707964,
+            "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+            "head_branch": "fix/frontend-parity-completion-20261113",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43766707964",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe9dS7KA",
+            "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132973378344",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43766707964/job/132973378344",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "created_at": "2026-11-15T21:59:31Z",
+            "started_at": "2026-11-15T21:59:31Z",
+            "completed_at": "2026-11-15T22:13:12Z",
+            "name": "Static V01 source test (ubuntu-24.04)",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132973378344",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": 0,
+            "runner_name": "",
+            "runner_group_id": 0,
+            "runner_group_name": ""
+          },
+          {
+            "id": 132973378345,
+            "run_id": 43766707964,
+            "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+            "head_branch": "fix/frontend-parity-completion-20261113",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43766707964",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe9dS7KQ",
+            "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132973378345",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43766707964/job/132973378345",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "created_at": "2026-11-15T21:59:31Z",
+            "started_at": "2026-11-15T21:59:31Z",
+            "completed_at": "2026-11-15T22:13:12Z",
+            "name": "Embedded V2.1.4 original Host (darwin-x64)",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132973378345",
+            "labels": [
+              "macos-15-intel"
+            ],
+            "runner_id": 0,
+            "runner_name": "",
+            "runner_group_id": 0,
+            "runner_group_name": ""
+          },
+          {
+            "id": 132973378346,
+            "run_id": 43766707964,
+            "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+            "head_branch": "fix/frontend-parity-completion-20261113",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43766707964",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe9dS7Kg",
+            "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132973378346",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43766707964/job/132973378346",
+            "status": "in_progress",
+            "conclusion": null,
+            "created_at": "2026-11-15T21:59:31Z",
+            "started_at": "2026-11-15T22:01:40Z",
+            "completed_at": null,
+            "name": "Embedded V2.1.4 original Host (win32-arm64)",
+            "steps": [
+              {
+                "name": "Set up job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 1,
+                "started_at": "2026-11-15T22:01:41Z",
+                "completed_at": "2026-11-15T22:01:43Z"
+              },
+              {
+                "name": "Run actions/checkout@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 2,
+                "started_at": "2026-11-15T22:01:43Z",
+                "completed_at": "2026-11-15T22:02:25Z"
+              },
+              {
+                "name": "Require immutable source HEAD and record actual runner tuple",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 3,
+                "started_at": "2026-11-15T22:02:25Z",
+                "completed_at": "2026-11-15T22:02:26Z"
+              },
+              {
+                "name": "Run pnpm/action-setup@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 4,
+                "started_at": "2026-11-15T22:02:26Z",
+                "completed_at": "2026-11-15T22:02:52Z"
+              },
+              {
+                "name": "Run actions/setup-node@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 5,
+                "started_at": "2026-11-15T22:02:52Z",
+                "completed_at": "2026-11-15T22:05:43Z"
+              },
+              {
+                "name": "Install exact source workspace dependencies",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 6,
+                "started_at": "2026-11-15T22:05:43Z",
+                "completed_at": "2026-11-15T22:11:56Z"
+              },
+              {
+                "name": "Build original Host and its pinned provider implementation",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 7,
+                "started_at": "2026-11-15T22:11:56Z",
+                "completed_at": "2026-11-15T22:12:02Z"
+              },
+              {
+                "name": "Check original graph and custody boundaries",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 8,
+                "started_at": "2026-11-15T22:12:02Z",
+                "completed_at": "2026-11-15T22:12:19Z"
+              },
+              {
+                "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 9,
+                "started_at": "2026-11-15T22:12:19Z",
+                "completed_at": "2026-11-15T22:13:06Z"
+              },
+              {
+                "name": "Prepare exact Bun, engine graph and original-process artifact",
+                "status": "completed",
+                "conclusion": "cancelled",
+                "number": 10,
+                "started_at": "2026-11-15T22:13:06Z",
+                "completed_at": "2026-11-15T22:13:20Z"
+              },
+              {
+                "name": "Prove actual Darwin executable custody and adversarial cleanup",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 11,
+                "started_at": "2026-11-15T22:13:20Z",
+                "completed_at": "2026-11-15T22:13:20Z"
+              },
+              {
+                "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 12,
+                "started_at": "2026-11-15T22:13:20Z",
+                "completed_at": "2026-11-15T22:13:20Z"
+              },
+              {
+                "name": "Prove original Windows Job custody and surviving descendant cleanup",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 13,
+                "started_at": "2026-11-15T22:13:20Z",
+                "completed_at": "2026-11-15T22:13:20Z"
+              },
+              {
+                "name": "Require exact Windows original-process evidence",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 14,
+                "started_at": "2026-11-15T22:13:20Z",
+                "completed_at": "2026-11-15T22:13:20Z"
+              },
+              {
+                "name": "Check original Desktop private recipe composition",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 15,
+                "started_at": "2026-11-15T22:13:20Z",
+                "completed_at": "2026-11-15T22:13:20Z"
+              },
+              {
+                "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 16,
+                "started_at": "2026-11-15T22:13:20Z",
+                "completed_at": "2026-11-15T22:13:20Z"
+              },
+              {
+                "name": "Exercise Windows automatic approval and cold Host Resume",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 17,
+                "started_at": "2026-11-15T22:13:20Z",
+                "completed_at": "2026-11-15T22:13:20Z"
+              },
+              {
+                "name": "Exercise native catalog and model probe without tool allocation",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 18,
+                "started_at": "2026-11-15T22:13:20Z",
+                "completed_at": "2026-11-15T22:13:20Z"
+              },
+              {
+                "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 19,
+                "started_at": "2026-11-15T22:13:20Z",
+                "completed_at": "2026-11-15T22:13:20Z"
+              },
+              {
+                "name": "Exercise effective permissions and active Stop with a surviving sibling",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 20,
+                "started_at": "2026-11-15T22:13:20Z",
+                "completed_at": "2026-11-15T22:13:20Z"
+              },
+              {
+                "name": "Exercise captured external MCP and app-only through the native Host",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 21,
+                "started_at": "2026-11-15T22:13:20Z",
+                "completed_at": "2026-11-15T22:13:20Z"
+              },
+              {
+                "name": "Require complete native management and permission evidence",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 22,
+                "started_at": "2026-11-15T22:13:20Z",
+                "completed_at": "2026-11-15T22:13:20Z"
+              },
+              {
+                "name": "Require product-path Host proof after exact candidate qualification",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 23,
+                "started_at": "2026-11-15T22:13:20Z",
+                "completed_at": "2026-11-15T22:13:20Z"
+              },
+              {
+                "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 24,
+                "started_at": "2026-11-15T22:13:20Z",
+                "completed_at": "2026-11-15T22:13:20Z"
+              },
+              {
+                "name": "Preserve exact native evidence or candidate HOLD",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 25,
+                "started_at": "2026-11-15T22:13:20Z",
+                "completed_at": "2026-11-15T22:13:21Z"
+              },
+              {
+                "name": "Post Run actions/setup-node@v6",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 48,
+                "started_at": "2026-11-15T22:13:21Z",
+                "completed_at": "2026-11-15T22:13:21Z"
+              },
+              {
+                "name": "Post Run pnpm/action-setup@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 49,
+                "started_at": "2026-11-15T22:13:21Z",
+                "completed_at": "2026-11-15T22:13:22Z"
+              },
+              {
+                "name": "Post Run actions/checkout@v6",
+                "status": "in_progress",
+                "conclusion": null,
+                "number": 50,
+                "started_at": "2026-11-15T22:13:22Z",
+                "completed_at": null
+              }
+            ],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132973378346",
+            "labels": [
+              "windows-11-arm"
+            ],
+            "runner_id": 1000374600,
+            "runner_name": "GitHub Actions 1000374600",
+            "runner_group_id": 0,
+            "runner_group_name": "GitHub Actions"
+          },
+          {
+            "id": 132973378362,
+            "run_id": 43766707964,
+            "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+            "head_branch": "fix/frontend-parity-completion-20261113",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43766707964",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe9dS7Og",
+            "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132973378362",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43766707964/job/132973378362",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "created_at": "2026-11-15T21:59:31Z",
+            "started_at": "2026-11-15T21:59:31Z",
+            "completed_at": "2026-11-15T22:13:12Z",
+            "name": "Embedded V2.1.4 original Host (darwin-arm64)",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132973378362",
+            "labels": [
+              "macos-15"
+            ],
+            "runner_id": 0,
+            "runner_name": "",
+            "runner_group_id": 0,
+            "runner_group_name": ""
+          },
+          {
+            "id": 132973378377,
+            "run_id": 43766707964,
+            "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+            "head_branch": "fix/frontend-parity-completion-20261113",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43766707964",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe9dS7SQ",
+            "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132973378377",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43766707964/job/132973378377",
+            "status": "completed",
+            "conclusion": "success",
+            "created_at": "2026-11-15T21:59:31Z",
+            "started_at": "2026-11-15T22:03:33Z",
+            "completed_at": "2026-11-15T22:06:34Z",
+            "name": "Static V01 source test (windows-2022)",
+            "steps": [
+              {
+                "name": "Set up job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 1,
+                "started_at": "2026-11-15T22:03:34Z",
+                "completed_at": "2026-11-15T22:03:36Z"
+              },
+              {
+                "name": "Run actions/checkout@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 2,
+                "started_at": "2026-11-15T22:03:36Z",
+                "completed_at": "2026-11-15T22:03:50Z"
+              },
+              {
+                "name": "Require immutable PR source HEAD",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 3,
+                "started_at": "2026-11-15T22:03:50Z",
+                "completed_at": "2026-11-15T22:03:50Z"
+              },
+              {
+                "name": "Run actions/checkout@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 4,
+                "started_at": "2026-11-15T22:03:50Z",
+                "completed_at": "2026-11-15T22:03:56Z"
+              },
+              {
+                "name": "Record exact current product commit",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 5,
+                "started_at": "2026-11-15T22:03:56Z",
+                "completed_at": "2026-11-15T22:03:56Z"
+              },
+              {
+                "name": "Run pnpm/action-setup@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 6,
+                "started_at": "2026-11-15T22:03:56Z",
+                "completed_at": "2026-11-15T22:04:16Z"
+              },
+              {
+                "name": "Run actions/setup-node@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 7,
+                "started_at": "2026-11-15T22:04:16Z",
+                "completed_at": "2026-11-15T22:04:58Z"
+              },
+              {
+                "name": "Prove retry classification on the exact source HEAD",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 8,
+                "started_at": "2026-11-15T22:04:58Z",
+                "completed_at": "2026-11-15T22:04:59Z"
+              },
+              {
+                "name": "Install pinned workspace dependencies",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 9,
+                "started_at": "2026-11-15T22:04:59Z",
+                "completed_at": "2026-11-15T22:05:38Z"
+              },
+              {
+                "name": "Build Stage1 Host without launching providers",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 10,
+                "started_at": "2026-11-15T22:05:38Z",
+                "completed_at": "2026-11-15T22:05:43Z"
+              },
+              {
+                "name": "Typecheck Host TEST contracts",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 11,
+                "started_at": "2026-11-15T22:05:43Z",
+                "completed_at": "2026-11-15T22:05:49Z"
+              },
+              {
+                "name": "Verify captured and native model variants through Host SPI",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 12,
+                "started_at": "2026-11-15T22:05:49Z",
+                "completed_at": "2026-11-15T22:05:50Z"
+              },
+              {
+                "name": "Verify generation-preserving install and update policy",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 13,
+                "started_at": "2026-11-15T22:05:50Z",
+                "completed_at": "2026-11-15T22:06:18Z"
+              },
+              {
+                "name": "Execute V2 static preflight, current-main lock and FIFO negatives",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 14,
+                "started_at": "2026-11-15T22:06:18Z",
+                "completed_at": "2026-11-15T22:06:28Z"
+              },
+              {
+                "name": "Native V1 baseline and latest Host compatibility (Linux TEST)",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 15,
+                "started_at": "2026-11-15T22:06:28Z",
+                "completed_at": "2026-11-15T22:06:28Z"
+              },
+              {
+                "name": "Preserve native V1 version evidence",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 16,
+                "started_at": "2026-11-15T22:06:28Z",
+                "completed_at": "2026-11-15T22:06:28Z"
+              },
+              {
+                "name": "Post Run actions/setup-node@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 29,
+                "started_at": "2026-11-15T22:06:28Z",
+                "completed_at": "2026-11-15T22:06:28Z"
+              },
+              {
+                "name": "Post Run pnpm/action-setup@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 30,
+                "started_at": "2026-11-15T22:06:28Z",
+                "completed_at": "2026-11-15T22:06:28Z"
+              },
+              {
+                "name": "Post Run actions/checkout@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 31,
+                "started_at": "2026-11-15T22:06:28Z",
+                "completed_at": "2026-11-15T22:06:30Z"
+              },
+              {
+                "name": "Post Run actions/checkout@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 32,
+                "started_at": "2026-11-15T22:06:30Z",
+                "completed_at": "2026-11-15T22:06:32Z"
+              },
+              {
+                "name": "Complete job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 33,
+                "started_at": "2026-11-15T22:06:32Z",
+                "completed_at": "2026-11-15T22:06:32Z"
+              }
+            ],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132973378377",
+            "labels": [
+              "windows-2022"
+            ],
+            "runner_id": 1000374608,
+            "runner_name": "GitHub Actions 1000374608",
+            "runner_group_id": 0,
+            "runner_group_name": "GitHub Actions"
+          },
+          {
+            "id": 132973378380,
+            "run_id": 43766707964,
+            "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+            "head_branch": "fix/frontend-parity-completion-20261113",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43766707964",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe9dS7TA",
+            "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132973378380",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43766707964/job/132973378380",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "created_at": "2026-11-15T21:59:31Z",
+            "started_at": "2026-11-15T21:59:31Z",
+            "completed_at": "2026-11-15T22:13:12Z",
+            "name": "Embedded V2.1.4 original Host (linux-x64)",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132973378380",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": 0,
+            "runner_name": "",
+            "runner_group_id": 0,
+            "runner_group_name": ""
+          },
+          {
+            "id": 132973378383,
+            "run_id": 43766707964,
+            "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+            "head_branch": "fix/frontend-parity-completion-20261113",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43766707964",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe9dS7Tw",
+            "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132973378383",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43766707964/job/132973378383",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "created_at": "2026-11-15T21:59:31Z",
+            "started_at": "2026-11-15T21:59:31Z",
+            "completed_at": "2026-11-15T22:13:12Z",
+            "name": "Published V2.0.21 durable HTTP process (TEST discovery only)",
+            "steps": [],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132973378383",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": 0,
+            "runner_name": "",
+            "runner_group_id": 0,
+            "runner_group_name": ""
+          },
+          {
+            "id": 132973378423,
+            "run_id": 43766707964,
+            "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+            "head_branch": "fix/frontend-parity-completion-20261113",
+            "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43766707964",
+            "run_attempt": 1,
+            "node_id": "CR_kwDORVTEtM8AAAAe9dS7dw",
+            "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132973378423",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43766707964/job/132973378423",
+            "status": "completed",
+            "conclusion": "success",
+            "created_at": "2026-11-15T21:59:32Z",
+            "started_at": "2026-11-15T21:59:43Z",
+            "completed_at": "2026-11-15T22:07:17Z",
+            "name": "Embedded V2.1.4 original Host (win32-x64)",
+            "steps": [
+              {
+                "name": "Set up job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 1,
+                "started_at": "2026-11-15T21:59:44Z",
+                "completed_at": "2026-11-15T21:59:45Z"
+              },
+              {
+                "name": "Run actions/checkout@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 2,
+                "started_at": "2026-11-15T21:59:45Z",
+                "completed_at": "2026-11-15T21:59:58Z"
+              },
+              {
+                "name": "Require immutable source HEAD and record actual runner tuple",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 3,
+                "started_at": "2026-11-15T21:59:58Z",
+                "completed_at": "2026-11-15T21:59:58Z"
+              },
+              {
+                "name": "Run pnpm/action-setup@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 4,
+                "started_at": "2026-11-15T21:59:58Z",
+                "completed_at": "2026-11-15T22:00:16Z"
+              },
+              {
+                "name": "Run actions/setup-node@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 5,
+                "started_at": "2026-11-15T22:00:16Z",
+                "completed_at": "2026-11-15T22:00:54Z"
+              },
+              {
+                "name": "Install exact source workspace dependencies",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 6,
+                "started_at": "2026-11-15T22:00:54Z",
+                "completed_at": "2026-11-15T22:01:18Z"
+              },
+              {
+                "name": "Build original Host and its pinned provider implementation",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 7,
+                "started_at": "2026-11-15T22:01:18Z",
+                "completed_at": "2026-11-15T22:01:22Z"
+              },
+              {
+                "name": "Check original graph and custody boundaries",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 8,
+                "started_at": "2026-11-15T22:01:22Z",
+                "completed_at": "2026-11-15T22:01:33Z"
+              },
+              {
+                "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 9,
+                "started_at": "2026-11-15T22:01:33Z",
+                "completed_at": "2026-11-15T22:01:47Z"
+              },
+              {
+                "name": "Prepare exact Bun, engine graph and original-process artifact",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 10,
+                "started_at": "2026-11-15T22:01:47Z",
+                "completed_at": "2026-11-15T22:02:16Z"
+              },
+              {
+                "name": "Prove actual Darwin executable custody and adversarial cleanup",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 11,
+                "started_at": "2026-11-15T22:02:16Z",
+                "completed_at": "2026-11-15T22:02:16Z"
+              },
+              {
+                "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 12,
+                "started_at": "2026-11-15T22:02:16Z",
+                "completed_at": "2026-11-15T22:02:16Z"
+              },
+              {
+                "name": "Prove original Windows Job custody and surviving descendant cleanup",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 13,
+                "started_at": "2026-11-15T22:02:16Z",
+                "completed_at": "2026-11-15T22:02:31Z"
+              },
+              {
+                "name": "Require exact Windows original-process evidence",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 14,
+                "started_at": "2026-11-15T22:02:31Z",
+                "completed_at": "2026-11-15T22:02:31Z"
+              },
+              {
+                "name": "Check original Desktop private recipe composition",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 15,
+                "started_at": "2026-11-15T22:02:31Z",
+                "completed_at": "2026-11-15T22:02:31Z"
+              },
+              {
+                "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 16,
+                "started_at": "2026-11-15T22:02:31Z",
+                "completed_at": "2026-11-15T22:04:58Z"
+              },
+              {
+                "name": "Exercise Windows automatic approval and cold Host Resume",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 17,
+                "started_at": "2026-11-15T22:04:58Z",
+                "completed_at": "2026-11-15T22:07:11Z"
+              },
+              {
+                "name": "Exercise native catalog and model probe without tool allocation",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 18,
+                "started_at": "2026-11-15T22:07:11Z",
+                "completed_at": "2026-11-15T22:07:11Z"
+              },
+              {
+                "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 19,
+                "started_at": "2026-11-15T22:07:11Z",
+                "completed_at": "2026-11-15T22:07:11Z"
+              },
+              {
+                "name": "Exercise effective permissions and active Stop with a surviving sibling",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 20,
+                "started_at": "2026-11-15T22:07:11Z",
+                "completed_at": "2026-11-15T22:07:11Z"
+              },
+              {
+                "name": "Exercise captured external MCP and app-only through the native Host",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 21,
+                "started_at": "2026-11-15T22:07:11Z",
+                "completed_at": "2026-11-15T22:07:11Z"
+              },
+              {
+                "name": "Require complete native management and permission evidence",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 22,
+                "started_at": "2026-11-15T22:07:11Z",
+                "completed_at": "2026-11-15T22:07:11Z"
+              },
+              {
+                "name": "Require product-path Host proof after exact candidate qualification",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 23,
+                "started_at": "2026-11-15T22:07:11Z",
+                "completed_at": "2026-11-15T22:07:11Z"
+              },
+              {
+                "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+                "status": "completed",
+                "conclusion": "skipped",
+                "number": 24,
+                "started_at": "2026-11-15T22:07:11Z",
+                "completed_at": "2026-11-15T22:07:11Z"
+              },
+              {
+                "name": "Preserve exact native evidence or candidate HOLD",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 25,
+                "started_at": "2026-11-15T22:07:11Z",
+                "completed_at": "2026-11-15T22:07:12Z"
+              },
+              {
+                "name": "Post Run actions/setup-node@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 48,
+                "started_at": "2026-11-15T22:07:12Z",
+                "completed_at": "2026-11-15T22:07:12Z"
+              },
+              {
+                "name": "Post Run pnpm/action-setup@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 49,
+                "started_at": "2026-11-15T22:07:12Z",
+                "completed_at": "2026-11-15T22:07:13Z"
+              },
+              {
+                "name": "Post Run actions/checkout@v6",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 50,
+                "started_at": "2026-11-15T22:07:13Z",
+                "completed_at": "2026-11-15T22:07:14Z"
+              },
+              {
+                "name": "Complete job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 51,
+                "started_at": "2026-11-15T22:07:14Z",
+                "completed_at": "2026-11-15T22:07:14Z"
+              }
+            ],
+            "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132973378423",
+            "labels": [
+              "windows-2022"
+            ],
+            "runner_id": 1000374587,
+            "runner_name": "GitHub Actions 1000374587",
+            "runner_group_id": 0,
+            "runner_group_name": "GitHub Actions"
+          }
+        ]
+      }
+    }
+  ]
+}

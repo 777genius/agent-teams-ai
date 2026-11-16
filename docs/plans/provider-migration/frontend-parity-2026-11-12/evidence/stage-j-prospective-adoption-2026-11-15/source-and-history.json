@@ -1,0 +1,145 @@
+{
+  "kind": "Stage J prospective exact incoming-history and one-fixture adoption; not applied",
+  "prior": {
+    "head": "88ada74cfc4598b1bff2ab3bc0f9d08177862dbf",
+    "tree": "6ea25725dec09d0617c2bc438472d6b77f3354ec"
+  },
+  "incomingBase": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+  "incoming": {
+    "head": "462845722260dfd91111c37cb66fc54a01a3ecb7",
+    "tree": "b891eb06f0ab42236f3145267aede136e4020d4f"
+  },
+  "commits": [
+    {
+      "head": "50bdfaf99223ab8368eb694b217947a88a3e42de",
+      "tree": "7d597bf58d2c2d543b065f467d2d80c55768253d",
+      "parents": [
+        "4dc08dea7eeed5c286cf310e09a2ba26d84a9546"
+      ],
+      "subject": "docs: bound Logs parity staging and Windows fixture binding fix"
+    },
+    {
+      "head": "332fbe3420c811c095dac4187d3f9664e8c47179",
+      "tree": "8387eab104fdb38de2d64c9298c7f92e86067522",
+      "parents": [
+        "50bdfaf99223ab8368eb694b217947a88a3e42de"
+      ],
+      "subject": "fix: bind Windows WOW64 fixture query through the SDK import"
+    },
+    {
+      "head": "6e90f38155f5a8edf57b0336b6d79e4ca60c110b",
+      "tree": "d1d1b7cedb6e828ae4d08fa160af132fa2f1031e",
+      "parents": [
+        "332fbe3420c811c095dac4187d3f9664e8c47179"
+      ],
+      "subject": "docs: review bounded stderr parity and existing Logs acceptance"
+    },
+    {
+      "head": "bb48cb81493fbadb8b1e451ba5c35d7bc8488952",
+      "tree": "392adce7f885d2dd4674e4f12dfba60e68cc5c9b",
+      "parents": [
+        "6e90f38155f5a8edf57b0336b6d79e4ca60c110b"
+      ],
+      "subject": "test: resolve WOW64 fixture path through the system API contract"
+    },
+    {
+      "head": "462845722260dfd91111c37cb66fc54a01a3ecb7",
+      "tree": "b891eb06f0ab42236f3145267aede136e4020d4f",
+      "parents": [
+        "bb48cb81493fbadb8b1e451ba5c35d7bc8488952"
+      ],
+      "subject": "docs: preserve concurrent Windows fix and exact activity UI proof"
+    }
+  ],
+  "incomingDeltaPaths": [
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md",
+    "tools/owned-process-broker/nativeFixture.cpp"
+  ],
+  "incomingPlan29Appendix": {
+    "local": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/incoming-plan29-appendix.md",
+    "bytes": 7520,
+    "blob": "df3939ae097bb3bffd92b2b01a46bd80b4487cdd",
+    "sha256": "3c19f551a65f33dd94f05ca2e001667281d79a0a00bbf865d6be64a769e6840a"
+  },
+  "patch": {
+    "local": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/incoming-4dc-to-462.patch",
+    "bytes": 40806,
+    "blob": "e1e9802a2367471b26af71eb1e90b6d7e61df4d0",
+    "sha256": "ef2044cbd7535f91e68e80064296a16c9dd574daee8cf38f3f6cdbb60aef1e01"
+  },
+  "leaves": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "incoming": {
+        "bytes": 738253,
+        "blob": "411f9e7943bd9323006ea67ef470624b873419c9",
+        "sha256": "dd4ddc2afce399a3e9b49553ae0886fc87808e11a89268986df44583f99d2193"
+      },
+      "prior": {
+        "bytes": 1072934,
+        "blob": "f48ed094dc7ed844be870ec03cf28499b75e18a2",
+        "sha256": "e0fb71c44ee54279d0ddcda193e718e8b2639e076bcdcbb359669df6a3a92be2"
+      },
+      "incomingBase": {
+        "bytes": 730733,
+        "blob": "c0342a10992d24f3706e5134b96cd73b017a537b",
+        "sha256": "268e36408906aebe178d0a00a1aa0d21fe45387d1ee291e2c701418519ce8d9c"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md",
+      "incoming": {
+        "bytes": 17120,
+        "blob": "1a2930d8ff1c5332a35126d7b161f7ea255b2d29",
+        "sha256": "80b4bf288a867fdc4e69317a8a610687bfa383fa099b0b0e181b79e749803433"
+      },
+      "stagedDocument": {
+        "local": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/32-host-log-view-parity-2026-11-15.md",
+        "bytes": 17120,
+        "blob": "1a2930d8ff1c5332a35126d7b161f7ea255b2d29",
+        "sha256": "80b4bf288a867fdc4e69317a8a610687bfa383fa099b0b0e181b79e749803433"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md",
+      "incoming": {
+        "bytes": 12267,
+        "blob": "a12546e75cdfa2cc3fa4661f78ba1d92f45f06de",
+        "sha256": "789c3cb7d7669d8be77999e56473824dd4a4b1e1cc6db935072a1c194bfe3716"
+      },
+      "stagedDocument": {
+        "local": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/33-member-stderr-log-parity-2026-11-15.md",
+        "bytes": 12267,
+        "blob": "a12546e75cdfa2cc3fa4661f78ba1d92f45f06de",
+        "sha256": "789c3cb7d7669d8be77999e56473824dd4a4b1e1cc6db935072a1c194bfe3716"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "incoming": {
+        "bytes": 17444,
+        "blob": "ca0ded66441b8818bdf5726ee7d8ffa95abb8518",
+        "sha256": "dc3cfdb3e8a7398d91dd2d0651bc31c11d2e6c357aaa03e83dba21c3b81adeb5"
+      },
+      "prior": {
+        "bytes": 17237,
+        "blob": "579a7aadf70a284cb44f7ec3690dab32c4d76e92",
+        "sha256": "5891d489d3587218900ae8864c64c29c4fbc594022b95132c0292074e3ce865c"
+      },
+      "candidate": {
+        "local": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/nativeFixture.cpp.proposed",
+        "bytes": 17444,
+        "blob": "ca0ded66441b8818bdf5726ee7d8ffa95abb8518",
+        "sha256": "dc3cfdb3e8a7398d91dd2d0651bc31c11d2e6c357aaa03e83dba21c3b81adeb5"
+      },
+      "diff": {
+        "local": "/workspace/scratch/82d3f9ba6b85/stage-j-adoption/nativeFixture.cpp.patch",
+        "bytes": 1540,
+        "blob": "46164e2e119683ef9439283dbf979f188252da6c",
+        "sha256": "126c7ec6277ef315ceb15c8ac9543dcbf90ac0e60f28ce7d237d7af649b6825f"
+      }
+    }
+  ]
+}

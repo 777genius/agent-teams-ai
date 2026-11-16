@@ -1,0 +1,1443 @@
+{
+  "kind": "ORIGINAL_2CB_WINDOWS_PROCESS_FAILURE_AUDIT",
+  "sourceHead": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+  "runId": 43755682747,
+  "attempt": 1,
+  "lanes": [
+    {
+      "lane": "process_arm",
+      "provider": "codex",
+      "jobId": 132939165328,
+      "artifactId": 14178133525,
+      "receipt": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/process_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+        "bytes": 57668,
+        "sha256": "42a765e925f55dc04b4346eda235abc564a8dff3ae08b290bc0b5bf7ac4df539",
+        "gitBlobSha1": "3c89a6433af9a0a45c0e9dd50a6a8ebd48d7ad1a"
+      },
+      "sourceScenarioLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/process_arm/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+        "bytes": 52219,
+        "sha256": "2318c26675bd09a3098e2b5a227a711a53685e83ff9b80b45eb150c9037136f4",
+        "gitBlobSha1": "a854830fd11cda85a6a75b364d44e16ca082621f"
+      },
+      "fullJobLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/job-132939165328.log",
+        "bytes": 371250,
+        "sha256": "fbc8ae303cd50ac925c7c6b56e8a0e049b2281561996d8d57802a0234e6abf6d",
+        "gitBlobSha1": "76ee94c27f939f70027fdc80c431d4264e353c53"
+      },
+      "archiveAudit": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/archive-audit-process_arm.json",
+        "bytes": 4243,
+        "sha256": "4389b4d6ad0acf23f26c091e9a6bdd668e1fa5287dee49e6bdd74e0a472cc482",
+        "gitBlobSha1": "5089e3962ec39fe9da3b07efef6fc09c229a99c4"
+      },
+      "sourcePinAudit": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/pin-audit-process_arm-codex.json",
+        "bytes": 6452,
+        "sha256": "a5bd0170352525348385cf76b0bb7546f3f2d52ca3ea0671b3fb0c226d6d3833",
+        "gitBlobSha1": "8f15b9027dbf8fa5d8c9457dea60572527c9cca6"
+      },
+      "receiptHead": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+      "nodeVersion": "v24.21.0",
+      "platform": "win32-arm64",
+      "outerStatus": "INCOMPLETE",
+      "outerCleanup": true,
+      "scenarioStatus": "INCOMPLETE",
+      "scenarioStage": "B-standalone",
+      "scenarioCleanup": false,
+      "lastLaunchReadiness": {
+        "source": {
+          "sourceId": "0ef3a1189106a8a1ba8bd0c76790a4461d81a78f9c4beb4425921a5a9682d8cb",
+          "revision": "999eeb6f4d68adf54dd31483f9e0738a36f658d487c324eb876680e69b9dfb38"
+        },
+        "image": "B",
+        "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+        "readCount": 115,
+        "elapsedMs": 15777.4352,
+        "lastRuntimeRead": {
+          "viewDigest": "322d611415d1de09975bb832e4f366a34c8a315a2594c0d6f7e9444463a1c6a9",
+          "memberId": "alice-id",
+          "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+          "phase": "allocated",
+          "sealed": false,
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true
+        }
+      },
+      "lastStandaloneCompletion": {
+        "source": {
+          "sourceId": "0ef3a1189106a8a1ba8bd0c76790a4461d81a78f9c4beb4425921a5a9682d8cb",
+          "revision": "999eeb6f4d68adf54dd31483f9e0738a36f658d487c324eb876680e69b9dfb38"
+        },
+        "runId": "TEST-source-standalone-B",
+        "scheduleId": "TEST-source-schedule-B",
+        "readCount": 126,
+        "elapsedMs": 15474.339000000007,
+        "lastRunRead": {
+          "phase": "running",
+          "cleanup": "unresolved"
+        }
+      },
+      "firstRefusal": {
+        "status": "observed",
+        "observations": [
+          {
+            "kind": "native",
+            "phase": "launch-chunk",
+            "reason": "refused",
+            "dispatched": true,
+            "staged": false,
+            "rootCaptured": false,
+            "deadlineExpired": null,
+            "ordinal": 1,
+            "source": {
+              "sourceId": "0ef3a1189106a8a1ba8bd0c76790a4461d81a78f9c4beb4425921a5a9682d8cb",
+              "revision": "999eeb6f4d68adf54dd31483f9e0738a36f658d487c324eb876680e69b9dfb38"
+            }
+          }
+        ]
+      },
+      "runtimeProjection": {
+        "status": "unknown",
+        "reason": "missing-invalid-overflow-conflicting-or-unjoined"
+      },
+      "epochCount": 1,
+      "firstCloseEntryMs": [
+        80787.1006
+      ],
+      "pending": [
+        {
+          "admitted": 2,
+          "revoked": 2
+        }
+      ],
+      "serviceOperations": [
+        0
+      ],
+      "jobs": [
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 0,
+          "capability": "692ff901-6ce2-4873-a128-49130f561bc2",
+          "root": {
+            "pid": 4712,
+            "birth": "01dd753e191bd4df"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 0,
+          "entryEnd": 1,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 1,
+          "capability": "77c101fe-b793-45c8-8a31-9d5e2183ccd4",
+          "root": {
+            "pid": 10160,
+            "birth": "01dd753e1b35d676"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 1,
+          "entryEnd": 2,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 2,
+          "capability": "83278c77-0831-41e8-93f1-57f3a1d56082",
+          "root": {
+            "pid": 8752,
+            "birth": "01dd753e1d8c9852"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 2,
+          "entryEnd": 3,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 3,
+          "capability": "4a663a90-f34b-4f79-916c-0bdd25d324c5",
+          "root": {
+            "pid": 4824,
+            "birth": "01dd753e1f344b27"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 3,
+          "entryEnd": 24,
+          "threadEphemeral": [
+            false
+          ]
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 4,
+          "capability": "18706a07-a4a7-471f-b584-1b279b3f034c",
+          "root": {
+            "pid": 4644,
+            "birth": "01dd753e20ef2cca"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 4,
+          "entryEnd": 5,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 5,
+          "capability": "57c1888b-1022-47fb-93de-a5b4b0a76d8c",
+          "root": {
+            "pid": 4188,
+            "birth": "01dd753e23127d82"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 5,
+          "entryEnd": 6,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 6,
+          "capability": "f506e355-c0c2-4a95-abee-a8e5901ed938",
+          "root": {
+            "pid": 9072,
+            "birth": "01dd753e24dc22a1"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 6,
+          "entryEnd": 7,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 7,
+          "capability": "0d22f9de-b8db-418e-899a-af03807b6072",
+          "root": {
+            "pid": 4012,
+            "birth": "01dd753e2713a9c5"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 7,
+          "entryEnd": 8,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 8,
+          "capability": "da88e310-b0a3-430d-af15-2d1fb5990309",
+          "root": {
+            "pid": 7620,
+            "birth": "01dd753e2a0089b4"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 8,
+          "entryEnd": 9,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 9,
+          "capability": "f7b78018-4e71-4773-97ba-7e152b3262d7",
+          "root": {
+            "pid": 2904,
+            "birth": "01dd753e2b7236ab"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 9,
+          "entryEnd": 10,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 10,
+          "capability": "a30c04ce-6635-40d5-bfb2-e4f6b1cabdcb",
+          "root": {
+            "pid": 4800,
+            "birth": "01dd753e2cd054b0"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 10,
+          "entryEnd": 11,
+          "threadEphemeral": [
+            false
+          ]
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 11,
+          "capability": "a297c948-890e-4cf0-a497-dae3545c1ab5",
+          "root": {
+            "pid": 3772,
+            "birth": "01dd753e2efe6df3"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 11,
+          "entryEnd": 12,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 12,
+          "capability": "f93740a2-9de7-4bb6-a774-28b360edc826",
+          "root": {
+            "pid": 9780,
+            "birth": "01dd753e315b5370"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 12,
+          "entryEnd": 13,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 13,
+          "capability": "aa44cd74-090c-4295-a79e-2603242beb06",
+          "root": {
+            "pid": 1268,
+            "birth": "01dd753e32f88d96"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 13,
+          "entryEnd": 24,
+          "threadEphemeral": [
+            false
+          ]
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 14,
+          "capability": "cbda57de-45bd-4225-86ab-1a1aa5da21fa",
+          "root": {
+            "pid": 11132,
+            "birth": "01dd753e34ab213f"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 14,
+          "entryEnd": 15,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 15,
+          "capability": "e33a098a-ac84-4991-b142-3bd87ce57c1f",
+          "root": {
+            "pid": 6924,
+            "birth": "01dd753e36c729f0"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 15,
+          "entryEnd": 16,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 16,
+          "capability": "e260103b-7bd4-4f63-a1da-d01f442aa0af",
+          "root": {
+            "pid": 2220,
+            "birth": "01dd753e388ddda2"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 16,
+          "entryEnd": 17,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 17,
+          "capability": "470a5e1d-305c-48a8-b656-c3746833b1e8",
+          "root": {
+            "pid": 3844,
+            "birth": "01dd753e3afc69ba"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 17,
+          "entryEnd": 18,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 18,
+          "capability": "3f3d32d9-567b-47fa-a052-1e76c5e1d72b",
+          "root": {
+            "pid": 11140,
+            "birth": "01dd753e3e3c57d6"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 18,
+          "entryEnd": 19,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 19,
+          "capability": "e0dc5922-177d-4514-929d-78aaa74164ce",
+          "root": {
+            "pid": 10088,
+            "birth": "01dd753e3fdb6e45"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 19,
+          "entryEnd": 20,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 20,
+          "capability": "a24ba87f-2435-48d6-bb6d-0e21132f21bc",
+          "root": {
+            "pid": 6184,
+            "birth": "01dd753e412a634c"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 20,
+          "entryEnd": 24,
+          "threadEphemeral": [
+            true
+          ]
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 21,
+          "capability": "054d76ab-c75e-44f8-8118-5616f32c2f26",
+          "root": {
+            "pid": 7764,
+            "birth": "01dd753e429c826d"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 21,
+          "entryEnd": 22,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 22,
+          "capability": "8a7330a8-a473-4e59-a0af-9f657695e6bd",
+          "root": {
+            "pid": 2740,
+            "birth": "01dd753e4425bcb1"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 22,
+          "entryEnd": 23,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 23,
+          "capability": "948a9bf7-8ca9-448e-8ebe-84b3f0fd9078",
+          "root": {
+            "pid": 5620,
+            "birth": "01dd753e45b17ab3"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 23,
+          "entryEnd": 24,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 24,
+          "capability": "7bfa22a0-49e8-4580-89dd-a7f42a399474",
+          "root": null,
+          "resumed": false,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": false,
+          "entryStart": null,
+          "entryEnd": null,
+          "threadEphemeral": []
+        }
+      ],
+      "unconfirmedByOriginalAllJobOracle": [
+        {
+          "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+          "jobSlot": 24,
+          "capability": "7bfa22a0-49e8-4580-89dd-a7f42a399474",
+          "root": null,
+          "resumed": false,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": false,
+          "entryStart": null,
+          "entryEnd": null,
+          "threadEphemeral": []
+        }
+      ],
+      "initialCleanupOutputFalseAbsenceSlots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24
+      ],
+      "lastCleanupOutput": {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "codex",
+        "mainEpoch": "252611a9-ad39-4cd0-9aef-08461290e514",
+        "jobSlot": 24,
+        "source": {
+          "sourceId": "0ef3a1189106a8a1ba8bd0c76790a4461d81a78f9c4beb4425921a5a9682d8cb",
+          "revision": "999eeb6f4d68adf54dd31483f9e0738a36f658d487c324eb876680e69b9dfb38"
+        },
+        "rootCaptured": false,
+        "witnessCaptured": false,
+        "resumed": false,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.24309999999240972,
+            "firstStartMs": 80750.7066,
+            "lastEndMs": 80750.9497
+          },
+          "prepare": {
+            "calls": 0,
+            "settled": 0,
+            "returned": 0,
+            "totalMs": 0,
+            "firstStartMs": null,
+            "lastEndMs": null
+          },
+          "resume": {
+            "calls": 0,
+            "settled": 0,
+            "returned": 0,
+            "totalMs": 0,
+            "firstStartMs": null,
+            "lastEndMs": null
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.25009999999019783,
+            "firstStartMs": 81159.39630000001,
+            "lastEndMs": 81159.6464
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.0996000000013737,
+            "firstStartMs": 81163.6047,
+            "lastEndMs": 81163.7043
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.043699999994714744,
+            "firstStartMs": 81164.9329,
+            "lastEndMs": 81164.9766
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 0,
+            "settled": 0,
+            "returned": 0,
+            "totalMs": 0,
+            "firstStartMs": null,
+            "lastEndMs": null
+          },
+          "launch-commit": {
+            "calls": 0,
+            "settled": 0,
+            "returned": 0,
+            "totalMs": 0,
+            "firstStartMs": null,
+            "lastEndMs": null
+          }
+        },
+        "firstCloseEntryMs": 80787.1006
+      },
+      "sourceStageAndObservationRecords": [
+        {
+          "line": 2,
+          "value": {
+            "kind": "TEST_SOURCE_STAGE",
+            "provider": "codex",
+            "stage": "publish-A"
+          }
+        },
+        {
+          "line": 4,
+          "value": {
+            "kind": "TEST_SOURCE_STAGE",
+            "provider": "codex",
+            "stage": "Team-A"
+          }
+        },
+        {
+          "line": 11,
+          "value": {
+            "kind": "TEST_SOURCE_READINESS",
+            "provider": "codex",
+            "source": {
+              "sourceId": "0ef3a1189106a8a1ba8bd0c76790a4461d81a78f9c4beb4425921a5a9682d8cb",
+              "revision": "e86357a8d302db259f246da7cfb547b91e3deff38a1e1da1f2edb03820759fb6"
+            },
+            "image": "A",
+            "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+            "readCount": 114,
+            "elapsedMs": 15764.277699999999,
+            "lastRuntimeRead": {
+              "viewDigest": "051895ca9313a9cdb572155f2c05f9c126d8a81fdf1fbecf93313de477733494",
+              "memberId": "alice-id",
+              "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+              "phase": "allocated",
+              "sealed": false,
+              "custody": "owned",
+              "nativeReady": true,
+              "attached": true
+            }
+          }
+        },
+        {
+          "line": 13,
+          "value": {
+            "kind": "TEST_SOURCE_STAGE",
+            "provider": "codex",
+            "stage": "publish-B"
+          }
+        },
+        {
+          "line": 15,
+          "value": {
+            "kind": "TEST_SOURCE_STAGE",
+            "provider": "codex",
+            "stage": "B-management"
+          }
+        },
+        {
+          "line": 17,
+          "value": {
+            "kind": "TEST_SOURCE_STAGE",
+            "provider": "codex",
+            "stage": "B-probe"
+          }
+        },
+        {
+          "line": 19,
+          "value": {
+            "kind": "TEST_SOURCE_STAGE",
+            "provider": "codex",
+            "stage": "Team-B"
+          }
+        },
+        {
+          "line": 26,
+          "value": {
+            "kind": "TEST_SOURCE_READINESS",
+            "provider": "codex",
+            "source": {
+              "sourceId": "0ef3a1189106a8a1ba8bd0c76790a4461d81a78f9c4beb4425921a5a9682d8cb",
+              "revision": "999eeb6f4d68adf54dd31483f9e0738a36f658d487c324eb876680e69b9dfb38"
+            },
+            "image": "B",
+            "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+            "readCount": 115,
+            "elapsedMs": 15777.4352,
+            "lastRuntimeRead": {
+              "viewDigest": "322d611415d1de09975bb832e4f366a34c8a315a2594c0d6f7e9444463a1c6a9",
+              "memberId": "alice-id",
+              "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+              "phase": "allocated",
+              "sealed": false,
+              "custody": "owned",
+              "nativeReady": true,
+              "attached": true
+            }
+          }
+        },
+        {
+          "line": 28,
+          "value": {
+            "kind": "TEST_SOURCE_STAGE",
+            "provider": "codex",
+            "stage": "B-standalone"
+          }
+        },
+        {
+          "line": 35,
+          "value": {
+            "kind": "TEST_SOURCE_STANDALONE",
+            "provider": "codex",
+            "source": {
+              "sourceId": "0ef3a1189106a8a1ba8bd0c76790a4461d81a78f9c4beb4425921a5a9682d8cb",
+              "revision": "999eeb6f4d68adf54dd31483f9e0738a36f658d487c324eb876680e69b9dfb38"
+            },
+            "runId": "TEST-source-standalone-B",
+            "scheduleId": "TEST-source-schedule-B",
+            "readCount": 126,
+            "elapsedMs": 15474.339000000007,
+            "lastRunRead": {
+              "phase": "running",
+              "cleanup": "unresolved"
+            }
+          }
+        },
+        {
+          "line": 61,
+          "value": {
+            "kind": "TEST_SOURCE_FIRST_REFUSAL",
+            "provider": "codex",
+            "diagnostic": {
+              "status": "observed",
+              "observations": [
+                {
+                  "kind": "native",
+                  "phase": "launch-chunk",
+                  "reason": "refused",
+                  "dispatched": true,
+                  "staged": false,
+                  "rootCaptured": false,
+                  "deadlineExpired": null,
+                  "ordinal": 1,
+                  "source": {
+                    "sourceId": "0ef3a1189106a8a1ba8bd0c76790a4461d81a78f9c4beb4425921a5a9682d8cb",
+                    "revision": "999eeb6f4d68adf54dd31483f9e0738a36f658d487c324eb876680e69b9dfb38"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "controller": {
+        "gateController": "drained",
+        "rootExitCode": 1,
+        "activeProcesses": 0
+      },
+      "workflowStepExitCode": 1,
+      "priorProviderSuccesses": [],
+      "realProviderExecuted": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    },
+    {
+      "lane": "process_x64",
+      "provider": "opencode",
+      "jobId": 132939165622,
+      "artifactId": 14178717477,
+      "receipt": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode-receipt.json",
+        "bytes": 14867,
+        "sha256": "ea8c23ad39f68155fd9bf7cd12fa47df85600a997b4497b9fc3385cdd37c567b",
+        "gitBlobSha1": "b399f97a83a32e5e4b0cb86b9f749b53bf88b447"
+      },
+      "sourceScenarioLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode.log",
+        "bytes": 7459,
+        "sha256": "006d06a01db7a76e873a9a34099e55c37c129b9e39406e196fa90b7ab9ac9bfd",
+        "gitBlobSha1": "b38f7b8d6b230b0f68fb063f25c45ea5e853ff22"
+      },
+      "fullJobLog": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/job-132939165622.log",
+        "bytes": 373569,
+        "sha256": "9ab1fec33b39b565209409c401e6999f9113865baf6885a58682ad7efaba0353",
+        "gitBlobSha1": "30802b67c19efbe9595f62774d0b69dbf01130cd"
+      },
+      "archiveAudit": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/archive-audit-process_x64.json",
+        "bytes": 5136,
+        "sha256": "22c3ad5ac70b9517130fde85e96fd685762a95a9a1038956fd46db484a6f1587",
+        "gitBlobSha1": "ef49b6ee36553d56f92f3a1147ea07d484e3db6b"
+      },
+      "sourcePinAudit": {
+        "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/pin-audit-process_x64-opencode.json",
+        "bytes": 6528,
+        "sha256": "b5c3b9f87b4b350a9f8be556377bc327cc4c53e6184d36f6e302066175c5374e",
+        "gitBlobSha1": "7274deb5c7690676b49d85dc787c61568cccd7d8"
+      },
+      "receiptHead": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+      "nodeVersion": "v24.21.0",
+      "platform": "win32-x64",
+      "outerStatus": "INCOMPLETE",
+      "outerCleanup": true,
+      "scenarioStatus": "INCOMPLETE",
+      "scenarioStage": "Team-A",
+      "scenarioCleanup": true,
+      "lastLaunchReadiness": {
+        "source": {
+          "sourceId": "a788d840163d3195e05701fc4785ce8cefad8d8b5f9d59e2f46f51945605161c",
+          "revision": "710f0135e8cbae13e5e538c11c303f125ae97ca2958c7aaaaa3bc1f9266fe994"
+        },
+        "image": "A",
+        "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+        "readCount": 7,
+        "elapsedMs": 15193.1343,
+        "lastRuntimeRead": {
+          "viewDigest": "d18a4c78f7d1174c1e78f591956e3147ed872da4f54a99006a323f8929858ccf",
+          "memberId": "alice-id",
+          "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+          "phase": "opening",
+          "sealed": false,
+          "custody": "unknown",
+          "nativeReady": false,
+          "attached": false
+        }
+      },
+      "lastStandaloneCompletion": null,
+      "firstRefusal": {
+        "status": "unknown",
+        "reason": "empty"
+      },
+      "runtimeProjection": {
+        "status": "observed",
+        "atomicWithFailure": false,
+        "viewDigest": "d18a4c78f7d1174c1e78f591956e3147ed872da4f54a99006a323f8929858ccf",
+        "bindingMatches": true,
+        "recordReady": false,
+        "providerReady": null,
+        "ownerCurrent": null,
+        "nativeReady": false
+      },
+      "epochCount": 1,
+      "firstCloseEntryMs": [
+        21742.7421
+      ],
+      "pending": [
+        {
+          "admitted": 1,
+          "revoked": 1
+        }
+      ],
+      "serviceOperations": [
+        0
+      ],
+      "jobs": [
+        {
+          "mainEpoch": "4875364b-71c8-415e-b2c4-d6363f9aae13",
+          "jobSlot": 0,
+          "capability": "db0ea3d9-7ff0-4d9f-9f18-286f305fc0cd",
+          "root": {
+            "pid": 4508,
+            "birth": "01dd753e5ef4129e"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 0,
+          "entryEnd": 1,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "4875364b-71c8-415e-b2c4-d6363f9aae13",
+          "jobSlot": 1,
+          "capability": "bfe26912-6074-4391-b018-cc6d8f4c23db",
+          "root": {
+            "pid": 7820,
+            "birth": "01dd753e601cb739"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 1,
+          "entryEnd": 2,
+          "threadEphemeral": []
+        },
+        {
+          "mainEpoch": "4875364b-71c8-415e-b2c4-d6363f9aae13",
+          "jobSlot": 2,
+          "capability": "c3f9c025-3b58-40ba-9e0a-7bbd0234f481",
+          "root": {
+            "pid": 6652,
+            "birth": "01dd753e668e8d71"
+          },
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "entryStart": 2,
+          "entryEnd": 3,
+          "threadEphemeral": []
+        }
+      ],
+      "unconfirmedByOriginalAllJobOracle": [],
+      "initialCleanupOutputFalseAbsenceSlots": [
+        1,
+        2
+      ],
+      "lastCleanupOutput": {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "opencode",
+        "mainEpoch": "4875364b-71c8-415e-b2c4-d6363f9aae13",
+        "jobSlot": 2,
+        "source": {
+          "sourceId": "a788d840163d3195e05701fc4785ce8cefad8d8b5f9d59e2f46f51945605161c",
+          "revision": "710f0135e8cbae13e5e538c11c303f125ae97ca2958c7aaaaa3bc1f9266fe994"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true,
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.19789999999920838,
+            "firstStartMs": 10921.1578,
+            "lastEndMs": 10921.3557
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 59.54939999999988,
+            "firstStartMs": 14395.995300000002,
+            "lastEndMs": 14455.544700000002
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 36.87120000000141,
+            "firstStartMs": 18569.2357,
+            "lastEndMs": 18606.106900000002
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 9.113499999999476,
+            "firstStartMs": 23363.9041,
+            "lastEndMs": 23373.0176
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.09330000000045402,
+            "firstStartMs": 23374.1279,
+            "lastEndMs": 23374.2212
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 2.1247999999977765,
+            "firstStartMs": 23374.746900000002,
+            "lastEndMs": 23376.8717
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.11260000000038417,
+            "firstStartMs": 11926.337,
+            "lastEndMs": 11926.4496
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.3206000000009226,
+            "firstStartMs": 12956.382699999998,
+            "lastEndMs": 12956.703300000001
+          }
+        },
+        "firstCloseEntryMs": 21742.7421
+      },
+      "sourceStageAndObservationRecords": [
+        {
+          "line": 2,
+          "value": {
+            "kind": "TEST_SOURCE_STAGE",
+            "provider": "opencode",
+            "stage": "publish-A"
+          }
+        },
+        {
+          "line": 4,
+          "value": {
+            "kind": "TEST_SOURCE_STAGE",
+            "provider": "opencode",
+            "stage": "Team-A"
+          }
+        },
+        {
+          "line": 7,
+          "value": {
+            "kind": "TEST_SOURCE_READINESS",
+            "provider": "opencode",
+            "source": {
+              "sourceId": "a788d840163d3195e05701fc4785ce8cefad8d8b5f9d59e2f46f51945605161c",
+              "revision": "710f0135e8cbae13e5e538c11c303f125ae97ca2958c7aaaaa3bc1f9266fe994"
+            },
+            "image": "A",
+            "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+            "readCount": 7,
+            "elapsedMs": 15193.1343,
+            "lastRuntimeRead": {
+              "viewDigest": "d18a4c78f7d1174c1e78f591956e3147ed872da4f54a99006a323f8929858ccf",
+              "memberId": "alice-id",
+              "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+              "phase": "opening",
+              "sealed": false,
+              "custody": "unknown",
+              "nativeReady": false,
+              "attached": false
+            }
+          }
+        },
+        {
+          "line": 11,
+          "value": {
+            "kind": "TEST_SOURCE_FIRST_REFUSAL",
+            "provider": "opencode",
+            "diagnostic": {
+              "status": "unknown",
+              "reason": "empty"
+            }
+          }
+        }
+      ],
+      "controller": {
+        "gateController": "drained",
+        "rootExitCode": 1,
+        "activeProcesses": 0
+      },
+      "workflowStepExitCode": 1,
+      "priorProviderSuccesses": [
+        {
+          "provider": "codex",
+          "receipt": {
+            "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+            "bytes": 60356,
+            "sha256": "0ea2bace831c26f1eea90b1776108c059017ce0d3fbc2fa3928bbfb2cf0574a0",
+            "gitBlobSha1": "9a7351e2abebea2dc328027e0f9784a9a8430e5b"
+          },
+          "status": "PASS",
+          "stage": "complete",
+          "scenarioCleanup": true,
+          "epochCount": 2,
+          "originalJobs": 25,
+          "allOriginalJobsReleasedAndAbsent": true,
+          "standalone": {
+            "phase": "completed",
+            "source": {
+              "sourceId": "7fc77cf34f9f2dee720a0fad65d454084107d1f8be2600e256686100d186b48c",
+              "revision": "f852d23641e35c004543662efe73e3e4e74fa799b3760c5b086865051b2ed468"
+            },
+            "inputDigest": "e0f5310b3b5a16ca654937604b6179aca1e48dca67246ba26e035db1ee26a906",
+            "limits": null,
+            "ephemeral": true,
+            "replayAllocated": false
+          },
+          "lastStandaloneCompletion": {
+            "source": {
+              "sourceId": "7fc77cf34f9f2dee720a0fad65d454084107d1f8be2600e256686100d186b48c",
+              "revision": "f852d23641e35c004543662efe73e3e4e74fa799b3760c5b086865051b2ed468"
+            },
+            "runId": "TEST-source-standalone-B",
+            "scheduleId": "TEST-source-schedule-B",
+            "readCount": 128,
+            "elapsedMs": 10767.2278,
+            "lastRunRead": {
+              "phase": "completed",
+              "cleanup": "confirmed",
+              "exitCode": 0
+            }
+          },
+          "cold": {
+            "currentB": true,
+            "retainedA": true,
+            "lookup": true,
+            "physicalReplayAllocations": 0,
+            "sourcePublishPendingAdmission": {
+              "admitted": 1,
+              "revoked": 1
+            },
+            "originalInputsReplayed": false,
+            "sdkPeerCheckpointRestored": false
+          },
+          "readinessRecords": [
+            {
+              "line": 11,
+              "value": {
+                "kind": "TEST_SOURCE_READINESS",
+                "provider": "codex",
+                "source": {
+                  "sourceId": "7fc77cf34f9f2dee720a0fad65d454084107d1f8be2600e256686100d186b48c",
+                  "revision": "52f8fbf5491424c21b2ccf1d4586caf90e1b8fdd2bd905b13466adc3374d0393"
+                },
+                "image": "A",
+                "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+                "readCount": 97,
+                "elapsedMs": 10020.426300000001,
+                "lastRuntimeRead": {
+                  "viewDigest": "051895ca9313a9cdb572155f2c05f9c126d8a81fdf1fbecf93313de477733494",
+                  "memberId": "alice-id",
+                  "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+                  "phase": "allocated",
+                  "sealed": false,
+                  "custody": "owned",
+                  "nativeReady": true,
+                  "attached": true
+                }
+              }
+            },
+            {
+              "line": 26,
+              "value": {
+                "kind": "TEST_SOURCE_READINESS",
+                "provider": "codex",
+                "source": {
+                  "sourceId": "7fc77cf34f9f2dee720a0fad65d454084107d1f8be2600e256686100d186b48c",
+                  "revision": "f852d23641e35c004543662efe73e3e4e74fa799b3760c5b086865051b2ed468"
+                },
+                "image": "B",
+                "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+                "readCount": 98,
+                "elapsedMs": 9862.242000000002,
+                "lastRuntimeRead": {
+                  "viewDigest": "322d611415d1de09975bb832e4f366a34c8a315a2594c0d6f7e9444463a1c6a9",
+                  "memberId": "alice-id",
+                  "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+                  "phase": "allocated",
+                  "sealed": false,
+                  "custody": "owned",
+                  "nativeReady": true,
+                  "attached": true
+                }
+              }
+            }
+          ],
+          "sourcePinAudit": {
+            "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/pin-audit-process_x64-codex.json",
+            "bytes": 8159,
+            "sha256": "b2650875eb2968b30fe08695dcd3713471d061a5ada1a238d43213b7d99db535",
+            "gitBlobSha1": "8f9bc764b908ec244af071dc393f654eda609134"
+          }
+        },
+        {
+          "provider": "claude",
+          "receipt": {
+            "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/process_x64/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude-receipt.json",
+            "bytes": 27721,
+            "sha256": "da5dda71f064684c872a3a57c45c4a15d7a53d43ce0ce84ab9e91dcc064a95fd",
+            "gitBlobSha1": "55a2ad85f22db74610fd192c28337081b3defe85"
+          },
+          "status": "PASS",
+          "stage": "complete",
+          "scenarioCleanup": true,
+          "epochCount": 2,
+          "originalJobs": 9,
+          "allOriginalJobsReleasedAndAbsent": true,
+          "standalone": {
+            "phase": "completed",
+            "source": {
+              "sourceId": "37c960301bd533a5b56c8c5b5831cf792a13f93cae302c41c408ada924a42775",
+              "revision": "64ccf9b912a7adaf8d9270aca7215b2f22c3b7f64162320b9bcb24302250de18"
+            },
+            "inputDigest": "8cb65dae5416d3884f19e3001965162fa0dc9e5b3ca113c08f40f79b94d2db4a",
+            "limits": {
+              "maxTurns": 6,
+              "maxBudgetUsd": 0.25
+            },
+            "ephemeral": true,
+            "replayAllocated": false
+          },
+          "lastStandaloneCompletion": {
+            "source": {
+              "sourceId": "37c960301bd533a5b56c8c5b5831cf792a13f93cae302c41c408ada924a42775",
+              "revision": "64ccf9b912a7adaf8d9270aca7215b2f22c3b7f64162320b9bcb24302250de18"
+            },
+            "runId": "TEST-source-standalone-B",
+            "scheduleId": "TEST-source-schedule-B",
+            "readCount": 22,
+            "elapsedMs": 1560.0047999999988,
+            "lastRunRead": {
+              "phase": "completed",
+              "cleanup": "confirmed",
+              "exitCode": 0
+            }
+          },
+          "cold": {
+            "currentB": true,
+            "retainedA": true,
+            "lookup": true,
+            "physicalReplayAllocations": 0,
+            "sourcePublishPendingAdmission": {
+              "admitted": 1,
+              "revoked": 1
+            },
+            "originalInputsReplayed": false,
+            "sdkPeerCheckpointRestored": true,
+            "originalNativeSessionRetained": true,
+            "restoredGeneration": "restore-686db9700d8453e6bc4c1357095eed010afd6009bae4db93c3021c0cd1f8686e",
+            "newInputId": "7024d61f-b67e-5515-89bc-017d0cf8ba98",
+            "source": {
+              "sourceId": "37c960301bd533a5b56c8c5b5831cf792a13f93cae302c41c408ada924a42775",
+              "revision": "3cdd8c0bc73494f2767de7f3b4a87b22d865f4435bfe527df879005a355f795f"
+            }
+          },
+          "readinessRecords": [
+            {
+              "line": 6,
+              "value": {
+                "kind": "TEST_SOURCE_READINESS",
+                "provider": "claude",
+                "source": {
+                  "sourceId": "37c960301bd533a5b56c8c5b5831cf792a13f93cae302c41c408ada924a42775",
+                  "revision": "3cdd8c0bc73494f2767de7f3b4a87b22d865f4435bfe527df879005a355f795f"
+                },
+                "image": "A",
+                "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+                "readCount": 21,
+                "elapsedMs": 2709.9710000000005,
+                "lastRuntimeRead": {
+                  "viewDigest": "9a06b96f904a89b9b33a4dcc9edfbd9c1d6da839c6f158834ca147b6cd9587cd",
+                  "memberId": "alice-id",
+                  "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+                  "phase": "allocated",
+                  "sealed": false,
+                  "custody": "owned",
+                  "nativeReady": true,
+                  "attached": true
+                }
+              }
+            },
+            {
+              "line": 16,
+              "value": {
+                "kind": "TEST_SOURCE_READINESS",
+                "provider": "claude",
+                "source": {
+                  "sourceId": "37c960301bd533a5b56c8c5b5831cf792a13f93cae302c41c408ada924a42775",
+                  "revision": "64ccf9b912a7adaf8d9270aca7215b2f22c3b7f64162320b9bcb24302250de18"
+                },
+                "image": "B",
+                "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+                "readCount": 25,
+                "elapsedMs": 3043.6502,
+                "lastRuntimeRead": {
+                  "viewDigest": "e9c711bebe8d482154970603455182c2f6ea79e5fe18e55d8428109bec781af6",
+                  "memberId": "alice-id",
+                  "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+                  "phase": "allocated",
+                  "sealed": false,
+                  "custody": "owned",
+                  "nativeReady": true,
+                  "attached": true
+                }
+              }
+            }
+          ],
+          "sourcePinAudit": {
+            "path": "/workspace/scratch/82d3f9ba6b85/native-audit-2cb/pin-audit-process_x64-claude.json",
+            "bytes": 8288,
+            "sha256": "2eb165c3dae70aaeff1833f8fd6850e0990a29475129fe37162aa3c0d44cfeee",
+            "gitBlobSha1": "99f86335f9154f666cef3195543bf66b12627da5"
+          }
+        }
+      ],
+      "realProviderExecuted": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    }
+  ],
+  "selectedPinComparison": {
+    "commonSourcePins": 13,
+    "commonBuiltOutputPins": 5,
+    "x64BuiltOutputPinsTotal": 6,
+    "armBuiltOutputPinsTotal": 5,
+    "allCommonPairsEqual": true,
+    "sourceGitBytesCRLFVerified": true,
+    "builtOutputPayloadsArchived": false
+  },
+  "sourceReview": [
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "gitBlob": "7ef05204eb696e2b498595a5f04a544fe20d0036",
+      "gitSHA256": "3ab3928664f7e83fabda0547de2f6ecfa3f0e4180df971d6987901314c606bfc",
+      "unchangedInCompleteSevenPathIncomingDelta": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "gitBlob": "0482d11bb2a051a0710905c5393495ee7cec64bf",
+      "gitSHA256": "bf1390ca8efbbcfffb4b61c138f1925d0c295f37def36d73c15377f013794438",
+      "unchangedInCompleteSevenPathIncomingDelta": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+      "gitBlob": "78b22adbb55ab285186285e4e3f6ada38f413ecb",
+      "gitSHA256": "1f262a499ca1999c6a2188f5b90005c5c1c4c84f8fdb6fb40d08bbeeaab8bdf1",
+      "unchangedInCompleteSevenPathIncomingDelta": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "gitBlob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f",
+      "gitSHA256": "352c62fcce347599a89658a5dc98d3d05d35d4a6d26618cc87faa6ece2f995df",
+      "unchangedInCompleteSevenPathIncomingDelta": true
+    }
+  ],
+  "sourceAssessment": {
+    "arm": "Original standalone poll uses default15s after schedule.run.start ACK. Last completed read is running/unresolved; post-read strict cutoff throws at poll63 before result/stdout/cleanup/replay assertions605–617. Later epoch.close checks all allocated records:24 captured/resumed Jobs pass final original HANDLE absence; slot24 never records root/witness/resume and fails original assertion289 before witness.wait. Outer controller active0 is separate and does not change scenario.cleanupfalse. The sole launch-chunk refusal has no timestamp and cannot establish whether it preceded the standalone timeout.",
+    "x64": "The original OpenCode readiness observer still uses15s after its Start RPC. Its seventh observed Runtime view is opening/unknown/attachedfalse/nativeReadyfalse; post-read cutoff throws at poll63. Projection recordReadyfalse short-circuits providerReady/ownerCurrent to null. Valid refusal ledger is empty. RuntimeOwner publishes attached/allocated after driverFactory.open resolves and held/open-unknown after a propagated error; OpenCode provider may await custody cleanup before rethrowing. Therefore the snapshot does not distinguish pending startup from pending provider error cleanup, nor identify an expired model probe.",
+    "fix": "No concrete same-contract production/protocol defect is established by these retained observations. No source change, deadline relaxation, repeated action, provider execution or new instrumentation was performed. UI agent independently owns deeper standalone provider semantics; no pending substage is promoted to observed fact."
+  },
+  "prerequisites": {
+    "bothWindowsOriginalHostContracts": {
+      "cases": 163,
+      "pass": 160,
+      "fail": 0,
+      "skip": 3,
+      "cancelled": 0
+    },
+    "bothWindowsProtocolVitest": {
+      "files": 3,
+      "pass": 53
+    },
+    "bothWindowsRetainedMainVitest": {
+      "files": 8,
+      "pass": 81
+    },
+    "qualification": "These complete commands and other successful prerequisite steps do not qualify the failed full Process jobs."
+  },
+  "limits": [
+    "All success/failure facts belong only to original2cb, not the proposed corrected absolute-D or any later composition.",
+    "ARM wrapper and controller cleanup must not replace failed original source-scenario cleanup. Root-null slot24 false absence is an unobserved original HANDLE wait, not an observed surviving PID.",
+    "No raw provider stdin/stdout, full effect/input/entry journal or standalone Runtime input state was archived; recorded threadEphemeral values are outbound transport observations, not native acceptance or terminal outcomes.",
+    "First-refusal native row lacks time/callsite; empty x64 ledger is no observed first-refusal row, not proof that all uninstrumented probes succeeded.",
+    "Source pins match exact incoming scenario8164/profile910 under Windows CRLF; the known absolute-deadline rebasing gap is still present in this original cohort. Historical old-source failures and the new TEST policy remain distinct.",
+    "No test/compiler/native/provider/CI action, tracked source or ref mutation by auditor."
+  ]
+}

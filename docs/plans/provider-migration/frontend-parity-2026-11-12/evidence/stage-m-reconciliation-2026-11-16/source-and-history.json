@@ -1,0 +1,566 @@
+{
+  "kind": "Prospective M bounded incoming9e source adoption, preserving L held-value RED stage and restoring lint scope",
+  "prior": {
+    "head": "db8b470bf3c530928fef9ad4a2b582a417d436bd",
+    "tree": "a36be1fc640e0750a1d792ef3e26fd49a731f9eb"
+  },
+  "mergeBase": "1f9242563bec2641b25077c3aa83a999bd7f4871",
+  "incoming": {
+    "head": "9e542899f36c47598a88c764c9e6745589fea3e1",
+    "tree": "dc7e07838cef3f0b6bf83ffce8b5a34f6e7484e4",
+    "parents": [
+      "1f9242563bec2641b25077c3aa83a999bd7f4871"
+    ]
+  },
+  "sourceLeaves": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "bytes": 97517,
+        "blob": "ae2e48f5dc013c8c2dd2ce6021dba2afd4ad66d5",
+        "sha256": "0e70cd2ef2ab7658085e4dadaeedaddd3db6f8a94d08f995419fcd596b8ff336"
+      },
+      "base": {
+        "bytes": 96552,
+        "blob": "bf268bbeedf1d985cb1f7ceae35716dae3b3d40c",
+        "sha256": "2aa609c4dd7e068fcd8f0ca469ac8c0c1bd6602aa2eb1d983be3a837479cf8ae"
+      },
+      "incoming": {
+        "bytes": 96552,
+        "blob": "bf268bbeedf1d985cb1f7ceae35716dae3b3d40c",
+        "sha256": "2aa609c4dd7e068fcd8f0ca469ac8c0c1bd6602aa2eb1d983be3a837479cf8ae"
+      },
+      "selected": {
+        "bytes": 101741,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/.github/workflows/host-emulated-acceptance.yml",
+      "kind": "original fast-lint scope extension",
+      "lines": 1312
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts",
+      "before": {
+        "bytes": 25660,
+        "blob": "ed25bfd57ff19730328fd13c4d338e8a3649e2a3",
+        "sha256": "2e988f1529b49a11c41a8678a964f0a38d4951a89a0dac3db18ab3e149b49958"
+      },
+      "base": {
+        "bytes": 25660,
+        "blob": "ed25bfd57ff19730328fd13c4d338e8a3649e2a3",
+        "sha256": "2e988f1529b49a11c41a8678a964f0a38d4951a89a0dac3db18ab3e149b49958"
+      },
+      "incoming": {
+        "bytes": 25689,
+        "blob": "186171f456cc99a18e12f0b87c4bd508936d6243",
+        "sha256": "895d895fb8b28e4007240389055e1b6405fc4d02093fe7eff1f95cdb51835a05"
+      },
+      "selected": {
+        "bytes": 25689,
+        "blob": "186171f456cc99a18e12f0b87c4bd508936d6243",
+        "sha256": "895d895fb8b28e4007240389055e1b6405fc4d02093fe7eff1f95cdb51835a05"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts",
+      "kind": "exact incoming",
+      "lines": 454
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts",
+      "before": {
+        "bytes": 9613,
+        "blob": "85929131823d19197651cc5f984096cde9b1fd6e",
+        "sha256": "e4e048ad5880cedd77ac7f105152322d26fa3bc60473b28a4a9d562a7c666dcc"
+      },
+      "base": {
+        "bytes": 9613,
+        "blob": "85929131823d19197651cc5f984096cde9b1fd6e",
+        "sha256": "e4e048ad5880cedd77ac7f105152322d26fa3bc60473b28a4a9d562a7c666dcc"
+      },
+      "incoming": {
+        "bytes": 10051,
+        "blob": "e6861511417070c9202458253a16a3ffb20216ae",
+        "sha256": "77cb82d6c1938b3f858b4b65484c9ab123ec6b0c8e4bab2c20793b6708f51c08"
+      },
+      "selected": {
+        "bytes": 10051,
+        "blob": "e6861511417070c9202458253a16a3ffb20216ae",
+        "sha256": "77cb82d6c1938b3f858b4b65484c9ab123ec6b0c8e4bab2c20793b6708f51c08"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts",
+      "kind": "exact incoming",
+      "lines": 166
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "before": {
+        "bytes": 7826,
+        "blob": "3b2b960722f878cf60ba94bae27176fb9e7d0bba",
+        "sha256": "c30d9a9d7357275864ede578ec9a4c66e335ffb1a613a5d916c6aced9061e1bc"
+      },
+      "base": {
+        "bytes": 7826,
+        "blob": "3b2b960722f878cf60ba94bae27176fb9e7d0bba",
+        "sha256": "c30d9a9d7357275864ede578ec9a4c66e335ffb1a613a5d916c6aced9061e1bc"
+      },
+      "incoming": {
+        "bytes": 7855,
+        "blob": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+        "sha256": "df315063bd119870f52b932daf72880ac4ea40340e023049a236fed79e505c37"
+      },
+      "selected": {
+        "bytes": 7855,
+        "blob": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+        "sha256": "df315063bd119870f52b932daf72880ac4ea40340e023049a236fed79e505c37"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "kind": "exact incoming",
+      "lines": 165
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/HostScheduledRuns.ts",
+      "before": {
+        "bytes": 15423,
+        "blob": "1db38b33e308071130543fecb62e8caaaa2c90b2",
+        "sha256": "fe9f75f954c4f15ad50396dd8757d34409d6ad533622ac512777b4d903da1323"
+      },
+      "base": {
+        "bytes": 15423,
+        "blob": "1db38b33e308071130543fecb62e8caaaa2c90b2",
+        "sha256": "fe9f75f954c4f15ad50396dd8757d34409d6ad533622ac512777b4d903da1323"
+      },
+      "incoming": {
+        "bytes": 17375,
+        "blob": "13fd4d190e0a50267a295cb75cbf50320fa36d5a",
+        "sha256": "69b605e0720613e17b20dbe82c3fa2213f8f7e075359dd451c0a975b8b732e02"
+      },
+      "selected": {
+        "bytes": 17375,
+        "blob": "13fd4d190e0a50267a295cb75cbf50320fa36d5a",
+        "sha256": "69b605e0720613e17b20dbe82c3fa2213f8f7e075359dd451c0a975b8b732e02"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/packages/legacy-agent-host/src/composition/HostScheduledRuns.ts",
+      "kind": "exact incoming",
+      "lines": 297
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/scheduledRunProjection.ts",
+      "before": {
+        "bytes": 4235,
+        "blob": "86d4ec120fb4deba4c53bb5426fc771f4e1ee5b7",
+        "sha256": "79bbdce726ef5ba8d85e6d877686d93604531e361c341e1710fcf336c1a77142"
+      },
+      "base": {
+        "bytes": 4235,
+        "blob": "86d4ec120fb4deba4c53bb5426fc771f4e1ee5b7",
+        "sha256": "79bbdce726ef5ba8d85e6d877686d93604531e361c341e1710fcf336c1a77142"
+      },
+      "incoming": {
+        "bytes": 5047,
+        "blob": "46613a43c30311321280f11129ed02df18ef527a",
+        "sha256": "ebf66eda6dfcd1cb907f6ce52ec1b4e3d3303774869e76e893063fd68302e8a3"
+      },
+      "selected": {
+        "bytes": 5047,
+        "blob": "46613a43c30311321280f11129ed02df18ef527a",
+        "sha256": "ebf66eda6dfcd1cb907f6ce52ec1b4e3d3303774869e76e893063fd68302e8a3"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/packages/legacy-agent-host/src/composition/scheduledRunProjection.ts",
+      "kind": "exact incoming",
+      "lines": 74
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+      "before": {
+        "bytes": 25074,
+        "blob": "48f51dc20a9253c81c9b231b6aa115f6244bd18f",
+        "sha256": "c43e4da640daed957b098161fd0f85479eb24df4f7b1ccfe4b03c4d9690009cb"
+      },
+      "base": {
+        "bytes": 25074,
+        "blob": "48f51dc20a9253c81c9b231b6aa115f6244bd18f",
+        "sha256": "c43e4da640daed957b098161fd0f85479eb24df4f7b1ccfe4b03c4d9690009cb"
+      },
+      "incoming": {
+        "bytes": 26288,
+        "blob": "ba90e3e6895bf7f85d7ca3de7d9608fe433fcadf",
+        "sha256": "a801ffb0e299ab25dbdd66353d7be904f471571f679008c5c21a84ac317389c7"
+      },
+      "selected": {
+        "bytes": 26288,
+        "blob": "ba90e3e6895bf7f85d7ca3de7d9608fe433fcadf",
+        "sha256": "a801ffb0e299ab25dbdd66353d7be904f471571f679008c5c21a84ac317389c7"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+      "kind": "exact incoming",
+      "lines": 610
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/activityContracts.ts",
+      "before": {
+        "bytes": 4266,
+        "blob": "22503cf7430200a8e221c7495a320740bbe7a474",
+        "sha256": "415b5ba4edbcd78f587ad8826d5e2661aa7eb4f7245e2914b2a7e55e288f21ae"
+      },
+      "base": {
+        "bytes": 4266,
+        "blob": "22503cf7430200a8e221c7495a320740bbe7a474",
+        "sha256": "415b5ba4edbcd78f587ad8826d5e2661aa7eb4f7245e2914b2a7e55e288f21ae"
+      },
+      "incoming": {
+        "bytes": 4476,
+        "blob": "d6a001c625d4369147811ee4d97b9853ff1c86c1",
+        "sha256": "84fa611fad41f75be7c3cc9798572db2c3e8d488c28258fbcd37c8408d0deb6f"
+      },
+      "selected": {
+        "bytes": 4476,
+        "blob": "d6a001c625d4369147811ee4d97b9853ff1c86c1",
+        "sha256": "84fa611fad41f75be7c3cc9798572db2c3e8d488c28258fbcd37c8408d0deb6f"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/packages/legacy-agent-host/src/runtime/activityContracts.ts",
+      "kind": "exact incoming",
+      "lines": 130
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "before": {
+        "bytes": 14002,
+        "blob": "f84153e49a9ace1f07a5d1f7bb9cea486f5617af",
+        "sha256": "30c863da3e66b2d2e4be13e8a3394d09e75ade9e84ee38a7775806cd60acc868"
+      },
+      "base": {
+        "bytes": 14002,
+        "blob": "f84153e49a9ace1f07a5d1f7bb9cea486f5617af",
+        "sha256": "30c863da3e66b2d2e4be13e8a3394d09e75ade9e84ee38a7775806cd60acc868"
+      },
+      "incoming": {
+        "bytes": 17005,
+        "blob": "d2b952c9e6ac2281a14a00665cf4689d9c7d4b5c",
+        "sha256": "12be8f565712c09537d99ba75b63aa6e01774708ad1967c7ee2fdd964d747712"
+      },
+      "selected": {
+        "bytes": 17005,
+        "blob": "d2b952c9e6ac2281a14a00665cf4689d9c7d4b5c",
+        "sha256": "12be8f565712c09537d99ba75b63aa6e01774708ad1967c7ee2fdd964d747712"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "kind": "exact incoming",
+      "lines": 366
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "before": {
+        "bytes": 45583,
+        "blob": "06bdfb8243c035f10f82b6025fbe98e171716831",
+        "sha256": "e0703be3ad202f8f1b6e358e32cc5fdc18bc2d71297019ac26ca903ea571bf89"
+      },
+      "base": {
+        "bytes": 45583,
+        "blob": "06bdfb8243c035f10f82b6025fbe98e171716831",
+        "sha256": "e0703be3ad202f8f1b6e358e32cc5fdc18bc2d71297019ac26ca903ea571bf89"
+      },
+      "incoming": {
+        "bytes": 47440,
+        "blob": "d13aa0c846dbf97aff99786e1165aa214aab93c7",
+        "sha256": "5a1e781f3d910b97cb3e4bfdc8592897bce69861b6200421355ed9f047f85f89"
+      },
+      "selected": {
+        "bytes": 47440,
+        "blob": "d13aa0c846dbf97aff99786e1165aa214aab93c7",
+        "sha256": "5a1e781f3d910b97cb3e4bfdc8592897bce69861b6200421355ed9f047f85f89"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "kind": "exact incoming",
+      "lines": 850
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "before": {
+        "bytes": 14603,
+        "blob": "d1b52658270cc53a9e1ec345de55f840e7549011",
+        "sha256": "fd7504cd6196122a450cab25dc3bce50f5125c4ab589510c005f08e68c731510"
+      },
+      "base": {
+        "bytes": 12742,
+        "blob": "c073ab7b8c6025313747f75e50e8b0a14985d589",
+        "sha256": "f2c89ada2f51d13e42af390229cc6b2fc58e2c82a48bf64154c006c5feedc573"
+      },
+      "incoming": {
+        "bytes": 14242,
+        "blob": "e52785444caebdc8c698d87ac122f4a13742b5cc",
+        "sha256": "e6f1a2d049117442bbdc26ad2c525b0f95d1080740bd5caec59a50930e0de45c"
+      },
+      "selected": {
+        "bytes": 16103,
+        "blob": "0727339627757c3a96d54da2933eb7c1b60685f7",
+        "sha256": "2a738fca4120ae3361483abd948f7746d2025f32012b189e695085845bc3e191"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "kind": "composition",
+      "lines": 277
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "before": {
+        "bytes": 54523,
+        "blob": "5a4a258d7802ff54fc2d4c405fc95c2e8e48e86e",
+        "sha256": "2b0b8accbaf951b00d86537d6a0eb793e7ef1859d1ab401b06e93624f97269cb"
+      },
+      "base": {
+        "bytes": 54523,
+        "blob": "5a4a258d7802ff54fc2d4c405fc95c2e8e48e86e",
+        "sha256": "2b0b8accbaf951b00d86537d6a0eb793e7ef1859d1ab401b06e93624f97269cb"
+      },
+      "incoming": {
+        "bytes": 60689,
+        "blob": "077ad7ea54675a4782984fcb5399f9964d5ec5e6",
+        "sha256": "a559b1b184c4f79f76fbcd99998d689cfc31158609051100c1f5cfdcc3b37c77"
+      },
+      "selected": {
+        "bytes": 60689,
+        "blob": "077ad7ea54675a4782984fcb5399f9964d5ec5e6",
+        "sha256": "a559b1b184c4f79f76fbcd99998d689cfc31158609051100c1f5cfdcc3b37c77"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "kind": "exact incoming",
+      "lines": 1186
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+      "before": {
+        "bytes": 28745,
+        "blob": "96a7f6ac29bbd830dffb60d80a910e3f26e76949",
+        "sha256": "2f55707a65dcdb1a4e23cbd84dcbe78c672982819d0b642c876ab9dc6191c3e4"
+      },
+      "base": {
+        "bytes": 28745,
+        "blob": "96a7f6ac29bbd830dffb60d80a910e3f26e76949",
+        "sha256": "2f55707a65dcdb1a4e23cbd84dcbe78c672982819d0b642c876ab9dc6191c3e4"
+      },
+      "incoming": {
+        "bytes": 41863,
+        "blob": "dbbd17b11db24a9dc3fb989e0266101847f0a778",
+        "sha256": "f3f9147184700663c24d85a2a81ff6ab54724b7883a9e6fcc9bf9c324f473ab5"
+      },
+      "selected": {
+        "bytes": 41863,
+        "blob": "dbbd17b11db24a9dc3fb989e0266101847f0a778",
+        "sha256": "f3f9147184700663c24d85a2a81ff6ab54724b7883a9e6fcc9bf9c324f473ab5"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+      "kind": "exact incoming",
+      "lines": 598
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "before": {
+        "bytes": 13673,
+        "blob": "4f2de43f25fa57005dec41cd9f3501b72d17eb6f",
+        "sha256": "ec56b1bea503eae250a4c2e7c9c3e7e8fc7fa53775b200a3c12a85bea43837be"
+      },
+      "base": {
+        "bytes": 13673,
+        "blob": "4f2de43f25fa57005dec41cd9f3501b72d17eb6f",
+        "sha256": "ec56b1bea503eae250a4c2e7c9c3e7e8fc7fa53775b200a3c12a85bea43837be"
+      },
+      "incoming": {
+        "bytes": 14327,
+        "blob": "881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb",
+        "sha256": "56be5d699948e7142fc94bc5b0776b675683e3c16a9a68a72e9e5b148146e0c5"
+      },
+      "selected": {
+        "bytes": 14327,
+        "blob": "881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb",
+        "sha256": "56be5d699948e7142fc94bc5b0776b675683e3c16a9a68a72e9e5b148146e0c5"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "kind": "exact incoming",
+      "lines": 381
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "before": {
+        "bytes": 63441,
+        "blob": "8740d94021dd031b0be0248bc8654576484e6d1d",
+        "sha256": "f1c7645f19d8b4ab08da39a248ebff08b896fe85b49df0be1be945b24650e820"
+      },
+      "base": {
+        "bytes": 63953,
+        "blob": "345dc9a6b3fb9d197eaf2982e60840682d7b8fbd",
+        "sha256": "62be20083316c423e9f0814593aa8815b7abd56507138e84a473de3cd8791c92"
+      },
+      "incoming": {
+        "bytes": 69272,
+        "blob": "d1a43bae56a2bceceb450d01a2544cdbe801e06e",
+        "sha256": "3cfffd1793d000850a5f144abdfe3da9c7296ce87f93b1a70215ecd7cab2d4d2"
+      },
+      "selected": {
+        "bytes": 68760,
+        "blob": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+        "sha256": "6ca239d1ea242a3ac64323bf28d41b84450fc1d5d7e4ae2324a069d03bff18ad"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "kind": "composition",
+      "lines": 788
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "before": {
+        "bytes": 20778,
+        "blob": "d8222627fd9f5ba303d1a2116246d63ba0d67516",
+        "sha256": "bfcc571e2c742ff2eb957bcc525c6a596ca9999e6d3d087cc2ca9dfab9e94681"
+      },
+      "base": {
+        "bytes": 20778,
+        "blob": "9ebf57607eb1ca52fa4d7e29213bba99624167c8",
+        "sha256": "4e278c7717ae10c6208dfa1658042b07861af63000e0c02900a735d423986898"
+      },
+      "incoming": {
+        "bytes": 20996,
+        "blob": "b52876e3215910eba3a3a24756f61c289a0965f9",
+        "sha256": "cc5fa1a4c6a2f841145b0e4f33709fd1b2d8c405dae7151477a8a8aac5fce02e"
+      },
+      "selected": {
+        "bytes": 20996,
+        "blob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+        "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "kind": "composition",
+      "lines": 323
+    },
+    {
+      "path": "test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx",
+      "before": {
+        "bytes": 6944,
+        "blob": "eb380c206e9d2c49984a1bf732ceddaddb9449ae",
+        "sha256": "765a4c8d5825d3e353a83953cf9ef018b2bbcee34fc11e446e8bbe1d3b5b0e13"
+      },
+      "base": {
+        "bytes": 6944,
+        "blob": "eb380c206e9d2c49984a1bf732ceddaddb9449ae",
+        "sha256": "765a4c8d5825d3e353a83953cf9ef018b2bbcee34fc11e446e8bbe1d3b5b0e13"
+      },
+      "incoming": {
+        "bytes": 7490,
+        "blob": "a367866923405e4d584fac1145b56fe27bf37b5a",
+        "sha256": "b5ed7faf0d728baed07f1d25f2cc5bbcc29c87987667d382df065434b861676f"
+      },
+      "selected": {
+        "bytes": 7490,
+        "blob": "a367866923405e4d584fac1145b56fe27bf37b5a",
+        "sha256": "b5ed7faf0d728baed07f1d25f2cc5bbcc29c87987667d382df065434b861676f"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx",
+      "kind": "exact incoming",
+      "lines": 232
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "before": {
+        "bytes": 31783,
+        "blob": "6cdba0b52141348d97c593bf2ae6c224cdce5d73",
+        "sha256": "03f92320d8646353540bcea7a3626a0a35634b803a6af1599d23c1d882a6d962"
+      },
+      "base": {
+        "bytes": 31783,
+        "blob": "6cdba0b52141348d97c593bf2ae6c224cdce5d73",
+        "sha256": "03f92320d8646353540bcea7a3626a0a35634b803a6af1599d23c1d882a6d962"
+      },
+      "incoming": {
+        "bytes": 32221,
+        "blob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+        "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87"
+      },
+      "selected": {
+        "bytes": 32221,
+        "blob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+        "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87"
+      },
+      "candidate": "/workspace/scratch/82d3f9ba6b85/stage-m-adoption/candidate/tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "kind": "exact incoming",
+      "lines": 463
+    }
+  ],
+  "sourceCount": 18,
+  "exactIncomingCount": 14,
+  "composedPaths": [
+    "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+    "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+    "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts"
+  ],
+  "newSourceFiles": 0,
+  "unchangedPriorLeaves": 9971,
+  "sourceOnlyProjection": {
+    "tree": "af96aaf355f0765aa0c2a7416e6e9789c5a63840",
+    "leaves": 9989,
+    "docsNote": "Prospective source overlay on L including its existing docs; final M docs parent adds separate reviewed docs leaves."
+  },
+  "patch": {
+    "bytes": 78799,
+    "blob": "a28b2f93f3c24d3bd75cf9a31d7b68078bdc5af4",
+    "sha256": "5cb5a2a290df19084078fb6f05b042149cf53e0065a63e9fd917a440a9c7d331"
+  },
+  "incomingDocuments": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md",
+      "identity": {
+        "bytes": 49788,
+        "blob": "27f455b058d999213277e396343016789163660f",
+        "sha256": "32cb9313cd505b9576662fc0453d2349f522b2ce0bb42092a2369b82b7539c05"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md",
+      "identity": {
+        "bytes": 28750,
+        "blob": "77cb678aef27ac3b744258e856deba479ea8c414",
+        "sha256": "1678842870b90126aef267c0bdb2e834254420d59d77c3c813dea310dd23b00f"
+      }
+    }
+  ],
+  "preservedLRuntimeTeamTest": {
+    "bytes": 207427,
+    "blob": "c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79",
+    "sha256": "5ecb1c76b7a3cccf205b9856f183095ef7da3fa06cd7617c2f403c37e3f41d2d"
+  },
+  "securityStage": {
+    "helper": {
+      "bytes": 7855,
+      "blob": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+      "sha256": "df315063bd119870f52b932daf72880ac4ea40340e023049a236fed79e505c37"
+    },
+    "test": {
+      "bytes": 16103,
+      "blob": "0727339627757c3a96d54da2933eb7c1b60685f7",
+      "sha256": "2a738fca4120ae3361483abd948f7746d2025f32012b189e695085845bc3e191"
+    },
+    "status": "RED-only: known held-value defect deliberately unfixed; no executed semantic RED yet",
+    "predictedStderrOnlyCounts": {
+      "tests": 24,
+      "pass": 21,
+      "fail": 3,
+      "skip": 0,
+      "cancel": 0,
+      "observation": "static prediction only"
+    }
+  },
+  "lintCoverage": {
+    "metadata": {
+      "bytes": 27853,
+      "blob": "7ad92d8f54a40a7aebef1d9e5cdcd12ff8c10e08",
+      "sha256": "b54628c5178b5c1cf7a2f6753a539166a04d3d692a9474b256abe15ea915669f"
+    },
+    "counts": {
+      "original": 38,
+      "requiredKLMUnion": 59,
+      "added": 55,
+      "selected": 93
+    },
+    "originalTeamTestCommand": "node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts"
+  },
+  "executionVenue": "Original existing Host Emulated Acceptance exact resulting PR head, fresh frozen9423 pair/build and full original10-file Team argv; original Process suites also cover scheduled/coordination. No local installation/compiler/test or manualCI.",
+  "sourceApplied": false,
+  "projectExecution": false,
+  "createdUtc": "2026-11-16T00:01:09.364623+00:00"
+}

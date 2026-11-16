@@ -1,0 +1,29 @@
+{
+  "kind": "Prospective Stage J bindings; fill only after publication and independent exact readback",
+  "recorder": {
+    "bytes": 8592,
+    "blob": "b0c938c0ab371c624ad6dcb05c92a5431bc5c8f9",
+    "sha256": "c67d952401c18e039a3cb791a446daf440b2aefaec8075dc7192effd45bfc31b"
+  },
+  "manifest": {
+    "bytes": 32984,
+    "blob": "784dc90ea7ba0f8761c25365eb985784d56515d7",
+    "sha256": "89533177f3dd2c8b2da41c89e09aa28aa3c1a33372f0c593c6dbb6a417d05064"
+  },
+  "independentProspectiveReview": true,
+  "documentation": {
+    "head": "6f74d7e8ecaa7f046826b6421ad105ab35eb09fa",
+    "tree": "58bc141c909c84c83278dbb38b98059b82ee3b7a",
+    "planBlob": "ee173c2f6610efd71ace3c907508d9e8ceec3397",
+    "independentReadbackExact": true
+  },
+  "source": {
+    "head": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+    "tree": "7e3d627c23816db232cf6dbdc3497954f5f0ab85",
+    "parents": [
+      "6f74d7e8ecaa7f046826b6421ad105ab35eb09fa",
+      "462845722260dfd91111c37cb66fc54a01a3ecb7"
+    ],
+    "independentReadbackExact": true
+  }
+}

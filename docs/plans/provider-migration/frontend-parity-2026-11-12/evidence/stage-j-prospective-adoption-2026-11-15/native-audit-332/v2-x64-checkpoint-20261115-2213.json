@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "332fbe3420c811c095dac4187d3f9664e8c47179",
+  "run": 43766707964,
+  "job": 132973378423,
+  "artifact": 14183136114,
+  "selectedPayloads": [
+    {
+      "path": "332-v2-win32-x64.zip",
+      "bytes": 13207,
+      "sha256": "4b7a4213ae1a685d1c7ae4aa25ed46e59307da0762ec44569d4d44827a857802",
+      "gitBlob": "a6a00a0226bd30be97639c4f14bab8c9c7615e81"
+    },
+    {
+      "path": "job-132973378423.log",
+      "bytes": 87622,
+      "sha256": "79e5e818eca60e60abbf06a452af1c4d773839ccf0ba882482040abad232e565",
+      "gitBlob": "1e4273c99d287dcd141bd6c1962745b390dd1cd5"
+    },
+    {
+      "path": "job-132973378423.json",
+      "bytes": 8365,
+      "sha256": "a9ece67ee04eb0e51bc368f8c66521b2d033a0389430d8798d104f4bef4d2d5f",
+      "gitBlob": "2ae2aeb47a66438c1532507eeca0880a2fbdb1e6"
+    },
+    {
+      "path": "archive-audit-v2_win_x64.json",
+      "bytes": 2438,
+      "sha256": "44feedd4d1416fff3a93bd2b80d1b878210341f550733b563b8d7f4d679ed6c7",
+      "gitBlob": "bb5a07ea582d07ad5833c63c17abe09395bb2616"
+    },
+    {
+      "path": "receipt-audit-v2-win32-x64.json",
+      "bytes": 29578,
+      "sha256": "abc36d10fd5efa281979b507ff0a9d13abc8cb89bb6a01c54ec8b7efb9db3f21",
+      "gitBlob": "a91c9e4cb848a77dbba93d3e598aba00bbeec0e8"
+    },
+    {
+      "path": "plan29-332-v2-x64-evidence-appendix.md",
+      "bytes": 4427,
+      "sha256": "113b92fa6794a1d744d51c6fc9001288c682b635db1d33c1b3741e0786cb5d27",
+      "gitBlob": "faf7ae6cecd66507950f3529c0d79df574f9d993"
+    }
+  ],
+  "qualification": "Original V2 Windows x64 custody/manual/automatic PASS only; no Process/WOW64/P08/P09 transfer",
+  "excluded": [
+    "private signed download URL",
+    "base64 transport and audit scripts",
+    "duplicate extracted ZIP members"
+  ],
+  "payloadCount": 6,
+  "payloadBytes": 145637
+}

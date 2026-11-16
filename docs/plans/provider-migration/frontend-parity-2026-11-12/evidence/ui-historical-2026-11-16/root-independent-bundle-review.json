@@ -1,0 +1,21 @@
+{
+  "result": "APPROVE_RECOVERABILITY",
+  "role": "root independent original UI bundle byte recovery review",
+  "archive": {
+    "bytes": 11117559,
+    "blob": "f75e5fbdb2721378b116549156f0e742b68964c1",
+    "sha256": "7aafb02556d24998b01eb56eeb688632e0504970c9995a6b8cf672d764db8fb9"
+  },
+  "outerMembers": 39,
+  "originalPayloads": 37,
+  "originalPayloadBytes": 12970239,
+  "originalZIPs": 6,
+  "fullOriginalFilesByteMatched": true,
+  "all232DerivativesRecoveredAndComparedToOriginal": true,
+  "safeUniqueCRC": true,
+  "originalPNGs": 182,
+  "scannedTextPayloads": 83,
+  "signedTransportURLsFound": 0,
+  "limitation": "Byte/recovery audit only; the original UI owners retain their source-specific visual/semantic evidence and limitations. No new-source execution or qualification.",
+  "observedUtc": "2026-11-16T00:09:26.353752+00:00"
+}

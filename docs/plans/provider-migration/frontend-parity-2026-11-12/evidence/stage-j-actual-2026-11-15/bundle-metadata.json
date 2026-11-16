@@ -1,0 +1,25 @@
+{
+  "kind": "Frozen scratch evidence-only J bundle",
+  "sourceHead": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+  "rawFiles": 8,
+  "rawBytes": 84842,
+  "newEvidencePayloadsIncludingInventory": 10,
+  "alreadyDurableReuses": 41,
+  "appendix": {
+    "bytes": 3979,
+    "blob": "88eb0c35056bfa1d3207ce31d1e98e65d77ec266",
+    "sha256": "6ba6956e4e3d1bcf5a476ed219b78f01da955f49c5ac5a85a7e0957c96f667a2"
+  },
+  "inventory": {
+    "bytes": 30153,
+    "blob": "941f394f03a97872859be35e597343e7c7bfdc13",
+    "sha256": "6a6ca4d286e716af8e2a5e389ccf3783086f5eae42762a2f33bfa92c194da293"
+  },
+  "independentAudit": {
+    "bytes": 5907,
+    "blob": "9ece42eb6e47a0ef92af71b70635f4419e3dca57",
+    "sha256": "e1264a9cd444b99f1e1801861189ac4724892b773347d68007bea9bf0ef4a6c0"
+  },
+  "projectExecutionByReviewer": false,
+  "sourceOrRefMutation": false
+}

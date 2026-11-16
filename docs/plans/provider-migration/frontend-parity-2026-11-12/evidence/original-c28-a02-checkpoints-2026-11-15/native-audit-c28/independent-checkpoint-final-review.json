@@ -1,0 +1,96 @@
+{
+  "kind": "independent-final-checkpoint-and-wording-R2",
+  "verdict": "APPROVE",
+  "checkpoint": {
+    "path": "windows-process-checkpoint-20261115-2106.json",
+    "bytes": 4029,
+    "gitBlob": "e0fdbf54040fb28b5d93e468486bd5eb60921552",
+    "sha256": "c4273c41ce7f7fb2c0f129cb04ef1deb4d614bde131acbe5db0ed451332c3063"
+  },
+  "appendix": {
+    "path": "plan29-c28-windows-process-appendix.md",
+    "bytes": 8348,
+    "gitBlob": "fca3d08d92b6a1e7ea9fd6f0e3fd3146281086e3",
+    "sha256": "1b6753cde76dfbbd7c6fac7fe19535b5d94c0d0d57e691f33610a801b935acad"
+  },
+  "detailedByteSourceAndReceiptReview": {
+    "path": "independent-checkpoint-review.json",
+    "bytes": 13405,
+    "gitBlob": "75dbcd59ba164b5464f79c5eba30941b0f9aa40c",
+    "sha256": "7439dfc330adfd9636b430cbced4fc60917ceb8c9ed73f3fd64e34fe7560c5e9"
+  },
+  "savedOfficialJobStatus": [
+    {
+      "id": 132949618051,
+      "run_id": 43759098052,
+      "head_sha": "c28f1aa890c909c7b981254c5e30b874cbc84287",
+      "name": "Host process fixtures (win32-x64)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-15T20:39:59Z",
+      "completed_at": "2026-11-15T20:46:35Z"
+    },
+    {
+      "id": 132949618151,
+      "run_id": 43759098052,
+      "head_sha": "c28f1aa890c909c7b981254c5e30b874cbc84287",
+      "name": "Host process fixtures (win32-arm64)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-15T20:38:36Z",
+      "completed_at": "2026-11-15T20:54:15Z"
+    }
+  ],
+  "x64": [
+    {
+      "provider": "codex",
+      "cleanupRows": 25,
+      "originalRootAndWitnessCaptured": true,
+      "earlyAbsentFalseCount": 23,
+      "finalAllAbsentTrueVerifiedInPreviousReview": true
+    },
+    {
+      "provider": "claude",
+      "cleanupRows": 9,
+      "originalRootAndWitnessCaptured": true,
+      "earlyAbsentFalseCount": 6,
+      "finalAllAbsentTrueVerifiedInPreviousReview": true
+    },
+    {
+      "provider": "opencode",
+      "cleanupRows": 7,
+      "originalRootAndWitnessCaptured": true,
+      "earlyAbsentFalseCount": 5,
+      "finalAllAbsentTrueVerifiedInPreviousReview": true
+    }
+  ],
+  "arm64": [
+    {
+      "provider": "codex",
+      "cleanupRows": 25,
+      "originalRootAndWitnessCaptured": true,
+      "earlyAbsentFalseCount": 23,
+      "finalAllAbsentTrueVerifiedInPreviousReview": true
+    },
+    {
+      "provider": "claude",
+      "cleanupRows": 9,
+      "originalRootAndWitnessCaptured": true,
+      "earlyAbsentFalseCount": 6,
+      "finalAllAbsentTrueVerifiedInPreviousReview": true
+    },
+    {
+      "provider": "opencode",
+      "cleanupRows": 7,
+      "originalRootAndWitnessCaptured": true,
+      "earlyAbsentFalseCount": 5,
+      "finalAllAbsentTrueVerifiedInPreviousReview": true
+    }
+  ],
+  "limits": [
+    "Saved official original executions only; no project/native/provider execution or CI status re-poll in this review.",
+    "Source-specific results are not qualification of isolated E–H or future incoming source.",
+    "Archive hashes/CRC and source joins do not recreate unarchived compiled payloads.",
+    "Historical failed, skipped, incomplete and false qualification flags remain unchanged."
+  ]
+}

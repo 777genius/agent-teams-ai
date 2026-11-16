@@ -1,0 +1,206 @@
+{
+  "result": "APPROVE",
+  "scope": "Exact prospective Stage L thirty-path staged-RED composition and original-CI execution/publication plan only; no final product or execution qualification.",
+  "reviewedAtUTC": "2026-11-15T23:40:19.108035+00:00",
+  "canonicalR1": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/canonical-R1.md",
+    "bytes": 16135,
+    "blob": "43b41001269e32ccb6f3c4d4483faea7c63bc9cd",
+    "sha256": "1f517f360c100a8f5dc3bd12e1bd8c896dfa1af3f14af3541007c99fe7812d4a"
+  },
+  "sourceContract": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/source-and-history.json",
+    "bytes": 32233,
+    "blob": "0845a6c2f6623b15b1f2a4649b48e5d4f742e2c0",
+    "sha256": "c7d64f26c074825d7ba52630ef09200e9a1901ca62d372963ca1901e60311800"
+  },
+  "sourceReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/independent-source-composition-review.json",
+    "bytes": 32317,
+    "blob": "54d66c9c0c9f2d5783698b2076594a7e873c205b",
+    "sha256": "70e55feec597975467c588bc95ba732ab78e1963b9eac0de955d63e960b5d677"
+  },
+  "sourcePatch": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/source.patch",
+    "bytes": 89885,
+    "blob": "bd842192a0b0aa9c7d73d9568bd46c5ebaed071f",
+    "sha256": "acf698c2c5c4d40bbcf551ec5ed6a37a824dbd76500759727cc2d72850ff5cc4"
+  },
+  "reviewedPriorCanonical": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/canonical-R1-v1-unpublished.md",
+    "bytes": 14838,
+    "blob": "9fbcaa6f29025870fbf9529b5fee4d8a94752a94",
+    "sha256": "b9ba33443c1a65036d9bb7cc576216c2ba2167b975939c1a2bc42396c4b81854"
+  },
+  "publication": {
+    "docsParent": "e3b661974cb7131cd3b1f7b6eaf6ede647b326f4",
+    "preservedPlan29PrefixBlob": "80e59bbc1bce8e6baca014d2743a9a09328d8529",
+    "preservedPlan29PrefixBytes": 1144279,
+    "exactIncomingPlan29SuffixBytes": 1478,
+    "incomingPlan32Blob": "2305bbd7b340418f82b39e5bdb28f302735f7237",
+    "incomingPlan33Blob": "f5176d68c3e9fa81472d0a81f0cb324a210a4854",
+    "sourceParentOrder": [
+      "future fully-read-back L docs child of K",
+      "1f9242563bec2641b25077c3aa83a999bd7f4871"
+    ],
+    "sourceCount": 30,
+    "exactIncoming": 26,
+    "composed": 4,
+    "modifiedExisting": 24,
+    "newFiles": 6,
+    "sourceOnlyTree": "6d18e878f0ad0ed38b3a9f01ba3db5de2c8f4a8f",
+    "sourceOnlyLeaves": 9943,
+    "unchangedKLeaves": 9913,
+    "finalDocsAndSourceTreesRequireSeparateExactReview": true
+  },
+  "originalCiRoute": {
+    "workflow": {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 97517,
+      "blob": "ae2e48f5dc013c8c2dd2ce6021dba2afd4ad66d5",
+      "sha256": "0e70cd2ef2ab7658085e4dadaeedaddd3db6f8a94d08f995419fcd596b8ff336"
+    },
+    "job": "Offline Host Desktop (linux-x64, team)",
+    "trigger": "Original pull_request synchronize, same-repository head; no manual dispatch or rerun",
+    "checkout": "github.event.pull_request.head.sha || github.sha",
+    "node": "24.21.0",
+    "install": "Original pnpm/action-setup@v6 and node-ci frozen install helper with --child-concurrency=1, original Electron prerequisites; actual versions/locked pair and source must be joined from resulting job evidence.",
+    "prerequisites": "Original Host/controller/MCP builds and eight-helper plus installer tests precede the Team step; a failure here is not semantic RED.",
+    "teamCommand": "node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+    "wholeFileOperands": [
+      "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "packages/legacy-agent-host/tests/team-snapshot.test.ts",
+      "packages/legacy-agent-host/tests/team-product-changes.test.ts",
+      "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+      "packages/legacy-agent-host/tests/owned-process-facade.test.ts"
+    ],
+    "unchangedScopedLintOperands": [
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts",
+      "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "packages/legacy-agent-host/tests/opencode-configuration-source.test.ts",
+      "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts",
+      "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+      "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+      "scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+      "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+      "src/features/agent-backend/renderer/createHostMemberSpawnStatuses.ts",
+      "src/features/agent-backend/renderer/createHostTeamChanges.ts",
+      "src/features/agent-backend/renderer/createHostTeamProvisioning.ts",
+      "src/features/agent-backend/renderer/index.ts",
+      "src/renderer/store/slices/teamSlice.ts",
+      "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "test/features/agent-backend/capturedWindowsSelection.test.ts",
+      "test/features/agent-backend/hostMemberSpawnStatuses.test.ts",
+      "test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "test/renderer/store/teamRuntimeRunAdoption.test.ts",
+      "test/renderer/store/teamSlice.test.ts",
+      "tools/owned-process-broker/nativeWindowsAppGate.mjs"
+    ],
+    "laterTypeLintDesktopCannotPassAfterRed": true,
+    "futureResultingSourceGatesRemainRequired": true
+  },
+  "redAndGreen": {
+    "redSourceHelper": "3b2b960722f878cf60ba94bae27176fb9e7d0bba",
+    "exactTest": "d1b52658270cc53a9e1ec345de55f840e7549011",
+    "meaningfulRed": "Three space/tab/mixed cases reach the real built observer, complete their original streams, and fail the first retained TEST_HELD_SUFFIX absence assertion. Setup/import/type/install/missing-event failures do not qualify.",
+    "predictedStderrFileOnly": {
+      "cases": 23,
+      "pass": 20,
+      "semanticFailures": 3
+    },
+    "wholeCommandCount": "Not predicted or replaced by the single-file count.",
+    "requiredActualRedReview": true,
+    "laterOnlyHelper": "21aa3590f82939778a3fd657bbafa2d64c23d923",
+    "laterTestBytesUnchanged": true,
+    "freshResultingBuildAndSameTenFileGreenRequired": true,
+    "noRedOrGreenHasRun": true,
+    "laterConservativeWholeLineInformationLossExplicit": true
+  },
+  "supportingSourceReviews": {
+    "stderrR1": {
+      "path": "/workspace/scratch/82d3f9ba6b85/stderr-held-value-35c-r1/R1-appendix.md",
+      "bytes": 9310,
+      "blob": "b0ddc336db50b6b9974fbb6f4e6bdfef753040c2",
+      "sha256": "4ee330cf75261d1f1152e744250b3da35c046fb7419ba9fce9c2fdff9cb328a8"
+    },
+    "stderrIndependentR2": {
+      "path": "/workspace/scratch/82d3f9ba6b85/stderr-held-value-35c-r1/independent-source-review.json",
+      "bytes": 6245,
+      "blob": "26a368e493e1e1c5c17921a015e9e04d3e39e2bf",
+      "sha256": "550ede31923e88bbdf53bdc9fa14c0dd18f7a8c5ac121bfac6f83af094b7fcdd"
+    },
+    "dependencyVenue": {
+      "path": "/workspace/scratch/82d3f9ba6b85/L-dependency-venue-final-review.json",
+      "bytes": 10995,
+      "blob": "e4103104b054917f99d5d85025c8a4460b6e2664",
+      "sha256": "ed38faf483cd16301f440c54c32b464519064560445c24385e4e8b30ede98a13"
+    },
+    "runtimeUiComposition": {
+      "path": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/composition/runtime-ui-metadata.json",
+      "bytes": 3735,
+      "blob": "d6f6e7eba76588700e19a5da551178d1d2f71e5b",
+      "sha256": "afa219b93b16a51aa2dd6563f7dfd241a09aa4c632afbb3cf5e9981e2a6b4878"
+    },
+    "runtimeTeamComposition": {
+      "path": "/workspace/scratch/82d3f9ba6b85/stage-l-adoption/composition/runtime-team-test-metadata.json",
+      "bytes": 2912,
+      "blob": "c0c91ca17f6bccad4d35874328ac043b3a4b7d64",
+      "sha256": "a1b7ae5ce0ed1fb3dbaa598f92dcc3e2841334d052bd42f3649f6fa96a608314"
+    }
+  },
+  "canonicalV2Corrections": [
+    "The blanket unchanged-acceptance-oracle claim was replaced by the explicit described source/test/pending-CREATE amendments and unchanged workflow selectors/rows/timeouts/caps.",
+    "Useful current-cohort evidence must be assessed and retained before both ordinary PR-head advances; a semantic RED alone does not waive remaining useful evidence. No universal all-active/queued-jobs-terminal gate is invented.",
+    "Unexecuted K43-path and affected L file-scoped lint remain pending. General src/ fast lint, Host38 operands and typed lint are not declared equivalent. A later finite reviewed amendment or qualified local venue must close this gap."
+  ],
+  "policyAnchors": {
+    "plan": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "blob": "80e59bbc1bce8e6baca014d2743a9a09328d8529",
+    "anchors": [
+      {
+        "line": 2583,
+        "scope": "Earlier exact Cross diagnostic CI-venue amendment, not a blanket all-cohorts-terminal rule."
+      },
+      {
+        "line": 4169,
+        "scope": "Canonical E-H preserves useful CI and explicitly says queued/running is not a blocker or PASS."
+      },
+      {
+        "line": 4207,
+        "scope": "Current useful original cohorts and fresh leases remain; source review is not execution."
+      }
+    ]
+  },
+  "limits": [
+    "No dependency install/bootstrap, captured Node/project command, test/compiler/lint, native/provider/graphical operation, source/ref/CI mutation performed by this review.",
+    "K original -9 failure and eleven NOT RUN outcomes remain exact. No fresh K build or L installed9423 venue is inferred.",
+    "Atomic source/package/workspace/lock/archive changes remain future source and actual-CI qualified; all provider controlled receipts retain zero qualified:true and do not transfer nativeHost/packaged qualification.",
+    "Plans71/1f future coordination/scheduled implementation is not included.",
+    "Root must preserve all author histories, publish and independently read back exact docs first, verify the resulting source tree, obtain fresh expected-SHA leases and confirm PR ancestry before the authorized ordinary advance.",
+    "Draft/base/no real Claude-or-Codex/no default activation/no main merge/no release/no Stage2 and original currentness/custody/deadline/cleanup boundaries remain."
+  ],
+  "reviewerPreparationNote": "A prior read-only review script stopped on an incorrect token-count assertion before writing this record; corrected count is13 command tokens=3 command/flag tokens+10 operands. No project command was invoked and no execution result was manufactured."
+}

@@ -1,0 +1,890 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "332fbe3420c811c095dac4187d3f9664e8c47179",
+  "run": 43766707964,
+  "job": 132973378423,
+  "artifact": 14183136114,
+  "jobConclusion": "success",
+  "archive": {
+    "schemaVersion": 1,
+    "artifact": {
+      "id": 14183136114,
+      "name": "opencode-v2-embedded-native-win32-x64",
+      "size_in_bytes": 13207,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14183136114",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14183136114/zip",
+      "expired": false,
+      "created_at": "2026-11-15T22:07:12Z",
+      "expires_at": "2026-11-22T22:07:11Z",
+      "updated_at": "2026-11-15T22:07:12Z",
+      "digest": "sha256:4b7a4213ae1a685d1c7ae4aa25ed46e59307da0762ec44569d4d44827a857802",
+      "workflow_run": {
+        "id": 43766707964,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179"
+      }
+    },
+    "archive": "332-v2-win32-x64.zip",
+    "archiveIdentity": {
+      "bytes": 13207,
+      "sha256": "4b7a4213ae1a685d1c7ae4aa25ed46e59307da0762ec44569d4d44827a857802",
+      "gitBlob": "a6a00a0226bd30be97639c4f14bab8c9c7615e81"
+    },
+    "validation": {
+      "apiSize": true,
+      "apiSha256": true,
+      "allCrc32": true,
+      "safeUniqueRelativeNames": true,
+      "noSymlinks": true
+    },
+    "extract": "v2_win_x64",
+    "fileCount": 4,
+    "members": [
+      {
+        "name": "opencode-v2-embedded-inputs.json",
+        "crc32": "aa392294",
+        "compressedBytes": 489,
+        "bytes": 780,
+        "sha256": "1bfb54cccd96a143d8a4fe804447f1ba608b1602eaf0f923e6c0ec43f1f4d70d",
+        "gitBlob": "994bf2c84036d1b609d50c40507500b63eda67e7"
+      },
+      {
+        "name": "opencode-v2-windows-custody.json",
+        "crc32": "ef258345",
+        "compressedBytes": 549,
+        "bytes": 907,
+        "sha256": "996936a7a98676dc6b0e8e59e803e6e1a270b5ab7f7e2c0b6d6d7493ecff0f69",
+        "gitBlob": "faec7e270862cb3e0465b65bb76a2ca0c241f81f"
+      },
+      {
+        "name": "opencode-v2-embedded-host.json",
+        "crc32": "c2647111",
+        "compressedBytes": 5786,
+        "bytes": 95064,
+        "sha256": "75b454be43a36b317592ccddf0413c093cccd6812351e91c2b2103316dad032c",
+        "gitBlob": "db8b4924546895a226ee049852e6a9d72ac5fb9c"
+      },
+      {
+        "name": "opencode-v2-embedded-host-auto.json",
+        "crc32": "3f9505e8",
+        "compressedBytes": 5735,
+        "bytes": 94874,
+        "sha256": "843a8d2e3eaac4571ede1d480b9d810ad34e0ae1ba4543491a3e9cfef87661c9",
+        "gitBlob": "dad81f5ec77415166a342fd4293412fdcfc086d9"
+      }
+    ]
+  },
+  "fullJob": {
+    "bytes": 87622,
+    "sha256": "79e5e818eca60e60abbf06a452af1c4d773839ccf0ba882482040abad232e565",
+    "gitBlob": "1e4273c99d287dcd141bd6c1962745b390dd1cd5"
+  },
+  "originalCommands": [
+    "2026-11-15T22:01:22.3404873Z ##[group]Run node --test packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/opencode-v2-native-paths.test.ts packages/legacy-agent-host/tests/owner-scoped-backup.test.ts packages/legacy-agent-host/tests/member-attachment-delivery.test.ts",
+    "2026-11-15T22:02:16.8014536Z ##[group]Run node --test packages/legacy-agent-host/tests/windows-job-custody.native.ts",
+    "2026-11-15T22:02:31.4669343Z ##[group]Run node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+    "2026-11-15T22:04:58.9902828Z ##[group]Run node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts"
+  ],
+  "commandSummaries": {
+    "tests": [
+      58,
+      1,
+      1,
+      1
+    ],
+    "pass": [
+      57,
+      1,
+      1,
+      1
+    ],
+    "fail": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "cancelled": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "skipped": [
+      1,
+      0,
+      0,
+      0
+    ]
+  },
+  "originalTotals": {
+    "pass": 60,
+    "skip": 1,
+    "fail": 0,
+    "cancelled": 0
+  },
+  "jobSteps": [
+    {
+      "name": "Set up job",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 1,
+      "started_at": "2026-11-15T21:59:44Z",
+      "completed_at": "2026-11-15T21:59:45Z"
+    },
+    {
+      "name": "Run actions/checkout@v6",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 2,
+      "started_at": "2026-11-15T21:59:45Z",
+      "completed_at": "2026-11-15T21:59:58Z"
+    },
+    {
+      "name": "Require immutable source HEAD and record actual runner tuple",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 3,
+      "started_at": "2026-11-15T21:59:58Z",
+      "completed_at": "2026-11-15T21:59:58Z"
+    },
+    {
+      "name": "Run pnpm/action-setup@v6",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 4,
+      "started_at": "2026-11-15T21:59:58Z",
+      "completed_at": "2026-11-15T22:00:16Z"
+    },
+    {
+      "name": "Run actions/setup-node@v6",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-11-15T22:00:16Z",
+      "completed_at": "2026-11-15T22:00:54Z"
+    },
+    {
+      "name": "Install exact source workspace dependencies",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 6,
+      "started_at": "2026-11-15T22:00:54Z",
+      "completed_at": "2026-11-15T22:01:18Z"
+    },
+    {
+      "name": "Build original Host and its pinned provider implementation",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 7,
+      "started_at": "2026-11-15T22:01:18Z",
+      "completed_at": "2026-11-15T22:01:22Z"
+    },
+    {
+      "name": "Check original graph and custody boundaries",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 8,
+      "started_at": "2026-11-15T22:01:22Z",
+      "completed_at": "2026-11-15T22:01:33Z"
+    },
+    {
+      "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 9,
+      "started_at": "2026-11-15T22:01:33Z",
+      "completed_at": "2026-11-15T22:01:47Z"
+    },
+    {
+      "name": "Prepare exact Bun, engine graph and original-process artifact",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 10,
+      "started_at": "2026-11-15T22:01:47Z",
+      "completed_at": "2026-11-15T22:02:16Z"
+    },
+    {
+      "name": "Prove actual Darwin executable custody and adversarial cleanup",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 11,
+      "started_at": "2026-11-15T22:02:16Z",
+      "completed_at": "2026-11-15T22:02:16Z"
+    },
+    {
+      "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 12,
+      "started_at": "2026-11-15T22:02:16Z",
+      "completed_at": "2026-11-15T22:02:16Z"
+    },
+    {
+      "name": "Prove original Windows Job custody and surviving descendant cleanup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 13,
+      "started_at": "2026-11-15T22:02:16Z",
+      "completed_at": "2026-11-15T22:02:31Z"
+    },
+    {
+      "name": "Require exact Windows original-process evidence",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 14,
+      "started_at": "2026-11-15T22:02:31Z",
+      "completed_at": "2026-11-15T22:02:31Z"
+    },
+    {
+      "name": "Check original Desktop private recipe composition",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 15,
+      "started_at": "2026-11-15T22:02:31Z",
+      "completed_at": "2026-11-15T22:02:31Z"
+    },
+    {
+      "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 16,
+      "started_at": "2026-11-15T22:02:31Z",
+      "completed_at": "2026-11-15T22:04:58Z"
+    },
+    {
+      "name": "Exercise Windows automatic approval and cold Host Resume",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 17,
+      "started_at": "2026-11-15T22:04:58Z",
+      "completed_at": "2026-11-15T22:07:11Z"
+    },
+    {
+      "name": "Exercise native catalog and model probe without tool allocation",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 18,
+      "started_at": "2026-11-15T22:07:11Z",
+      "completed_at": "2026-11-15T22:07:11Z"
+    },
+    {
+      "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 19,
+      "started_at": "2026-11-15T22:07:11Z",
+      "completed_at": "2026-11-15T22:07:11Z"
+    },
+    {
+      "name": "Exercise effective permissions and active Stop with a surviving sibling",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 20,
+      "started_at": "2026-11-15T22:07:11Z",
+      "completed_at": "2026-11-15T22:07:11Z"
+    },
+    {
+      "name": "Exercise captured external MCP and app-only through the native Host",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 21,
+      "started_at": "2026-11-15T22:07:11Z",
+      "completed_at": "2026-11-15T22:07:11Z"
+    },
+    {
+      "name": "Require complete native management and permission evidence",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 22,
+      "started_at": "2026-11-15T22:07:11Z",
+      "completed_at": "2026-11-15T22:07:11Z"
+    },
+    {
+      "name": "Require product-path Host proof after exact candidate qualification",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 23,
+      "started_at": "2026-11-15T22:07:11Z",
+      "completed_at": "2026-11-15T22:07:11Z"
+    },
+    {
+      "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 24,
+      "started_at": "2026-11-15T22:07:11Z",
+      "completed_at": "2026-11-15T22:07:11Z"
+    },
+    {
+      "name": "Preserve exact native evidence or candidate HOLD",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 25,
+      "started_at": "2026-11-15T22:07:11Z",
+      "completed_at": "2026-11-15T22:07:12Z"
+    },
+    {
+      "name": "Post Run actions/setup-node@v6",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 48,
+      "started_at": "2026-11-15T22:07:12Z",
+      "completed_at": "2026-11-15T22:07:12Z"
+    },
+    {
+      "name": "Post Run pnpm/action-setup@v6",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 49,
+      "started_at": "2026-11-15T22:07:12Z",
+      "completed_at": "2026-11-15T22:07:13Z"
+    },
+    {
+      "name": "Post Run actions/checkout@v6",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 50,
+      "started_at": "2026-11-15T22:07:13Z",
+      "completed_at": "2026-11-15T22:07:14Z"
+    },
+    {
+      "name": "Complete job",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 51,
+      "started_at": "2026-11-15T22:07:14Z",
+      "completed_at": "2026-11-15T22:07:14Z"
+    }
+  ],
+  "sourceJoins": {
+    "exactGitSources": [
+      {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "bytes": 36013,
+        "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+        "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+        "bytes": 33259,
+        "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff",
+        "gitBlob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/windows-job-custody.native.ts",
+        "bytes": 9536,
+        "sha256": "88ee29496c076870605d2e2c6849c92e9286a06809f00cb10444b033757f4687",
+        "gitBlob": "a224b47e942a337e823135d0cfca0fa11cd475bd"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+        "bytes": 15303,
+        "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01",
+        "gitBlob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5"
+      },
+      {
+        "path": "scripts/legacy-agent-host/prepare-opencode-v2-native.ts",
+        "bytes": 9450,
+        "sha256": "40c7b16a40c3efaf859dffcaa762d927d630d84945810782da2ca172c06fe16e",
+        "gitBlob": "b6fef813e23b8f18d7f8ebae5b14f5c0a104a30c"
+      }
+    ],
+    "hostSourceTree": "92515b1671f7bc02c9fbbde943319b503f7e73de",
+    "priorRehashedIdenticalTree": {
+      "path": "packages/legacy-agent-host/src",
+      "gitTree": "92515b1671f7bc02c9fbbde943319b503f7e73de",
+      "files": 615,
+      "bytes": 4084414,
+      "lfSha256": "7a1229966bdf7b230657d9a8e509a3cedfda01419c24d6aa26fbdca7c669f77e",
+      "crlfSha256": "5c8b4c598e53d8a026d0f829647ff29d0cb200492f99ba4181854f302d2d8052",
+      "algorithm": "sorted relative ASCII name + NUL + exact .ts bytes + NUL"
+    },
+    "priorRehashAudit": {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-4dc/receipt-audit-original-arm-complete.json",
+      "bytes": 56863,
+      "sha256": "aa2370aa289cf1a085e6993a2717c51390048c4d55f58290d74766688db8ba4b",
+      "gitBlob": "7b5b77b5055c3eb8f04ec5b9d127564151d0d0d7"
+    },
+    "immutableTreeEquality": true,
+    "buildDigestClaimsJoin": true,
+    "compiledBinaryBytesArchived": false
+  },
+  "inputs": {
+    "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+    "status": "READY",
+    "sourceHead": "332fbe3420c811c095dac4187d3f9664e8c47179",
+    "platform": "win32-x64",
+    "nodeVersion": "v24.21.0",
+    "productQualified": false,
+    "stage": "prepared",
+    "baseArchiveSha256": "fafa3d891922cb3a5df6d1bd7dec80cc105352c619b39e298761657add677f49",
+    "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+    "bun": {
+      "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\resources\\runtime\\bun\\bun.exe",
+      "sha256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+      "version": "1.4.3"
+    },
+    "supportArchiveSha256": "9cea106d78a0482a0ea8bd05b0a7cb44c604fcf4f6de3fdac5549a5ba552787c",
+    "manifestSha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628"
+  },
+  "windowsCustody": {
+    "kind": "TEST_WINDOWS_ORIGINAL_JOB_CUSTODY",
+    "status": "PASS",
+    "cleanup": true,
+    "sourceHead": "332fbe3420c811c095dac4187d3f9664e8c47179",
+    "platform": "win32-x64",
+    "nodeVersion": "v24.21.0",
+    "bunSha256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+    "manifestSha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+    "hostBuild": {
+      "hostSourceDigest": "5c8b4c598e53d8a026d0f829647ff29d0cb200492f99ba4181854f302d2d8052",
+      "hostDistDigest": "ab274ebbc672bda9fa91cc3d8f4680405e85e65e10a1fda8426072508965e227",
+      "providerDigest": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94"
+    },
+    "productQualified": false,
+    "desktopQualified": false,
+    "captureBeforeInput": true,
+    "descendantSurvivedRootExit": true,
+    "originalJobCleanup": "confirmed",
+    "neighborSurvivedTargetStop": true,
+    "neighborJobCleanup": "confirmed"
+  },
+  "manualAndAuto": [
+    {
+      "receipt": {
+        "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+        "status": "PASS",
+        "sourceHead": "332fbe3420c811c095dac4187d3f9664e8c47179",
+        "platform": "win32-x64",
+        "version": "2.1.4",
+        "approvalMode": "manual",
+        "nodeVersion": "v24.21.0",
+        "modelSelection": {
+          "providerId": "TEST-local",
+          "modelId": "TEST-model-B",
+          "variant": "high"
+        },
+        "configurationSelection": {
+          "scope": "project",
+          "original": "project-A",
+          "later": "project-B"
+        },
+        "preferencesSelection": {
+          "nativeDefault": "TEST-local/TEST-model",
+          "appDefault": "TEST-local/TEST-model-B"
+        },
+        "digests": {
+          "bun": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+          "manifest": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+          "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+          "hostSource": "5c8b4c598e53d8a026d0f829647ff29d0cb200492f99ba4181854f302d2d8052",
+          "hostDist": "ab274ebbc672bda9fa91cc3d8f4680405e85e65e10a1fda8426072508965e227",
+          "provider": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94",
+          "windowsShell": "38f4384643b3fa0de714d2367b712c2e0fa1c89e2cfd131ae6b831ad962b1033"
+        },
+        "steps": [
+          "original_host_embedded_native_and_mcp_ready",
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+          "changed_project_config_did_not_retarget_running_native_session",
+          "original_uploaded_PNG_native_image_inference_and_public_readback",
+          "checkpoint_and_original_host_native_cleanup_confirmed",
+          "cold_host_restored_native_history_without_model_or_tool_replay"
+        ],
+        "cleanup": true,
+        "phaseElapsedMs": {
+          "original_host_embedded_native_and_mcp_ready": 35299,
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 116633,
+          "changed_project_config_did_not_retarget_running_native_session": 116633,
+          "original_uploaded_PNG_native_image_inference_and_public_readback": 116633,
+          "checkpoint_and_original_host_native_cleanup_confirmed": 117405,
+          "cold_host_restored_native_history_without_model_or_tool_replay": 145861
+        },
+        "elapsedMs": 147164,
+        "cancelled": false,
+        "inputObservation": {
+          "reads": 423,
+          "last": {
+            "phase": "allocated",
+            "custody": "owned",
+            "nativeReady": true,
+            "attached": true,
+            "sealed": false,
+            "diagnostic": null,
+            "inputs": [
+              {
+                "phase": "terminal",
+                "terminal": "succeeded"
+              },
+              {
+                "phase": "terminal",
+                "terminal": "succeeded"
+              }
+            ],
+            "interactions": [
+              {
+                "kind": "permission",
+                "phase": "resolved"
+              },
+              {
+                "kind": "permission",
+                "phase": "resolved"
+              }
+            ]
+          }
+        },
+        "launchObservation": {
+          "openElapsedMs": 29606,
+          "afterOpen": {
+            "available": true,
+            "status": "ready",
+            "reason": "context-applied",
+            "elapsedSinceAttemptMs": 28769,
+            "capturedTimeoutMs": 120000,
+            "claimed": true,
+            "nativeReady": true,
+            "contextApplied": true,
+            "everReady": true,
+            "usable": true,
+            "controlAvailable": true,
+            "noAllocation": false
+          }
+        },
+        "failureCode": null,
+        "hosts": [
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          },
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          }
+        ],
+        "modelOrigin": "localhost-scripted",
+        "modelRequests": 11,
+        "modelProgress": [
+          {
+            "elapsedMs": 35525,
+            "requests": 0
+          },
+          {
+            "elapsedMs": 42022,
+            "requests": 1
+          },
+          {
+            "elapsedMs": 42322,
+            "requests": 2
+          },
+          {
+            "elapsedMs": 42672,
+            "requests": 3
+          },
+          {
+            "elapsedMs": 42953,
+            "requests": 4
+          },
+          {
+            "elapsedMs": 76103,
+            "requests": 5
+          },
+          {
+            "elapsedMs": 76415,
+            "requests": 6
+          },
+          {
+            "elapsedMs": 76682,
+            "requests": 7
+          },
+          {
+            "elapsedMs": 76912,
+            "requests": 8
+          },
+          {
+            "elapsedMs": 88920,
+            "requests": 9
+          },
+          {
+            "elapsedMs": 112928,
+            "requests": 10
+          },
+          {
+            "elapsedMs": 113267,
+            "requests": 11
+          }
+        ],
+        "coordination": {
+          "status": "unqualified",
+          "cleanup": null
+        },
+        "modelFailures": [],
+        "vendorAuthQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      },
+      "trace": {
+        "count": 254,
+        "ordinary": 253,
+        "eventCounts": {
+          "child-spawn": 1,
+          "child-ready": 1,
+          "request": 105,
+          "response": 104,
+          "request-send-headers": 15,
+          "request-body-sent": 15,
+          "response-end": 12,
+          "trace-limit": 1
+        },
+        "epochs": [
+          1
+        ],
+        "bytesWithLf": 54754,
+        "maxBytesWithLf": 229,
+        "last": {
+          "epoch": 1,
+          "event": "trace-limit",
+          "atMs": 47561,
+          "child": null,
+          "request": null,
+          "route": null,
+          "method": null,
+          "durationMs": null,
+          "status": null,
+          "contentEncoding": null,
+          "stage": null,
+          "code": null,
+          "exitCode": null,
+          "signal": null
+        },
+        "limitsVerified": true,
+        "completeTraceQualified": false
+      },
+      "cpuSummaryPresent": true,
+      "rawCpuArchived": false,
+      "noCauseAttribution": true
+    },
+    {
+      "receipt": {
+        "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+        "status": "PASS",
+        "sourceHead": "332fbe3420c811c095dac4187d3f9664e8c47179",
+        "platform": "win32-x64",
+        "version": "2.1.4",
+        "approvalMode": "auto",
+        "nodeVersion": "v24.21.0",
+        "modelSelection": {
+          "providerId": "TEST-local",
+          "modelId": "TEST-model-B",
+          "variant": "high"
+        },
+        "configurationSelection": {
+          "scope": "project",
+          "original": "project-A",
+          "later": "project-B"
+        },
+        "preferencesSelection": {
+          "nativeDefault": "TEST-local/TEST-model",
+          "appDefault": "TEST-local/TEST-model-B"
+        },
+        "digests": {
+          "bun": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+          "manifest": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+          "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+          "hostSource": "5c8b4c598e53d8a026d0f829647ff29d0cb200492f99ba4181854f302d2d8052",
+          "hostDist": "ab274ebbc672bda9fa91cc3d8f4680405e85e65e10a1fda8426072508965e227",
+          "provider": "91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94",
+          "windowsShell": "38f4384643b3fa0de714d2367b712c2e0fa1c89e2cfd131ae6b831ad962b1033"
+        },
+        "steps": [
+          "original_host_embedded_native_and_mcp_ready",
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+          "changed_project_config_did_not_retarget_running_native_session",
+          "original_uploaded_PNG_native_image_inference_and_public_readback",
+          "checkpoint_and_original_host_native_cleanup_confirmed",
+          "cold_host_restored_native_history_without_model_or_tool_replay"
+        ],
+        "cleanup": true,
+        "phaseElapsedMs": {
+          "original_host_embedded_native_and_mcp_ready": 35789,
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 102475,
+          "changed_project_config_did_not_retarget_running_native_session": 102475,
+          "original_uploaded_PNG_native_image_inference_and_public_readback": 102475,
+          "checkpoint_and_original_host_native_cleanup_confirmed": 103287,
+          "cold_host_restored_native_history_without_model_or_tool_replay": 131191
+        },
+        "elapsedMs": 132189,
+        "cancelled": false,
+        "inputObservation": {
+          "reads": 334,
+          "last": {
+            "phase": "allocated",
+            "custody": "owned",
+            "nativeReady": true,
+            "attached": true,
+            "sealed": false,
+            "diagnostic": null,
+            "inputs": [
+              {
+                "phase": "terminal",
+                "terminal": "succeeded"
+              },
+              {
+                "phase": "terminal",
+                "terminal": "succeeded"
+              }
+            ],
+            "interactions": []
+          }
+        },
+        "launchObservation": {
+          "openElapsedMs": 29833,
+          "afterOpen": {
+            "available": true,
+            "status": "ready",
+            "reason": "context-applied",
+            "elapsedSinceAttemptMs": 28990,
+            "capturedTimeoutMs": 120000,
+            "claimed": true,
+            "nativeReady": true,
+            "contextApplied": true,
+            "everReady": true,
+            "usable": true,
+            "controlAvailable": true,
+            "noAllocation": false
+          }
+        },
+        "failureCode": null,
+        "hosts": [
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          },
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          }
+        ],
+        "modelOrigin": "localhost-scripted",
+        "modelRequests": 11,
+        "modelProgress": [
+          {
+            "elapsedMs": 36012,
+            "requests": 0
+          },
+          {
+            "elapsedMs": 42337,
+            "requests": 1
+          },
+          {
+            "elapsedMs": 42635,
+            "requests": 2
+          },
+          {
+            "elapsedMs": 42983,
+            "requests": 3
+          },
+          {
+            "elapsedMs": 43284,
+            "requests": 4
+          },
+          {
+            "elapsedMs": 64853,
+            "requests": 5
+          },
+          {
+            "elapsedMs": 65153,
+            "requests": 6
+          },
+          {
+            "elapsedMs": 65436,
+            "requests": 7
+          },
+          {
+            "elapsedMs": 65657,
+            "requests": 8
+          },
+          {
+            "elapsedMs": 77641,
+            "requests": 9
+          },
+          {
+            "elapsedMs": 99204,
+            "requests": 10
+          },
+          {
+            "elapsedMs": 99536,
+            "requests": 11
+          }
+        ],
+        "coordination": {
+          "status": "unqualified",
+          "cleanup": null
+        },
+        "modelFailures": [],
+        "vendorAuthQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      },
+      "trace": {
+        "count": 254,
+        "ordinary": 253,
+        "eventCounts": {
+          "child-spawn": 1,
+          "child-ready": 1,
+          "request": 105,
+          "response": 104,
+          "request-send-headers": 15,
+          "request-body-sent": 15,
+          "response-end": 12,
+          "trace-limit": 1
+        },
+        "epochs": [
+          1
+        ],
+        "bytesWithLf": 54750,
+        "maxBytesWithLf": 229,
+        "last": {
+          "epoch": 1,
+          "event": "trace-limit",
+          "atMs": 47705,
+          "child": null,
+          "request": null,
+          "route": null,
+          "method": null,
+          "durationMs": null,
+          "status": null,
+          "contentEncoding": null,
+          "stage": null,
+          "code": null,
+          "exitCode": null,
+          "signal": null
+        },
+        "limitsVerified": true,
+        "completeTraceQualified": false
+      },
+      "cpuSummaryPresent": true,
+      "rawCpuArchived": false,
+      "noCauseAttribution": true
+    }
+  ],
+  "limits": [
+    "This SUCCESS qualifies only the original Windows x64 custody/manual/auto scenario commands; original skipped files and later platform-specific scenarios remain unqualified.",
+    "The API label product-path proof does not widen the explicit false product/vendor-auth/desktop/release flags in the receipts.",
+    "The native C++ service-pair/WOW64 prerequisite is not executed by this V2 workflow; no success is transferred to Process332 or to its new SDK binding.",
+    "Both limited epoch1 traces are independent from the original completed Stop/cold-resume cleanup assertions; neither is a complete cleanup/epoch2 trace.",
+    "The exact immutable Host source tree is joined to its prior complete615-file Git-byte digest, not a fresh binary build.",
+    "No native/provider/test/compiler execution, CI action, later-source promotion or performance-cause attribution was performed during this audit."
+  ]
+}

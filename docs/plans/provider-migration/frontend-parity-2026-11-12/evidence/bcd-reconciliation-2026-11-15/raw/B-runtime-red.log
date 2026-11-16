@@ -1,0 +1,82 @@
+✔ ordinary lead replies replace their original signed conversation row without inbox writes or product feed churn (346.119687ms)
+✔ never-opened lead and an original no-allocation Skip retain an empty conversation without creating Runtime state (48.662014ms)
+✔ ordinary long replies preserve 30 KiB snapshots and 300 KiB Unicode through signed fragments and cold reads (463.020099ms)
+✔ task recovery never returns a prior receipt for a changed command with unavailable attachments (71.048006ms)
+✔ mixed Host boots V2 Session SPI profile without invoking V1 management registration (566.135034ms)
+✔ two captured teams may share an original run ID without sharing launch ownership (72.678945ms)
+✔ cold unavailable Team history retains original resources while an independent Team still captures and runs (350.642939ms)
+✔ a superseded unstarted capture cannot inject its prompt into a newer launch with the same product revision (72.476315ms)
+✔ saved configuration captures fresh native identities, preserves historical launches and replays after cold restart (381.403045ms)
+✔ capture rejects stale product sources, missing recipes and protected args before native allocation (31.931334ms)
+✔ NDJSON saved roster edits preserve product APIs across stale runtime capture/restart without allocation (75.984544ms)
+✔ NDJSON roster replacement refuses live allocation, then saves only after confirmed stop (2333.836598ms)
+✔ captured-run OpenCode live Add reaches its original model probe and preserves failed-probe refusal (625.546225ms)
+✔ NDJSON unknown native cleanup keeps the saved roster and its original grants bound (300.351248ms)
+✔ stopped fresh capture admits its exact probe profile and cold replay retains the original check (118.112329ms)
+✔ Team model preflight requires current control authority and exact launch selection before any provider allocation (74.558266ms)
+✔ NDJSON human messages auto-admit once and terminal events pump the next input without dispatch RPC (95.547334ms)
+✔ member HTTP MCP and Desktop transport share canonical Tasks and enforce member/scope authority (152.688166ms)
+✔ runtime projections redact private provider identities; missing human control and revoked member grants refuse allocation (118.292006ms)
+✔ dispose seals a pending provider open before late allocation and retains unknown custody as cleanup debt (31.473172ms)
+✔ pending open cleanup precedes readiness: late-driver (89.853625ms)
+✔ pending open cleanup precedes readiness: unknown-driver (34.707227ms)
+✔ pending open cleanup precedes readiness: factory-rejection (47.154646ms)
+✔ pending provider cleanup survives stop before dispose (41.298794ms)
+✔ pending provider cleanup survives reconcile before dispose (43.453383ms)
+✔ allocated driver checkpoint and close precede captured process cleanup (55.269316ms)
+✔ expired MCP proof holds the next admitted input; disposing a never-opened profile performs no allocation (107.932028ms)
+✔ Codex Host cost reports retained usage once without native dispatch or private snapshot leakage (501.765145ms)
+ℹ TEST restore state: /tmp/TEST-runtime-team-host-J6KReX
+✔ activity RPC pages normalized native observations with opaque cursor, bounded snapshots and explicit gaps (458.673525ms)
+✔ activity snapshot/feed recheck current human read grants and reject authority overrides (18.070022ms)
+✔ production aggregate launch RPC preserves configured and missing roster members and idempotent scoped progress (64.117066ms)
+✔ launch options are durably selected before provider creation and replay survives Host restart without new allocation (135.083412ms)
+✔ launch options refuse allocated state and compile every selected provider before any publication or allocation (185.882412ms)
+(node:37) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ selected checkpoint resumes through a new Host/generation, retains Team delivery ownership and fences stale controls (793.296329ms)
+ℹ TEST restore state: /tmp/TEST-runtime-team-host-COzkad
+ℹ TEST restore state: /tmp/TEST-runtime-team-host-VAuXoV
+✔ Runtime projection privately observes only evaluated readiness operands and preserves the original view and errors (1.629497ms)
+✔ the original passive Runtime projection receiver writes only bounded exit facts and keeps ambiguous evidence unknown (15.382311ms)
+✖ source Codex readiness refuses an expired absolute deadline before its first read after the poll handoff (2.240176ms)
+✖ source Codex readiness refuses a ready result delivered after its original deadline despite a handoff pause (1.239105ms)
+✔ source readiness keeps its timely success, other original budgets, 25ms cadence and exact read errors (6.094466ms)
+ℹ tests 39
+ℹ suites 0
+ℹ pass 37
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9611.38839
+
+✖ failing tests:
+
+test at packages/legacy-agent-host/tests/runtime-team-host.test.ts:3642:1
+✖ source Codex readiness refuses an expired absolute deadline before its first read after the poll handoff (2.240176ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/82d3f9ba6b85/agent-teams-e2e/packages/legacy-agent-host/tests/runtime-team-host.test.ts:3644:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /Original source Team readiness/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/runtime-team-host.test.ts:3650:1
+✖ source Codex readiness refuses a ready result delivered after its original deadline despite a handoff pause (1.239105ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/82d3f9ba6b85/agent-teams-e2e/packages/legacy-agent-host/tests/runtime-team-host.test.ts:3652:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /Original source Team readiness/,
+    operator: 'rejects',
+    diff: 'simple'
+  }

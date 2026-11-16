@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "4dc08dea7eeed5c286cf310e09a2ba26d84a9546",
+  "checkpoint": "2026-11-15 original terminal API plus completed read-only archive audit",
+  "sourceRuns": [
+    43765103075,
+    43765103118
+  ],
+  "selectedPayloads": [
+    {
+      "path": "4dc-process-win32-arm64.zip",
+      "bytes": 14471,
+      "sha256": "a064253b68cf1131c90094936a7718c7a44e191de5b2c5bbed5991393ea3457a",
+      "gitBlob": "d82f3e22351e6fb5a5ef16578f27d09994700b60"
+    },
+    {
+      "path": "4dc-v2-win32-arm64.zip",
+      "bytes": 7452,
+      "sha256": "c506eaa1a236d8e614dd349067aac9155fb7a3b0d46544fc6bcbe88886358971",
+      "gitBlob": "a8210dfdae1cfab5148462a27b351aac579c2715"
+    },
+    {
+      "path": "4dc-arm-full-job.log",
+      "bytes": 149803,
+      "sha256": "b40bfbaff6475e9cf4d05a0cabe663e270d7dacf2e793dfb98956360b3960f38",
+      "gitBlob": "c9ce514317b69c907baeac9d0d322a3f609d85e5"
+    },
+    {
+      "path": "4dc-v2-arm-full-job.log",
+      "bytes": 99483,
+      "sha256": "1d40c6aefda602f8d40221bdcd20acbe354ce9838b317c17ff5979ab607e71fe",
+      "gitBlob": "bdafd18cfd945b81a08551fe2dd746e32b1da742"
+    },
+    {
+      "path": "archive-audit-process_win_arm.json",
+      "bytes": 4301,
+      "sha256": "0792bd01ee079fac1d817deee11a0744fba97788932e362b709f9d6457218a82",
+      "gitBlob": "444ad6cb5667539d99908b7c3900ac9f953f7f43"
+    },
+    {
+      "path": "archive-audit-v2_win_arm.json",
+      "bytes": 2150,
+      "sha256": "109ad20e3d2df7035bf3fb5333252eb648c9ee63a83ce6fbfe66c92479305c54",
+      "gitBlob": "ad0406dd1c81f4dc2871d54854ec95ffead3222a"
+    },
+    {
+      "path": "receipt-audit-original-arm-complete.json",
+      "bytes": 56863,
+      "sha256": "aa2370aa289cf1a085e6993a2717c51390048c4d55f58290d74766688db8ba4b",
+      "gitBlob": "7b5b77b5055c3eb8f04ec5b9d127564151d0d0d7"
+    },
+    {
+      "path": "4dc-terminal-api-evidence.json",
+      "bytes": 29557,
+      "sha256": "d3c07241af12ff828f8c02ea81c8ee9d454942ff789e9353129dfd9a12639f8c",
+      "gitBlob": "dfe6b01e64eff940976892c225b3caa707f0b538"
+    },
+    {
+      "path": "plan29-4dc-arm-terminal-evidence-appendix.md",
+      "bytes": 7675,
+      "sha256": "128d566cff416353f9406a5bb8ec9107f0bbc7d11f8832d87ebd1ca30057c749",
+      "gitBlob": "05c8379b18251a90a8ac79f245c018ada265e9a3"
+    }
+  ],
+  "excluded": [
+    "transport/base64/private signed download URLs",
+    "audit scripts",
+    "duplicate extracted ZIP members"
+  ],
+  "qualification": "Process ARM FAIL; V2 ARM cancelled after manual PASS; no source transfer",
+  "payloadCount": 9,
+  "payloadBytes": 371755
+}
