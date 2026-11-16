@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { closeSync, existsSync, openSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { createHash } from 'node:crypto';
+import { closeSync, existsSync, openSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
 import { Duplex } from 'node:stream';
 
 import { decodeServiceFacts, decodeServiceIdentity, decodeServiceRefusal, encodeFrame, encodeLaunch,
@@ -13,6 +14,32 @@ import { createFixtureOutputCollector } from './nativeGateOutput';
 import type { Frame } from '@agent-teams/legacy-agent-host/owned-process';
 import type { GateContext } from './nativeGateContext';
 
+function readI386ChildObservations(bytes: Buffer) {
+  assert.ok(bytes.length > 0 && bytes.length <= 512 && bytes.length % 32 === 0, 'Bounded complete I386 child trace');
+  const rows = Array.from({ length: bytes.length / 32 }, (_, index) => {
+    const offset = index * 32;
+    assert.equal(bytes.readUInt32LE(offset), 1, 'Overflow or unknown observation cannot qualify');
+    assert.equal(bytes.readUInt32LE(offset + 4), index + 1, 'Original admission-thread order');
+    const row = { pid: bytes.readUInt32LE(offset + 8), birth: bytes.readBigUInt64LE(offset + 12).toString(16).padStart(16, '0'),
+      code: bytes.readUInt32LE(offset + 20), firstChance: bytes.readUInt32LE(offset + 24), handled: bytes.readUInt32LE(offset + 28) };
+    assert.ok(row.pid > 0 && row.birth !== '0000000000000000');
+    assert.ok(row.code === 0x80000003 || row.code === 0x4000001f);
+    assert.ok(row.firstChance <= 1 && row.handled <= 1);
+    return row;
+  });
+  return rows;
+}
+
+function qualifyI386ChildObservations(rows: ReturnType<typeof readI386ChildObservations>, child: { pid: number; birth: string }) {
+  const selected = rows.filter(row => row.pid === child.pid && row.birth === child.birth);
+  assert.equal(selected.length, 4, 'One exact retained child has two startup and two late exception observations');
+  assert.deepEqual(selected.slice(0, 2).map(row => [row.code, row.firstChance, row.handled]),
+    [[0x80000003, 1, 1], [0x4000001f, 1, 1]], 'Actual original I386 startup order');
+  assert.deepEqual(selected.slice(2).map(row => [row.firstChance, row.handled]), [[1, 0], [1, 0]],
+    'Both later application exceptions are forwarded; retain their actual observed codes');
+  return rows;
+}
+
 /** Unstaged TEST binary only. A valid provider receipt is never minted from these scoped facts. */
 export async function nativeDebugServiceScenario(context: GateContext, debugBroker: string,
   mode: 'pre-resume-cancel' | 'service-pair' | 'service-first' | 'service-race' | 'wow64-root', sentinel: ChildProcess): Promise<void> {
@@ -20,20 +47,37 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
   const identity = owner(), start = marker();
   const admissionBarrier = `${start.path}.admission`;
   const wow64Path = join(dirname(start.path), 'TEST-wow64-command.utf16');
+  const selectedI386 = mode === 'service-pair' ? process.env.HOST_PROCESS_NATIVE_I386_FIXTURE : undefined;
+  const i386Fixture = selectedI386 === undefined ? undefined : realpathSync.native(selectedI386);
+  let i386Sha256: string | undefined, i386Child: { pid: number; birth: string } | undefined;
+  if (i386Fixture !== undefined) {
+    assert.equal(basename(i386Fixture), 'owned-process-fixture-i386.exe', 'The same-source TEST target has one fixed name');
+    assert.equal(dirname(i386Fixture), dirname(realpathSync.native(fixture)), 'Only the same build directory supplies the TEST I386 image');
+    assert.ok(!i386Fixture.includes('"') && !/\p{Cc}/u.test(i386Fixture));
+    const bytes = readFileSync(i386Fixture);
+    assert.ok(bytes.length >= 64 && bytes.toString('ascii', 0, 2) === 'MZ');
+    const offset = bytes.readUInt32LE(60);
+    assert.ok(offset <= bytes.length - 24 && bytes.toString('ascii', offset, offset + 4) === 'PE\0\0' && bytes.readUInt16LE(offset + 4) === 0x014c);
+    i386Sha256 = createHash('sha256').update(bytes).digest('hex');
+  }
+  const i386TracePath = i386Fixture === undefined ? undefined : `${start.path}.i386-child-events`;
   if (mode === 'service-pair') assert.equal(existsSync(wow64Path), false,
     'The original child scenario publishes a fresh native path in this controller sandbox');
   const diagnosticPath = `${start.path}.debug-failure`;
   const diagnosticFd = openSync(diagnosticPath, 'wx');
+  let i386TraceFd: number | undefined;
   const raw = (() => {
     try {
+      if (i386TracePath !== undefined) i386TraceFd = openSync(i386TracePath, 'wx');
       return spawn(debugBroker, [], {
-        stdio: ['pipe', 'pipe', 'pipe', 'overlapped', diagnosticFd], windowsHide: true,
+        stdio: ['pipe', 'pipe', 'pipe', 'overlapped', diagnosticFd, ...(i386TraceFd === undefined ? [] : [i386TraceFd])], windowsHide: true,
         ...(mode === 'service-race' ? { env: { ...process.env,
           OWNED_PROCESS_TEST_ADMISSION_BARRIER: admissionBarrier,
           OWNED_PROCESS_TEST_ADMISSION_NONCE: start.nonce,
-        } } : mode === 'wow64-root' ? { env: { ...process.env, OWNED_PROCESS_TEST_I386_ROOT: '1' } } : {}),
+        } } : mode === 'wow64-root' ? { env: { ...process.env, OWNED_PROCESS_TEST_I386_ROOT: '1' } } :
+          i386TracePath === undefined ? {} : { env: { ...process.env, OWNED_PROCESS_TEST_I386_EVENTS: '1' } }),
       });
-    } finally { closeSync(diagnosticFd); }
+    } finally { try { closeSync(diagnosticFd); } finally { if (i386TraceFd !== undefined) closeSync(i386TraceFd); } }
   })();
   track(raw, 'raw-broker');
   raw.once('exit', events.guard((code: number | null) => {
@@ -48,8 +92,20 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
         event: bytes.readUInt32LE(8), pid: bytes.readUInt32LE(12),
       } }));
     }
+    let i386Observations: ReturnType<typeof readI386ChildObservations> | undefined;
+    if (i386TracePath !== undefined) {
+      try { i386Observations = readI386ChildObservations(readFileSync(i386TracePath)); } catch { /* Unknown cannot qualify. */ }
+      try { console.log(JSON.stringify({ nativeI386ChildObservation: i386Observations === undefined
+        ? { status: 'unknown' } : { status: 'observed', fixtureSha256: i386Sha256, child: i386Child ?? null,
+          observations: i386Observations, directI386RootLateHandler: 'unqualified' } })); } catch { /* Preserve the original exit/refusal. */ }
+    }
     assert.equal(code, 0, 'TEST debug broker must not die before completing its native gate');
     assert.equal(bytes.length, 0, 'Success cannot mask a native debug failure');
+    if (i386TracePath !== undefined) {
+      assert.ok(i386Child && i386Fixture && i386Sha256 && i386Observations, 'Actual I386 child completion and observations must precede broker cleanup');
+      qualifyI386ChildObservations(i386Observations, i386Child);
+      assert.equal(createHash('sha256').update(readFileSync(i386Fixture)).digest('hex'), i386Sha256);
+    }
   }));
   const exited = new Promise<number | null>((resolve, reject) => {
     raw.once('exit', resolve); raw.once('error', reject);
@@ -94,6 +150,8 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
   }));
   stderr.resume();
   let launch = spec(mode === 'pre-resume-cancel' ? 'tree' : mode, start);
+  if (i386Fixture !== undefined)
+    launch = { ...launch, environment: [...launch.environment, `OWNED_PROCESS_TEST_I386_FIXTURE=${i386Fixture}`] };
   if (mode === 'wow64-root') {
     assert.ok(existsSync(wow64Path), 'The preceding completed child scenario must publish its verified I386 path');
     const bytes = readFileSync(wow64Path);
@@ -133,7 +191,7 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
         const key = '"TEST_SERVICE_PAIR_PREREQUISITE"';
         const records = lines.filter(line => line.includes(key));
         const match = records.length === 1 && tail.length === 0
-          ? /^\{"TEST_SERVICE_PAIR_PREREQUISITE":\{"stage":([1-9]|1[0-9])(?:,"result":(0|[1-9][0-9]{0,9}))?\}\}\r?$/.exec(records[0]!)
+          ? /^\{"TEST_SERVICE_PAIR_PREREQUISITE":\{"stage":([1-9]|1[0-9]|2[0-5])(?:,"result":(0|[1-9][0-9]{0,9}))?\}\}\r?$/.exec(records[0]!)
           : null;
         const result = match?.[2] === undefined ? undefined : Number(match[2]);
         const prerequisite = match && (result === undefined || result <= 0xffffffff)
@@ -153,6 +211,13 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
         'actual cumulative child churn exceeded64 without exhausting live scope custody');
       assert.ok(text.includes('{"wow64StartupAndApplicationBreakpoints":true}'),
         'A verified x86 child survives native startup; later root/child application exceptions reach their handlers');
+      if (i386Fixture !== undefined) {
+        const records = text.split('\n').filter(line => line.includes('"TEST_I386_CHILD"'));
+        assert.equal(records.length, 1, 'One completed original I386 application child');
+        const found = /^\{"TEST_I386_CHILD":\{"pid":([1-9][0-9]{0,9}),"birth":"([a-f0-9]{16})","machine":332,"exitCode":0\}\}\r?$/.exec(records[0]!);
+        assert.ok(found && Number(found[1]) <= 0xffffffff && found[2] !== '0000000000000000');
+        i386Child = { pid: Number(found[1]), birth: found[2]! };
+      }
     }
     const [service, neighbor] = output.childrenOf(rootPid);
     assert.ok(service && neighbor);

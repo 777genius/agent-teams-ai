@@ -124,6 +124,7 @@ class Scopes {
 #if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE)
   void (*testAdmissionBarrier)(HANDLE)=nullptr;
   void (*testAdmittedBarrier)(const Scope&)=nullptr;
+  void (*testBreakpointObserver)(const Scope&,const EXCEPTION_DEBUG_INFO&,bool) noexcept=nullptr;
 #endif
 
   std::shared_ptr<Scope> find(Key key) {
@@ -164,6 +165,9 @@ public:
 #if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE)
   void setTestAdmissionBarriers(void (*before)(HANDLE),void (*after)(const Scope&)) {
     testAdmissionBarrier=before; testAdmittedBarrier=after;
+  }
+  void setTestBreakpointObserver(void (*observer)(const Scope&,const EXCEPTION_DEBUG_INFO&,bool) noexcept) {
+    testBreakpointObserver=observer;
   }
   Key testRegisteredAncestor(HANDLE child) {
     std::lock_guard<std::mutex> lock(mutex);
@@ -296,7 +300,13 @@ public:
     const auto found=currentPids.find(pid);
     if(found==currentPids.end()) throw DWORD{ERROR_NOT_FOUND};
     auto selected=find(found->second);
+#if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE)
+    const bool accepted=selected->startup.accept(event);
+    if(testBreakpointObserver&&selected->startup.wow64) testBreakpointObserver(*selected,event,accepted);
+    return accepted;
+#else
     return selected->startup.accept(event);
+#endif
   }
 
   /** The existing broker frame cache owns attempt deduplication, not this record. */

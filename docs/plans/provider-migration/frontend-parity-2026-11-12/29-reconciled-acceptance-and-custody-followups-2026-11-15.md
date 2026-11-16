@@ -6121,3 +6121,39 @@ Dependency plan 2da688a52fc62d1ca94c4495133e9afdd74c17fd (SHA256 2ea2ae8bc157ad4
 Audit `c9eb8175504809b0a53e14f5b224eb33c302a424` (SHA256 b2e71a4b8432d26581a3f8747d6e6366011e965297aae9b338f16124b8f99c36) and runner `257fa9b598dcabb4ee60722674cb9785b148f4c0` (SHA256 efbbd33df671a06cffd34c4483558cc212814faaa313beb854861bf45c2dfca4) bind exact R1/source/argv/config/script hashes, frozen actual source trees and built output inventories. RED contains only the single test plus published Plan; GREEN contains exactly all six approved paths plus that same Plan. Every other public leaf and all retained build outputs must remain exact. Unexpected import, selector, compiler, timeout or other failure remains separate evidence and stops the planned sequence rather than becoming expected native RED.
 
 After actual finite source/results R2, publish exactly these six existing paths and factual Plan append with immediate normal expected-head push/full readback to the same delivery branch. A later primary PR advance requires fresh expected head and preservation of useful original cohorts; no cancellation, dispatch or manual rerun. Only the original resulting-source Windows x64 and ARM Host Node/Electron jobs can qualify compiled same-source I386 child order/handlers/cleanup. The direct I386 debugger-root late-handler boundary remains unqualified even on child PASS. Original 15 s provider gates, P08/P09, M16/upgrade, full native-policy HOLD, actual vendor exclusions, Draft/original base and Stage1 limits remain. Stage M helper 6b6c / test 072733 are untouched, and this cut is not a local substitute for its original-CI privacy execution venue.
+
+
+## Actual finite I386 evidence preparation — native qualification remains pending
+
+The exact prospective R1 was published and fully read back as 732998cfa741393bec65f0d812f777f5f5778b5b, tree 7ead12f58af8c6665c2da5a1f1984d65fc5f5641, sole parent c9be61a9431683959be4b8090620f1ed67fb7671, after independent source/execution and actual-parent R2. Its complete Plan29 9b9e64e0dc240a1b56181663de04bdf553d388ed, 1,384,536 bytes, remains the unchanged prefix. Root created only the approved scratch selected-config resolution link after publication. Baseline source equalled that documentation tree, with all six public preimages, original dependency/archive closure, normal indexes and retained canonical public7 build verified.
+
+Test-only source e3f20a63514c741c98ca3d87add3d27456b366c2 ran the one complete original tools Vitest file with its explicit unchanged cd03a734 configuration and one worker. All three original asynchronous callback/cleanup cases passed. The fourth case failed at nativeGateEvents.test.ts:70 because the original Scenario contains no reviewed decoder for extraction. Root and independent R2 read this exact assertion. It is the planned extraction-boundary RED only; no native Windows exception, child event, process failure or handler behavior was observed.
+
+Applying exactly the remaining five reviewed images produced source tree 9447c990eda20734b100bc1b510d0eef3abc6779. The identical complete four-case file then passed 4/4. The new finite case evaluates only the two actual private scalar functions extracted into its VM. It exercises child PID/birth joins, complete valid rows and late-code facts, wrong identities, extra child rows, malformed/partial/overflow/order/Boolean values and decodable counterexamples. The original three callback/cleanup cases remain unchanged. No Scenario/provider/native entrypoint was imported and no C++ image was built or launched.
+
+| Exact outer command phase | Exit | Seconds | Raw log bytes | Raw log SHA256 |
+| --- | --- | --- | --- | --- |
+| red-native-events | 1 | 6.983 | 2012 | `da41c29dc1551dca98f66ba844ba85aac7f279c969363d55c11a16f2fe8dcc97` |
+| green-native-events | 0 | 6.486 | 326 | `551b1e735c8aa00117733b619f2d5bfc892f5e62bb08192bf58096eb37ff72d9` |
+| green-selected-types | 0 | 0.622 | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| green-lint | 0 | 5.365 | 220 | `6ef45cec8de197570e7922d272baebe329c87282d1d9da1f651221ce80a2bbbc` |
+| green-workflow-syntax | 0 | 0.218 | 240 | `3fd4fda8bd4b91466f66dcaacd29f70bd51269c438d38b7f38ef10040299266d` |
+| green-source-size | 0 | 4.207 | 249 | `26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f` |
+| green-provisioning | 0 | 3.548 | 245 | `7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c` |
+
+Seven outer command executions occurred, with four distinct tests; RED and GREEN are not eight distinct tests. Every GREEN command exited zero without timeout. The strict compiler used only the two approved entrypoints and unchanged inherited options. Fast lint covered only those two existing TypeScript files. The workflow validator parsed YAML 2.9, confirmed exactly three original Windows run-block changes and equality of every other workflow field, then invoked only the approved pinned Node `--check --input-type=module` child. The extracted module SHA256 was 952dd71c90bcf5ef2fe944668fc87e0458a2dcb8a6ebf768f8461dd365cbd0fc. This is structural and JavaScript syntax evidence, not PowerShell, CMake, MSVC or Windows execution. Original source-size and provisioning guards passed without changed limits or allowances.
+
+Postflight at 2026-11-16T02:26:27.326136+00:00 retained tested source 9447c990eda20734b100bc1b510d0eef3abc6779, all 1,504 controller/Host/ledger output files byte for byte (inventory f6f6335efc3c44cfbd7c2d93a1beba1fe2e061c6005bc930e04cb61b7c70f5b9), all 133 dependency links, six workspace aliases, 253+12 original 9423 provider payloads, all five edges and both normal index hashes 7a2489dc/161fc514. The complete recorded build-input paths still have no difference from the actual public7 successful build tree 88e62917. No private/stale dist substitution or rebuild occurred.
+
+| Existing source/workflow path | Exact after-image | Bytes | Lines |
+| --- | --- | --- | --- |
+| tools/owned-process-broker/nativeFixture.cpp | `dd14a6cbdc9976bbeaf2ae48efda560623fa72c5` | 19357 | 355 |
+| tools/owned-process-broker/nativeDebugServiceScenario.ts | `e002d7fc688cac9e2db38abbd1c1c9e851f975dd` | 25009 | 390 |
+| tools/owned-process-broker/debugServiceTest.h | `e17c33ba6a45d8a6471439907e50519af8d7338b` | 9009 | 186 |
+| tools/owned-process-broker/serviceScopes.h | `b3fbd2949a5b015bf36c56eb19ca8ef43ec42329` | 16379 | 386 |
+| .github/workflows/host-process-acceptance.yml | `10aa65bc06fb840a9ec88ddc8c717f1dd4c54d8f` | 32100 | 414 |
+| tools/owned-process-broker/nativeGateEvents.test.ts | `b930a01a0af87cb5c6a5356f6dc9948bf6c06a94` | 7387 | 124 |
+
+The ordinary source child contains exactly these six reviewed paths and this factual Plan append; only the appendix differs from tested GREEN. The whole patch remains +232/−7, SHA256 19bfdf1995e65cfbb576d092b23a190407d827497f769f550c62fd0755c3a0ae. Original loop decision/custody, helper 64/live 64, service-pair 10 s, provider 15 s, per-build 120000 ms and overall job budgets stay as reviewed.
+
+Only the subsequent original resulting-source Windows x64/ARM Host Node and Electron Node jobs can establish the actual Win32 build, child architecture and HANDLE identity, recorded exception codes/order/decisions, both application handlers and original cleanup. Even a future child PASS does not qualify direct I386 debugger-root late handlers or close the full native-policy HOLD. No other platform or future source inherits this finite result. P08/P09, M16/upgrade, real-vendor exclusions, Draft/original base, no manual Actions/main/release/default activation and Stage1 limits remain. Stage M helper 6b6c / test 072733 remain unchanged, with no local privacy command or GREEN claim.

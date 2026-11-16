@@ -15,6 +15,37 @@ inline std::wstring admissionPath;
 inline char admissionNonce[37]{};
 inline bool admissionUsed=false, admissionCompleted=false;
 inline ULONGLONG admissionDeadline=0;
+// Optional TEST-only child observations: 15 records and one reserved overflow record.
+// The existing admission thread copies already retained identity and decisions only.
+inline DWORD breakpointRows[16][8]{};
+inline DWORD breakpointCount=0;
+inline HANDLE breakpointOutput=nullptr;
+inline void observeBreakpoint(const owned_service::Scope& child,const EXCEPTION_DEBUG_INFO& event,bool accepted) noexcept {
+  if(!breakpointOutput||breakpointCount>=16) return;
+  auto& row=breakpointRows[breakpointCount];
+  row[0]=breakpointCount==15?2:1; row[1]=breakpointCount+1;
+  if(row[0]==1) {
+    row[2]=child.pid; row[3]=static_cast<DWORD>(child.birth); row[4]=static_cast<DWORD>(child.birth>>32);
+    row[5]=event.ExceptionRecord.ExceptionCode; row[6]=event.dwFirstChance; row[7]=accepted?1:0;
+  }
+  ++breakpointCount;
+}
+inline void configureBreakpointObservations() {
+  wchar_t expected[2]{};
+  const auto length=GetEnvironmentVariableW(L"OWNED_PROCESS_TEST_I386_EVENTS",expected,2);
+  if(!length) return;
+  if(length!=1||expected[0]!=L'1') throw DWORD{ERROR_INVALID_PARAMETER};
+  breakpointOutput=reinterpret_cast<HANDLE>(_get_osfhandle(5));
+  if(breakpointOutput==INVALID_HANDLE_VALUE||GetFileType(breakpointOutput)!=FILE_TYPE_DISK)
+    throw DWORD{ERROR_INVALID_HANDLE};
+  scopes.setTestBreakpointObserver(observeBreakpoint);
+}
+inline void flushBreakpointObservations() noexcept {
+  if(!breakpointOutput||!breakpointCount) return;
+  DWORD written=0;
+  WriteFile(breakpointOutput,breakpointRows,static_cast<DWORD>(breakpointCount*sizeof(breakpointRows[0])),&written,nullptr);
+  // Missing/short output is an unqualified TEST observation, never an altered debug decision.
+}
 inline void checkAdmissionDeadline() {
   if(GetTickCount64()>=admissionDeadline) throw DWORD{WAIT_TIMEOUT};
 }
@@ -104,6 +135,7 @@ inline void failure(Stage stage,DWORD error,const DEBUG_EVENT& event={}) noexcep
 /** Called on the same existing admission thread; TEST alone supplies FD4 diagnostics. */
 inline bool run(DWORD rootPid,HANDLE root,HANDLE outer,std::unique_lock<std::timed_mutex>& stateLock) {
   configureAdmissionBarrier();
+  configureBreakpointObservations();
   wchar_t expected[2]{};
   const auto length=GetEnvironmentVariableW(L"OWNED_PROCESS_TEST_I386_ROOT",expected,2);
   if(length) {
@@ -118,6 +150,7 @@ inline bool run(DWORD rootPid,HANDLE root,HANDLE outer,std::unique_lock<std::tim
   }
   scopes.setTestAdmissionBarriers(admissionBarrier,admittedBarrier);
   const bool result=owned_service::runDebugLoop(rootPid,root,outer,stateLock,scopes,failure);
+  flushBreakpointObservations();
   if(result&&!admissionPath.empty()&&!admissionCompleted) {
     failure(Stage::Registry,ERROR_INVALID_DATA); return false;
   }
