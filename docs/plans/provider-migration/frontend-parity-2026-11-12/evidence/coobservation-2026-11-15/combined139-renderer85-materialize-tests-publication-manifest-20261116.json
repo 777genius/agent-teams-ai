@@ -1,0 +1,208 @@
+{
+  "schema": "c714-test-materialization-publication-manifest-v1",
+  "at": "2026-11-16T22:13:23.438Z",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "parentCommit": "6e83f68ead8e8add8edfd1d17b3947509ef5989b",
+  "parentTree": "3c254a09607aa0f695dc05838afd598bfccd7cc7",
+  "parentDocuments": {
+    "plan": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2535538,
+      "sha256": "2a3378dd5e84fb38f1fad6fe47b6832bdafccaeb5d37842a7eeb417bffaec08a",
+      "gitBlob": "c90465d001bfebb870cc09619932e57b82c6203b"
+    },
+    "status": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 37018,
+      "sha256": "399b32d1f9ef6142771d282d3463f2a3be2672a7060c22a0bb3611091a6ac9b0",
+      "gitBlob": "dec823eb6aaa622cced72204903bb737edd80c6b"
+    },
+    "catalog": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 118442,
+      "sha256": "44e4a308370c4a9f57c65c899f5fd04b6b6fff30b1da841604bfd774c3f1af6e",
+      "gitBlob": "bf596d9335b2d44c0aaf910ba010337375e70ead"
+    }
+  },
+  "materialization": {
+    "stage": "two exact tests physically materialized and independently accepted; combined RED not yet executed",
+    "controlsPublication": "6e83f68ead8e8add8edfd1d17b3947509ef5989b",
+    "controlsActual": {
+      "root": {
+        "bytes": 53234,
+        "sha256": "a278bb97490a533a31dde75f884678647f233268f481550f62667cd858892004",
+        "gitBlob": "f54d36513fdce8cc8231070be653bf0db6ab8561"
+      },
+      "independent": {
+        "bytes": 80400,
+        "sha256": "960e306976e821512927f538f06ff6e01e1b19961fe4915d89a3c9b15158caf8",
+        "gitBlob": "e6f2efd8354135dfcddf30cb08aba93108656d43"
+      }
+    },
+    "packet": {
+      "bytes": 195085,
+      "sha256": "eaedc299cc59cab8b9291c1b253dc7ea2ac9233e51172715bf10a5892a080cf6",
+      "gitBlob": "bc87216a3f4cee41f3bfa97cca4a3cdfb8a85fd3"
+    },
+    "outer": {
+      "bytes": 5899,
+      "sha256": "c571e8e779b4e66b027365ae68581516b2dfd942cffbe3366f86c679799338a7",
+      "gitBlob": "17635bb8aed9be764c00b17e4a7af1d2b66e3dd3"
+    },
+    "rootReview": {
+      "bytes": 45573,
+      "sha256": "8d841e4cbc0540751b2625a124969a6262443edb1e99903ac0b96a5c3af49335",
+      "gitBlob": "211a94dcd4dba4bff0ae3a10dd5c7aff7806a36c"
+    },
+    "rootCommandJoins": {
+      "bytes": 5332,
+      "sha256": "5a8f2b58a6192f89255c6322bed70ca9d18340bf81ab465e0d4a111b184181b1",
+      "gitBlob": "00c07b109baf0ab0e0692f9b8087ae341f7343c2"
+    },
+    "guard": {
+      "bytes": 126054,
+      "sha256": "34a3bb0df97616ea1b93524a628f320594f1700ee158617b04258c98d610cb9c",
+      "gitBlob": "62fda73c295b6fa1467a121685e4daa85a686869"
+    },
+    "parity": {
+      "bytes": 113999,
+      "sha256": "48dc8af6e125667c960df0d8fcead2c8a82428d8fd8b45294a1465071267ced9",
+      "gitBlob": "eeb4a37b7967a387bf01c16337788fc75f3bbb6e"
+    },
+    "sourceBefore": {
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+    },
+    "sourceAfter": {
+      "bytes": 2478745,
+      "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+      "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+    },
+    "sourceRows": 8798,
+    "physicalOverlays": 6,
+    "workflows": 42,
+    "materialized": true,
+    "observedOuterExit": 0,
+    "scope": "source-and-supervisor-metadata-only",
+    "fullRuntimeInputsInspected": false,
+    "fullRuntimeInputsPreserved": null,
+    "executed": false,
+    "producerPostimagesAuthored": false,
+    "next": "Complete actual materialization publication readback then exactly one combinedRED package with fresh full runtime-input boundaries. All three producer fixes remain gated on complete accepted current combinedRED and its publication/readback."
+  },
+  "evidenceFiles": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-materialize-tests-packet-20261116.json",
+      "bytes": 195085,
+      "sha256": "eaedc299cc59cab8b9291c1b253dc7ea2ac9233e51172715bf10a5892a080cf6",
+      "gitBlob": "bc87216a3f4cee41f3bfa97cca4a3cdfb8a85fd3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-materialize-tests-full-metadata-20261116.json",
+      "bytes": 3160415,
+      "sha256": "2f440a7180dc483ae5b24b3b42fba01fb29544677927d0327def687ec09685c9",
+      "gitBlob": "93493e8223667b4b1af3822a4fbaa5faa2468424"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-materialize-tests-source-before-20261116.json",
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-materialize-tests-source-after-20261116.json",
+      "bytes": 2478745,
+      "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+      "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-materialize-tests-outer-20261116.json",
+      "bytes": 5899,
+      "sha256": "c571e8e779b4e66b027365ae68581516b2dfd942cffbe3366f86c679799338a7",
+      "gitBlob": "17635bb8aed9be764c00b17e4a7af1d2b66e3dd3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-materialize-tests-root-review-20261116.json",
+      "bytes": 45573,
+      "sha256": "8d841e4cbc0540751b2625a124969a6262443edb1e99903ac0b96a5c3af49335",
+      "gitBlob": "211a94dcd4dba4bff0ae3a10dd5c7aff7806a36c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-materialize-tests-root-command-joins-20261116.json",
+      "bytes": 5332,
+      "sha256": "5a8f2b58a6192f89255c6322bed70ca9d18340bf81ab465e0d4a111b184181b1",
+      "gitBlob": "00c07b109baf0ab0e0692f9b8087ae341f7343c2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-materialize-tests-guard-review-20261116.json",
+      "bytes": 126054,
+      "sha256": "34a3bb0df97616ea1b93524a628f320594f1700ee158617b04258c98d610cb9c",
+      "gitBlob": "62fda73c295b6fa1467a121685e4daa85a686869"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-materialize-tests-parity-review-20261116.json",
+      "bytes": 113999,
+      "sha256": "48dc8af6e125667c960df0d8fcead2c8a82428d8fd8b45294a1465071267ced9",
+      "gitBlob": "eeb4a37b7967a387bf01c16337788fc75f3bbb6e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-controls-root-publication-readback-20261116.json",
+      "bytes": 53234,
+      "sha256": "a278bb97490a533a31dde75f884678647f233268f481550f62667cd858892004",
+      "gitBlob": "f54d36513fdce8cc8231070be653bf0db6ab8561"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-controls-independent-publication-readback-20261116.json",
+      "bytes": 80400,
+      "sha256": "960e306976e821512927f538f06ff6e01e1b19961fe4915d89a3c9b15158caf8",
+      "gitBlob": "e6f2efd8354135dfcddf30cb08aba93108656d43"
+    }
+  ],
+  "modifiedDocuments": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2537686,
+      "sha256": "2b3cd6bb6f0b1a165d4d3a7f4e1a23c3cc5835e929ac0d233c465a9f5c3e63d5",
+      "gitBlob": "dc942891889503c6d6c50c9f401ea5bfd2c6ce76"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 37880,
+      "sha256": "ac36398b286a028b6d043fcacb80e9b132f4f8571bf4773a789c2e99e3b98db7",
+      "gitBlob": "81ac235ebeecfa8e28998174e9190520b3d927a7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 125227,
+      "sha256": "f378553c772f35c07ce9c9899b1a7e312a1b1a007ae74c7acfd2d68a40ec9984",
+      "gitBlob": "5719272acd2695cb9e6d2f8ecc6ff5ac6800658f"
+    }
+  ],
+  "expectedDelta": {
+    "addedDocs": 12,
+    "modifiedDocs": 3,
+    "totalChangedLeaves": 15,
+    "sourceModified": 0,
+    "removed": 0,
+    "modeChanges": 0
+  },
+  "expectedCensus": {
+    "parentTotal": 11800,
+    "parentDocs": 3002,
+    "afterTotal": 11812,
+    "afterDocs": 3014,
+    "source": 8798,
+    "workflows": 42
+  },
+  "allParentPlanAndStatusBytesExactPrefixes": true,
+  "allPriorCatalogFieldsPreservedExceptCurrentStage": true,
+  "previousCurrentStageRetainedInFull": true,
+  "all27OriginalBundlesAndTotalsUnchanged": true,
+  "repoSourceAndWorkflowsUnchanged": true,
+  "actualLocalSourceChangedOnlyByAcceptedOnceOnlyMaterialization": true,
+  "fullRuntimeTestsExecuted": false,
+  "producerPostimagesAuthored": false,
+  "remaining": "Complete actual materialization publication readback then exactly one combinedRED package with fresh full runtime-input boundaries. All three producer fixes remain gated on complete accepted current combinedRED and its publication/readback."
+}

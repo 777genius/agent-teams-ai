@@ -1,0 +1,118 @@
+{
+  "kind": "combined-materialize-tests-separately-observed-outer-result",
+  "observedAtUtc": "2026-11-16T22:02:33.627Z",
+  "sessionId": 10639,
+  "intent": {
+    "kind": "once-only-source-materialization-launch-intent",
+    "at": "2026-11-16T22:01:37.114Z",
+    "action": "materialize",
+    "command": "red",
+    "publication": "6e83f68ead8e8add8edfd1d17b3947509ef5989b",
+    "gate": {
+      "kind": "combined-controls-actual-gate-closed",
+      "at": "2026-11-16T22:00:34.884Z",
+      "commit": "6e83f68ead8e8add8edfd1d17b3947509ef5989b",
+      "runner": {
+        "bytes": 89953,
+        "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+        "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+      },
+      "binding": {
+        "bytes": 4898503,
+        "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+        "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+      },
+      "root": {
+        "bytes": 53234,
+        "sha256": "a278bb97490a533a31dde75f884678647f233268f481550f62667cd858892004",
+        "gitBlob": "f54d36513fdce8cc8231070be653bf0db6ab8561"
+      },
+      "independent": {
+        "bytes": 80400,
+        "sha256": "960e306976e821512927f538f06ff6e01e1b19961fe4915d89a3c9b15158caf8",
+        "gitBlob": "e6f2efd8354135dfcddf30cb08aba93108656d43"
+      },
+      "rootReadFullIndependentBody": true,
+      "controlStagingYet": false,
+      "materializationYet": false,
+      "runtimeYet": false
+    },
+    "argv": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+      "/tmp/c714-combined139-85-controls/combined-runner.py",
+      "/tmp/c714-combined139-85-controls/red-binding.json",
+      "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+      "materialize",
+      "red"
+    ],
+    "scope": "source-and-supervisor-metadata-only",
+    "selectedAttempt": 1,
+    "noRetry": true
+  },
+  "launchToolResult": {
+    "chunk_id": "3bccaa",
+    "wall_time_seconds": 1.001157844,
+    "session_id": 10639,
+    "original_token_count": 0,
+    "output": ""
+  },
+  "finalToolResult": {
+    "chunk_id": "3abd1b",
+    "wall_time_seconds": 0.000027979,
+    "exit_code": 0,
+    "original_token_count": 398,
+    "output": "{\"command\": \"red\", \"action\": \"materialize\", \"phase\": \"red\", \"exitCode\": null, \"exitSignal\": null, \"timedOut\": false, \"executionError\": null, \"postflightError\": null, \"transientCleanupError\": null, \"inputsPreserved\": null, \"fullRuntimeInputsInspected\": false, \"fullRuntimeInputsPreserved\": null, \"sourceAndSupervisorMetadataPreserved\": true, \"commandCompletedNormally\": false, \"semanticAdmissionComplete\": false, \"scopeCompleted\": true, \"preflightSeconds\": 3.866929746000096, \"commandPhaseSeconds\": 0, \"cleanupSeconds\": 0, \"transientCaptureAndCleanupSeconds\": 1.1309966794215143e-06, \"postflightSeconds\": 2.0320531420002226, \"totalInvocationSeconds\": 5.904164975996537, \"unreachedCommands\": [], \"unacceptedCommands\": [], \"cleanup\": {\"unknownPrimaryLaunches\": [], \"capturedSessionMembersAfter\": [], \"newTestTempsRemaining\": [], \"taskTmpEntriesAfter\": [], \"viteTempAbsent\": true, \"nodeDebtGatePassed\": null, \"scope\": \"Captured primary sessions/groups and exact owned phase outputs; metadata sessions checked individually. No universal escaped-child/native custody claim.\"}, \"signalAdmissionCutoff\": {\"at\": \"2026-11-16T22:01:44.491177+00:00\", \"pendingSignals\": [], \"supervisorExitZeroRequired\": true, \"scope\": \"Managed-signal pending snapshot while blocked; later signals require separate observed outer-exit admission.\"}, \"primarySummaries\": [], \"finalReceipt\": {\"path\": \"/tmp/c714-combined139-85-evidence/materialize-tests/phase-receipt.json\", \"bytes\": 92391, \"sha256\": \"3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d\", \"gitBlob\": \"f542dde38b84f533e5658aeafe5a06642c1dcca9\"}}\n"
+  },
+  "observedOuterExit": 0,
+  "summary": {
+    "command": "red",
+    "action": "materialize",
+    "phase": "red",
+    "exitCode": null,
+    "exitSignal": null,
+    "timedOut": false,
+    "executionError": null,
+    "postflightError": null,
+    "transientCleanupError": null,
+    "inputsPreserved": null,
+    "fullRuntimeInputsInspected": false,
+    "fullRuntimeInputsPreserved": null,
+    "sourceAndSupervisorMetadataPreserved": true,
+    "commandCompletedNormally": false,
+    "semanticAdmissionComplete": false,
+    "scopeCompleted": true,
+    "preflightSeconds": 3.866929746000096,
+    "commandPhaseSeconds": 0,
+    "cleanupSeconds": 0,
+    "transientCaptureAndCleanupSeconds": 0.0000011309966794215143,
+    "postflightSeconds": 2.0320531420002226,
+    "totalInvocationSeconds": 5.904164975996537,
+    "unreachedCommands": [],
+    "unacceptedCommands": [],
+    "cleanup": {
+      "unknownPrimaryLaunches": [],
+      "capturedSessionMembersAfter": [],
+      "newTestTempsRemaining": [],
+      "taskTmpEntriesAfter": [],
+      "viteTempAbsent": true,
+      "nodeDebtGatePassed": null,
+      "scope": "Captured primary sessions/groups and exact owned phase outputs; metadata sessions checked individually. No universal escaped-child/native custody claim."
+    },
+    "signalAdmissionCutoff": {
+      "at": "2026-11-16T22:01:44.491177+00:00",
+      "pendingSignals": [],
+      "supervisorExitZeroRequired": true,
+      "scope": "Managed-signal pending snapshot while blocked; later signals require separate observed outer-exit admission."
+    },
+    "primarySummaries": [],
+    "finalReceipt": {
+      "path": "/tmp/c714-combined139-85-evidence/materialize-tests/phase-receipt.json",
+      "bytes": 92391,
+      "sha256": "3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d",
+      "gitBlob": "f542dde38b84f533e5658aeafe5a06642c1dcca9"
+    }
+  },
+  "selectedAttemptSpent": true,
+  "replayed": false,
+  "runtimeTestPackageExecuted": false
+}

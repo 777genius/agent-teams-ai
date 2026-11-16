@@ -200,3 +200,10 @@ Test R2 proposal061cb054 is accepted by Guard4d3004a5 and renderer6580a4f4. Node
 Exact runner906d8b49 and RED bindingf7c78d18 have accepted full Guard7e167aa1, semantic067403c4 and binding05b729d3 R2 reviews. Root AST/data check1b6d8217 confirms exact code/data without evaluation. The two test-publication actual readbacks19ae837f/156f7b19 are complete. All inherited runtime inputs, four fixed producers, three producer preimages, full139/85 census, original clocks and captured cleanup remain bound.
 
 No selected controls were staged, no source was materialized, no current package ran and no producer fix was authored. Full actual controls publication readback precedes exclusive staging and source-only materialize-tests; complete actual materialization acceptance/publication/readback precedes the once-only combinedRED. Expected RED counts are predictions. Wider E2E gates remain OPEN.
+
+
+## Test materialization complete; combined RED pending
+
+The one source-only materialize-tests session10639 completed with observedouter0 in5.904 seconds. Packetbc87216a retains all60files/11,128,084bytes. Root211a94dc with command supplement00c07b10, Guard62fda73c and parityeeb4a37b accept the complete source/metadata result. Exactlytwo test rows changed;8796otherrows, sevenproducers and42workflows remain exact. Fullsourceafter499fe054 has6physicaloverlays; all14Gitmetadata commands and captured cleanup are complete.
+
+No test primary has run. Runtimeinputclosure remainsUNINSPECTEDfalse/null for this source-only phase. Full actual publication readback precedes the once-only combinedRED using complete fresh runtime inputs. Producer fixes still require acceptedcurrentRED; canonicaltyping/build, GUI/platform/native, integration and fullE2E remainOPEN.

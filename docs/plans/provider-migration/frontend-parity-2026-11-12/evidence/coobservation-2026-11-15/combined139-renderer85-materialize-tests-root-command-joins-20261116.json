@@ -1,0 +1,175 @@
+{
+  "schema": "c714-materialize-tests-root-command-joins-v1",
+  "at": "2026-11-16T22:10:32.608Z",
+  "parentRootActual": {
+    "bytes": 45573,
+    "sha256": "8d841e4cbc0540751b2625a124969a6262443edb1e99903ac0b96a5c3af49335",
+    "gitBlob": "211a94dcd4dba4bff0ae3a10dd5c7aff7806a36c"
+  },
+  "packet": {
+    "bytes": 195085,
+    "sha256": "eaedc299cc59cab8b9291c1b253dc7ea2ac9233e51172715bf10a5892a080cf6",
+    "gitBlob": "bc87216a3f4cee41f3bfa97cca4a3cdfb8a85fd3"
+  },
+  "all14ExactMetadataCommands": true,
+  "all14StartFinalIdentityJoins": true,
+  "all14CorrectNineRowBoundaryVectors": true,
+  "checks": [
+    {
+      "ordinal": 1,
+      "boundary": "before",
+      "exactArgv": true,
+      "startFinalIdentityFieldsExact": true,
+      "sourceVector": {
+        "bytes": 2118,
+        "sha256": "3424bc0514cacc9028defc0b790cb4dd02605d5904afc6bab504b9b3e045def5",
+        "gitBlob": "c9ab45fa5fffc3ee4ab8c38b1174a56b6fc6b2bf"
+      }
+    },
+    {
+      "ordinal": 2,
+      "boundary": "before",
+      "exactArgv": true,
+      "startFinalIdentityFieldsExact": true,
+      "sourceVector": {
+        "bytes": 2118,
+        "sha256": "3424bc0514cacc9028defc0b790cb4dd02605d5904afc6bab504b9b3e045def5",
+        "gitBlob": "c9ab45fa5fffc3ee4ab8c38b1174a56b6fc6b2bf"
+      }
+    },
+    {
+      "ordinal": 3,
+      "boundary": "before",
+      "exactArgv": true,
+      "startFinalIdentityFieldsExact": true,
+      "sourceVector": {
+        "bytes": 2118,
+        "sha256": "3424bc0514cacc9028defc0b790cb4dd02605d5904afc6bab504b9b3e045def5",
+        "gitBlob": "c9ab45fa5fffc3ee4ab8c38b1174a56b6fc6b2bf"
+      }
+    },
+    {
+      "ordinal": 4,
+      "boundary": "before",
+      "exactArgv": true,
+      "startFinalIdentityFieldsExact": true,
+      "sourceVector": {
+        "bytes": 2118,
+        "sha256": "3424bc0514cacc9028defc0b790cb4dd02605d5904afc6bab504b9b3e045def5",
+        "gitBlob": "c9ab45fa5fffc3ee4ab8c38b1174a56b6fc6b2bf"
+      }
+    },
+    {
+      "ordinal": 5,
+      "boundary": "before",
+      "exactArgv": true,
+      "startFinalIdentityFieldsExact": true,
+      "sourceVector": {
+        "bytes": 2118,
+        "sha256": "3424bc0514cacc9028defc0b790cb4dd02605d5904afc6bab504b9b3e045def5",
+        "gitBlob": "c9ab45fa5fffc3ee4ab8c38b1174a56b6fc6b2bf"
+      }
+    },
+    {
+      "ordinal": 6,
+      "boundary": "before",
+      "exactArgv": true,
+      "startFinalIdentityFieldsExact": true,
+      "sourceVector": {
+        "bytes": 2118,
+        "sha256": "3424bc0514cacc9028defc0b790cb4dd02605d5904afc6bab504b9b3e045def5",
+        "gitBlob": "c9ab45fa5fffc3ee4ab8c38b1174a56b6fc6b2bf"
+      }
+    },
+    {
+      "ordinal": 7,
+      "boundary": "before",
+      "exactArgv": true,
+      "startFinalIdentityFieldsExact": true,
+      "sourceVector": {
+        "bytes": 2118,
+        "sha256": "3424bc0514cacc9028defc0b790cb4dd02605d5904afc6bab504b9b3e045def5",
+        "gitBlob": "c9ab45fa5fffc3ee4ab8c38b1174a56b6fc6b2bf"
+      }
+    },
+    {
+      "ordinal": 8,
+      "boundary": "after",
+      "exactArgv": true,
+      "startFinalIdentityFieldsExact": true,
+      "sourceVector": {
+        "bytes": 2118,
+        "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+        "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+      }
+    },
+    {
+      "ordinal": 9,
+      "boundary": "after",
+      "exactArgv": true,
+      "startFinalIdentityFieldsExact": true,
+      "sourceVector": {
+        "bytes": 2118,
+        "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+        "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+      }
+    },
+    {
+      "ordinal": 10,
+      "boundary": "after",
+      "exactArgv": true,
+      "startFinalIdentityFieldsExact": true,
+      "sourceVector": {
+        "bytes": 2118,
+        "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+        "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+      }
+    },
+    {
+      "ordinal": 11,
+      "boundary": "after",
+      "exactArgv": true,
+      "startFinalIdentityFieldsExact": true,
+      "sourceVector": {
+        "bytes": 2118,
+        "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+        "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+      }
+    },
+    {
+      "ordinal": 12,
+      "boundary": "after",
+      "exactArgv": true,
+      "startFinalIdentityFieldsExact": true,
+      "sourceVector": {
+        "bytes": 2118,
+        "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+        "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+      }
+    },
+    {
+      "ordinal": 13,
+      "boundary": "after",
+      "exactArgv": true,
+      "startFinalIdentityFieldsExact": true,
+      "sourceVector": {
+        "bytes": 2118,
+        "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+        "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+      }
+    },
+    {
+      "ordinal": 14,
+      "boundary": "after",
+      "exactArgv": true,
+      "startFinalIdentityFieldsExact": true,
+      "sourceVector": {
+        "bytes": 2118,
+        "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+        "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+      }
+    }
+  ],
+  "sourceWrites": 0,
+  "runtimeEvaluations": 0
+}

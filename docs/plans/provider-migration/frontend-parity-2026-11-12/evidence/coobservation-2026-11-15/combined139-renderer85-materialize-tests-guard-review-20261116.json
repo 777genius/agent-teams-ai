@@ -1,0 +1,3563 @@
+{
+  "schemaVersion": 1,
+  "kind": "complete-actual-combined-test-source-materialization-guard-review",
+  "reviewer": "/root/combined_guard_review",
+  "reviewedAtUtc": "2026-11-16T22:11:43.086Z",
+  "repository": "777genius/agent-teams-ai",
+  "accepted": true,
+  "verdict": "ACCEPT_COMPLETE_ACTUAL_SOURCE_AND_SUPERVISOR_METADATA_MATERIALIZATION_ONLY",
+  "subject": {
+    "action": "materialize",
+    "command": "red",
+    "phaseRoot": "/tmp/c714-combined139-85-evidence/materialize-tests",
+    "controlsPublication": "6e83f68ead8e8add8edfd1d17b3947509ef5989b",
+    "publishedTestSubject": {
+      "commit": "935e057f85d31a316706b6942310695719503fc1",
+      "tree": "f74fa718137b5c518989f7efcb1c937019a24e3a",
+      "qualification": "Exact published two whole test postimages and unchanged seven producer rows; no current combined runtime qualification."
+    },
+    "sourceCommit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+    "sourceTree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+    "runner": {
+      "bytes": 89953,
+      "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+      "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+    },
+    "binding": {
+      "bytes": 4898503,
+      "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+      "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+    },
+    "packet": {
+      "bytes": 195085,
+      "sha256": "eaedc299cc59cab8b9291c1b253dc7ea2ac9233e51172715bf10a5892a080cf6",
+      "gitBlob": "bc87216a3f4cee41f3bfa97cca4a3cdfb8a85fd3"
+    },
+    "outer": {
+      "bytes": 5899,
+      "sha256": "c571e8e779b4e66b027365ae68581516b2dfd942cffbe3366f86c679799338a7",
+      "gitBlob": "17635bb8aed9be764c00b17e4a7af1d2b66e3dd3"
+    },
+    "finalReceipt": {
+      "bytes": 92391,
+      "sha256": "3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d",
+      "gitBlob": "f542dde38b84f533e5658aeafe5a06642c1dcca9"
+    },
+    "completeSourceBefore": {
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+    },
+    "completeSourceAfter": {
+      "bytes": 2478745,
+      "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+      "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+    },
+    "completeTreeIndexContainer": {
+      "bytes": 3160415,
+      "sha256": "2f440a7180dc483ae5b24b3b42fba01fb29544677927d0327def687ec09685c9",
+      "gitBlob": "93493e8223667b4b1af3822a4fbaa5faa2468424"
+    }
+  },
+  "prerequisitePublication": {
+    "root": {
+      "bytes": 53234,
+      "sha256": "a278bb97490a533a31dde75f884678647f233268f481550f62667cd858892004",
+      "gitBlob": "f54d36513fdce8cc8231070be653bf0db6ab8561"
+    },
+    "independent": {
+      "bytes": 80400,
+      "sha256": "960e306976e821512927f538f06ff6e01e1b19961fe4915d89a3c9b15158caf8",
+      "gitBlob": "e6f2efd8354135dfcddf30cb08aba93108656d43"
+    },
+    "bothFullBodiesFetchedAndRehashed": true,
+    "bothAccepted": true,
+    "subject": {
+      "branch": "fix/frontend-parity-coobservation-c714-20261115",
+      "commit": "6e83f68ead8e8add8edfd1d17b3947509ef5989b",
+      "tree": "3c254a09607aa0f695dc05838afd598bfccd7cc7",
+      "soleParent": "935e057f85d31a316706b6942310695719503fc1",
+      "parentTree": "f74fa718137b5c518989f7efcb1c937019a24e3a",
+      "initialRefExact": true,
+      "finalRefExact": true,
+      "manifest": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-controls-publication-manifest-20261116.json",
+        "bytes": 8585,
+        "sha256": "18b0efd063ca1603fe4d55925b42701b43d21a6e8b2d5aadcb03a50e6e00a2d9",
+        "gitBlob": "9b2409ce884deb7938abb99cb4ddebf042735402"
+      }
+    },
+    "exactR2Subject": {
+      "runner": {
+        "bytes": 89953,
+        "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+        "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+      },
+      "binding": {
+        "bytes": 4898503,
+        "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+        "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+      },
+      "guard": {
+        "bytes": 77692,
+        "sha256": "141f3a6f6a989397967cdb66255c94adee9386cb7e1d21c3e709c2fd628d3e94",
+        "gitBlob": "7e167aa10dc976593508d0808079a197dd7bc512"
+      },
+      "semantic": {
+        "bytes": 56438,
+        "sha256": "684b603eda3dfb3fa9285b443d2745b47194d7b34cb49515b7b1bd8193c3b2ff",
+        "gitBlob": "067403c46c573232e42da401e9d09e479e50dd36"
+      },
+      "bindingReview": {
+        "bytes": 71830,
+        "sha256": "f9f0c1f991f514af9c2f13fdf44b94026114b785bcf9af1f9dacc3cce8a5922c",
+        "gitBlob": "05b729d334b5e4e7d46a384bed99857fdce9cdd9"
+      },
+      "allThreeAccepted": true,
+      "rootFullReviewReadbacks": true,
+      "acceptedAt": "2026-11-16T21:53:21.490Z"
+    },
+    "publicationBeforeStagingBeforeLaunchVerified": true
+  },
+  "method": {
+    "readOnly": true,
+    "completePacketReadAndRehashed": true,
+    "completeOuterToolObservationReadAndRehashed": true,
+    "all60ActualPhaseFileBodiesIndividuallyJoinedAndRehashed": true,
+    "allBeforeAfterSourceRowsCompared": true,
+    "all11567TreeAndIndexRowsDecodedAndCompared": true,
+    "all14MetadataStartRawFinalRecordsChecked": true,
+    "allControlsAndEnvironmentCompared": true,
+    "noSampleOrCountOnlyAcceptance": true,
+    "noRuntimeOrShellInvokedByReviewer": true
+  },
+  "completeFileCensus": {
+    "phaseFiles": 60,
+    "totalPhaseFileBytes": 11128084,
+    "literalFiles": 54,
+    "literalBytes": 129791,
+    "largeInstances": 6,
+    "largeUniqueFullBodies": 4,
+    "allPathsUnderExactPhaseRoot": true,
+    "allFilesRegularMode0644UnderOwned0700Phase": true,
+    "wholeFileJoins": [
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-10-receipt.json",
+        "name": "materialize-tests-after-metadata-10-receipt.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 1728,
+          "sha256": "04e5ffe401a5596e9da7f4e262b8774d06da7ce30700f5145bf878d132d264c3",
+          "gitBlob": "0bc4ccd8798c9315766762a65fed77d56e4d8fe8"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-10-start.json",
+        "name": "materialize-tests-after-metadata-10-start.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 903,
+          "sha256": "56765de6ee0374ac00a83d4575fc6ccc43b477344ad01114d6f4b71aafbd9cdc",
+          "gitBlob": "fafb48570ef5c8a39f5322cc203286ae25f99254"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-10.log",
+        "name": "materialize-tests-after-metadata-10.log",
+        "mode": 420,
+        "identity": {
+          "bytes": 1527575,
+          "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+          "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-10.stderr",
+        "name": "materialize-tests-after-metadata-10.stderr",
+        "mode": 420,
+        "identity": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-11-receipt.json",
+        "name": "materialize-tests-after-metadata-11-receipt.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 1723,
+          "sha256": "f50f705aa849159c33b5d05a6db693f32530725f50fe1ecf2be1143ca178eabf",
+          "gitBlob": "db37929a8d9870a44d2351d772a26d37587ba163"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-11-start.json",
+        "name": "materialize-tests-after-metadata-11-start.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 903,
+          "sha256": "b3487b5fc4bbb9365ab57f8324bf567b0627e69f408763e058339f255482512c",
+          "gitBlob": "916d3d3d8bf6ad03133dd31cf0c0aee3d5fb3d81"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-11.log",
+        "name": "materialize-tests-after-metadata-11.log",
+        "mode": 420,
+        "identity": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-11.stderr",
+        "name": "materialize-tests-after-metadata-11.stderr",
+        "mode": 420,
+        "identity": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-12-receipt.json",
+        "name": "materialize-tests-after-metadata-12-receipt.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 1733,
+          "sha256": "65e5342bd217b5c860c72a1bf6d3a107e97d7af525bac250ab2bf3e5a60d2c88",
+          "gitBlob": "2c7a1060af5406989c390f45cb3393c32bf546d0"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-12-start.json",
+        "name": "materialize-tests-after-metadata-12-start.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 914,
+          "sha256": "6093804d1f676bdefcc806f41647c4262d572293ca15023bcd1f7a87461bd72d",
+          "gitBlob": "0a6a2fd2026579915d32e6cde7052526cf04d81d"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-12.log",
+        "name": "materialize-tests-after-metadata-12.log",
+        "mode": 420,
+        "identity": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-12.stderr",
+        "name": "materialize-tests-after-metadata-12.stderr",
+        "mode": 420,
+        "identity": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-13-receipt.json",
+        "name": "materialize-tests-after-metadata-13-receipt.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 1712,
+          "sha256": "c75574175eeda66f5574e73126130f3578d5d357f052aa422423bf51623ff91d",
+          "gitBlob": "37e2e2f696a24a4c66dc060a96bba726c4f0707e"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-13-start.json",
+        "name": "materialize-tests-after-metadata-13-start.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 887,
+          "sha256": "fec77151b95807ec64a8a5394728860f4daeb0e8092891178e524e1067ff4829",
+          "gitBlob": "c2b59fb16c971db66d764889019bdc460bb15eaa"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-13.log",
+        "name": "materialize-tests-after-metadata-13.log",
+        "mode": 420,
+        "identity": {
+          "bytes": 1492874,
+          "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+          "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-13.stderr",
+        "name": "materialize-tests-after-metadata-13.stderr",
+        "mode": 420,
+        "identity": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-14-receipt.json",
+        "name": "materialize-tests-after-metadata-14-receipt.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 1720,
+          "sha256": "c03b5d938dd059d8337b7fda35ca02d894152298225062a375361ce5829e524b",
+          "gitBlob": "9c80b29d0f4be93f14dbde9dbad68bb86898e1a0"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-14-start.json",
+        "name": "materialize-tests-after-metadata-14-start.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 899,
+          "sha256": "b2ffc933dc68808b8857784a98bde64d73ce8631c7fb0284900539fac6603a30",
+          "gitBlob": "73422f37711f1985482168a780701a5afe1a87ec"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-14.log",
+        "name": "materialize-tests-after-metadata-14.log",
+        "mode": 420,
+        "identity": {
+          "bytes": 372,
+          "sha256": "1c7f849fbf69eeafbc32b149725885f28946c2728c9eb88718a2edcf314e1b88",
+          "gitBlob": "4fae9729a55e3202b79d0658abaf25745f9d8cf8"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-14.stderr",
+        "name": "materialize-tests-after-metadata-14.stderr",
+        "mode": 420,
+        "identity": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-8-receipt.json",
+        "name": "materialize-tests-after-metadata-8-receipt.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 1694,
+          "sha256": "d7461595b1c04cdafadca9f34d9f688782c4dc47a49daee2e0cd02ba908eef33",
+          "gitBlob": "fc87d82707fc832ca251b3519eb9392053ae0b2b"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-8-start.json",
+        "name": "materialize-tests-after-metadata-8-start.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 875,
+          "sha256": "4d89a6ab712a00f99ce318a797125c22ceec2f4a506e1f2b2640f886ae871679",
+          "gitBlob": "d13de7fa79acc53a050f2799da93f54d59de2324"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-8.log",
+        "name": "materialize-tests-after-metadata-8.log",
+        "mode": 420,
+        "identity": {
+          "bytes": 41,
+          "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+          "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-8.stderr",
+        "name": "materialize-tests-after-metadata-8.stderr",
+        "mode": 420,
+        "identity": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-9-receipt.json",
+        "name": "materialize-tests-after-metadata-9-receipt.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 1701,
+          "sha256": "eaa306362c59142a2b37f1781a5bc59e59af789e0045dc7ea77b22f61cef7abe",
+          "gitBlob": "b61cad15ad722f6a4d2de69249b7f65745b6ba99"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-9-start.json",
+        "name": "materialize-tests-after-metadata-9-start.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 882,
+          "sha256": "33880988cc266fbc1411d5e89b2a9188000f117e9222a0ad910c96bca185b03e",
+          "gitBlob": "ff84e1b7ec2b46993be3abbc95ae799d5d4747ac"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-9.log",
+        "name": "materialize-tests-after-metadata-9.log",
+        "mode": 420,
+        "identity": {
+          "bytes": 41,
+          "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+          "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-9.stderr",
+        "name": "materialize-tests-after-metadata-9.stderr",
+        "mode": 420,
+        "identity": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-source.json",
+        "name": "materialize-tests-after-source.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 2478745,
+          "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+          "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-1-receipt.json",
+        "name": "materialize-tests-before-metadata-1-receipt.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 1695,
+          "sha256": "c7c9bfb1b0542d17ff8e9812a3a6aa08baeb6f1b2ae1368e079532eb6b82c1ee",
+          "gitBlob": "881086a904e72e26ff0951f235c259342a8dea3e"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-1-start.json",
+        "name": "materialize-tests-before-metadata-1-start.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 875,
+          "sha256": "bfd961d958ff2d5bc751ef6563b79001496f1da85988fe0d5c35b5b22daba069",
+          "gitBlob": "7b2f298d4dbc60580a65146c2935b83a839d8cb2"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-1.log",
+        "name": "materialize-tests-before-metadata-1.log",
+        "mode": 420,
+        "identity": {
+          "bytes": 41,
+          "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+          "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-1.stderr",
+        "name": "materialize-tests-before-metadata-1.stderr",
+        "mode": 420,
+        "identity": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-2-receipt.json",
+        "name": "materialize-tests-before-metadata-2-receipt.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 1702,
+          "sha256": "5104693380795361a4efe0a72b6709f847b01e3fd40a7648aaa54b82275a5286",
+          "gitBlob": "16cb216c08c20976e023802bb79df8e2f43ebbaf"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-2-start.json",
+        "name": "materialize-tests-before-metadata-2-start.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 882,
+          "sha256": "f7c412f2484449670cde32579dd33071142108f1539232d92f3f6b55296d97b5",
+          "gitBlob": "3c7887710dbe1c505bc1298d786ab3e30693cb4b"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-2.log",
+        "name": "materialize-tests-before-metadata-2.log",
+        "mode": 420,
+        "identity": {
+          "bytes": 41,
+          "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+          "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-2.stderr",
+        "name": "materialize-tests-before-metadata-2.stderr",
+        "mode": 420,
+        "identity": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-3-receipt.json",
+        "name": "materialize-tests-before-metadata-3-receipt.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 1727,
+          "sha256": "e764ba6c780ad9c5c629ef38a9b6b0b096bc02a2b9e59b435e0387cbe71fa9a9",
+          "gitBlob": "b3db1fe716c5467a9146377251aa8018dc1c1763"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-3-start.json",
+        "name": "materialize-tests-before-metadata-3-start.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 903,
+          "sha256": "e41ff8249fbf396515013df012def402919cd48a22dbd467e5e252581af2ac40",
+          "gitBlob": "5dc1f06d47fd88de805ba7fc59a25284a90da70e"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-3.log",
+        "name": "materialize-tests-before-metadata-3.log",
+        "mode": 420,
+        "identity": {
+          "bytes": 1527575,
+          "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+          "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-3.stderr",
+        "name": "materialize-tests-before-metadata-3.stderr",
+        "mode": 420,
+        "identity": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-4-receipt.json",
+        "name": "materialize-tests-before-metadata-4-receipt.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 1722,
+          "sha256": "15923425c15939f99adc8a73e4e9f3ccf234f8945eb2b4da392cbb31ce8117e4",
+          "gitBlob": "03ddaac5181cf0c665c58cd81a2991414eee9988"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-4-start.json",
+        "name": "materialize-tests-before-metadata-4-start.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 903,
+          "sha256": "7351dc7aa4e9ff2987d1b5c37a6a2ce7d099dc4b5ed6cbec3111565dc9c2edbd",
+          "gitBlob": "7dd895ad1f2c069650329e7633241a8c4a6469af"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-4.log",
+        "name": "materialize-tests-before-metadata-4.log",
+        "mode": 420,
+        "identity": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-4.stderr",
+        "name": "materialize-tests-before-metadata-4.stderr",
+        "mode": 420,
+        "identity": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-5-receipt.json",
+        "name": "materialize-tests-before-metadata-5-receipt.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 1732,
+          "sha256": "264526770846df5e4988175902b7db1a453ca835b771772ce9a49947d0eb9f20",
+          "gitBlob": "df931b32e49a8df8fc1739917379da90db8695f3"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-5-start.json",
+        "name": "materialize-tests-before-metadata-5-start.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 914,
+          "sha256": "e61d20ea778f931c8648c65bbc278fce882d89c6f4699a72a5d6ea632389b63b",
+          "gitBlob": "c463cbde8a80896f7b30c3b70f7ad0b7f4c16f61"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-5.log",
+        "name": "materialize-tests-before-metadata-5.log",
+        "mode": 420,
+        "identity": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-5.stderr",
+        "name": "materialize-tests-before-metadata-5.stderr",
+        "mode": 420,
+        "identity": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-6-receipt.json",
+        "name": "materialize-tests-before-metadata-6-receipt.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 1712,
+          "sha256": "7da57fef2a04333bdcfec27b453b997ab2f083efd62aa4e026d0215450f8bd8a",
+          "gitBlob": "f77c635c53c4cdad9478aa0afb50c2cbe5f87d5c"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-6-start.json",
+        "name": "materialize-tests-before-metadata-6-start.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 887,
+          "sha256": "e3a798df95be0e50cf12ada24fa435b164110c01b3825aae27a028df2196bc7c",
+          "gitBlob": "4e3030937aab1f0afbe8b78d55d401cab5ea819b"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-6.log",
+        "name": "materialize-tests-before-metadata-6.log",
+        "mode": 420,
+        "identity": {
+          "bytes": 1492874,
+          "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+          "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-6.stderr",
+        "name": "materialize-tests-before-metadata-6.stderr",
+        "mode": 420,
+        "identity": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-7-receipt.json",
+        "name": "materialize-tests-before-metadata-7-receipt.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 1720,
+          "sha256": "5d7808041bde022ea339c6f6a180d199c60718d7a827b3addfefcf68f8e74389",
+          "gitBlob": "68184258f2a0191e8e350b03168c3bac246e8047"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-7-start.json",
+        "name": "materialize-tests-before-metadata-7-start.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 899,
+          "sha256": "fe2678707453dee6a81db51a1852b94b5e5d65a487dcad184a629cf5e146a7ae",
+          "gitBlob": "b0de7d017c5f2cba4f4332b4824941ae3f80d98d"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-7.log",
+        "name": "materialize-tests-before-metadata-7.log",
+        "mode": 420,
+        "identity": {
+          "bytes": 284,
+          "sha256": "73314fb17f826ef0b5e37a98e2211c229a682b5036865043c2e541f2d2be47e9",
+          "gitBlob": "e1d8c27921fd7d45dcb0dfc8259e92bb2e75e2bd"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-7.stderr",
+        "name": "materialize-tests-before-metadata-7.stderr",
+        "mode": 420,
+        "identity": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-source.json",
+        "name": "materialize-tests-before-source.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 2478650,
+          "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+          "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests.attempt",
+        "name": "materialize-tests.attempt",
+        "mode": 420,
+        "identity": {
+          "bytes": 33,
+          "sha256": "f10bf6043bf5b0284b0aef112d62e6c5c0d7ef363e3a4100a760f22dd8f45289",
+          "gitBlob": "86cc1cdb377acbfd34a9aeafd2f1da8ac022d220"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      },
+      {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/phase-receipt.json",
+        "name": "phase-receipt.json",
+        "mode": 420,
+        "identity": {
+          "bytes": 92391,
+          "sha256": "3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d",
+          "gitBlob": "f542dde38b84f533e5658aeafe5a06642c1dcca9"
+        },
+        "fullBodyRetainedAndIndependentlyRehashed": true
+      }
+    ],
+    "largeRetentions": [
+      {
+        "identity": {
+          "bytes": 1527575,
+          "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+          "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+        },
+        "instances": [
+          {
+            "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-10.log",
+            "name": "materialize-tests-after-metadata-10.log",
+            "mode": 420,
+            "bytes": 1527575,
+            "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+            "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+          },
+          {
+            "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-3.log",
+            "name": "materialize-tests-before-metadata-3.log",
+            "mode": 420,
+            "bytes": 1527575,
+            "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+            "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+          }
+        ],
+        "retention": {
+          "kind": "lossless-json-container-member",
+          "container": {
+            "bytes": 3160415,
+            "sha256": "2f440a7180dc483ae5b24b3b42fba01fb29544677927d0327def687ec09685c9",
+            "gitBlob": "93493e8223667b4b1af3822a4fbaa5faa2468424"
+          },
+          "member": "tree"
+        }
+      },
+      {
+        "identity": {
+          "bytes": 1492874,
+          "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+          "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+        },
+        "instances": [
+          {
+            "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-13.log",
+            "name": "materialize-tests-after-metadata-13.log",
+            "mode": 420,
+            "bytes": 1492874,
+            "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+            "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+          },
+          {
+            "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-6.log",
+            "name": "materialize-tests-before-metadata-6.log",
+            "mode": 420,
+            "bytes": 1492874,
+            "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+            "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+          }
+        ],
+        "retention": {
+          "kind": "lossless-json-container-member",
+          "container": {
+            "bytes": 3160415,
+            "sha256": "2f440a7180dc483ae5b24b3b42fba01fb29544677927d0327def687ec09685c9",
+            "gitBlob": "93493e8223667b4b1af3822a4fbaa5faa2468424"
+          },
+          "member": "index"
+        }
+      },
+      {
+        "identity": {
+          "bytes": 2478745,
+          "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+          "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+        },
+        "instances": [
+          {
+            "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-source.json",
+            "name": "materialize-tests-after-source.json",
+            "mode": 420,
+            "bytes": 2478745,
+            "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+            "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+          }
+        ],
+        "retention": {
+          "kind": "full-utf8-git-blob",
+          "identity": {
+            "bytes": 2478745,
+            "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+            "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+          }
+        }
+      },
+      {
+        "identity": {
+          "bytes": 2478650,
+          "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+          "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+        },
+        "instances": [
+          {
+            "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-source.json",
+            "name": "materialize-tests-before-source.json",
+            "mode": 420,
+            "bytes": 2478650,
+            "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+            "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+          }
+        ],
+        "retention": {
+          "kind": "full-utf8-git-blob",
+          "identity": {
+            "bytes": 2478650,
+            "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+            "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+          }
+        }
+      }
+    ]
+  },
+  "fullMetadataCensus": {
+    "members": [
+      {
+        "name": "tree",
+        "identity": {
+          "bytes": 1527575,
+          "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+          "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+        },
+        "completeRows": 11567,
+        "terminatingNul": true
+      },
+      {
+        "name": "index",
+        "identity": {
+          "bytes": 1492874,
+          "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+          "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+        },
+        "completeRows": 11567,
+        "terminatingNul": true
+      }
+    ],
+    "treeAndStage0IndexFullBijection": true,
+    "treeLeaves": 11567,
+    "indexLeaves": 11567,
+    "workflows": 42,
+    "allRowsBlobAndStage0": true,
+    "beforeAfterRawTreeIdentical": true,
+    "beforeAfterRawIndexIdentical": true
+  },
+  "completeSourceReview": {
+    "before": {
+      "identity": {
+        "bytes": 2478650,
+        "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+        "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+      },
+      "rows": 8798,
+      "physicalChangedPaths": [
+        "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts"
+      ],
+      "localGitConfig": {
+        "bytes": 210,
+        "sha256": "6ff4733acc7f5f6541ad024fd46a03cc3938ffbb8e04d9c5591df0d36904cac2",
+        "gitBlob": "9e3a8c79305c001abd936eeee71b661091dd6150"
+      }
+    },
+    "after": {
+      "identity": {
+        "bytes": 2478745,
+        "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+        "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+      },
+      "rows": 8798,
+      "physicalChangedPaths": [
+        "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+      ],
+      "localGitConfig": {
+        "bytes": 210,
+        "sha256": "6ff4733acc7f5f6541ad024fd46a03cc3938ffbb8e04d9c5591df0d36904cac2",
+        "gitBlob": "9e3a8c79305c001abd936eeee71b661091dd6150"
+      }
+    },
+    "wholeTreeUnchanged": true,
+    "wholeIndexUnchanged": true,
+    "all42WorkflowsUnchanged": true,
+    "exactWrittenPaths": [
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+    ],
+    "actualChangedRows": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "before": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "mode": "100644",
+          "bytes": 155423,
+          "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+          "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+        },
+        "after": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "mode": "100644",
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        }
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "before": {
+          "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+          "mode": "100644",
+          "bytes": 180091,
+          "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+          "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978"
+        },
+        "after": {
+          "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+          "mode": "100644",
+          "bytes": 187890,
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+        }
+      }
+    ],
+    "allOther8796RowsByteIdentityAndModePreserved": true,
+    "allSevenProducerRowsUnchanged": true,
+    "beforeNineRowVector": {
+      "bytes": 2118,
+      "sha256": "3424bc0514cacc9028defc0b790cb4dd02605d5904afc6bab504b9b3e045def5",
+      "gitBlob": "c9ab45fa5fffc3ee4ab8c38b1174a56b6fc6b2bf"
+    },
+    "afterNineRowVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "afterVectorEqualsReviewedRedBinding": true,
+    "exactPublishedWholeTests": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    }
+  },
+  "controlAndEnvironmentReview": {
+    "complete10ControlPinsBefore": [
+      {
+        "path": "/tmp/c714-combined139-85-controls/combined-runner.py",
+        "bytes": 89953,
+        "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+        "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+      },
+      {
+        "path": "/tmp/c714-combined139-85-controls/red-binding.json",
+        "bytes": 4898503,
+        "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+        "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+      },
+      {
+        "path": "/tmp/c714-fresh-bootstrap-review/binding.json",
+        "bytes": 2790411,
+        "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+        "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+      },
+      {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/source-restore-source-after.json",
+        "bytes": 3451167,
+        "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+        "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+      },
+      {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-source-after.json",
+        "bytes": 2478318,
+        "sha256": "59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751",
+        "gitBlob": "51bf0d0962e07fcc7843fcd65c3202ec9133a607"
+      },
+      {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json",
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-compiled-after.json",
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      },
+      {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/pnpm-inventory.json",
+        "bytes": 253936,
+        "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+        "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c"
+      },
+      {
+        "path": "/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json",
+        "bytes": 3654,
+        "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+        "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+      },
+      {
+        "path": "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json",
+        "bytes": 789090,
+        "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+        "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+      }
+    ],
+    "complete10ControlPinsAfter": [
+      {
+        "path": "/tmp/c714-combined139-85-controls/combined-runner.py",
+        "bytes": 89953,
+        "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+        "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+      },
+      {
+        "path": "/tmp/c714-combined139-85-controls/red-binding.json",
+        "bytes": 4898503,
+        "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+        "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+      },
+      {
+        "path": "/tmp/c714-fresh-bootstrap-review/binding.json",
+        "bytes": 2790411,
+        "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+        "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+      },
+      {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/source-restore-source-after.json",
+        "bytes": 3451167,
+        "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+        "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+      },
+      {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-source-after.json",
+        "bytes": 2478318,
+        "sha256": "59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751",
+        "gitBlob": "51bf0d0962e07fcc7843fcd65c3202ec9133a607"
+      },
+      {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json",
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-compiled-after.json",
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      },
+      {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/pnpm-inventory.json",
+        "bytes": 253936,
+        "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+        "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c"
+      },
+      {
+        "path": "/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json",
+        "bytes": 3654,
+        "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+        "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+      },
+      {
+        "path": "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json",
+        "bytes": 789090,
+        "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+        "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+      }
+    ],
+    "allWholeControlIdentitiesMatchReviewedBinding": true,
+    "allToolsBefore": [
+      {
+        "tool": "node",
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "realPath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "bytes": 126939688,
+        "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+        "gitBlob": "97b7784b737e5bda3ec45af8c65508bd61001d0c"
+      },
+      {
+        "tool": "git",
+        "path": "/usr/local/bin/git",
+        "realPath": "/usr/local/bin/git",
+        "bytes": 19295504,
+        "sha256": "8a2ae22e7898e163330a96319b541f92ed6f90fc87576414f72c5a89aa1dc352",
+        "gitBlob": "d51aaf6e2f66bdf456e2d198085d4d35054433df"
+      },
+      {
+        "tool": "python",
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "realPath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12",
+        "bytes": 30894944,
+        "sha256": "fa67443527ed9647f760d807e2a38f26340757123e643c4639cf273ed15d5ea7",
+        "gitBlob": "cdff710ca21bf61260e4c7d7f3818ecd65cba2e7"
+      },
+      {
+        "tool": "scriptShell",
+        "path": "/bin/sh",
+        "realPath": "/usr/bin/dash",
+        "bytes": 129736,
+        "sha256": "a6f559e00b69a4aa4d8cb607be18d9386c5aee55c509e2c075549dcf00e00fc7",
+        "gitBlob": "965067be6aaf758adf88a3ff5539f41b25770579"
+      }
+    ],
+    "allToolsAfter": [
+      {
+        "tool": "node",
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "realPath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "bytes": 126939688,
+        "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+        "gitBlob": "97b7784b737e5bda3ec45af8c65508bd61001d0c"
+      },
+      {
+        "tool": "git",
+        "path": "/usr/local/bin/git",
+        "realPath": "/usr/local/bin/git",
+        "bytes": 19295504,
+        "sha256": "8a2ae22e7898e163330a96319b541f92ed6f90fc87576414f72c5a89aa1dc352",
+        "gitBlob": "d51aaf6e2f66bdf456e2d198085d4d35054433df"
+      },
+      {
+        "tool": "python",
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "realPath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12",
+        "bytes": 30894944,
+        "sha256": "fa67443527ed9647f760d807e2a38f26340757123e643c4639cf273ed15d5ea7",
+        "gitBlob": "cdff710ca21bf61260e4c7d7f3818ecd65cba2e7"
+      },
+      {
+        "tool": "scriptShell",
+        "path": "/bin/sh",
+        "realPath": "/usr/bin/dash",
+        "bytes": 129736,
+        "sha256": "a6f559e00b69a4aa4d8cb607be18d9386c5aee55c509e2c075549dcf00e00fc7",
+        "gitBlob": "965067be6aaf758adf88a3ff5539f41b25770579"
+      }
+    ],
+    "pnpmInventoryBefore": {
+      "bytes": 238649,
+      "sha256": "e814a4ca22111e747db4386274e92f596f0a26d7e4b5bc687f8d1ccf61510a77",
+      "gitBlob": "2f917a18c33c04a1c6398d1adf644ce62fb8e39f"
+    },
+    "pnpmInventoryAfter": {
+      "bytes": 238649,
+      "sha256": "e814a4ca22111e747db4386274e92f596f0a26d7e4b5bc687f8d1ccf61510a77",
+      "gitBlob": "2f917a18c33c04a1c6398d1adf644ce62fb8e39f"
+    },
+    "beforeAfterWholeEnvironmentIdentical": true,
+    "effectiveEnvironmentIdentity": {
+      "bytes": 5853,
+      "sha256": "494806ba006b2b48882d1441b949fa33424106dff6c3dfb6cb732d8caef43dc7",
+      "gitBlob": "b309b0ef853c2633bd711262f26fd726f4b770a3"
+    },
+    "effectiveValueIdentityCount": 117,
+    "completeEffectiveValueIdentitiesRetainedInFinalReceipt": true,
+    "rawSensitivePinsExact": true,
+    "allRequiredEffectiveAbsentKeysAbsent": true,
+    "allExplicitAssignmentsExactR1ExceptSelectedTmpdir": true,
+    "selectedTmpdir": "/tmp/c714-combined139-85-evidence/materialize-tests/tmp",
+    "supervisorHomePreserved": true,
+    "supervisorCodexHomePreserved": true,
+    "originalAbsentConfigs": [
+      "/home/agent/.npmrc",
+      "/home/agent/.pnpmrc",
+      "/home/agent/.config/pnpm/rc",
+      "/etc/npmrc",
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/etc/npmrc",
+      "/home/agent/.local/etc/npmrc"
+    ]
+  },
+  "metadataLifecycle": {
+    "metadataCommands": 14,
+    "argvContract": "Exact seven reviewed Git metadata commands once each before and after; no Node/Vitest/pnpm/provider child execution.",
+    "records": [
+      {
+        "name": "materialize-tests-before-metadata-1-receipt.json",
+        "argv": [
+          "/usr/local/bin/git",
+          "rev-parse",
+          "HEAD"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T22:01:38.587153+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 3,
+        "metadataOnly": true,
+        "sourceVectorIdentity": {
+          "bytes": 2118,
+          "sha256": "3424bc0514cacc9028defc0b790cb4dd02605d5904afc6bab504b9b3e045def5",
+          "gitBlob": "c9ab45fa5fffc3ee4ab8c38b1174a56b6fc6b2bf"
+        },
+        "effectiveEnvironmentIdentity": {
+          "bytes": 5853,
+          "sha256": "494806ba006b2b48882d1441b949fa33424106dff6c3dfb6cb732d8caef43dc7",
+          "gitBlob": "b309b0ef853c2633bd711262f26fd726f4b770a3"
+        },
+        "bindingIdentity": {
+          "bytes": 4898503,
+          "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+          "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+        },
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-1.log",
+          "bytes": 41,
+          "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+          "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-1.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finishedAt": "2026-11-16T22:01:38.609048+00:00",
+        "durationSeconds": 0.012456450000172481,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true,
+        "startRecordIdentity": {
+          "bytes": 875,
+          "sha256": "bfd961d958ff2d5bc751ef6563b79001496f1da85988fe0d5c35b5b22daba069",
+          "gitBlob": "7b2f298d4dbc60580a65146c2935b83a839d8cb2"
+        },
+        "finalRecordIdentity": {
+          "bytes": 1695,
+          "sha256": "c7c9bfb1b0542d17ff8e9812a3a6aa08baeb6f1b2ae1368e079532eb6b82c1ee",
+          "gitBlob": "881086a904e72e26ff0951f235c259342a8dea3e"
+        },
+        "fullRawAndStderrVerified": true
+      },
+      {
+        "name": "materialize-tests-before-metadata-2-receipt.json",
+        "argv": [
+          "/usr/local/bin/git",
+          "rev-parse",
+          "HEAD^{tree}"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T22:01:38.609543+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 4,
+        "metadataOnly": true,
+        "sourceVectorIdentity": {
+          "bytes": 2118,
+          "sha256": "3424bc0514cacc9028defc0b790cb4dd02605d5904afc6bab504b9b3e045def5",
+          "gitBlob": "c9ab45fa5fffc3ee4ab8c38b1174a56b6fc6b2bf"
+        },
+        "effectiveEnvironmentIdentity": {
+          "bytes": 5853,
+          "sha256": "494806ba006b2b48882d1441b949fa33424106dff6c3dfb6cb732d8caef43dc7",
+          "gitBlob": "b309b0ef853c2633bd711262f26fd726f4b770a3"
+        },
+        "bindingIdentity": {
+          "bytes": 4898503,
+          "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+          "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+        },
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-2.log",
+          "bytes": 41,
+          "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+          "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-2.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finishedAt": "2026-11-16T22:01:38.627055+00:00",
+        "durationSeconds": 0.009022562000609469,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true,
+        "startRecordIdentity": {
+          "bytes": 882,
+          "sha256": "f7c412f2484449670cde32579dd33071142108f1539232d92f3f6b55296d97b5",
+          "gitBlob": "3c7887710dbe1c505bc1298d786ab3e30693cb4b"
+        },
+        "finalRecordIdentity": {
+          "bytes": 1702,
+          "sha256": "5104693380795361a4efe0a72b6709f847b01e3fd40a7648aaa54b82275a5286",
+          "gitBlob": "16cb216c08c20976e023802bb79df8e2f43ebbaf"
+        },
+        "fullRawAndStderrVerified": true
+      },
+      {
+        "name": "materialize-tests-before-metadata-3-receipt.json",
+        "argv": [
+          "/usr/local/bin/git",
+          "ls-tree",
+          "-rz",
+          "--full-tree",
+          "HEAD"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T22:01:38.627322+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 5,
+        "metadataOnly": true,
+        "sourceVectorIdentity": {
+          "bytes": 2118,
+          "sha256": "3424bc0514cacc9028defc0b790cb4dd02605d5904afc6bab504b9b3e045def5",
+          "gitBlob": "c9ab45fa5fffc3ee4ab8c38b1174a56b6fc6b2bf"
+        },
+        "effectiveEnvironmentIdentity": {
+          "bytes": 5853,
+          "sha256": "494806ba006b2b48882d1441b949fa33424106dff6c3dfb6cb732d8caef43dc7",
+          "gitBlob": "b309b0ef853c2633bd711262f26fd726f4b770a3"
+        },
+        "bindingIdentity": {
+          "bytes": 4898503,
+          "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+          "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+        },
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-3.log",
+          "bytes": 1527575,
+          "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+          "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-3.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finishedAt": "2026-11-16T22:01:38.804430+00:00",
+        "durationSeconds": 0.16875708400039002,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true,
+        "startRecordIdentity": {
+          "bytes": 903,
+          "sha256": "e41ff8249fbf396515013df012def402919cd48a22dbd467e5e252581af2ac40",
+          "gitBlob": "5dc1f06d47fd88de805ba7fc59a25284a90da70e"
+        },
+        "finalRecordIdentity": {
+          "bytes": 1727,
+          "sha256": "e764ba6c780ad9c5c629ef38a9b6b0b096bc02a2b9e59b435e0387cbe71fa9a9",
+          "gitBlob": "b3db1fe716c5467a9146377251aa8018dc1c1763"
+        },
+        "fullRawAndStderrVerified": true
+      },
+      {
+        "name": "materialize-tests-before-metadata-4-receipt.json",
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--cached",
+          "--name-only",
+          "-z"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T22:01:38.850531+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 6,
+        "metadataOnly": true,
+        "sourceVectorIdentity": {
+          "bytes": 2118,
+          "sha256": "3424bc0514cacc9028defc0b790cb4dd02605d5904afc6bab504b9b3e045def5",
+          "gitBlob": "c9ab45fa5fffc3ee4ab8c38b1174a56b6fc6b2bf"
+        },
+        "effectiveEnvironmentIdentity": {
+          "bytes": 5853,
+          "sha256": "494806ba006b2b48882d1441b949fa33424106dff6c3dfb6cb732d8caef43dc7",
+          "gitBlob": "b309b0ef853c2633bd711262f26fd726f4b770a3"
+        },
+        "bindingIdentity": {
+          "bytes": 4898503,
+          "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+          "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+        },
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-4.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-4.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finishedAt": "2026-11-16T22:01:38.877064+00:00",
+        "durationSeconds": 0.017582770000444725,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true,
+        "startRecordIdentity": {
+          "bytes": 903,
+          "sha256": "7351dc7aa4e9ff2987d1b5c37a6a2ce7d099dc4b5ed6cbec3111565dc9c2edbd",
+          "gitBlob": "7dd895ad1f2c069650329e7633241a8c4a6469af"
+        },
+        "finalRecordIdentity": {
+          "bytes": 1722,
+          "sha256": "15923425c15939f99adc8a73e4e9f3ccf234f8945eb2b4da392cbb31ce8117e4",
+          "gitBlob": "03ddaac5181cf0c665c58cd81a2991414eee9988"
+        },
+        "fullRawAndStderrVerified": true
+      },
+      {
+        "name": "materialize-tests-before-metadata-5-receipt.json",
+        "argv": [
+          "/usr/local/bin/git",
+          "ls-files",
+          "--others",
+          "--exclude-standard",
+          "-z"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T22:01:38.877374+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 7,
+        "metadataOnly": true,
+        "sourceVectorIdentity": {
+          "bytes": 2118,
+          "sha256": "3424bc0514cacc9028defc0b790cb4dd02605d5904afc6bab504b9b3e045def5",
+          "gitBlob": "c9ab45fa5fffc3ee4ab8c38b1174a56b6fc6b2bf"
+        },
+        "effectiveEnvironmentIdentity": {
+          "bytes": 5853,
+          "sha256": "494806ba006b2b48882d1441b949fa33424106dff6c3dfb6cb732d8caef43dc7",
+          "gitBlob": "b309b0ef853c2633bd711262f26fd726f4b770a3"
+        },
+        "bindingIdentity": {
+          "bytes": 4898503,
+          "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+          "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+        },
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-5.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-5.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finishedAt": "2026-11-16T22:01:39.051559+00:00",
+        "durationSeconds": 0.16510720000223955,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true,
+        "startRecordIdentity": {
+          "bytes": 914,
+          "sha256": "e61d20ea778f931c8648c65bbc278fce882d89c6f4699a72a5d6ea632389b63b",
+          "gitBlob": "c463cbde8a80896f7b30c3b70f7ad0b7f4c16f61"
+        },
+        "finalRecordIdentity": {
+          "bytes": 1732,
+          "sha256": "264526770846df5e4988175902b7db1a453ca835b771772ce9a49947d0eb9f20",
+          "gitBlob": "df931b32e49a8df8fc1739917379da90db8695f3"
+        },
+        "fullRawAndStderrVerified": true
+      },
+      {
+        "name": "materialize-tests-before-metadata-6-receipt.json",
+        "argv": [
+          "/usr/local/bin/git",
+          "ls-files",
+          "--stage",
+          "-z"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T22:01:39.053229+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 8,
+        "metadataOnly": true,
+        "sourceVectorIdentity": {
+          "bytes": 2118,
+          "sha256": "3424bc0514cacc9028defc0b790cb4dd02605d5904afc6bab504b9b3e045def5",
+          "gitBlob": "c9ab45fa5fffc3ee4ab8c38b1174a56b6fc6b2bf"
+        },
+        "effectiveEnvironmentIdentity": {
+          "bytes": 5853,
+          "sha256": "494806ba006b2b48882d1441b949fa33424106dff6c3dfb6cb732d8caef43dc7",
+          "gitBlob": "b309b0ef853c2633bd711262f26fd726f4b770a3"
+        },
+        "bindingIdentity": {
+          "bytes": 4898503,
+          "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+          "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+        },
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-6.log",
+          "bytes": 1492874,
+          "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+          "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-6.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finishedAt": "2026-11-16T22:01:39.081591+00:00",
+        "durationSeconds": 0.019649403002404142,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true,
+        "startRecordIdentity": {
+          "bytes": 887,
+          "sha256": "e3a798df95be0e50cf12ada24fa435b164110c01b3825aae27a028df2196bc7c",
+          "gitBlob": "4e3030937aab1f0afbe8b78d55d401cab5ea819b"
+        },
+        "finalRecordIdentity": {
+          "bytes": 1712,
+          "sha256": "7da57fef2a04333bdcfec27b453b997ab2f083efd62aa4e026d0215450f8bd8a",
+          "gitBlob": "f77c635c53c4cdad9478aa0afb50c2cbe5f87d5c"
+        },
+        "fullRawAndStderrVerified": true
+      },
+      {
+        "name": "materialize-tests-before-metadata-7-receipt.json",
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--name-only",
+          "-z",
+          "HEAD"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T22:01:39.104840+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 9,
+        "metadataOnly": true,
+        "sourceVectorIdentity": {
+          "bytes": 2118,
+          "sha256": "3424bc0514cacc9028defc0b790cb4dd02605d5904afc6bab504b9b3e045def5",
+          "gitBlob": "c9ab45fa5fffc3ee4ab8c38b1174a56b6fc6b2bf"
+        },
+        "effectiveEnvironmentIdentity": {
+          "bytes": 5853,
+          "sha256": "494806ba006b2b48882d1441b949fa33424106dff6c3dfb6cb732d8caef43dc7",
+          "gitBlob": "b309b0ef853c2633bd711262f26fd726f4b770a3"
+        },
+        "bindingIdentity": {
+          "bytes": 4898503,
+          "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+          "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+        },
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-7.log",
+          "bytes": 284,
+          "sha256": "73314fb17f826ef0b5e37a98e2211c229a682b5036865043c2e541f2d2be47e9",
+          "gitBlob": "e1d8c27921fd7d45dcb0dfc8259e92bb2e75e2bd"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-metadata-7.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finishedAt": "2026-11-16T22:01:39.129045+00:00",
+        "durationSeconds": 0.016502866994414944,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true,
+        "startRecordIdentity": {
+          "bytes": 899,
+          "sha256": "fe2678707453dee6a81db51a1852b94b5e5d65a487dcad184a629cf5e146a7ae",
+          "gitBlob": "b0de7d017c5f2cba4f4332b4824941ae3f80d98d"
+        },
+        "finalRecordIdentity": {
+          "bytes": 1720,
+          "sha256": "5d7808041bde022ea339c6f6a180d199c60718d7a827b3addfefcf68f8e74389",
+          "gitBlob": "68184258f2a0191e8e350b03168c3bac246e8047"
+        },
+        "fullRawAndStderrVerified": true
+      },
+      {
+        "name": "materialize-tests-after-metadata-8-receipt.json",
+        "argv": [
+          "/usr/local/bin/git",
+          "rev-parse",
+          "HEAD"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T22:01:42.459318+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 30,
+        "metadataOnly": true,
+        "sourceVectorIdentity": {
+          "bytes": 2118,
+          "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+          "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+        },
+        "effectiveEnvironmentIdentity": {
+          "bytes": 5853,
+          "sha256": "494806ba006b2b48882d1441b949fa33424106dff6c3dfb6cb732d8caef43dc7",
+          "gitBlob": "b309b0ef853c2633bd711262f26fd726f4b770a3"
+        },
+        "bindingIdentity": {
+          "bytes": 4898503,
+          "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+          "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+        },
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-8.log",
+          "bytes": 41,
+          "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+          "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-8.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finishedAt": "2026-11-16T22:01:42.474313+00:00",
+        "durationSeconds": 0.004252962004102301,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true,
+        "startRecordIdentity": {
+          "bytes": 875,
+          "sha256": "4d89a6ab712a00f99ce318a797125c22ceec2f4a506e1f2b2640f886ae871679",
+          "gitBlob": "d13de7fa79acc53a050f2799da93f54d59de2324"
+        },
+        "finalRecordIdentity": {
+          "bytes": 1694,
+          "sha256": "d7461595b1c04cdafadca9f34d9f688782c4dc47a49daee2e0cd02ba908eef33",
+          "gitBlob": "fc87d82707fc832ca251b3519eb9392053ae0b2b"
+        },
+        "fullRawAndStderrVerified": true
+      },
+      {
+        "name": "materialize-tests-after-metadata-9-receipt.json",
+        "argv": [
+          "/usr/local/bin/git",
+          "rev-parse",
+          "HEAD^{tree}"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T22:01:42.474509+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 31,
+        "metadataOnly": true,
+        "sourceVectorIdentity": {
+          "bytes": 2118,
+          "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+          "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+        },
+        "effectiveEnvironmentIdentity": {
+          "bytes": 5853,
+          "sha256": "494806ba006b2b48882d1441b949fa33424106dff6c3dfb6cb732d8caef43dc7",
+          "gitBlob": "b309b0ef853c2633bd711262f26fd726f4b770a3"
+        },
+        "bindingIdentity": {
+          "bytes": 4898503,
+          "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+          "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+        },
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-9.log",
+          "bytes": 41,
+          "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+          "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-9.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finishedAt": "2026-11-16T22:01:42.487269+00:00",
+        "durationSeconds": 0.004196209003566764,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true,
+        "startRecordIdentity": {
+          "bytes": 882,
+          "sha256": "33880988cc266fbc1411d5e89b2a9188000f117e9222a0ad910c96bca185b03e",
+          "gitBlob": "ff84e1b7ec2b46993be3abbc95ae799d5d4747ac"
+        },
+        "finalRecordIdentity": {
+          "bytes": 1701,
+          "sha256": "eaa306362c59142a2b37f1781a5bc59e59af789e0045dc7ea77b22f61cef7abe",
+          "gitBlob": "b61cad15ad722f6a4d2de69249b7f65745b6ba99"
+        },
+        "fullRawAndStderrVerified": true
+      },
+      {
+        "name": "materialize-tests-after-metadata-10-receipt.json",
+        "argv": [
+          "/usr/local/bin/git",
+          "ls-tree",
+          "-rz",
+          "--full-tree",
+          "HEAD"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T22:01:42.487484+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 32,
+        "metadataOnly": true,
+        "sourceVectorIdentity": {
+          "bytes": 2118,
+          "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+          "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+        },
+        "effectiveEnvironmentIdentity": {
+          "bytes": 5853,
+          "sha256": "494806ba006b2b48882d1441b949fa33424106dff6c3dfb6cb732d8caef43dc7",
+          "gitBlob": "b309b0ef853c2633bd711262f26fd726f4b770a3"
+        },
+        "bindingIdentity": {
+          "bytes": 4898503,
+          "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+          "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+        },
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-10.log",
+          "bytes": 1527575,
+          "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+          "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-10.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finishedAt": "2026-11-16T22:01:42.515188+00:00",
+        "durationSeconds": 0.01998377500422066,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true,
+        "startRecordIdentity": {
+          "bytes": 903,
+          "sha256": "56765de6ee0374ac00a83d4575fc6ccc43b477344ad01114d6f4b71aafbd9cdc",
+          "gitBlob": "fafb48570ef5c8a39f5322cc203286ae25f99254"
+        },
+        "finalRecordIdentity": {
+          "bytes": 1728,
+          "sha256": "04e5ffe401a5596e9da7f4e262b8774d06da7ce30700f5145bf878d132d264c3",
+          "gitBlob": "0bc4ccd8798c9315766762a65fed77d56e4d8fe8"
+        },
+        "fullRawAndStderrVerified": true
+      },
+      {
+        "name": "materialize-tests-after-metadata-11-receipt.json",
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--cached",
+          "--name-only",
+          "-z"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T22:01:42.543890+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 33,
+        "metadataOnly": true,
+        "sourceVectorIdentity": {
+          "bytes": 2118,
+          "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+          "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+        },
+        "effectiveEnvironmentIdentity": {
+          "bytes": 5853,
+          "sha256": "494806ba006b2b48882d1441b949fa33424106dff6c3dfb6cb732d8caef43dc7",
+          "gitBlob": "b309b0ef853c2633bd711262f26fd726f4b770a3"
+        },
+        "bindingIdentity": {
+          "bytes": 4898503,
+          "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+          "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+        },
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-11.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-11.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finishedAt": "2026-11-16T22:01:42.561618+00:00",
+        "durationSeconds": 0.008764281999901868,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true,
+        "startRecordIdentity": {
+          "bytes": 903,
+          "sha256": "b3487b5fc4bbb9365ab57f8324bf567b0627e69f408763e058339f255482512c",
+          "gitBlob": "916d3d3d8bf6ad03133dd31cf0c0aee3d5fb3d81"
+        },
+        "finalRecordIdentity": {
+          "bytes": 1723,
+          "sha256": "f50f705aa849159c33b5d05a6db693f32530725f50fe1ecf2be1143ca178eabf",
+          "gitBlob": "db37929a8d9870a44d2351d772a26d37587ba163"
+        },
+        "fullRawAndStderrVerified": true
+      },
+      {
+        "name": "materialize-tests-after-metadata-12-receipt.json",
+        "argv": [
+          "/usr/local/bin/git",
+          "ls-files",
+          "--others",
+          "--exclude-standard",
+          "-z"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T22:01:42.561780+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 34,
+        "metadataOnly": true,
+        "sourceVectorIdentity": {
+          "bytes": 2118,
+          "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+          "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+        },
+        "effectiveEnvironmentIdentity": {
+          "bytes": 5853,
+          "sha256": "494806ba006b2b48882d1441b949fa33424106dff6c3dfb6cb732d8caef43dc7",
+          "gitBlob": "b309b0ef853c2633bd711262f26fd726f4b770a3"
+        },
+        "bindingIdentity": {
+          "bytes": 4898503,
+          "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+          "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+        },
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-12.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-12.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finishedAt": "2026-11-16T22:01:42.603295+00:00",
+        "durationSeconds": 0.03325135899649467,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true,
+        "startRecordIdentity": {
+          "bytes": 914,
+          "sha256": "6093804d1f676bdefcc806f41647c4262d572293ca15023bcd1f7a87461bd72d",
+          "gitBlob": "0a6a2fd2026579915d32e6cde7052526cf04d81d"
+        },
+        "finalRecordIdentity": {
+          "bytes": 1733,
+          "sha256": "65e5342bd217b5c860c72a1bf6d3a107e97d7af525bac250ab2bf3e5a60d2c88",
+          "gitBlob": "2c7a1060af5406989c390f45cb3393c32bf546d0"
+        },
+        "fullRawAndStderrVerified": true
+      },
+      {
+        "name": "materialize-tests-after-metadata-13-receipt.json",
+        "argv": [
+          "/usr/local/bin/git",
+          "ls-files",
+          "--stage",
+          "-z"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T22:01:42.605143+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 35,
+        "metadataOnly": true,
+        "sourceVectorIdentity": {
+          "bytes": 2118,
+          "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+          "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+        },
+        "effectiveEnvironmentIdentity": {
+          "bytes": 5853,
+          "sha256": "494806ba006b2b48882d1441b949fa33424106dff6c3dfb6cb732d8caef43dc7",
+          "gitBlob": "b309b0ef853c2633bd711262f26fd726f4b770a3"
+        },
+        "bindingIdentity": {
+          "bytes": 4898503,
+          "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+          "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+        },
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-13.log",
+          "bytes": 1492874,
+          "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+          "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-13.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finishedAt": "2026-11-16T22:01:42.635156+00:00",
+        "durationSeconds": 0.02020134500344284,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true,
+        "startRecordIdentity": {
+          "bytes": 887,
+          "sha256": "fec77151b95807ec64a8a5394728860f4daeb0e8092891178e524e1067ff4829",
+          "gitBlob": "c2b59fb16c971db66d764889019bdc460bb15eaa"
+        },
+        "finalRecordIdentity": {
+          "bytes": 1712,
+          "sha256": "c75574175eeda66f5574e73126130f3578d5d357f052aa422423bf51623ff91d",
+          "gitBlob": "37e2e2f696a24a4c66dc060a96bba726c4f0707e"
+        },
+        "fullRawAndStderrVerified": true
+      },
+      {
+        "name": "materialize-tests-after-metadata-14-receipt.json",
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--name-only",
+          "-z",
+          "HEAD"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T22:01:42.666291+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 36,
+        "metadataOnly": true,
+        "sourceVectorIdentity": {
+          "bytes": 2118,
+          "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+          "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+        },
+        "effectiveEnvironmentIdentity": {
+          "bytes": 5853,
+          "sha256": "494806ba006b2b48882d1441b949fa33424106dff6c3dfb6cb732d8caef43dc7",
+          "gitBlob": "b309b0ef853c2633bd711262f26fd726f4b770a3"
+        },
+        "bindingIdentity": {
+          "bytes": 4898503,
+          "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+          "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+        },
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-14.log",
+          "bytes": 372,
+          "sha256": "1c7f849fbf69eeafbc32b149725885f28946c2728c9eb88718a2edcf314e1b88",
+          "gitBlob": "4fae9729a55e3202b79d0658abaf25745f9d8cf8"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-metadata-14.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finishedAt": "2026-11-16T22:01:42.935514+00:00",
+        "durationSeconds": 0.26027764799800934,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true,
+        "startRecordIdentity": {
+          "bytes": 899,
+          "sha256": "b2ffc933dc68808b8857784a98bde64d73ce8631c7fb0284900539fac6603a30",
+          "gitBlob": "73422f37711f1985482168a780701a5afe1a87ec"
+        },
+        "finalRecordIdentity": {
+          "bytes": 1720,
+          "sha256": "c03b5d938dd059d8337b7fda35ca02d894152298225062a375361ce5829e524b",
+          "gitBlob": "9c80b29d0f4be93f14dbde9dbad68bb86898e1a0"
+        },
+        "fullRawAndStderrVerified": true
+      }
+    ],
+    "allOrdinaryExitZero": true,
+    "allCapturedPidKnown": true,
+    "allCapturedGroupsEmpty": true,
+    "allStderrEmpty": true,
+    "allRawSemanticsExact": true,
+    "allStartFinalImmutableFieldsJoined": true,
+    "allSourceEnvironmentBindingIdentitiesJoined": true,
+    "noAbnormalCleanup": true,
+    "noInterruption": true,
+    "noTimeoutOrDeadlineExceeded": true,
+    "maximumDurationSeconds": 0.26027764799800934,
+    "originalMetadataLimitSeconds": 30
+  },
+  "ownershipAndCleanup": {
+    "ownerAndStaging": [
+      {
+        "path": "/tmp/c714-combined139-85-evidence/owner.json",
+        "value": {
+          "kind": "c714-combined139-renderer85-evidence",
+          "base": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+          "publishedR1": "cf6547aa79cc903a5833fa950a2de3178194c429",
+          "r1Identity": {
+            "bytes": 77830,
+            "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+            "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+          },
+          "runner": {
+            "bytes": 89953,
+            "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+            "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+          },
+          "tests": {
+            "node": {
+              "bytes": 164965,
+              "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+              "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+            },
+            "renderer": {
+              "bytes": 187890,
+              "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+              "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+            }
+          }
+        },
+        "identity": {
+          "bytes": 927,
+          "sha256": "8b5f08a885a945c1eb9ba1f87ebbd7e65cc38d5f7ebe2dd951ef893f4e145dc8",
+          "gitBlob": "c8c51f4a49746249241ec51300ba4b0a281b859e"
+        }
+      },
+      {
+        "path": "/tmp/c714-combined-r2-authoring-20261116/staging-receipt.json",
+        "value": {
+          "kind": "exclusive-combined-controls-staging",
+          "at": "2026-11-16T22:01:15.972041+00:00",
+          "publicationGate": {
+            "kind": "combined-controls-actual-gate-closed",
+            "at": "2026-11-16T22:00:34.884Z",
+            "commit": "6e83f68ead8e8add8edfd1d17b3947509ef5989b",
+            "runner": {
+              "bytes": 89953,
+              "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+              "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+            },
+            "binding": {
+              "bytes": 4898503,
+              "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+              "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+            },
+            "root": {
+              "bytes": 53234,
+              "sha256": "a278bb97490a533a31dde75f884678647f233268f481550f62667cd858892004",
+              "gitBlob": "f54d36513fdce8cc8231070be653bf0db6ab8561"
+            },
+            "independent": {
+              "bytes": 80400,
+              "sha256": "960e306976e821512927f538f06ff6e01e1b19961fe4915d89a3c9b15158caf8",
+              "gitBlob": "e6f2efd8354135dfcddf30cb08aba93108656d43"
+            },
+            "rootReadFullIndependentBody": true,
+            "controlStagingYet": false,
+            "materializationYet": false,
+            "runtimeYet": false
+          },
+          "root": {
+            "path": "/tmp/c714-combined139-85-controls",
+            "mode": 448,
+            "device": 39,
+            "inode": 2745888,
+            "uid": 1000
+          },
+          "files": [
+            {
+              "path": "/tmp/c714-combined139-85-controls/combined-runner.py",
+              "mode": 384,
+              "device": 39,
+              "inode": 2745889,
+              "uid": 1000,
+              "bytes": 89953,
+              "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+              "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+            },
+            {
+              "path": "/tmp/c714-combined139-85-controls/red-binding.json",
+              "mode": 384,
+              "device": 39,
+              "inode": 2745890,
+              "uid": 1000,
+              "bytes": 4898503,
+              "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+              "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+            }
+          ],
+          "sourceWrites": 0,
+          "runtimeEvaluated": false,
+          "evidenceRootAbsent": true
+        },
+        "identity": {
+          "bytes": 2062,
+          "sha256": "7fdf76821f74e7380a175aaebe0ec4bcc91751c2b93ed0a41f2caccef7c567ee",
+          "gitBlob": "d8301e2380897dc3a08aae333b495a90f53286ad"
+        }
+      }
+    ],
+    "taskTmpOwner": {
+      "path": "/tmp/c714-combined139-85-evidence/materialize-tests/tmp",
+      "device": 39,
+      "inode": 2745910,
+      "mode": 448,
+      "uid": 1000,
+      "gid": 1000
+    },
+    "beforeTaskEntries": [],
+    "afterTaskEntries": [],
+    "collectorTaskEntries": [],
+    "cleanup": {
+      "unknownPrimaryLaunches": [],
+      "capturedSessionMembersAfter": [],
+      "newTestTempsRemaining": [],
+      "taskTmpEntriesAfter": [],
+      "viteTempAbsent": true,
+      "nodeDebtGatePassed": null,
+      "scope": "Captured primary sessions/groups and exact owned phase outputs; metadata sessions checked individually. No universal escaped-child/native custody claim."
+    },
+    "beforeProcessCensus": [
+      {
+        "pid": 1,
+        "name": "codex",
+        "state": "S",
+        "ppid": 0,
+        "pgid": 1,
+        "session": 1,
+        "startTicks": 4198592
+      },
+      {
+        "pid": 2,
+        "name": "python3",
+        "state": "R",
+        "ppid": 1,
+        "pgid": 1,
+        "session": 1,
+        "startTicks": 4198594
+      }
+    ],
+    "afterProcessCensus": [
+      {
+        "pid": 1,
+        "name": "codex",
+        "state": "S",
+        "ppid": 0,
+        "pgid": 1,
+        "session": 1,
+        "startTicks": 4198592
+      },
+      {
+        "pid": 2,
+        "name": "python3",
+        "state": "R",
+        "ppid": 1,
+        "pgid": 1,
+        "session": 1,
+        "startTicks": 4198594
+      }
+    ],
+    "capturedMetadataSessionsAbsentFromBothObservedCensuses": true,
+    "claim": "Exact owned source-only phase outputs and captured Git metadata sessions only; no universal escaped-child custody inference."
+  },
+  "outerAndTiming": {
+    "outerIdentity": {
+      "bytes": 5899,
+      "sha256": "c571e8e779b4e66b027365ae68581516b2dfd942cffbe3366f86c679799338a7",
+      "gitBlob": "17635bb8aed9be764c00b17e4a7af1d2b66e3dd3"
+    },
+    "sessionId": 10639,
+    "launch": {
+      "kind": "once-only-source-materialization-launch-intent",
+      "at": "2026-11-16T22:01:37.114Z",
+      "action": "materialize",
+      "command": "red",
+      "publication": "6e83f68ead8e8add8edfd1d17b3947509ef5989b",
+      "gate": {
+        "kind": "combined-controls-actual-gate-closed",
+        "at": "2026-11-16T22:00:34.884Z",
+        "commit": "6e83f68ead8e8add8edfd1d17b3947509ef5989b",
+        "runner": {
+          "bytes": 89953,
+          "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+          "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+        },
+        "binding": {
+          "bytes": 4898503,
+          "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+          "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+        },
+        "root": {
+          "bytes": 53234,
+          "sha256": "a278bb97490a533a31dde75f884678647f233268f481550f62667cd858892004",
+          "gitBlob": "f54d36513fdce8cc8231070be653bf0db6ab8561"
+        },
+        "independent": {
+          "bytes": 80400,
+          "sha256": "960e306976e821512927f538f06ff6e01e1b19961fe4915d89a3c9b15158caf8",
+          "gitBlob": "e6f2efd8354135dfcddf30cb08aba93108656d43"
+        },
+        "rootReadFullIndependentBody": true,
+        "controlStagingYet": false,
+        "materializationYet": false,
+        "runtimeYet": false
+      },
+      "argv": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/tmp/c714-combined139-85-controls/combined-runner.py",
+        "/tmp/c714-combined139-85-controls/red-binding.json",
+        "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+        "materialize",
+        "red"
+      ],
+      "scope": "source-and-supervisor-metadata-only",
+      "selectedAttempt": 1,
+      "noRetry": true
+    },
+    "observedOuterExit": 0,
+    "finalToolExit": 0,
+    "finalPrintedSummaryMatchesActualReceipt": true,
+    "startedAt": "2026-11-16T22:01:38.528898+00:00",
+    "finishedAt": "2026-11-16T22:01:44.491197+00:00",
+    "observedAtUtc": "2026-11-16T22:02:33.627Z",
+    "preflightSeconds": 3.866929746000096,
+    "postflightSeconds": 2.0320531420002226,
+    "totalInvocationSeconds": 5.904164975996537,
+    "primaryCommandSeconds": 0,
+    "signalAdmissionCutoff": {
+      "at": "2026-11-16T22:01:44.491177+00:00",
+      "pendingSignals": [],
+      "supervisorExitZeroRequired": true,
+      "scope": "Managed-signal pending snapshot while blocked; later signals require separate observed outer-exit admission."
+    },
+    "interruptions": [],
+    "attempt": 1,
+    "attemptSpent": true,
+    "replayed": false
+  },
+  "scope": {
+    "sourceAndSupervisorMetadataPreserved": true,
+    "scopeCompleted": true,
+    "fullRuntimeInputsRequested": false,
+    "fullRuntimeInputsInspected": false,
+    "inputsPreserved": null,
+    "fullRuntimeInputsPreserved": null,
+    "fullRuntimeInputBoundaries": {
+      "before": "UNINSPECTED",
+      "after": "UNINSPECTED"
+    },
+    "uninspectedRuntimeInputs": {
+      "dependencies": "UNINSPECTED",
+      "compiled": "UNINSPECTED",
+      "providerArchivesAndInstalledMembers": "UNINSPECTED",
+      "bootstrapNodeCache": "UNINSPECTED"
+    },
+    "runtimePrimaryCount": 0,
+    "commandCompletedNormally": false,
+    "semanticAdmissionComplete": false,
+    "node139Executed": false,
+    "renderer85Executed": false,
+    "nativeMetadataExecuted": false,
+    "redAccepted": false,
+    "greenAccepted": false,
+    "wholeE2EComplete": false,
+    "explanation": "This invocation performed only exact two-test source materialization with full source/control/tool/config/pnpm/environment and captured Git metadata checks. Historical dependency/compiled/provider manifests were hashed as immutable controls, but their current runtime contents were not freshly inspected. Those categories remain explicitly UNINSPECTED/false/null."
+  },
+  "assertions": [
+    {
+      "name": "complete60files",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "total11128084bytes",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-10-receipt.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-10-start.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-10.log",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-10.stderr",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-11-receipt.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-11-start.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-11.log",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-11.stderr",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-12-receipt.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-12-start.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-12.log",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-12.stderr",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-13-receipt.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-13-start.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-13.log",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-13.stderr",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-14-receipt.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-14-start.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-14.log",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-14.stderr",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-8-receipt.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-8-start.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-8.log",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-8.stderr",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-9-receipt.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-9-start.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-9.log",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-metadata-9.stderr",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-after-source.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-1-receipt.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-1-start.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-1.log",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-1.stderr",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-2-receipt.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-2-start.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-2.log",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-2.stderr",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-3-receipt.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-3-start.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-3.log",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-3.stderr",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-4-receipt.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-4-start.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-4.log",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-4.stderr",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-5-receipt.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-5-start.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-5.log",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-5.stderr",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-6-receipt.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-6-start.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-6.log",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-6.stderr",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-7-receipt.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-7-start.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-7.log",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-metadata-7.stderr",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests-before-source.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-materialize-tests.attempt",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "full-file-phase-receipt.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "completeTreeAndIndex11567",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "treeIndexExactBijection",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "completeSources8798",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "exactC5HeadTree",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "exactTwoWrittenRows",
+      "pass": true,
+      "detail": [
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+      ]
+    },
+    {
+      "name": "beforeall8798ExactBasePlusOverlays",
+      "pass": true,
+      "detail": {
+        "physicalDiffs": 5,
+        "paths": [
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "scripts/legacy-agent-host/desktop-ui-controls.ts"
+        ]
+      }
+    },
+    {
+      "name": "beforesourceMetadata",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "afterall8798ExactBasePlusOverlays",
+      "pass": true,
+      "detail": {
+        "physicalDiffs": 6,
+        "paths": [
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+        ]
+      }
+    },
+    {
+      "name": "aftersourceMetadata",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "42WorkflowsUnchanged",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "beforeAfter-tools",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "beforeAfter-environment",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "beforeAfter-controls",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "beforeAfter-pnpm",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "controlPinsExactly10",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "packetPointerJoins",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "receiptOuterFullIdentity",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "properScopeFalseNull",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "allRuntimeUninspected",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "noRuntimePrimary",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "aggregateScopeComplete",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "emptyCleanup",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "phaseTmpExactOwnership",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "14metadataOnlyExactCount",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "14uniqueCapturedPids",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-1-argv-cwd",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-1-start-final-join",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-1-identities",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-1-ordinary-clean-exit",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-1-clock",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-1-full-raw-pointers",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-1-complete-semantic-output",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-2-argv-cwd",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-2-start-final-join",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-2-identities",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-2-ordinary-clean-exit",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-2-clock",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-2-full-raw-pointers",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-2-complete-semantic-output",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-2-ordered",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-3-argv-cwd",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-3-start-final-join",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-3-identities",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-3-ordinary-clean-exit",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-3-clock",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-3-full-raw-pointers",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-3-complete-semantic-output",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-3-ordered",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-4-argv-cwd",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-4-start-final-join",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-4-identities",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-4-ordinary-clean-exit",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-4-clock",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-4-full-raw-pointers",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-4-complete-semantic-output",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-4-ordered",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-5-argv-cwd",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-5-start-final-join",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-5-identities",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-5-ordinary-clean-exit",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-5-clock",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-5-full-raw-pointers",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-5-complete-semantic-output",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-5-ordered",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-6-argv-cwd",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-6-start-final-join",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-6-identities",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-6-ordinary-clean-exit",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-6-clock",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-6-full-raw-pointers",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-6-complete-semantic-output",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-6-ordered",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-7-argv-cwd",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-7-start-final-join",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-7-identities",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-7-ordinary-clean-exit",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-7-clock",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-7-full-raw-pointers",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-7-complete-semantic-output",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-7-ordered",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-8-argv-cwd",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-8-start-final-join",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-8-identities",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-8-ordinary-clean-exit",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-8-clock",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-8-full-raw-pointers",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-8-complete-semantic-output",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-8-ordered",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-9-argv-cwd",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-9-start-final-join",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-9-identities",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-9-ordinary-clean-exit",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-9-clock",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-9-full-raw-pointers",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-9-complete-semantic-output",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-9-ordered",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-10-argv-cwd",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-10-start-final-join",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-10-identities",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-10-ordinary-clean-exit",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-10-clock",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-10-full-raw-pointers",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-10-complete-semantic-output",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-10-ordered",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-11-argv-cwd",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-11-start-final-join",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-11-identities",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-11-ordinary-clean-exit",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-11-clock",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-11-full-raw-pointers",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-11-complete-semantic-output",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-11-ordered",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-12-argv-cwd",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-12-start-final-join",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-12-identities",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-12-ordinary-clean-exit",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-12-clock",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-12-full-raw-pointers",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-12-complete-semantic-output",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-12-ordered",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-13-argv-cwd",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-13-start-final-join",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-13-identities",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-13-ordinary-clean-exit",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-13-clock",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-13-full-raw-pointers",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-13-complete-semantic-output",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-13-ordered",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-14-argv-cwd",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-14-start-final-join",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-14-identities",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-14-ordinary-clean-exit",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-14-clock",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-14-full-raw-pointers",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-14-complete-semantic-output",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "metadata-14-ordered",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "ownerOrStagingFullBody-/tmp/c714-combined139-85-evidence/owner.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "ownerOrStagingFullBody-/tmp/c714-combined-r2-authoring-20261116/staging-receipt.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "ownerMatchesReceipt",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "stagingExact700600",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "publicationGateClosedBeforeStaging",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "publicationReadbackJoins",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "outerAttemptSingleObserved0",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "launchExactMaterializeVector",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "phaseAttemptTemporal",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "rendererEnvironmentExactBinding",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "effectiveEnvironmentAbsences",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "effectiveAssignmentsExactR1Phase",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "allAssignmentValueIdentities",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "supervisorHomesPreserved",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "sameProcessCensusNoMetadataGroups",
+      "pass": true,
+      "detail": null
+    }
+  ],
+  "assertionCount": 213,
+  "auditErrors": [],
+  "blockers": [],
+  "gateDisposition": "Accept this one complete source-and-supervisor-metadata materialization with separately observed outer0. Publish its actual evidence and independent acceptance, then perform required complete root+independent actual publication/readback before the single selected combinedRED runtime. No rerun/materialization retry; no producer postimage authorship before accepted actual combinedRED and required publication/readback.",
+  "reviewerActions": {
+    "gitBlobReads": true,
+    "pureJavaScriptDataOnlyHashingParsingAndComparison": true,
+    "bareReportBlobCreation": true,
+    "shellCalls": 0,
+    "targetOrProviderRuntimeExecutions": 0,
+    "sourceRunnerRefOrCiMutations": 0
+  }
+}
