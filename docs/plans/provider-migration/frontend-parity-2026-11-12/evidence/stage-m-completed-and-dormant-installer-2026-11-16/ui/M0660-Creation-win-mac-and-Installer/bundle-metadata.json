@@ -1,0 +1,31 @@
+{
+  "name": "M0660-Creation-win-mac-and-Installer",
+  "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "bundle": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ui-M0660-completed-evidence-bundles/M0660-Creation-win-mac-and-Installer/M0660-Creation-win-mac-and-Installer.zip",
+    "bytes": 5321791,
+    "blob": "a7dba022626f8afb3d4204efca0e9d4ef120b24b",
+    "sha256": "74f140ea0a6e0e492dd3b996ec865309f1a96e2edc8a092a6e973005bb212e1d"
+  },
+  "inventory": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ui-M0660-completed-evidence-bundles/M0660-Creation-win-mac-and-Installer/inventory.json",
+    "bytes": 11140,
+    "blob": "1fb62127d67bd0b6bbb4f2de040887197d48b41d",
+    "sha256": "0219c5833a925cb117789cf048c264f34673e2bb1c916b4ac4ce68113666ae4a"
+  },
+  "readme": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ui-M0660-completed-evidence-bundles/M0660-Creation-win-mac-and-Installer/README.md",
+    "bytes": 674,
+    "blob": "de12e8b273bf2de110193908deed4cccd40918ea",
+    "sha256": "2cac9e73e0723587c57440b170d2fae7b59683b6e7eae603d8de110406b8fa37"
+  },
+  "payloadCount": 28,
+  "payloadBytes": 6175362,
+  "officialArchives": 3,
+  "officialArchiveMembers": 111,
+  "originalPNG": 89,
+  "actuallyViewedPNG": 10,
+  "roundtripAllBytes": true,
+  "safeUniqueCRC": true,
+  "noSignedTransportURLs": true
+}
