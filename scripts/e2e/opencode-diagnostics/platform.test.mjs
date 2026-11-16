@@ -41,7 +41,7 @@ test('one fresh Windows interpreter retains ordered original process and listene
   const launcher = { pid: 42, parent: 1, birth: '2026-09-10T01:00:00.0000000Z', executable: 'C:\\TEST\\app.exe' };
   const child = { pid: 43, parent: 42, birth: '2026-09-10T01:00:00.0000001Z' };
   const processQuery = "@(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,CreationDate,ExecutablePath | Where-Object CreationDate | ForEach-Object { [pscustomobject]@{pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; birth=$_.CreationDate.ToUniversalTime().ToString('o'); executable=$_.ExecutablePath} }) | ConvertTo-Json -Compress";
-  const listenerQuery = 'Get-NetTCPConnection -State Listen | Where-Object LocalPort -eq 9222 | Select-Object -ExpandProperty OwningProcess';
+  const listenerQuery = 'Get-CimInstance -Namespace root/StandardCimv2 -ClassName MSFT_NetTCPConnection -Filter "State = 2 AND LocalPort = 9222" -Property OwningProcess | Select-Object -ExpandProperty OwningProcess';
   let calls = 0;
   const execute = script => {
     calls++;
@@ -328,4 +328,69 @@ test('Windows census observations preserve original results, refusals and bounde
   proof.censusReads = Array(512).fill(null);
   assert.equal(observe('process-census', () => original), original);
   assert.equal(proof.censusReads.length, 512); assert.equal(proof.censusReadsTruncated, true);
+});
+
+test('actual live Windows renderer guard refuses empty, foreign and stale listener observations', () => {
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const start = 'const assertOwnedRenderer = () => {', end = 'const readJson = async path => {';
+  assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
+  const from = source.indexOf(start), to = source.indexOf(end);
+  assert(to > from);
+  const create = runInThisContext('(function(assert, check, observeCensus, windowsProcessListenerSnapshot, validateCensus, lineage, remaining) {' +
+    source.slice(from, to) + 'return assertOwnedRenderer;})');
+  const main = { pid: 42, parent: 1, birth: '2026-09-10T01:00:00.0000000Z' };
+  const renderer = { pid: 43, parent: 42, birth: '2026-09-10T01:00:00.0000001Z' };
+  const foreign = { pid: 99, parent: 1, birth: '2026-09-10T01:00:00.0000002Z' };
+  const lineage = [main, renderer];
+  const exercise = ({ census = [main, renderer, foreign], listeners = '43',
+    initialError, executorError, censusError, closingError } = {}) => {
+    const calls = [];
+    const guard = create(assert, () => {
+      calls.push('check'); if (initialError) throw initialError;
+    }, (operation, read) => {
+      calls.push(operation); return read();
+    }, () => {
+      calls.push('snapshot');
+      return windowsProcessListenerSnapshot(9222, () => {
+        calls.push('execute'); if (executorError) throw executorError;
+        return JSON.stringify({ processes: JSON.stringify(census), listeners });
+      });
+    }, value => {
+      calls.push('validate'); assert.deepEqual(value, census);
+      if (censusError) throw censusError;
+      return value;
+    }, lineage, () => {
+      calls.push('remaining'); if (closingError) throw closingError;
+    });
+    return { calls, run: () => { guard(); calls.push('admitted'); } };
+  };
+  const throughCensus = ['check', 'process-listener-snapshot', 'snapshot', 'execute', 'validate'];
+  for (const listeners of ['43', '43\r\n43\r\n42\r\n']) {
+    const current = exercise({ listeners });
+    current.run();
+    assert.deepEqual(current.calls, [...throughCensus, 'remaining', 'admitted']);
+  }
+  for (const options of [
+    { listeners: '' },
+    { listeners: '99' },
+    { listeners: '43\n99' },
+    { listeners: '44' },
+    { census: [main, foreign] },
+    { census: [main, { ...renderer, birth: 'reused' }, foreign] },
+  ]) {
+    const refused = exercise(options);
+    assert.throws(refused.run, /CDP listener belongs to this original Main family/);
+    assert.deepEqual(refused.calls, throughCensus, 'no final admission follows a refused listener set');
+  }
+  for (const [key, expected] of [
+    ['initialError', ['check']],
+    ['executorError', throughCensus.slice(0, -1)],
+    ['censusError', throughCensus],
+    ['closingError', [...throughCensus, 'remaining']],
+  ]) {
+    const failure = new Error('TEST original live guard refusal: ' + key);
+    const refused = exercise({ [key]: failure });
+    assert.throws(refused.run, error => error === failure);
+    assert.deepEqual(refused.calls, expected, 'the original refusal stops before caller admission');
+  }
 });
