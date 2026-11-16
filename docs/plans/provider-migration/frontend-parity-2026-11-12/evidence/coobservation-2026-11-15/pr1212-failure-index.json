@@ -1,0 +1,322 @@
+{
+  "kind": "original-pr1212-failure-archives-actual-read-only-inspection",
+  "frozenHead": "3a81d8bfb72b2f21a2bca1c0b1d8cf24fc61cc6d",
+  "attempt": 1,
+  "archives": [
+    {
+      "artifactId": 14199709945,
+      "archiveBytes": 281610,
+      "archiveSha256": "759c063ec71b199587e0b194a0b5c9bfeec06acd9da48bce0a682642a9bbf328",
+      "archiveGitBlob": "6bad47d14c641af16a2839a8bd528a4f652d0acf",
+      "crcVerified": true,
+      "members": [
+        {
+          "path": "TEST-desktop-backend-uwo89V/TEST-codex-install/registry.ndjson",
+          "bytes": 306,
+          "sha256": "53437b6eafa3ce14796b9878d73a6e963b4f58ef4abd525d7362c06a732f63b5",
+          "gitBlob": "0578be97a9724cf0d5b48100732c11a0c36ea19d"
+        },
+        {
+          "path": "TEST-desktop-backend-uwo89V/TEST-codex-install/invocations.ndjson",
+          "bytes": 1107,
+          "sha256": "47683fa6ca9462c96421f0f4c70e5407d9cc3fadf5b789c1f6d0a43ee6511490",
+          "gitBlob": "a9393a7c70f20c5bdb172332afe39086e6cf6974"
+        },
+        {
+          "path": "TEST-desktop-backend-uwo89V/desktop-app.log",
+          "bytes": 11211,
+          "sha256": "167391c98666974f7d8ec97928a96167f20d8b7f6cdf55c682406d5c48096167",
+          "gitBlob": "a0f1404639a46abd4801eea7e66141596b715fd8"
+        },
+        {
+          "path": "TEST-desktop-backend-uwo89V/TEST-peer-codex-scope/effects.ndjson",
+          "bytes": 1291,
+          "sha256": "96baa715c003b1c2bdb719434f5acbc515af53f04c44008ab1de598d30a930cf",
+          "gitBlob": "c38eea21d35421f36758e108ee5489b646c86575"
+        },
+        {
+          "path": "TEST-desktop-backend-uwo89V/desktop-backend-receipt.json",
+          "bytes": 783616,
+          "sha256": "deabea1694953af2a71c092450dfc8ac1d026d699c6c257035edbb68f985b0b5",
+          "gitBlob": "38394e72b6e6b7086a4b91a0c398448592c86994"
+        },
+        {
+          "path": "TEST-desktop-backend-uwo89V/desktop-descriptor.json",
+          "bytes": 2664,
+          "sha256": "c245da1a35def5d343d2e3e9217f11493900db5609f69a8c274519b21d2f81c8",
+          "gitBlob": "885666b993de622d703a1602758a23891139dfdd"
+        },
+        {
+          "path": "TEST-desktop-backend-uwo89V/host-profile.json",
+          "bytes": 7471,
+          "sha256": "22e048050fb1a40c183a6b18670da7b1cb616ad7037bad77afa91fc55f4907d3",
+          "gitBlob": "5fabc6ade70b3c19c8dba74dc3b4c82fd757c0e6"
+        },
+        {
+          "path": "TEST-desktop-backend-uwo89V/hoststore/management-commands/4ea58e8b215fc0af66908869aa73761bf87aaa91572bbba8dd23d66eff57989d.json",
+          "bytes": 904,
+          "sha256": "17f0bf1a38d84fff1ed24e370b823d4a2c648abb86aaf293449af83c53284448",
+          "gitBlob": "c8d3b7fc87c9663cc2c7466f76bdf6a43250c021"
+        },
+        {
+          "path": "TEST-desktop-backend-uwo89V/sentinel-invocations.ndjson",
+          "bytes": 96,
+          "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+          "gitBlob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162"
+        },
+        {
+          "path": "TEST-desktop-backend-uwo89V/ui-failure.png",
+          "bytes": 81976,
+          "sha256": "8853b24d1f95e77060326b66bb6e810089d7902016666c90d158406f92c81617",
+          "gitBlob": "c9511f4eac67638c8051514e5d226ce8f9b7a41f"
+        },
+        {
+          "path": "TEST-desktop-backend-uwo89V/ui-seed-receipt.json",
+          "bytes": 2335,
+          "sha256": "8e489b8cf999a294d992b524ce03df8b25319619b5a68899bcefb705d989933d",
+          "gitBlob": "edf839495ff15a34a309b89f40c95315b86c05dd"
+        },
+        {
+          "path": "host-emulated-emulated-installer-ui.log",
+          "bytes": 2928,
+          "sha256": "3f495c2b87bd647415b3acd5209f3c77e483fb09420cb03410d22af3539480b2",
+          "gitBlob": "e0e218068ab016bcdfbbc58eb460e304d7c4f7ba"
+        },
+        {
+          "path": "host-emulated-inputs.json",
+          "bytes": 1055,
+          "sha256": "9ba69c293d38113defb9d2d72f59deabef6668bd18d39c541e332a7c6b137b41",
+          "gitBlob": "3148b289409bb614c15e6e024c3b4523ecc1e9a7"
+        }
+      ]
+    },
+    {
+      "artifactId": 14202042488,
+      "archiveBytes": 2740047,
+      "archiveSha256": "27694ee88c948e8b759dd54c915a57fa9ebd2c35bf11375f6559eb423b3a644b",
+      "archiveGitBlob": "15513807bd1e29850f02400df0fcd327919f034a",
+      "crcVerified": true,
+      "members": [
+        {
+          "path": "TEST-desktop-backend-R7KkCv/desktop-app.log",
+          "bytes": 44746,
+          "sha256": "6379f3aaf6c01b0780859fbb67ca1d786956be8a8da942f2fe0db0f518ae0b35",
+          "gitBlob": "d801373c19eaf16282fe4b9dba309b839757b248"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/desktop-backend-receipt.json",
+          "bytes": 20594144,
+          "sha256": "e9f2789993ef3fc076218ab781eca8bd3d70295992f5e9da15dce057c7092231",
+          "gitBlob": "ce5bfd8b2faab9635cda3573c448e9e870b1463a"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/desktop-descriptor.json",
+          "bytes": 4225,
+          "sha256": "b4f95ad6d5618b5c66653e41c4b9485bfeddbf5b9a49ab3f9df945363e282c53",
+          "gitBlob": "ab48a46f5ba14918afa39f74949dd0602a2e0b91"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/hoststore/teams/test-cross-alpha/inboxes/team-lead.json",
+          "bytes": 1863,
+          "sha256": "bafbbb97a479372a82fedbeaa771ae54b306c00242f610e4f4df44794bce1c88",
+          "gitBlob": "87c43267d53f96704742cc80641bf946611b59da"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/hoststore/teams/test-cross-beta/inboxes/team-lead.json",
+          "bytes": 1733,
+          "sha256": "1da88c2258fb0b6f43b0f394260ed72835f186492f9ef5fc9dbe71da2487aac0",
+          "gitBlob": "54cfada7fefffaa390a349a409bf747f4cc85c21"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/hoststore/teams/test-desktop-backend/group-chats.json",
+          "bytes": 340,
+          "sha256": "5026631c89a5c0491150ab30c56c21056f2fc02b48c1ddf98486d64a5cd54215",
+          "gitBlob": "f6976781b924ca937959d23b611eccae4b88c81d"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+          "bytes": 4633,
+          "sha256": "bb3b85a397b1e60d0702b5d163124323026ede7b86d8398a4bc531e681ba6aa7",
+          "gitBlob": "4cd833138938db66c0a337ddd3772a0627f8ad74"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/owner-routing-default-b.log",
+          "bytes": 19009,
+          "sha256": "435245c8a23c7dbb07a87750d5b3d0e302f944187567e7919d1d85a7ee0a8ff2",
+          "gitBlob": "21bc586131e8afefcb37d1a5606c49c994bbcde5"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/owner-routing-unavailable-a.log",
+          "bytes": 19465,
+          "sha256": "b9499289b98ccbbd10f89d8779a517798a7d0fe769e621d6f249b66e416b3919",
+          "gitBlob": "46c2b8adb1ab8cb20402f98edcc6d23f03877097"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/sentinel-invocations.ndjson",
+          "bytes": 288,
+          "sha256": "eec16a5fd10f9796e020e2e74a0f9647839654eb0f7e187dbd2583a5e49817dc",
+          "gitBlob": "1bee4b54c66c6d44e57bc07360eb9db2c90c7c32"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-cross-team-reply.png",
+          "bytes": 115281,
+          "sha256": "61b701429ad9d267e35ed2b229eebf4cc2d643a30585db81078c1c2fccacf567",
+          "gitBlob": "3db1fb9955d1d6f5c0572119dcd84dff5e6c79c0"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-group-seed-receipt.json",
+          "bytes": 593,
+          "sha256": "b3fcdfea6b05fc7db29dc92dd8a8c2d79d121082bbd0165385e0d7e4c7fb8839",
+          "gitBlob": "8b9eb1959bb0e448ac62435bc2ee641054dca96e"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-owner-routing-task-opened.png",
+          "bytes": 109994,
+          "sha256": "361e3eb22090489ec1c0d62d2bf77d4f0440b95d295b812235d8880ce3e4ed20",
+          "gitBlob": "1a4fcbdbdf4a1627982723949a7549327f012541"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-owner-routing-tasks-filtered.png",
+          "bytes": 116087,
+          "sha256": "d198fa1e82536364ae582b5c1d8b89c51f3579d44422b623121cbb269869ef27",
+          "gitBlob": "084f514f8332b4c4fd702323bfbd57fb59b7c6dc"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-owner-routing-tasks.png",
+          "bytes": 115470,
+          "sha256": "69e0ddfaca22f178d644f98bf751c42b47b925081cbda1e84c164be0d1794db8",
+          "gitBlob": "c430a825efcfe612a9a71d70416a242e485d5dbb"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-owner-routing-teams-filtered.png",
+          "bytes": 83510,
+          "sha256": "d1ccfe239393bee8653c63a006d1511b2e96c1b36cc9cb58c31048b90573a479",
+          "gitBlob": "6929f3ce4d996b8acb2e11c4438bcebf6608919e"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-owner-routing-teams.png",
+          "bytes": 88947,
+          "sha256": "b379c64c89dedf9e85f2aa60f8178ac3eddc568437e10595393ef577729a61d7",
+          "gitBlob": "6c7a3cc4a42e5422bcec12ffca480df4531ae40c"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-seed-receipt.json",
+          "bytes": 2197,
+          "sha256": "f81b5306522e4bdd5bd1cbcc53e3903bc729d17de0aac079c87c421637996377",
+          "gitBlob": "1821a82f499636079741dcaa4d805bdc9be32f2b"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-task-board-assigned-blocked.png",
+          "bytes": 109666,
+          "sha256": "ee21ef62a38d9df74756196b368cec64633cdbc5c69255359a1ed4bec6036e97",
+          "gitBlob": "ca1ad093d2c227168fa83897c02bf2c3a100c807"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-task-board-attachment-added.png",
+          "bytes": 127635,
+          "sha256": "7779bb3a75721b8b5b52c649d3669d877ecc3e3880ebeedad90f69b6bcd70b42",
+          "gitBlob": "789e9f76bd6f720a97841508ff3c47987d275f1f"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-task-board-attachment-removed.png",
+          "bytes": 117042,
+          "sha256": "8a90c4a8ec85f7575667ed2d0a991cc1759e468df3bf2b6ddda9ac6cc7dd711e",
+          "gitBlob": "220cca30c98e3e36cd52cc6dc3897bed8b4e2e73"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-task-board-attachments-reloaded.png",
+          "bytes": 115236,
+          "sha256": "34927f95130081f458bc48f81e060d52481a2f61b6092e0f89f2d2981326733e",
+          "gitBlob": "10d894d90f206e4bae8383323d4cf3138080125b"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-task-board-blocked-start.png",
+          "bytes": 145668,
+          "sha256": "26ee4332824ab9135da2b56e0749ab1d6bcb95ac353dc575d6ad54f406dca222",
+          "gitBlob": "2d53604165a60cf4875c06b6e6b362702e9ae4b9"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-task-board-initial.png",
+          "bytes": 103063,
+          "sha256": "9fe909bd869250c5e1cea5de431cc8cb2e3be5a9e5174175f3e660177e42df79",
+          "gitBlob": "1005a4483e461f8d2a41a0e2ddba5e1df4d7947e"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-task-board-reloaded.png",
+          "bytes": 124570,
+          "sha256": "65e2438ec86b1d071d3b6bb82f26d9cb8cc288f3d1ba97c56f3b4189cc35e690",
+          "gitBlob": "6471646b3ed6cf386c6c9cc81c496fbf1aeb7630"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-task-board-reordered.png",
+          "bytes": 132461,
+          "sha256": "580812e24e1c5fee089df55deac9c4b63ad5f181bdd63743e0b084b8690ea00a",
+          "gitBlob": "037a501b0e19cefbf1a23bd83ec620dd292e9bf1"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-task-large-comment-cold-readback.png",
+          "bytes": 77680,
+          "sha256": "f025107dc7202e4f6d99d443398874d16261b6c79cc2caefb4bdb29d79302839",
+          "gitBlob": "4422b4ee2e71a01c78fc03b4d6ad0dce48ee7d98"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-task-notification-quick-actions.png",
+          "bytes": 120820,
+          "sha256": "783ecdff7713811166d422d290e1e20aced3538456d5062348e0f28f3ec907dd",
+          "gitBlob": "efdf6d1215f032344cb2307751f76763c59c4ac6"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-task-review-approved.png",
+          "bytes": 114573,
+          "sha256": "ffce3f82e36f97b77c42a0bf53201afdf3bba75708c6cfd64cf80596470bdd41",
+          "gitBlob": "4467cc9ef99aae0ed7c5b7dd44cd3feecd406065"
+        },
+        {
+          "path": "TEST-desktop-backend-R7KkCv/ui-task-trash-original-row.png",
+          "bytes": 102978,
+          "sha256": "f6ca1c90b0aaf5e3680880a98ef394ca4b2252deb92536db1935242de032d75e",
+          "gitBlob": "76612a54e3a9ffd304f7456e803fcbbea2ff0022"
+        },
+        {
+          "path": "TEST-desktop-backend-djDh9l/host-profile.json",
+          "bytes": 560,
+          "sha256": "46d4808f42325d4bba055620278479add9cdec7d5cd4adbcda1fca8313dd64d2",
+          "gitBlob": "06a3601784958100d369fa1294e4d66eed87ed23"
+        },
+        {
+          "path": "TEST-emulated-ui-inputs-ZLGJBe/linux-child-exec/linux-child-exec",
+          "bytes": 790608,
+          "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+          "gitBlob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807"
+        },
+        {
+          "path": "TEST-emulated-ui-inputs-ZLGJBe/linux-child-exec/manifest.json",
+          "bytes": 2408,
+          "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+          "gitBlob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517"
+        },
+        {
+          "path": "host-emulated-inputs.json",
+          "bytes": 1803,
+          "sha256": "d7ed3c6563a6a572f57c6ea7880cd0abcd5a841d0d061283b712e769ad574865",
+          "gitBlob": "6c59ae477b79b76aa36a3b7848828d2aa5d07463"
+        },
+        {
+          "path": "host-emulated-linux-child-exec-selection.json",
+          "bytes": 271,
+          "sha256": "8511ead85b9f3b3f9ed108f10f9802c88ae9b432bffe881d7697187fe7d60f85",
+          "gitBlob": "05893a4b39871dc12383c924211a92596e45ae85"
+        },
+        {
+          "path": "host-emulated-task-board-cross-team-ui.log",
+          "bytes": 981,
+          "sha256": "ebbc105df535c0b2853420231912c0906d08920d3ab9737a79497e6ae05f9657",
+          "gitBlob": "9b594f9e007a3ca239ff69e9f7bb4cc7c3d735d2"
+        }
+      ]
+    }
+  ],
+  "crossEpochProjection": "78ee0653a5fb9c440fb32cdc27559f4ec870c44a",
+  "crossProjectionQualification": "Complete selected JSON fields, labelled derived; whole original receipt remains in original archive. No replay/new execution.",
+  "installerReceipt": "38394e72b6e6b7086a4b91a0c398448592c86994"
+}
