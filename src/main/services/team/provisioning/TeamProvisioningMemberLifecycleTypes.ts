@@ -1,6 +1,5 @@
 import type { ChildProcess } from 'node:child_process';
 
-import type { MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
 import type {
   EffortLevel,
   MemberSpawnStatusEntry,
@@ -8,6 +7,8 @@ import type {
   TeamCreateRequest,
   TeamProviderId,
 } from '@shared/types';
+
+import type { MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
 
 export type LiveRosterAttachReason = 'member_added' | 'member_restored' | 'member_updated';
 export type DirectProcessMemberLaunchReason = 'manual_restart' | LiveRosterAttachReason;
