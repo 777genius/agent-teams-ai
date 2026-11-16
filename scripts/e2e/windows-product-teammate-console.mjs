@@ -62,6 +62,7 @@ let teamAliveBeforeAttach = null;
 let attachLivenessDiagnostics = null;
 let addMemberIpcReceipt = null;
 let forceExitMember;
+let forceExitHeldTool;
 let hwndObserver;
 let hwndObserverLog = '';
 let hwndEvidence;
@@ -195,6 +196,28 @@ async function freePort() {
 async function api(expression) {
   assert(client);
   return client.evaluate('(async()=>await (' + expression + '))()');
+}
+
+async function waitForOwnedPowerShellDescendant(parentPid, label, timeoutMs = 60_000) {
+  return wait(label, async () => {
+    const marker = await readFile(heldToolPidPath, 'utf8').catch(error => {
+      if (error?.code === 'ENOENT') return '';
+      throw error;
+    });
+    if (!/^[0-9]+$/.test(marker.trim())) return false;
+    const pid = Number(marker.trim());
+    if (!Number.isSafeInteger(pid) || pid <= 0) return false;
+    const observed = await getProcess(pid);
+    if (!observed?.command?.toLowerCase().includes('powershell.exe')) return false;
+    let parent = observed.parent;
+    for (let depth = 0; depth < 8 && Number.isSafeInteger(parent) && parent > 0; depth++) {
+      if (parent === parentPid) return observed;
+      const ancestor = await getProcess(parent);
+      if (!ancestor) return false;
+      parent = ancestor.parent;
+    }
+    return false;
+  }, timeoutMs);
 }
 
 async function run() {
@@ -471,25 +494,8 @@ async function run() {
   expected.set(holdKey, 'WIN_HOLD_' + holdToken);
   await api(`window.electronAPI.teams.sendMessage(${literal(teamName)},
     ${literal({ member: 'bob', from: 'user', text: 'WIN_NATIVE_TOOL:' + holdKey })})`);
-  heldTool = await wait('original live PowerShell descendant of Bob', async () => {
-    const marker = await readFile(heldToolPidPath, 'utf8').catch(error => {
-      if (error?.code === 'ENOENT') return '';
-      throw error;
-    });
-    if (!/^\d+$/.test(marker.trim())) return false;
-    const pid = Number(marker.trim());
-    if (!Number.isSafeInteger(pid) || pid <= 0) return false;
-    const observed = await getProcess(pid);
-    if (!observed?.command?.toLowerCase().includes('powershell.exe')) return false;
-    let parent = observed.parent;
-    for (let depth = 0; depth < 8 && Number.isSafeInteger(parent) && parent > 0; depth++) {
-      if (parent === originalMember.pid) return observed;
-      const ancestor = await getProcess(parent);
-      if (!ancestor) return false;
-      parent = ancestor.parent;
-    }
-    return false;
-  }, 60_000);
+  heldTool = await waitForOwnedPowerShellDescendant(originalMember.pid,
+    'original live PowerShell descendant of Bob');
   assert(await ownedStillAlive(heldTool), 'Real held PowerShell exited before product Stop');
   await writeFile(hwndStop, 'stop');
   hwndEvidence = await wait('owned native HWND observer evidence', async () => {
@@ -540,6 +546,17 @@ async function run() {
     'Forced-exit product member must be a new process, not a recycled stopped member');
   assert(await ownedStillAlive(forceExitMember),
     'Forced-exit teammate had already retired before Electron Main was killed');
+  // Qualify the actual Electron force-exit path with a live native tool
+  // descendant too; the separate app-shaped fixture is not product proof.
+  await rm(heldToolPidPath, { force: true });
+  const forceHoldToken = randomUUID(), forceHoldKey = 'hold:' + forceHoldToken;
+  expected.set(forceHoldKey, 'WIN_FORCE_HOLD_' + forceHoldToken);
+  await api(`window.electronAPI.teams.sendMessage(${literal(forcedTeamName)},
+    ${literal({ member: 'alice', from: 'user', text: 'WIN_NATIVE_TOOL:' + forceHoldKey })})`);
+  forceExitHeldTool = await waitForOwnedPowerShellDescendant(forceExitMember.pid,
+    'original live PowerShell descendant before Electron Main force-exit', 90_000);
+  assert(await ownedStillAlive(forceExitHeldTool),
+    'Forced-exit tool descendant had already retired before Electron Main was killed');
   const liveMain = await getProcess(mainBirth.pid);
   assert(liveMain?.creation === mainBirth.creation &&
     liveMain.command.toLowerCase().includes('electron.exe'),
@@ -548,16 +565,17 @@ async function run() {
     windowsHide: true, timeout: 15_000, encoding: 'utf8',
   });
   assert.equal(killedMain.status, 0, 'Actual Electron Main force-exit failed');
-  let forceExitMemberRetired = false;
+  let forceExitDescendantsRetired = false;
   for (let attempt = 0; attempt < 100; attempt++) {
-    if (!(await ownedStillAlive(forceExitMember))) {
-      forceExitMemberRetired = true;
+    if (!(await ownedStillAlive(forceExitMember)) &&
+        !(await ownedStillAlive(forceExitHeldTool))) {
+      forceExitDescendantsRetired = true;
       break;
     }
     await delay(300);
   }
-  assert(forceExitMemberRetired,
-    'Original product teammate survived forced Electron Main exit without tree-kill');
+  assert(forceExitDescendantsRetired,
+    'Original product teammate or live tool descendant survived forced Electron Main exit');
   const evidence = {
     schemaVersion: 1, success: true, platform: process.platform,
     modelBoundary: 'loopback synthetic HTTP; no paid model inference',
@@ -575,6 +593,7 @@ async function run() {
     forceAppExitDescendantsVerified: true,
     forcedElectronMainPid: mainBirth.pid,
     forceExitTeammatePid: forceExitMember.pid,
+    forceExitHeldToolPid: forceExitHeldTool.pid,
     screenshot: path.basename(screenshot), runtimeVersion: lock.version,
   };
   await writeFile(receiptPath, JSON.stringify(evidence, null, 2) + '\n');
@@ -614,6 +633,7 @@ try {
     addMemberIpcReceipt,
     toolResults: [...proofs.values()], usageImporterProcesses,
     heldPowerShellToolPid: heldTool?.pid ?? null,
+    forceExitHeldToolPid: forceExitHeldTool?.pid ?? null,
     stopFailurePidEvidence,
     modelErrors: model?.errors ?? [],
     logTail: log.slice(-3500),
@@ -641,6 +661,7 @@ try {
     { identity: originalMember, marker: teamName },
     { identity: heldTool, marker: 'powershell.exe' },
     { identity: forceExitMember, marker: teamName + '-force' },
+    { identity: forceExitHeldTool, marker: 'powershell.exe' },
   ]) {
     if (!identity) continue;
     try {
