@@ -2284,3 +2284,224 @@ test('the actual generated target expression keeps the same eligible click when 
   }
   assert.deepEqual(output, [], 'a successful original click does not emit a failure diagnostic');
 });
+
+async function originalReviewCorrectionStage(observations: unknown[], insertFailure?: Error) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = (await readFile(new URL('./desktop-task-review-cycle-ui-smoke.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = '  const commentTarget = record(', end = "  await snapshotStage(await newReceipt(commentBefore, 'task.comment'), 'in_progress');";
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original correction input boundary');
+  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));
+  const selector = '[role="dialog"] textarea[id="TEST-original-correction-input"]';
+  const original = { selector, canEditNow: true }, trace: string[] = [], budgets: number[] = [];
+  let reads = 0;
+  const cdp = {
+    async evaluate(expression: string) {
+      assert.equal(expression, 'TEST-original-current-correction-expression');
+      assert.ok(reads < observations.length, 'no unplanned currentness observation');
+      const value = observations[reads++]; trace.push('read');
+      if (value instanceof Error) throw value;
+      return value === 'current' ? original : value && typeof value === 'object' && !Array.isArray(value)
+        ? { selector, ...value } : value;
+    },
+    async send(method: string, params?: Record<string, unknown>) {
+      assert.equal(method, 'Input.insertText');
+      assert.deepEqual(params, { text: 'TEST original correction text' });
+      trace.push('insert');
+      if (insertFailure) throw insertFailure;
+      return {};
+    },
+  };
+  const controls = createDesktopUiControls(cdp, { assertOwnedRenderer() {}, step() {} });
+  const ui = {
+    ...controls,
+    waitRead: ((expression: string, label: string, timeoutMs = 30_000, accepts?: (value: unknown) => boolean) => {
+      assert.equal(label, 'exact current correction Task/owner/surface');
+      budgets.push(timeoutMs);
+      return controls.waitRead(expression, label, timeoutMs, accepts);
+    }) as typeof controls.waitRead,
+    async scrollTo(target: string, label: string) {
+      assert.equal(target, selector); assert.equal(label, 'existing Task comment composer'); trace.push('scroll');
+    },
+    async click(target: string, label: string, text?: string) {
+      if (label === 'focus existing correction comment') {
+        assert.equal(target, selector); assert.equal(text, undefined); trace.push('focus');
+      } else {
+        assert.equal(target, '[role="dialog"] button.message-composer-send-button');
+        assert.equal(label, 'original correction Comment once'); assert.equal(text, 'Comment'); trace.push('submit');
+      }
+    },
+  };
+  const run = Function('environment', `'use strict';
+    const {assert,record,ui,cdp,options,taskId,commentText,desktopTaskCommentInputExpression}=environment;
+    return (async()=>{${actual}})();`) as (environment: Record<string, unknown>) => Promise<void>;
+  return { trace, budgets, reads: () => reads, run: () => run({ assert, ui, cdp,
+    record(value: unknown) { assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value; },
+    options: { handleId: 'TEST-original-correction-owner' }, taskId: 'TEST-original-correction-task',
+    commentText: 'TEST original correction text',
+    desktopTaskCommentInputExpression(handleId: string, taskId: string) {
+      assert.equal(handleId, 'TEST-original-correction-owner'); assert.equal(taskId, 'TEST-original-correction-task');
+      return 'TEST-original-current-correction-expression';
+    },
+  }) };
+}
+
+test('original review correction refuses missing or false live edit authority before any input action', { timeout: 5000 }, async () => {
+  for (const observation of [null, {}, { canEditNow: false }, { canEditNow: 1 }, [{ canEditNow: true }]]) {
+    const refusal = new Error('TEST original currentness read failed');
+    const f = await originalReviewCorrectionStage([observation, refusal]);
+    await assert.rejects(f.run(), error => error === refusal);
+    assert.deepEqual(f.trace, ['read', 'read']); assert.deepEqual(f.budgets, [30_000]);
+    assert.equal(f.reads(), 2);
+  }
+});
+
+test('original review correction admits current authority with one original insertion and submit', { timeout: 5000 }, async () => {
+  for (const observations of [['current'], [{ canEditNow: false }, 'current']]) {
+    const f = await originalReviewCorrectionStage(observations);
+    await f.run();
+    assert.deepEqual(f.trace, [...observations.map(() => 'read'), 'scroll', 'focus', 'insert', 'submit']);
+    assert.deepEqual(f.budgets, [30_000]); assert.equal(f.reads(), observations.length);
+  }
+  const failure = new Error('TEST original insertion response failed');
+  const refused = await originalReviewCorrectionStage(['current'], failure);
+  await assert.rejects(refused.run(), error => error === failure);
+  assert.deepEqual(refused.trace, ['read', 'scroll', 'focus', 'insert']);
+  assert.deepEqual(refused.budgets, [30_000]); assert.equal(refused.reads(), 1);
+});
+
+async function originalSelectionInitialChat(fixture: {
+  clock: { now: number }; modes: string[]; expireAfter?: 'preview' | 'final-target' | 'reply'; memberName?: string;
+}) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const { desktopJsLiteral: literal } = await import('./desktop-ui-controls.ts');
+  const source = (await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = '  const leadSelector = (live: Live) => {', end = '  const assertSameLive = async (';
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original initial conversation boundary');
+  for (const live of ['liveA', 'liveB']) assert.equal(source.split(`await openInitialChat(${live});`).length, 2);
+  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));
+  const memberName = fixture.memberName ?? 'team-lead', name = memberName === 'team-lead' ? 'lead' : memberName;
+  const selector = `button[aria-label^=${literal(name + ',')}]`;
+  const commands: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [];
+  const budgets: { label: string; ms: number }[] = [], values: boolean[] = [], trace: string[] = [];
+  const refusal = new Error('TEST original preview observation failed');
+  let previews = 0, targets = 0, opened = false;
+  const rect = { x: 20, y: 40, width: 100, height: 30, top: 40, bottom: 70 };
+  const button = (label: string, texts: string[]) => ({
+    label, tagName: 'BUTTON', parentElement: null,
+    textContent: texts.join(' '), getBoundingClientRect: () => rect,
+    matches(actual: string) { assert.equal(actual, ':disabled'); return false; },
+    closest(actual: string) { assert.equal(actual, '[role="dialog"]'); return null; },
+    getAnimations: () => [], contains: () => false,
+    querySelectorAll(actual: string) { assert.equal(actual, 'span'); return texts.map(textContent => ({ textContent })); },
+  });
+  let buttons = [button(name + ', conversation', ['TEST pending'])];
+  const cdp = {
+    async evaluate(expression: string) {
+      const preview = expression.includes('TEST boot ready') && !expression.startsWith('document.body.');
+      const reply = expression.startsWith('document.body.');
+      if (preview) {
+        const mode = fixture.modes[previews++];
+        if (mode === undefined) throw refusal;
+        const text = mode === 'current' || mode === 'duplicate-row' || mode === 'duplicate-span' ? 'TEST boot ready'
+          : mode === 'user-prefix' ? 'You: TEST boot ready' : mode === 'substring' ? 'TEST boot ready later' : 'TEST pending';
+        const row = button(name + ', conversation', mode === 'duplicate-span' ? [text, text] : [text]);
+        buttons = mode === 'missing' ? [] : mode === 'wrong-row'
+          ? [row, button('TEST-other-lead, conversation', ['TEST boot ready'])]
+          : mode === 'duplicate-row' ? [row, row] : [row];
+      }
+      const value = runInNewContext(expression, {
+        innerWidth: 1000, innerHeight: 720, getComputedStyle: () => ({ pointerEvents: 'auto' }),
+        document: {
+          querySelectorAll(actual: string) {
+            assert.equal(actual, selector, 'the original captured lead selector is unchanged');
+            return buttons.filter(row => row.label.startsWith(name + ','));
+          },
+          elementFromPoint: () => buttons[0], fonts: { status: 'loaded' },
+          documentElement: { getBoundingClientRect: () => ({ x: 0, width: 1000, top: 0, bottom: 720 }) },
+          body: { innerText: opened ? 'TEST boot ready' : '' },
+        },
+      });
+      await Promise.resolve();
+      if (preview) {
+        assert.equal(typeof value, 'boolean'); values.push(value); trace.push('preview');
+        fixture.clock.now += 10_000;
+        if (fixture.expireAfter === 'preview') fixture.clock.now = 60_000;
+      } else if (reply) {
+        trace.push('reply'); fixture.clock.now += 1000;
+        if (fixture.expireAfter === 'reply') fixture.clock.now = 60_000;
+      } else if (expression.includes('const elements =')) {
+        targets++; trace.push('target'); fixture.clock.now += 500;
+        if (fixture.expireAfter === 'final-target' && targets === 5) fixture.clock.now = 60_000;
+      } else {
+        assert.ok(expression.includes('const top=Math.max')); trace.push('scroll'); fixture.clock.now += 1000;
+      }
+      return value;
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      assert.ok(method === 'Page.bringToFront' || method === 'Input.dispatchMouseEvent');
+      commands.push({ method, ...params }); trace.push(String(params.type ?? method));
+      if (params.type === 'mouseReleased') opened = true;
+      return {};
+    },
+  };
+  const make = Function('environment', `'use strict';
+    const {assert,literal,ui,createDesktopUiControls,cdp,options,steps}=environment;
+    ${actual}
+    return openInitialChat;`) as (environment: Record<string, unknown>) => (live: unknown) => Promise<void>;
+  const run = make({ assert, literal, ui: undefined, cdp, steps, options: { assertOwnedRenderer() {} },
+    createDesktopUiControls(port: typeof cdp, options: Parameters<typeof createDesktopUiControls>[1]) {
+      const controls = createDesktopUiControls(port, options);
+      return { ...controls, waitRead: ((expression: string, label: string, timeoutMs = 30_000,
+        accepts?: (value: unknown) => boolean) => {
+        budgets.push({ label, ms: timeoutMs }); return controls.waitRead(expression, label, timeoutMs, accepts);
+      }) as typeof controls.waitRead };
+    },
+  });
+  return { run: () => run({ memberName }), commands, steps, budgets, values, trace, refusal };
+}
+
+test('original first A and B conversation waits for its exact preview before one physical click in the shared budget', { timeout: 5000 }, async t => {
+  const clock = { now: 0 }; t.mock.method(Date, 'now', () => clock.now);
+  for (const memberName of ['team-lead', 'TEST-captured-lead']) {
+    clock.now = 0;
+    const f = await originalSelectionInitialChat({ clock, memberName, modes: ['pending', 'current'] });
+    await f.run();
+    assert.deepEqual(f.values, [false, true]);
+    assert.deepEqual(f.budgets, [{ label: 'original lead BOOT preview', ms: 60_000 },
+      { label: 'original visible reply TEST boot ready', ms: 36_500 }]);
+    assert.deepEqual(f.commands, [{ method: 'Page.bringToFront' },
+      { method: 'Input.dispatchMouseEvent', type: 'mouseMoved', x: 70, y: 55 },
+      { method: 'Input.dispatchMouseEvent', type: 'mousePressed', x: 70, y: 55, button: 'left', clickCount: 1 },
+      { method: 'Input.dispatchMouseEvent', type: 'mouseReleased', x: 70, y: 55, button: 'left', clickCount: 1 }]);
+    assert.deepEqual(f.trace, ['preview', 'preview', 'scroll', 'Page.bringToFront', 'target', 'mouseMoved',
+      'target', 'target', 'target', 'target', 'mousePressed', 'mouseReleased', 'reply']);
+    assert.deepEqual(f.steps.map(row => [row.action, row.label]), [
+      ['mouseMoved', 'hover open original lead conversation'], ['mouseClick', 'open original lead conversation']]);
+  }
+});
+
+test('original initial conversation rejects observations crossing the same cutoff without a late press or replay', { timeout: 5000 }, async t => {
+  const clock = { now: 0 }; t.mock.method(Date, 'now', () => clock.now);
+  for (const expireAfter of ['preview', 'final-target', 'reply'] as const) {
+    clock.now = 0;
+    const f = await originalSelectionInitialChat({ clock, modes: ['current'], expireAfter });
+    await assert.rejects(f.run(), /original initial conversation deadline/);
+    assert.equal(f.commands.filter(row => row.type === 'mousePressed').length, expireAfter === 'reply' ? 1 : 0);
+    assert.equal(f.commands.filter(row => row.type === 'mouseReleased').length, expireAfter === 'reply' ? 1 : 0);
+    assert.equal(f.values.length, 1); assert.equal(f.budgets[0]!.ms, 60_000);
+    assert.equal(f.budgets.length, expireAfter === 'reply' ? 2 : 1);
+    assert.equal(f.trace.filter(value => value === 'reply').length, expireAfter === 'reply' ? 1 : 0);
+  }
+});
+
+test('original initial conversation refuses missing wrong or duplicate terminal previews before opening a chat', { timeout: 5000 }, async t => {
+  const clock = { now: 0 }; t.mock.method(Date, 'now', () => clock.now);
+  for (const mode of ['missing', 'pending', 'wrong-row', 'user-prefix', 'substring', 'duplicate-row', 'duplicate-span']) {
+    clock.now = 0;
+    const f = await originalSelectionInitialChat({ clock, modes: [mode] });
+    await assert.rejects(f.run(), error => error === f.refusal);
+    assert.deepEqual(f.values, [false], mode); assert.deepEqual(f.commands, [], mode);
+    assert.deepEqual(f.steps, [], mode); assert.deepEqual(f.trace, ['preview'], mode);
+    assert.deepEqual(f.budgets, [{ label: 'original lead BOOT preview', ms: 60_000 }]);
+  }
+});

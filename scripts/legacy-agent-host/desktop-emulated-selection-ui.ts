@@ -125,10 +125,32 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
       memberName: String(members[0]!.name) };
   };
   type Live = Awaited<ReturnType<typeof launch>>;
-  const openChat = async (live: Live) => {
+  const leadSelector = (live: Live) => {
     const name = live.memberName === 'team-lead' ? 'lead' : live.memberName;
-    const selector = `button[aria-label^=${literal(name + ',')}]`;
-    await ui.scrollTo(selector, 'original lead conversation'); await ui.click(selector, 'open original lead conversation');
+    return `button[aria-label^=${literal(name + ',')}]`;
+  };
+  const openChat = async (live: Live, controls = ui) => {
+    const selector = leadSelector(live);
+    await controls.scrollTo(selector, 'original lead conversation'); await controls.click(selector, 'open original lead conversation');
+  };
+  const openInitialChat = async (live: Live) => {
+    const deadline = Date.now() + 60_000;
+    const current = () => {
+      options.assertOwnedRenderer();
+      assert.ok(Date.now() < deadline, 'original initial conversation deadline');
+    };
+    const controls = createDesktopUiControls(cdp, { assertOwnedRenderer: current, step: value => steps.push(value) });
+    // Native BOOT completion precedes the rendered inbox preview. Keep its
+    // hydration and the original click/reply check within one existing budget.
+    await controls.waitRead(`(() => { const rows = [...document.querySelectorAll(${literal(leadSelector(live))})];
+      return rows.length === 1 && [...rows[0].querySelectorAll('span')]
+        .filter(span => span.textContent.trim() === 'TEST boot ready').length === 1; })()`,
+      'original lead BOOT preview', deadline - Date.now());
+    current();
+    await openChat(live, controls);
+    await controls.waitRead(`document.body.innerText.includes('TEST boot ready')`,
+      'original visible reply TEST boot ready', deadline - Date.now());
+    current();
   };
   const assertSameLive = async (live: Live, phase: string, originalInputs: boolean) => {
     assert.deepEqual(array((await live.owner()).runtimeCaptures), [live.capture]);
@@ -188,7 +210,7 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
 
   await ui.observeInput(); await ui.clickSidebar(fixture.uiSeed.subject);
   await openLaunch(a, true); const liveA = await launch(a);
-  await openChat(liveA); await visible('TEST boot ready');
+  await openInitialChat(liveA);
   proof.aLaunchScreenshot = await screenshot('a-launch'); proof.a = { capture: liveA.capture, definition: liveA.definition, thread: liveA.thread };
   if (installer) {
     const originalInvocation = (await readDesktopEmulatedCodexInstallerLog(installer.invocationLog)).filter(row => row.pid === liveA.thread.pid && row.kind === 'app-server');
@@ -272,7 +294,7 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
     assert.equal(nextSources[0]!.memberId, record(liveB.initial.binding).memberId);
     proof.bInvocation = nextInvocation[0]; proof.bSource = nextSources[0];
   }
-  await openChat(liveB); await visible('TEST boot ready');
+  await openInitialChat(liveB);
   proof.bLaunchScreenshot = await screenshot('b-launch'); proof.b = { capture: liveB.capture, definition: liveB.definition, thread: liveB.thread };
   await assertSameLive(liveA, 'after-next-launch', true);
   if (installer) record(proof.installer).settings = await readDesktopEmulatedCodexInstallerSettingsUi(cdp, { fixture, ui,

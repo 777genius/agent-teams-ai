@@ -414,7 +414,10 @@ export async function runDesktopTaskReviewCycleUiSmoke(
   const commentTarget = record(
     await ui.waitRead(
       desktopTaskCommentInputExpression(options.handleId, taskId),
-      'exact current correction Task/owner/surface'
+      'exact current correction Task/owner/surface',
+      30_000,
+      value => Boolean(value && typeof value === 'object' && !Array.isArray(value) &&
+        (value as Record<string, unknown>).canEditNow === true)
     )
   );
   assert.equal(typeof commentTarget.selector, 'string');
