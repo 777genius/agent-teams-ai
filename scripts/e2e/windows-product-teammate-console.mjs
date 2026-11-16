@@ -337,7 +337,17 @@ async function run() {
   // Start its real IPC before the separate OS PID census of Alice, which may
   // take seconds on a heavily loaded Windows runner. No safety gate is skipped.
   phase = 'app-managed-teammate-attach';
-  teamAliveBeforeAttach = await api(`window.electronAPI.teams.processAlive(${literal(teamName)})`);
+  // createTeam returns the run ID while the deterministic lead process is
+  // still being spawned. Wait for the normal product liveness transition,
+  // then dispatch addMember immediately, before any slow OS PID census.
+  let leadActivationError = null;
+  try {
+    teamAliveBeforeAttach = await wait('original product lead-run becomes active',
+      () => api(`window.electronAPI.teams.processAlive(${literal(teamName)})`),
+      120_000);
+  } catch (error) {
+    leadActivationError = String(error);
+  }
   if (!teamAliveBeforeAttach) {
     const snapshot = await api(
       `window.electronAPI.teams.getTeamAgentRuntime(${literal(teamName)})`
@@ -356,8 +366,8 @@ async function run() {
     };
   }
   assert.equal(teamAliveBeforeAttach, true,
-    'Product runtime became inactive before app-managed member attachment: ' +
-      JSON.stringify(attachLivenessDiagnostics));
+    'Original product lead-run failed to become active before roster attach: ' +
+      JSON.stringify({ ...attachLivenessDiagnostics, leadActivationError }));
   const attachedName = 'bob';
   const attachedSpec = {
     name: attachedName, providerId: 'anthropic', model: 'claude-sonnet-4-6',
