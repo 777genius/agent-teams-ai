@@ -5,7 +5,7 @@ const { createController } = require('../src/index.js');
 const kanban = require('../src/internal/kanban.js');
 const kanbanStore = require('../src/internal/kanbanStore.js');
 
-describe('human-only review approval', () => {
+describe('configurable review flow', () => {
   let dir;
   let board;
   let controller;
@@ -32,7 +32,7 @@ describe('human-only review approval', () => {
   it('keeps opt-in disabled and preserves the existing agent approval workflow', () => {
     const task = board.createTask({ subject: 'Legacy approval', owner: 'bob' });
     board.completeTask(task.id, 'bob');
-    expect(board.getKanbanState().humanOnlyApproval).toBe(false);
+    expect(board.getKanbanState().reviewFlow).toBe('agent_approval');
     board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
     board.approveReview(task.id, { from: 'alice' });
     expect(board.getTask(task.id).reviewState).toBe('approved');
@@ -42,7 +42,7 @@ describe('human-only review approval', () => {
   it('closes only the requested cycle to reviewed Done and allows human acceptance', () => {
     const task = board.createTask({ subject: 'Require human acceptance', owner: 'bob' });
     board.completeTask(task.id, 'bob');
-    board.setHumanOnlyApproval(true);
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
     board.addReviewer('alice');
     board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
 
@@ -84,7 +84,7 @@ describe('human-only review approval', () => {
   it('recovers both dependency and lead notices after an interrupted review completion', () => {
     const task = board.createTask({ subject: 'Interrupted review completion', owner: 'bob' });
     board.completeTask(task.id, 'bob');
-    board.setHumanOnlyApproval(true);
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
     board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
     const dependent = board.createTask({
       subject: 'Blocked during review', owner: 'bob', blockedBy: [task.id],
@@ -121,7 +121,7 @@ describe('human-only review approval', () => {
   it('replays notices after a review overlay was persisted before an error', () => {
     const task = board.createTask({ subject: 'Post-write review failure', owner: 'bob' });
     board.completeTask(task.id, 'bob');
-    board.setHumanOnlyApproval(true);
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
     board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
     const dependent = board.createTask({
       subject: 'Waiting on AI review', owner: 'bob', blockedBy: [task.id],
@@ -161,7 +161,7 @@ describe('human-only review approval', () => {
   it('repairs an Approved placement without treating it as recorded human consent', () => {
     const task = board.createTask({ subject: 'Recover human history', owner: 'bob' });
     board.completeTask(task.id, 'bob');
-    board.setHumanOnlyApproval(true);
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
     const state = JSON.parse(fs.readFileSync(kanbanFile(), 'utf8'));
     state.tasks[task.id] = { column: 'approved', movedAt: new Date().toISOString() };
     fs.writeFileSync(kanbanFile(), JSON.stringify(state));
@@ -178,7 +178,7 @@ describe('human-only review approval', () => {
   it('repairs interrupted human approval after disabling the policy', () => {
     const task = board.createTask({ subject: 'Interrupted human acceptance', owner: 'bob' });
     board.completeTask(task.id, 'bob');
-    board.setHumanOnlyApproval(true);
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
     const fail = vi.spyOn(kanbanStore, 'setKanbanColumn').mockImplementationOnce(() => {
       throw new Error('synthetic human overlay failure');
     });
@@ -186,7 +186,7 @@ describe('human-only review approval', () => {
     fail.mockRestore();
     expect(events(task.id, 'human_approved')).toHaveLength(1);
     expect(board.getKanbanState().tasks[task.id]).toBeUndefined();
-    board.setHumanOnlyApproval(false);
+    board.setReviewFlowSettings({ reviewFlow: 'agent_approval' });
     expect(board.approveAsHuman(task.id)).toMatchObject({ reviewState: 'approved' });
     expect(board.getKanbanState().tasks[task.id].column).toBe('approved');
     expect(events(task.id, 'human_approved')).toHaveLength(1);
@@ -195,7 +195,7 @@ describe('human-only review approval', () => {
   it('replays dependency notice after the human approval overlay already persisted', () => {
     const task = board.createTask({ subject: 'Human approval post-write failure', owner: 'bob' });
     board.completeTask(task.id, 'bob');
-    board.setHumanOnlyApproval(true);
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
     board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
     const dependent = board.createTask({
       subject: 'Waiting on human approval', owner: 'bob', blockedBy: [task.id],
@@ -224,7 +224,7 @@ describe('human-only review approval', () => {
   it('resumes an interrupted human rejection without duplicate events or owner messages', () => {
     const task = board.createTask({ subject: 'Interrupted human rejection', owner: 'bob' });
     board.completeTask(task.id, 'bob');
-    board.setHumanOnlyApproval(true);
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
     board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
     const cycle = events(task.id, 'review_requested')[0].id;
     board.completeReview(task.id, { from: 'alice', expectedReviewRequestId: cycle });
@@ -260,7 +260,7 @@ describe('human-only review approval', () => {
   it('recovers dependency wake-ups after interrupted human acceptance from Review', () => {
     const blocker = board.createTask({ subject: 'Human review blocker', owner: 'bob' });
     board.completeTask(blocker.id, 'bob');
-    board.setHumanOnlyApproval(true);
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
     board.requestReview(blocker.id, { from: 'alice', reviewer: 'alice' });
     const dependent = board.createTask({
       subject: 'Dependent of user approval', owner: 'bob', blockedBy: [blocker.id],
@@ -284,7 +284,7 @@ describe('human-only review approval', () => {
   it('rejects stale, absent, wrong-reviewer and superseded cycle IDs without mutation', () => {
     const task = board.createTask({ subject: 'Stale cycle', owner: 'bob' });
     board.completeTask(task.id, 'bob');
-    board.setHumanOnlyApproval(true);
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
     board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
     const cycle = events(task.id, 'review_requested')[0].id;
     const beforeTask = fs.readFileSync(taskFile(task.id), 'utf8');
@@ -312,11 +312,11 @@ describe('human-only review approval', () => {
   it('retains manual acceptance of reviewed Done after the policy is switched off', () => {
     const task = board.createTask({ subject: 'Reviewed before toggle', owner: 'bob' });
     board.completeTask(task.id, 'bob');
-    board.setHumanOnlyApproval(true);
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
     board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
     const cycle = events(task.id, 'review_requested')[0].id;
     board.completeReview(task.id, { from: 'alice', expectedReviewRequestId: cycle });
-    board.setHumanOnlyApproval(false);
+    board.setReviewFlowSettings({ reviewFlow: 'agent_approval' });
     expect(() => board.approveReview(task.id, { from: 'alice' })).toThrow(/must be in review/);
     expect(board.approveAsHuman(task.id)).toMatchObject({ reviewState: 'approved' });
     expect(events(task.id, 'human_approved')).toHaveLength(1);
@@ -328,7 +328,7 @@ describe('human-only review approval', () => {
   it('lets only the trusted human path request changes from reviewed Done', () => {
     const task = board.createTask({ subject: 'Human rejects AI review', owner: 'bob' });
     board.completeTask(task.id, 'bob');
-    board.setHumanOnlyApproval(true);
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
     board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
     const cycle = events(task.id, 'review_requested')[0].id;
     board.completeReview(task.id, { from: 'alice', expectedReviewRequestId: cycle });
@@ -350,7 +350,7 @@ describe('human-only review approval', () => {
   it('rejects stale or missing reviewer rejection tokens without changing the board', () => {
     const task = board.createTask({ subject: 'Reject stale review decision', owner: 'bob' });
     board.completeTask(task.id, 'bob');
-    board.setHumanOnlyApproval(true);
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
     board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
     const cycle = events(task.id, 'review_requested')[0].id;
     const beforeTask = fs.readFileSync(taskFile(task.id), 'utf8');
@@ -386,7 +386,7 @@ describe('human-only review approval', () => {
       expect(first.deduplicated).toBeUndefined();
 
       vi.advanceTimersByTime(1000);
-      board.setHumanOnlyApproval(true);
+      board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
       board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
       const cycle = events(task.id, 'review_requested').at(-1).id;
       vi.advanceTimersByTime(1000);
@@ -422,7 +422,7 @@ describe('human-only review approval', () => {
       subject: 'Depends on reviewed blocker', owner: 'bob', blockedBy: [blocker.id],
     });
     board.completeTask(blocker.id, 'bob');
-    board.setHumanOnlyApproval(true);
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
     board.requestReview(blocker.id, { from: 'alice', reviewer: 'alice' });
     const reviewId = events(blocker.id, 'review_requested').at(-1).id;
     board.completeReview(blocker.id, { from: 'alice', expectedReviewRequestId: reviewId });
@@ -439,15 +439,15 @@ describe('human-only review approval', () => {
 
   it('preserves settings through kanban writes and fails closed for corrupt stored policy', () => {
     board.addReviewer('alice');
-    board.setHumanOnlyApproval(true);
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
     board.removeReviewer('alice');
-    expect(board.getKanbanState().humanOnlyApproval).toBe(true);
+    expect(board.getKanbanState().reviewFlow).toBe('human_approval');
     const disk = JSON.parse(fs.readFileSync(kanbanFile(), 'utf8'));
-    expect(disk.humanOnlyApproval).toBe(true);
-    disk.humanOnlyApproval = 'true';
+    expect(disk.reviewFlow).toBe('human_approval');
+    disk.reviewFlow = 'everyone';
     fs.writeFileSync(kanbanFile(), JSON.stringify(disk));
-    expect(() => board.getKanbanState()).toThrow(/policy is corrupt/);
-    expect(() => board.setHumanOnlyApproval(false)).toThrow(/policy is corrupt/);
+    expect(() => board.getKanbanState()).toThrow(/review flow is corrupt/);
+    expect(() => board.setReviewFlowSettings({ reviewFlow: 'agent_approval' })).toThrow(/review flow is corrupt/);
   });
 
   it('allows explicit AI-only completion when default policy is off', () => {
@@ -459,5 +459,44 @@ describe('human-only review approval', () => {
       ok: true, column: 'done', reviewState: 'reviewed',
     });
     expect(board.getTask(task.id).reviewState).toBe('reviewed');
+  });
+
+  it('rejects unknown flows, empty settings and agent-forged values without persisting', () => {
+    expect(() => board.setReviewFlowSettings({ reviewFlow: 'everyone' })).toThrow(/reviewFlow must be one of/);
+    expect(() => board.setReviewFlowSettings({})).toThrow(/empty/);
+    expect(() => board.setReviewFlowSettings({ reviewFlowPrompt: 'x'.repeat(1001) })).toThrow(/at most 1000/);
+    expect(() => board.setReviewFlowSettings({ reviewFlowPrompt: 5 })).toThrow(/must be a string/);
+    expect(board.getKanbanState()).toMatchObject({ reviewFlow: 'agent_approval' });
+    expect(board.getKanbanState().reviewFlowPrompt).toBeUndefined();
+  });
+
+  it('keeps the flow when only the prompt changes and clears the prompt with empty text', () => {
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
+    board.setReviewFlowSettings({ reviewFlowPrompt: '  Check the migration plan first.  ' });
+    expect(board.getKanbanState()).toMatchObject({
+      reviewFlow: 'human_approval', reviewFlowPrompt: 'Check the migration plan first.',
+    });
+    board.setReviewFlowSettings({ reviewFlow: 'agent_approval' });
+    expect(board.getKanbanState()).toMatchObject({
+      reviewFlow: 'agent_approval', reviewFlowPrompt: 'Check the migration plan first.',
+    });
+    board.setReviewFlowSettings({ reviewFlowPrompt: '   ' });
+    expect(board.getKanbanState().reviewFlowPrompt).toBeUndefined();
+    expect(JSON.parse(fs.readFileSync(kanbanFile(), 'utf8')).reviewFlowPrompt).toBeUndefined();
+  });
+
+  it('delivers the owner prompt to the reviewer without changing who may approve', () => {
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval', reviewFlowPrompt: 'Run the e2e suite before deciding.' });
+    const task = board.createTask({ subject: 'Prompted review', owner: 'bob' });
+    board.completeTask(task.id, 'bob');
+    board.addReviewer('alice');
+    board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+    const inbox = JSON.parse(fs.readFileSync(
+      path.join(dir, 'teams', 'fixture', 'inboxes', 'alice.json'), 'utf8'
+    ));
+    const text = inbox.map((msg) => msg.text).join('\n');
+    expect(text).toContain('Run the e2e suite before deciding.');
+    expect(text).toContain('do not change which tools you may use');
+    expect(() => board.approveReview(task.id, { from: 'alice' })).toThrow(/Human approval required/);
   });
 });

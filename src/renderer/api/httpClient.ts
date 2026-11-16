@@ -110,6 +110,7 @@ import type {
   Project,
   QueuedUserMessagesSnapshot,
   RepositoryGroup,
+  ReviewFlowSettings,
   Schedule,
   ScheduleRun,
   SearchSessionsResult,
@@ -1166,8 +1167,8 @@ export class HttpAPIClient implements ElectronAPI {
     ): Promise<void> => {
       throw new Error('Team kanban is not available in browser mode');
     },
-    setHumanOnlyApproval: async (_teamName: string, _enabled: boolean): Promise<void> => {
-      throw new Error('Human approval settings are only available in the desktop app');
+    setReviewFlowSettings: async (_teamName: string, _settings: ReviewFlowSettings): Promise<void> => {
+      throw new Error('Review flow settings are only available in the desktop app');
     },
     updateKanbanColumnOrder: async (
       _teamName: string,

@@ -11,17 +11,27 @@ the default and offer an opt-in team policy.
 
 ## Product contract
 
-Add a settings button to the Approved column header. Its shared Radix menu has
-one checkbox: **Only users can move tasks to Approved**. It is unchecked by
-default. Use the shared Tooltip and an accessible button label. Support both
-board layouts and avoid triggering column dragging when using the button.
+Add a settings button to the Approved column header. It opens a popover ("Review
+flow") with a radio choice of **who gives final approval** and an optional
+free-text **instructions for agents** field, saved together with one Save button
+(Cancel and closing discard the draft; the popover always opens from the
+persisted values). Use the shared Tooltip and an accessible button label.
+Support both board layouts and avoid triggering column dragging when using the
+button.
 
-Persist `humanOnlyApproval: boolean` with the team's kanban configuration, not
-in renderer local storage. Missing values mean false. Only the human settings
-surface may change this policy; agents can read it in board/review context.
+Persist `reviewFlow: 'agent_approval' | 'human_approval'` and optional
+`reviewFlowPrompt: string` (trimmed, at most 1000 characters, empty clears it)
+with the team's kanban configuration, not in renderer local storage. Missing
+`reviewFlow` means `agent_approval` (the existing behavior, the default). The flow
+is an enum rather than a boolean so further presets (for example a Lead
+sign-off step) can be added without a data migration. Only the human settings
+surface may change these values; agents read them through board/review context
+(`kanban_get`), and the prompt is also appended to each review request sent to
+the reviewer. The prompt is advisory text for agents: it never changes which
+tools or actors are permitted, enforcement stays in the controller.
 
-With the policy disabled, existing review_start, review_approve, and
-review_request_changes behavior remains unchanged. With it enabled:
+With `agent_approval`, existing review_start, review_approve, and
+review_request_changes behavior remains unchanged. With `human_approval`:
 
 1. The owner completes the work: Done.
 2. review_request assigns the same task to a reviewer: Review.
@@ -32,7 +42,7 @@ review_request_changes behavior remains unchanged. With it enabled:
    reviewer must preserve that ID from the cycle being reviewed (never fetch
    the latest ID only at completion), then either calls
    review_request_changes or review_complete with `expectedReviewRequestId`.
-   In human-only mode both agent decisions require that same cycle ID.
+   In `human_approval` mode both agent decisions require that same cycle ID.
 4. review_complete closes AI review and returns the task to Done, recording its
    outcome and notifying Lead. The human can inspect the review note/history.
 5. Only a human action moves the task to Approved. Human rejection can request
@@ -64,7 +74,7 @@ current state (Done/reviewed, or Approved if a human has subsequently accepted),
 without duplicate history, intervals, or notifications. A missing,
 unknown, or stale ID (including one from a cycle superseded by review_request,
 reopening, or deletion) fails explicitly **without any mutation**; it must never
-close a newer cycle. Under human-only policy, review_request_changes must also
+close a newer cycle. Under `human_approval`, review_request_changes must also
 reject missing/stale IDs without changing task status. A fresh review_request after review_completed starts a new
 cycle and invalidates earlier review evidence. Reopening work resets reviewed
 state and the human acceptance indicator. Deleted and unfinished tasks reject
@@ -99,7 +109,7 @@ its cycle ID and commit its state changes while holding that same lock. The main
 mutation; it must not update kanban-state.json through an independent read/write
 or renderer snapshot. A concurrent settings change must not allow approval
 based on stale state. Surface validation/persistence failures, reload the
-persisted policy, and restore the checkbox on error. Keep unrelated kanban
+persisted policy, and reload the persisted values on error. Keep unrelated kanban
 writes from dropping the new property.
 
 ## Dependencies and compatibility

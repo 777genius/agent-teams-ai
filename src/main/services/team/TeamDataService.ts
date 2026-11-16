@@ -6,6 +6,7 @@ import { yieldToEventLoop } from '@main/utils/asyncYield';
 import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
 import { stripAgentBlocks, wrapAgentBlock } from '@shared/constants/agentBlocks';
+import { isHumanApprovalFlow } from '@shared/constants/kanban';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import {
@@ -106,6 +107,7 @@ import type {
   MessagesPage,
   PersistedTeamLaunchSnapshot,
   ReplaceMembersRequest,
+  ReviewFlowSettings,
   SendMessageRequest,
   SendMessageResult,
   TaskAttachmentMeta,
@@ -3991,8 +3993,8 @@ export class TeamDataService {
     return texts.length > MAX_LEAD_TEXTS ? texts.slice(-MAX_LEAD_TEXTS) : texts;
   }
 
-  async setHumanOnlyApproval(teamName: string, enabled: boolean): Promise<void> {
-    this.getTaskBoard(teamName).setHumanOnlyApproval(enabled);
+  async setReviewFlowSettings(teamName: string, settings: ReviewFlowSettings): Promise<void> {
+    this.getTaskBoard(teamName).setReviewFlowSettings(settings);
   }
 
   async updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {
@@ -4012,10 +4014,10 @@ export class TeamDataService {
         });
       } else {
         // Only the desktop renderer's user action reaches this path. Agent tools
-        // have no updateKanban/setHumanOnlyApproval endpoint; controller locks
+        // have no updateKanban/setReviewFlowSettings endpoint; controller locks
         // and re-checks the policy before every approval mutation.
         const task = taskBoard.getTask(taskId) as TeamTask;
-        if ((taskBoard.getKanbanState?.() as KanbanState | null)?.humanOnlyApproval === true ||
+        if (isHumanApprovalFlow(taskBoard.getKanbanState?.() as KanbanState | null) ||
             getReviewStateFromTask(task) === 'reviewed') {
           taskBoard.approveAsHuman(taskId);
           return;
@@ -4055,7 +4057,7 @@ export class TeamDataService {
         latestDecision?.type === 'review_changes_requested' &&
         latestDecision.actor === 'user';
       if (reviewState === 'reviewed' ||
-          (taskBoard.getKanbanState?.() as KanbanState | null)?.humanOnlyApproval === true ||
+          isHumanApprovalFlow(taskBoard.getKanbanState?.() as KanbanState | null) ||
           retryHumanRejection) {
         taskBoard.requestChangesAsHuman(taskId, {
           comment: patch.comment?.trim() || 'User requested changes.',

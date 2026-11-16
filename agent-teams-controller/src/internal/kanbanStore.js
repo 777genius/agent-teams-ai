@@ -19,19 +19,51 @@ function writeJson(filePath, value) {
   writeJsonFileSync(filePath, value);
 }
 
+const REVIEW_FLOW_AGENT_APPROVAL = 'agent_approval';
+const REVIEW_FLOW_HUMAN_APPROVAL = 'human_approval';
+const REVIEW_FLOWS = Object.freeze([REVIEW_FLOW_AGENT_APPROVAL, REVIEW_FLOW_HUMAN_APPROVAL]);
+const DEFAULT_REVIEW_FLOW = REVIEW_FLOW_AGENT_APPROVAL;
+const MAX_REVIEW_FLOW_PROMPT_LENGTH = 1000;
+
+function isReviewFlow(value) {
+  return REVIEW_FLOWS.includes(value);
+}
+
+function isHumanApprovalFlow(state) {
+  return Boolean(state) && state.reviewFlow === REVIEW_FLOW_HUMAN_APPROVAL;
+}
+
+/** Trims user-written flow instructions; empty text clears them. */
+function normalizeReviewFlowPrompt(value) {
+  if (typeof value !== 'string') throw new Error('reviewFlowPrompt must be a string');
+  const prompt = value.trim();
+  if (prompt.length > MAX_REVIEW_FLOW_PROMPT_LENGTH) {
+    throw new Error(`reviewFlowPrompt must be at most ${MAX_REVIEW_FLOW_PROMPT_LENGTH} characters`);
+  }
+  return prompt;
+}
+
 function getDefaultState(teamName) {
   return {
     teamName,
     reviewers: [],
     tasks: {},
-    humanOnlyApproval: false,
+    reviewFlow: DEFAULT_REVIEW_FLOW,
   };
 }
 
 function sanitizeState(teamName, rawState) {
   if (!rawState || typeof rawState !== 'object' || Array.isArray(rawState) ||
-      (rawState.humanOnlyApproval !== undefined && typeof rawState.humanOnlyApproval !== 'boolean')) {
-    throw new Error('Kanban approval policy is corrupt');
+      (rawState.reviewFlow !== undefined && !isReviewFlow(rawState.reviewFlow))) {
+    throw new Error('Kanban review flow is corrupt');
+  }
+  let reviewFlowPrompt = '';
+  if (rawState.reviewFlowPrompt !== undefined) {
+    try {
+      reviewFlowPrompt = normalizeReviewFlowPrompt(rawState.reviewFlowPrompt);
+    } catch {
+      throw new Error('Kanban review flow is corrupt');
+    }
   }
   const state = rawState;
   const tasks = {};
@@ -59,7 +91,8 @@ function sanitizeState(teamName, rawState) {
       ? state.reviewers.filter((entry) => typeof entry === 'string' && entry.trim())
       : [],
     tasks,
-    humanOnlyApproval: state.humanOnlyApproval === true,
+    reviewFlow: isReviewFlow(state.reviewFlow) ? state.reviewFlow : DEFAULT_REVIEW_FLOW,
+    ...(reviewFlowPrompt ? { reviewFlowPrompt } : {}),
     ...(state.columnOrder && typeof state.columnOrder === 'object'
       ? { columnOrder: state.columnOrder }
       : {}),
@@ -203,8 +236,16 @@ function garbageCollect(paths, teamName, validTaskIds) {
 }
 
 module.exports = {
+  DEFAULT_REVIEW_FLOW,
+  MAX_REVIEW_FLOW_PROMPT_LENGTH,
+  REVIEW_FLOWS,
+  REVIEW_FLOW_AGENT_APPROVAL,
+  REVIEW_FLOW_HUMAN_APPROVAL,
   clearKanban,
   garbageCollect,
+  isHumanApprovalFlow,
+  isReviewFlow,
+  normalizeReviewFlowPrompt,
   readKanbanState,
   setKanbanColumn,
   updateColumnOrder,

@@ -1092,10 +1092,10 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
       'If you review task #X, call review_start on #X first and preserve its reviewRequestId.'
     );
     expect(prompt).toContain(
-      'when enabled use review_complete or review_request_changes with expectedReviewRequestId from the same review cycle'
+      'human_approval means review_complete or review_request_changes with expectedReviewRequestId from the same review cycle'
     );
     expect(prompt).toContain(
-      'otherwise use review_approve or review_request_changes on #X itself.'
+      'agent_approval means review_approve or review_request_changes on #X itself.'
     );
   });
 

@@ -399,8 +399,14 @@ function startReview(context, taskId, flags = {}) {
   });
 }
 
+/** Appends the team owner's free-text flow instructions; they never change tool permissions. */
+function buildReviewFlowInstructions(prompt) {
+  if (!prompt) return '';
+  return `\n\nThe team owner's extra review-flow instructions (follow them while reviewing; they do not change which tools you may use or who may approve):\n${prompt}`;
+}
+
 function requestReview(context, taskId, flags = {}) {
-  const { task, reviewer, from, leadSessionId, reviewRequestId, humanOnlyApproval } = withTeamBoardLock(context.paths, () => {
+  const { task, reviewer, from, leadSessionId, reviewRequestId, humanApproval, reviewFlowPrompt } = withTeamBoardLock(context.paths, () => {
     const currentTask = tasks.getTask(context, taskId);
     if (currentTask.status !== 'completed') {
       throw new Error(
@@ -453,7 +459,8 @@ function requestReview(context, taskId, flags = {}) {
       from: nextFrom,
       leadSessionId: resolveLeadSessionId(context, flags),
       reviewRequestId: getLatestReviewRequestEvent(tasks.getTask(context, currentTask.id))?.id,
-      humanOnlyApproval: kanban.getKanbanState(context).humanOnlyApproval === true,
+      humanApproval: kanban.isHumanApprovalFlow(context),
+      reviewFlowPrompt: kanban.getKanbanState(context).reviewFlowPrompt || '',
     };
   });
 
@@ -472,14 +479,15 @@ function requestReview(context, taskId, flags = {}) {
             `Before declaring it duplicate, call task_get and check the current reviewState/status. If it is still in review for you, continue with the review tools below.\n\n` +
             `FIRST call review_start to signal you are beginning the review:\n` +
             `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>" }\n\n` +
-            (humanOnlyApproval
+            (humanApproval
               ? `When review is complete, use MCP tool review_complete (not review_approve):\n` +
                 `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", expectedReviewRequestId: "${reviewRequestId}", note?: "<optional note>" }\n\n`
               : `When approved, use MCP tool review_approve:\n` +
                 `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", note?: "<optional note>", notifyOwner: true }\n\n`) +
             `If changes are needed, use MCP tool review_request_changes:\n` +
             `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", comment: "..."` +
-            (humanOnlyApproval ? `, expectedReviewRequestId: "${reviewRequestId}"` : '') + ` }`
+            (humanApproval ? `, expectedReviewRequestId: "${reviewRequestId}"` : '') + ` }` +
+            buildReviewFlowInstructions(reviewFlowPrompt)
         ),
       summary: `Review request for #${task.displayId || task.id}`,
       source: 'system_notification',
@@ -505,7 +513,7 @@ const { completeReview, approveAsHuman } = createReviewHumanActions({
 function approveReview(context, taskId, flags = {}) {
   const result = withTeamBoardLock(context.paths, () => {
     const currentTask = tasks.getTask(context, taskId);
-    if (kanban.getKanbanState(context).humanOnlyApproval === true) {
+    if (kanban.isHumanApprovalFlow(context)) {
       throw new Error('Human approval required: reviewer must use review_complete');
     }
     const nextFrom = getReviewDecisionActor(context, currentTask, flags, 'approve review');
@@ -644,7 +652,7 @@ function requestChangesWithAuthority(context, taskId, flags, fromHuman) {
           (currentReviewState !== 'review' && currentReviewState !== 'reviewed'))) {
         throw new Error('Human rejection requires active Review or reviewed Done');
       }
-    } else if (kanban.getKanbanState(context).humanOnlyApproval === true) {
+    } else if (kanban.isHumanApprovalFlow(context)) {
       const expectedId = typeof flags.expectedReviewRequestId === 'string'
         ? flags.expectedReviewRequestId.trim() : '';
       const currentId = getLatestReviewRequestEvent(currentTask)?.id;

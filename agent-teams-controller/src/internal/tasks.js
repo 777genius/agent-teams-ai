@@ -823,9 +823,9 @@ function listTaskInventory(context, filters = {}) {
     return agenda.listTaskInventory(context.paths, context.teamName, filters);
 }
 
-function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessagingProtocol('native'), humanOnlyApproval = false) {
-    const reviewDecisionTool = humanOnlyApproval ? 'review_complete' : 'review_approve';
-    const reviewDecisionResult = humanOnlyApproval ? 'DONE (awaiting human acceptance)' : 'APPROVED';
+function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessagingProtocol('native'), humanApproval = false) {
+    const reviewDecisionTool = humanApproval ? 'review_complete' : 'review_approve';
+    const reviewDecisionResult = humanApproval ? 'DONE (awaiting human acceptance)' : 'APPROVED';
     const notifyLeadExample = messagingProtocol.buildLeadMessageExample({
         teamName,
         leadName: '<lead-name>',
@@ -873,10 +873,11 @@ function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessa
    { teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>" }
    This is MANDATORY before ${reviewDecisionTool} or review_request_changes. Save the reviewRequestId returned by review_start; an older ID must not be used for a newer review cycle.
 4. If you are asked to review and the task is accepted, move it to ${reviewDecisionResult} with MCP tool ${reviewDecisionTool}:
-   ${humanOnlyApproval ? `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", expectedReviewRequestId: "<reviewRequestId from the cycle you reviewed>", note?: "<optional note>" }` : `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", note?: "<optional note>", notifyOwner: true }`}
-   CRITICAL: Text comments like "approved" or "LGTM" do NOT change review state. You MUST call ${reviewDecisionTool}; in human-only mode, an agent NEVER moves a task to Approved.
+   ${humanApproval ? `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", expectedReviewRequestId: "<reviewRequestId from the cycle you reviewed>", note?: "<optional note>" }` : `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", note?: "<optional note>", notifyOwner: true }`}
+   CRITICAL: Text comments like "approved" or "LGTM" do NOT change review state. You MUST call ${reviewDecisionTool}; when the team's reviewFlow is human_approval, an agent NEVER moves a task to Approved.
+   If kanban_get returns a reviewFlowPrompt, it holds the team owner's extra review-flow instructions: follow them. They never change which tools you may use or who may approve.
 5. If review fails and changes are needed, use MCP tool review_request_changes:
-   ${humanOnlyApproval ? `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", comment: "<what to fix>", expectedReviewRequestId: "<reviewRequestId from the cycle you reviewed>" }` : `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", comment: "<what to fix>" }`}
+   ${humanApproval ? `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", comment: "<what to fix>", expectedReviewRequestId: "<reviewRequestId from the cycle you reviewed>" }` : `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", comment: "<what to fix>" }`}
 6. NEVER skip status updates. A task is NOT done until completed status is written.
    - Never "bulk-complete" a batch of tasks at the end. Update status incrementally as you work.
 7. To reply to a comment on a task, use MCP tool task_add_comment:
@@ -1087,7 +1088,7 @@ async function memberBriefing(context, memberName, options = {}) {
         '',
         buildMemberTaskProtocol(
             context.teamName, messagingProtocol,
-            kanbanStore.readKanbanState(context.paths, context.teamName).humanOnlyApproval === true
+            kanbanStore.isHumanApprovalFlow(kanbanStore.readKanbanState(context.paths, context.teamName))
         ),
         '',
         buildMemberProcessProtocol(context.teamName)

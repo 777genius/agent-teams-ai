@@ -162,8 +162,8 @@ function approveAsHuman(context, taskId) {
   return review.approveAsHuman(context, taskId);
 }
 
-function setHumanOnlyApproval(context, enabled) {
-  return kanban.setHumanOnlyApproval(context, enabled);
+function setReviewFlowSettings(context, settings) {
+  return kanban.setReviewFlowSettings(context, settings);
 }
 
 function requestChanges(context, taskId, flags) {
@@ -206,7 +206,7 @@ module.exports = {
   resolveTaskId,
   restoreTask,
   setKanbanColumn,
-  setHumanOnlyApproval,
+  setReviewFlowSettings,
   setNeedsClarification,
   setTaskOwner,
   setTaskStatus,

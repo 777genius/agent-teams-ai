@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { useResizableColumns } from '@renderer/hooks/useResizableColumns';
 import { cn } from '@renderer/lib/utils';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { DEFAULT_REVIEW_FLOW } from '@shared/constants/kanban';
 import { isTeamTaskNeedsFixActionable } from '@shared/utils/teamTaskState';
 import {
   CheckCircle2,
@@ -43,7 +44,13 @@ import type { KanbanViewMode } from './KanbanViewModeSwitch';
 import type { TaskGroupOption } from './teamTaskProjection';
 import type { DragEndEvent } from '@dnd-kit/core';
 import type { Session } from '@renderer/types/data';
-import type { KanbanColumnId, KanbanState, ResolvedTeamMember, TeamTask } from '@shared/types';
+import type {
+  KanbanColumnId,
+  KanbanState,
+  ResolvedTeamMember,
+  ReviewFlowSettings,
+  TeamTask,
+} from '@shared/types';
 
 const COLUMN_ACCENTS: Record<KanbanColumnId, { accentColor: string; icon: React.ReactNode }> = {
   todo: {
@@ -88,7 +95,7 @@ interface KanbanBoardProps {
   onSortChange: (sort: KanbanSortState) => void;
   onRequestReview: (taskId: string) => void;
   onApprove: (taskId: string) => void;
-  onHumanOnlyApprovalChange?: (enabled: boolean) => Promise<void>;
+  onReviewFlowSettingsChange?: (settings: ReviewFlowSettings) => Promise<void>;
   onRequestChanges: (taskId: string) => void;
   onMoveBackToDone: (taskId: string) => void;
   onStartTask: (taskId: string) => void;
@@ -324,7 +331,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   onSortChange,
   onRequestReview,
   onApprove,
-  onHumanOnlyApprovalChange,
+  onReviewFlowSettingsChange,
   onRequestChanges,
   onMoveBackToDone,
   onStartTask,
@@ -349,12 +356,17 @@ export const KanbanBoard = memo(function KanbanBoard({
   const [visibleTaskLimitsByColumn, setVisibleTaskLimitsByColumn] = useState<
     Partial<Record<KanbanColumnId, number>>
   >({});
-  const approvalSettingsAccessory = onHumanOnlyApprovalChange ? (
-    <KanbanApprovedSettingsMenu
-      enabled={kanbanState.humanOnlyApproval === true}
-      onChange={onHumanOnlyApprovalChange}
-    />
-  ) : null;
+  const approvalSettingsAccessory = useMemo(
+    () =>
+      onReviewFlowSettingsChange ? (
+        <KanbanApprovedSettingsMenu
+          reviewFlow={kanbanState.reviewFlow ?? DEFAULT_REVIEW_FLOW}
+          reviewFlowPrompt={kanbanState.reviewFlowPrompt ?? ''}
+          onSave={onReviewFlowSettingsChange}
+        />
+      ) : null,
+    [kanbanState.reviewFlow, kanbanState.reviewFlowPrompt, onReviewFlowSettingsChange]
+  );
   const hasReviewers = kanbanState.reviewers.length > 0;
   const enableTaskSorting =
     viewMode === 'columns' && !!onColumnOrderChange && sort.field === 'manual';

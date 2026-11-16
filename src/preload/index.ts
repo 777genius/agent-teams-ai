@@ -217,8 +217,8 @@ import {
   TEAM_SAVE_TASK_ATTACHMENT,
   TEAM_SEND_MESSAGE,
   TEAM_SET_CHANGE_PRESENCE_TRACKING,
-  TEAM_SET_HUMAN_ONLY_APPROVAL,
   TEAM_SET_PROJECT_BRANCH_TRACKING,
+  TEAM_SET_REVIEW_FLOW_SETTINGS,
   TEAM_SET_TASK_CLARIFICATION,
   TEAM_SET_TASK_LOG_STREAM_TRACKING,
   TEAM_SET_TOOL_ACTIVITY_TRACKING,
@@ -359,6 +359,7 @@ import type {
   ReviewConflictResolution,
   ReviewDecisionConflictCandidateSummary,
   ReviewFileScope,
+  ReviewFlowSettings,
   ReviewRedoAction,
   ReviewRenameRecoveryExpectation,
   ReviewUndoAction,
@@ -1050,8 +1051,8 @@ const electronAPI: ElectronAPI = {
     updateKanban: async (teamName: string, taskId: string, patch: UpdateKanbanPatch) => {
       return invokeIpcWithResult<void>(TEAM_UPDATE_KANBAN, teamName, taskId, patch);
     },
-    setHumanOnlyApproval: async (teamName: string, enabled: boolean) => {
-      return invokeIpcWithResult<void>(TEAM_SET_HUMAN_ONLY_APPROVAL, teamName, enabled);
+    setReviewFlowSettings: async (teamName: string, settings: ReviewFlowSettings) => {
+      return invokeIpcWithResult<void>(TEAM_SET_REVIEW_FLOW_SETTINGS, teamName, settings);
     },
     updateKanbanColumnOrder: async (
       teamName: string,

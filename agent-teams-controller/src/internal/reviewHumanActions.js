@@ -55,7 +55,7 @@ function createReviewHumanActions({
           actor: completedCycle.actor,
           note: completedCycle.note || 'AI review completed',
           leadSessionId: resolveLeadSessionId(context, flags),
-          humanOnlyApproval: kanban.getKanbanState(context).humanOnlyApproval === true,
+          humanApproval: kanban.isHumanApprovalFlow(context),
         };
       }
       assertReviewTransitionAllowed(context, task, 'completing review');
@@ -80,7 +80,7 @@ function createReviewHumanActions({
         reviewState: 'reviewed', reviewRequestId: expectedId, alreadyCompleted: false,
       }, task: tasks.getTask(context, task.id), actor, note,
       leadSessionId: resolveLeadSessionId(context, flags),
-      humanOnlyApproval: kanban.getKanbanState(context).humanOnlyApproval === true };
+      humanApproval: kanban.isHumanApprovalFlow(context) };
     });
     // Retry post-commit notices with the same event ID. Inbox rows and dependency
     // comments deduplicate it, even if a prior overlay write already succeeded.
@@ -96,7 +96,7 @@ function createReviewHumanActions({
       messages.sendMessage(context, {
         to: runtimeHelpers.inferLeadName(context.paths),
         from: result.actor,
-        text: `AI review completed for task #${result.task.displayId || result.task.id}. The task is in Done${result.humanOnlyApproval ? ' awaiting human acceptance' : ''}.\n\n${result.note}`,
+        text: `AI review completed for task #${result.task.displayId || result.task.id}. The task is in Done${result.humanApproval ? ' awaiting human acceptance' : ''}.\n\n${result.note}`,
         summary: `AI review completed #${result.task.displayId || result.task.id}`,
         ...(event?.id ? { messageId: event.id } : {}),
         source: 'system_notification',
@@ -114,7 +114,7 @@ function createReviewHumanActions({
    */
   function approveAsHuman(context, taskId) {
     const result = withTeamBoardLock(context.paths, () => {
-      const policyEnabled = kanban.getKanbanState(context).humanOnlyApproval === true;
+      const policyEnabled = kanban.isHumanApprovalFlow(context);
       const task = tasks.getTask(context, taskId);
       if (task.status !== 'completed') {
         throw new Error(`Task #${task.displayId || task.id} must be completed before human approval`);

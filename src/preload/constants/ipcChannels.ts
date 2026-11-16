@@ -226,7 +226,7 @@ export const TEAM_GET_CLAUDE_LOGS = 'team:getClaudeLogs';
 export const TEAM_UPDATE_KANBAN = 'team:updateKanban';
 
 /** Set user-controlled approval policy (desktop renderer only; not agent MCP). */
-export const TEAM_SET_HUMAN_ONLY_APPROVAL = 'team:setHumanOnlyApproval';
+export const TEAM_SET_REVIEW_FLOW_SETTINGS = 'team:setReviewFlowSettings';
 
 /** Update kanban column task order (drag-and-drop within column) */
 export const TEAM_UPDATE_KANBAN_COLUMN_ORDER = 'team:updateKanbanColumnOrder';

@@ -395,7 +395,11 @@ try {
   ), 'return to legacy grid mode');
   // Real Electron + IPC + on-disk acceptance of the opt-in approval policy.
   // A hidden loading skeleton button must not count as the loaded Grid header.
-  const toggleHumanApproval = async (layout: 'grid' | 'columns', checked: boolean): Promise<void> => {
+  const setReviewFlow = async (
+    layout: 'grid' | 'columns',
+    reviewFlow: 'agent_approval' | 'human_approval',
+    reviewFlowPrompt: string
+  ): Promise<void> => {
     // Both CDP programs are constant source strings; choose selectors inside
     // the renderer rather than interpolating host values into executable code.
     await until(() => cdp!.evaluate(
@@ -419,44 +423,58 @@ try {
         b.focus();
       })()`
     );
-    // Radix DropdownMenuTrigger opens on Enter/pointerdown, not DOM HTMLElement.click().
+    // Radix PopoverTrigger opens on Enter/pointerdown, not DOM HTMLElement.click().
     await cdp!.send('Input.dispatchKeyEvent', {
       type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
     });
     await cdp!.send('Input.dispatchKeyEvent', {
       type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
     });
-    await until(async () => {
-      const actual = await cdp!.evaluate(
-        "document.querySelector('[role=menuitemcheckbox]')?.getAttribute('aria-checked')"
-      );
-      return actual === String(!checked);
-    }, `${layout} approval policy menu opened`);
+    await until(() => cdp!.evaluate(
+      "!!document.querySelector('[data-testid=\"kanban-review-flow-panel\"]')"
+    ), `${layout} review flow panel opened`);
+    // The panel always starts from the persisted flow; pick the requested one.
     await cdp!.evaluate(
-      "(()=>{const item=document.querySelector('[role=menuitemcheckbox]');if(!(item instanceof HTMLElement))throw Error('Approval policy checkbox missing');item.click();})()"
+      `(()=>{const flow=${JSON.stringify(reviewFlow)};const radio=document.querySelector('[data-testid="kanban-review-flow-'+flow+'"]');if(!(radio instanceof HTMLInputElement))throw Error('Review flow option missing');radio.click();
+        const area=document.querySelector('[data-testid="kanban-review-flow-prompt"]');
+        if(!(area instanceof HTMLTextAreaElement))throw Error('Review flow prompt missing');
+        const setter=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value')?.set;
+        setter?.call(area,${JSON.stringify(reviewFlowPrompt)});
+        area.dispatchEvent(new Event('input',{bubbles:true}));})()`
+    );
+    await until(() => cdp!.evaluate(
+      "(()=>{const b=document.querySelector('[data-testid=\"kanban-review-flow-save\"]');return b instanceof HTMLButtonElement&&!b.disabled;})()"
+    ), `${layout} review flow save enabled`);
+    await cdp!.evaluate(
+      "document.querySelector('[data-testid=\"kanban-review-flow-save\"]')?.click()"
     );
     await until(async () => {
       const state = JSON.parse(await readFile(tableTeam.kanbanFile, 'utf8')) as {
-        humanOnlyApproval?: boolean;
+        reviewFlow?: string;
+        reviewFlowPrompt?: string;
       };
-      return (state.humanOnlyApproval === true) === checked;
-    }, `${layout} human approval policy persisted via real IPC`);
-    await cdp!.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' });
+      return (
+        state.reviewFlow === reviewFlow && (state.reviewFlowPrompt ?? '') === reviewFlowPrompt.trim()
+      );
+    }, `${layout} review flow persisted via real IPC`);
+    await until(() => cdp!.evaluate(
+      "!document.querySelector('[data-testid=\"kanban-review-flow-panel\"]')"
+    ), `${layout} review flow panel closed after save`);
   };
-  const initialPolicy = JSON.parse(await readFile(tableTeam.kanbanFile, 'utf8')) as {
-    humanOnlyApproval?: boolean;
+  const initialFlow = JSON.parse(await readFile(tableTeam.kanbanFile, 'utf8')) as {
+    reviewFlow?: string;
   };
-  assert.notEqual(initialPolicy.humanOnlyApproval, true, 'approval policy defaults to disabled');
-  await toggleHumanApproval('grid', true);
+  assert.notEqual(initialFlow.reviewFlow, 'human_approval', 'review flow defaults to agent approval');
+  await setReviewFlow('grid', 'human_approval', 'Run the e2e suite before deciding.');
   await cdp.screenshot(join(root, 'kanban-table-human-approval-grid.png'));
-  await toggleHumanApproval('grid', false);
+  await setReviewFlow('grid', 'agent_approval', '');
   await cdp.evaluate("document.querySelector('[data-testid=\"kanban-view-columns\"]')?.click()");
   await until(() => cdp!.evaluate(
     "!!document.querySelector('[data-testid=\"kanban-view-columns\"][aria-pressed=\"true\"]')"
   ), 'legacy columns mode works');
-  await toggleHumanApproval('columns', true);
+  await setReviewFlow('columns', 'human_approval', 'Run the e2e suite before deciding.');
   await cdp.screenshot(join(root, 'kanban-table-human-approval-columns.png'));
-  await toggleHumanApproval('columns', false);
+  await setReviewFlow('columns', 'agent_approval', '');
 
   // Exercise the actual shared search and virtualized DOM at 0, 1, 50 and 1004 tasks.
   await cdp.evaluate("document.querySelector('[data-testid=\"kanban-view-table\"]')?.click()");

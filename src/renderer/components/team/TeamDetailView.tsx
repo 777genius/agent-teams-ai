@@ -218,6 +218,7 @@ import type {
   KanbanTaskState,
   MemberSpawnStatusEntry,
   ResolvedTeamMember,
+  ReviewFlowSettings,
   TeamAgentRuntimeEntry,
   TeamCreateRequest,
   TeamLaunchRequest,
@@ -1449,7 +1450,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     initTabUIState,
     selectTeam,
     updateKanban,
-    setHumanOnlyApproval,
+    setReviewFlowSettings,
     updateKanbanColumnOrder,
     updateTaskStatus,
     updateTaskOwner,
@@ -1499,7 +1500,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       initTabUIState: s.initTabUIState,
       selectTeam: s.selectTeam,
       updateKanban: s.updateKanban,
-      setHumanOnlyApproval: s.setHumanOnlyApproval,
+      setReviewFlowSettings: s.setReviewFlowSettings,
       updateKanbanColumnOrder: s.updateKanbanColumnOrder,
       updateTaskStatus: s.updateTaskStatus,
       updateTaskOwner: s.updateTaskOwner,
@@ -2465,9 +2466,9 @@ export const TeamDetailView = memo(function TeamDetailView({
     [teamName, updateKanban]
   );
 
-  const handleHumanOnlyApprovalChange = useCallback(
-    (enabled: boolean) => setHumanOnlyApproval(teamName, enabled),
-    [setHumanOnlyApproval, teamName]
+  const handleReviewFlowSettingsChange = useCallback(
+    (settings: ReviewFlowSettings) => setReviewFlowSettings(teamName, settings),
+    [setReviewFlowSettings, teamName]
   );
 
   const handleRequestChanges = useCallback((taskId: string) => {
@@ -3229,7 +3230,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                   }
                   onRequestReview={handleRequestReview}
                   onApprove={handleApproveTask}
-                  onHumanOnlyApprovalChange={handleHumanOnlyApprovalChange}
+                  onReviewFlowSettingsChange={handleReviewFlowSettingsChange}
                   onRequestChanges={handleRequestChanges}
                   onMoveBackToDone={handleMoveBackToDone}
                   onStartTask={handleStartTask}

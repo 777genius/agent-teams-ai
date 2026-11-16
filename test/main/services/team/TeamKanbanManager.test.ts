@@ -72,7 +72,7 @@ describe('TeamKanbanManager', () => {
       teamName: 'my-team',
       reviewers: [],
       tasks: {},
-      humanOnlyApproval: false,
+      reviewFlow: 'agent_approval',
     });
   });
 
@@ -83,7 +83,7 @@ describe('TeamKanbanManager', () => {
       teamName: 'my-team',
       reviewers: [],
       tasks: {},
-      humanOnlyApproval: false,
+      reviewFlow: 'agent_approval',
     });
   });
 
@@ -92,27 +92,30 @@ describe('TeamKanbanManager', () => {
       teamName: 'my-team',
       reviewers: [],
       tasks: {},
-      humanOnlyApproval: true,
+      reviewFlow: 'human_approval',
+      reviewFlowPrompt: '  Run the e2e suite first.  ',
     }));
 
     expect(await manager.getState('my-team', { strict: true })).toMatchObject({
-      humanOnlyApproval: true,
+      reviewFlow: 'human_approval',
+      reviewFlowPrompt: 'Run the e2e suite first.',
     });
     await manager.updateTask('my-team', '1', { op: 'set_column', column: 'review' });
     await manager.updateColumnOrder('my-team', 'review', ['1']);
     const disk = JSON.parse(hoisted.files.get(statePath) ?? '{}');
-    expect(disk.humanOnlyApproval).toBe(true);
+    expect(disk.reviewFlow).toBe('human_approval');
+    expect(disk.reviewFlowPrompt).toBe('Run the e2e suite first.');
     expect(disk.columnOrder.review).toEqual(['1']);
 
     hoisted.files.set(statePath, JSON.stringify({
-      teamName: 'my-team', reviewers: [], tasks: {}, humanOnlyApproval: 'true',
+      teamName: 'my-team', reviewers: [], tasks: {}, reviewFlow: 'everyone',
     }));
     await expect(manager.getState('my-team', { strict: true })).rejects.toThrow('corrupt');
   });
 
   it('never downgrades a corrupt approval policy through Kanban mutations', async () => {
     const corrupt = JSON.stringify({
-      teamName: 'my-team', reviewers: [], tasks: {}, humanOnlyApproval: 'true',
+      teamName: 'my-team', reviewers: [], tasks: {}, reviewFlow: 'everyone',
     });
     const actions = [
       () => manager.updateColumnOrder('my-team', 'review', ['1']),

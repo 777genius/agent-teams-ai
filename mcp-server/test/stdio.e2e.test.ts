@@ -1964,12 +1964,12 @@ describe('agent-teams-mcp stdio e2e', () => {
     }
   });
 
-  it('enforces cycle-bound human-only approval through real stdio MCP', async () => {
+  it('enforces cycle-bound human_approval flow through real stdio MCP', async () => {
     const teamName = 'stdio-human-only-team';
     await writeTeamConfig(claudeDir, teamName);
     await writeFile(
       path.join(claudeDir, 'teams', teamName, 'kanban-state.json'),
-      JSON.stringify({ teamName, reviewers: ['bob'], tasks: {}, humanOnlyApproval: true })
+      JSON.stringify({ teamName, reviewers: ['bob'], tasks: {}, reviewFlow: 'human_approval', reviewFlowPrompt: 'Run the e2e suite first.' })
     );
     const client = new McpStdIoClient(serverPath, workspaceRoot);
     const context = { claudeDir, teamName };
@@ -2046,7 +2046,8 @@ describe('agent-teams-mcp stdio e2e', () => {
         'kanban_get', context, 220
       ) as { result: unknown }).result);
       expect(kanban.tasks[task.id]).toBeUndefined();
-      expect(kanban.humanOnlyApproval).toBe(true);
+      expect(kanban.reviewFlow).toBe('human_approval');
+      expect(kanban.reviewFlowPrompt).toBe('Run the e2e suite first.');
     } finally {
       await client.close();
     }

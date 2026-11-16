@@ -128,7 +128,10 @@ declare module 'agent-teams-controller' {
     addReviewer(reviewer: string): string[];
     removeReviewer(reviewer: string): string[];
     updateColumnOrder(columnId: string, orderedTaskIds: string[]): unknown;
-    setHumanOnlyApproval(enabled: boolean): unknown;
+    setReviewFlowSettings(settings: {
+      reviewFlow?: 'agent_approval' | 'human_approval';
+      reviewFlowPrompt?: string;
+    }): unknown;
   }
 
   export interface ControllerTaskBoardKanbanApi

@@ -100,8 +100,8 @@ import {
   TEAM_SAVE_TASK_ATTACHMENT,
   TEAM_SEND_MESSAGE,
   TEAM_SET_CHANGE_PRESENCE_TRACKING,
-  TEAM_SET_HUMAN_ONLY_APPROVAL,
   TEAM_SET_PROJECT_BRANCH_TRACKING,
+  TEAM_SET_REVIEW_FLOW_SETTINGS,
   TEAM_SET_TASK_CLARIFICATION,
   TEAM_SET_TASK_LOG_STREAM_TRACKING,
   TEAM_SET_TOOL_ACTIVITY_TRACKING,
@@ -125,7 +125,11 @@ import {
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
 } from '@preload/constants/ipcChannels';
 import { wrapAgentBlock } from '@shared/constants/agentBlocks';
-import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
+import {
+  isReviewFlow,
+  KANBAN_COLUMN_IDS,
+  MAX_REVIEW_FLOW_PROMPT_LENGTH,
+} from '@shared/constants/kanban';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import {
   parseTeamMemberRestartResult,
@@ -282,6 +286,7 @@ import type {
   OpenCodeRuntimeDeliveryStatus,
   QueuedUserMessagesSnapshot,
   RetryFailedOpenCodeSecondaryLanesResult,
+  ReviewFlowSettings,
   SendMessageRequest,
   SendMessageResult,
   TaskAttachmentMeta,
@@ -713,7 +718,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_GET_TASK, handleGetTask);
   ipcMain.handle(TEAM_REQUEST_REVIEW, handleRequestReview);
   ipcMain.handle(TEAM_UPDATE_KANBAN, handleUpdateKanban);
-  ipcMain.handle(TEAM_SET_HUMAN_ONLY_APPROVAL, handleSetHumanOnlyApproval);
+  ipcMain.handle(TEAM_SET_REVIEW_FLOW_SETTINGS, handleSetReviewFlowSettings);
   ipcMain.handle(TEAM_UPDATE_KANBAN_COLUMN_ORDER, handleUpdateKanbanColumnOrder);
   ipcMain.handle(TEAM_UPDATE_TASK_STATUS, handleUpdateTaskStatus);
   ipcMain.handle(TEAM_UPDATE_TASK_OWNER, handleUpdateTaskOwner);
@@ -806,7 +811,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_GET_TASK);
   ipcMain.removeHandler(TEAM_REQUEST_REVIEW);
   ipcMain.removeHandler(TEAM_UPDATE_KANBAN);
-  ipcMain.removeHandler(TEAM_SET_HUMAN_ONLY_APPROVAL);
+  ipcMain.removeHandler(TEAM_SET_REVIEW_FLOW_SETTINGS);
   ipcMain.removeHandler(TEAM_UPDATE_KANBAN_COLUMN_ORDER);
   ipcMain.removeHandler(TEAM_UPDATE_TASK_STATUS);
   ipcMain.removeHandler(TEAM_UPDATE_TASK_OWNER);
@@ -3311,20 +3316,49 @@ async function handleGetTask(
   );
 }
 
-async function handleSetHumanOnlyApproval(
+function parseReviewFlowSettings(
+  value: unknown
+): { ok: true; settings: ReviewFlowSettings } | { ok: false; error: string } {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return { ok: false, error: 'settings must be an object' };
+  }
+  const { reviewFlow, reviewFlowPrompt } = value as Record<string, unknown>;
+  const settings: ReviewFlowSettings = {};
+  if (reviewFlow !== undefined) {
+    if (!isReviewFlow(reviewFlow)) return { ok: false, error: 'reviewFlow is not supported' };
+    settings.reviewFlow = reviewFlow;
+  }
+  if (reviewFlowPrompt !== undefined) {
+    if (typeof reviewFlowPrompt !== 'string') {
+      return { ok: false, error: 'reviewFlowPrompt must be a string' };
+    }
+    if (reviewFlowPrompt.trim().length > MAX_REVIEW_FLOW_PROMPT_LENGTH) {
+      return {
+        ok: false,
+        error: `reviewFlowPrompt must be at most ${MAX_REVIEW_FLOW_PROMPT_LENGTH} characters`,
+      };
+    }
+    settings.reviewFlowPrompt = reviewFlowPrompt;
+  }
+  if (Object.keys(settings).length === 0) return { ok: false, error: 'settings are empty' };
+  return { ok: true, settings };
+}
+
+async function handleSetReviewFlowSettings(
   _event: IpcMainInvokeEvent,
   teamName: unknown,
-  enabled: unknown
+  settings: unknown
 ): Promise<IpcResult<void>> {
   const validatedTeam = validateTeamName(teamName);
   if (!validatedTeam.valid) {
     return { success: false, error: validatedTeam.error ?? 'Invalid teamName' };
   }
-  if (typeof enabled !== 'boolean') {
-    return { success: false, error: 'humanOnlyApproval must be a boolean' };
+  const parsed = parseReviewFlowSettings(settings);
+  if (!parsed.ok) {
+    return { success: false, error: parsed.error };
   }
-  return wrapTeamHandler('setHumanOnlyApproval', () =>
-    getTeamDataService().setHumanOnlyApproval(validatedTeam.value!, enabled)
+  return wrapTeamHandler('setReviewFlowSettings', () =>
+    getTeamDataService().setReviewFlowSettings(validatedTeam.value!, parsed.settings)
   );
 }
 

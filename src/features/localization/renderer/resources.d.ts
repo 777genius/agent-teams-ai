@@ -4463,8 +4463,23 @@ export default interface Resources {
     },
     "kanban": {
       "approvalSettings": {
-        "onlyHumans": "Only users can move tasks to Approved",
-        "title": "Approved column settings"
+        "cancel": "Cancel",
+        "flowLegend": "Who gives final approval",
+        "flows": {
+          "agent_approval": {
+            "description": "The reviewer approves and the task moves to Approved.",
+            "label": "Agents approve"
+          },
+          "human_approval": {
+            "description": "The reviewer finishes the review and the task stays in Done as reviewed. Only you move it to Approved.",
+            "label": "I give final approval"
+          }
+        },
+        "promptHint": "Sent to reviewers with each review request and visible to agents on the board. It does not change who may approve.",
+        "promptLabel": "Instructions for agents (optional)",
+        "promptPlaceholder": "For example: run the e2e tests before deciding.",
+        "save": "Save",
+        "title": "Review flow"
       },
       "board": {
         "addTask": "Add task",

@@ -1,6 +1,11 @@
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
-import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
+import {
+  DEFAULT_REVIEW_FLOW,
+  isReviewFlow,
+  KANBAN_COLUMN_IDS,
+  MAX_REVIEW_FLOW_PROMPT_LENGTH,
+} from '@shared/constants/kanban';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -17,7 +22,7 @@ function createDefaultState(teamName: string): KanbanState {
     teamName,
     reviewers: [],
     tasks: {},
-    humanOnlyApproval: false,
+    reviewFlow: DEFAULT_REVIEW_FLOW,
   };
 }
 
@@ -62,7 +67,13 @@ function validateSafetyState(value: unknown, teamName: string): void {
       value.reviewers.some((name) => typeof name !== 'string' || !name.trim()))
   )
     return invalid();
-  if (value.humanOnlyApproval !== undefined && typeof value.humanOnlyApproval !== 'boolean') return invalid();
+  if (value.reviewFlow !== undefined && !isReviewFlow(value.reviewFlow)) return invalid();
+  if (
+    value.reviewFlowPrompt !== undefined &&
+    (typeof value.reviewFlowPrompt !== 'string' ||
+      value.reviewFlowPrompt.trim().length > MAX_REVIEW_FLOW_PROMPT_LENGTH)
+  )
+    return invalid();
   for (const [taskId, task] of Object.entries(value.tasks)) {
     if (
       !taskId.trim() ||
@@ -109,6 +120,8 @@ export class TeamKanbanManager {
     }
     if (options.strict) validateSafetyState(parsed, teamName);
     const sanitizedTasks: KanbanState['tasks'] = {};
+    const reviewFlowPrompt =
+      typeof parsed.reviewFlowPrompt === 'string' ? parsed.reviewFlowPrompt.trim() : '';
     if (parsed.tasks && typeof parsed.tasks === 'object') {
       for (const [taskId, value] of Object.entries(parsed.tasks)) {
         if (!value || typeof value !== 'object') {
@@ -139,7 +152,8 @@ export class TeamKanbanManager {
         ? parsed.reviewers.filter((r): r is string => typeof r === 'string' && r.trim().length > 0)
         : [],
       tasks: sanitizedTasks,
-      humanOnlyApproval: parsed.humanOnlyApproval === true,
+      reviewFlow: isReviewFlow(parsed.reviewFlow) ? parsed.reviewFlow : DEFAULT_REVIEW_FLOW,
+      ...(reviewFlowPrompt ? { reviewFlowPrompt } : {}),
       columnOrder: sanitizeColumnOrder(parsed.columnOrder),
     };
   }
@@ -229,7 +243,8 @@ export class TeamKanbanManager {
       teamName,
       reviewers: state.reviewers,
       tasks: state.tasks,
-      humanOnlyApproval: state.humanOnlyApproval === true,
+      reviewFlow: isReviewFlow(state.reviewFlow) ? state.reviewFlow : DEFAULT_REVIEW_FLOW,
+      ...(state.reviewFlowPrompt?.trim() ? { reviewFlowPrompt: state.reviewFlowPrompt.trim() } : {}),
       ...(state.columnOrder && Object.keys(state.columnOrder).length > 0
         ? { columnOrder: state.columnOrder }
         : {}),
