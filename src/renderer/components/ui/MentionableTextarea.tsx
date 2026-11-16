@@ -933,13 +933,11 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           return;
         }
         // When the suggestion dropdown is open, let it consume Enter/Arrow keys first
-        if (isOpen && effectiveSuggestions.length > 0) {
-          mentionHandleKeyDown(e, effectiveSuggestions.length, (index) => {
-            const next = effectiveSuggestions[index];
-            if (next) handleActiveSelect(next);
-          });
-          if (e.defaultPrevented) return;
-        }
+        mentionHandleKeyDown(e, effectiveSuggestions.length, (index) => {
+          const next = effectiveSuggestions[index];
+          if (next) handleActiveSelect(next);
+        });
+        if (isOpen && effectiveSuggestions.length > 0 && e.defaultPrevented) return;
         // Shift+Tab → cycle action mode
         if (e.key === 'Tab' && e.shiftKey && onShiftTab) {
           e.preventDefault();
