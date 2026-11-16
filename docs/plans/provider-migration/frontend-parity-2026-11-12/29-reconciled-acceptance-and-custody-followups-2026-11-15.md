@@ -4486,3 +4486,91 @@ Every command used pinned Node24.21.0, TypeScript7.0.2 and applicable app pnpm11
 ### Remaining acceptance
 
 The separately reviewed scheduled14-path Thinking/stderr source cut is still unapplied and unexecuted. No new native/GUI/Electron/packaged/vendor execution, original15-second readiness, P08 same-Main recovery, P09 selected-source/writer contract, full C++/I386 policy, genuine donor upgrade or M16 qualification is asserted. Existing failures/HOLD/skipped/cancelled evidence remains as recorded. Keep the original Draft/base, no main merge/release/default activation/Stage2. Final exact source/document R2 and immediate guarded publication/readback close only this32-path cut.
+
+
+## Prospective R1: original scheduled Thinking/stderr route and existing rich Task oracle
+
+Parent `8b093b34695ce3db95b17b3d3984fe76b7bb4949`, tree `265962c321f8ba47db6d914bdef5de305aba2f2d`, was published and all33 complete returned payloads (including both archives) independently Git-blob hashed/read back. Its395-case source qualification and resolved strict17-root Host gate remain recorded above. Select the exact17 paths below:15 source/test/fixture paths and two existing plan appends. Published source reference is `9e542899f36c47598a88c764c9e6745589fea3e1`, tree `dc7e07838cef3f0b6bf83ffce8b5a34f6e7484e4`, sole parent1f924. Original Draft/base remain unchanged.
+
+The six scheduled production files, five Host test changes and three finite UI/peer/roster changes match the already independently reviewed author working snapshot byte-for-byte. The newer public commit also publishes the already integrated two coordination files unchanged; do not duplicate their adoption. The only additional source path is the existing Task-tab test oracle described below. Plan32/33 retain their whole previous prefixes and append187/29 lines; their author129/66 test inventories and historical1f native observations are attributed author evidence, not resulting-source qualification for this private composition.
+
+### Existing frontend route and exact bounded implementation
+
+This is the established remaining Logs omission: a standalone schedule uses its separate HostScheduledRuns Runtime, not the ordinary member registry. The existing route remains Host snapshot → scheduledRunProjection → CapturedScheduledRuns → runCapturedScheduledTask → SchedulerService/JsonScheduleRepository saved .log/.err → schedules.getRunLogs → the original completed-run dialog, rich parser/ThinkingItem and separate stderr pre. Original frozen dialog/parser/renderer owners remain unchanged. No new Runtime, RPC, persistence format, cache, feed reader, polling owner, sidecar or component is introduced. No new standalone OpenCode support or unsupported Codex Thinking claim is added.
+
+- ScheduledRunProvider attaches the existing observer to the original custody-launched Claude child or original Codex app-server child, with actual args, before returning the original SDK/byte transport. The Codex catalog helper and stdout protocol are excluded. The helper's endpoint is optional only for the existing standalone path; existing member masking, original24KiB sanitation/frame bounds, held env/argv/MCP values and final-tail-once stay intact.
+- HostScheduledRuns captures the original binding, complete request, capture/config/profile, Team/owner/principal and active entry. Its source assertion checks writer, original control revision, original retained recipe/workspace/source and captured MCP selection, also inside Runtime's unchanged append fence. It never follows a replacement source. Ordinary cancellation permits only original unreleased closing facts; Host composition seal, source/authority/selection replacement and released custody refuse them. No Session/input/task/operation is invented for process stderr. Runtime's full-config/incarnation/phase and32KiB event bounds remain unchanged.
+- RuntimeActivityCoordinator derives optional internal logProjection (Thinking, stderr, truncated) from the same already-authorized journal read. Existing usage/interactions/tools/text/subagents groups and their old budget loop are untouched. Thinking then stderr use only remaining aggregate256KiB. Auxiliary omission changes only logProjection.truncated, never original global gap/Stats/cost completeness. The actual outward snapshot mapper whitelists old groups and omits this field.
+- Original input/operation/message/block and child/parent identities remain distinct; complete Thinking beats a late snapshot. Scheduled compatibility output retains original eventId/sequence/child identity and actual observed-time/duration rules. Summary stays text-only, stdout keeps512KiB. Sanitized stderr follows journal sequence and retains the first16KiB including the existing warning once, without splitting UTF-8. Hot/cold reads do not rewrite the journal or replay a provider.
+
+### Preservation compositions and three necessary ownership assertions
+
+The runtime test is the entire private576b source plus the exact author86-line suffix, yielding76480223/1234lines. Team read retains the entire private420ea source plus the exact author8-line Stats-isolation insertion, yieldingbb5eb306/427. It excludes only the separately generated computedAt timestamps, following the existing neighboring test; facts, cost, gaps and authority assertions stay equal. This comparison is not falsely claimed as a producer RED.
+
+The finite Desktop script is exact publishedd1a43bae plus three existing synchronous assertOwnedRenderer calls immediately before three new raw CDP evaluations: scheduled saved-log read after filesystem awaits, member fullscreen Thinking clipboard and standalone Thinking clipboard. CdpClient.evaluate has no implicit ownership wrapper. Each guard precedes its read without another await; no new business turn, retry, clock or acceptance exception. The resulting script2d4a6bcf is798/800lines. Keep all author real-row/source/error/copy/filter/fullscreen/cold-identity/effect/cleanup oracles.
+
+The peer is exact published920b40fa: final Thinking and benign stderr occur inside the existing TEST_UI_STANDALONE_DONE input; its two stop frames correct only the existing uninterrupted stream framing. No additional model turn/action is added. The common roster preserves private d822's entire prior ordering and appends only the three existing scheduled projection/capture/contracts leaves, yieldingf1bfeb02/323lines. The original root800lines, Process and WindowsRetry arrays remain unchanged.
+
+The existing hostTaskActivityTabs test now selects actual-source:3, requires its original error flag and actual red BaseItem status dot, proves initial collapse, opens that same card and reads its full actual result. This replaces the stale literal raw-JSON isError string assertion after accepted rich rendering. Both original cases/mocks/actions/Activity/Stream/Exact/stale-generation/timestamp/no-transcript/cleanup checks remain. No production edit is attached to this semantic test correction.
+
+| Selected path | Exact private preimage | Exact resulting blob | Lines |
+| --- | --- | --- | ---: |
+| `packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts` | `85929131823d19197651cc5f984096cde9b1fd6e` | `e6861511417070c9202458253a16a3ffb20216ae` | 166 |
+| `packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts` | `3b2b960722f878cf60ba94bae27176fb9e7d0bba` | `6b6c7003960eb4075d74ca449d303602e99ef83e` | 165 |
+| `packages/legacy-agent-host/src/composition/HostScheduledRuns.ts` | `1db38b33e308071130543fecb62e8caaaa2c90b2` | `13fd4d190e0a50267a295cb75cbf50320fa36d5a` | 297 |
+| `packages/legacy-agent-host/src/composition/scheduledRunProjection.ts` | `86d4ec120fb4deba4c53bb5426fc771f4e1ee5b7` | `46613a43c30311321280f11129ed02df18ef527a` | 74 |
+| `packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts` | `48f51dc20a9253c81c9b231b6aa115f6244bd18f` | `ba90e3e6895bf7f85d7ca3de7d9608fe433fcadf` | 610 |
+| `packages/legacy-agent-host/src/runtime/activityContracts.ts` | `22503cf7430200a8e221c7495a320740bbe7a474` | `d6a001c625d4369147811ee4d97b9853ff1c86c1` | 130 |
+| `packages/legacy-agent-host/tests/captured-claude-process.test.ts` | `f84153e49a9ace1f07a5d1f7bb9cea486f5617af` | `d2b952c9e6ac2281a14a00665cf4689d9c7d4b5c` | 366 |
+| `packages/legacy-agent-host/tests/member-process-stderr.test.ts` | `c073ab7b8c6025313747f75e50e8b0a14985d589` | `e52785444caebdc8c698d87ac122f4a13742b5cc` | 247 |
+| `packages/legacy-agent-host/tests/runtime-activity.test.ts` | `576b232167e16f60b28f3417922cafcd9d9939ef` | `76480223b97320827c97a8469a11418f5ccb0206` | 1234 |
+| `packages/legacy-agent-host/tests/scheduled-run-host.test.ts` | `96a7f6ac29bbd830dffb60d80a910e3f26e76949` | `dbbd17b11db24a9dc3fb989e0266101847f0a778` | 598 |
+| `packages/legacy-agent-host/tests/team-activity-read.test.ts` | `420ea7318a294a6e21e9da54cfa8dcbbebd361d1` | `bb5eb306bd81fdd5bdd69ccd9f10664d44d2c1c4` | 427 |
+| `scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts` | `345dc9a6b3fb9d197eaf2982e60840682d7b8fbd` | `2d4a6bcfb47f72aa2d2db3d05cdbfc8dc17602fb` | 798 |
+| `scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts` | `d8222627fd9f5ba303d1a2116246d63ba0d67516` | `f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d` | 323 |
+| `tools/owned-process-broker/fixtures/claudeProviderPeer.mjs` | `6cdba0b52141348d97c593bf2ae6c224cdce5d73` | `920b40fa594f7aa65e11d1ec1f31d2aa69581a01` | 463 |
+| `test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx` | `eb380c206e9d2c49984a1bf732ceddaddb9449ae` | `a367866923405e4d584fac1145b56fe27bf37b5a` | 232 |
+| `docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md` | `2305bbd7b340418f82b39e5bdb28f302735f7237` | `27f455b058d999213277e396343016789163660f` | 694 |
+| `docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md` | `f5176d68c3e9fa81472d0a81f0cb324a210a4854` | `77cb678aef27ac3b744258e856deba479ea8c414` | 464 |
+
+### Prospective finite counterexamples and validation
+
+Publish this documentation-only R1 with immediate guarded push/full readback and obtain exact independent R2 before applying any selected source or running checks. The provider pair/pins, coherent private dependency closure and original2 Host links remain unchanged; no installation, link replacement or package change is planned. Before/after validation, verify all253+12 original checked archive-member bytes and the existing dependency edges, complete tracked source tree and unchanged normal index.
+
+For controlled source RED, apply selected tests/fixtures/docs and the optional internal activityContracts declaration, retaining the five original executable production bodies: ScheduledRunProvider, observeMemberProcessStderr, HostScheduledRuns, scheduledRunProjection and RuntimeActivityCoordinator. Build the actual canonical Host using the original command. Run the five full Host files below with pinned Node/concurrency1. New scheduled Thinking and original stderr cases should expose the old missing observation/projection path; unchanged cases remain required. Record actual counts and exact causes, including any different failure, before qualification. New type declarations are not mistaken for implemented behavior.
+
+Separately retain the original Task-tab test and run its complete two-case file once to record the existing stale raw-JSON expectation on the already accepted rich UI. This is an obsolete test-oracle refusal, not a new scheduled production defect. Preserve the original log. Then apply only the exact five reviewed production bodies and the exact Task-test correction, rebuild canonical Host and run the same five full Host files plus all four app files below. No subsequent source change is hidden inside a rerun.
+
+Five full Host suites:
+
+- `packages/legacy-agent-host/tests/member-process-stderr.test.ts`
+- `packages/legacy-agent-host/tests/captured-claude-process.test.ts`
+- `packages/legacy-agent-host/tests/scheduled-run-host.test.ts`
+- `packages/legacy-agent-host/tests/runtime-activity.test.ts`
+- `packages/legacy-agent-host/tests/team-activity-read.test.ts`
+
+These are existing finite Session/PassThrough/temporary-filesystem fixtures and generic Node/shell/sleep children. The original SDK standalone case launches the pinned TEST claudeProviderPeer.mjs in disposable roots, not a real vendor executable or model. Existing Windows skips remain unchanged and do not qualify Windows. No local graphical/native/Electron/Xvfb lane is run.
+
+Four full app suites:
+
+- `test/main/services/schedule/SmartSchedules.safe-e2e.test.ts`
+- `test/renderer/utils/streamJsonParser.test.ts`
+- `test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx`
+- `test/features/agent-backend/runtimeActivityFacade.test.ts`
+
+The original SmartSchedules14 registrations exercise actual SchedulerService/JsonScheduleRepository with finite execution ports, save/read/fences and stop/restart persistence drain. The parser's five existing registrations check original JSONL/legacy compatibility; they contain no Thinking-specific proof and are not relabelled as one. Task-tab has two existing cases. The twelve-case Runtime facade is repeated because the shared snapshot now gains an internal field: this verifies its real Main/Host contract boundary on the new source. These are inspected registration counts, not yet executed PASS. No other previous71/133 suite is repeated without a changed consumer risk.
+
+There is no dedicated existing CapturedScheduledRuns/runCapturedScheduledTask suite. Their actual code, persistence/IPC and original dialog/Thinking renderer enter the strict app graph through explicit roots; its sixteen roots include the four suites and original ambient declarations. The complete actual Host→saved→dialog/clipboard join still belongs to the original Desktop scenario, not these mocks or compiler results. The new standalone UI check itself does not restart Electron; finite Host cold readback and graphical cold acceptance remain separate.
+
+Run strict selected Host types with the six production and five Host test roots (eleven total), inheriting the original Host test options. The preceding strict17-root gate was actually resolved/passed on8b; this new source-specific scope does not replace its failed receipt or hide its diagnostics. App types inherit original root options with sixteen explicit roots, original declarations and no new stubs/options/suppressions. Keep the scratch node_modules link to the canonical root. Run the unchanged complete legacy-host-scripts compiler, scoped fast lint on the fifteen changed code/test/fixture paths, original source-size/provisioning guards and diff verification. Do not retry the whole workspace or whole Host-test compiler.
+
+| Scratch configuration | Roots | Git blob | SHA256 |
+| --- | ---: | --- | --- |
+| `tsconfig.host-selected.json` | 11 | `d3f58336f9c9b21db3b29d9dc5869444cd9f394e` | `b4784fd4497da251f8fa15b0b3e36a486650450338385d2e13b506ba2a15f5c2` |
+| `tsconfig.app-selected.json` | 16 | `caa1204017d2f0ad0901e296ca3e1fbb897ecbeb` | `5f8fba14fbad3d8907374d7ca877681fb4e8ce51be195dabf4c667d985e05263` |
+
+Import only copied versions of the four pure roster modules with pinned Node. Require the previous57 ordinary inputs and all three new scheduled leaves, old relative order and unchanged root800/Process/WindowsRetry. Expected ordinary1754→1757 and Windows1795→1798 must be checked against actual exports, not just source text. No scenario entrypoint is imported.
+
+Validation manifest SHA256 `28dd7cd3866133ae4ce755d5135998404d2b360bce2a03455f9551882e8ed632`; exact text patch SHA256 `0c22a30e11703602538dc7e5e8a2f78d2fdabdeafad7f3d40295181e72083de6`. Existing coherent closure manifest SHA256 `0a5fb1a10b3925a7b5615560a4b37b4f9ff4ae39b62c89da243fdbbe9f6417c8` stays in force. Use pinned Node24.21.0/TypeScript7.0.2/app pnpm11.25.0, original environment unsets, generic TEST Node and180-second local subprocess ceiling. No fake product/native clocks, real Claude/Codex (including version), paid inference, ambient credentials, user projects, native/GUI rebuild or new workflow action.
+
+All original15-second qualifying deadlines, source/authority/currentness/effect/no-replay/physical-cleanup oracles remain. Resulting-source full CI/types/typed lint, Desktop/native/packaged, P08, P09, full public C++/I386 policy and genuine donor/M16 gates remain separate; author/source review and prior-source PASS do not close them. No main merge/release/default activation/Stage2. No selected source or new checks were applied/executed while preparing this proposal.
