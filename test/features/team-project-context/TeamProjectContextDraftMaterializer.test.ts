@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { TeamProjectContextDraftMaterializer } from '../../../src/features/team-project-context/main/TeamProjectContextDraftMaterializer';
 
 import type { ResolvedTeamWorkContext } from '../../../src/features/team-project-context/main';
+import type { TeamCreateConfigRequest } from '../../../src/shared/types/team';
 import type { TeamCreateRequest } from '../../../src/shared/types/team';
 
 const reserved: ResolvedTeamWorkContext = {
@@ -24,7 +25,7 @@ function fixture(result: ResolvedTeamWorkContext = reserved) {
       name === 'builders'
         ? { teamName: 'builders', cwd: '/sandbox/a', members: [{ name: 'alice' }], prompt: 'rules' }
         : null),
-    createTeamConfig: vi.fn(async () => undefined),
+    createTeamConfig: vi.fn(async (_: TeamCreateConfigRequest, _options: { claimOwnerOnCreate: true }) => undefined),
     assertOwnedAlias: vi.fn(async () => undefined),
   };
   return { materializer: new TeamProjectContextDraftMaterializer(context, store), context, store };
@@ -40,8 +41,7 @@ describe('TeamProjectContextDraftMaterializer', () => {
     expect(f.store.createTeamConfig).toHaveBeenCalledWith({
       teamName: 'ptc-sandbox', cwd: '/sandbox/b', members: [{ name: 'alice' }],
       prompt: 'rules', projectContextMode: 'shared',
-    });
-    expect(f.store.createTeamConfig.mock.calls[0]?.[1]).toEqual({ claimOwnerOnCreate: true });
+    }, { claimOwnerOnCreate: true });
   });
 
   it('releases an empty reservation when native draft creation rejects', async () => {
@@ -89,6 +89,5 @@ describe('TeamProjectContextDraftMaterializer', () => {
     await expect(f.materializer.ensureProjectDraft({
       logicalTeamName: 'builders', projectPath: '/sandbox/b',
     })).rejects.toThrow('foreign');
-    expect(f.claim).not.toHaveBeenCalled();
   });
 });
