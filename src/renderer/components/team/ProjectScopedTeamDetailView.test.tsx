@@ -44,6 +44,20 @@ vi.mock('./TeamDetailView', () => ({
 vi.mock('./TeamHistoryModePicker', () => ({
   TeamHistoryModePicker: () => React.createElement('div', { 'data-testid': 'mode-picker' }),
 }));
+vi.mock('./dialogs/LaunchTeamDialog', () => ({
+  LaunchTeamDialog: ({
+    onLaunch, teamName, defaultProjectPath,
+  }: {
+    onLaunch: (request: { teamName: string; cwd: string; providerId: 'anthropic' }) => Promise<void>;
+    teamName: string;
+    defaultProjectPath: string;
+  }) => React.createElement('button', {
+    'data-testid': 'launch-with-provider',
+    onClick: () => { void onLaunch({
+      teamName, cwd: defaultProjectPath, providerId: 'anthropic',
+    }); },
+  }, 'Configure runtime and launch'),
+}));
 
 import { ProjectScopedTeamDetailView } from './ProjectScopedTeamDetailView';
 
@@ -156,12 +170,19 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     expect(host.textContent).toContain('projectContextView.empty');
     const button = host.querySelector('button');
     expect(button).not.toBeNull();
+    await act(async () => button?.click());
+    await vi.waitFor(() => expect(
+      host.querySelector('[data-testid="launch-with-provider"]')
+    ).not.toBeNull());
+    expect(launchTeam).not.toHaveBeenCalled();
     getView.mockResolvedValue(native('ptc-b', '/TEST/b'));
     launchTeam.mockResolvedValue({ runId: 'b' });
-    await act(async () => button?.click());
+    await act(async () => {
+      (host.querySelector('[data-testid="launch-with-provider"]') as HTMLButtonElement).click();
+    });
     await settle();
     expect(launchTeam).toHaveBeenCalledWith({
-      teamName: 'builders', cwd: '/TEST/b',
+      teamName: 'builders', cwd: '/TEST/b', providerId: 'anthropic',
     });
     expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('ptc-b');
   });
