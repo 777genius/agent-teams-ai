@@ -6433,6 +6433,10 @@ export default interface Resources {
         "human_approval": {
           "description": "The reviewer finishes the review and the task stays in Done as reviewed. Only you move it to Approved.",
           "label": "I give final approval"
+        },
+        "lead_then_human": {
+          "description": "After the reviewer, the team lead signs off in a second review. Then the task waits in Done for you. Only you move it to Approved.",
+          "label": "Lead signs off, then I approve"
         }
       },
       "humanApprovalNote": "In this mode agents can never move a task to Approved. Only you can.",
@@ -6738,6 +6742,10 @@ export default interface Resources {
         "edit": "Edit description",
         "placeholder": "Task description (supports markdown)"
       },
+      "leadSignoff": {
+        "badge": "Lead sign-off",
+        "hint": "The team lead signs off on this task before it reaches Done."
+      },
       "loading": {
         "fetchingTeamData": "Fetching team data",
         "title": "Loading task..."
@@ -6794,6 +6802,7 @@ export default interface Resources {
         "empty": "No workflow history recorded",
         "humanApproved": "Approved by user",
         "implementationIntervalEnded": "Implementation interval ended at this transition",
+        "leadSignoffRequested": "Lead sign-off requested",
         "ownerChanged": "Owner changed",
         "reassigned": "Reassigned",
         "reviewCompleted": "AI review completed",

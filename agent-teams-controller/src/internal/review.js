@@ -1,11 +1,13 @@
 const kanban = require('./kanban.js');
 const { createReviewHumanActions } = require('./reviewHumanActions.js');
+const { createLeadSignoff } = require('./reviewLeadSignoff.js');
 const messages = require('./messages.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const reviewStateHelpers = require('./reviewState.js');
 const tasks = require('./tasks.js');
 const { withTeamBoardLock } = require('./boardLock.js');
-const { wrapAgentBlock } = require('./agentBlocks.js');
+const reviewFlow = require('./reviewFlow.js');
+const { buildReviewRequestMessage } = require('./reviewRequestMessage.js');
 
 function warnNonCritical(message, error) {
   if (typeof console === 'undefined' || typeof console.warn !== 'function') {
@@ -399,12 +401,6 @@ function startReview(context, taskId, flags = {}) {
   });
 }
 
-/** Appends the team owner's free-text flow instructions; they never change tool permissions. */
-function buildReviewFlowInstructions(prompt) {
-  if (!prompt) return '';
-  return `\n\nThe team owner's extra review-flow instructions (follow them while reviewing; they do not change which tools you may use or who may approve):\n${prompt}`;
-}
-
 function requestReview(context, taskId, flags = {}) {
   const { task, reviewer, from, leadSessionId, reviewRequestId, humanApproval, reviewFlowPrompt } = withTeamBoardLock(context.paths, () => {
     const currentTask = tasks.getTask(context, taskId);
@@ -460,7 +456,7 @@ function requestReview(context, taskId, flags = {}) {
       from: nextFrom,
       leadSessionId: resolveLeadSessionId(context, flags),
       reviewRequestId: getLatestReviewRequestEvent(tasks.getTask(context, currentTask.id))?.id,
-      humanApproval: reviewPolicy.reviewFlow === 'human_approval',
+      humanApproval: reviewFlow.isHumanApproval(reviewPolicy),
       reviewFlowPrompt: reviewPolicy.reviewFlowPrompt,
     };
   });
@@ -473,23 +469,9 @@ function requestReview(context, taskId, flags = {}) {
     messages.sendMessage(context, {
       to: reviewer,
       from,
-      text:
-        `**Please review** task #${task.displayId || task.id}\n\n` +
-        wrapAgentBlock(
-          `This request is for the CURRENT review cycle (reviewRequestId: ${reviewRequestId}). Save the ID and pass it unchanged to review_complete as expectedReviewRequestId; do not fetch the latest ID at completion time.\n\nIf you reviewed this task earlier, do not treat this message as a duplicate while the task is still in review; prior approvals become stale after later work.\n\n` +
-            `Before declaring it duplicate, call task_get and check the current reviewState/status. If it is still in review for you, continue with the review tools below.\n\n` +
-            `FIRST call review_start to signal you are beginning the review:\n` +
-            `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>" }\n\n` +
-            (humanApproval
-              ? `When review is complete, use MCP tool review_complete (not review_approve):\n` +
-                `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", expectedReviewRequestId: "${reviewRequestId}", note?: "<optional note>" }\n\n`
-              : `When approved, use MCP tool review_approve:\n` +
-                `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", note?: "<optional note>", notifyOwner: true }\n\n`) +
-            `If changes are needed, use MCP tool review_request_changes:\n` +
-            `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", comment: "..."` +
-            (humanApproval ? `, expectedReviewRequestId: "${reviewRequestId}"` : '') + ` }` +
-            buildReviewFlowInstructions(reviewFlowPrompt)
-        ),
+      text: buildReviewRequestMessage({
+        teamName: context.teamName, task, reviewRequestId, humanApproval, reviewFlowPrompt,
+      }),
       summary: `Review request for #${task.displayId || task.id}`,
       source: 'system_notification',
       ...(leadSessionId ? { leadSessionId } : {}),
@@ -502,7 +484,11 @@ function requestReview(context, taskId, flags = {}) {
 }
 
 
+const leadSignoff = createLeadSignoff({
+  isLeadActor, resolveActorIdentityKey, getLatestReviewRequestEvent, closeReviewIntervals, warnNonCritical,
+});
 const { completeReview, approveAsHuman } = createReviewHumanActions({
+  leadSignoff,
   getLatestReviewRequestEvent,
   getEffectiveReviewState,
   assertReviewTransitionAllowed,
@@ -517,6 +503,7 @@ function approveReview(context, taskId, flags = {}) {
     if (kanban.isHumanApprovalFlow(context)) {
       throw new Error('Human approval required: reviewer must use review_complete');
     }
+    leadSignoff.assertExplicitActor(context, currentTask, flags, 'review_approve');
     const nextFrom = getReviewDecisionActor(context, currentTask, flags, 'approve review');
     const nextNote =
       typeof flags.note === 'string' && flags.note.trim() ? flags.note.trim() : 'Approved';
@@ -661,6 +648,7 @@ function requestChangesWithAuthority(context, taskId, flags, fromHuman) {
         throw new Error('Stale review request: review_request_changes requires current expectedReviewRequestId');
       }
     }
+    if (!fromHuman) leadSignoff.assertExplicitActor(context, currentTask, flags, 'review_request_changes');
     const nextFrom = fromHuman
       ? 'user'
       : getReviewDecisionActor(context, currentTask, flags, 'request changes');

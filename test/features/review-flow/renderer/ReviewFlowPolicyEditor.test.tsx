@@ -114,6 +114,15 @@ describe('ReviewFlowPolicyEditor', () => {
     });
   });
 
+  it('offers the lead sign-off flow and saves it like any other flow', async () => {
+    const onSave = vi.fn(() => Promise.resolve());
+    render({ policy: own(agent), defaults: agent, onSave });
+
+    act(() => q<HTMLInputElement>('lead_then_human')!.click());
+    await act(async () => q<HTMLButtonElement>('save')!.click());
+    expect(onSave).toHaveBeenCalledWith({ reviewFlow: 'lead_then_human', reviewFlowPrompt: '' });
+  });
+
   it('removes the override (saves null) when a custom team returns to the default', async () => {
     const onSave = vi.fn(() => Promise.resolve());
     render({ policy: own(human), defaults: agent, onSave });
