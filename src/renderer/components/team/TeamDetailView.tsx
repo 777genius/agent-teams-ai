@@ -2075,9 +2075,20 @@ export const TeamDetailView = memo(function TeamDetailView({
     setSendDialogOpen(true);
   }, []);
 
+  const [projectLaunchError, setProjectLaunchError] = useState<string | null>(null);
   const openLaunchDialog = useCallback((mode: TeamLaunchDialogMode) => {
+    if (logicalTeamName) {
+      void (async () => {
+        setProjectLaunchError(null);
+        if (mode === 'relaunch') await api.teams.stop(teamName);
+        await launchTeam({ teamName: logicalTeamName, cwd: data?.config.projectPath ?? '' });
+      })().catch((error: unknown) =>
+        setProjectLaunchError(error instanceof Error ? error.message : String(error))
+      );
+      return;
+    }
     setLaunchDialogState({ open: true, mode });
-  }, []);
+  }, [logicalTeamName, teamName, data?.config.projectPath, launchTeam]);
 
   const closeLaunchDialog = useCallback(() => {
     setLaunchDialogState((prev) => ({ ...prev, open: false }));
@@ -2112,15 +2123,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       onMembersSaved?: () => void
     ): Promise<void> => {
       if (logicalTeamName) {
-        if (memberSettingsRelaunch) {
-          throw new Error('Change team roster settings on the logical team before relaunch');
-        }
-        await api.teams.stop(teamName);
-        await launchTeam({
-          ...request, teamName: logicalTeamName,
-          cwd: data?.config.projectPath ?? request.cwd,
-        });
-        return;
+        throw new Error('Project teams relaunch through the logical-team admission action');
       }
       await executeTeamRelaunch({
         teamName,
@@ -3102,6 +3105,11 @@ export const TeamDetailView = memo(function TeamDetailView({
                   {t('detail.kanbanSafeData')}
                 </div>
               ) : null}
+              {projectLaunchError && (
+                <div role="alert" className="mb-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-[var(--step-error-text)]">
+                  {projectLaunchError}
+                </div>
+              )}
               {reviewActionError ? (
                 <div className="mb-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-[var(--step-error-text)]">
                   {reviewActionError}
@@ -3710,7 +3718,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       {spawnStatusWatcher}
       {teamAgentRuntimeWatcher}
       {renderBody()}
-      {launchDialogOpen && (
+      {launchDialogOpen && !logicalTeamName && (
         <Suspense
           fallback={
             <LaunchTeamDialogLoadingFallback
