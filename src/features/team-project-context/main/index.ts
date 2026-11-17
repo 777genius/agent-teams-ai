@@ -28,3 +28,9 @@ export {
   registerTeamProjectContextViewHandler,
   unregisterTeamProjectContextViewHandler,
 } from './TeamProjectContextViewIpc';
+
+export { changeTeamProjectContextMode } from './TeamProjectContextModeService';
+export {
+  registerTeamProjectContextModeHandler,
+  unregisterTeamProjectContextModeHandler,
+} from './TeamProjectContextModeIpc';
