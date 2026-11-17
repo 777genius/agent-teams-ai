@@ -1,7 +1,6 @@
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import {
-  claimTeamForThisProfile,
   readTeamOwnerProfileScope,
   resolveThisAppProfileScope,
 } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
@@ -218,75 +217,86 @@ export class TeamProjectContextRegistry {
   }
 
   /**
-   * Single writer, idempotent after crash. A reserved alias with an uncertain
-   * owner is never taken over; it must be reconciled explicitly.
+   * Reserve an opaque native name without creating a physical directory.
+   * The EXISTING Team Provisioning create flow remains the sole writer of
+   * native team config, tasks and launch state.
    */
-  async getOrCreate(
+  async reserve(
     logicalTeamName: string,
     projectPath: string
   ): Promise<PersistedTeamWorkContext> {
     await this.assertOwnedDirectory(logicalTeamName);
     const projectKey = await canonicalProjectPath(projectPath);
-    const target = this.indexPath(logicalTeamName);
-    return withFileLock(target, async () => {
+    return withFileLock(this.indexPath(logicalTeamName), async () => {
       await this.assertOwnedDirectory(logicalTeamName);
       const index = await this.readIndex(logicalTeamName);
-      let row = index.contexts.find((c) => c.projectKey === projectKey);
-      if (!row) {
-        if (index.contexts.length >= MAX_PROJECT_CONTEXTS) {
-          throw new TeamProjectContextUnavailableError('Team has too many project contexts');
-        }
-        let executionTeamName: string | null = null;
-        for (let i = 0; i < 8; i++) {
-          const candidate = 'ptc-' + randomUUID().replaceAll('-', '').slice(0, 24);
-          if (
-            !index.contexts.some((c) => c.executionTeamName === candidate) &&
-            !(await exists(path.join(this.paths.teamsBasePath, candidate))) &&
-            !(await exists(path.join(this.paths.tasksBasePath, candidate)))
-          ) {
-            executionTeamName = candidate;
-            break;
-          }
-        }
-        if (!executionTeamName) {
-          throw new TeamProjectContextUnavailableError('Could not reserve a unique team context');
-        }
-        row = {
-          id: randomUUID(),
-          projectKey,
-          projectPath: projectKey,
-          executionTeamName,
-          state: 'reserved',
-        };
-        index.contexts.push(row);
-        await this.writeIndex(index);
+      const existing = index.contexts.find((c) => c.projectKey === projectKey);
+      if (existing) {
+        if (existing.state === 'ready') await this.assertOwnedDirectory(existing.executionTeamName);
+        return existing;
       }
+      if (index.contexts.length >= MAX_PROJECT_CONTEXTS) {
+        throw new TeamProjectContextUnavailableError('Team has too many project contexts');
+      }
+      let executionTeamName: string | null = null;
+      for (let attempt = 0; attempt < 8; attempt++) {
+        const candidate = 'ptc-' + randomUUID().replaceAll('-', '').slice(0, 24);
+        if (
+          !index.contexts.some((c) => c.executionTeamName === candidate) &&
+          !(await exists(path.join(this.paths.teamsBasePath, candidate))) &&
+          !(await exists(path.join(this.paths.tasksBasePath, candidate)))
+        ) {
+          executionTeamName = candidate;
+          break;
+        }
+      }
+      if (!executionTeamName) {
+        throw new TeamProjectContextUnavailableError('Could not reserve a unique team context');
+      }
+      const reserved: PersistedTeamWorkContext = {
+        id: randomUUID(),
+        projectKey,
+        projectPath: projectKey,
+        executionTeamName,
+        state: 'reserved',
+      };
+      index.contexts.push(reserved);
+      await this.writeIndex(index);
+      return reserved;
+    }, { preventLiveOwnerTakeover: true });
+  }
 
-      const physicalTeamPath = path.join(this.paths.teamsBasePath, row.executionTeamName);
-      const physicalTasksPath = path.join(this.paths.tasksBasePath, row.executionTeamName);
-      if (row.state === 'ready') {
-        await this.assertOwnedDirectory(row.executionTeamName);
-        return row;
+  /**
+   * Confirm only after the existing native provisioning flow has created an
+   * owned, valid physical team and task directory. No inferred success.
+   */
+  async confirmReady(
+    logicalTeamName: string,
+    projectPath: string,
+    executionTeamName: string
+  ): Promise<PersistedTeamWorkContext> {
+    await this.assertOwnedDirectory(logicalTeamName);
+    const projectKey = await canonicalProjectPath(projectPath);
+    return withFileLock(this.indexPath(logicalTeamName), async () => {
+      await this.assertOwnedDirectory(logicalTeamName);
+      const index = await this.readIndex(logicalTeamName);
+      const row = index.contexts.find((c) => c.projectKey === projectKey);
+      if (!row || row.executionTeamName !== executionTeamName) {
+        throw new TeamProjectContextUnavailableError('Unrecognized project context confirmation');
       }
-      // A pre-existing unmarked alias after crash is ambiguous: never claim it.
-      if (await exists(physicalTeamPath)) {
-        await this.assertOwnedDirectory(row.executionTeamName);
-      } else {
-        if (await exists(physicalTasksPath)) {
-          throw new TeamProjectContextUnavailableError('Reserved task directory collision');
+      await this.assertOwnedDirectory(row.executionTeamName);
+      for (const required of [
+        path.join(this.paths.teamsBasePath, row.executionTeamName, 'config.json'),
+        path.join(this.paths.tasksBasePath, row.executionTeamName),
+      ]) {
+        const stat = await fs.lstat(required);
+        if (stat.isSymbolicLink() || !(required.endsWith('.json') ? stat.isFile() : stat.isDirectory())) {
+          throw new TeamProjectContextUnavailableError('Native project context is incomplete');
         }
-        await fs.mkdir(physicalTeamPath, { mode: 0o700 });
-        await claimTeamForThisProfile({
-          teamName: row.executionTeamName,
-          teamsBasePath: this.paths.teamsBasePath,
-          reason: 'create',
-          profileScope: this.paths.profileScope,
-        });
       }
-      await fs.mkdir(physicalTasksPath, { mode: 0o700, recursive: true });
-      await fs.mkdir(path.join(physicalTeamPath, 'inboxes'), { mode: 0o700, recursive: true });
+      if (row.state === 'ready') return row;
       const ready: PersistedTeamWorkContext = { ...row, state: 'ready' };
-      index.contexts = index.contexts.map((c) => (c.id === row.id ? ready : c));
+      index.contexts = index.contexts.map((c) => c.id === ready.id ? ready : c);
       await this.writeIndex(index);
       return ready;
     }, { preventLiveOwnerTakeover: true });
