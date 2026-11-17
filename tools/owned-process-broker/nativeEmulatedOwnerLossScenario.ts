@@ -358,7 +358,6 @@ export async function nativeEmulatedOwnerLossScenario(sandbox: string, broker: s
       to: 'alice', text: 'TEST-register-services', messageId: 'TEST-input', actionMode: 'do' } };
     if (afterEffect) {
       const opened = await observe(() => pendingOpen!); assert.equal(opened.state, 'fulfilled');
-      if (opened.state !== 'fulfilled') throw opened.error;
       assert.equal(value(opened.response).nativeReady, true);
       stage('one-original-business-input');
       const entered = performance.now(); inputCutoff = entered + 15000;
