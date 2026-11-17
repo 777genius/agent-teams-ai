@@ -24,6 +24,7 @@ export interface TeamProjectContextViewApi {
     logicalTeamName: string,
     projectPath?: string | null
   ): Promise<TeamProjectContextView>;
+  setProjectContextMode(logicalTeamName: string, mode: TeamProjectContextMode): Promise<void>;
 }
 
 export const TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL = 'team:projectContextMode:set';

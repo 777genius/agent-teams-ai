@@ -17,6 +17,7 @@ import { createTeamMemberSettingsBridge } from '@features/team-provisioning/prel
 import { createTeamReadRecoveryBridge } from '@features/team-read-recovery/preload';
 import {
   TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
+  TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL,
   type TeamProjectContextView,
 } from '@features/team-project-context/contracts';
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
@@ -933,6 +934,8 @@ const electronAPI: ElectronAPI = {
       invokeIpcWithResult<TeamProjectContextView>(
         TEAM_PROJECT_CONTEXT_VIEW_CHANNEL, logicalName, projectPath ?? null
       ),
+    setProjectContextMode: async (logicalName: string, mode: 'shared' | 'per_project') =>
+      invokeIpcWithResult<void>(TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL, logicalName, mode),
     getData: async (teamName: string, options?: TeamGetDataOptions) => {
       if (options === undefined) {
         return invokeIpcWithResult<TeamViewSnapshot>(TEAM_GET_DATA, teamName);
