@@ -335,3 +335,37 @@ Both complete Darwin artifact sets retain strict P09 failure: x64 has6 PASS/3 IN
 The original OpenCode flow remains INCOMPLETE at the initial member-detail target read, before any member mouse input. The retained screenshot/layout/source advisory supports missing viewport preparation; exact null branch and prior scroll trigger are unknown. A bounded original scroll-reveal candidate is advisory only and is outside this completed five-source/control subject. The newly captured Codex/extension artifacts are complete data captures, with independent semantic review separate.
 
 All79 original catalog values, all27 complete bundles/totals, both full plan/status prefixes, all8799 non-doc leaves and all42 workflows are preserved. This publication adds only exact controls, review/evidence records and these documentation pointers. Production5020,800-line limit,141 frozen exceptions, no-real-agent and frozen-PR constraints remain.
+
+
+## Inode64 standalone recovery and member reveal — R1 (2026-11-17 06:26:03 UTC)
+
+The original standalone deadline invocation is retained as `REFUSED_BEFORE_SCOPE_ADMISSION_SPENT`: exit 1, zero phases and zero cases, before source creation or child spawn. The signed Node inode and unsigned Python pin represent the same 64 bits. The supervisor did not reach its digest check; separate full external pre/post identity observations and all three staged control files remain unchanged. The old absent source root and preserved old stage are spent and will not be reused.
+
+Exact R1 `b16bf54091cfb2fd2756ad7a951d0f9143611d2b` selects two bounded changes after this publication's complete actual readbacks: range-checked inode normalization only inside exactNode with the original unsigned pin retained, and one awaited existing scrollTo call for the unique alice name before the unchanged 649-byte original member click. No source or executable-control postimage is published by this R1. Root and independent guard, semantic and binding reviews passed 131 static/evidence checks with no blockers and complete report readbacks.
+
+The fresh standalone source and stage names are `/workspace/scratch/c714-waitread-inode64-20261117` and `/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117`. The actual docs-only R1 publication will be the known immutable source anchor; later combined R2 publication is joined through an external immutable admission. All three selected source inputs, full ordered ten-case expectations, original test/phase/supervisor/cleanup budgets, raw streams and process/census rules remain unchanged. Expected RED 7 failures/3 passes and GREEN 10 passes remain predictions.
+
+The whole original renderer85 now has independently accepted actual GREEN evidence at frozen 9c9, including former regressions81–83 and later stale-response assertions. The surrounding shard's18 skipped cases/two skipped files remain skipped. Later aggregate149, catalog43, standalone10 and the new member-reveal wiring have no runtime result here. Prior finite Codex/Extensions success stays bounded, including the recorded mutation-boundary banner and unsupported final Extensions observations.
+
+Retained CI observation14 reports Host19 successes,2 failures,1 queued and Packaged3 successes,3 failures,1 queued. Those are time-bound observations, not final workflow success. Full original cross-team and both Windows failure artifacts are retained; their errors remain failures. No frozen CI ref/PR mutation, rerun/cancel/dispatch, Ready, real Claude/Codex, default activation, native/release or Stage2 qualification occurs.
+
+All current source/workflow/dependency bytes, previous81 catalog values,27 bundles and totals remain unchanged. Full plan/status prefixes are preserved. Exact evidence files:
+
+- `inode64-member-reveal-r1-20261117.json` — `b16bf54091cfb2fd2756ad7a951d0f9143611d2b`, 27869 bytes.
+- `inode64-member-reveal-r1-root-review-20261117.json` — `3e38848ca22648dccb8928553b31543d8cb366b6`, 13214 bytes.
+- `inode64-member-reveal-r1-guard-review-20261117.json` — `3e53832bf5fee506849b88202028ae73a50f2ab1`, 60065 bytes.
+- `inode64-member-reveal-r1-semantic-review-20261117.json` — `6f1d57b805792bca13cdda2048c34c59d3565944`, 48210 bytes.
+- `inode64-member-reveal-r1-binding-review-20261117.json` — `4edbaba44e16de90ef20d2a1e1baf9350d847a88`, 86401 bytes.
+- `standalone-waitread-original-spent-admission-20261117.json` — `8c2c7a2a439b1054972f4a52eb8f88b842274dba`, 1583 bytes.
+- `standalone-waitread-original-refusal-20261117.json` — `30bcf16f731650684a275de4ae4be6cd18b41c4e`, 200440 bytes.
+- `standalone-waitread-inode64-advisory-20261117.json` — `5af2e1cf8dc14ace23e8cc1f10ddbb25e8ef6d26`, 54695 bytes.
+- `opencode-member-reveal-r1-advisory-20261117.json` — `c246bbf66dd628fe6909a1a57cab85bdccf80d58`, 27043 bytes.
+- `pr1218-whole-renderer85-actual-review-20261117.json` — `4277afde65b656545ca30e4b1be3f593af862fc8`, 56658 bytes.
+- `pr1218-codex-extensions-actual-review-20261117.json` — `342a38f823f0d07bd8281fd94022ea1f3ecb3133`, 101500 bytes.
+- `pr1218-extensions-semantic-slice-20261117.json` — `14bd6ed652989dde397cce0073e315e269762bcb`, 28120 bytes.
+- `narrow-waitread-control-root-actual-publication-20261117.json` — `516017b52445cd7c337878f0754a0e121849b24d`, 65482 bytes.
+- `narrow-waitread-control-independent-actual-publication-20261117.json` — `f20c0188402a166dce08b6592e06e311edcc9fe9`, 200533 bytes.
+- `pr1218-executed-observation13-20261117.json` — `e809fefa350f8d7f7e3e4922ac0bba865c19c13e`, 573622 bytes.
+- `pr1218-executed-observation14-20261117.json` — `99f1a2a1630f25627a9e103f9a58f48c1c87a0ec`, 638122 bytes.
+- `pr1218-frontend2-complete-artifact-capture-20261117.json` — `88130b0010f8d67e683792e0712b5ce01d7e7e03`, 7711 bytes.
+- `pr1218-cross-team-windows-full-failure-capture-20261117.json` — `33e472d38720bda64a2483041af43405c2eec085`, 43216 bytes.

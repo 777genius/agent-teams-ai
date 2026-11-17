@@ -1,0 +1,854 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-semantic-R1-review-inode64-fresh-standalone-and-member-reveal",
+  "at": "2026-11-17 06:21:47 UTC",
+  "reviewer": "/root/producer_r2_semantic",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "bytes": 27869,
+    "sha256": "e3a891024d750f7c868a7a253f2ed1f3630b833e92d1698af38b533c8ebc5db7",
+    "gitBlob": "b16bf54091cfb2fd2756ad7a951d0f9143611d2b"
+  },
+  "verdict": "ACCEPT_R1_NARROW_PLAN_STATIC",
+  "blockers": [],
+  "acceptanceScope": "Accept the exact b16bf R1 plan for the selected future authorship and existing review sequence. This is not approval of uncreated source/control postimages, staging, a runtime result, or a new GUI/CI action.",
+  "authorityAndMethod": {
+    "actions": "Immutable Git/source/evidence reads, complete in-memory identity/JSON comparisons and bounded arithmetic, plus retention of this bare report only.",
+    "targetExecution": false,
+    "sourceAuthorship": false,
+    "controlAuthorship": false,
+    "shell": false,
+    "liveCiReads": false,
+    "refOrPrMutation": false,
+    "identityHelper": {
+      "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8",
+      "bytes": 3982,
+      "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7"
+    },
+    "readQualification": "Complete R1, complete member advisory, complete inode advisory, complete baseline runner and complete fixture were read. Driver/controls/aggregate were freshly fetched and hashed as whole strings, joined literally to this reviewer's previously complete source reads, and decisive driver/waitRead/click/scroll boundaries reread. The refusal packet was fully fetched/hashed/parsed; its original result, outcome and Node pre/post metadata were read here, while Guard owns complete stage-payload reconstruction. Upstream Node source evidence is joined through the complete pinned inode advisory and is not represented as a new full upstream source census.",
+    "noNewGate": "The existing R1 publication/actual closure, combined source/control R2 and actual admission gates are preserved; this review invents no extra approval requirement."
+  },
+  "primaryEvidence": [
+    {
+      "role": "r1",
+      "bytes": 27869,
+      "sha256": "e3a891024d750f7c868a7a253f2ed1f3630b833e92d1698af38b533c8ebc5db7",
+      "gitBlob": "b16bf54091cfb2fd2756ad7a951d0f9143611d2b"
+    },
+    {
+      "role": "memberAdvisory",
+      "bytes": 27043,
+      "sha256": "ccc199a00f3e822961831a05b2e9138076a4843a389b432354aea07093ed1543",
+      "gitBlob": "c246bbf66dd628fe6909a1a57cab85bdccf80d58"
+    },
+    {
+      "role": "inodeAdvisory",
+      "bytes": 54695,
+      "sha256": "9212ceb83645a0f9fb9e2f9b37985c5af6bfe6248014014cac86eead66a7092d",
+      "gitBlob": "5af2e1cf8dc14ace23e8cc1f10ddbb25e8ef6d26"
+    },
+    {
+      "role": "refusal",
+      "bytes": 200440,
+      "sha256": "ab24e85bd89e55d48149f05274176df9fba2e0340b526c1a927242b4ed401bd4",
+      "gitBlob": "30bcf16f731650684a275de4ae4be6cd18b41c4e"
+    },
+    {
+      "role": "driver",
+      "bytes": 69194,
+      "sha256": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+      "gitBlob": "43ab487464098fed0425ffd51441a38abc206f3b"
+    },
+    {
+      "role": "controls",
+      "bytes": 29017,
+      "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+      "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+    },
+    {
+      "role": "aggregate",
+      "bytes": 165022,
+      "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+      "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+    },
+    {
+      "role": "fixture",
+      "bytes": 7883,
+      "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+      "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+    },
+    {
+      "role": "runner",
+      "bytes": 25389,
+      "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+      "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced"
+    },
+    {
+      "role": "binding",
+      "bytes": 105210,
+      "sha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+      "gitBlob": "a206a4432f4e9f77f682b91d340c191826b5f25b"
+    },
+    {
+      "role": "acceptedActualRenderer85Review",
+      "gitBlob": "4277afde65b656545ca30e4b1be3f593af862fc8",
+      "bytes": 56658,
+      "sha256": "2a20638c7372fc202d5dc1fbcb364744a8ada038401e6673461ab8147843524e",
+      "selfReadComplete": true
+    },
+    {
+      "role": "acceptedPriorStandaloneControlSemanticR2",
+      "gitBlob": "1d7d97c7d6bf0f91a179621099388162a09b8f2b",
+      "bytes": 43030,
+      "sha256": "0321bd9d9d6315a0268bd3e34b2418aa6bbafb3926e8667c19b0a1c622ca27f9",
+      "selfReadComplete": true
+    }
+  ],
+  "baseAndFutureBinding": {
+    "baseCommit": "c4fc226201fb32e59d1a8ccfb130922926445747",
+    "sourceCommit": "674d32a84644f87544910c28bb4d2a4214958fb5",
+    "baseEvidenceMode": "The exact R1's retained base/source and accepted actual-publication references are the plan basis. This review does not repeat an unrelated entire repository tree audit or make a fresh current-ref/absence observation.",
+    "futureSourceAnchor": "The exact actual immutable docs-only publication of this R1, known before authoring R2. Its selected package/test/fixed-controls bytes must equal current c4fc/674 source. The later driver-only change does not enter these3 standalone inputs. Admission additionally binds the actual combined source/control R2 publication and its root/independent actual readbacks.",
+    "futureRebinding": "New exclusive scope/stage/token, current R1 and actual gates, immutable source anchor, exact runner/binding/publication/admission identities. Any hardcoded prior publication refs must be updated to these exact joined identities. Preserve all actual source/test bodies and test budgets.",
+    "originalRefusal": {
+      "invokedAt": "2026-11-17 05:47:31 UTC",
+      "status": "REFUSED_BEFORE_SCOPE_ADMISSION_SPENT",
+      "outerExitCode": 1,
+      "phasesStarted": 0,
+      "testCasesExecuted": 0,
+      "attemptSpent": true,
+      "sourceScopeStillAbsent": true,
+      "supervisorElapsedMs": 16.488356,
+      "errorSite": "Initial exactNode inode comparison; before exclusive source scope creation/materialization and before phaseRun. The supervisor's own hash code follows the failing comparison and was not reached."
+    },
+    "oldScope": "/workspace/scratch/c714-waitread-20261117",
+    "oldStage": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117",
+    "oldAttemptToken": "c714-waitread-20261117-original-one-shot",
+    "newScope": "/workspace/scratch/c714-waitread-inode64-20261117",
+    "newStage": "/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117",
+    "newAttemptToken": "c714-waitread-inode64-20261117-original-one-shot",
+    "freshnessLimit": "Retained absence observations are point-in-time data. Exact future source/control implementation must retain exclusive creation and refuse if the new path has appeared. Old scope and staged controls remain spent evidence and cannot be reused."
+  },
+  "inodeSemantics": {
+    "observed": {
+      "raw": "-9223372036854733364",
+      "expected": "9223372036854818252",
+      "signedMin": "-9223372036854775808",
+      "signedMax": "9223372036854775807",
+      "unsignedMax": "18446744073709551615",
+      "inSignedRange": true,
+      "inUnsignedRange": true,
+      "sum": "9223372036854818252",
+      "canonical": "9223372036854818252",
+      "inverse": "-9223372036854733364",
+      "hex": "0x800000000000a5cc",
+      "sameBits": true,
+      "unchangedPin": true
+    },
+    "nodePin": {
+      "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "bytes": 126939688,
+      "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+      "device": "27",
+      "inode": "9223372036854818252",
+      "uid": "65534",
+      "gid": "65534",
+      "mode": "0o755",
+      "mtimeNs": "1794515386000000000",
+      "ctimeNs": "1794515386000000000",
+      "versionPreviouslyObserved": "v24.22.1"
+    },
+    "physicalPrePostEqual": true,
+    "sourceBasis": "The complete 5af2 advisory reads the official Node v24.22.1 fs.lstatSync({bigint:true}) source path: libuv's uint64 inode is copied through the stats population into a signed BigInt64Array slot, and BigIntStats preserves that raw field. It pins ten full source bodies and the release commit. This supports the signed-versus-unsigned representation diagnosis, not source-to-binary reproducibility.",
+    "selectedRule": "Only in exactNode: retain raw metadata.inode; validate raw BigInt lies within signed64 and unchanged expected pin within unsigned64; derive BigInt.asUintN(64, raw) and compare decimal value to the existing pin; return both raw and canonical inode evidence. Generic metadata/source/control censuses stay raw. No Number conversion or expected-pin replacement.",
+    "mathematicalReason": "On the finite signed64 domain, adding 2^64 to a negative integer and retaining a nonnegative integer maps bijectively to unsigned64. BigInt.asUintN(64, raw) performs that mapping. Validating both domains before comparison avoids accepting out-of-range aliases. The selected expected inode is unchanged; no precision-losing Number operation is involved.",
+    "canonicalStringBoundary": "The raw value is produced by String(s.ino), and the expected pin is an immutable canonical decimal literal. This is not a general-purpose permissive parser or a selected normalization of source/control metadata.",
+    "evidenceBoundary": "Return the raw metadata together with the derived canonical inode in the local Node evidence. Keep every generic metadata/census/fstat comparison raw. All callers' existing before/after equality must remain in the later exact implementation.",
+    "notClaimed": [
+      "A new physical Node observation",
+      "A new version probe",
+      "A changed inode or binary identity",
+      "Full source-to-binary attestation",
+      "Acceptance of arbitrary-width modulo aliases"
+    ]
+  },
+  "standalonePreservation": {
+    "embeddedBodyJoins": [
+      {
+        "path": "package.json",
+        "claimed": {
+          "bytes": 26839,
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+          "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        "observed": {
+          "bytes": 26839,
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+          "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        "match": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "claimed": {
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        },
+        "observed": {
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        },
+        "match": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "claimed": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        "observed": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        "match": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "claimed": {
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        "observed": {
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        "match": true
+      }
+    ],
+    "samePhaseInventory": true,
+    "sameArgv": true,
+    "sameNodePin": true,
+    "sameChildEnvironment": true,
+    "unchangedBudgets": {
+      "phaseWallMs": 60000,
+      "supervisorWallMs": 135000,
+      "cleanupWallMs": 4000,
+      "outputLimitBytes": 8388608,
+      "perTestMs": 5000,
+      "originalUiDefaultMs": 30000,
+      "originalPollMs": 100
+    },
+    "fullInventory": [
+      {
+        "label": "RED",
+        "exitCode": 1,
+        "tests": [
+          {
+            "number": 1,
+            "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 2,
+            "title": "generic UI read refuses its first fulfilled value after the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 3,
+            "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 4,
+            "title": "generic UI read refuses a later fulfilled value after the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 5,
+            "title": "generic UI read does not admit or poll again after a late false observation",
+            "result": "FAIL",
+            "signature": "late-false-readiness"
+          },
+          {
+            "number": 6,
+            "title": "generic UI read preserves a timely first value and its exact identity",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 7,
+            "title": "generic UI read preserves its original cadence and a timely later value",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 8,
+            "title": "generic UI read honors a supplied budget at its strict boundary",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 9,
+            "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 10,
+            "title": "generic UI hover preserves one movement after three timely stable points",
+            "result": "PASS",
+            "signature": null
+          }
+        ]
+      },
+      {
+        "label": "GREEN",
+        "exitCode": 0,
+        "tests": [
+          {
+            "number": 1,
+            "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 2,
+            "title": "generic UI read refuses its first fulfilled value after the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 3,
+            "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 4,
+            "title": "generic UI read refuses a later fulfilled value after the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 5,
+            "title": "generic UI read does not admit or poll again after a late false observation",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 6,
+            "title": "generic UI read preserves a timely first value and its exact identity",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 7,
+            "title": "generic UI read preserves its original cadence and a timely later value",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 8,
+            "title": "generic UI read honors a supplied budget at its strict boundary",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 9,
+            "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 10,
+            "title": "generic UI hover preserves one movement after three timely stable points",
+            "result": "PASS",
+            "signature": null
+          }
+        ]
+      }
+    ],
+    "fixtureSemantics": [
+      "The five late read scenarios use finite original observations and record exact expression, owner guard count, readiness values, real polling cadence and absence of input.",
+      "Cases 1–4 reject truthy first/later observations at or after the original 30,000 ms cutoff. Old code returns them, producing the expected missing-rejection failures.",
+      "Case 5 makes the distinction sharper: both versions ultimately time out on a false late result, but old code improperly invokes readiness and polls again. Fixed code rejects without those effects.",
+      "Cases 6–7 preserve exact offered-value identity and the original real 100 ms later-poll cadence. A stateful or copied readiness substitute is not used.",
+      "Case 8 tests a caller-supplied 73 ms deadline: 72 ms remains timely, exactly73 is refused. The single test fails old code on its second subcase.",
+      "Cases 9–10 call the actual hoverExpression. A third equal point exactly at cutoff must not complete stateful readiness or emit input. A third point at29,999 remains eligible for exactly one original movement.",
+      "The fixture mocks Date only, while its setTimeout wrapper invokes the original real timer. Finally restores all method mocks and Date before checking that every tracked polling timer has already settled.",
+      "Neither source nor fixture provides active cancellation of a pending CDP evaluate. Parent phase/supervisor controls retain their separate wall-clock responsibility."
+    ],
+    "fixedWaitReadInverse": {
+      "offset": 14002,
+      "deltaBytes": 43,
+      "unique": true,
+      "inverseEqualsOld": true
+    },
+    "phaseAdmission": "The expected RED7F/3P has to be accepted by the original strict classifier and ordinary cleanup before fixed controls may be written on the same source inode and GREEN admitted. No failure-only rerun, alternate target, case substitution or test expansion is selected.",
+    "controlInvariantSummary": [
+      "Exact Node realpath/hash/size/device/mode/owner/times and full before/after checks.",
+      "Parent exec-c empty environment, cwd/, exact argv/no execArgv; detached child Node session and fixed env.",
+      "Only3 regular0644/nlink1 staged controls and0755 directories; no symlinks; exclusive fresh scope and no pre-existing artifacts.",
+      "Full source/control/root before/after censuses; only oldcontrols→fixedcontrols on the same original inode after accepted RED and ordinary cleanup.",
+      "One original monotonic supervisor deadline, unchanged phase deadlines and immediate synchronous pre-admission cutoff checks before scope/materialization/transition/write/spawn.",
+      "Full process samples before validation and finally retention; PID/start/session/group/uid/exe/argv ownership; no unrelated-process signaling.",
+      "One original4s cleanup deadline across continuation, no repeated TERM/KILL pass, original250ms TERM→KILL.",
+      "Complete raw stdout/stderr8MiB cap, exact TAP10 ordered cases/plan/counters/diagnostics; no skip/todo/cancel/nested substitute/bailout.",
+      "Ordinary close/EOF/exact status/no signal and no surviving captured process/session/group before acceptance.",
+      "Any refusal, timeout, unknown, retention or cleanup error spends the attempt; no silent retry."
+    ],
+    "runtimeState": "All ten outcomes above are predictions. The spent original attempt executed zero. No new invocation, materialization or test was performed in this review."
+  },
+  "memberReveal": {
+    "driverPin": {
+      "bytes": 69194,
+      "sha256": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+      "gitBlob": "43ab487464098fed0425ffd51441a38abc206f3b"
+    },
+    "driverPhysicalLines": 794,
+    "insertionBoundary": "Immediately after proof.stats = stats; immediately before the original member click.",
+    "selector": "div[role=\"button\"][tabindex=\"0\"][class~=\"group/member\"] span",
+    "exactText": "alice",
+    "maxWheelEvents": 12,
+    "fifthArgument": {
+      "requireCenterHit": true
+    },
+    "originalClick": {
+      "bytes": 649,
+      "sha256": "41c01f7e76509f264fe9337294554e84bc7c22e355558ab000469f9dae086f24",
+      "startOffset": 36910,
+      "endOffsetExclusive": 37559,
+      "literalEqual": true,
+      "unique": true,
+      "fragmentOnly": "The fragment's derived Git blob is not presented as a separately retained object."
+    },
+    "helperSignature": "scrollTo(selector: string, label: string, text?: string, maxWheelEvents = 12, scrollOptions: { requireCenterHit?: boolean } = {})",
+    "actualHelperSemantics": [
+      "Query the selected descendant spans and filter exact trimmed text. Require exactly one match; absence and duplicates return null to the existing waitRead.",
+      "Read positive element dimensions and the nearest vertically scrollable ancestor, clipping its vertical viewport to the browser viewport.",
+      "When requireCenterHit is true, the name center's elementFromPoint result must be the selected span or its descendant before visible can be accepted.",
+      "If already fully vertically contained with an eligible center hit, return without a wheel. Otherwise use existing physical Input.dispatchMouseEvent mouseWheel, clamped ±600, and the original100 ms cadence.",
+      "At most twelve wheels are allowed, followed by one final observation. Persistent occlusion/zero dimensions/missing matches cannot authorize a click. A center obstructed by unrelated content can consume bounded wheel attempts and still fail.",
+      "Each read retains its own30,000 ms cutoff. The helper does not impose one cumulative30,000 ms reveal deadline and does not cancel an unresolved evaluate."
+    ],
+    "unchangedClickAuthority": [
+      "Exactly one eligible member row containing Alice and exactly one Alice span within that row.",
+      "Positive name dimensions; center hit present; no nested button as the hit's closest button; hit belongs to the selected row.",
+      "Existing captured-renderer ownership, one hover, repeated point stability, final point equality after ownership and another owner check.",
+      "Exactly one mousePressed and one mouseReleased; no uncertain click replay."
+    ],
+    "boundaryNuance": "The preparation selector operates on unique name spans, while the click separately proves unique eligible rows. Pathological nested rows could share one descendant span; this does not weaken the final row-uniqueness refusal. The current MemberCard source reviewed in c246 uses an ordinary name span, with the exact source pin retained there.",
+    "causeQualification": "Retained OpenCode evidence establishes failure before member hover/press/release and a roster above the viewport in the screenshot. The precise null-return branch and how the earlier scroll state arose remain unknown. Codex success at the same original selector when visible is consistent with the preparation hypothesis, not proof of causation.",
+    "verificationRoute": "One-call exact source delta and original649-byte click preservation at R2; no new helper extraction or member-specific copied test; current actual helper tests preserved; later unchanged whole provider GUI journeys remain necessary and are not selected by this R1.",
+    "existingHelperCoverage": "The c246 full-source advisory retains the actual aggregate scroll opt-in/default tests, moving/stable/unstable click tests, final point/currentness checks and VM-tested generic missing/ambiguous/zero/disabled/covered targets. Those are shared helper tests, not direct execution of this new driver line.",
+    "cap": "794 physical preimage lines; the one call must keep the file at most800. Six lines of headroom are available without any cap or ignore change.",
+    "scope": "Only the existing TEST driver path changes; shared Claude/Codex/OpenCode behavior may be affected. No product component, native/package route, selector fallback, section expansion, time increase or new fixture is selected."
+  },
+  "testsAndExistingActualEvidence": {
+    "aggregatePin": {
+      "bytes": 165022,
+      "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+      "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+    },
+    "aggregatePhysicalLines": 2702,
+    "original139Prefix": {
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    "unchangedSuffix": "\nawait import('./desktop-ui-controls-deadline.test.ts');\n",
+    "suffixBytes": 57,
+    "deadlineFixture": {
+      "bytes": 7883,
+      "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+      "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+    },
+    "aggregateMeaning": "The original139 bytes are an exact prefix of the current aggregate, followed by the awaited literal import of the unchanged10 module. It establishes source registration inclusion and149 prospective cases, not completion ordering of the original tests or runtime success.",
+    "protectedFiveSourceRows": [
+      {
+        "role": "controls",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "before": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        "after": {
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        "physicalLines": 495
+      },
+      {
+        "role": "nodeAggregate",
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "before": {
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        "after": {
+          "bytes": 165022,
+          "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+          "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+        },
+        "physicalLines": 2702
+      },
+      {
+        "role": "catalog",
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "mode": "100644",
+        "before": {
+          "bytes": 32055,
+          "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+          "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb"
+        },
+        "after": {
+          "bytes": 32077,
+          "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+          "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+        },
+        "physicalLines": 982
+      },
+      {
+        "role": "catalogTests",
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "mode": "100644",
+        "before": {
+          "bytes": 49687,
+          "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+          "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32"
+        },
+        "after": {
+          "bytes": 56775,
+          "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+          "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+        },
+        "physicalLines": 1611
+      },
+      {
+        "role": "deadlineTests",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "mode": "100644",
+        "before": null,
+        "after": {
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        },
+        "physicalLines": 202
+      }
+    ],
+    "renderer85": {
+      "review": {
+        "gitBlob": "4277afde65b656545ca30e4b1be3f593af862fc8",
+        "bytes": 56658,
+        "sha256": "2a20638c7372fc202d5dc1fbcb364744a8ada038401e6673461ab8147843524e"
+      },
+      "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "runId": 44008782843,
+      "jobId": 133790458962,
+      "artifactId": 14301633290,
+      "test": {
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9"
+      },
+      "production": {
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c"
+      },
+      "wholeJson": {
+        "gitBlob": "d3868b44b99e7ec13d72116a21ba29274427e725",
+        "bytes": 2389600,
+        "sha256": "1623bdabac26b56107a0758fb526fa87a1d79b87b9b36c12574372966a39563a"
+      },
+      "result": "One exact source file,85 original expanded cases, all85 assertionResults passed in source order. Former RED81–83 and their later stale branches were reached; original80 and newer/unmount84–85 preserved. No target-name filter, skipped target case or substituted case.",
+      "limits": "The shard overall had6744 passed and18 skipped assertions. The target85 all passed; unrelated skips are not promoted. Actual frontend Node26.12.1/Vitest3.2.6 differs from the planned standalone Node24.22.1. This actual result does not execute the new member line, whole149, catalog43 or standalone10."
+    },
+    "separateClaims": "Original139 actual evidence, accepted renderer85 actual evidence, future standalone10, future aggregate149 and catalog43 remain separate. No new test or GUI result is inferred from plan/source review."
+  },
+  "frozenAndExcludedScope": {
+    "frozenPr": 1218,
+    "frozenHead": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "preservation": [
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts"
+    ],
+    "noActions": "No current/old/frozen CI polling, dispatch/rerun/cancel, PR/ref change, shell/runtime/native probe, source/control authorship or use of real Claude/Codex was performed.",
+    "failureAccounting": "Historical strict Darwin P09 and other retained failures are preserved. No Ready/Stage2/main/merge/native qualification is implied.",
+    "newTaskDeferral": "A later retained cross-team/oversized-comment failure packet was received during this review but is not part of this R1 verdict and has not been used to broaden this plan."
+  },
+  "checks": [
+    {
+      "id": "R01",
+      "status": "PASS_STATIC",
+      "claim": "The complete exact R1 subject was fetched, parsed, read and independently hashed.",
+      "evidence": "b16bf54091cfb2fd2756ad7a951d0f9143611d2b; 27,869 bytes; the requested SHA256 and Git blob identity match."
+    },
+    {
+      "id": "R02",
+      "status": "PASS_STATIC",
+      "claim": "This verdict accepts only the concrete R1 plan and its selected semantic constraints.",
+      "evidence": "No driver, runner, binding or admission postimage exists in this review. Their exact later implementation remains subject to the existing R2 and actual-publication sequence."
+    },
+    {
+      "id": "R03",
+      "status": "PASS_STATIC",
+      "claim": "Root retains sole source/control authorship, publication, staging and execution authority.",
+      "evidence": "R1 authority, orderedGates and prohibitions. This reviewer used immutable Git/evidence reads, pure data operations and this bare review blob only."
+    },
+    {
+      "id": "R04",
+      "status": "PASS_STATIC",
+      "claim": "The existing publication and actual-readback sequence is preserved without a new approval gate.",
+      "evidence": "Complete R1 orderedGates: R1 reviews/publication/actual closure before authorship; combined source/control R2 and actual admission before any fresh staging or one-shot execution."
+    },
+    {
+      "id": "R05",
+      "status": "PASS_STATIC",
+      "claim": "The original refusal is retained as a spent attempt with zero phases and zero test cases.",
+      "evidence": "Full 30bc transport/hash and selected originalParsedResult, outcome, invocation and physical Node metadata read directly; complete prior inode advisory independently read. The initial exactNode failure precedes scope creation and phaseRun."
+    },
+    {
+      "id": "R06",
+      "status": "PASS_STATIC",
+      "claim": "The two observed inode strings denote exactly the same 64 bits.",
+      "evidence": "Pure BigInt arithmetic: -9223372036854733364 + 2^64 = 9223372036854818252 = 0x800000000000a5cc; both lie within the explicitly selected input domains."
+    },
+    {
+      "id": "R07",
+      "status": "PASS_STATIC",
+      "claim": "The selected comparison is range bounded and preserves the existing expected pin.",
+      "evidence": "Raw input is restricted to signed64; expected input to unsigned64; BigInt.asUintN(64, raw) is then compared to the unchanged decimal pin. No Number conversion, absolute value, replacement inode or arbitrary-width modulo is permitted."
+    },
+    {
+      "id": "R08",
+      "status": "PASS_STATIC",
+      "claim": "The correction remains local to exactNode and does not normalize generic custody metadata.",
+      "evidence": "Full baseline runner: metadata() returns raw inode strings; source/control census and same-inode O_NOFOLLOW/fstat transition use those raw values. R1 explicitly preserves them and returns both raw and canonical Node evidence."
+    },
+    {
+      "id": "R09",
+      "status": "PASS_STATIC",
+      "claim": "All initial, per-phase, exceptional and final Node checks retain their original evidence comparisons.",
+      "evidence": "Full baseline runner has five exactNode call expressions. The R1 preserves complete before/after checks, so the common returned raw/canonical evidence must remain stable at every caller."
+    },
+    {
+      "id": "R10",
+      "status": "PASS_STATIC",
+      "claim": "All other physical Node pins remain exact.",
+      "evidence": "Path/realpath, byte length, full SHA256, device, uid, gid, mode, mtimeNs and ctimeNs are unchanged. Separate retained pre/post physical metadata agrees; the original supervisor did not reach its own later hash check."
+    },
+    {
+      "id": "R11",
+      "status": "PASS_STATIC",
+      "claim": "The diagnosis is source supported without asserting binary reproducibility or a new probe.",
+      "evidence": "Full 5af2 inode advisory joins the official Node v24.22.1 signed BigInt64Array statistics path and upstream source pins. This review executed no Node binary, version command or target source."
+    },
+    {
+      "id": "R12",
+      "status": "PASS_STATIC",
+      "claim": "The new attempt uses a genuinely distinct scope, stage and token.",
+      "evidence": "All three R1 values differ from the spent binding. The old source remains historically absent and old stage preserved; no reuse, restoration, overwrite or replay is selected."
+    },
+    {
+      "id": "R13",
+      "status": "PASS_STATIC",
+      "claim": "Point-in-time absence observations do not replace future exclusive creation.",
+      "evidence": "R1 retains concrete absence observations and the baseline exclusive scope/staging checks. This review makes no fresh filesystem observation and grants no permission to reuse a path that later exists."
+    },
+    {
+      "id": "R14",
+      "status": "PASS_STATIC",
+      "claim": "The proposed source anchor and external admission are noncircular.",
+      "evidence": "R1 publication will precede R2 authorship; the fixed runner/binding can then pin it. Future admission binds the actual combined publication and actual reviews. Hardcoded prior publication references must be rebound."
+    },
+    {
+      "id": "R15",
+      "status": "PASS_STATIC",
+      "claim": "The RED and GREEN source composition is unchanged and fully identity joined.",
+      "evidence": "All four embedded bodies in the existing binding were independently hashed: package, fixture, historical old controls and current fixed controls. The only conditional materialized transition remains old controls to fixed controls."
+    },
+    {
+      "id": "R16",
+      "status": "PASS_STATIC",
+      "claim": "The exact ten-case phase inventory and test argv are unchanged.",
+      "evidence": "R1 completeCaseInventory equals existing binding phases as parsed data; argv, Node pin and child environment likewise match. No filter, skip, todo, substituted fixture or extra case is selected."
+    },
+    {
+      "id": "R17",
+      "status": "PASS_STATIC",
+      "claim": "The seven RED failures and three preservation passes are meaningful static predictions.",
+      "evidence": "Complete fixture read against actual old/fixed waitRead and hover paths. Four default-cutoff successes, supplied-cutoff success and late stable hover produce missing-rejection failures; late false produces readiness mismatch. Timely first/later/hover remain pass predictions."
+    },
+    {
+      "id": "R18",
+      "status": "PASS_STATIC",
+      "claim": "The late-false case discriminates forbidden predicate evaluation and extra polling.",
+      "evidence": "Old controls evaluate Boolean readiness for the late false value and take another real 100 ms wait; the test later rejects its predicates/ticks. Fixed controls break before readiness and polling. A mere eventual timeout would not satisfy this test."
+    },
+    {
+      "id": "R19",
+      "status": "PASS_STATIC",
+      "claim": "The two hover cases exercise the actual stateful consumer.",
+      "evidence": "Actual hoverExpression counts three finite equal points through waitRead. A third point exactly at 30,000 ms must never enter that predicate or cause movement; a third at 29,999 ms retains one movement and the post-read owner check."
+    },
+    {
+      "id": "R20",
+      "status": "PASS_STATIC",
+      "claim": "The fixture preserves real timer waits and restores test mocks.",
+      "evidence": "The full fixture mocks Date, wraps the original real setTimeout, records each 100 ms wait and restores method mocks plus Date in finally. No new helper copy or mock is added to the parent supervisor."
+    },
+    {
+      "id": "R21",
+      "status": "PASS_STATIC",
+      "claim": "The fixed controls delta is exact and does not imply pending CDP cancellation.",
+      "evidence": "Removing the sole 43-byte post-fulfilled deadline line at byte offset 14,002 recovers the complete historical old controls. Rejection/context behavior and all other bytes remain identical; unresolved evaluate promises are not actively canceled."
+    },
+    {
+      "id": "R22",
+      "status": "PASS_STATIC",
+      "claim": "Every selected timing and output budget remains unchanged.",
+      "evidence": "60,000 ms phase; 135,000 ms original supervisor; one 4,000 ms cleanup interval; 8 MiB raw output; 5,000 ms per test; 30,000 ms UI default; 100 ms polling. No higher timeout or mocked parent clock is selected."
+    },
+    {
+      "id": "R23",
+      "status": "PASS_STATIC",
+      "claim": "Synchronous monotonic admission checks and one cleanup deadline remain required.",
+      "evidence": "Complete baseline runner preserves pre-scope/materialization/transition/fixed-write/spawn checks, stored cleanup deadline, nonreplayed TERM/KILL attempts and full failure samples. R1 explicitly carries these controls forward."
+    },
+    {
+      "id": "R24",
+      "status": "PASS_STATIC",
+      "claim": "Strict phase classification and ordinary process completion remain required.",
+      "evidence": "Ordered exact TAP ten-case checks, expected signatures, ordinary close/EOF/no signal, captured process identity/currentness and no surviving group/session are retained. Any unknown/refusal/timeout/cleanup error spends the attempt."
+    },
+    {
+      "id": "R25",
+      "status": "PASS_STATIC",
+      "claim": "The current driver body and insertion boundary match the accepted member advisory.",
+      "evidence": "Fresh complete driver fetch/hash is literal-equal to the previously fully read 43ab body. The selected boundary is proof.stats = stats immediately before the original member click, followed by original Logs/Stats/reload flow."
+    },
+    {
+      "id": "R26",
+      "status": "PASS_STATIC",
+      "claim": "The original click body is uniquely identified and exactly preserved by the plan.",
+      "evidence": "The 649-byte fragment at offsets 36,910..37,559 hashes to SHA256 41c01f7e76509f264fe9337294554e84bc7c22e355558ab000469f9dae086f24 and matches the prior advisory literally; exactly one copy is present."
+    },
+    {
+      "id": "R27",
+      "status": "PASS_STATIC",
+      "claim": "The selected scroll call uses the existing exact five-argument helper contract.",
+      "evidence": "Selector div[role=\"button\"][tabindex=\"0\"][class~=\"group/member\"] span; exact trimmed text alice; maxWheelEvents 12; fifth argument {requireCenterHit:true}. No helper extraction, selector fallback or new test module is selected."
+    },
+    {
+      "id": "R28",
+      "status": "PASS_STATIC",
+      "claim": "The helper's real behavior supports bounded preparation of the selected name.",
+      "evidence": "Full current scrollTo read: unique exact-text element, positive dimensions, nearest vertical scroller bounds, optional elementFromPoint center ownership, bounded physical wheel deltas and real cadence. Already-visible eligible targets return without a wheel."
+    },
+    {
+      "id": "R29",
+      "status": "PASS_STATIC",
+      "claim": "Preparatory scroll does not replace final click authority.",
+      "evidence": "The original click still separately requires exactly one eligible member row and one name span, excludes a nested button hit, checks row hit ownership, uses stable point sampling and a final exact point/owner read, then one press/release."
+    },
+    {
+      "id": "R30",
+      "status": "PASS_STATIC",
+      "claim": "Ambiguous, unavailable and covered targets retain refusal behavior without a new guarantee.",
+      "evidence": "Zero/multiple span matches cannot satisfy waitRead. Persistent center obstruction cannot return visible. A pathological nested-row/shared-name case may be prepared but is still refused by the unchanged unique-row click. No claimed new four-case member test is inferred."
+    },
+    {
+      "id": "R31",
+      "status": "PASS_STATIC",
+      "claim": "The existing scroll and click limits are accurately stated.",
+      "evidence": "At most twelve wheel effects, each delta clamped to ±600 with 100 ms cadence, plus a final observation. Each observation retains its own 30-second wait; this is not a newly proved single 30-second total reveal deadline or active cancellation of pending CDP."
+    },
+    {
+      "id": "R32",
+      "status": "PASS_STATIC",
+      "claim": "The diagnosis remains appropriately bounded to available evidence.",
+      "evidence": "Prior OpenCode failure had no member hover/press/release and the retained screenshot placed the roster above view. A later Codex run used the same selector successfully when visible. This supports preparation as a hypothesis, not the exact null branch or earlier scroll cause."
+    },
+    {
+      "id": "R33",
+      "status": "PASS_STATIC",
+      "claim": "The one-call source scope fits the unchanged 800-line cap.",
+      "evidence": "Current driver is 794 physical lines. The R1 allows one awaited call within the remaining six-line headroom, with no other driver edit, import, helper, mode change or cap exception."
+    },
+    {
+      "id": "R34",
+      "status": "PASS_STATIC",
+      "claim": "The aggregate preserves its entire original 139-case prefix and the unchanged ten-case import.",
+      "evidence": "Full current aggregate identity joined. Removing the literal 57-byte final awaited import yields exact original139 bytes, SHA256 and Git blob. New fixture body equals the full existing binding body. No current aggregate edit is selected."
+    },
+    {
+      "id": "R35",
+      "status": "PASS_STATIC",
+      "claim": "Awaited import inclusion is distinct from test completion and new member coverage.",
+      "evidence": "The existing append registers the ten module cases after the original registrations; it does not prove all original tests completed first. The current 149 file has no new member-reveal-specific test, and this R1 adds none."
+    },
+    {
+      "id": "R36",
+      "status": "PASS_STATIC",
+      "claim": "Existing helper tests plus a later whole GUI flow are the scoped verification route.",
+      "evidence": "The accepted full member advisory identifies actual scroll, moving/unstable point, final authority and generic unavailable/covered target tests. These support shared helper behavior but are not claimed as four direct driver/member regressions. R1 selects no GUI execution."
+    },
+    {
+      "id": "R37",
+      "status": "PASS_STATIC",
+      "claim": "The independently accepted actual renderer 85 result remains exact and separate.",
+      "evidence": "Own complete 4277 report/self-read: frozen 9c9, job133790458962, full original JSON/log, 85 exact assertion results passed including former RED81–83. All-shard pending cases and unrelated later149/43/10 remain distinct."
+    },
+    {
+      "id": "R38",
+      "status": "PASS_STATIC",
+      "claim": "No prior provider success is promoted to execution of the new driver line.",
+      "evidence": "The driver change affects the shared Claude/Codex/OpenCode path. Frozen9c9 results precede it. Later unchanged member Logs/Stats/reload/scheduling/Task Activity/Stop journeys still require their own original evidence."
+    },
+    {
+      "id": "R39",
+      "status": "PASS_STATIC",
+      "claim": "The R1 preserves current source/test/workflow and frozen-CI scope.",
+      "evidence": "Only the one TEST driver source path and narrowly corrected/rebound control evidence are selected. All five already-published narrow-source bodies, renderer85, protected producers, packages/dependencies/workflows and frozen PR1218 refs remain unchanged."
+    },
+    {
+      "id": "R40",
+      "status": "PASS_STATIC",
+      "claim": "No runtime or full qualification is implied by R1 acceptance.",
+      "evidence": "Standalone10, whole149, catalog43, new driver GUI, canonical validation, packaged/native and full E2E are not established here. Existing strict P09 failures and other retained failures are not waived."
+    }
+  ],
+  "summary": {
+    "checks": 40,
+    "passStatic": 40,
+    "blockers": 0,
+    "sourceOnly": true,
+    "planOnly": true,
+    "newRuntimeCases": 0,
+    "newMemberSpecificTests": 0,
+    "futurePostimagesApproved": false,
+    "selfReadback": "The immutable retained report must be fully fetched and read back after its pin is sent; that completion is reported separately."
+  }
+}

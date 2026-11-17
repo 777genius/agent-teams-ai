@@ -1,0 +1,1416 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-frozen-frontend-shard2-whole-renderer85-evidence-audit",
+  "reviewer": "/root/producer_r2_semantic",
+  "at": "2026-11-17 06:08:42 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "verdict": "ACCEPTED_BOUNDED_ACTUAL_RENDERER_85_GREEN",
+  "acceptedWithinAssignedScope": true,
+  "subject": {
+    "sourceHead": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "runId": 44008782843,
+    "runAttempt": 1,
+    "jobId": 133790458962,
+    "workflow": "Host Emulated Acceptance",
+    "jobName": "Offline frontend tests (2/4)",
+    "jobStatus": "completed",
+    "jobConclusion": "success",
+    "branch": "ci/frontend-parity-c714-20261117-head",
+    "artifactId": 14301633290,
+    "pins": [
+      {
+        "role": "capture",
+        "bytes": 7711,
+        "sha256": "7ea1b4b25243970292f504c67cd8dd6ee4a2f38a6cef6508a241923ea54c288d",
+        "gitBlob": "88130b0010f8d67e683792e0712b5ce01d7e7e03"
+      },
+      {
+        "role": "log",
+        "bytes": 202124,
+        "sha256": "0ab3b3e7181121c0f588ee6e3b51dc1b6d36cf6080e531995f881da5b32b435f",
+        "gitBlob": "96cd259186ca5e5823e2b3b35b013464578c0f7b"
+      },
+      {
+        "role": "json",
+        "bytes": 2389600,
+        "sha256": "1623bdabac26b56107a0758fb526fa87a1d79b87b9b36c12574372966a39563a",
+        "gitBlob": "d3868b44b99e7ec13d72116a21ba29274427e725"
+      },
+      {
+        "role": "artifactLog",
+        "bytes": 107106,
+        "sha256": "1fd2c48c71ccdfe32ad01291949d430e71f308791dbe1cc0ef1426a731c2cf3b",
+        "gitBlob": "5787abc9e2d7f9b8a10eafe46c990bfd258bff11"
+      },
+      {
+        "role": "test",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      },
+      {
+        "role": "hook",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      {
+        "role": "redHistorical",
+        "bytes": 229314,
+        "sha256": "2e05bcc76671b35883fc04e072d46e0961c86c2d293de2582e0e0fe0196692da",
+        "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55"
+      },
+      {
+        "role": "frozen-source",
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      },
+      {
+        "role": "frozen-source",
+        "path": "vitest.config.ts",
+        "bytes": 1187,
+        "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+        "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3"
+      },
+      {
+        "role": "frozen-source",
+        "path": "test/setup.ts",
+        "bytes": 5297,
+        "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b",
+        "gitBlob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c"
+      },
+      {
+        "role": "frozen-source",
+        "path": ".node-version",
+        "bytes": 8,
+        "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5",
+        "gitBlob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+      },
+      {
+        "role": "frozen-source",
+        "path": "package.json",
+        "bytes": 26839,
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+      },
+      {
+        "role": "frozen-source",
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderProjectContext.ts",
+        "bytes": 1300,
+        "sha256": "94e4ebc5b9e343b12ebc40f5251bab30372d9668aab295a57930653b20b6730f",
+        "gitBlob": "33744a0abc543ab39e13d0b5a784de719e40ec58"
+      }
+    ]
+  },
+  "decision": {
+    "wholeOriginalTargetFile": "All 85 cases passed in the unchanged complete fixture 76495189 against the published hook c2faa156 at frozen 9c9. No skip, failure, duplicate, replacement or extra target case.",
+    "exactHistoricalProgress": "Same three accepted RED regressions (81, 82, 83) now pass through their later stale-completion assertions. Original 80 and existing newer-request/unmount controls 84/85 also pass.",
+    "boundedMeaning": "This is actual original Vitest whole-file renderer evidence from the new CI venue. It does not claim all shards passed, all-provider E2E, native/GUI qualification, or later 149/43/10 execution."
+  },
+  "authority": {
+    "allowed": "Immutable Git source and retained artifact/log reads; pure in-memory hashing, JSON parsing, literal source inventory and evidence comparisons; bare review retention only.",
+    "notPerformed": [
+      "live CI polling or reads",
+      "test or target runtime execution",
+      "shell or subprocess",
+      "source/control/ref/PR/CI mutation",
+      "old local replay",
+      "new source or runner authorship"
+    ],
+    "rootSoleAuthorExecutor": true
+  },
+  "reviewMethod": {
+    "completeBodies": "Fetched and independently verified every listed Git body. Fresh complete target fixture and production hook read, complete config/setup/project-context helper read; exact frozen path reads join the named source blobs.",
+    "logs": "Complete original job log and artifact log fetched and hashed. All 541 reporter file rows parsed and joined to complete JSON records; all 193 nonempty non-file-summary artifact lines, original setup/checkout/install/command/upload/cleanup sections reviewed. Full artifact log is a literal contiguous segment after timestamp-prefix removal only.",
+    "json": "Parsed the complete 2,389,600-byte JSON, traversed all 541 file records and all 6,762 assertions for shape/status/failure/timing/census; individually source-mapped the complete 85-case target. Other test implementations were not re-audited.",
+    "historical": "The previously accepted 229,314-byte RED semantic report was rehashed and its renderer subject, entire 85-name/status inventory and three complete failures joined. No historical CI polling or new RED execution.",
+    "scopeOfPrimarySourceReads": "Full current target source/test and needed configuration; complete workflow transport identity plus original selected frontend job read; package JSON parsed for selected runtime/dependency declarations. No unrelated transitive dependency census.",
+    "noTargetEvaluation": true
+  },
+  "capture": {
+    "rootCapturePacket": {
+      "bytes": 7711,
+      "sha256": "7ea1b4b25243970292f504c67cd8dd6ee4a2f38a6cef6508a241923ea54c288d",
+      "gitBlob": "88130b0010f8d67e683792e0712b5ce01d7e7e03"
+    },
+    "archiveReportedByCapture": {
+      "artifactId": 14301633290,
+      "name": "host-offline-tests-9c9c73190840592963142d36562ea07d2b5d2d71-2",
+      "bytes": 313120,
+      "sha256": "db192f7d1187d1cc06fbc519c0cd81214a39245b870461b67bf57667ad41dd32",
+      "fileCount": 2,
+      "uncompressedBytes": 2496706,
+      "membersComplete": true
+    },
+    "independentlyVerifiedMembers": [
+      {
+        "path": "host-offline-tests-2.json",
+        "bytes": 2389600,
+        "sha256": "1623bdabac26b56107a0758fb526fa87a1d79b87b9b36c12574372966a39563a",
+        "gitBlob": "d3868b44b99e7ec13d72116a21ba29274427e725",
+        "crc32": 1042599570,
+        "computedCrc32": 1042599570
+      },
+      {
+        "path": "host-offline-tests-2.log",
+        "bytes": 107106,
+        "sha256": "1fd2c48c71ccdfe32ad01291949d430e71f308791dbe1cc0ef1426a731c2cf3b",
+        "gitBlob": "5787abc9e2d7f9b8a10eafe46c990bfd258bff11",
+        "crc32": 1078539370,
+        "computedCrc32": 1078539370
+      }
+    ],
+    "originalJobLogUploadJoin": {
+      "rawArtifactMatchesEntireContiguousJobSegmentAfterOnlyTimestampRemoval": true,
+      "jsCharacterOffset": 44265,
+      "artifactBytes": 107106,
+      "jobLogContainsArchiveDigest": true,
+      "jobLogContainsArtifactId": true,
+      "artifactMembersExact": true,
+      "completeTextBytes": 2496706
+    },
+    "limit": "ZIP entry enumeration/extraction is root's retained capture; this independent review verifies both full member bodies and CRCs, not a second filesystem ZIP extraction."
+  },
+  "runtimeAndScope": {
+    "operatingSystem": "ubuntu-latest job, original log Linux x64",
+    "frontendNode": "26.12.1",
+    "separatelyCapturedHostTestNode": "24.21.0",
+    "pnpm": "11.22.0",
+    "vitest": "3.2.6",
+    "happyDom": "21.0.4",
+    "reactAndReactDom": "19.2.4",
+    "command": "pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" 2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\"",
+    "shardValue": 2,
+    "originalShell": "bash --noprofile --norc -e -o pipefail",
+    "targetNotFiltered": true,
+    "globalRunHasOriginalShardAndExclusions": true,
+    "originalConfig": {
+      "environment": "happy-dom",
+      "testTimeoutMs": 15000,
+      "setupFiles": [
+        "./test/setup.ts"
+      ],
+      "include": [
+        "test/**/*.test.ts",
+        "test/**/*.test.tsx",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx"
+      ]
+    },
+    "originalSetup": "Original per-file temporary HOME/USERPROFILE, best-effort stale-home cleanup, Node >=26 happy-dom storage installation, Sentry mocks, and before/afterEach console error/warning assertions. The target additionally uses one PostHog module mock, actual React roots, controlled electronAPI promises, and existing four fake-timer uses each restored to real timers.",
+    "evidenceAgainstSubstitute": "Original pnpm exec command, installed vitest 3.2.6 and actual Vitest banner; source imports the real production hook directly and Vitest assertions from vitest. No name/filename subset, replacement hook, fake Vitest shim or new executable control.",
+    "observedWarnings": "Host/task-ledger Node-engine warnings under Node26, pre-build missing Host bin warnings followed by completed builds, dependency compiler/deprecation and unrelated KaTeX/Lit warnings remain observations; the run is not claimed warning-free.",
+    "timing": {
+      "jobStarted": "2026-11-17T05:20:39Z",
+      "jobCompleted": "2026-11-17T05:27:56Z",
+      "jsonRunStarted": "2026-11-17T05:21:56.288Z",
+      "target": {
+        "startEpochMs": 1794892933090,
+        "endEpochMs": 1794892936090.0608,
+        "startUTC": "2026-11-17T05:22:13.090Z",
+        "endUTC": "2026-11-17T05:22:16.090Z"
+      },
+      "loggedTargetDurationMs": 3002,
+      "loggedShardDurationSeconds": 355.88
+    },
+    "binaryAttestationLimit": "Versions are original command/install/runtime-log observations joined to frozen configuration; this report does not independently attest every installed package binary."
+  },
+  "sourceSemantics": {
+    "test": {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "identity": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      },
+      "registrationExpressions": 70,
+      "directCases": 61,
+      "tableExpressions": 9,
+      "tableCases": 24,
+      "expandedCases": 85,
+      "normalUnconditionalRegistration": true
+    },
+    "hook": {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "identity": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      "oldIdentity": {
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      },
+      "exactRemovedBytes": "!silent && ",
+      "addedBytes": "",
+      "inverseAllBytesEqual": true,
+      "line": 508
+    },
+    "productionMeaning": "Every completed current view read clears loading in finally, including silent refresh success, response.error and thrown/rejected errors. Silent start still does not set loading, silent errors still retain the existing view, and response/error writes still require currentness. The unchanged request sequence and project/runtime/mount generation guard prevents stale or unmounted completions from changing state.",
+    "actualSilentRoute": "refreshDirectory invokes refresh({ silent: true }) only when viewRequestedRef is true, alongside the existing directory read, then retains its existing optional models load. No timer, retry, dispatch, error policy or provider integration was changed.",
+    "currentnessHelper": {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderProjectContext.ts",
+      "identity": {
+        "bytes": 1300,
+        "sha256": "94e4ebc5b9e343b12ebc40f5251bab30372d9668aab295a57930653b20b6730f",
+        "gitBlob": "33744a0abc543ab39e13d0b5a784de719e40ec58"
+      },
+      "meaning": "Snapshots retain project path/runtime/generation; render context changes and effect unmount cleanup increment generation, so old completions fail the same guard."
+    },
+    "case81": "An earlier nonsilent refresh leaves loading true; current silent directory refresh installs TEST-current-silent-model and clears loading. The earlier completion returns false, cannot restore loading or replace the current view/error, and loadView is called exactly twice.",
+    "cases82and83": "Response-error and Promise rejection each clear the existing pending loading and keep the exact current error, null diagnostics and null view. Resolving the earlier request returns false and preserves those states, with exactly two view calls. These later checks were unreachable after the old RED loading assertion.",
+    "case84": "A newer third nonsilent request leaves loading true; completing the older silent and original first reads remains inert. Only the current latest completion returns true, clears loading and installs TEST-latest-view; exactly three calls.",
+    "case85": "After unmount, completing silent and first reads leaves the saved state object identical; no view installation or loading change and exactly two calls.",
+    "coverageLimit": "These are finite React/happy-dom state/order assertions with controlled API responses. They are not branch-coverage instrumentation or evidence of real vendor execution."
+  },
+  "completeTargetCaseMatrix": [
+    {
+      "ordinal": 1,
+      "sourceLine": 238,
+      "tableRow": 1,
+      "title": "refreshes shared provider metadata after filtered 'connect' (null, full=false)",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 38.60079799999994
+    },
+    {
+      "ordinal": 2,
+      "sourceLine": 238,
+      "tableRow": 2,
+      "title": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=false)",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 9.17111100000011
+    },
+    {
+      "ordinal": 3,
+      "sourceLine": 238,
+      "tableRow": 3,
+      "title": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=true)",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 7.750934000000143
+    },
+    {
+      "ordinal": 4,
+      "sourceLine": 238,
+      "tableRow": 4,
+      "title": "refreshes shared provider metadata after filtered 'forget' (null, full=false)",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 4.816532999999936
+    },
+    {
+      "ordinal": 5,
+      "sourceLine": 238,
+      "tableRow": 5,
+      "title": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=false)",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 5.260384000000158
+    },
+    {
+      "ordinal": 6,
+      "sourceLine": 238,
+      "tableRow": 6,
+      "title": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=true)",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 3.4786699999999655
+    },
+    {
+      "ordinal": 7,
+      "sourceLine": 451,
+      "tableRow": 1,
+      "title": "skips unsupported shared directory reads after connect without a refresh warning",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 3.8070009999999
+    },
+    {
+      "ordinal": 8,
+      "sourceLine": 451,
+      "tableRow": 2,
+      "title": "skips unsupported shared directory reads after forget without a refresh warning",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 53.265343999999914
+    },
+    {
+      "ordinal": 9,
+      "sourceLine": 554,
+      "tableRow": 1,
+      "title": "cancels all active probe attempts when startConnect closes the picker",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 4.970429999999851
+    },
+    {
+      "ordinal": 10,
+      "sourceLine": 554,
+      "tableRow": 2,
+      "title": "cancels all active probe attempts when startReconnect closes the picker",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 3.060564000000113
+    },
+    {
+      "ordinal": 11,
+      "sourceLine": 554,
+      "tableRow": 3,
+      "title": "cancels all active probe attempts when closeModelPicker closes the picker",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.024896000000126
+    },
+    {
+      "ordinal": 12,
+      "sourceLine": 554,
+      "tableRow": 4,
+      "title": "cancels all active probe attempts when switchProvider closes the picker",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.0140779999999268
+    },
+    {
+      "ordinal": 13,
+      "sourceLine": 619,
+      "title": "stops only one probe and ignores its late response after immediate restart",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 6.361437999999907
+    },
+    {
+      "ordinal": 14,
+      "sourceLine": 698,
+      "title": "keeps the probe running when stop is rejected",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 3.867089999999962
+    },
+    {
+      "ordinal": 15,
+      "sourceLine": 744,
+      "title": "uses a clicked model as the app default for new teams without a global success banner",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.1056260000000293
+    },
+    {
+      "ordinal": 16,
+      "sourceLine": 762,
+      "title": "opens only the public GitHub device-login URL from OAuth progress",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 1.716859999999997
+    },
+    {
+      "ordinal": 17,
+      "sourceLine": 783,
+      "title": "passes projectPath to the runtime provider management API",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.316898999999921
+    },
+    {
+      "ordinal": 18,
+      "sourceLine": 816,
+      "title": "defers the full managed view until explicitly requested",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 53.550567
+    },
+    {
+      "ordinal": 19,
+      "sourceLine": 870,
+      "title": "opens a deep-linked provider setup after the directory row is ready",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 55.71404400000006
+    },
+    {
+      "ordinal": 20,
+      "sourceLine": 997,
+      "title": "reloads a requested Models view when native runtime identity settles",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 4.104925000000094
+    },
+    {
+      "ordinal": 21,
+      "sourceLine": 1042,
+      "title": "reopens a pending deep-linked Connect when native runtime identity settles",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 58.475214999999935
+    },
+    {
+      "ordinal": 22,
+      "sourceLine": 1146,
+      "title": "hydrates the full provider directory without a catalog refresh",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 55.61549100000002
+    },
+    {
+      "ordinal": 23,
+      "sourceLine": 1263,
+      "title": "keeps summary providers when the full catalog comes back empty",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.571476000000075
+    },
+    {
+      "ordinal": 24,
+      "sourceLine": 1339,
+      "title": "paints same-scope curated cache while summary IPC is pending and retains errors",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.1421990000001188
+    },
+    {
+      "ordinal": 25,
+      "sourceLine": 1404,
+      "title": "never emits a previous-project provider in the transition render",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.0801309999999376
+    },
+    {
+      "ordinal": 26,
+      "sourceLine": 1448,
+      "title": "does not project cached summary credentials into another project or global scope",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 57.87732899999992
+    },
+    {
+      "ordinal": 27,
+      "sourceLine": 1508,
+      "title": "recovers directory support when a newer OpenCode runtime replaces an unsupported one",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 54.099324000000024
+    },
+    {
+      "ordinal": 28,
+      "sourceLine": 1566,
+      "title": "ignores a pre-mutation directory response without changing the project",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 53.31553699999995
+    },
+    {
+      "ordinal": 29,
+      "sourceLine": 1617,
+      "title": "masks cached rows and ignores pending responses when the OpenCode binary changes",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 54.25723300000004
+    },
+    {
+      "ordinal": 30,
+      "sourceLine": 1709,
+      "title": "reopens a cached full catalog without flashing the 16-provider summary",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 53.71272799999997
+    },
+    {
+      "ordinal": 31,
+      "sourceLine": 1828,
+      "title": "does not replace the cached full catalog with search results",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 305.5676629999998
+    },
+    {
+      "ordinal": 32,
+      "sourceLine": 1942,
+      "title": "reuses setup while preserving the connected auth method for reconnect",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 6.259755000000041
+    },
+    {
+      "ordinal": 33,
+      "sourceLine": 2102,
+      "title": "keeps provider search local until full-catalog search is explicitly requested",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 657.4260129999998
+    },
+    {
+      "ordinal": 34,
+      "sourceLine": 2151,
+      "title": "clears structured errors and stale provider state when disabled",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.9285030000000916
+    },
+    {
+      "ordinal": 35,
+      "sourceLine": 2211,
+      "title": "ignores pending directory and setup-form responses after being disabled",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 53.94822900000008
+    },
+    {
+      "ordinal": 36,
+      "sourceLine": 2317,
+      "title": "ignores stale provider views after project context changes",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.7693340000000717
+    },
+    {
+      "ordinal": 37,
+      "sourceLine": 2389,
+      "title": "reissues a requested view after temporary project-context hydration",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 3.8002670000000762
+    },
+    {
+      "ordinal": 38,
+      "sourceLine": 2450,
+      "title": "restarts provider directory loading when project context changes while loading",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 24.248827999999776
+    },
+    {
+      "ordinal": 39,
+      "sourceLine": 2587,
+      "title": "drops stale model probe results after project context changes",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.731412999999975
+    },
+    {
+      "ordinal": 40,
+      "sourceLine": 2672,
+      "title": "drops stale set-default responses after project context changes",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 3.0412340000002587
+    },
+    {
+      "ordinal": 41,
+      "sourceLine": 2757,
+      "title": "clears pending provider save state after project context changes",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 3.852245999999923
+    },
+    {
+      "ordinal": 42,
+      "sourceLine": 2903,
+      "title": "refreshes view and catalog after forgetting managed auth while local auth remains",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 4.861295000000155
+    },
+    {
+      "ordinal": 43,
+      "sourceLine": 3015,
+      "title": "refreshes the view and catalog after a confirmed connection",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 4.312474000000293
+    },
+    {
+      "ordinal": 44,
+      "sourceLine": 3161,
+      "title": "keeps provider data visible during catalog refresh",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 13.140088999999989
+    },
+    {
+      "ordinal": 45,
+      "sourceLine": 3269,
+      "title": "lazy-loads provider directory and ignores stale search responses",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 313.20150999999987
+    },
+    {
+      "ordinal": 46,
+      "sourceLine": 3431,
+      "title": "keeps the API key draft when provider connect fails",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 4.376741000000038
+    },
+    {
+      "ordinal": 47,
+      "sourceLine": 3524,
+      "title": "explains Copilot model access separately from GitHub authentication",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 5.104131999999936
+    },
+    {
+      "ordinal": 48,
+      "sourceLine": 3593,
+      "title": "keeps setup form diagnostics available when submit is attempted after form load failure",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.7880159999999705
+    },
+    {
+      "ordinal": 49,
+      "sourceLine": 3655,
+      "title": "submits a supported setup form without a secret as a null API key",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 3.8801430000003165
+    },
+    {
+      "ordinal": 50,
+      "sourceLine": 3752,
+      "tableRow": 1,
+      "title": "keeps OpenCode API connect pending beyond the old UI deadline: late-success",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 6.087509999999838
+    },
+    {
+      "ordinal": 51,
+      "sourceLine": 3752,
+      "tableRow": 2,
+      "title": "keeps OpenCode API connect pending beyond the old UI deadline: timeout",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 3.463456999999835
+    },
+    {
+      "ordinal": 52,
+      "sourceLine": 3852,
+      "title": "keeps setup open when the backend does not confirm a connected provider",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.81150099999968
+    },
+    {
+      "ordinal": 53,
+      "sourceLine": 3911,
+      "title": "keeps the actual API credential hint when xAI refresh fails after connect",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 110.6637740000001
+    },
+    {
+      "ordinal": 54,
+      "sourceLine": 4062,
+      "title": "refreshes provider status after a cancelled OAuth child settles",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 4.763923999999861
+    },
+    {
+      "ordinal": 55,
+      "sourceLine": 4175,
+      "tableRow": 1,
+      "title": "preserves the full slow model-picker allowance: complete",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 4.038421999999628
+    },
+    {
+      "ordinal": 56,
+      "sourceLine": 4175,
+      "tableRow": 2,
+      "title": "preserves the full slow model-picker allowance: timeout",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 3.639549999999872
+    },
+    {
+      "ordinal": 57,
+      "sourceLine": 4265,
+      "title": "clears model loading when switching from model picker to setup form",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 4.469026000000213
+    },
+    {
+      "ordinal": 58,
+      "sourceLine": 4391,
+      "title": "debounces provider model search and groups superseded picker requests",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 355.78143699999964
+    },
+    {
+      "ordinal": 59,
+      "sourceLine": 4465,
+      "title": "keeps Test results across a debounced catalog search reload",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 356.10481200000004
+    },
+    {
+      "ordinal": 60,
+      "sourceLine": 4554,
+      "title": "appends paged provider models without duplicates",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 4.752593000000161
+    },
+    {
+      "ordinal": 61,
+      "sourceLine": 4634,
+      "title": "tracks concurrent model probes independently",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 3.4768139999996492
+    },
+    {
+      "ordinal": 62,
+      "sourceLine": 4712,
+      "title": "drops stale model probe results after leaving the model picker",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.8652790000005552
+    },
+    {
+      "ordinal": 63,
+      "sourceLine": 4806,
+      "tableRow": 1,
+      "title": "refreshes global provider status after a current model test (ok=true)",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.083793999999216
+    },
+    {
+      "ordinal": 64,
+      "sourceLine": 4806,
+      "tableRow": 2,
+      "title": "refreshes global provider status after a current model test (ok=false)",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 1.7140599999993356
+    },
+    {
+      "ordinal": 65,
+      "sourceLine": 4841,
+      "title": "records an empty model test response as a row failure and refreshes provider status",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.50970099999995
+    },
+    {
+      "ordinal": 66,
+      "sourceLine": 4875,
+      "title": "preserves successful model verification when its global status refresh rejects",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.208810999999514
+    },
+    {
+      "ordinal": 67,
+      "sourceLine": 4909,
+      "tableRow": 1,
+      "title": "does not refresh global status from a model test after project change",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.4646539999994275
+    },
+    {
+      "ordinal": 68,
+      "sourceLine": 4909,
+      "tableRow": 2,
+      "title": "does not refresh global status from a model test after unmount",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 1.8344150000002628
+    },
+    {
+      "ordinal": 69,
+      "sourceLine": 4976,
+      "title": "keeps failed model probes scoped to the model result instead of a global success banner",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.0182850000001054
+    },
+    {
+      "ordinal": 70,
+      "sourceLine": 5009,
+      "title": "keeps structured runtime endpoint diagnostics on the model result",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.0076630000003206
+    },
+    {
+      "ordinal": 71,
+      "sourceLine": 5045,
+      "title": "keeps the model-test UI watchdog outside the runtime probe transport budget",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.8466319999997722
+    },
+    {
+      "ordinal": 72,
+      "sourceLine": 5104,
+      "title": "promotes structured model probe failures to the global diagnostics alert state",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 1.8683810000002268
+    },
+    {
+      "ordinal": 73,
+      "sourceLine": 5145,
+      "title": "keeps successful model probes scoped to the model card instead of a global success banner",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 1.8859449999999924
+    },
+    {
+      "ordinal": 74,
+      "sourceLine": 5176,
+      "title": "saves a default without probing or fabricating verified model state",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.494053000000349
+    },
+    {
+      "ordinal": 75,
+      "sourceLine": 5253,
+      "title": "keeps the effective project default selected when an all-projects default is shadowed",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.925268999999389
+    },
+    {
+      "ordinal": 76,
+      "sourceLine": 5344,
+      "title": "preserves project-scoped access evidence after a neutral all-projects probe",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.949438000000555
+    },
+    {
+      "ordinal": 77,
+      "sourceLine": 5420,
+      "title": "does not clear a project override before the bundled runtime supports scoped defaults",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.334296999999424
+    },
+    {
+      "ordinal": 78,
+      "sourceLine": 5465,
+      "title": "clears a valid project override with a compatible bundled runtime",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 3.5152850000004037
+    },
+    {
+      "ordinal": 79,
+      "sourceLine": 5547,
+      "title": "keeps the clear-project watchdog beyond the 300-second main-process timeout",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.6661119999998846
+    },
+    {
+      "ordinal": 80,
+      "sourceLine": 5623,
+      "title": "does not clear project B while its view is still refreshing after switching from A",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.535624999999527
+    },
+    {
+      "ordinal": 81,
+      "sourceLine": 5679,
+      "title": "clears loading for the current silent refresh and refuses a stale response",
+      "historicalStatus": "failed",
+      "status": "passed",
+      "durationMs": 2.242525999999998
+    },
+    {
+      "ordinal": 82,
+      "sourceLine": 5738,
+      "tableRow": 1,
+      "title": "clears pending loading when the current silent refresh ends with response-error",
+      "historicalStatus": "failed",
+      "status": "passed",
+      "durationMs": 3.0971739999995407
+    },
+    {
+      "ordinal": 83,
+      "sourceLine": 5738,
+      "tableRow": 2,
+      "title": "clears pending loading when the current silent refresh ends with rejection",
+      "historicalStatus": "failed",
+      "status": "passed",
+      "durationMs": 2.116587999999865
+    },
+    {
+      "ordinal": 84,
+      "sourceLine": 5800,
+      "tableRow": 1,
+      "title": "keeps a silent view completion inert after newer-request",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 3.1039209999999002
+    },
+    {
+      "ordinal": 85,
+      "sourceLine": 5800,
+      "tableRow": 2,
+      "title": "keeps a silent view completion inert after unmounted",
+      "historicalStatus": "passed",
+      "status": "passed",
+      "durationMs": 2.060873999999785
+    }
+  ],
+  "targetRecordInvariants": {
+    "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+    "status": "passed",
+    "message": "",
+    "ancestorTitles": [
+      "useRuntimeProviderManagement"
+    ],
+    "fullNameRule": "'useRuntimeProviderManagement ' + title for every row",
+    "failureMessages": "[] for all 85",
+    "meta": "{} for all 85",
+    "uniqueTitles": 85
+  },
+  "historicalRed": {
+    "report": {
+      "bytes": 229314,
+      "sha256": "2e05bcc76671b35883fc04e072d46e0961c86c2d293de2582e0e0fe0196692da",
+      "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55"
+    },
+    "subjectPacket": {
+      "bytes": 441196,
+      "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+      "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+    },
+    "summary": {
+      "numTotalTests": 85,
+      "numPassedTests": 82,
+      "numFailedTests": 3,
+      "numPendingTests": 0,
+      "numTodoTests": 0,
+      "numTotalTestSuites": 2,
+      "numPassedTestSuites": 0,
+      "numFailedTestSuites": 2,
+      "numPendingTestSuites": 0
+    },
+    "exactFailures": [
+      {
+        "ordinal": 81,
+        "title": "clears loading for the current silent refresh and refuses a stale response",
+        "site": [
+          5722,
+          28
+        ],
+        "fullFailureMessage": "AssertionError: expected true to be false // Object.is equality\n    at /workspace/scratch/c714-fresh-20261116/source/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts:5722:28\n    at file:///workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20"
+      },
+      {
+        "ordinal": 82,
+        "title": "clears pending loading when the current silent refresh ends with response-error",
+        "site": [
+          5781,
+          30
+        ],
+        "fullFailureMessage": "AssertionError: expected true to be false // Object.is equality\n    at /workspace/scratch/c714-fresh-20261116/source/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts:5781:30\n    at file:///workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20"
+      },
+      {
+        "ordinal": 83,
+        "title": "clears pending loading when the current silent refresh ends with rejection",
+        "site": [
+          5781,
+          30
+        ],
+        "fullFailureMessage": "AssertionError: expected true to be false // Object.is equality\n    at /workspace/scratch/c714-fresh-20261116/source/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts:5781:30\n    at file:///workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20"
+      }
+    ]
+  },
+  "wholeShardCensus": {
+    "allJsonFiles": 541,
+    "allJsonFileStatuses": {
+      "passed": 541
+    },
+    "defaultReporterFiles": {
+      "passed": 539,
+      "skipped": 2,
+      "total": 541
+    },
+    "assertions": {
+      "passed": 6744,
+      "skipped": 18,
+      "failed": 0,
+      "todo": 0,
+      "total": 6762
+    },
+    "literalJsonSuiteCounters": {
+      "total": 1292,
+      "passed": 1292,
+      "failed": 0,
+      "pending": 0
+    },
+    "suiteCounterLimit": "The JSON suite counters are not the number of files or individual cases; the file-level status='passed' also does not erase skipped nested assertions.",
+    "allFileRowsJoined": true,
+    "fileRowMismatches": [],
+    "fileFailureMessages": [],
+    "shapeStatusViolations": [],
+    "allSkippedFiles": [
+      {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/test/main/utils/childProcess.windows.test.ts",
+        "assertions": 5,
+        "jsonStatus": "passed"
+      },
+      {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+        "assertions": 2,
+        "jsonStatus": "passed"
+      }
+    ],
+    "all18SkippedAssertions": [
+      {
+        "file": "/home/runner/work/agent-teams-ai/agent-teams-ai/test/scripts/opencodeNativeRealTaskPrompt.test.ts",
+        "title": "executes the unchanged verifier in PowerShell and cmd",
+        "status": "skipped"
+      },
+      {
+        "file": "/home/runner/work/agent-teams-ai/agent-teams-ai/src/main/utils/electronDevPathOverrides.test.ts",
+        "title": "uses absolute APPDATA when Electron cannot return appData before ready on Windows",
+        "status": "skipped"
+      },
+      {
+        "file": "/home/runner/work/agent-teams-ai/agent-teams-ai/src/main/utils/electronDevPathOverrides.test.ts",
+        "title": "uses regular APPDATA when userData is unavailable before Windows Electron ready",
+        "status": "skipped"
+      },
+      {
+        "file": "/home/runner/work/agent-teams-ai/agent-teams-ai/src/main/utils/electronDevPathOverrides.test.ts",
+        "title": "rejects a case-only alias of a nonexistent legacy profile",
+        "status": "skipped"
+      },
+      {
+        "file": "/home/runner/work/agent-teams-ai/agent-teams-ai/test/main/utils/ReviewFileTransaction.safe-e2e.test.ts",
+        "title": "classifies a published equal-content case-only Undo using its owned inode",
+        "status": "skipped"
+      },
+      {
+        "file": "/home/runner/work/agent-teams-ai/agent-teams-ai/test/main/utils/childProcess.windows.test.ts",
+        "title": "preserves adversarial argv through execCli for a spaced non-ASCII executable path",
+        "status": "skipped"
+      },
+      {
+        "file": "/home/runner/work/agent-teams-ai/agent-teams-ai/test/main/utils/childProcess.windows.test.ts",
+        "title": "preserves adversarial argv through spawnCli for a spaced non-ASCII executable path",
+        "status": "skipped"
+      },
+      {
+        "file": "/home/runner/work/agent-teams-ai/agent-teams-ai/test/main/utils/childProcess.windows.test.ts",
+        "title": "preserves adversarial argv through a batch launcher that forwards %*",
+        "status": "skipped"
+      },
+      {
+        "file": "/home/runner/work/agent-teams-ai/agent-teams-ai/test/main/utils/childProcess.windows.test.ts",
+        "title": "preserves safe argv through batch parameter modifiers",
+        "status": "skipped"
+      },
+      {
+        "file": "/home/runner/work/agent-teams-ai/agent-teams-ai/test/main/utils/childProcess.windows.test.ts",
+        "title": "rejects shell syntax before a batch launcher can reparse positional arguments",
+        "status": "skipped"
+      },
+      {
+        "file": "/home/runner/work/agent-teams-ai/agent-teams-ai/test/main/utils/shellEnv.real-shell.integration.test.ts",
+        "title": "reads real login and interactive startup exports with exact edge values",
+        "status": "skipped"
+      },
+      {
+        "file": "/home/runner/work/agent-teams-ai/agent-teams-ai/test/main/utils/shellEnv.real-shell.integration.test.ts",
+        "title": "ignores startup banners and accepts a completed dump before a failing real logout",
+        "status": "skipped"
+      },
+      {
+        "file": "/home/runner/work/agent-teams-ai/agent-teams-ai/test/main/utils/shellEnv.real-shell.integration.test.ts",
+        "title": "falls back from a failing real login profile to the real interactive rc",
+        "status": "skipped"
+      },
+      {
+        "file": "/home/runner/work/agent-teams-ai/agent-teams-ai/test/main/utils/shellEnv.real-shell.integration.test.ts",
+        "title": "keeps its framing independent of an rc-defined printf function",
+        "status": "skipped"
+      },
+      {
+        "file": "/home/runner/work/agent-teams-ai/agent-teams-ai/test/main/utils/shellEnv.real-shell.integration.test.ts",
+        "title": "keeps its framing independent of an rc-defined printf alias",
+        "status": "skipped"
+      },
+      {
+        "file": "/home/runner/work/agent-teams-ai/agent-teams-ai/test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts",
+        "title": "selects the native OpenCode executable behind an nvm cmd shim",
+        "status": "skipped"
+      },
+      {
+        "file": "/home/runner/work/agent-teams-ai/agent-teams-ai/test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+        "title": "reports RSS for a bootstrap-confirmed Anthropic teammate discovered from the real process table",
+        "status": "skipped"
+      },
+      {
+        "file": "/home/runner/work/agent-teams-ai/agent-teams-ai/test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+        "title": "reports RSS for a real Anthropic teammate CLI process",
+        "status": "skipped"
+      }
+    ]
+  },
+  "limitations": [
+    "Whole original renderer85 is GREEN; no claim about other shard jobs or the aggregate Host Emulated workflow conclusion.",
+    "All 18 skipped assertions and two all-skipped files remain unqualified; live/native excluded files remain excluded.",
+    "Frozen9c9 predates later674 source. This artifact contains no whole149, whole43 or standalone10 result; the separate three-case openCodeEmptyCatalog file cannot substitute for catalog43.",
+    "Original139 Node results elsewhere are distinct. Vitest include globs here do not execute scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.",
+    "New CI evidence does not retroactively complete the spent local producer materialization/old GREEN phase, and is not its phase receipt.",
+    "Happy-dom renderer state tests are not Electron GUI, Windows/Darwin GUI, packaged execution, strict Darwin P09, full provider parity, real vendor auth/session, canonical workspace typecheck or release qualification.",
+    "Archive digest and file-census authority comes from retained original upload plus root capture; complete text bytes and CRCs are independently joined here.",
+    "Root alone selects later work. This review authors no source, runner, ref, PR or CI action and adds no new gate."
+  ],
+  "checkCount": 37,
+  "checks": [
+    {
+      "id": "complete-capture-identity",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "bytes": 7711,
+        "sha256": "7ea1b4b25243970292f504c67cd8dd6ee4a2f38a6cef6508a241923ea54c288d",
+        "gitBlob": "88130b0010f8d67e683792e0712b5ce01d7e7e03"
+      }
+    },
+    {
+      "id": "complete-log-identity",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "bytes": 202124,
+        "sha256": "0ab3b3e7181121c0f588ee6e3b51dc1b6d36cf6080e531995f881da5b32b435f",
+        "gitBlob": "96cd259186ca5e5823e2b3b35b013464578c0f7b"
+      }
+    },
+    {
+      "id": "complete-json-identity",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "bytes": 2389600,
+        "sha256": "1623bdabac26b56107a0758fb526fa87a1d79b87b9b36c12574372966a39563a",
+        "gitBlob": "d3868b44b99e7ec13d72116a21ba29274427e725"
+      }
+    },
+    {
+      "id": "complete-artifactLog-identity",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "bytes": 107106,
+        "sha256": "1fd2c48c71ccdfe32ad01291949d430e71f308791dbe1cc0ef1426a731c2cf3b",
+        "gitBlob": "5787abc9e2d7f9b8a10eafe46c990bfd258bff11"
+      }
+    },
+    {
+      "id": "capture-original-job-tuple",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "runId": 44008782843,
+        "attempt": 1,
+        "jobId": 133790458962,
+        "sourceHead": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    },
+    {
+      "id": "complete-two-member-census",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "Only the complete original JSON and log members; 2,496,706 uncompressed UTF-8 bytes."
+    },
+    {
+      "id": "all-member-identities-and-crc",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": [
+        {
+          "path": "host-offline-tests-2.json",
+          "expected": 1042599570,
+          "actual": 1042599570,
+          "match": true
+        },
+        {
+          "path": "host-offline-tests-2.log",
+          "expected": 1078539370,
+          "actual": 1078539370,
+          "match": true
+        }
+      ]
+    },
+    {
+      "id": "whole-artifact-log-in-job-log",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "Entire raw artifact log, including ANSI sequences and line breaks, is one contiguous substring after removing only GitHub timestamp prefixes; no trimming or case filtering."
+    },
+    {
+      "id": "original-upload-digest-and-id",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "Original job log records artifact ID 14301633290, 313120 bytes, and ZIP SHA256 db192f7d1187d1cc06fbc519c0cd81214a39245b870461b67bf57667ad41dd32."
+    },
+    {
+      "id": "test-at-frozen-head",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    },
+    {
+      "id": "hook-at-frozen-head",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      }
+    },
+    {
+      "id": "full-target-source-read",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "Complete 187890-byte fixture and 74340-byte production hook read, not only terminal regression blocks."
+    },
+    {
+      "id": "exact-eleven-byte-production-fix",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "All old/new bytes inverse-join; only the silent exemption in current view finally is removed."
+    },
+    {
+      "id": "workflow-frozen-source-join",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "Exact 9c9 workflow equals accepted complete current workflow corpus; original offline-frontend-tests job unchanged."
+    },
+    {
+      "id": "original-unfiltered-target-command",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "No target filename or test-name filter. Original four-way shard and three live/native exclusion globs are retained; the global run is therefore not universally unfiltered."
+    },
+    {
+      "id": "genuine-vitest-source-route",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "Real Vitest imports, original production-hook relative import, original happy-dom config, pnpm installation and actual RUN v3.2.6 banner; no substitute runner or copied hook."
+    },
+    {
+      "id": "actual-frontend-node-version",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "Frontend uses Node 26.12.1 after its second setup. AGENT_BACKEND_TEST_NODE remains the separately captured Node 24.21.0; they are not conflated."
+    },
+    {
+      "id": "original-config-and-setup-scope",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "Original 15000ms config, setup files, renderer aliases, per-file test HOME and storage fix, telemetry mocks, and console-error/warning assertions are retained."
+    },
+    {
+      "id": "exact-source-registration-count",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "70 registration expressions: 61 direct cases plus nine literal tables expanding to 24 cases, total 85."
+    },
+    {
+      "id": "no-test-source-focus-or-skip",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "Complete source has no focused/skipped/todo/conditional registration. The word 'skips' in two normal test titles is behavior under test, not Vitest skip."
+    },
+    {
+      "id": "one-target-result-file",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "One exact target path in the complete JSON; no alternate or duplicate target result."
+    },
+    {
+      "id": "all-85-order-title-ancestor-joins",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "Every source-expanded title joins the same original-order JSON fullName and ancestorTitles; all 85 unique."
+    },
+    {
+      "id": "all-85-pass-without-promotion",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "All 85 assertionResults are passed with finite positive durations, empty failureMessages and meta, no skip/todo/pending/extra case."
+    },
+    {
+      "id": "accepted-red-same-test-identity",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "Complete prior report rehashed; its relevant accepted RED fixture identity, all 85 names/statuses and three full failure messages joined."
+    },
+    {
+      "id": "three-prior-reds-now-pass",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "Prior loading true-versus-false assertions at 5722:28 and 5781:30 now pass in the whole original file."
+    },
+    {
+      "id": "prior-eighty-and-two-controls-preserved",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "All original 80 and controls 84/85 remain passed; no replacement inventory."
+    },
+    {
+      "id": "later-stale-branches-now-reached",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "Unchanged source after former failure sites resolves the original pending request and asserts false/stale rejection, retained current view or error, loading state and exact call counts; complete passed outcomes now cover those later finite assertions."
+    },
+    {
+      "id": "currentness-remains-required",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "Current sequence and project/runtime/mount generation still gate finally; newer requests and unmount cannot be cleared by a stale silent completion."
+    },
+    {
+      "id": "whole-json-all-record-census",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "All 541 records and 6762 assertions traversed; no failed assertion or nonempty file failure message."
+    },
+    {
+      "id": "json-summary-literal-join",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "JSON total counters join the actual nested assertion census; 18 pending-counter cases are status='skipped'."
+    },
+    {
+      "id": "all-541-log-file-rows-join",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "Every default-reporter file row independently joins its one JSON record with exact test count and skip count."
+    },
+    {
+      "id": "two-all-skipped-files-not-promoted",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "Default reporter's 539 passed/2 skipped files preserved, despite JSON status='passed' on every file; the two all-skipped files contain 5 and 2 skipped cases."
+    },
+    {
+      "id": "target-timing-in-original-job",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "All result intervals lie inside the original job; JSON target interval is 05:22:13.090Z through 05:22:16.090Z, while the original default reporter separately records 3002ms."
+    },
+    {
+      "id": "no-later-149-43-10-claim",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "No desktop-team-ui-smoke, standalone deadline module, or complete teamModelAvailability.test.ts result in this artifact. Frozen 9c9 predates later source 674; no promotion of 149/43/10."
+    },
+    {
+      "id": "archive-capture-authority-limited",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "Root's retained packet is the ZIP enumeration/central-directory capture authority; this reviewer independently verifies complete Git text bytes/SHA/Git hashes/CRC and the original upload digest. No local ZIP extraction or target runtime was performed."
+    },
+    {
+      "id": "mock-and-ui-scope-explicit",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "Actual production hook runs under React/happy-dom with original finite window.electronAPI mocks and telemetry/setup mocks. This is renderer regression evidence, not real OpenCode/Claude/Codex, Electron GUI, packaged/native or all-provider E2E."
+    },
+    {
+      "id": "no-old-local-phase-replay-inference",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": "This new frozen CI result is not an execution or receipt for the spent local c81 GREEN/materialization attempt; old-local unreachability is unchanged."
+    }
+  ],
+  "failedChecks": [],
+  "unresolvedAssignedScopeBlockers": []
+}
