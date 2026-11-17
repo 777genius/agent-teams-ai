@@ -2088,11 +2088,9 @@ export const TeamDetailView = memo(function TeamDetailView({
   const closeLaunchDialog = useCallback(() => {
     setLaunchDialogState((prev) => ({ ...prev, open: false }));
   }, []);
-
   const handleRestartTeam = useCallback(() => {
     openLaunchDialog('relaunch');
   }, [openLaunchDialog]);
-
   const handleLaunchDialogSubmit = useCallback(
     async (request: TeamLaunchRequest): Promise<void> => {
       await launchTeam(logicalTeamName
@@ -2101,7 +2099,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     },
     [launchTeam, logicalTeamName, data?.config.projectPath]
   );
-
   const validateMemberSettingsRelaunch = useCallback(async (): Promise<void> => {
     const { memberSettingsDraft, baselineMembers } = launchDialogState;
     if (!memberSettingsDraft || !baselineMembers) return;
@@ -2113,7 +2110,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       memberSettingsDraft
     );
   }, [launchDialogState, teamName]);
-
   const handleRelaunchDialogSubmit = useCallback(
     async (
       request: TeamLaunchRequest,
@@ -2122,7 +2118,15 @@ export const TeamDetailView = memo(function TeamDetailView({
       onMembersSaved?: () => void
     ): Promise<void> => {
       if (logicalTeamName) {
-        throw new Error('Stop the project runtime before launching; team roster changes must be made on the logical team');
+        if (memberSettingsRelaunch) {
+          throw new Error('Change team roster settings on the logical team before relaunch');
+        }
+        await api.teams.stop(teamName);
+        await launchTeam({
+          ...request, teamName: logicalTeamName,
+          cwd: data?.config.projectPath ?? request.cwd,
+        });
+        return;
       }
       await executeTeamRelaunch({
         teamName,
@@ -2168,11 +2172,11 @@ export const TeamDetailView = memo(function TeamDetailView({
       data?.tasks,
       launchTeam,
       logicalTeamName,
+      data?.config.projectPath,
       teamName,
       validateMemberSettingsRelaunch,
     ]
   );
-
   const handleChangeLeadRuntime = useCallback(
     (memberSettingsDraft?: MemberSettingsRelaunchDraft) => {
       setEditTarget(null);
@@ -2231,14 +2235,12 @@ export const TeamDetailView = memo(function TeamDetailView({
     setReplyQuote(undefined);
     setSendDialogOpen(true);
   }, []);
-
   const handleAssignTaskToMember = useCallback(
     (member: ResolvedTeamMember) => {
       openCreateTaskDialog('', '', member.name);
     },
     [openCreateTaskDialog]
   );
-
   const handleOpenTaskById = useCallback(
     (taskId: string) => {
       const task = taskMapRef.current.get(taskId);
@@ -2255,7 +2257,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     },
     [handleOpenTaskById]
   );
-
   const handleTaskIdClick = useTeamTaskReferenceNavigation(
     teamName,
     data?.tasks ?? [],
@@ -2639,7 +2640,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       }
     })();
   }, [teamName, logicalTeamName, deleteTeam, openTeamsTab, closeTab, tabId, reviewLifecycleHostId, t]);
-
   const handleCreateTask = async (request: CreateTaskRequest): Promise<void> => {
     assertCreateTaskOriginCurrent();
     const { owner, prompt, startImmediately, subject } = request;
