@@ -50,6 +50,15 @@ async function simulateNativeProvisioning(f: Awaited<ReturnType<typeof fixture>>
 }
 
 describe('TeamProjectContextRegistry', () => {
+  it('keeps retained contexts discoverable after switching history mode', async () => {
+    const f = await fixture();
+    expect(await f.registry.hasRetainedIndex('logical-team')).toBe(false);
+    expect(await f.registry.listRetained('logical-team')).toEqual([]);
+    const pending = await f.registry.reserve('logical-team', f.workspaceA);
+    expect(await f.registry.hasRetainedIndex('logical-team')).toBe(true);
+    expect(await f.registry.listRetained('logical-team')).toEqual([pending]);
+  });
+
   it('is read-only until a context is explicitly created', async () => {
     const f = await fixture();
     expect(await f.registry.find('logical-team', f.workspaceA)).toBeNull();

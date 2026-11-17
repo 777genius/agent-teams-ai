@@ -186,6 +186,17 @@ export class TeamProjectContextRegistry {
     });
   }
 
+  /** A retained index may outlive the selected history mode. */
+  async hasRetainedIndex(logicalTeamName: string): Promise<boolean> {
+    return exists(this.indexPath(logicalTeamName));
+  }
+
+  /** Legacy shared teams without an index are unchanged, including ownership. */
+  async listRetained(logicalTeamName: string): Promise<readonly PersistedTeamWorkContext[]> {
+    if (!(await this.hasRetainedIndex(logicalTeamName))) return [];
+    return this.list(logicalTeamName);
+  }
+
   /**
    * Enumerate only verified native aliases; never treat a matching name prefix
    * as proof that a directory belongs to this team or this app profile.
