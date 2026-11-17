@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_TEAM_SELECTION_ROOT_PNG_VISUAL_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "root",
+  "at": "2026-11-17 17:31:19 UTC",
+  "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+  "runId": 44092933810,
+  "method": "All eight original retained PNGs actually inspected with view_image. An earlier two-image output for Selection completed/reloaded was truncated and did not count; each was reopened individually. No image transformation or target runtime execution.",
+  "subjects": [
+    {
+      "artifactId": 14349776017,
+      "logicalCapture": {
+        "bytes": 2867982,
+        "sha256": "b61a83b53e271b8f4162646fd72896dae2ecc6a62caa3d2f886e0084ba2062eb",
+        "gitBlob": "01e384d014516b7bbe1d7ba48cdff6cd4e2f42b8",
+        "derivedLogicalIdentity": false
+      },
+      "retainedCapture": {
+        "bytes": 2867982,
+        "sha256": "b61a83b53e271b8f4162646fd72896dae2ecc6a62caa3d2f886e0084ba2062eb",
+        "gitBlob": "01e384d014516b7bbe1d7ba48cdff6cd4e2f42b8"
+      },
+      "images": [
+        {
+          "path": "TEST-desktop-backend-FDtvpp/ui-task-created.png",
+          "bytes": 97445,
+          "sha256": "2edc4fe887f7addf6e647eb3027c0781318b94dc903640f74b710832b2180ed2",
+          "gitBlob": "c3539989650386b1c14c230856dad31738bbbaeb",
+          "identityKind": "Derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Team task-created: original ordinary Desktop-created task and persisted seed both visible in TODO and sidebar, total2; team/member offline. Image corroborates task UI creation, not provider execution."
+        }
+      ]
+    },
+    {
+      "artifactId": 14347188007,
+      "logicalCapture": {
+        "bytes": 4781937,
+        "sha256": "717b14ed3932b6c3697f2f27c01484c65d81b5f8f6c435f951e17729926a37fe",
+        "gitBlob": "03840f9fce4e9d390e20f622c48bd6ba017c9bf2",
+        "derivedLogicalIdentity": true
+      },
+      "retainedCapture": {
+        "bytes": 10182,
+        "sha256": "3000a873797012effc6ee282a78f97e5dac9c7ea8bc1866d747634d415ba84b2",
+        "gitBlob": "edd49c3bbf9dac41c624362e0cc69d016881839a"
+      },
+      "images": [
+        {
+          "path": "TEST-desktop-backend-JXRrKV/ui-emulated-selection-a-launch.png",
+          "bytes": 102033,
+          "sha256": "d76a13efe56f43fd11ff58cddf9be774c4e85a175bd32df0db9e3cee0ab02d48",
+          "gitBlob": "914e6242ba228fe0eeb715bef4d2c9eb05e0d2bb",
+          "identityKind": "Derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "A launch: Team launched/lead online, TEST_UI_BOOT→TEST boot ready, alice finite Codex TEST-model with Low effort, original persisted seed retained."
+        },
+        {
+          "path": "TEST-desktop-backend-JXRrKV/ui-emulated-selection-b-launch.png",
+          "bytes": 98193,
+          "sha256": "45c7286f9a77dd44f8d39b37ffac6f8b2d2954ad190f3728681243bd153d5159",
+          "gitBlob": "503d2f97ff2e670c35e161b13c9b80987e2adf70",
+          "identityKind": "Derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "B launch: new test-selection-next-team lead shows finite Codex TEST-model-next/High and TEST boot ready; board0 while sidebar still exposes original team's seed."
+        },
+        {
+          "path": "TEST-desktop-backend-JXRrKV/ui-emulated-selection-a-survived.png",
+          "bytes": 114731,
+          "sha256": "24d08b8ad6fb18ec8b17db282b2b7d89987916073cf12b7ce7f48f523c25567e",
+          "gitBlob": "a0d9069f72e139d3508645694ed51ded1b9e264f",
+          "identityKind": "Derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "A survived: original team Running with Stop, alice still TEST-model/Low, and original TEST_UI_STREAM→TEST stream partial after B is present as another tab. This supports retained selection visually; exact process identity requires receipt."
+        },
+        {
+          "path": "TEST-desktop-backend-JXRrKV/ui-emulated-selection-completed.png",
+          "bytes": 115666,
+          "sha256": "4ac2a0be71db56576812c9b2418d4d3187d063d34fd2278cbebbef530d3897bb",
+          "gitBlob": "ed35c877f0d154e069c80b4d88673c96e77ca75e",
+          "identityKind": "Derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "The completed-frame screenshot still shows Team A running with Stop available, lead alice on TEST-model / via Codex / Low and a separate B tab. The chat's existing held TEST_UI_STREAM shows TEST stream partial and a later compact TEST stream partial complete line. This screenshot alone does not establish process identity, terminal confirmation, or model-selection persistence."
+        },
+        {
+          "path": "TEST-desktop-backend-JXRrKV/ui-emulated-selection-reloaded.png",
+          "bytes": 111142,
+          "sha256": "926e7151afd6bb9e9fc611763d1551c66e67a84755635e7b6ba05867a7b7258b",
+          "gitBlob": "416228cef48fde7f0bf4b613f736bffb5c9a4d51",
+          "identityKind": "Derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "The reloaded Team B launch dialog shows TEST next model, High effort, TEST_UI_BOOT, and a verified TEST-model-next selected-model check with Launch team available. The provider strip simultaneously displays Codex Needs attention, while the selected-model area says all selected providers are ready; this coexistence must not be rewritten as globally healthy provider status. OpenCode sources show Refresh needed and Backend routing unavailable. The selected per-Team launch values are visible; persistence and source/binding identity depend on retained receipts."
+        },
+        {
+          "path": "TEST-desktop-backend-JXRrKV/ui-emulated-selection-selected.png",
+          "bytes": 102653,
+          "sha256": "b670545c6c46c3c4aafe0d9a6ea9fec1bdd641bc7d2be933603a19d5ca755b6d",
+          "gitBlob": "740b69bffb58d1821bdb213f00b655c9f16709e2",
+          "identityKind": "Derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "The Team B creation form visibly selects TEST-model-next / TEST next model and High effort for lead, with Sync model with teammates enabled. The finite Codex 0.162.0 update banner advertises 0.169.0; disabled ordinary models, unavailable OpenCode routing/Refresh needed, and Local models Check remain visible. This is a per-Team configuration selection screenshot, not a proof of application-wide defaults, actual provider installation, or real Codex execution."
+        },
+        {
+          "path": "TEST-desktop-backend-JXRrKV/ui-emulated-selection-stopped.png",
+          "bytes": 118186,
+          "sha256": "52a6585b8e01da8a392d930856c7e0feec0c4cc03289e1c4b27a78af1c73d8c8",
+          "gitBlob": "3f3c6c7468af8dfb5f49cfa65f4501f8cda0303b",
+          "identityKind": "Derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "The stopped Team A frame shows Team is offline with Launch available, alice offline while still labelled TEST-model / via Codex / Low, and a fully visible TEST stream partial complete message. The green historical Team launched / lead online milestones coexist with the current offline status; they are not current liveness. Native process/Host/group absence and exact Stop completion rely on receipt evidence, not the screenshot."
+        }
+      ]
+    }
+  ],
+  "imageCount": 8,
+  "qualification": {
+    "actualImageInspection": true,
+    "standaloneNativeAbsence": false,
+    "applicationWideProviderDefault": false,
+    "realCodexExecution": false,
+    "wholeE2E": false
+  },
+  "materialLimits": [
+    "Team task creation is visible while team/member remain offline; it does not imply a Runtime was configured.",
+    "Selection is a saved per-Team next-launch model/effort contract. Exact process/session/thread continuity and native absence require the receipt joins.",
+    "The reloaded Team B dialog retains a Codex Needs attention badge alongside successful selected-model checks; other-provider unavailable/refresh/check labels remain visible.",
+    "Completed Team A frame is still Running; stopped frame is offline/Launch, retaining historical green launch milestones. Those milestones do not override current offline state.",
+    "Finite TEST catalog/version/update labels do not qualify any real vendor execution or account."
+  ]
+}

@@ -1,0 +1,1532 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_DARWIN_X64_PACKAGED_INDEPENDENT_BOUNDED_OUTCOME_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/red_publication_recovery",
+  "at": "2026-11-17 16:13:46 UTC",
+  "subject": {
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "platform": "darwin-x64",
+    "runId": 44092933873,
+    "jobId": 134098864967,
+    "artifactId": 14344905416,
+    "log": {
+      "gitBlob": "059cd11ebd8e1e554ec97844f1fe30945479d663",
+      "bytes": 182578,
+      "sha256": "2386589a9b0935ab83f7e3f8a795d4a8e008017f25efdb1cefbd63a9438c7ea9"
+    },
+    "capture": {
+      "gitBlob": "2d3690dbced319abbadc5aeb8c69305335964731",
+      "bytes": 3418119,
+      "sha256": "1ff055a6dbe00238a672677c86a7bed755dd1874b1fa9662509d4a7193102a2c"
+    }
+  },
+  "decision": "ACCEPT_RETAINED_BOUNDED_NATIVE_AND_FINITE_PACKAGED_OUTCOMES_WITH_EXPLICIT_LIMITS",
+  "accepted": true,
+  "notAnExecutionGate": true,
+  "completeInputTuples": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "original-job-log",
+      "pin": {
+        "gitBlob": "059cd11ebd8e1e554ec97844f1fe30945479d663",
+        "bytes": 182578,
+        "sha256": "2386589a9b0935ab83f7e3f8a795d4a8e008017f25efdb1cefbd63a9438c7ea9"
+      },
+      "method": "fresh full immutable Git read and hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "complete-artifact-capture",
+      "pin": {
+        "gitBlob": "2d3690dbced319abbadc5aeb8c69305335964731",
+        "bytes": 3418119,
+        "sha256": "1ff055a6dbe00238a672677c86a7bed755dd1874b1fa9662509d4a7193102a2c"
+      },
+      "method": "fresh full immutable Git read and hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "root-visual-record",
+      "pin": {
+        "bytes": 1956,
+        "sha256": "3a2372d97dfbb07f4dcb543044e69ef4cd8ba9d6ccbadb83599980939bca0714",
+        "gitBlob": "f16596545f63c7fa22a90f6e03ed876f1a0d5552"
+      },
+      "method": "fresh full immutable Git read and hash; root's observation attribution"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "source",
+      "path": "scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+      "pin": {
+        "bytes": 14137,
+        "sha256": "b6f0893cda4210adaa754d7b2af96f3ddd43dc9af64e0656a5736e26e79060e4",
+        "gitBlob": "44ccc655c11bb48dd354b10c09acb3d0e2d65c91"
+      },
+      "method": "accepted complete immutable source body; independently rehashed and exact source86f tree leaf joined",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "source",
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "pin": {
+        "bytes": 13466,
+        "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056",
+        "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c"
+      },
+      "method": "accepted complete immutable source body; independently rehashed and exact source86f tree leaf joined",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "source",
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "pin": {
+        "bytes": 49613,
+        "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+        "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608"
+      },
+      "method": "accepted complete immutable source body; independently rehashed and exact source86f tree leaf joined",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "source",
+      "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+      "pin": {
+        "bytes": 22845,
+        "sha256": "135cd81f2edde1f087b231d4dcbed83d8cc8beade5a0230a093e6cbfcb1923ee",
+        "gitBlob": "b33e5290e4ed86a48b902a24ffc80509f1c89236"
+      },
+      "method": "accepted complete immutable source body; independently rehashed and exact source86f tree leaf joined",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "source",
+      "path": "scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+      "pin": {
+        "bytes": 17320,
+        "sha256": "74444f48ffc2ddd4ca4bae52c9cbd7c2bddaa465508169d026e193661ce25787",
+        "gitBlob": "27cf4112a25dec299a21d6f802a5c08d55e36f2d"
+      },
+      "method": "accepted complete immutable body; independent full rehash",
+      "tree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "source",
+      "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "pin": {
+        "bytes": 33259,
+        "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff",
+        "gitBlob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190"
+      },
+      "method": "accepted complete immutable body; independent full rehash; exact source86f package leaf also joined",
+      "tree": "dc592662ccd8e886de52da21c666ff3ac1d3d6f6",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "source",
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "pin": {
+        "bytes": 21993,
+        "sha256": "2f929c1f5cfd1a9a3c9ec16d35f7197856c79a61adf166d30eebb8a1bd086f67",
+        "gitBlob": "adf5b4c418195e0fc4ab38ba7fde2b3436a6b835"
+      },
+      "method": "accepted complete immutable body; independent full rehash",
+      "tree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "source",
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "pin": {
+        "bytes": 33227,
+        "sha256": "dc9ba0c735ea763a24bb06d93590373cf1072d5737c7fba67a31df1356c44dd5",
+        "gitBlob": "1430de1a6666a22a7582d38a21273d61d2f745b7"
+      },
+      "method": "accepted complete immutable body; independent full rehash",
+      "tree": "7360460b475db2e174c65f5ba0eeb075f06622b1",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087"
+    }
+  ],
+  "completeInputCount": 11,
+  "completeInputBytes": 3808513,
+  "archiveIdentity": {
+    "pin": {
+      "bytes": 801325,
+      "sha256": "75596555db73599bb485f1d43d1f6657717ad51ee13c9d6b92b9e201cbb85b2b",
+      "gitBlob": "58797a1e7b194aa1e1d93fb261980812fcb57aba"
+    },
+    "metadataSize": 801325,
+    "metadataDigest": "sha256:75596555db73599bb485f1d43d1f6657717ad51ee13c9d6b92b9e201cbb85b2b",
+    "decodedComplete": true
+  },
+  "zipCensus": {
+    "count": 9,
+    "centralDirectoryOffset": 800425,
+    "centralDirectoryBytes": 878,
+    "exactEnd": true,
+    "totalMemberBytes": 2119740,
+    "method": "Independent pure in-memory ZIP directory and raw DEFLATE decode; complete SHA256/Git/CRC32 joins, no filesystem or target execution"
+  },
+  "completeMemberJoins": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154723,
+      "compressedBytes": 343467,
+      "method": 8,
+      "pin": {
+        "bytes": 1154723,
+        "sha256": "08ad40bf27d39c8a56caaa5642914dc3a00c5fc37e5056e62ed090097bc51292",
+        "gitBlob": "5e66c5cb052c98a05bc44892a6ef8700f9fe6c62"
+      },
+      "crc32": "9a08d951",
+      "crcVerified": true,
+      "fullDecodedBytesMatched": true
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-W4UOsy/ui-automatic-app-relaunch-successor.png",
+      "bytes": 70747,
+      "compressedBytes": 65715,
+      "method": 8,
+      "pin": {
+        "bytes": 70747,
+        "sha256": "1f02532ba80a77ece8f2b6f192b343af1053d29137f74eb8d49c0bbb9f5035eb",
+        "gitBlob": "c9792725631175b2808a78fbee0d5f673d21eb0d"
+      },
+      "crc32": "67d33918",
+      "crcVerified": true,
+      "fullDecodedBytesMatched": true
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-W4UOsy/ui-emulated-lifecycle-launch.png",
+      "bytes": 107226,
+      "compressedBytes": 103635,
+      "method": 8,
+      "pin": {
+        "bytes": 107226,
+        "sha256": "20e012d40239ac132888f137c8c2e5dff77959c4e643f94c9abbf7d5992c0b20",
+        "gitBlob": "2570c12a90f89d6f238a9b27d550b6eac671e8c2"
+      },
+      "crc32": "f55fa87c",
+      "crcVerified": true,
+      "fullDecodedBytesMatched": true
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-W4UOsy/ui-emulated-lifecycle-stopped.png",
+      "bytes": 98552,
+      "compressedBytes": 95243,
+      "method": 8,
+      "pin": {
+        "bytes": 98552,
+        "sha256": "0d9d0e1841babac1ea866fc63350c779385e1a1890243e334e25b9a1a3e4b77a",
+        "gitBlob": "ddb915d168141b0196663a7b44fde0d1c2bf9c88"
+      },
+      "crc32": "46c1c4bd",
+      "crcVerified": true,
+      "fullDecodedBytesMatched": true
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-inputs.json",
+      "bytes": 2370,
+      "compressedBytes": 1161,
+      "method": 8,
+      "pin": {
+        "bytes": 2370,
+        "sha256": "0350503d7fdae2d42ef0cb5ce908bb282dd7d11993cb0389b922760a49403c1e",
+        "gitBlob": "fe9b85f48a613ffdb7872cdf8f3cdf1d6d1bd6a3"
+      },
+      "crc32": "3d2d6241",
+      "crcVerified": true,
+      "fullDecodedBytesMatched": true
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-native.json",
+      "bytes": 5306,
+      "compressedBytes": 1890,
+      "method": 8,
+      "pin": {
+        "bytes": 5306,
+        "sha256": "d7128b48b44096a7f27b0139200eb76a05bac6b738045fd4082330ad304705e9",
+        "gitBlob": "2cb967f91f7800c351e31100ed136ca3cbec9b84"
+      },
+      "crc32": "6f872d1c",
+      "crcVerified": true,
+      "fullDecodedBytesMatched": true
+    },
+    {
+      "path": "_temp/opencode-v2-packaged.json",
+      "bytes": 1187,
+      "compressedBytes": 625,
+      "method": 8,
+      "pin": {
+        "bytes": 1187,
+        "sha256": "07226cf39f7fb452fd19a57406b6398a88b4e899582ad4654aee5a2d7f0c4738",
+        "gitBlob": "6ff5e5153bbc2d1b63cd8d6b671bd7148f8e808a"
+      },
+      "crc32": "50010485",
+      "crcVerified": true,
+      "fullDecodedBytesMatched": true
+    },
+    {
+      "path": "_temp/packaged-app-relaunch.app.log",
+      "bytes": 4194,
+      "compressedBytes": 1120,
+      "method": 8,
+      "pin": {
+        "bytes": 4194,
+        "sha256": "64eec9698874d2ddece6ba2dc2c0c0062a808ef96ad0b34fb9e1d06c199a9089",
+        "gitBlob": "88ecdb377996987d5f4aaa62cde5c90f4c4f3f8a"
+      },
+      "crc32": "52199056",
+      "crcVerified": true,
+      "fullDecodedBytesMatched": true
+    },
+    {
+      "path": "_temp/packaged-app-relaunch.json",
+      "bytes": 675435,
+      "compressedBytes": 186691,
+      "method": 8,
+      "pin": {
+        "bytes": 675435,
+        "sha256": "06e91857a45bddc65ecaa8fd00a1325ebe5ab7b26a3c70eff6289c9c7340256d",
+        "gitBlob": "f8c4baab5540e2775faa8c43e8899702ee7cdace"
+      },
+      "crc32": "846cc594",
+      "crcVerified": true,
+      "fullDecodedBytesMatched": true
+    }
+  ],
+  "memberEncodingJoins": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "pin": {
+        "bytes": 1154723,
+        "sha256": "08ad40bf27d39c8a56caaa5642914dc3a00c5fc37e5056e62ed090097bc51292",
+        "gitBlob": "5e66c5cb052c98a05bc44892a6ef8700f9fe6c62"
+      },
+      "encoding": "utf-8",
+      "crc32": "9a08d951"
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-W4UOsy/ui-automatic-app-relaunch-successor.png",
+      "pin": {
+        "bytes": 70747,
+        "sha256": "1f02532ba80a77ece8f2b6f192b343af1053d29137f74eb8d49c0bbb9f5035eb",
+        "gitBlob": "c9792725631175b2808a78fbee0d5f673d21eb0d"
+      },
+      "encoding": "base64",
+      "crc32": "67d33918"
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-W4UOsy/ui-emulated-lifecycle-launch.png",
+      "pin": {
+        "bytes": 107226,
+        "sha256": "20e012d40239ac132888f137c8c2e5dff77959c4e643f94c9abbf7d5992c0b20",
+        "gitBlob": "2570c12a90f89d6f238a9b27d550b6eac671e8c2"
+      },
+      "encoding": "base64",
+      "crc32": "f55fa87c"
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-W4UOsy/ui-emulated-lifecycle-stopped.png",
+      "pin": {
+        "bytes": 98552,
+        "sha256": "0d9d0e1841babac1ea866fc63350c779385e1a1890243e334e25b9a1a3e4b77a",
+        "gitBlob": "ddb915d168141b0196663a7b44fde0d1c2bf9c88"
+      },
+      "encoding": "base64",
+      "crc32": "46c1c4bd"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-inputs.json",
+      "pin": {
+        "bytes": 2370,
+        "sha256": "0350503d7fdae2d42ef0cb5ce908bb282dd7d11993cb0389b922760a49403c1e",
+        "gitBlob": "fe9b85f48a613ffdb7872cdf8f3cdf1d6d1bd6a3"
+      },
+      "encoding": "utf-8",
+      "crc32": "3d2d6241"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-native.json",
+      "pin": {
+        "bytes": 5306,
+        "sha256": "d7128b48b44096a7f27b0139200eb76a05bac6b738045fd4082330ad304705e9",
+        "gitBlob": "2cb967f91f7800c351e31100ed136ca3cbec9b84"
+      },
+      "encoding": "utf-8",
+      "crc32": "6f872d1c"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged.json",
+      "pin": {
+        "bytes": 1187,
+        "sha256": "07226cf39f7fb452fd19a57406b6398a88b4e899582ad4654aee5a2d7f0c4738",
+        "gitBlob": "6ff5e5153bbc2d1b63cd8d6b671bd7148f8e808a"
+      },
+      "encoding": "utf-8",
+      "crc32": "50010485"
+    },
+    {
+      "path": "_temp/packaged-app-relaunch.app.log",
+      "pin": {
+        "bytes": 4194,
+        "sha256": "64eec9698874d2ddece6ba2dc2c0c0062a808ef96ad0b34fb9e1d06c199a9089",
+        "gitBlob": "88ecdb377996987d5f4aaa62cde5c90f4c4f3f8a"
+      },
+      "encoding": "utf-8",
+      "crc32": "52199056"
+    },
+    {
+      "path": "_temp/packaged-app-relaunch.json",
+      "pin": {
+        "bytes": 675435,
+        "sha256": "06e91857a45bddc65ecaa8fd00a1325ebe5ab7b26a3c70eff6289c9c7340256d",
+        "gitBlob": "f8c4baab5540e2775faa8c43e8899702ee7cdace"
+      },
+      "encoding": "utf-8",
+      "crc32": "846cc594"
+    }
+  ],
+  "nativeOutcome": {
+    "receiptMember": "_temp/opencode-v2-packaged-native.json",
+    "receipt": {
+      "kind": "TEST_PACKAGED_NATIVE_V2_HOST",
+      "status": "PASS",
+      "packaged": {
+        "executionOrigin": "packaged-extraResources",
+        "appAsarSha256": "99ffa74ba2c0cd04b1103edd38ea07dbd3a7ad640363ff80490a736d0f56b630",
+        "candidateManifestSha256": "08ad40bf27d39c8a56caaa5642914dc3a00c5fc37e5056e62ed090097bc51292",
+        "harnessSha256": "1890cad5057237154c0bcfd72c1c5cedb3e516057151d6bbafb1e76671d9d63e",
+        "sourceCheckoutUnavailable": true,
+        "legacyRuntimeUnavailable": true,
+        "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+        "nodeArchiveSha256": "1462cb3b3046b815cf8ea436d3da450ec1a9f11dac7e5a46b0ada5305d7e8097",
+        "providerArtifacts": [
+          {
+            "name": "@agent-teams/provider-implementations",
+            "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+          },
+          {
+            "name": "@agent-teams/provider-session-contracts",
+            "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+          }
+        ],
+        "packages": 120,
+        "files": 8131
+      },
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "platform": "darwin-x64",
+      "version": "2.1.4",
+      "approvalMode": "manual",
+      "nodeVersion": "v24.21.0",
+      "modelSelection": {
+        "providerId": "TEST-local",
+        "modelId": "TEST-model-B",
+        "variant": "high"
+      },
+      "configurationSelection": {
+        "scope": "project",
+        "original": "project-A",
+        "later": "project-B"
+      },
+      "preferencesSelection": {
+        "nativeDefault": "TEST-local/TEST-model",
+        "appDefault": "TEST-local/TEST-model-B"
+      },
+      "digests": {
+        "bun": "c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab",
+        "manifest": "7690030a5aba3026544e65f000475dd20f83213383e9bfddad3d98c1134a65fb",
+        "node": "7abcf39bd37ab251015337ff75304d7555f0d8e88c6e0fbf04bce8ce34636f49",
+        "hostSource": "83e3304024dcfa67db7034c0316c3d9463d47659a44b8a8a04e0aedf3c660c67",
+        "hostDist": "c1deda42795d6769cc0f2d71ce9de79a56a928ff9954fdba64b6e3c7ca891997",
+        "provider": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+      },
+      "steps": [
+        "original_host_embedded_native_and_mcp_ready",
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+        "changed_project_config_did_not_retarget_running_native_session",
+        "original_uploaded_PNG_native_image_inference_and_public_readback",
+        "checkpoint_and_original_host_native_cleanup_confirmed",
+        "cold_host_restored_native_history_without_model_or_tool_replay"
+      ],
+      "cleanup": true,
+      "phaseElapsedMs": {
+        "original_host_embedded_native_and_mcp_ready": 115846,
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 171193,
+        "changed_project_config_did_not_retarget_running_native_session": 171193,
+        "original_uploaded_PNG_native_image_inference_and_public_readback": 171193,
+        "checkpoint_and_original_host_native_cleanup_confirmed": 171881,
+        "cold_host_restored_native_history_without_model_or_tool_replay": 223983
+      },
+      "elapsedMs": 246187,
+      "cancelled": false,
+      "inputObservation": {
+        "reads": 201,
+        "last": {
+          "phase": "allocated",
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true,
+          "sealed": false,
+          "diagnostic": null,
+          "inputs": [
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            },
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            }
+          ],
+          "interactions": [
+            {
+              "kind": "permission",
+              "phase": "resolved"
+            },
+            {
+              "kind": "permission",
+              "phase": "resolved"
+            }
+          ]
+        }
+      },
+      "launchObservation": {
+        "openElapsedMs": 80446,
+        "afterOpen": {
+          "available": true,
+          "status": "ready",
+          "reason": "context-applied",
+          "elapsedSinceAttemptMs": 78432,
+          "capturedTimeoutMs": 120000,
+          "claimed": true,
+          "nativeReady": true,
+          "contextApplied": true,
+          "everReady": true,
+          "usable": true,
+          "controlAvailable": true,
+          "noAllocation": false
+        }
+      },
+      "failureCode": null,
+      "hosts": [
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        },
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        }
+      ],
+      "modelOrigin": "localhost-scripted",
+      "modelRequests": 11,
+      "modelProgress": [
+        {
+          "elapsedMs": 116044,
+          "requests": 0
+        },
+        {
+          "elapsedMs": 129193,
+          "requests": 1
+        },
+        {
+          "elapsedMs": 129538,
+          "requests": 2
+        },
+        {
+          "elapsedMs": 130118,
+          "requests": 3
+        },
+        {
+          "elapsedMs": 130500,
+          "requests": 4
+        },
+        {
+          "elapsedMs": 136029,
+          "requests": 5
+        },
+        {
+          "elapsedMs": 136307,
+          "requests": 6
+        },
+        {
+          "elapsedMs": 136564,
+          "requests": 7
+        },
+        {
+          "elapsedMs": 136798,
+          "requests": 8
+        },
+        {
+          "elapsedMs": 160318,
+          "requests": 9
+        },
+        {
+          "elapsedMs": 165351,
+          "requests": 10
+        },
+        {
+          "elapsedMs": 165644,
+          "requests": 11
+        }
+      ],
+      "coordination": {
+        "status": "unqualified",
+        "cleanup": null
+      },
+      "modelFailures": [],
+      "vendorAuthQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    },
+    "wrapperReceipt": {
+      "kind": "TEST_PACKAGED_V2_QUALIFICATION",
+      "status": "PASS",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "platform": "darwin-x64",
+      "cleanup": true,
+      "phase": "finished",
+      "desktopJourneyQualified": false,
+      "vendorAuthQualified": false,
+      "releaseQualified": false,
+      "cleanupObservation": {
+        "originalExitObserved": true,
+        "nativeReceiptParsed": true,
+        "nativeReceiptBound": true,
+        "nativeCleanupConfirmed": true,
+        "firstFailure": null,
+        "firstRestorationFailure": null
+      },
+      "appAsarSha256": "99ffa74ba2c0cd04b1103edd38ea07dbd3a7ad640363ff80490a736d0f56b630",
+      "candidateManifestSha256": "08ad40bf27d39c8a56caaa5642914dc3a00c5fc37e5056e62ed090097bc51292",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "nodeSha256": "7abcf39bd37ab251015337ff75304d7555f0d8e88c6e0fbf04bce8ce34636f49",
+      "nativeExit": {
+        "code": 0,
+        "signal": null
+      },
+      "nativeReceiptSha256": "d7128b48b44096a7f27b0139200eb76a05bac6b738045fd4082330ad304705e9",
+      "sourceCheckoutUnavailable": true,
+      "legacyRuntimeUnavailable": true,
+      "sourceRestored": true,
+      "bundleRestored": true,
+      "legacyRuntimeRestored": true
+    },
+    "inputPreparation": {
+      "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+      "status": "READY",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "platform": "darwin-x64",
+      "nodeVersion": "v24.21.0",
+      "productQualified": false,
+      "stage": "prepared",
+      "baseArchiveSha256": "fbaab0cb2a1b46241985ecabf4f256abf8f80051be264786cbf301857e46969a",
+      "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "bun": {
+        "path": "/Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+        "sha256": "c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab",
+        "version": "1.4.4"
+      },
+      "osBuild": "24G830",
+      "productTupleAdmitted": true,
+      "processArtifact": {
+        "manifest": {
+          "schemaVersion": 1,
+          "abi": "napi-8",
+          "platform": "darwin",
+          "architecture": "x64",
+          "osBuild": "24G830",
+          "library": "registered-process.node",
+          "sourceSha256": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5",
+          "binarySha256": "50e8af2e01f9a79387b13548d2d84f963e543baaa5c3fc842f4a38580ed6c973",
+          "compilerSha256": "4c458256bcdf913774de1bb4a37768244d3b41f32ad55afb2dfec3432f46f4fe",
+          "sdkSettingsSha256": "58a133735f0a55a624a1703067059f6e78925e51725ec6e1f966072e142c9c42",
+          "headers": [
+            {
+              "file": "node_api.h",
+              "sha256": "2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a"
+            },
+            {
+              "file": "node_api_types.h",
+              "sha256": "a25356630d3058f0a0c8937d9f297e9471e037fda58c2696d8a505c2bd99cb00"
+            },
+            {
+              "file": "js_native_api.h",
+              "sha256": "8808ef8899a1691411928ef5dd7dae0537aedc93d3a34e223b2d89692e79c788"
+            },
+            {
+              "file": "js_native_api_types.h",
+              "sha256": "4f19cb90d240765cc0961d92a1ee20f65fdc50db7de1ab0a5cb6bc227224e1a0"
+            },
+            {
+              "file": "node_version.h",
+              "sha256": "bd056729fddf4bfa58687036219f07417c334c4ecfcb513ac256fa254451bfc9"
+            }
+          ]
+        },
+        "manifestSha256": "160c3052dda74b45ed6d78e8f1553091f52587399e5912590c01484b6b37e10e",
+        "directory": "/Users/runner/work/_temp/TEST-opencode-v2-inputs-AHS778/process-artifact"
+      },
+      "supportArchiveSha256": "f80837d4659bcd0ccc0275dbbff3731e517a50567572d24635bfdcf6447f1111",
+      "manifestSha256": "7690030a5aba3026544e65f000475dd20f83213383e9bfddad3d98c1134a65fb"
+    },
+    "candidateManifest": {
+      "pin": {
+        "bytes": 1154723,
+        "sha256": "08ad40bf27d39c8a56caaa5642914dc3a00c5fc37e5056e62ed090097bc51292",
+        "gitBlob": "5e66c5cb052c98a05bc44892a6ef8700f9fe6c62"
+      },
+      "packages": 120,
+      "files": 8131,
+      "harnessSha256": "1890cad5057237154c0bcfd72c1c5cedb3e516057151d6bbafb1e76671d9d63e",
+      "scope": "Complete manifest bytes and recorded runtime verification; not independent re-reading of all installed 8,131 file bodies or compiled harness bytes."
+    }
+  },
+  "finitePackagedOutcome": {
+    "status": "PASS",
+    "scope": "Actual packaged macOS Electron and bundled Host, one finite SDK Launch/Stop, automatic app.relaunch and one successor public Quit",
+    "excluded": [
+      "Claude/Codex executable execution",
+      "vendor inference/authentication",
+      "full cold Resume/active Quit",
+      "release qualification"
+    ],
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "platform": "darwin-x64",
+    "packedCandidate": {
+      "executable": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/MacOS/Agent Teams AI",
+      "executableSha256": "6f99f14f55e2dc41b449e10631b1aada39a917a3c93bcc214bed1128d77a7e4f",
+      "appAsar": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/Resources/app.asar",
+      "appAsarSha256": "99ffa74ba2c0cd04b1103edd38ea07dbd3a7ad640363ff80490a736d0f56b630",
+      "rendererUrl": "file:///Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent%20Teams%20AI.app/Contents/Resources/app.asar/out/renderer/index.html",
+      "capture": {
+        "resourcesRoot": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/Resources/legacy-agent-host",
+        "appAsar": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/Resources/app.asar",
+        "appAsarSha256": "99ffa74ba2c0cd04b1103edd38ea07dbd3a7ad640363ff80490a736d0f56b630",
+        "manifestSha256": "08ad40bf27d39c8a56caaa5642914dc3a00c5fc37e5056e62ed090097bc51292"
+      },
+      "node": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/Resources/legacy-agent-host/node/v24.21.0/darwin-x64/node",
+      "hostEntry": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/Resources/legacy-agent-host/host/packages/0000/dist/cli.js"
+    },
+    "fixturePins": {
+      "executable": {
+        "path": "/Users/runner/work/_temp/TEST-desktop-backend-W4UOsy/bin/TEST-claude-peer",
+        "sha256": "b9a2a56ad543ddf12dd9bfa78759b554397fe1f5f77f67f90c55fc252c5a20ab"
+      },
+      "sources": [
+        {
+          "path": "/Users/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "sha256": "dc9ba0c735ea763a24bb06d93590373cf1072d5737c7fba67a31df1356c44dd5"
+        }
+      ],
+      "provider": "claude",
+      "lifecycleVariant": "cold-resume-active-quit-v1",
+      "protocolRevision": "sdk-0.3.305",
+      "runtimeConfigured": true,
+      "managementConfigured": true,
+      "vendorsAllowed": false
+    },
+    "realVendorExecutions": 0,
+    "nativeProviderQualified": false,
+    "releaseQualified": false,
+    "originalApp": {
+      "pid": 48005,
+      "processGroup": 48005,
+      "identity": "Tue Nov 17 15:48:18 2026     /Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/MacOS/Agent Teams AI --remote-debugging-port=9222",
+      "invocation": [
+        "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/MacOS/Agent Teams AI",
+        "--remote-debugging-port=9222"
+      ]
+    },
+    "originalHost": {
+      "pid": 48072,
+      "ppid": 48005,
+      "pgid": 48005,
+      "observedBeforeShutdown": true
+    },
+    "flowCensus": {
+      "launches": 1,
+      "stops": 1,
+      "businessInputs": 1,
+      "probeInputs": 1,
+      "totalInputs": 2,
+      "allEffectPids": [
+        48233,
+        48281,
+        48587,
+        48692,
+        48729,
+        49041,
+        49975,
+        49998
+      ],
+      "peerPids": [
+        48233,
+        48281,
+        48587,
+        48692,
+        48729,
+        49041,
+        49975,
+        49998
+      ]
+    },
+    "launchStop": {
+      "status": "PASS",
+      "scope": "Original Launch, one successful SDK peer input and original Stop before automatic packaged app relaunch",
+      "excluded": [
+        "vendor inference/authentication",
+        "native provider qualification",
+        "cold checkpoint Resume",
+        "active/queued Quit"
+      ],
+      "nativeQualification": false,
+      "session": {
+        "schemaVersion": 1,
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-W4UOsy",
+          "teamId": "TEST-desktop-team",
+          "runId": "9c8f58da-ac88-5e27-b188-8cdc81c893a6",
+          "memberId": "alice-id",
+          "generation": "capture-733edd72-d2e9-5ef5-9462-465a00359a61"
+        },
+        "profileId": "TEST-desktop-profile-TEST-desktop-backend-W4UOsy",
+        "config": {
+          "tenantId": "TEST-desktop-owner-TEST-desktop-backend-W4UOsy",
+          "projectId": "TEST-project-TEST-desktop-backend-W4UOsy",
+          "sessionId": "76a8278a-f4be-5a86-8b47-67c1717a50f7",
+          "generation": 2,
+          "configRevision": "capture-4393beb05bda13f9bff8643010877b7a4d91e3815be807b848cffe67912393e7",
+          "requiredCapabilities": [
+            "session.conversation"
+          ]
+        },
+        "openFingerprint": "6dcaf87f9426643c21e19c30faebf9647061e8597701b87f0b706d2696b97d96",
+        "hostIncarnation": "02b5bbfa-9114-4ce7-a631-fd6045b6ad0e",
+        "phase": "closed",
+        "sealed": true,
+        "custody": "released",
+        "nativeReady": false,
+        "inputs": [
+          {
+            "intent": {
+              "binding": {
+                "backendId": "TEST-desktop-owner-TEST-desktop-backend-W4UOsy",
+                "teamId": "TEST-desktop-team",
+                "runId": "9c8f58da-ac88-5e27-b188-8cdc81c893a6",
+                "memberId": "alice-id",
+                "generation": "capture-733edd72-d2e9-5ef5-9462-465a00359a61"
+              },
+              "deliveryId": "f816903e-bca6-5b25-a80e-31b61383c943",
+              "inputId": "f816903e-bca6-5b25-a80e-31b61383c943",
+              "messageId": "108f4558-357b-506e-ac84-f57f20eac673",
+              "content": "TEST_UI_BOOT"
+            },
+            "fingerprint": "ed830180f63202434e8b3a99ea0e0651bbadd3951c2015168069d61979fe0fe3",
+            "operationRef": "0771ebe1-b257-4301-b7c3-0a742bfa5b01",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ],
+        "interactions": [],
+        "conversation": {
+          "sequence": 8,
+          "digest": "f5d85612d1866b8dd7794b3cd77183f3ef29a1343fc8778981431149ef75cbd9",
+          "gaps": []
+        },
+        "activitySequence": 16,
+        "sessionRef": "76a8278a-f4be-5a86-8b47-67c1717a50f7",
+        "closeClaimed": true,
+        "checkpoints": [
+          {
+            "checkpointId": "stop-77f62101682a4ec3b453b98d6bf345a6595c226d346ec87aae8642f49e9336c6",
+            "fingerprint": "c0c2b9ab177c1119fb9b18f224c113e133cec4b4277721db9cca2fc69623f06e",
+            "hostIncarnation": "02b5bbfa-9114-4ce7-a631-fd6045b6ad0e",
+            "status": "published",
+            "reference": "cp1-63352951dce36cc7fdea8f9291e89e21356c41c35583b1d4b7a373428aac4246",
+            "historyDigest": "3c8897f99ca425b3278963582c9fa2ff9caf2615b108587efadc8474c0336ae6",
+            "payloadDigest": "bb8bc2952fa4439784dac74fe1c24e9bbf106c993625cffc356a5ba7c3185e76"
+          }
+        ],
+        "diagnostic": "observe-ended"
+      },
+      "source": {
+        "session": {
+          "schemaVersion": 1,
+          "binding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-W4UOsy",
+            "teamId": "TEST-desktop-team",
+            "runId": "9c8f58da-ac88-5e27-b188-8cdc81c893a6",
+            "memberId": "alice-id",
+            "generation": "capture-733edd72-d2e9-5ef5-9462-465a00359a61"
+          },
+          "profileId": "TEST-desktop-profile-TEST-desktop-backend-W4UOsy",
+          "config": {
+            "tenantId": "TEST-desktop-owner-TEST-desktop-backend-W4UOsy",
+            "projectId": "TEST-project-TEST-desktop-backend-W4UOsy",
+            "sessionId": "76a8278a-f4be-5a86-8b47-67c1717a50f7",
+            "generation": 2,
+            "configRevision": "capture-4393beb05bda13f9bff8643010877b7a4d91e3815be807b848cffe67912393e7",
+            "requiredCapabilities": [
+              "session.conversation"
+            ]
+          },
+          "openFingerprint": "6dcaf87f9426643c21e19c30faebf9647061e8597701b87f0b706d2696b97d96",
+          "hostIncarnation": "02b5bbfa-9114-4ce7-a631-fd6045b6ad0e",
+          "phase": "closed",
+          "sealed": true,
+          "custody": "released",
+          "nativeReady": false,
+          "inputs": [
+            {
+              "intent": {
+                "binding": {
+                  "backendId": "TEST-desktop-owner-TEST-desktop-backend-W4UOsy",
+                  "teamId": "TEST-desktop-team",
+                  "runId": "9c8f58da-ac88-5e27-b188-8cdc81c893a6",
+                  "memberId": "alice-id",
+                  "generation": "capture-733edd72-d2e9-5ef5-9462-465a00359a61"
+                },
+                "deliveryId": "f816903e-bca6-5b25-a80e-31b61383c943",
+                "inputId": "f816903e-bca6-5b25-a80e-31b61383c943",
+                "messageId": "108f4558-357b-506e-ac84-f57f20eac673",
+                "content": "TEST_UI_BOOT"
+              },
+              "fingerprint": "ed830180f63202434e8b3a99ea0e0651bbadd3951c2015168069d61979fe0fe3",
+              "operationRef": "0771ebe1-b257-4301-b7c3-0a742bfa5b01",
+              "phase": "terminal",
+              "terminal": "succeeded"
+            }
+          ],
+          "interactions": [],
+          "conversation": {
+            "sequence": 8,
+            "digest": "f5d85612d1866b8dd7794b3cd77183f3ef29a1343fc8778981431149ef75cbd9",
+            "gaps": []
+          },
+          "activitySequence": 16,
+          "sessionRef": "76a8278a-f4be-5a86-8b47-67c1717a50f7",
+          "closeClaimed": true,
+          "checkpoints": [
+            {
+              "checkpointId": "stop-77f62101682a4ec3b453b98d6bf345a6595c226d346ec87aae8642f49e9336c6",
+              "fingerprint": "c0c2b9ab177c1119fb9b18f224c113e133cec4b4277721db9cca2fc69623f06e",
+              "hostIncarnation": "02b5bbfa-9114-4ce7-a631-fd6045b6ad0e",
+              "status": "published",
+              "reference": "cp1-63352951dce36cc7fdea8f9291e89e21356c41c35583b1d4b7a373428aac4246",
+              "historyDigest": "3c8897f99ca425b3278963582c9fa2ff9caf2615b108587efadc8474c0336ae6",
+              "payloadDigest": "bb8bc2952fa4439784dac74fe1c24e9bbf106c993625cffc356a5ba7c3185e76"
+            }
+          ],
+          "diagnostic": "observe-ended"
+        },
+        "reference": "cp1-63352951dce36cc7fdea8f9291e89e21356c41c35583b1d4b7a373428aac4246",
+        "payloadFileSha256": "4a0ad542e20f8c72f6bad7d328f11a3b33f37dcd11b6958632aecd1cde0232ff",
+        "historyPath": "/Users/runner/work/_temp/TEST-desktop-backend-W4UOsy/TEST-peer-claude-scope/config/projects/TEST-desktop-peer/00c7c279-312f-43f9-8eb7-a5fb32e0b567.jsonl",
+        "historySha256": "2d6142f2758c2bb80c29a49ea464e679ebba94c45985356d0bbfb8be78e2319c",
+        "nativeSession": "00c7c279-312f-43f9-8eb7-a5fb32e0b567",
+        "originalPids": [
+          49041
+        ]
+      },
+      "launchScreenshot": {
+        "path": "/Users/runner/work/_temp/TEST-desktop-backend-W4UOsy/ui-emulated-lifecycle-launch.png",
+        "sha256": "20e012d40239ac132888f137c8c2e5dff77959c4e643f94c9abbf7d5992c0b20"
+      },
+      "stoppedScreenshot": {
+        "path": "/Users/runner/work/_temp/TEST-desktop-backend-W4UOsy/ui-emulated-lifecycle-stopped.png",
+        "sha256": "0d9d0e1841babac1ea866fc63350c779385e1a1890243e334e25b9a1a3e4b77a"
+      }
+    },
+    "automaticRelaunch": {
+      "status": "PASS",
+      "scope": "Automatic packed app.relaunch, observer-only successor and one guarded public Quit",
+      "successorNativeCustody": false,
+      "numericPidSignalsAuthorized": false,
+      "providerRootCleanupQualification": "outside this observer-only app lifecycle scope",
+      "originalLease": {
+        "pid": 48072,
+        "token": "03c6ce7f-c8a4-4328-85d3-2e276ad593ed",
+        "dev": 16777220,
+        "ino": 12888861923
+      },
+      "originalSessions": [
+        {
+          "schemaVersion": 1,
+          "binding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-W4UOsy",
+            "teamId": "TEST-desktop-team",
+            "runId": "9c8f58da-ac88-5e27-b188-8cdc81c893a6",
+            "memberId": "alice-id",
+            "generation": "capture-733edd72-d2e9-5ef5-9462-465a00359a61"
+          },
+          "profileId": "TEST-desktop-profile-TEST-desktop-backend-W4UOsy",
+          "config": {
+            "tenantId": "TEST-desktop-owner-TEST-desktop-backend-W4UOsy",
+            "projectId": "TEST-project-TEST-desktop-backend-W4UOsy",
+            "sessionId": "76a8278a-f4be-5a86-8b47-67c1717a50f7",
+            "generation": 2,
+            "configRevision": "capture-4393beb05bda13f9bff8643010877b7a4d91e3815be807b848cffe67912393e7",
+            "requiredCapabilities": [
+              "session.conversation"
+            ]
+          },
+          "openFingerprint": "6dcaf87f9426643c21e19c30faebf9647061e8597701b87f0b706d2696b97d96",
+          "hostIncarnation": "02b5bbfa-9114-4ce7-a631-fd6045b6ad0e",
+          "phase": "closed",
+          "sealed": true,
+          "custody": "released",
+          "nativeReady": false,
+          "inputs": [
+            {
+              "intent": {
+                "binding": {
+                  "backendId": "TEST-desktop-owner-TEST-desktop-backend-W4UOsy",
+                  "teamId": "TEST-desktop-team",
+                  "runId": "9c8f58da-ac88-5e27-b188-8cdc81c893a6",
+                  "memberId": "alice-id",
+                  "generation": "capture-733edd72-d2e9-5ef5-9462-465a00359a61"
+                },
+                "deliveryId": "f816903e-bca6-5b25-a80e-31b61383c943",
+                "inputId": "f816903e-bca6-5b25-a80e-31b61383c943",
+                "messageId": "108f4558-357b-506e-ac84-f57f20eac673",
+                "content": "TEST_UI_BOOT"
+              },
+              "fingerprint": "ed830180f63202434e8b3a99ea0e0651bbadd3951c2015168069d61979fe0fe3",
+              "operationRef": "0771ebe1-b257-4301-b7c3-0a742bfa5b01",
+              "phase": "terminal",
+              "terminal": "succeeded"
+            }
+          ],
+          "interactions": [],
+          "conversation": {
+            "sequence": 8,
+            "digest": "f5d85612d1866b8dd7794b3cd77183f3ef29a1343fc8778981431149ef75cbd9",
+            "gaps": []
+          },
+          "activitySequence": 16,
+          "sessionRef": "76a8278a-f4be-5a86-8b47-67c1717a50f7",
+          "closeClaimed": true,
+          "checkpoints": [
+            {
+              "checkpointId": "stop-77f62101682a4ec3b453b98d6bf345a6595c226d346ec87aae8642f49e9336c6",
+              "fingerprint": "c0c2b9ab177c1119fb9b18f224c113e133cec4b4277721db9cca2fc69623f06e",
+              "hostIncarnation": "02b5bbfa-9114-4ce7-a631-fd6045b6ad0e",
+              "status": "published",
+              "reference": "cp1-63352951dce36cc7fdea8f9291e89e21356c41c35583b1d4b7a373428aac4246",
+              "historyDigest": "3c8897f99ca425b3278963582c9fa2ff9caf2615b108587efadc8474c0336ae6",
+              "payloadDigest": "bb8bc2952fa4439784dac74fe1c24e9bbf106c993625cffc356a5ba7c3185e76"
+            }
+          ],
+          "diagnostic": "observe-ended"
+        }
+      ],
+      "relaunchAttempted": true,
+      "relaunchReply": "acknowledged",
+      "originalExit": {
+        "exitCode": 0,
+        "signalCode": null,
+        "HostExitCode": "unavailable",
+        "HostSignalCode": "unavailable"
+      },
+      "leaseAfterOriginalExit": null,
+      "successorIdentity": {
+        "pid": 49633,
+        "executable": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/MacOS/Agent Teams AI",
+        "argv": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/MacOS/Agent Teams AI --remote-debugging-port=9222",
+        "started": "Tue Nov 17 15:49:33 2026",
+        "observationOnly": true
+      },
+      "successorHomeBeforeBackend": {
+        "defaultPath": "/Users/runner/work/_temp/TEST-desktop-backend-W4UOsy/home/.claude",
+        "resolvedPath": "/Users/runner/work/_temp/TEST-desktop-backend-W4UOsy/claude",
+        "customPath": null
+      },
+      "successorBinding": {
+        "rendererTarget": {
+          "id": "EA9817BF48B29C96B69D4596FC5DA85A",
+          "url": "file:///Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent%20Teams%20AI.app/Contents/Resources/app.asar/out/renderer/index.html"
+        },
+        "discoveryReadiness": {
+          "attempts": 1,
+          "transient": []
+        },
+        "discovery": {
+          "state": "ready",
+          "bindings": [
+            {
+              "handle": {
+                "handleId": "TEST-desktop-handle-TEST-desktop-backend-W4UOsy"
+              },
+              "label": "TEST private backend",
+              "ownerResourceRef": "487fcfcd7cdf032be4ee8e190a9083edf26c075c818c59b67f5a5245b0b0b8c7",
+              "teamResourceRef": "bfa2665f-6aa1-5bcb-a5ef-1b433edd9a99",
+              "members": [
+                {
+                  "memberId": "alice-id",
+                  "label": "alice"
+                }
+              ]
+            }
+          ]
+        },
+        "compiledBundleHashesAfterStartup": {
+          "appAsar": {
+            "path": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac/Agent Teams AI.app/Contents/Resources/app.asar",
+            "sha256": "99ffa74ba2c0cd04b1103edd38ea07dbd3a7ad640363ff80490a736d0f56b630"
+          }
+        },
+        "bundleProvenance": "Actual captured packed executable/app.asar and candidate runtime census; no source bundle fallback",
+        "homePathProof": {
+          "defaultPath": "/Users/runner/work/_temp/TEST-desktop-backend-W4UOsy/home/.claude",
+          "resolvedPath": "/Users/runner/work/_temp/TEST-desktop-backend-W4UOsy/claude",
+          "customPath": null,
+          "canonicalDefaultPath": "/Users/runner/work/_temp/TEST-desktop-backend-W4UOsy/home/.claude"
+        }
+      },
+      "writerOrdering": {
+        "originalHostAbsent": true,
+        "originalLease": {
+          "pid": 48072,
+          "token": "03c6ce7f-c8a4-4328-85d3-2e276ad593ed",
+          "dev": 16777220,
+          "ino": 12888861923
+        },
+        "newExclusiveLease": {
+          "pid": 49705,
+          "token": "910ba127-7323-4d59-b4c1-2e4dadc21b3c",
+          "dev": 16777220,
+          "ino": 12888871052
+        },
+        "rule": "Existing no-replace PID/token publication forbids overlap; original release versus dead-owner recovery is not inferred from a missed absence sample"
+      },
+      "successorQuitAttempted": true,
+      "successorQuitReply": "unconfirmed; no retry or signal",
+      "successorAbsence": {
+        "listenerAbsent": true,
+        "observedPidAbsent": true,
+        "HostPidAbsent": true,
+        "writerLockAbsent": true,
+        "exitCode": "unavailable",
+        "signalCode": "unavailable",
+        "naturalExitQualified": false
+      }
+    },
+    "originalInputEffects": [
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 48729,
+        "event": "input",
+        "inputId": "fe9eba1e-c701-4a40-a08a-f88b08cd7ebb",
+        "marker": "TEST_MODEL_PROBE",
+        "sessionId": "31626cdc-77bf-4a7a-b9da-f1eef7e257bc",
+        "wrapped": false
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 49041,
+        "event": "input",
+        "inputId": "542a52d4-bd56-434c-af46-976c499765b0",
+        "marker": "TEST_UI_BOOT",
+        "sessionId": "00c7c279-312f-43f9-8eb7-a5fb32e0b567",
+        "wrapped": false
+      }
+    ],
+    "quitRequestedField": false,
+    "quitRequestedFieldMeaning": "This field is the generic failure-close path, false in this successful scope. Actual one successor public Quit is separately recorded in packedAppRelaunch.successorQuitAttempted.",
+    "beforeHarnessCleanup": [],
+    "cleanup": {
+      "remaining": [],
+      "capturedHostAbsent": true,
+      "hostPid": 48072
+    },
+    "finitePeerCleanup": {
+      "originalPeerPids": [
+        48233,
+        48281,
+        48587,
+        48692,
+        48729,
+        49041,
+        49975,
+        49998
+      ],
+      "remaining": [],
+      "absent": true
+    },
+    "finalSentinelCensus": [],
+    "sourceCensusRows": 1760,
+    "sourceBeforeAfterLiteralEqual": true,
+    "packagedInputsUnchanged": true,
+    "selectedReviewedSourceJoins": [
+      {
+        "path": "scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+        "pin": {
+          "bytes": 14137,
+          "sha256": "b6f0893cda4210adaa754d7b2af96f3ddd43dc9af64e0656a5736e26e79060e4",
+          "gitBlob": "44ccc655c11bb48dd354b10c09acb3d0e2d65c91"
+        },
+        "selectedSha256": "b6f0893cda4210adaa754d7b2af96f3ddd43dc9af64e0656a5736e26e79060e4"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "pin": {
+          "bytes": 13466,
+          "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056",
+          "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c"
+        },
+        "selectedSha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "pin": {
+          "bytes": 49613,
+          "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+          "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608"
+        },
+        "selectedSha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+        "pin": {
+          "bytes": 22845,
+          "sha256": "135cd81f2edde1f087b231d4dcbed83d8cc8beade5a0230a093e6cbfcb1923ee",
+          "gitBlob": "b33e5290e4ed86a48b902a24ffc80509f1c89236"
+        },
+        "selectedSha256": "135cd81f2edde1f087b231d4dcbed83d8cc8beade5a0230a093e6cbfcb1923ee"
+      },
+      {
+        "path": "scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+        "pin": {
+          "bytes": 17320,
+          "sha256": "74444f48ffc2ddd4ca4bae52c9cbd7c2bddaa465508169d026e193661ce25787",
+          "gitBlob": "27cf4112a25dec299a21d6f802a5c08d55e36f2d"
+        },
+        "selectedSha256": "74444f48ffc2ddd4ca4bae52c9cbd7c2bddaa465508169d026e193661ce25787"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "pin": {
+          "bytes": 21993,
+          "sha256": "2f929c1f5cfd1a9a3c9ec16d35f7197856c79a61adf166d30eebb8a1bd086f67",
+          "gitBlob": "adf5b4c418195e0fc4ab38ba7fde2b3436a6b835"
+        },
+        "selectedSha256": "2f929c1f5cfd1a9a3c9ec16d35f7197856c79a61adf166d30eebb8a1bd086f67"
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+        "pin": {
+          "bytes": 33227,
+          "sha256": "dc9ba0c735ea763a24bb06d93590373cf1072d5737c7fba67a31df1356c44dd5",
+          "gitBlob": "1430de1a6666a22a7582d38a21273d61d2f745b7"
+        },
+        "selectedSha256": "dc9ba0c735ea763a24bb06d93590373cf1072d5737c7fba67a31df1356c44dd5"
+      }
+    ]
+  },
+  "rootVisualRecord": {
+    "pin": {
+      "bytes": 1956,
+      "sha256": "3a2372d97dfbb07f4dcb543044e69ef4cd8ba9d6ccbadb83599980939bca0714",
+      "gitBlob": "f16596545f63c7fa22a90f6e03ed876f1a0d5552"
+    },
+    "fullRecord": {
+      "schemaVersion": 1,
+      "kind": "C714_CI3_DARWIN_X64_PACKAGED_SCREENSHOT_READ",
+      "repository": "777genius/agent-teams-ai",
+      "at": "2026-11-17 16:08:42 UTC",
+      "artifactId": 14344905416,
+      "capture": {
+        "bytes": 3418119,
+        "sha256": "1ff055a6dbe00238a672677c86a7bed755dd1874b1fa9662509d4a7193102a2c",
+        "gitBlob": "2d3690dbced319abbadc5aeb8c69305335964731"
+      },
+      "images": [
+        {
+          "path": "_temp/TEST-desktop-backend-W4UOsy/ui-automatic-app-relaunch-successor.png",
+          "pin": {
+            "bytes": 70747,
+            "sha256": "1f02532ba80a77ece8f2b6f192b343af1053d29137f74eb8d49c0bbb9f5035eb",
+            "gitBlob": "c9792725631175b2808a78fbee0d5f673d21eb0d"
+          },
+          "observed": "Automatically relaunched window shows home/project selection surface with retained TEST sidebar task; provider statuses still loading/unknown."
+        },
+        {
+          "path": "_temp/TEST-desktop-backend-W4UOsy/ui-emulated-lifecycle-launch.png",
+          "pin": {
+            "bytes": 107226,
+            "sha256": "20e012d40239ac132888f137c8c2e5dff77959c4e643f94c9abbf7d5992c0b20",
+            "gitBlob": "2570c12a90f89d6f238a9b27d550b6eac671e8c2"
+          },
+          "observed": "Original launch shows Alice on TEST-claude-sonnet/Low, TEST_UI_BOOT and TEST boot ready, and all four launch stages green."
+        },
+        {
+          "path": "_temp/TEST-desktop-backend-W4UOsy/ui-emulated-lifecycle-stopped.png",
+          "pin": {
+            "bytes": 98552,
+            "sha256": "0d9d0e1841babac1ea866fc63350c779385e1a1890243e334e25b9a1a3e4b77a",
+            "gitBlob": "ddb915d168141b0196663a7b44fde0d1c2bf9c88"
+          },
+          "observed": "Original Stop screen shows offline Team/Alice, Launch action, and the same boot message and sidebar/task content retained."
+        }
+      ],
+      "qualification": "Three retained screenshots visually inspected. They do not prove atomic state, original-process exit, receipt custody, Quit reply, native P09, cold Resume, vendor authentication or whole-E2E qualification."
+    },
+    "attribution": "Root's full image inspection only; this reviewer independently verified exact original ZIP/PNG bytes and identity joins."
+  },
+  "checks": [
+    {
+      "id": "complete-primary-bodies",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Complete original log and capture are freshly read and independently byte/SHA256/Git hashed.",
+      "evidence": {}
+    },
+    {
+      "id": "exact-original-subject",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "All findings concern only this original Darwin x64 packaged job on fixed86f.",
+      "evidence": {}
+    },
+    {
+      "id": "archive-census-and-crc",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Complete ZIP independently decoded as data: exact nine members, central-directory bounds, full member SHA256/Git/CRC32; no filesystem or target execution.",
+      "evidence": {
+        "count": 9,
+        "centralDirectoryOffset": 800425,
+        "centralDirectoryBytes": 878,
+        "exactEnd": true,
+        "totalMemberBytes": 2119740,
+        "method": "Independent pure in-memory ZIP directory and raw DEFLATE decode; complete SHA256/Git/CRC32 joins, no filesystem or target execution"
+      }
+    },
+    {
+      "id": "member-byte-census",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Six UTF-8 members total 1,843,215 bytes; three PNG members total 276,525 bytes. All complete bytes match the original ZIP.",
+      "evidence": {}
+    },
+    {
+      "id": "exact-source-route",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Eight complete source-route bodies total 205,860 bytes join source86f unchanged scripts/tools/packages leaves; no target evaluation.",
+      "evidence": {}
+    },
+    {
+      "id": "same-manifest-across-outcomes",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Native wrapper, original native receipt and finite packaged relaunch bind the exact same full candidate manifest.",
+      "evidence": {}
+    },
+    {
+      "id": "candidate-census",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Complete manifest metadata and native runtime receipt agree on 120 packages and 8,131 files. This is not an independent read of all 8,131 installed file bodies.",
+      "evidence": {}
+    },
+    {
+      "id": "node-host-engine-bindings",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Pinned Node24.21, Host entry, Bun and OpenCode2.1.4 engine manifest identities are joined across the complete retained records.",
+      "evidence": {}
+    },
+    {
+      "id": "native-complete-six-phases",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "All six original native phases are retained in order; scenario is not cancelled and elapsedMs is 246,187.",
+      "evidence": {
+        "steps": [
+          "original_host_embedded_native_and_mcp_ready",
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+          "changed_project_config_did_not_retarget_running_native_session",
+          "original_uploaded_PNG_native_image_inference_and_public_readback",
+          "checkpoint_and_original_host_native_cleanup_confirmed",
+          "cold_host_restored_native_history_without_model_or_tool_replay"
+        ],
+        "phaseElapsedMs": {
+          "original_host_embedded_native_and_mcp_ready": 115846,
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 171193,
+          "changed_project_config_did_not_retarget_running_native_session": 171193,
+          "original_uploaded_PNG_native_image_inference_and_public_readback": 171193,
+          "checkpoint_and_original_host_native_cleanup_confirmed": 171881,
+          "cold_host_restored_native_history_without_model_or_tool_replay": 223983
+        },
+        "elapsedMs": 246187
+      }
+    },
+    {
+      "id": "native-model-selection-and-counts",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Original local scripted-model run retains exact selected model/high variant, 11 requests, no model failures and manual permission handling.",
+      "evidence": {}
+    },
+    {
+      "id": "native-whole-turn-and-cold-semantics",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Whole source defines two original successful inputs, two permissions, tool/MCP/task/reply effects, image readback, checkpoint and cold restoration without model/tool replay. These are the native receipt's six-phase scope.",
+      "evidence": {}
+    },
+    {
+      "id": "native-cleanup-host-exits",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Both retained native Host children exit 0 without signal and valid stdout; cleanup=true.",
+      "evidence": {}
+    },
+    {
+      "id": "native-wrapper-bindings",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Wrapper binds the complete exact native receipt and records original child exit and confirmed native cleanup.",
+      "evidence": {}
+    },
+    {
+      "id": "native-isolation-and-restoration",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "The selected native scenario ran with source checkout and legacy runtime unavailable; original source, bundle and legacy runtime were restored without a retained cleanup/restoration failure.",
+      "evidence": {}
+    },
+    {
+      "id": "native-limits",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Native coordination/P09, vendor authentication, desktop journey and release qualification remain expressly unqualified.",
+      "evidence": {}
+    },
+    {
+      "id": "finite-provider-only",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Packaged desktop flow uses the exact finite SDK peer; no real Claude/Codex executable or native-provider qualification is inferred.",
+      "evidence": {}
+    },
+    {
+      "id": "one-launch-stop-and-input",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "One UI Launch and one UI Stop complete with one TEST_UI_BOOT business input plus the distinct readiness-probe input; total two finite input effects.",
+      "evidence": {}
+    },
+    {
+      "id": "original-stop-custody-checkpoint",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Original finite SDK session closes and releases custody, retains successful boot input and published checkpoint; originalStopOnly excludes full cold Resume/active Quit.",
+      "evidence": {}
+    },
+    {
+      "id": "one-automatic-relaunch",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "One public automatic app.relaunch is acknowledged; source prohibits substituting a harness restart or reissuing the intent.",
+      "evidence": {}
+    },
+    {
+      "id": "original-app-exit-and-host",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Original captured application exits 0/null and original Host is observed absent. Host exit code itself remains unavailable.",
+      "evidence": {}
+    },
+    {
+      "id": "writer-token-ordering",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Successor has a distinct Host PID/token lease after original Host absence; the source retains no-replace ordering and does not infer an unobserved release versus dead-owner recovery mechanism.",
+      "evidence": {}
+    },
+    {
+      "id": "successor-candidate-and-home",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Observed successor binds the same exact executable/argv, bundled renderer, TEST home and public backend binding.",
+      "evidence": {}
+    },
+    {
+      "id": "no-input-or-session-replay",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Recorded original input set remains exactly one readiness probe plus one business input; original closed session is retained without business-input replay.",
+      "evidence": {}
+    },
+    {
+      "id": "guarded-quit-and-honest-absence",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "One guarded successor Quit has an unconfirmed reply; listener/PID/Host/lock absence is observed. Successor exit code/signal and natural-exit qualification remain unavailable/false.",
+      "evidence": {}
+    },
+    {
+      "id": "custody-not-expanded",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Observer-only successor is not promoted to native custody or numeric-PID signal authority; provider-root cleanup remains outside this app-lifecycle scope.",
+      "evidence": {}
+    },
+    {
+      "id": "original-group-and-eight-peers-absent",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Original group and Host are absent, all eight originally observed finite peers are absent, and final sentinel census is empty.",
+      "evidence": {}
+    },
+    {
+      "id": "source-and-input-custody",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Complete 1,760-row source vectors are literally equal before/after; candidate, fixture and executable rechecks support packagedInputsUnchanged=true.",
+      "evidence": {}
+    },
+    {
+      "id": "source-pin-fields-join",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "All seven reviewed sources occurring in the original selected vector match; smoke and finite-peer source pins match complete retained canonical source bodies.",
+      "evidence": {}
+    },
+    {
+      "id": "three-png-byte-and-root-visual-joins",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "All three complete PNG byte identities join root's separate visual record. Root visual observations are attributed, not relabeled as this reviewer's image inspection.",
+      "evidence": {}
+    },
+    {
+      "id": "log-receipt-outcome-joins",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "Complete job log contains the exact wrapper receipt and the packaged relaunch PASS summary tied to the captured receipt path.",
+      "evidence": {}
+    },
+    {
+      "id": "no-cross-scope-transfer",
+      "status": "PASS_BOUNDED_RETAINED_OUTCOME",
+      "detail": "No Darwin ARM installer, Stage1 P09, newer542a source, whole CI cohort, vendor-authentication, release or blanket E2E claim is transferred.",
+      "evidence": {}
+    }
+  ],
+  "checkCount": 31,
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "unresolvedBlockers": [],
+  "explicitLimits": [
+    "Exact original source86f and Darwin x64 job only; no newer source qualification.",
+    "Native OpenCode uses localhost-scripted model; vendor authentication, coordination/P09, desktop journey and release remain unqualified.",
+    "Finite Claude is the TEST SDK peer, with one business input plus one readiness-probe input; real vendor executions zero.",
+    "Packaged originalStopOnly does not qualify full cold checkpoint Resume or active/queued Quit.",
+    "Original application exit is 0/null, but original Host exit code is not recorded.",
+    "Successor Quit reply is unconfirmed; only listener/PID/Host/writer-lock absence is qualified. Successor exit code/signal and natural exit remain unknown.",
+    "No successor native custody, numeric-PID signaling authority or provider-root cleanup qualification is granted.",
+    "Metadata references to the historical provider archive do not supply its missing original TGZ bytes.",
+    "No Darwin ARM or Stage1 P09 result is replaced, no whole-cohort or whole-E2E PASS is claimed."
+  ],
+  "dataOnlyCorrections": [
+    "The first archive data decode attempted the absent bodyBase64 field; strict decoder rejected before any archive identity was accepted. The actual capture field is archive.base64; full decoding and all identities then matched. No target/source/runtime action occurred."
+  ],
+  "actions": {
+    "sourcePostimages": false,
+    "localShellOrFilesystem": false,
+    "targetExecution": false,
+    "liveCiRead": false,
+    "artifactDownload": false,
+    "refOrPrMutation": false,
+    "pureDataZipInflation": true,
+    "bareAdvisoryOnly": true
+  }
+}

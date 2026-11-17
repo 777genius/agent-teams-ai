@@ -1,0 +1,699 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_SCHEDULED_PREVIEW_CALLER_READINESS_R1_GUARD_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_guard",
+  "authoredAt": "2026-11-17 18:07:48 UTC",
+  "subject": {
+    "bytes": 82537,
+    "sha256": "98cb75df75d8fd72be398a9b0232144d234bf1587c79061a1f80b86ea96549ba",
+    "gitBlob": "8c9beffb843278b3a4a8b35c425732d4b1308c67",
+    "kind": "C714_SCHEDULED_PREVIEW_READINESS_R1",
+    "authoredAt": "2026-11-17 17:59:50 UTC"
+  },
+  "decision": "ACCEPT_EXACT_R1_STATIC_SCOPE",
+  "blockers": [],
+  "acceptanceBoundary": "Accept only the exact plan 8c9beffb843278b3a4a8b35c425732d4b1308c67 within its existing sequence. No source postimage exists or is approved by this review; no runtime or GUI result is claimed.",
+  "conclusions": [
+    "The one selected caller argument uses the existing per-target content prerequisite while preserving every original read, ownership, geometry and one-click refusal boundary.",
+    "Both exact finite scheduled output forms support the trailing-space prefix; the later exact visible scheduled reply assertion and matching task/effect authority remain mandatory.",
+    "The original movement cause and failed artifact/cleanup remain unknown. The readiness argument is a source-supported preserving improvement, not a proved cure or a future PASS.",
+    "The combined docs-only plan is arithmetically closed at 90 changes: 87 additions and 3 modifications. CI3 historical evidence, active CI4 fixed-source observations and the future source repair remain distinct."
+  ],
+  "readCoverage": {
+    "subject": "Fresh complete UTF8 body, contiguous full read, exact bytes/SHA256/Git identity.",
+    "primarySources": "Eight complete source bodies / 358,431 unique bytes hash-joined. Six accepted complete prior reads reused by exact identity, two small preview bodies freshly fully read. Current driver call/control/fixture/test/peer relevant boundaries re-read without evaluating target code.",
+    "advisories": "Both complete 20f354b6 and eb4910ae bodies freshly fetched/rehashed/read.",
+    "gates": "Complete ca1b9cc4 and d5a637f8 fetched/rehashed/read.",
+    "currentParentDriver": "Fresh immutable path fetch at 56ea675, whole bytes identical to current accepted driver; no mutable ref lookup.",
+    "publicationInventory": "All complete R1 inventory rows read and data-checked. No recursive re-fetch of already complete historical captures/binaries solely for novelty; full future publication/current-pointer closure remains existing actual readbacks.",
+    "noSourceExecution": true
+  },
+  "sourceBasis": {
+    "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+    "root": "834d86a61218cd70ec92d6f51f17dcd6531b574f",
+    "scriptsTree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+    "sourceActualGate": {
+      "bytes": 6196,
+      "sha256": "06f73d718018698225838883cad606c5e2a8924c9e7f90e5ea335735e27a0bc2",
+      "gitBlob": "ca1b9cc4a3666168a8f13ca0fd52aa4fab2abe47"
+    },
+    "currentEvidenceParent": "56ea675b480f229cdaa0a47beff48d8d3a03f501",
+    "currentEvidenceRoot": "b1368574a268afae426d9490c72639fa4eb769ba",
+    "currentEvidenceDocs": "ce4f4daaa0e1f3d6e33fe01c687b340e2d6352d4",
+    "precedingDocumentationActualGate": {
+      "bytes": 9374,
+      "sha256": "8888ff9bd7c82108d0bd5847ee9d423f3f08e76d7aef199cb776f0f7b25baaa9",
+      "gitBlob": "d5a637f85e1faf4f3b3bc032b813dfb7b665dad0"
+    }
+  },
+  "primarySources": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "bytes": 69370,
+      "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+      "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f",
+      "physicalLines": 798,
+      "readBasis": "Previously complete source read reused only after a fresh whole-body Git/bytes/SHA256 equality join; relevant current caller/helper/test/peer boundaries re-read."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 29017,
+      "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+      "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+      "physicalLines": 495,
+      "readBasis": "Previously complete source read reused only after a fresh whole-body Git/bytes/SHA256 equality join; relevant current caller/helper/test/peer boundaries re-read."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 165022,
+      "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+      "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+      "physicalLines": 2702,
+      "readBasis": "Previously complete source read reused only after a fresh whole-body Git/bytes/SHA256 equality join; relevant current caller/helper/test/peer boundaries re-read."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "bytes": 21993,
+      "sha256": "2f929c1f5cfd1a9a3c9ec16d35f7197856c79a61adf166d30eebb8a1bd086f67",
+      "gitBlob": "adf5b4c418195e0fc4ab38ba7fde2b3436a6b835",
+      "physicalLines": 280,
+      "readBasis": "Previously complete source read reused only after a fresh whole-body Git/bytes/SHA256 equality join; relevant current caller/helper/test/peer boundaries re-read."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "bytes": 33227,
+      "sha256": "dc9ba0c735ea763a24bb06d93590373cf1072d5737c7fba67a31df1356c44dd5",
+      "gitBlob": "1430de1a6666a22a7582d38a21273d61d2f745b7",
+      "physicalLines": 481,
+      "readBasis": "Previously complete source read reused only after a fresh whole-body Git/bytes/SHA256 equality join; relevant current caller/helper/test/peer boundaries re-read."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "bytes": 39026,
+      "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a",
+      "gitBlob": "76f5d1953816fd125f576a966c42caefcfc297e2",
+      "physicalLines": 562,
+      "readBasis": "Previously complete source read reused only after a fresh whole-body Git/bytes/SHA256 equality join; relevant current caller/helper/test/peer boundaries re-read."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/features/team-direct-chats/core/domain/pickPreviewMessage.ts",
+      "bytes": 490,
+      "sha256": "3f502e8ba895eaaa01380d166c3f4451836044d61f8a10ce93c01f710d09b535",
+      "gitBlob": "252113492c852f26b1da6ce455520f87345d00b2",
+      "physicalLines": 15,
+      "readBasis": "Fresh full body read in this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/renderer/utils/chatPreview.ts",
+      "bytes": 286,
+      "sha256": "7ca7c8bf70176ded550fcba8761a122d22e8e057216a0d337534f05f1b828759",
+      "gitBlob": "7c8869dba13c1e20effcbf96e4c898beafe946ab",
+      "physicalLines": 7,
+      "readBasis": "Fresh full body read in this review."
+    }
+  ],
+  "parentDriver": {
+    "repository": "777genius/agent-teams-ai",
+    "ref": "56ea675b480f229cdaa0a47beff48d8d3a03f501",
+    "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+    "bytes": 69370,
+    "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+    "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f",
+    "literalEqualityWithAcceptedSource": true
+  },
+  "completeSupportingBodies": [
+    {
+      "role": "exact R1 subject",
+      "bytes": 82537,
+      "sha256": "98cb75df75d8fd72be398a9b0232144d234bf1587c79061a1f80b86ea96549ba",
+      "gitBlob": "8c9beffb843278b3a4a8b35c425732d4b1308c67",
+      "fullRead": true
+    },
+    {
+      "role": "scheduled-preview source semantics advisory",
+      "bytes": 46531,
+      "sha256": "aaf392fb3f8ec0cb15e6d24fea41ea20e00db306c800532899843b33245a49b7",
+      "gitBlob": "20f354b647a7e582d691e034f4dee6cb43cba6c5",
+      "fullRead": true
+    },
+    {
+      "role": "original Claude and collaboration log/source advisory",
+      "bytes": 26675,
+      "sha256": "ce530bfaeb56a6b4010261c288637ae78633369913747e891ea67b1942cf0571",
+      "gitBlob": "eb4910aecd055982eeb9131c6d0c5f261366670f",
+      "fullRead": true
+    },
+    {
+      "role": "accepted current source actual gate",
+      "bytes": 6196,
+      "sha256": "06f73d718018698225838883cad606c5e2a8924c9e7f90e5ea335735e27a0bc2",
+      "gitBlob": "ca1b9cc4a3666168a8f13ca0fd52aa4fab2abe47",
+      "fullRead": true
+    },
+    {
+      "role": "preceding docs actual gate",
+      "bytes": 9374,
+      "sha256": "8888ff9bd7c82108d0bd5847ee9d423f3f08e76d7aef199cb776f0f7b25baaa9",
+      "gitBlob": "d5a637f85e1faf4f3b3bc032b813dfb7b665dad0",
+      "fullRead": true
+    }
+  ],
+  "selectedChange": {
+    "files": 1,
+    "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+    "before": {
+      "bytes": 69370,
+      "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+      "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+    },
+    "physicalLinesBefore": 798,
+    "maximumPhysicalLinesAfter": 798,
+    "cap": 800,
+    "callLabel": "show original scheduled reply",
+    "selector": "button[aria-label^=\"alice,\"]",
+    "oldLine": "  await ui.click('button[aria-label^=\"alice,\"]', 'show original scheduled reply'); await visible('TEST scheduled reply');",
+    "argumentSelection": {
+      "thirdExactText": "undefined, preserving the current unset exact-text constraint",
+      "fourthRequiredContent": "TEST scheduled ",
+      "trailingSpaceRequired": true
+    },
+    "scope": "Add only the existing fourth click argument in the sole existing call. No full source postimage is authored in R1. In R2 the complete inverse must restore the entire original driver byte-for-byte.",
+    "unmodifiedExactLaterAssertion": "await visible('TEST scheduled reply');",
+    "unmodifiedPreviousActions": [
+      "Original Back-to-chats click",
+      "Original bounded Alice scroll",
+      "Unique original manual schedule/run/task/effect joins"
+    ],
+    "otherSourceFilesChanged": 0,
+    "newHelperFiles": 0,
+    "helperImplementationChanges": 0,
+    "productionUiChanges": 0,
+    "testSourceChanges": 0,
+    "workflowChanges": 0
+  },
+  "sourceGuard": {
+    "targetExpressionLines": "desktop-ui-controls.ts212-225",
+    "waitReadLines": "186-209",
+    "clickFlowLines": "227-358",
+    "requiredContentReachesEveryOriginalPhase": true,
+    "thirdArgumentUnset": true,
+    "fourthArgument": "TEST scheduled ",
+    "trailingSpace": true,
+    "stableSampleCeiling": 15,
+    "equalConsecutiveSamples": 2,
+    "intervalMs": 100,
+    "readPointBudgetMs": 30000,
+    "finalMovementOrRevocationRemainsFailure": true,
+    "physicalClickCountAtMostOne": true,
+    "noHardAggregateClickOrPendingCdpCancellationClaim": true,
+    "sourcePostimageReviewed": false,
+    "sourceInverseNowRequired": false,
+    "sourceInverseRequiredAtExistingR2": true
+  },
+  "originalFailure": {
+    "evidenceAdvisory": {
+      "bytes": 26675,
+      "sha256": "ce530bfaeb56a6b4010261c288637ae78633369913747e891ea67b1942cf0571",
+      "gitBlob": "eb4910aecd055982eeb9131c6d0c5f261366670f"
+    },
+    "followupAdvisory": {
+      "bytes": 46531,
+      "sha256": "aaf392fb3f8ec0cb15e6d24fea41ea20e00db306c800532899843b33245a49b7",
+      "gitBlob": "20f354b647a7e582d691e034f4dee6cb43cba6c5"
+    },
+    "fixedHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "runId": 44092933810,
+    "jobId": 134072511986,
+    "sourceFrames": [
+      "desktop-ui-controls.ts:327",
+      "desktop-emulated-runtime-ui.ts:647"
+    ],
+    "thisPhysicalClickDispatched": false,
+    "originalStatus": "INCOMPLETE",
+    "established": "Source-joined final stable-versus-final point equality refused before the mouseClick record/physical input. Prior sequential task/effect operations were reached; they are not invented unseen receipt records.",
+    "unknown": [
+      "Failed stable/final coordinates",
+      "Failed exact preview/layout transition",
+      "Which state caused movement",
+      "Whether the selected prerequisite would have prevented this occurrence",
+      "Complete failed archive and ordinary full cleanup"
+    ],
+    "comparisons": "Accepted finite lane comparisons are attributed to the fully read 20f354 advisory; no new runtime/capture/visual claim is made here."
+  },
+  "testCoverage": {
+    "whole149": {
+      "bytes": 165022,
+      "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+      "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+    },
+    "original139Prefix": {
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    "unchangedTenCaseImport": "\nawait import('./desktop-ui-controls-deadline.test.ts');\n",
+    "helperCasesReRead": "Complete actual helper fixture and cases at lines2101-2215.",
+    "forwardingCasesReRead": "Four Selection caller cases at2217-2238; separate caller only.",
+    "whole149_43_85Frozen": true,
+    "newTestsSelected": 0,
+    "prior247And7NotNewCandidateEvidence": true
+  },
+  "publicationPlan": {
+    "parent": "56ea675b480f229cdaa0a47beff48d8d3a03f501",
+    "parentTree": "b1368574a268afae426d9490c72639fa4eb769ba",
+    "parentDocs": "ce4f4daaa0e1f3d6e33fe01c687b340e2d6352d4",
+    "branch": "fix/frontend-parity-coobservation-c714-20261115",
+    "docsOnly": true,
+    "checkedInventory": {
+      "sourceCount": 8,
+      "sourceBytes": 358431,
+      "lateRows": 113,
+      "newLate": 75,
+      "oldLate": 38,
+      "ci4Rows": 6,
+      "uniquePaths": 119,
+      "totalRows": 119,
+      "modes": [
+        "100644"
+      ],
+      "groups": {
+        "complete-original-job-log": 45,
+        "complete-original-artifact-capture": 23,
+        "chunked-original-capture-manifest": 4,
+        "exact-utf8-capture-chunk": 19,
+        "retained-complete-report": 19,
+        "complete-original-evidence-packet": 1,
+        "retained-complete-advisory": 2
+      },
+      "allPinsValid": true,
+      "allDocs": true,
+      "adds": 87,
+      "changes": 90,
+      "totalLeaves": 12431,
+      "docsLeaves": 3632,
+      "nonDoc": 8799,
+      "newCatalogKeys": 6,
+      "catalogNext": 123,
+      "originalLineMatches": 1,
+      "original139Prefix": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      }
+    },
+    "newEvidenceLeaves": {
+      "lateCi3": 75,
+      "ci4": 6,
+      "r1AndFourReviews": 5,
+      "manifest": 1
+    },
+    "canonicalModifications": 3,
+    "expectedAdds": 87,
+    "expectedChanges": 90,
+    "expectedTotalLeaves": 12431,
+    "expectedDocsLeaves": 3632,
+    "unchangedNonDocLeaves": 8799,
+    "otherRootEntriesPreserved": 53,
+    "catalogFrom": 117,
+    "catalogTo": 123,
+    "newKeys": [
+      "fixed86fThirdCiLateEvidenceStage",
+      "fixed86fThirdCiLateEvidenceFiles",
+      "fixedAab3FourthCiActualStage",
+      "fixedAab3FourthCiActualEvidenceFiles",
+      "scheduledPreviewReadinessR1Stage",
+      "scheduledPreviewReadinessR1EvidenceFiles"
+    ],
+    "allOldValuesAnd27BundlesPreserved": true,
+    "fullPlanStatusPrefixesPreserved": true,
+    "futureActualPublicationNotClaimed": true,
+    "inventoryValidationIsNotArtifactRecapture": true,
+    "images": "Root-attributed historical view records only; this review did not inspect PNGs."
+  },
+  "concurrentAndFrozenScope": {
+    "ci3": "All eleven terminal forever; no polling or renewed artifact/log requests.",
+    "ci4": {
+      "pr": 1228,
+      "sourceHead": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "publishedPacket": {
+        "bytes": 296986,
+        "sha256": "90c8d6e666a87411c3ec135acc1cd84a84280b18a67401c2bc9ea8a6ecd68fcf",
+        "gitBlob": "7c26f47943df19ce9472ace5275b522c03a5a542"
+      },
+      "refsAndMetadataFrozen": true,
+      "firstDiscoveryTerminalForever": [
+        44140796959,
+        44140796781
+      ],
+      "activeOriginalAttemptsObservedOnly": true,
+      "notValidationOfFuturePostimage": true
+    },
+    "oldScopes": {
+      "production": 5020,
+      "cap": 800,
+      "exceptions": 141,
+      "nonDocLeaves": 8799,
+      "workflows": 42,
+      "dependenciesChanged": 0,
+      "originalDeadlinesAndCleanup": true,
+      "noRealClaudeCodexIncludingVersion": true,
+      "frozenPrs": [
+        1206,
+        1207,
+        1208,
+        1211,
+        1212,
+        1213
+      ],
+      "oldOriginalAnd1218And1219AndCi3TerminalForever": true,
+      "oldStandaloneAttemptsSpentForever": true,
+      "noReadyMainMergeReleaseDefaultActivationStage2": true
+    },
+    "noRuntimeAuthorityFromDocs": true
+  },
+  "existingSequence": [
+    "Four full exact R1 reviews: root, guard, semantic, binding; retain and self-read each.",
+    "Publish this docs-only R1 together with the already required late CI3 and actual CI4 evidence checkpoint; immediately push.",
+    "Root and independent full actual publication readbacks close the existing R1 gate.",
+    "Only then author the sole selected full source postimage as sourceR2, with exact inverse and preserved contracts; four full reviews.",
+    "Publish exact sourceR2 and records; immediately push; root and independent actual readbacks.",
+    "Select only later original-case execution against the actual repaired source through the existing admission procedure; no new executable local controls or ad-hoc retry."
+  ],
+  "checks": [
+    {
+      "id": "G01",
+      "status": "PASS_STATIC_R1",
+      "title": "Exact subject",
+      "finding": "The complete 82,537-byte R1 body was fetched, rehashed and read without truncation. Its Git identity and SHA256 equal the assigned subject.",
+      "evidence": "subject"
+    },
+    {
+      "id": "G02",
+      "status": "PASS_STATIC_R1",
+      "title": "Immutable source parent",
+      "finding": "A fresh immutable Git path read of the selected driver at current evidence parent 56ea675b480f229cdaa0a47beff48d8d3a03f501 is byte-for-byte identical to the complete ff991b68 source body at aab3.",
+      "evidence": "parentDriver"
+    },
+    {
+      "id": "G03",
+      "status": "PASS_STATIC_R1",
+      "title": "Complete source basis",
+      "finding": "All eight selected primary source bodies, totalling 358,431 bytes, join their full declared Git/byte/SHA256 tuples. Prior complete reads are reused explicitly; the two small preview helpers were freshly read in full.",
+      "evidence": "primarySources"
+    },
+    {
+      "id": "G04",
+      "status": "PASS_STATIC_R1",
+      "title": "Prior gates and authorship",
+      "finding": "The complete source actual gate ca1b9cc4 and preceding docs actual gate d5a637f8 are read. Their closure times 17:01:40 and 17:44:37 precede R1 authorship 17:59:50. This is R1 plan review, not source postimage acceptance.",
+      "evidence": "gates"
+    },
+    {
+      "id": "G05",
+      "status": "PASS_STATIC_R1",
+      "title": "One exact call only",
+      "finding": "The declared original full line occurs exactly once in the current full driver, at physical line 647. R1 selects one existing file and only the third unset/fourth requiredContent arguments of that click; no other source edit is selected.",
+      "evidence": "selectedChange"
+    },
+    {
+      "id": "G06",
+      "status": "PASS_STATIC_R1",
+      "title": "Exact target authority",
+      "finding": "The exact selector button[aria-label^=\"alice,\"] and label show original scheduled reply remain. Explicit undefined preserves the current absence of an exact-text filter; it does not choose one text-matching row from multiple visible candidates.",
+      "evidence": "controls212-217"
+    },
+    {
+      "id": "G07",
+      "status": "PASS_STATIC_R1",
+      "title": "Marker contract",
+      "finding": "The literal TEST scheduled followed by one space is supported by both TEST scheduled reply and TEST scheduled complete from the actual finite Claude and Codex/OpenCode peers. It is not a new provider identifier or a production model/authentication acceptance rule.",
+      "evidence": "peerSources"
+    },
+    {
+      "id": "G08",
+      "status": "PASS_STATIC_R1",
+      "title": "Existing task authority",
+      "finding": "The existing unique manual dispatch, linked task ID, completed task count/owner and provider-specific matching finite effect stay before navigation/click. The marker cannot substitute for these already required task/effect assertions.",
+      "evidence": "driver633-647"
+    },
+    {
+      "id": "G09",
+      "status": "PASS_STATIC_R1",
+      "title": "Original schedule order",
+      "finding": "The common manual task-first schedule is reached after the existing schedule-count-zero assertion and before the later real automatic occurrence. Earlier Claude standalone messages have a different prefix; no RunNow replay or new scheduling action is selected.",
+      "evidence": "driver608-666"
+    },
+    {
+      "id": "G10",
+      "status": "PASS_STATIC_R1",
+      "title": "Preview selection",
+      "finding": "The actual pickPreviewMessage selects the newest addressed-to-user message, else the newest visible one. Actual truncation retains up to 88 code points. A common scheduled prefix accommodates the two source-proved preview texts without weakening the later exact reply assertion.",
+      "evidence": "previewSources"
+    },
+    {
+      "id": "G11",
+      "status": "PASS_STATIC_R1",
+      "title": "Sole eligible element",
+      "finding": "The helper counts all positive-size selector matches before requiredContent. Exactly one is required; only that element's textContent can satisfy the prefix. Body/neighbor text and ambiguous positive-size candidates do not satisfy it.",
+      "evidence": "controls212-217"
+    },
+    {
+      "id": "G12",
+      "status": "PASS_STATIC_R1",
+      "title": "Geometry and hit checks",
+      "finding": "The original target expression still computes the existing center, requires a hit on the element or its descendant and refuses native :disabled. Existing telemetry such as ariaDisabled is not promoted into a new separate acceptance or refusal predicate.",
+      "evidence": "controls218-225"
+    },
+    {
+      "id": "G13",
+      "status": "PASS_STATIC_R1",
+      "title": "Literal serialization",
+      "finding": "The fourth argument is passed through desktopJsLiteral in the unchanged generated target expression. No code interpolation, helper replacement or new expression authoring is selected.",
+      "evidence": "controls212-226,357-358"
+    },
+    {
+      "id": "G14",
+      "status": "PASS_STATIC_R1",
+      "title": "Original read budgets",
+      "finding": "Each existing waitRead keeps its original default/explicit 30,000 ms cutoff, post-fulfilled deadline check and 100 ms cadence. The plan adds no read loop, timer, await callsite or deadline change. This is not a claim of a hard aggregate click deadline or cancellation of pending CDP evaluation.",
+      "evidence": "controls186-209,266"
+    },
+    {
+      "id": "G15",
+      "status": "PASS_STATIC_R1",
+      "title": "Same prerequisite across phases",
+      "finding": "click constructs one expression and passes it into clickExpression; the same scheduled target predicate is used for initial readiness, after-hover read, every stability sample and final direct evaluate.",
+      "evidence": "controls227-358"
+    },
+    {
+      "id": "G16",
+      "status": "PASS_STATIC_R1",
+      "title": "One hover",
+      "finding": "After initial read, the original owned-renderer assertion precedes the sole mouseMoved dispatch. No fallback hover or new coordinate is added.",
+      "evidence": "controls300-308"
+    },
+    {
+      "id": "G17",
+      "status": "PASS_STATIC_R1",
+      "title": "Stability preserved",
+      "finding": "The existing 15-sample ceiling, 100 ms intervals and requirement for two consecutive equal x/y/tag samples remain. The argument adds readiness to these existing observations without coalescing or caching them.",
+      "evidence": "controls309-321"
+    },
+    {
+      "id": "G18",
+      "status": "PASS_STATIC_R1",
+      "title": "Final refusal preserved",
+      "finding": "After the original ownership assertion, the final expression must still be available and its x/y/tag must deep-equal the stable point. A revoked marker or later movement remains a failure before physical input.",
+      "evidence": "controls324-331"
+    },
+    {
+      "id": "G19",
+      "status": "PASS_STATIC_R1",
+      "title": "Physical click authority",
+      "finding": "A further original owner assertion remains before the attempted mouseClick record and single mousePressed/mouseReleased pair. No retry or coordinate substitution after refusal or uncertain response is selected.",
+      "evidence": "controls332-355"
+    },
+    {
+      "id": "G20",
+      "status": "PASS_STATIC_R1",
+      "title": "Exact later case retained",
+      "finding": "The following await visible('TEST scheduled reply') remains literal and unchanged. Scheduled preview readiness does not replace the original conversation-content assertion.",
+      "evidence": "driver647"
+    },
+    {
+      "id": "G21",
+      "status": "PASS_STATIC_R1",
+      "title": "Later obligations preserved",
+      "finding": "Saved prompt not replayed, schedule proof, real wall-clock automatic occurrence, Task Activity/Stream, held input, original Team Stop and application/Host/group cleanup remain unchanged and are not considered passed by this R1.",
+      "evidence": "driver648 onward and R1.testPreservation"
+    },
+    {
+      "id": "G22",
+      "status": "PASS_STATIC_R1",
+      "title": "Full driver cap and inverse requirement",
+      "finding": "The complete current driver has 798 physical lines under the unchanged cap of 800. The plan selects a same-line argument edit and requires the eventual full-byte inverse to restore the exact preimage; no postimage or hypothetical inverse is accepted here.",
+      "evidence": "selectedChange"
+    },
+    {
+      "id": "G23",
+      "status": "PASS_STATIC_R1",
+      "title": "Whole test corpus preserved",
+      "finding": "The exact whole149 body remains 165,022 bytes. Pure byte slicing independently recovers its 164,965-byte original139 prefix with Git 896c587e and original SHA256; the accepted literal awaited ten-case import is unchanged.",
+      "evidence": "whole149"
+    },
+    {
+      "id": "G24",
+      "status": "PASS_STATIC_R1",
+      "title": "Meaningful existing helper regressions",
+      "finding": "Actual createDesktopUiControls tests exercise delayed own-row readiness, body/neighbor/different/missing/empty/zero/disabled/covered/ambiguous refusal, literal serialization, revoked readiness, owner-error identity and final movement despite a ready preview. These are source coverage, not a new run.",
+      "evidence": "whole1492101-2215"
+    },
+    {
+      "id": "G25",
+      "status": "PASS_STATIC_R1",
+      "title": "Caller coverage limit",
+      "finding": "The four existing actual Selection openChat forwarding tests cover that separate caller. The R1 correctly does not present them as an executed or newly authored test of scheduled runtime-ui line 647.",
+      "evidence": "whole1492217-2238"
+    },
+    {
+      "id": "G26",
+      "status": "PASS_STATIC_R1",
+      "title": "Original failure is bounded",
+      "finding": "The full original failure advisory and full follow-up advisory identify controls327 at driver647 after hover/stability/final ownership read but before mousePressed/mouseReleased. Failed point values, row context and complete failed artifact/cleanup remain unavailable.",
+      "evidence": "advisories"
+    },
+    {
+      "id": "G27",
+      "status": "PASS_STATIC_R1",
+      "title": "No causal or future PASS promotion",
+      "finding": "Source supports a missing per-target readiness prerequisite. Neither the older successful OpenCode/Codex comparisons nor source-visible async layout possibilities prove the exact Claude movement cause or guarantee the future call will pass. The R1 keeps that limit.",
+      "evidence": "advisories and R1.observedFailure"
+    },
+    {
+      "id": "G28",
+      "status": "PASS_STATIC_R1",
+      "title": "Finite provider and cleanup preservation",
+      "finding": "All selected peers/fixture bodies stay unchanged. R1 selects no new native/vendor invocation, auth environment, model authority, process ownership or cleanup change; real Claude/Codex including version probes remains prohibited.",
+      "evidence": "authorization,preservation,primarySources"
+    },
+    {
+      "id": "G29",
+      "status": "PASS_STATIC_R1",
+      "title": "Complete plan inventory accounting",
+      "finding": "All 113 late CI3 inventory entries and six CI4 inventory entries have valid immutable tuples and 119 unique documentation paths. The late inventory splits exactly into 75 additions and 38 existing references, with all late modes 100644.",
+      "evidence": "publicationInventory"
+    },
+    {
+      "id": "G30",
+      "status": "PASS_STATIC_R1",
+      "title": "Capture cardinalities are truthful categories",
+      "finding": "The plan inventory has 45 complete job logs, 23 single capture entries, four chunk manifests and 19 UTF8 chunks. Thus 27 logical captures are not confused with 46 transport leaves; derived member identities are not separate Git-fetch obligations.",
+      "evidence": "publicationInventory"
+    },
+    {
+      "id": "G31",
+      "status": "PASS_STATIC_R1",
+      "title": "Missing evidence remains missing",
+      "finding": "The plan explicitly retains three unavailable log requests and eleven old unavailable artifact deliveries. Prior unread artifacts and unknown cancellations/cleanup are not turned into successful or complete evidence by publication.",
+      "evidence": "publicationContract"
+    },
+    {
+      "id": "G32",
+      "status": "PASS_STATIC_R1",
+      "title": "90 documentation changes",
+      "finding": "Independent arithmetic gives 75 late CI3 additions + six CI4 additions + R1/four reviews five + one manifest = 87 additions; with three canonical document modifications, exactly 90 changed leaves and zero source changes.",
+      "evidence": "publicationArithmetic"
+    },
+    {
+      "id": "G33",
+      "status": "PASS_STATIC_R1",
+      "title": "Census and root preservation",
+      "finding": "The preceding actual parent census is 12,344 leaves, 3,545 docs and 8,799 non-docs. The selected additions yield 12,431/3,632/8,799. R1 requires all 53 other root entries unchanged; this review does not claim a future actual tree has been published.",
+      "evidence": "docsGate,publicationContract"
+    },
+    {
+      "id": "G34",
+      "status": "PASS_STATIC_R1",
+      "title": "Catalog contract",
+      "finding": "Exactly six distinct selected catalog keys increase 117 to 123. All old values, 27 bundles, totals and full plan/status prefixes must be preserved. Their actual publication remains for the already required full root/independent readbacks.",
+      "evidence": "publicationContract"
+    },
+    {
+      "id": "G35",
+      "status": "PASS_STATIC_R1",
+      "title": "Visual evidence attribution",
+      "finding": "The plan's 85 viewed late PNGs are attributed to the retained original root visual records and inventories. This guard review performs no image inspection and does not infer process absence, atomic state, or native/vendor PASS from those records.",
+      "evidence": "publication evidence scope"
+    },
+    {
+      "id": "G36",
+      "status": "PASS_STATIC_R1",
+      "title": "CI3 terminal freeze",
+      "finding": "All CI3 runs are terminal and excluded forever. Historical active snapshots inside earlier source-gate evidence are not current status or permission to poll. Old original/1218/1219 attempts and spent standalone attempts stay closed.",
+      "evidence": "docsGate,R1.preservation"
+    },
+    {
+      "id": "G37",
+      "status": "PASS_STATIC_R1",
+      "title": "CI4 source separation",
+      "finding": "Current PR1228 remains fixed to aab3 versus 86f, with frozen refs/metadata. Its two initial Draft skips are terminal forever. Active original attempts may only be observed by root under existing authority; no CI4 observation can validate this unauthored repair.",
+      "evidence": "concurrentCi4"
+    },
+    {
+      "id": "G38",
+      "status": "PASS_STATIC_R1",
+      "title": "Existing sequence only",
+      "finding": "The existing four R1 reviews, docs publication/immediate non-force push, root/independent actual closure, later root-authored source R2 and four reviews/publication/actual closure remain the sequence. No new executable R2, venue, extra gate, local replay or runtime authority is introduced.",
+      "evidence": "existingSequence"
+    },
+    {
+      "id": "G39",
+      "status": "PASS_STATIC_R1",
+      "title": "Unrelated obligations unchanged",
+      "finding": "No Darwin listener/P09, Windows Retry/readiness, V2 Settings, helper, workflow, dependency, test inventory, production UI, preserved PR/main/Ready/release/default activation or Stage2 change is selected.",
+      "evidence": "exclusions,preservation"
+    },
+    {
+      "id": "G40",
+      "status": "PASS_STATIC_R1",
+      "title": "Review actions bounded",
+      "finding": "This review used immutable Git/source/report reads and pure JS identity/count comparisons only, then retained this bare report. No source/control body was authored; no target was executed, compiled, imported, staged or mutated; no live CI/ref/PR/artifact query was used.",
+      "evidence": "performedActions"
+    }
+  ],
+  "checkCount": 40,
+  "statusCounts": {
+    "PASS_STATIC_R1": 40
+  },
+  "limitations": [
+    "R1 source acceptance is prospective; exact postimage and whole-byte inverse remain later existing source R2 work.",
+    "The historical Claude movement cause, failed archive and whole cleanup remain unproved.",
+    "Existing tests establish helper behavior; no new scheduled caller run is represented by source coverage.",
+    "Current fixed-aab3 CI4 cannot qualify an unauthored future source body.",
+    "Future full docs tree, manifest bodies and pointer closure are not claimed before the already required actual readbacks.",
+    "No Darwin/Windows/V2, real vendor, native platform or full E2E qualification is added."
+  ],
+  "performedActions": [
+    "Immutable Git source/report reads.",
+    "Pure JS hash, literal, count and arithmetic comparisons using the approved identity helper.",
+    "Retention of this bare guard report only."
+  ],
+  "selfReadbackProtocol": "Send exact retained pin immediately, then freshly fetch the complete report, verify all bytes/literal equality/SHA256/Git identity and read every byte before confirmation."
+}

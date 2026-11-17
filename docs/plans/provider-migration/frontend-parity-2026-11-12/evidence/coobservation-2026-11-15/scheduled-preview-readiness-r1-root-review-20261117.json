@@ -1,0 +1,509 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_SCHEDULED_PREVIEW_READINESS_ROOT_R1_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "root",
+  "at": "2026-11-17 18:03:55 UTC",
+  "subject": {
+    "bytes": 82537,
+    "sha256": "98cb75df75d8fd72be398a9b0232144d234bf1587c79061a1f80b86ea96549ba",
+    "gitBlob": "8c9beffb843278b3a4a8b35c425732d4b1308c67"
+  },
+  "accepted": true,
+  "decision": "ACCEPT_EXACT_R1_SCOPE_FOR_EXISTING_DOCUMENTATION_PUBLICATION",
+  "sourceHead": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+  "publicationParent": "56ea675b480f229cdaa0a47beff48d8d3a03f501",
+  "primarySourceJoins": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "pin": {
+        "bytes": 69370,
+        "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+        "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+      },
+      "physicalLines": 798,
+      "completeBodyRead": true,
+      "method": "Complete previously read immutable body reused by exact repository/length/SHA256/Git tuple",
+      "fullTupleMatched": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "pin": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      },
+      "physicalLines": 495,
+      "completeBodyRead": true,
+      "method": "Complete previously read immutable body reused by exact repository/length/SHA256/Git tuple",
+      "fullTupleMatched": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "pin": {
+        "bytes": 165022,
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+      },
+      "physicalLines": 2702,
+      "completeBodyRead": true,
+      "method": "Complete previously read immutable body reused by exact repository/length/SHA256/Git tuple",
+      "fullTupleMatched": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "pin": {
+        "bytes": 21993,
+        "sha256": "2f929c1f5cfd1a9a3c9ec16d35f7197856c79a61adf166d30eebb8a1bd086f67",
+        "gitBlob": "adf5b4c418195e0fc4ab38ba7fde2b3436a6b835"
+      },
+      "physicalLines": 280,
+      "completeBodyRead": true,
+      "method": "Complete previously read immutable body reused by exact repository/length/SHA256/Git tuple",
+      "fullTupleMatched": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "pin": {
+        "bytes": 33227,
+        "sha256": "dc9ba0c735ea763a24bb06d93590373cf1072d5737c7fba67a31df1356c44dd5",
+        "gitBlob": "1430de1a6666a22a7582d38a21273d61d2f745b7"
+      },
+      "physicalLines": 481,
+      "completeBodyRead": true,
+      "method": "Complete previously read immutable body reused by exact repository/length/SHA256/Git tuple",
+      "fullTupleMatched": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "pin": {
+        "bytes": 39026,
+        "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a",
+        "gitBlob": "76f5d1953816fd125f576a966c42caefcfc297e2"
+      },
+      "physicalLines": 562,
+      "completeBodyRead": true,
+      "method": "Complete previously read immutable body reused by exact repository/length/SHA256/Git tuple",
+      "fullTupleMatched": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/features/team-direct-chats/core/domain/pickPreviewMessage.ts",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "pin": {
+        "bytes": 490,
+        "sha256": "3f502e8ba895eaaa01380d166c3f4451836044d61f8a10ce93c01f710d09b535",
+        "gitBlob": "252113492c852f26b1da6ce455520f87345d00b2"
+      },
+      "physicalLines": 15,
+      "completeBodyRead": true,
+      "method": "Fresh complete immutable blob read",
+      "fullTupleMatched": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/renderer/utils/chatPreview.ts",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "pin": {
+        "bytes": 286,
+        "sha256": "7ca7c8bf70176ded550fcba8761a122d22e8e057216a0d337534f05f1b828759",
+        "gitBlob": "7c8869dba13c1e20effcbf96e4c898beafe946ab"
+      },
+      "physicalLines": 7,
+      "completeBodyRead": true,
+      "method": "Fresh complete immutable blob read",
+      "fullTupleMatched": true
+    }
+  ],
+  "sourceScope": {
+    "files": 1,
+    "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+    "before": {
+      "bytes": 69370,
+      "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+      "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+    },
+    "physicalLinesBefore": 798,
+    "maximumPhysicalLinesAfter": 798,
+    "cap": 800,
+    "callLabel": "show original scheduled reply",
+    "selector": "button[aria-label^=\"alice,\"]",
+    "oldLine": "  await ui.click('button[aria-label^=\"alice,\"]', 'show original scheduled reply'); await visible('TEST scheduled reply');",
+    "argumentSelection": {
+      "thirdExactText": "undefined, preserving the current unset exact-text constraint",
+      "fourthRequiredContent": "TEST scheduled ",
+      "trailingSpaceRequired": true
+    },
+    "scope": "Add only the existing fourth click argument in the sole existing call. No full source postimage is authored in R1. In R2 the complete inverse must restore the entire original driver byte-for-byte.",
+    "unmodifiedExactLaterAssertion": "await visible('TEST scheduled reply');",
+    "unmodifiedPreviousActions": [
+      "Original Back-to-chats click",
+      "Original bounded Alice scroll",
+      "Unique original manual schedule/run/task/effect joins"
+    ],
+    "otherSourceFilesChanged": 0,
+    "newHelperFiles": 0,
+    "helperImplementationChanges": 0,
+    "productionUiChanges": 0,
+    "testSourceChanges": 0,
+    "workflowChanges": 0
+  },
+  "guardScope": {
+    "solePositiveSizeEligibleElement": true,
+    "bodyOrNeighborCannotSatisfy": true,
+    "exactSelectorAndLabel": true,
+    "disabledAndCenterHitRefusal": true,
+    "literalDataSerialization": true,
+    "samePredicateBeforeHoverDuringStabilityAndFinalRead": true,
+    "originalOwnershipChecks": true,
+    "oneHoverAndOnePhysicalClickOnly": true,
+    "maximumStableSamples": 15,
+    "requiredEqualConsecutiveSamples": 2,
+    "originalSampleIntervalMs": 100,
+    "originalReadDeadlineMs": 30000,
+    "postFulfilledCutoff": true,
+    "finalExactPointTagEquality": true,
+    "revokedPrerequisiteRefusal": true,
+    "ownerErrorIdentity": true,
+    "noNewReadLoopOrTimer": true,
+    "noRetryOrNewCoordinateAfterRefusal": true
+  },
+  "semanticEvidence": {
+    "gitBlob": "20f354b647a7e582d691e034f4dee6cb43cba6c5",
+    "bytes": 46531,
+    "sha256": "aaf392fb3f8ec0cb15e6d24fea41ea20e00db306c800532899843b33245a49b7"
+  },
+  "evidencePublicationScope": {
+    "lateCi3Records": 113,
+    "newLateCi3Leaves": 75,
+    "alreadyPublishedReferences": 38,
+    "ci4Records": 6,
+    "newR1Records": 5,
+    "manifest": 1,
+    "changedLeaves": 90,
+    "addedLeaves": 87,
+    "modifiedLeaves": 3,
+    "allSourceUnchanged": true,
+    "fullBodyCustodyReuse": "Existing exact retained full bodies, complete chunk reconstruction/ZIP member/PDF-free PNG review reports and prior self-read records are reused. No unrelated historical re-audit or new target execution; current publication path/body/prefix/catalog/pointer closure remains the original subsequent actual-readback step."
+  },
+  "checks": [
+    {
+      "id": "R01",
+      "status": "PASS_STATIC_R1",
+      "finding": "Complete exact R1 subject is retained and freshly self-read."
+    },
+    {
+      "id": "R02",
+      "status": "PASS_STATIC_R1",
+      "finding": "The selected docs parent is the exact58-check closed actual publication; fixed source remains the previously closed aab3 source."
+    },
+    {
+      "id": "R03",
+      "status": "PASS_STATIC_R1",
+      "finding": "All eight complete primary source bodies independently rehash to the selected current repository-scoped tuples.",
+      "evidence": [
+        {
+          "repository": "777genius/agent-teams-ai",
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+          "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+          "pin": {
+            "bytes": 69370,
+            "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+            "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+          },
+          "physicalLines": 798,
+          "completeBodyRead": true,
+          "method": "Complete previously read immutable body reused by exact repository/length/SHA256/Git tuple",
+          "fullTupleMatched": true
+        },
+        {
+          "repository": "777genius/agent-teams-ai",
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+          "pin": {
+            "bytes": 29017,
+            "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+            "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+          },
+          "physicalLines": 495,
+          "completeBodyRead": true,
+          "method": "Complete previously read immutable body reused by exact repository/length/SHA256/Git tuple",
+          "fullTupleMatched": true
+        },
+        {
+          "repository": "777genius/agent-teams-ai",
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+          "pin": {
+            "bytes": 165022,
+            "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+            "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+          },
+          "physicalLines": 2702,
+          "completeBodyRead": true,
+          "method": "Complete previously read immutable body reused by exact repository/length/SHA256/Git tuple",
+          "fullTupleMatched": true
+        },
+        {
+          "repository": "777genius/agent-teams-ai",
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+          "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+          "pin": {
+            "bytes": 21993,
+            "sha256": "2f929c1f5cfd1a9a3c9ec16d35f7197856c79a61adf166d30eebb8a1bd086f67",
+            "gitBlob": "adf5b4c418195e0fc4ab38ba7fde2b3436a6b835"
+          },
+          "physicalLines": 280,
+          "completeBodyRead": true,
+          "method": "Complete previously read immutable body reused by exact repository/length/SHA256/Git tuple",
+          "fullTupleMatched": true
+        },
+        {
+          "repository": "777genius/agent-teams-ai",
+          "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+          "pin": {
+            "bytes": 33227,
+            "sha256": "dc9ba0c735ea763a24bb06d93590373cf1072d5737c7fba67a31df1356c44dd5",
+            "gitBlob": "1430de1a6666a22a7582d38a21273d61d2f745b7"
+          },
+          "physicalLines": 481,
+          "completeBodyRead": true,
+          "method": "Complete previously read immutable body reused by exact repository/length/SHA256/Git tuple",
+          "fullTupleMatched": true
+        },
+        {
+          "repository": "777genius/agent-teams-ai",
+          "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+          "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+          "pin": {
+            "bytes": 39026,
+            "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a",
+            "gitBlob": "76f5d1953816fd125f576a966c42caefcfc297e2"
+          },
+          "physicalLines": 562,
+          "completeBodyRead": true,
+          "method": "Complete previously read immutable body reused by exact repository/length/SHA256/Git tuple",
+          "fullTupleMatched": true
+        },
+        {
+          "repository": "777genius/agent-teams-ai",
+          "path": "src/features/team-direct-chats/core/domain/pickPreviewMessage.ts",
+          "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+          "pin": {
+            "bytes": 490,
+            "sha256": "3f502e8ba895eaaa01380d166c3f4451836044d61f8a10ce93c01f710d09b535",
+            "gitBlob": "252113492c852f26b1da6ce455520f87345d00b2"
+          },
+          "physicalLines": 15,
+          "completeBodyRead": true,
+          "method": "Fresh complete immutable blob read",
+          "fullTupleMatched": true
+        },
+        {
+          "repository": "777genius/agent-teams-ai",
+          "path": "src/renderer/utils/chatPreview.ts",
+          "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+          "pin": {
+            "bytes": 286,
+            "sha256": "7ca7c8bf70176ded550fcba8761a122d22e8e057216a0d337534f05f1b828759",
+            "gitBlob": "7c8869dba13c1e20effcbf96e4c898beafe946ab"
+          },
+          "physicalLines": 7,
+          "completeBodyRead": true,
+          "method": "Fresh complete immutable blob read",
+          "fullTupleMatched": true
+        }
+      ]
+    },
+    {
+      "id": "R04",
+      "status": "PASS_STATIC_R1",
+      "finding": "The selected scheduled-reply click is exactly one current line647; no other caller is selected."
+    },
+    {
+      "id": "R05",
+      "status": "PASS_STATIC_R1",
+      "finding": "The proposal requires preserving all798 physical lines within the original800 cap."
+    },
+    {
+      "id": "R06",
+      "status": "PASS_STATIC_R1",
+      "finding": "The selected literal is the common15-character scheduled prefix with its intentional trailing space."
+    },
+    {
+      "id": "R07",
+      "status": "PASS_STATIC_R1",
+      "finding": "The existing prerequisite is already implemented on the sole eligible original element."
+    },
+    {
+      "id": "R08",
+      "status": "PASS_STATIC_R1",
+      "finding": "The previously unset exact-text argument, original selector and label remain unchanged."
+    },
+    {
+      "id": "R09",
+      "status": "PASS_STATIC_R1",
+      "finding": "The later exact full scheduled-reply assertion remains required and is not replaced by the prefix."
+    },
+    {
+      "id": "R10",
+      "status": "PASS_STATIC_R1",
+      "finding": "Scope is one existing caller argument; shared helper, producer, workflow, tests and other source files stay unchanged."
+    },
+    {
+      "id": "R11",
+      "status": "PASS_STATIC_R1",
+      "finding": "Both selected finite peer implementations contain the two legitimate scheduled preview variants."
+    },
+    {
+      "id": "R12",
+      "status": "PASS_STATIC_R1",
+      "finding": "Actual preview selection may adopt the newest addressed message; the short common prefix survives the88-codepoint preview limit."
+    },
+    {
+      "id": "R13",
+      "status": "PASS_STATIC_R1",
+      "finding": "The selected first manual task-first flow joins its unique dispatch/completed task/effect before the later real automatic occurrence."
+    },
+    {
+      "id": "R14",
+      "status": "PASS_STATIC_R1",
+      "finding": "Earlier standalone output is explicitly distinguished; a broad success or unrelated conversation marker is not admitted."
+    },
+    {
+      "id": "R15",
+      "status": "PASS_STATIC_R1",
+      "finding": "The failed Claude boundary is before physical input; absent coordinates/layout/full cleanup remain explicit unknowns."
+    },
+    {
+      "id": "R16",
+      "status": "PASS_STATIC_R1",
+      "finding": "This readiness repair does not assert a proven Claude geometric cause or promise future PASS."
+    },
+    {
+      "id": "R17",
+      "status": "PASS_STATIC_R1",
+      "finding": "Existing unique positive-size own-element gating remains; body/neighbor evidence cannot satisfy the predicate."
+    },
+    {
+      "id": "R18",
+      "status": "PASS_STATIC_R1",
+      "finding": "Existing center-hit and disabled target refusals remain."
+    },
+    {
+      "id": "R19",
+      "status": "PASS_STATIC_R1",
+      "finding": "Literal serialization and same original expression in final owned read remain."
+    },
+    {
+      "id": "R20",
+      "status": "PASS_STATIC_R1",
+      "finding": "Original15-sample/two-equal-sample stabilization and final exact point/tag equality remain."
+    },
+    {
+      "id": "R21",
+      "status": "PASS_STATIC_R1",
+      "finding": "No additional wait clock, timer, loop or deadline inflation is selected."
+    },
+    {
+      "id": "R22",
+      "status": "PASS_STATIC_R1",
+      "finding": "All original ownership checks and one-input semantics remain; final refusal cannot become a retry or coordinate reacquisition."
+    },
+    {
+      "id": "R23",
+      "status": "PASS_STATIC_R1",
+      "finding": "Existing whole149 tests exercise the actual helper's meaningful ready/invalid/revoked/owner/movement boundaries."
+    },
+    {
+      "id": "R24",
+      "status": "PASS_STATIC_R1",
+      "finding": "Separate Selection forwarding tests are not misreported as candidate runtime-driver execution."
+    },
+    {
+      "id": "R25",
+      "status": "PASS_STATIC_R1",
+      "finding": "All later original GUI assertions and complete unfiltered commands/cases remain required."
+    },
+    {
+      "id": "R26",
+      "status": "PASS_STATIC_R1",
+      "finding": "The complete selected late CI3 inventory matches113 exact retained records,75new leaves and38existing references; no silent record replacement."
+    },
+    {
+      "id": "R27",
+      "status": "PASS_STATIC_R1",
+      "finding": "Every selected late record resolves to its complete retained body and unique exact repository path; whole actual publication readbacks remain subsequent."
+    },
+    {
+      "id": "R28",
+      "status": "PASS_STATIC_R1",
+      "finding": "All19 exact UTF8 chunk leaves and4manifests are selected; no derived logical capture ID is substituted for retained chunks."
+    },
+    {
+      "id": "R29",
+      "status": "PASS_STATIC_R1",
+      "finding": "Late complete captures and85 actually viewed PNGs have their retained bounded reports; image authority remains distinct from process/native proof."
+    },
+    {
+      "id": "R30",
+      "status": "PASS_STATIC_R1",
+      "finding": "Six exact CI4 gate/readback/admission/preflight/opened records bind actualPR1228 and its verified fixed-source merge."
+    },
+    {
+      "id": "R31",
+      "status": "PASS_STATIC_R1",
+      "finding": "Publication arithmetic is87document additions plus3canonical modifications; no source change."
+    },
+    {
+      "id": "R32",
+      "status": "PASS_STATIC_R1",
+      "finding": "Expected census follows the closed parent and exact docs-only additions; all53 other root entries stay fixed."
+    },
+    {
+      "id": "R33",
+      "status": "PASS_STATIC_R1",
+      "finding": "Exactly six new catalog keys are selected; all old117values,27bundles/totals and both complete Markdown prefixes remain."
+    },
+    {
+      "id": "R34",
+      "status": "PASS_STATIC_R1",
+      "finding": "The original R1/publication/actual then sourceR2/reviews/publication/actual sequence remains; no full postimage or execution is authored here."
+    },
+    {
+      "id": "R35",
+      "status": "PASS_STATIC_R1",
+      "finding": "CurrentCI4 source/refs/PR stay frozen; allCI3terminal remains spent. Currentaab3 runs cannot validate the future one-call edit."
+    },
+    {
+      "id": "R36",
+      "status": "PASS_STATIC_R1",
+      "finding": "No real vendor execution, frozen PR change, release/Ready/Stage2, or unrelated failure repair is introduced."
+    }
+  ],
+  "checkCount": 36,
+  "failedChecks": [],
+  "unresolvedBlockers": [],
+  "qualification": {
+    "staticR1Only": true,
+    "sourcePostimageAuthored": false,
+    "runtimeExecuted": false,
+    "originalClaudeCauseProven": false,
+    "futurePassProven": false,
+    "wholeE2E": false
+  },
+  "selfReadbackProtocol": "Retain exact complete report; fresh full read and byte equality before existing four-review closure."
+}

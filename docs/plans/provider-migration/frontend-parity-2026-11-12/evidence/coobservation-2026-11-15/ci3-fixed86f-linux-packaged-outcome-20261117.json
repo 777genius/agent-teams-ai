@@ -1,0 +1,906 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_LINUX_PACKAGED_OUTCOME_GUARD_ADVISORY",
+  "reviewer": "/root/producer_r2_guard",
+  "createdAtUtc": "2026-11-17 16:36:05 UTC",
+  "decision": "ACCEPT_BOUNDED_ORIGINAL_PACKAGED_OUTCOME",
+  "checkCount": 33,
+  "blockers": [],
+  "scope": "Immutable retained evidence for original Linux x64 packaged job134098865333/run44092933873 at fixed86f52244b5375834a4040cbc63803d68cc708087 only. This is an outcome advisory, not a new gate, venue selection, runtime authorization, rerun, or blanket native/desktop/release qualification.",
+  "authority": {
+    "rootSoleSourceControlRuntimeRefPrCiAuthorAndExecutor": true,
+    "reviewerOperations": [
+      "immutable Git blob/source reads",
+      "pure in-memory UTF8 hashing, JSON parsing, complete manifest-row traversal and equality checks",
+      "bare report blob retention and complete self-readback"
+    ],
+    "targetExecution": false,
+    "sourceEvaluation": false,
+    "sourceCompilation": false,
+    "localOrShellAction": false,
+    "liveCiReads": false,
+    "downloads": false,
+    "sourceOrRefMutation": false,
+    "newRuntime": false,
+    "realVendorExecution": false
+  },
+  "evidence": {
+    "capture": {
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 1712888,
+      "sha256": "0fccc3359b3aae91e35b349db16bbcbdc58bc84e310457bb8f3126b9711f6a46",
+      "gitBlob": "2afaae7e70c2455e6572bdd5fb044d488c6617be",
+      "artifactId": 14344673725,
+      "runId": 44092933873,
+      "jobId": 134098865333,
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "capturedAt": "2026-11-17T16:28:38.823658+00:00"
+    },
+    "log": {
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 173066,
+      "sha256": "8e5f4cef3fed62e914cfec4c45e8046e60048c2f92be06a49da8fab5e4a62a37",
+      "gitBlob": "e5857e0f75768e414ea8f0772ed06e21616fb2bd",
+      "read": {
+        "characters": 172464,
+        "contiguousSlices": [
+          [
+            0,
+            22000
+          ],
+          [
+            22000,
+            44000
+          ],
+          [
+            44000,
+            66000
+          ],
+          [
+            66000,
+            88000
+          ],
+          [
+            88000,
+            110000
+          ],
+          [
+            110000,
+            132000
+          ],
+          [
+            132000,
+            154000
+          ],
+          [
+            154000,
+            172464
+          ]
+        ],
+        "truncationRepair": "44000–66000 reprinted complete after a combined-output truncation; no omitted log body remains."
+      }
+    },
+    "archive": {
+      "bytes": 347137,
+      "sha256": "ea84d9b48559e83b23093e8f8c5aa1268922328d63bf3003a869012082b22864",
+      "gitBlob": "5a1998de7d1f5b0e50a44989e796f48100361107",
+      "allMembersCrcVerified": true,
+      "base64RetainedInCapture": true,
+      "verificationBoundary": "Root capture records whole archive SHA/CRC and all member extraction. Reviewer independently verifies full capture UTF8, all four embedded UTF8 member bytes/SHA/Git IDs, and original job upload SHA/347137-byte/14344673725 identity; no ZIP decompression or binary re-execution performed by reviewer."
+    },
+    "members": [
+      {
+        "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+        "bytes": 1154504,
+        "sha256": "7f1ea73304c76a666a839b02dab40f6bdbb73ae0fd6f1f93749c9b570b994d24",
+        "gitBlob": "7d2e7f84272dae22238fd0b6bb81396907a55055",
+        "crc32": "767f502c",
+        "compressedBytes": 343369,
+        "crcVerified": true,
+        "encoding": "utf-8",
+        "verified": {
+          "bytes": 1154504,
+          "sha256": "7f1ea73304c76a666a839b02dab40f6bdbb73ae0fd6f1f93749c9b570b994d24",
+          "gitBlob": "7d2e7f84272dae22238fd0b6bb81396907a55055"
+        }
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-inputs.json",
+        "bytes": 783,
+        "sha256": "bdcfef43878b3b97728d9dcbf5269360885cec51aea262918e1112270ad825f2",
+        "gitBlob": "32c69050591873104512a80b15b56d9b780630a4",
+        "crc32": "344db73b",
+        "compressedBytes": 495,
+        "crcVerified": true,
+        "encoding": "utf-8",
+        "verified": {
+          "bytes": 783,
+          "sha256": "bdcfef43878b3b97728d9dcbf5269360885cec51aea262918e1112270ad825f2",
+          "gitBlob": "32c69050591873104512a80b15b56d9b780630a4"
+        }
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-native.json",
+        "bytes": 5286,
+        "sha256": "e66b7b22e1cc4a82140a440fd24329ee0b8b1ebe9ff427de5683c1b6558b64be",
+        "gitBlob": "3c15dfc96d21e1d2a363e58ae986f69d7753f9a0",
+        "crc32": "6e63c567",
+        "compressedBytes": 1881,
+        "crcVerified": true,
+        "encoding": "utf-8",
+        "verified": {
+          "bytes": 5286,
+          "sha256": "e66b7b22e1cc4a82140a440fd24329ee0b8b1ebe9ff427de5683c1b6558b64be",
+          "gitBlob": "3c15dfc96d21e1d2a363e58ae986f69d7753f9a0"
+        }
+      },
+      {
+        "path": "_temp/opencode-v2-packaged.json",
+        "bytes": 1186,
+        "sha256": "da0d0652653f2e6204d8261681e7efcc9289fe7c085b2e104876dd633324aead",
+        "gitBlob": "8988befa94aa968afcebe49bafcc84974aa957ad",
+        "crc32": "518984ba",
+        "compressedBytes": 620,
+        "crcVerified": true,
+        "encoding": "utf-8",
+        "verified": {
+          "bytes": 1186,
+          "sha256": "da0d0652653f2e6204d8261681e7efcc9289fe7c085b2e104876dd633324aead",
+          "gitBlob": "8988befa94aa968afcebe49bafcc84974aa957ad"
+        }
+      }
+    ],
+    "completeUtf8MemberCount": 4,
+    "completeUtf8MemberBytes": 1161759,
+    "pngCount": 0,
+    "sourceIndex": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "bytes": 19532,
+        "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f",
+        "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+        "read": "complete UTF8 body read as source text only; no evaluation/import/compilation"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+        "bytes": 14137,
+        "sha256": "b6f0893cda4210adaa754d7b2af96f3ddd43dc9af64e0656a5736e26e79060e4",
+        "gitBlob": "44ccc655c11bb48dd354b10c09acb3d0e2d65c91",
+        "read": "complete UTF8 body read as source text only; no evaluation/import/compilation"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+        "bytes": 33259,
+        "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff",
+        "gitBlob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+        "read": "complete UTF8 body read as source text only; no evaluation/import/compilation"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+        "bytes": 17320,
+        "sha256": "74444f48ffc2ddd4ca4bae52c9cbd7c2bddaa465508169d026e193661ce25787",
+        "gitBlob": "27cf4112a25dec299a21d6f802a5c08d55e36f2d",
+        "read": "complete UTF8 body read as source text only; no evaluation/import/compilation"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+        "bytes": 15303,
+        "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01",
+        "gitBlob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5",
+        "read": "complete UTF8 body read as source text only; no evaluation/import/compilation"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/stage-opencode-v2-packaged.ts",
+        "bytes": 9840,
+        "sha256": "a7d4b63db9a604114c46c9ee4f2dcaf27747e9cfd4753f2de79e0e6a9fee591d",
+        "gitBlob": "08fd0ad35418d66b9cd5b007213b58888fcf8a24",
+        "read": "complete UTF8 body read as source text only; no evaluation/import/compilation"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/electron-builder/smokePackagedApp.cjs",
+        "bytes": 19905,
+        "sha256": "f90a08ed320efb158a9ebe4fc8b333f1f5b71b4624203f259378357d22712424",
+        "gitBlob": "ee0ccf4deb1d058cd593d8ae842d3fc3f12cdfde",
+        "read": "complete UTF8 body read as source text only; no evaluation/import/compilation"
+      }
+    ],
+    "completeSourceBytes": 129296
+  },
+  "sourceAndCommandBinding": {
+    "workflowExplicitHeadCheckout": "actions/checkout ref github.event.pull_request.head.sha; Linux smoke uses actual86f, not the default merge tree.",
+    "platform": "linux-x64",
+    "bundle": "release/linux-unpacked",
+    "workflowJobTimeoutMinutes": 90,
+    "originalNativeCommand": "node \"${github.workspace}/scripts/legacy-agent-host/run-packaged-opencode-v2.ts\" \"release/linux-unpacked\" \"linux-x64\"",
+    "originalNativeCommandObserved": "node \"/home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/run-packaged-opencode-v2.ts\" \"release/linux-unpacked\" \"linux-x64\"",
+    "originalCaptureTestCommand": "node --test scripts/legacy-agent-host/candidate-closure.test.ts scripts/legacy-agent-host/packaged-opencode-v2-inputs.test.ts scripts/legacy-agent-host/stage-node.test.ts",
+    "captureTestResult": {
+      "tests": 26,
+      "pass": 25,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 1,
+      "todo": 0,
+      "skip": "Windows builder preserves only the fully attested unused ia32 FFI with its real x64 target",
+      "limit": "This is the original three-file capture test command, not native-receipt/platform26 or whole149/43/85."
+    },
+    "buildNode": "v26.12.1",
+    "electronNode": "24.22.1",
+    "selectedHostNode": "v24.21.0",
+    "nodeDistinction": "Build-time engine warnings for Node26 do not change the actual captured Host node24.21.0. The workflow explicitly selects24.21.0 before staging, and packaged scenario verifies actual process.execPath plus version and binary SHA.",
+    "acquisitionAndRetryLimit": "Original installation and capture-boundary tests have their own existing retry/test behavior. This advisory does not call the whole job retry-free. The native wrapper launches one selected harness, whose two Hosts are the initial Host and the prescribed cold successor. Repeated team.execute calls are explicit idempotence assertions against the same original receipt, not replacement business intents."
+  },
+  "manifest": {
+    "identity": {
+      "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154504,
+      "sha256": "7f1ea73304c76a666a839b02dab40f6bdbb73ae0fd6f1f93749c9b570b994d24",
+      "gitBlob": "7d2e7f84272dae22238fd0b6bb81396907a55055",
+      "crc32": "767f502c",
+      "compressedBytes": 343369,
+      "crcVerified": true,
+      "encoding": "utf-8",
+      "verified": {
+        "bytes": 1154504,
+        "sha256": "7f1ea73304c76a666a839b02dab40f6bdbb73ae0fd6f1f93749c9b570b994d24",
+        "gitBlob": "7d2e7f84272dae22238fd0b6bb81396907a55055"
+      }
+    },
+    "census": {
+      "packages": 120,
+      "uniquePackagePaths": 120,
+      "files": 8131,
+      "depEdges": 202,
+      "executable": 3,
+      "optional": 8,
+      "errors": [],
+      "hostEntry": {
+        "path": "dist/cli.js",
+        "sha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+        "executable": false
+      },
+      "first": {
+        "path": "dist/adapters/cross-team/createHostCrossTeamOutbox.d.ts",
+        "sha256": "0d83bec987216b4531df46450e1c1cfcf0648436052244263e50dbfd014089f7",
+        "executable": false
+      },
+      "last": {
+        "path": "tsconfig.json",
+        "sha256": "5c01887c6c8539144c0fc5fae6f5115073b6e26ecbeae8434a0329f46f9169c6",
+        "executable": false
+      },
+      "manifestHasProcessCustody": false
+    },
+    "candidateTopLevel": {
+      "schemaVersion": 1,
+      "kind": "TEST_PACKAGED_OPENCODE_V2_INPUTS",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "platform": "linux-x64",
+      "hostSourceDigest": "83e3304024dcfa67db7034c0316c3d9463d47659a44b8a8a04e0aedf3c660c67",
+      "harnessSha256": "1890cad5057237154c0bcfd72c1c5cedb3e516057151d6bbafb1e76671d9d63e",
+      "node": {
+        "schemaVersion": 1,
+        "platform": "linux-x64",
+        "version": "24.21.0",
+        "archiveSha256": "6e1db87ef58b8819e5d5402eff1536491b18edd8eb7bee5ef7897876e88dc5ff",
+        "binarySha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "executable": "node",
+        "source": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-linux-x64.tar.gz"
+      },
+      "nodeExecutable": "node/v24.21.0/linux-x64/node",
+      "hostPackage": "host/packages/0000",
+      "hostEntry": "host/packages/0000/dist/cli.js",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "artifacts": [
+        {
+          "name": "@agent-teams/provider-implementations",
+          "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+        },
+        {
+          "name": "@agent-teams/provider-session-contracts",
+          "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+        }
+      ],
+      "bun": {
+        "path": "native/opencode-v2/bun",
+        "sha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "version": "1.3.11"
+      },
+      "engine": {
+        "directory": "native/opencode-v2/engine",
+        "manifestSha256": "30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce",
+        "version": "2.1.4"
+      }
+    },
+    "traversal": "Entire1154504-byte manifest parsed; all120 package records,8131 file records and202 dependency edges traversed. Each file retains a safe relative unique path,64hex SHA and Boolean executable bit; all dependency references resolve to captured package IDs. All120 package summaries were read. Three executable file flags and eight explicitly missing optional dependencies are metadata, not proof those executables ran.",
+    "installedVendorPackageLimit": "Manifest contains the installed Claude SDK and its Linux platform payload because the captured Host dependency closure includes them. Package presence is not execution evidence. The original selected native profile is opencode-v2; generic app smoke separately uses finite TEST metadata fences.",
+    "verificationSource": "The original reader verifies every selected file hash and executable bit, full package/dependency directory census, exact internal links, selected Node manifest, Host entry, Bun, engine graph, ASAR, harness, source absence and legacy-runtime absence. Scenario invokes verify before and after the native flow. Reviewer reads these assertions and retained success evidence; no independent current filesystem inventory or reproducible rebuild is claimed."
+  },
+  "receipts": {
+    "inputs": {
+      "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+      "status": "READY",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "platform": "linux-x64",
+      "nodeVersion": "v24.21.0",
+      "productQualified": false,
+      "stage": "prepared",
+      "baseArchiveSha256": "09b174841e74c95337f8b1be986f1501a71582ce190671c548bf4c70ab814e10",
+      "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "bun": {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+        "sha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "version": "1.3.11"
+      },
+      "supportArchiveSha256": "c49a71cd1b4f253ed2d1392b44db419eaa28d91764f278c78b8c0fabe35a06ee",
+      "manifestSha256": "30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce"
+    },
+    "native": {
+      "kind": "TEST_PACKAGED_NATIVE_V2_HOST",
+      "status": "PASS",
+      "packaged": {
+        "executionOrigin": "packaged-extraResources",
+        "appAsarSha256": "05bf35a8a4ae3ffc5bc0b07f6668010416fa65542e2dc7986e9ed23f18e1f005",
+        "candidateManifestSha256": "7f1ea73304c76a666a839b02dab40f6bdbb73ae0fd6f1f93749c9b570b994d24",
+        "harnessSha256": "1890cad5057237154c0bcfd72c1c5cedb3e516057151d6bbafb1e76671d9d63e",
+        "sourceCheckoutUnavailable": true,
+        "legacyRuntimeUnavailable": true,
+        "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+        "nodeArchiveSha256": "6e1db87ef58b8819e5d5402eff1536491b18edd8eb7bee5ef7897876e88dc5ff",
+        "providerArtifacts": [
+          {
+            "name": "@agent-teams/provider-implementations",
+            "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+          },
+          {
+            "name": "@agent-teams/provider-session-contracts",
+            "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+          }
+        ],
+        "packages": 120,
+        "files": 8131
+      },
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "platform": "linux-x64",
+      "version": "2.1.4",
+      "approvalMode": "manual",
+      "nodeVersion": "v24.21.0",
+      "modelSelection": {
+        "providerId": "TEST-local",
+        "modelId": "TEST-model-B",
+        "variant": "high"
+      },
+      "configurationSelection": {
+        "scope": "project",
+        "original": "project-A",
+        "later": "project-B"
+      },
+      "preferencesSelection": {
+        "nativeDefault": "TEST-local/TEST-model",
+        "appDefault": "TEST-local/TEST-model-B"
+      },
+      "digests": {
+        "bun": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "manifest": "30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce",
+        "node": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "hostSource": "83e3304024dcfa67db7034c0316c3d9463d47659a44b8a8a04e0aedf3c660c67",
+        "hostDist": "c1deda42795d6769cc0f2d71ce9de79a56a928ff9954fdba64b6e3c7ca891997",
+        "provider": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+      },
+      "steps": [
+        "original_host_embedded_native_and_mcp_ready",
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+        "changed_project_config_did_not_retarget_running_native_session",
+        "original_uploaded_PNG_native_image_inference_and_public_readback",
+        "checkpoint_and_original_host_native_cleanup_confirmed",
+        "cold_host_restored_native_history_without_model_or_tool_replay"
+      ],
+      "cleanup": true,
+      "phaseElapsedMs": {
+        "original_host_embedded_native_and_mcp_ready": 17579,
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 26980,
+        "changed_project_config_did_not_retarget_running_native_session": 26980,
+        "original_uploaded_PNG_native_image_inference_and_public_readback": 26980,
+        "checkpoint_and_original_host_native_cleanup_confirmed": 27173,
+        "cold_host_restored_native_history_without_model_or_tool_replay": 39637
+      },
+      "elapsedMs": 44501,
+      "cancelled": false,
+      "inputObservation": {
+        "reads": 160,
+        "last": {
+          "phase": "allocated",
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true,
+          "sealed": false,
+          "diagnostic": null,
+          "inputs": [
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            },
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            }
+          ],
+          "interactions": [
+            {
+              "kind": "permission",
+              "phase": "resolved"
+            },
+            {
+              "kind": "permission",
+              "phase": "resolved"
+            }
+          ]
+        }
+      },
+      "launchObservation": {
+        "openElapsedMs": 12064,
+        "afterOpen": {
+          "available": true,
+          "status": "ready",
+          "reason": "context-applied",
+          "elapsedSinceAttemptMs": 11903,
+          "capturedTimeoutMs": 120000,
+          "claimed": true,
+          "nativeReady": true,
+          "contextApplied": true,
+          "everReady": true,
+          "usable": true,
+          "controlAvailable": true,
+          "noAllocation": false
+        }
+      },
+      "failureCode": null,
+      "hosts": [
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        },
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        }
+      ],
+      "modelOrigin": "localhost-scripted",
+      "modelRequests": 11,
+      "modelProgress": [
+        {
+          "elapsedMs": 17621,
+          "requests": 0
+        },
+        {
+          "elapsedMs": 20005,
+          "requests": 1
+        },
+        {
+          "elapsedMs": 20125,
+          "requests": 2
+        },
+        {
+          "elapsedMs": 20240,
+          "requests": 3
+        },
+        {
+          "elapsedMs": 20340,
+          "requests": 4
+        },
+        {
+          "elapsedMs": 21280,
+          "requests": 5
+        },
+        {
+          "elapsedMs": 21352,
+          "requests": 6
+        },
+        {
+          "elapsedMs": 21480,
+          "requests": 7
+        },
+        {
+          "elapsedMs": 21582,
+          "requests": 8
+        },
+        {
+          "elapsedMs": 25643,
+          "requests": 9
+        },
+        {
+          "elapsedMs": 26160,
+          "requests": 10
+        },
+        {
+          "elapsedMs": 26253,
+          "requests": 11
+        }
+      ],
+      "coordination": {
+        "status": "unqualified",
+        "cleanup": null
+      },
+      "modelFailures": [],
+      "vendorAuthQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    },
+    "wrapper": {
+      "kind": "TEST_PACKAGED_V2_QUALIFICATION",
+      "status": "PASS",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "platform": "linux-x64",
+      "cleanup": true,
+      "phase": "finished",
+      "desktopJourneyQualified": false,
+      "vendorAuthQualified": false,
+      "releaseQualified": false,
+      "cleanupObservation": {
+        "originalExitObserved": true,
+        "nativeReceiptParsed": true,
+        "nativeReceiptBound": true,
+        "nativeCleanupConfirmed": true,
+        "firstFailure": null,
+        "firstRestorationFailure": null
+      },
+      "appAsarSha256": "05bf35a8a4ae3ffc5bc0b07f6668010416fa65542e2dc7986e9ed23f18e1f005",
+      "candidateManifestSha256": "7f1ea73304c76a666a839b02dab40f6bdbb73ae0fd6f1f93749c9b570b994d24",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "nativeExit": {
+        "code": 0,
+        "signal": null
+      },
+      "nativeReceiptSha256": "e66b7b22e1cc4a82140a440fd24329ee0b8b1ebe9ff427de5683c1b6558b64be",
+      "sourceCheckoutUnavailable": true,
+      "legacyRuntimeUnavailable": true,
+      "sourceRestored": true,
+      "bundleRestored": true,
+      "legacyRuntimeRestored": true
+    }
+  },
+  "caseInterpretation": [
+    {
+      "step": "original_host_embedded_native_and_mcp_ready",
+      "elapsedMs": 17579,
+      "meaning": "Original selected Host opens actual embedded OpenCode2.1.4/native MCP and reports nativeReady. Post-open public launch read is observational; it cannot open or retry."
+    },
+    {
+      "step": "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+      "elapsedMs": 26980,
+      "meaning": "Two original business inputs succeed. Manual permission responses are selected/current and unique; oracle requires exactly11 requests and zero failures. Native file effect is exactly ONE newline TWO newline; one completed carol task with one comment, and exactly two expected replies. Failed shell exit7 must appear as a failed tool."
+    },
+    {
+      "step": "changed_project_config_did_not_retarget_running_native_session",
+      "elapsedMs": 26980,
+      "meaning": "Every actual observed request uses selected TEST-model-B/high and original project-A context/auth/header despite the fixture changing the later project config toB after initial open. This proves the bounded captured-configuration scenario."
+    },
+    {
+      "step": "original_uploaded_PNG_native_image_inference_and_public_readback",
+      "elapsedMs": 26980,
+      "meaning": "Original uploaded PNG accompanies the second input; exact native image payload observations and public readback are asserted, then retained across the cold Host. This is fixture image inference against a finite localhost model."
+    },
+    {
+      "step": "checkpoint_and_original_host_native_cleanup_confirmed",
+      "elapsedMs": 27173,
+      "meaning": "Checkpoint published; original Stop returns phaseclosed/custodyreleased; original Host close verifies exit0/null and valid stdout before recording this step."
+    },
+    {
+      "step": "cold_host_restored_native_history_without_model_or_tool_replay",
+      "elapsedMs": 39637,
+      "meaning": "A new Host returns the same retained original receipts/input IDs and image, restores a new native generation from the checkpoint, then observes250ms with no additional model calls or duplicate file effects. Second Stop releases custody and successor Host closes normally."
+    }
+  ],
+  "clocksAndCustody": {
+    "elapsedMs": 44501,
+    "originalOpenElapsedMs": 12064,
+    "capturedLaunchTimeoutMs": 120000,
+    "wrapperInitialObservationMs": 480000,
+    "wrapperCancellationObservationMs": 90000,
+    "runtimeOpenAndRestoreRpcMs": 180000,
+    "ordinaryRpcMs": 60000,
+    "originalEachInputReadLoopMs": 90000,
+    "originalTickMs": 25,
+    "noReplayObservationMs": 250,
+    "originalClose": "EOF first; wait captured advertised disposal budget plus2000ms (or startup-failure12000ms before handshake). Only if unconfirmed, original SIGTERM and another12000ms observation; final normal0/null/stdout-valid assertions still mandatory. Receipt does not encode which close branch occurred, so no unobserved signal claim is made.",
+    "noSourceTestBudgetPromotion": "The source node:test registration300000ms (Darwinx64 exception420000ms) is bypassed by packaged harness OPENCODE_V2_PACKAGED_GO=1; packaged execution is the same exported scenario under its original wrapper cancellation boundary.",
+    "cancellation": "Nativecancelledfalse,wrappernativeExit0/null,all native steps completed. A timeout/cancellation cannot be relabeled PASS; wrapper retains unknown inputs rather than restoring after unconfirmed native cleanup.",
+    "restoration": "Wrapper records nativeReceiptParsed/bound/cleanupConfirmed and originalExitObserved before source,bundle,legacy restoration. All restoration flags true; firstFailure and firstRestorationFailure null.",
+    "sourceAbsence": "Packaged reader confirms original checkout and adjacent legacy runtime absent while selecting captured Node/Host/Bun/engine; no source or PATH fallback qualifies the native flow.",
+    "lastInputObservation": "Allocated/owned/nativeReady/attached in inputObservation.last is an earlier turn-read projection, not the final runtime state. Later Stop assertions and both normal Host exits establish the bounded cleanup claim.",
+    "timingLimit": "phaseElapsedMs and modelProgress are cumulative original observation timestamps. They are not individual phase durations, exact native request timestamps, performance guarantees, or evidence for widening any budget.",
+    "globalAbsenceLimit": "Host cleanup and generic smoke-owned process records do not prove an unrestricted global process absence or the separate Darwin P09 continuous-byte-custody invariant."
+  },
+  "separateGenericSmoke": {
+    "nativeModules": "Original log records SQLite/PTY PACKAGED_NATIVE_OK with Electron44.10.1/Node24.22.1; base bundled runtime0.0.160 sourcee13edcd3 and availability-only OpenCodeV2 distinction retained.",
+    "managedGit": "Original log records packaged Git/LFS/status/diff/worktree/clone/PATH smoke PASS.",
+    "mcp": "Original log records55-tool MCP handshake and retained-owned-set remaining[].",
+    "xvfbApp": {
+      "startupStableMs": 8015,
+      "sqlite": true,
+      "leaderExit": {
+        "code": 0,
+        "signal": null
+      },
+      "ownedRecords": [
+        {
+          "phase": "final",
+          "leaderPid": 5536,
+          "owned": [
+            {
+              "pid": 5536,
+              "parent": 5529,
+              "group": 5536,
+              "birth": "proc:183145",
+              "state": "S"
+            }
+          ],
+          "remaining": [],
+          "signals": [
+            {
+              "pid": 5536,
+              "birth": "proc:183145",
+              "signal": "SIGTERM",
+              "outcome": "sent",
+              "at": "2026-11-17T16:04:17.201Z"
+            }
+          ],
+          "at": "2026-11-17T16:04:17.211Z"
+        },
+        {
+          "phase": "final",
+          "leaderPid": 5595,
+          "owned": [
+            {
+              "pid": 5595,
+              "parent": 5560,
+              "group": 5595,
+              "birth": "proc:183213",
+              "state": "R"
+            },
+            {
+              "pid": 5692,
+              "parent": 5595,
+              "group": 5692,
+              "birth": "proc:183476",
+              "state": "S"
+            },
+            {
+              "pid": 5898,
+              "parent": 5595,
+              "group": 5595,
+              "birth": "proc:184644",
+              "state": "R"
+            }
+          ],
+          "remaining": [],
+          "signals": [
+            {
+              "pid": 5595,
+              "birth": "proc:183213",
+              "signal": "SIGTERM",
+              "outcome": "sent",
+              "at": "2026-11-17T16:04:31.984Z"
+            },
+            {
+              "pid": 5692,
+              "birth": "proc:183476",
+              "signal": "SIGTERM",
+              "outcome": "sent",
+              "at": "2026-11-17T16:04:31.984Z"
+            }
+          ],
+          "at": "2026-11-17T16:04:32.122Z"
+        }
+      ],
+      "limitations": "Startup/SQLite smoke only. It does not exercise the full packaged relaunch/Launch/Stop journey, and no PNG/visual inspection exists in this capture."
+    },
+    "finiteMetadataFence": "Exactee0ccf4d source generates private TEST Claude/Codex metadata wrappers, accepts only --version, refuses other argv with77, seeds private Codex current.json and selects those paths in the app environment. The logged Codex catalog code77 and Anthropic summary missing-auth degradation are not real-vendor qualification. Prior no-real-vendor scope remains unchanged.",
+    "retainedWarnings": "Full log retains D-Bus/raster errors, missing private projects paths, missing Anthropic credential summary and finite Codex catalog refusal. The unchanged smoke passed its selected startup patterns; these messages are not silently removed or claimed to prove provider readiness."
+  },
+  "qualification": {
+    "accepted": "Original selected Linuxx64 packaged-extraResources manual OpenCodeV2.1.4 six-step Host/native/MCP/tool/image/checkpoint/cold-restore scenario and its bound ordinary cleanup/restoration.",
+    "notQualified": [
+      "auto approval mode",
+      "source-only Linux coordination and its cleanup",
+      "passive native diagnostics/Host CPU profiling",
+      "real Claude or Codex execution",
+      "real vendor authentication",
+      "remote/nonlocal model inference",
+      "full packaged desktop journey",
+      "Darwin packaged relaunch",
+      "Windows same-Main Retry/Kill",
+      "Darwin P09 custody",
+      "release/signing/notarization",
+      "all platforms or whole CI run",
+      "whole149/catalog43/renderer85 or unrelated suites"
+    ],
+    "falseFieldsPreserved": true,
+    "noNewWork": "No retries, new native observations, source changes, deadline changes, test filters, gates, CI actions, or speculative fixes selected."
+  },
+  "checks": [
+    {
+      "id": "L01",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Complete capture UTF8 identity joins exact assigned blob, bytes and SHA."
+    },
+    {
+      "id": "L02",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Complete original log identity; contiguous full read, not filtered excerpts only."
+    },
+    {
+      "id": "L03",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "All four embedded UTF8 members rehashed, derived IDs not fetched as separate blobs."
+    },
+    {
+      "id": "L04",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Capture and original job/run/head/artifact binding exact."
+    },
+    {
+      "id": "L05",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Original upload log independently joins root-captured archive bytes/hash/ID; CRC verification is attributed to capture, not independently decompressed here."
+    },
+    {
+      "id": "L06",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "All four parsed members retain exact source and platform."
+    },
+    {
+      "id": "L07",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Complete 120-package/8131-file metadata traversal; 202 captured dependency edges valid, no duplicate package/file paths or malformed hash rows."
+    },
+    {
+      "id": "L08",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Original staged candidate count and SHA equal full retained candidate body."
+    },
+    {
+      "id": "L09",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Candidate SHA joins native and wrapper receipts."
+    },
+    {
+      "id": "L10",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Selected bundled Host entry joins candidate file census and both receipts."
+    },
+    {
+      "id": "L11",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Host process uses separately selected Node 24.21.0; build Node26.12.1 and Electron Node24.22.1 are separate observations."
+    },
+    {
+      "id": "L12",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Exact Linux Bun1.3.11 and embedded engine2.1.4 identities agree."
+    },
+    {
+      "id": "L13",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Provider archive and selected Host source claims bind consistently; no independently reconstructed binary build claimed."
+    },
+    {
+      "id": "L14",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Original harness and ASAR hashes bind across receipts, with reader verification before/after native scenario."
+    },
+    {
+      "id": "L15",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Complete log contains exactly one original finished wrapper receipt, literally object-equal to archived receipt."
+    },
+    {
+      "id": "L16",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Wrapper binds exact 5286-byte native receipt; no result from another execution substituted."
+    },
+    {
+      "id": "L17",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Actual manual packaged scenario completed without cancellation or recorded failure; auto mode is unqualified here."
+    },
+    {
+      "id": "L18",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Exactly six original ordered scenario steps retained, all after their source assertions."
+    },
+    {
+      "id": "L19",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Exactly 11 finite localhost model requests and no oracle failures; no real model authentication or general model quality claim."
+    },
+    {
+      "id": "L20",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Original selected model/variant and captured project-A context remain selected despite post-open project-B configuration change."
+    },
+    {
+      "id": "L21",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Both original Host processes observed normal exit0/null with valid stdout; source requires Stop custody release and Host close."
+    },
+    {
+      "id": "L22",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Last original input read records both successes and two resolved permissions; source checks identity/currentness and exactly-once effects."
+    },
+    {
+      "id": "L23",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Original post-open readiness observation at captured120000ms budget; no inferred later deadline change or launch retry."
+    },
+    {
+      "id": "L24",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Phase values are cumulative monotonic elapsed observations; 44501ms total and 39637ms final step, not per-phase durations or exact request timestamps."
+    },
+    {
+      "id": "L25",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Packaged path explicitly excludes source-only Linux coordination and passive/CPU diagnostics; no platform-name promotion."
+    },
+    {
+      "id": "L26",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "All original qualification exclusions preserved."
+    },
+    {
+      "id": "L27",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Wrapper outcome follows original native exit and successful exact receipt validation."
+    },
+    {
+      "id": "L28",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Original exit/parse/binding/cleanup observation flags all true, no primary/restoration error."
+    },
+    {
+      "id": "L29",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Selected source checkout and legacy runtime were unavailable during scenario and restored afterward; authority not switched to source fallback."
+    },
+    {
+      "id": "L30",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Original three-file capture test command logged26 tests=25pass+1 original Windows-only skip, never26pass."
+    },
+    {
+      "id": "L31",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Separate generic Xvfb smoke logged renderer startup,8015ms stability,SQLite and normal leader exit; no later desktop journey inferred."
+    },
+    {
+      "id": "L32",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Generic MCP/app ownership records both end with empty retained owned sets; no global OS absence or native-P09 claim."
+    },
+    {
+      "id": "L33",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "detail": "Generic app source uses private generated TEST metadata programs; logged Codex exit77 is consistent with deliberate non-version refusal, not real-Codex execution."
+    }
+  ],
+  "retentionProtocol": "Send exact report pin immediately after retention; independently fresh-fetch the complete retained UTF8 body, compare bytes/SHA/Git and literal content, and read it before final confirmation. This sentence is a protocol, not a preclaimed completed self-read."
+}

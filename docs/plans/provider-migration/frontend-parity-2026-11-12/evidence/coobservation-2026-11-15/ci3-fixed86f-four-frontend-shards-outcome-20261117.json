@@ -1,0 +1,2452 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_FOUR_FRONTEND_SHARDS_INDEPENDENT_GUARD_OUTCOME_AUDIT",
+  "reviewer": "/root/producer_r2_guard",
+  "authoredAt": "2026-11-17 15:11:06 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "decision": "ACCEPT_BOUNDED_RETAINED_FRONTEND_OUTCOME",
+  "blockers": [],
+  "subject": {
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "runId": 44092933810,
+    "attempt": 1,
+    "pullRequest": 1223,
+    "workflow": {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "mode": "100644",
+      "bytes": 96872,
+      "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+      "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+    },
+    "captureCount": 4
+  },
+  "scope": "Outcome audit of four original frontend shards at fixed86f, from immutable retained data only. No execution/admission/publication gate is added.",
+  "result": {
+    "files": 2162,
+    "tests": 25883,
+    "pass": 25845,
+    "skip": 38,
+    "nestedSuites": 5314,
+    "leafFilesPassed": 2155,
+    "leafFilesWhollySkipped": 7,
+    "failedCaseRecords": 0,
+    "todoCaseRecords": 0,
+    "uniqueLeafFiles": 2162,
+    "sourceCandidates": 2195,
+    "originalExcludedFiles": 33,
+    "selectedPassingCases": {
+      "catalog": 43,
+      "runtimeManagement": 85,
+      "capturedClaudeStatus": 7
+    },
+    "allFourJobSuccessAuthority": "Root's original completed CI3 observations plus original successful command/artifact logs; no live API lookup here."
+  },
+  "readMethod": {
+    "completeCaptureBytes": "All four complete UTF-8 capture bodies fetched and rehashed; complete JSON parsed, including all embedded members and archive metadata/base64.",
+    "archiveBoundary": "ZIP bytes and CRC verification are attributed to root's retained capture. This reviewer did not decode/extract binaries or independently re-run CRC.",
+    "completeMembers": "All eight complete embedded UTF-8 member bodies independently rehashed. All2,162 leaf results and25,883 assertions traversed; failure/name/status/duration fields checked.",
+    "fullJobLogJoin": "All four complete job-log bodies fetched/rehashed; the entire corresponding artifact log matches a contiguous normalized job-log segment. Fresh reads cover checkout, runtime versions, command, summary/artifact sections; this is not a claim of manual line-by-line reading of every job-install log.",
+    "selectedSource": "All three complete selected source test bodies and config fetched and rehashed. Every selected case declaration/parameter row and actual case record read and joined. Full captured-status test and the catalog/runtime regression append assertion bodies freshly read; prior accepted source semantics reused only at exact equal identities.",
+    "sourcePopulation": "Complete untruncated immutable test/src Git tree bodies parsed, every entry processed against literal configured include/exclude rules. Test implementation bodies outside selected three are not newly audited.",
+    "normalization": "Only exact workspace-prefix removal for path matching; ISO job timestamps and ANSI sequences for contiguous log joins. Case names/counts/statuses were not normalized or filtered.",
+    "dataMethodCorrection": "A local report-preparation identity call initially received the cached workflow object instead of its body and threw a TypeError. It was corrected to the explicit body. No input body, target source, observed result or runtime was changed."
+  },
+  "captures": [
+    {
+      "shard": 1,
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "662dc63313acb1a503da067ab874df82b5ad671c",
+      "bytes": 2854443,
+      "sha256": "dd5553bee174e1a93ad7e3064dff3e831054e2be98b9f9fd1e51d7bc696a5ae9",
+      "artifactId": 14335984464,
+      "jobId": 134072511476,
+      "runId": 44092933810,
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "readAt": "2026-11-17T14:47:30.533565+00:00",
+      "archive": {
+        "bytes": 295854,
+        "sha256": "cf84d22e2234f8ee0f084acecf95c3d0566cacfcca31c91eb33917b2e41f4988",
+        "gitBlob": "31822a2624b12ed8d3f503eb5b93516e4b767a61",
+        "allMembersCrcVerified": true,
+        "crcAuthority": "Root capture/CRC verification, not independently re-extracted by this reviewer"
+      },
+      "members": [
+        {
+          "path": "host-offline-tests-1.json",
+          "bytes": 2168794,
+          "sha256": "2f7351b0a65ff527409afa31526b59d118383e9f84c663b58f1e471a100d330f",
+          "gitBlob": "18f5941bed7d95b4a023924b7aff53fc8f03a581",
+          "crc32": "67db50c7",
+          "compressedBytes": 280821,
+          "crcVerified": true,
+          "encoding": "utf-8",
+          "identityVerifiedIndependently": true,
+          "retainedAs": "embedded complete UTF-8 body; Git identity is derived, not a separately fetched blob"
+        },
+        {
+          "path": "host-offline-tests-1.log",
+          "bytes": 99730,
+          "sha256": "7f566e31c2392628f5ac66b28ca13ffd96872c7aea5fb38c4c247867219b8404",
+          "gitBlob": "9b5e71711758634700bf3e3724b0494eb195e753",
+          "crc32": "d4c332fc",
+          "compressedBytes": 14729,
+          "crcVerified": true,
+          "encoding": "utf-8",
+          "identityVerifiedIndependently": true,
+          "retainedAs": "embedded complete UTF-8 body; Git identity is derived, not a separately fetched blob"
+        }
+      ],
+      "completeJobLog": {
+        "bytes": 192921,
+        "sha256": "02521897989cac74028548d776b158b15dc576ea0d4f42037d3215351752bf53",
+        "gitBlob": "6d75a93b289d9a897f80ccfde425762ce1e1f731"
+      }
+    },
+    {
+      "shard": 2,
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "0f95c8703a5a6b5731392043785907f551f83e89",
+      "bytes": 3119689,
+      "sha256": "f244ac350031928f786f1957d4c98ff6947490b99e381565028b248bead7e849",
+      "artifactId": 14339061547,
+      "jobId": 134072511328,
+      "runId": 44092933810,
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "readAt": "2026-11-17T14:54:12.905679+00:00",
+      "archive": {
+        "bytes": 313343,
+        "sha256": "298d8b81464a16491cf116a8aeeefd342157defe21e2318246dfe52c64c6461a",
+        "gitBlob": "aa69535116cc619afea06f9ad7043def460190a7",
+        "allMembersCrcVerified": true,
+        "crcAuthority": "Root capture/CRC verification, not independently re-extracted by this reviewer"
+      },
+      "members": [
+        {
+          "path": "host-offline-tests-2.json",
+          "bytes": 2389408,
+          "sha256": "0738c06fe022dae45c39781cbeed0d5e4c4b76d748b29d9ebce38c2984bf0aef",
+          "gitBlob": "c2ee50260f7dbdce60214732a1e5a80e76c9a7a9",
+          "crc32": "0f5338fc",
+          "compressedBytes": 296533,
+          "crcVerified": true,
+          "encoding": "utf-8",
+          "identityVerifiedIndependently": true,
+          "retainedAs": "embedded complete UTF-8 body; Git identity is derived, not a separately fetched blob"
+        },
+        {
+          "path": "host-offline-tests-2.log",
+          "bytes": 106978,
+          "sha256": "c1a4fe2a67f825ad77c8f39f62200a146cb8f68f5f121251d15b23e1e2136644",
+          "gitBlob": "04d594f63a3c28be6d776df6a43c0dbece17861d",
+          "crc32": "3d0c98be",
+          "compressedBytes": 16506,
+          "crcVerified": true,
+          "encoding": "utf-8",
+          "identityVerifiedIndependently": true,
+          "retainedAs": "embedded complete UTF-8 body; Git identity is derived, not a separately fetched blob"
+        }
+      ],
+      "completeJobLog": {
+        "bytes": 184303,
+        "sha256": "69034cff69b207cb99f00265f6d7e89eb15996cf758acd706ec16045ee023ec8",
+        "gitBlob": "647d6e3c248ec6a1870791cc7d9abc3d91959e63"
+      }
+    },
+    {
+      "shard": 3,
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "363439bb50e4c40a115358af67c806e719bb862b",
+      "bytes": 2869263,
+      "sha256": "92ffe9e304e984c207da990bf443d2749601b5ac1fed8f48e0c9aa03c01fb320",
+      "artifactId": 14336154427,
+      "jobId": 134072511484,
+      "runId": 44092933810,
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "readAt": "2026-11-17T14:47:30.263733+00:00",
+      "archive": {
+        "bytes": 296153,
+        "sha256": "219ae7d82dc554c493fd6c98a5dd2f5f2c452c3712f1b7785dec940b17838fc9",
+        "gitBlob": "fcd2eb0e2f203a8a77814271f490c640f846c573",
+        "allMembersCrcVerified": true,
+        "crcAuthority": "Root capture/CRC verification, not independently re-extracted by this reviewer"
+      },
+      "members": [
+        {
+          "path": "host-offline-tests-3.json",
+          "bytes": 2190664,
+          "sha256": "ab8f0f71a9e1b9aff9dd9fb2b20377eeb9ddc71c1a9dae7a995e9213b45ba894",
+          "gitBlob": "85165cecc8c889ded79e01f683be84a85c7f79df",
+          "crc32": "cf20fc1f",
+          "compressedBytes": 281868,
+          "crcVerified": true,
+          "encoding": "utf-8",
+          "identityVerifiedIndependently": true,
+          "retainedAs": "embedded complete UTF-8 body; Git identity is derived, not a separately fetched blob"
+        },
+        {
+          "path": "host-offline-tests-3.log",
+          "bytes": 92779,
+          "sha256": "c1aeefb55dcada1563d9f9927900a1d4e592f4679b1fb6450ac30700ccdb95e5",
+          "gitBlob": "e6f3828d4587abfcff37b54baaf757417f2daee2",
+          "crc32": "135a82e2",
+          "compressedBytes": 13981,
+          "crcVerified": true,
+          "encoding": "utf-8",
+          "identityVerifiedIndependently": true,
+          "retainedAs": "embedded complete UTF-8 body; Git identity is derived, not a separately fetched blob"
+        }
+      ],
+      "completeJobLog": {
+        "bytes": 183391,
+        "sha256": "662b5a57c05473d9e9c8b52165cd1da899c9eab616ab530d56c8a7f2ff5cf9b7",
+        "gitBlob": "f449481ccefe6d5fe2af2beda18c958d61b3bae0"
+      }
+    },
+    {
+      "shard": 4,
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "c8948e51ecfce552fbeaeaf07fffd66cc9dcfc30",
+      "bytes": 3078005,
+      "sha256": "d9f2159ce996864e0294ffb5738c6880865353df64196eb9868b871d23f08fda",
+      "artifactId": 14337206794,
+      "jobId": 134072511059,
+      "runId": 44092933810,
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "readAt": "2026-11-17T14:47:29.934031+00:00",
+      "archive": {
+        "bytes": 318172,
+        "sha256": "471017a1d8688c8b7f1c829f928c882000ec731dbd1cdbf8474f615de020b700",
+        "gitBlob": "f230fc401f0f0d66720bd4309971a9cac365caf2",
+        "allMembersCrcVerified": true,
+        "crcAuthority": "Root capture/CRC verification, not independently re-extracted by this reviewer"
+      },
+      "members": [
+        {
+          "path": "host-offline-tests-4.json",
+          "bytes": 2330700,
+          "sha256": "15b746b3bd88ef53897d678adceb4e88c08d1b0a61eb45955b4ca788aae8260c",
+          "gitBlob": "3c3c1559294296abe1bf270442f3954cc361205d",
+          "crc32": "607a7e4b",
+          "compressedBytes": 300478,
+          "crcVerified": true,
+          "encoding": "utf-8",
+          "identityVerifiedIndependently": true,
+          "retainedAs": "embedded complete UTF-8 body; Git identity is derived, not a separately fetched blob"
+        },
+        {
+          "path": "host-offline-tests-4.log",
+          "bytes": 117133,
+          "sha256": "49bb65adddaa226b61e2d34b3b7ad16a6c1a1aff8cc040e39f36a40814de22f7",
+          "gitBlob": "592845a9829da6b3387f584e82d0ed6b68b3b521",
+          "crc32": "caf0768e",
+          "compressedBytes": 17390,
+          "crcVerified": true,
+          "encoding": "utf-8",
+          "identityVerifiedIndependently": true,
+          "retainedAs": "embedded complete UTF-8 body; Git identity is derived, not a separately fetched blob"
+        }
+      ],
+      "completeJobLog": {
+        "bytes": 213521,
+        "sha256": "316ca1d2bd5874ddcf951a3cd4788683d8a816657939e44324a177b270f82413",
+        "gitBlob": "37eea3261cb229fd43257d2add85cc86e33c1857"
+      }
+    }
+  ],
+  "originalExecution": {
+    "command": "pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" \\\n--exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' \\\n--reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" \\\n2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\"",
+    "shell": "bash, original set -euo pipefail",
+    "testRunner": "Vitest3.2.6",
+    "workspaceNode": "26.12.1",
+    "capturedHostChildNode": "24.21.0",
+    "capturedHostEnvironmentVariable": "AGENT_BACKEND_TEST_NODE",
+    "pnpm": "11.22.0",
+    "os": "Ubuntu26.04.1 x64",
+    "workerLimit": 2,
+    "workflowTimeoutMinutes": 45,
+    "vitestDefaultTestTimeoutMs": 15000,
+    "sourceConfiguration": {
+      "repository": "777genius/agent-teams-ai",
+      "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "vitest.config.ts",
+      "bytes": 1187,
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+      "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3"
+    },
+    "noTargetedNameFilter": true,
+    "noNewSuiteInvocation": true,
+    "qualification": "These records do not establish an absence of all subprocess/I/O. Existing offline tests include finite test fixtures/real local filesystem or process seams. Original skipped real-vendor/native/live cases remain skipped or excluded. Prior CI admission/finite-provider contracts remain unchanged; this outcome audit is not a new transitive vendor audit."
+  },
+  "shardResults": [
+    {
+      "shard": 1,
+      "leafFiles": 541,
+      "leafFilesPassed": 541,
+      "leafFilesSkipped": 0,
+      "assertionRecords": 6232,
+      "passed": 6226,
+      "skipped": 6,
+      "failed": 0,
+      "todo": 0,
+      "reporterNestedSuites": 1357,
+      "summaryLines": [
+        " Test Files  541 passed (541)",
+        "      Tests  6226 passed | 6 skipped (6232)",
+        "   Duration  373.63s (transform 36.74s, setup 15.89s, collect 320.84s, tests 175.40s, environment 122.13s, prepare 35.65s)",
+        "JSON report written to /home/runner/work/_temp/host-offline-tests-1.json"
+      ]
+    },
+    {
+      "shard": 2,
+      "leafFiles": 541,
+      "leafFilesPassed": 539,
+      "leafFilesSkipped": 2,
+      "assertionRecords": 6762,
+      "passed": 6744,
+      "skipped": 18,
+      "failed": 0,
+      "todo": 0,
+      "reporterNestedSuites": 1292,
+      "summaryLines": [
+        " Test Files  539 passed | 2 skipped (541)",
+        "      Tests  6744 passed | 18 skipped (6762)",
+        "   Duration  382.27s (transform 37.03s, setup 22.99s, collect 307.39s, tests 217.99s, environment 108.45s, prepare 34.80s)",
+        "JSON report written to /home/runner/work/_temp/host-offline-tests-2.json"
+      ]
+    },
+    {
+      "shard": 3,
+      "leafFiles": 541,
+      "leafFilesPassed": 538,
+      "leafFilesSkipped": 3,
+      "assertionRecords": 6264,
+      "passed": 6257,
+      "skipped": 7,
+      "failed": 0,
+      "todo": 0,
+      "reporterNestedSuites": 1316,
+      "summaryLines": [
+        " Test Files  538 passed | 3 skipped (541)",
+        "      Tests  6257 passed | 7 skipped (6264)",
+        "   Duration  257.99s (transform 24.42s, setup 12.13s, collect 223.99s, tests 124.52s, environment 76.71s, prepare 24.19s)",
+        "JSON report written to /home/runner/work/_temp/host-offline-tests-3.json"
+      ]
+    },
+    {
+      "shard": 4,
+      "leafFiles": 539,
+      "leafFilesPassed": 537,
+      "leafFilesSkipped": 2,
+      "assertionRecords": 6625,
+      "passed": 6618,
+      "skipped": 7,
+      "failed": 0,
+      "todo": 0,
+      "reporterNestedSuites": 1349,
+      "summaryLines": [
+        " Test Files  537 passed | 2 skipped (539)",
+        "      Tests  6618 passed | 7 skipped (6625)",
+        "   Duration  429.65s (transform 40.75s, setup 21.33s, collect 346.56s, tests 242.23s, environment 128.91s, prepare 38.41s)",
+        "JSON report written to /home/runner/work/_temp/host-offline-tests-4.json"
+      ]
+    }
+  ],
+  "populationJoins": {
+    "fileLogJoins": [
+      {
+        "shard": 1,
+        "jsonFileRows": 541,
+        "logFileRows": 541,
+        "uniqueLogPaths": 541,
+        "allPathsJoin": true,
+        "caseCountMismatches": 0,
+        "unknown": [],
+        "missing": [],
+        "totals": {
+          "filesPassed": 541,
+          "filesSkipped": 0,
+          "tests": 6232,
+          "skipped": 6
+        },
+        "summaryLines": [
+          " Test Files  541 passed (541)",
+          "      Tests  6226 passed | 6 skipped (6232)",
+          "   Duration  373.63s (transform 36.74s, setup 15.89s, collect 320.84s, tests 175.40s, environment 122.13s, prepare 35.65s)",
+          "JSON report written to /home/runner/work/_temp/host-offline-tests-1.json"
+        ]
+      },
+      {
+        "shard": 2,
+        "jsonFileRows": 541,
+        "logFileRows": 541,
+        "uniqueLogPaths": 541,
+        "allPathsJoin": true,
+        "caseCountMismatches": 0,
+        "unknown": [],
+        "missing": [],
+        "totals": {
+          "filesPassed": 539,
+          "filesSkipped": 2,
+          "tests": 6762,
+          "skipped": 18
+        },
+        "summaryLines": [
+          " Test Files  539 passed | 2 skipped (541)",
+          "      Tests  6744 passed | 18 skipped (6762)",
+          "   Duration  382.27s (transform 37.03s, setup 22.99s, collect 307.39s, tests 217.99s, environment 108.45s, prepare 34.80s)",
+          "JSON report written to /home/runner/work/_temp/host-offline-tests-2.json"
+        ]
+      },
+      {
+        "shard": 3,
+        "jsonFileRows": 541,
+        "logFileRows": 541,
+        "uniqueLogPaths": 541,
+        "allPathsJoin": true,
+        "caseCountMismatches": 0,
+        "unknown": [],
+        "missing": [],
+        "totals": {
+          "filesPassed": 538,
+          "filesSkipped": 3,
+          "tests": 6264,
+          "skipped": 7
+        },
+        "summaryLines": [
+          " Test Files  538 passed | 3 skipped (541)",
+          "      Tests  6257 passed | 7 skipped (6264)",
+          "   Duration  257.99s (transform 24.42s, setup 12.13s, collect 223.99s, tests 124.52s, environment 76.71s, prepare 24.19s)",
+          "JSON report written to /home/runner/work/_temp/host-offline-tests-3.json"
+        ]
+      },
+      {
+        "shard": 4,
+        "jsonFileRows": 539,
+        "logFileRows": 539,
+        "uniqueLogPaths": 539,
+        "allPathsJoin": true,
+        "caseCountMismatches": 0,
+        "unknown": [],
+        "missing": [],
+        "totals": {
+          "filesPassed": 537,
+          "filesSkipped": 2,
+          "tests": 6625,
+          "skipped": 7
+        },
+        "summaryLines": [
+          " Test Files  537 passed | 2 skipped (539)",
+          "      Tests  6618 passed | 7 skipped (6625)",
+          "   Duration  429.65s (transform 40.75s, setup 21.33s, collect 346.56s, tests 242.23s, environment 128.91s, prepare 38.41s)",
+          "JSON report written to /home/runner/work/_temp/host-offline-tests-4.json"
+        ]
+      }
+    ],
+    "jobSourceJoins": [
+      {
+        "shard": 1,
+        "completeEmbeddedVitestLogMatchesContiguousJobLog": true,
+        "exactOneVitestInvocation": true,
+        "commandMatchesWorkflow": true,
+        "shardEnvironment": true,
+        "head": true,
+        "sourceAssert": true,
+        "workspaceNode26": true,
+        "capturedHostNode24": true,
+        "vitest3_2_6": true,
+        "artifactId": true,
+        "artifactSize": true,
+        "archiveSha": true,
+        "metadataDigest": true,
+        "metadataSource": true,
+        "metadataRun": true,
+        "noWorkflowError": true
+      },
+      {
+        "shard": 2,
+        "completeEmbeddedVitestLogMatchesContiguousJobLog": true,
+        "exactOneVitestInvocation": true,
+        "commandMatchesWorkflow": true,
+        "shardEnvironment": true,
+        "head": true,
+        "sourceAssert": true,
+        "workspaceNode26": true,
+        "capturedHostNode24": true,
+        "vitest3_2_6": true,
+        "artifactId": true,
+        "artifactSize": true,
+        "archiveSha": true,
+        "metadataDigest": true,
+        "metadataSource": true,
+        "metadataRun": true,
+        "noWorkflowError": true
+      },
+      {
+        "shard": 3,
+        "completeEmbeddedVitestLogMatchesContiguousJobLog": true,
+        "exactOneVitestInvocation": true,
+        "commandMatchesWorkflow": true,
+        "shardEnvironment": true,
+        "head": true,
+        "sourceAssert": true,
+        "workspaceNode26": true,
+        "capturedHostNode24": true,
+        "vitest3_2_6": true,
+        "artifactId": true,
+        "artifactSize": true,
+        "archiveSha": true,
+        "metadataDigest": true,
+        "metadataSource": true,
+        "metadataRun": true,
+        "noWorkflowError": true
+      },
+      {
+        "shard": 4,
+        "completeEmbeddedVitestLogMatchesContiguousJobLog": true,
+        "exactOneVitestInvocation": true,
+        "commandMatchesWorkflow": true,
+        "shardEnvironment": true,
+        "head": true,
+        "sourceAssert": true,
+        "workspaceNode26": true,
+        "capturedHostNode24": true,
+        "vitest3_2_6": true,
+        "artifactId": true,
+        "artifactSize": true,
+        "archiveSha": true,
+        "metadataDigest": true,
+        "metadataSource": true,
+        "metadataRun": true,
+        "noWorkflowError": true
+      }
+    ],
+    "sourceTreeCensus": [
+      {
+        "path": "test",
+        "gitTree": "511ca68c4ed50372a2b5387af31f1d9876843925",
+        "entries": 1980,
+        "truncated": false,
+        "responseIdentity": {
+          "bytes": 532224,
+          "sha256": "873cea4dd2036a45712672fdfb766a6301d9254801fa84eaa41d9c20392af82c",
+          "gitBlob": "de4c8c01f39ff3658b322a92780b3b1525af69da"
+        },
+        "responseIdentityRetainedSeparately": false
+      },
+      {
+        "path": "src",
+        "gitTree": "9ed817aaf1b2959381ea7d9262ed04f538247750",
+        "entries": 5445,
+        "truncated": false,
+        "responseIdentity": {
+          "bytes": 1479012,
+          "sha256": "5601b1b2e82b3c10c1f7369458e8ed554657a5a33df5c530079f92afc6e141bf",
+          "gitBlob": "62e0d8b853badbfb5b242926313c2bda2d1ba242"
+        },
+        "responseIdentityRetainedSeparately": false
+      }
+    ],
+    "sourceJoin": {
+      "allCandidateTestFiles": 2195,
+      "excluded": [
+        {
+          "path": "test/features/codex-account/main/createCodexAccountFeature.live.test.ts",
+          "gitBlob": "1841b5d1fa7564fafb6b005bfc744136e95b9c11",
+          "bytes": 1817,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/features/runtime-provider-management/capturedClaudeModelProbe.native.test.ts",
+          "gitBlob": "4891b5303e6a4db5baa73d179d10ef878ed0afa8",
+          "bytes": 28795,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/features/runtime-provider-management/capturedClaudeStatus.native.test.ts",
+          "gitBlob": "825cbed9965c7c1f9584c714819f97a1396c9ca8",
+          "bytes": 10127,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/features/team-runtime-recovery/main/TeamRuntimeRecoveryFeature.live-e2e.test.ts",
+          "gitBlob": "099b8c066ddebf3841832d98d7e8178e7a20609c",
+          "bytes": 15217,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/AgentDeletion258.live-e2e.test.ts",
+          "gitBlob": "048f6ed9f1347637912c48ae45bd35414bd75f44",
+          "bytes": 21357,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/AnthropicLaunchSelection.live.test.ts",
+          "gitBlob": "e0fcb4dae596ddf51eac4a959322aa53001a44b2",
+          "bytes": 23298,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/AnthropicRuntimeMemory.live.test.ts",
+          "gitBlob": "09f97f437d598bc155bd0de4202c29953c862811",
+          "bytes": 9344,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/BoardTaskLogStream.live.test.ts",
+          "gitBlob": "0d149631a70cfa6d8031642fe46aa369dbb2d727",
+          "bytes": 2703,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/MemberWorkSyncClaudeStopHook.live.test.ts",
+          "gitBlob": "8274b04a5599cdeb7dde905fc906fcdfe2694064",
+          "bytes": 28385,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/MemberWorkSyncCodex.live.test.ts",
+          "gitBlob": "817bb647f7305d174e595ea7c85b5ba31ae6867f",
+          "bytes": 64451,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/MemberWorkSyncOpenCode.live.test.ts",
+          "gitBlob": "75804a38e8a242ef3c9bb40f381e95c8a07dbfc3",
+          "bytes": 19201,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/MemberWorkSyncRecovery.live.test.ts",
+          "gitBlob": "8e626837615ba7a097e44bf8a964fdea236ae0d3",
+          "bytes": 71500,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/MemberWorkSyncRecoveryClaude.live.test.ts",
+          "gitBlob": "da6c34a4b82138901bef7d51216ce68bca55fce5",
+          "bytes": 42025,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/MemberWorkSyncRecoveryCodexTeammate.live.test.ts",
+          "gitBlob": "744d43f7988b2a75f87764874a6b3ed20910ea49",
+          "bytes": 76240,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/MemberWorkSyncRecoveryOpenCode.live.test.ts",
+          "gitBlob": "b8fd4c58f731db35b0488a2fc1321b13456043de",
+          "bytes": 28790,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/MemberWorkSyncRecoveryOpenCodeLifecycle.live.test.ts",
+          "gitBlob": "d5ac93ba4f64423a134ec12207c1d7247d3d1ea2",
+          "bytes": 22745,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/MixedProviderTeamLaunch.live.test.ts",
+          "gitBlob": "4ac5f01fb02b7eafa0f12b5b7443669ab5a65b55",
+          "bytes": 25269,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/OpenCodeAcceptFastDelivery.live-e2e.test.ts",
+          "gitBlob": "2d234a2809c043f14fd6efd24aa2c1dd025f64f4",
+          "bytes": 15745,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/OpenCodeDefaultModelResolution.live-e2e.test.ts",
+          "gitBlob": "b5ec4a49aeb8411d4701695fe9e694dfb1bf57ea",
+          "bytes": 6013,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/OpenCodeFullTeamCollaboration.live.test.ts",
+          "gitBlob": "e2dd21f54cd37b4e3f16e7b83e0e159be034fe9c",
+          "bytes": 31120,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/OpenCodeLocalProviderAppLaunch.live.test.ts",
+          "gitBlob": "6be57077db6bc045c4fd74adde34d1fa684e3b8e",
+          "bytes": 23564,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/OpenCodeMixedRecovery.live.test.ts",
+          "gitBlob": "16355cd9b5aba7734ce79ea10a82338d11ab0b67",
+          "bytes": 18026,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/OpenCodeMixedTeamCollaboration.live.test.ts",
+          "gitBlob": "7550a29c0bb8f578f7f839f41513acfba23c91c2",
+          "bytes": 33203,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/OpenCodePaidPlanMixedTeam.live-e2e.test.ts",
+          "gitBlob": "b173aedbd9c0492ee42a9f28f2c6052a179da146",
+          "bytes": 9118,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/OpenCodeSemanticMessaging.live.test.ts",
+          "gitBlob": "8beb974966b9243e754d942bf4fe44739893bbbf",
+          "bytes": 20827,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/OpenCodeSemanticModelGauntlet.live.test.ts",
+          "gitBlob": "8eee3b1fb8f67a0af5e5ce14404e576604c6dc03",
+          "bytes": 74249,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/OpenCodeSemanticModelMatrix.live.test.ts",
+          "gitBlob": "e9985b10ef27f7be56d6b683c7abe295a48bafd2",
+          "bytes": 19292,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/OpenCodeTeamProvisioning.live.test.ts",
+          "gitBlob": "b7304d8491a9bd1af32c9b49b3ebd9bbb6062e62",
+          "bytes": 22889,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/OpenCodeVisualization.live.test.ts",
+          "gitBlob": "8a76d13e5177dffd4848daf082f569b4369051ed",
+          "bytes": 15651,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/ProviderLaunchStress.live-e2e.test.ts",
+          "gitBlob": "8b574707498b079c9e60a94be3e198a270ccf7ef",
+          "bytes": 37941,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/services/team/TeamMemberRuntimeAdvisoryService.live.test.ts",
+          "gitBlob": "bed4efe6ac261de2a435a3a69c219975a846cb88",
+          "bytes": 2806,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/main/utils/AgentCliLaunch.live-e2e.test.ts",
+          "gitBlob": "476c28aebfec274d40df025259377239d73383e0",
+          "bytes": 5700,
+          "mode": "100644",
+          "excluded": true
+        },
+        {
+          "path": "test/renderer/components/team/taskLogs/TaskLogStreamSection.live.test.ts",
+          "gitBlob": "07cc3323db309fbad21b1f47aaecd50e99ccb166",
+          "bytes": 3887,
+          "mode": "100644",
+          "excluded": true
+        }
+      ],
+      "expectedFiles": 2162,
+      "actualFiles": 2162,
+      "missing": [],
+      "extra": [],
+      "allRegular": true,
+      "rootCounts": {
+        "test": 1501,
+        "src": 661
+      }
+    },
+    "derivedCensusDigests": {
+      "completeLeafSourceAndOutcome": {
+        "bytes": 674665,
+        "sha256": "b8151fd33e5f445aa76c0b799e0c28cc715ac2a90e299ade7ff44626dcbdd5d6",
+        "gitBlob": "3e16c64cfc42578a100d644a7472007cf89c9236",
+        "records": 2162,
+        "retainedSeparately": false,
+        "derivedFromCompleteIndexedBodies": true
+      },
+      "selectedCaseInventory": {
+        "bytes": 41680,
+        "sha256": "ce2a3eedc388e63737ee3fca72607ffbe98cda869805230a1d9d6cda0add34ad",
+        "gitBlob": "2390337972ae454db6b26af361d9e1ab3a9c65ce",
+        "records": 3,
+        "retainedSeparately": false,
+        "derivedFromCompleteIndexedBodies": true
+      },
+      "duplicateNames": {
+        "bytes": 11130,
+        "sha256": "05b3daa76e1a52e9a52ff93b98872dfa7faa63f22d342708b0038cf3af3c9323",
+        "gitBlob": "0c8399c7c9172fb570ad3962302f9f9eac914c1e",
+        "records": 42,
+        "retainedSeparately": false,
+        "derivedFromCompleteIndexedBodies": true
+      }
+    },
+    "derivedDigestQualification": "Pure in-memory JSON data-index identities; not separately retained/fetchable blobs. The full authoritative capture bodies and immutable source tree IDs are indexed.",
+    "duplicateFiles": [],
+    "caseNameCollisions": {
+      "groups": 42,
+      "additionalSameNameRecords": 80,
+      "allWithinSameFileAndShard": true,
+      "meaning": "Repeated parameter/case labels do not establish duplicate file execution. Totals count reporter assertion records, not uniquely named semantic obligations."
+    }
+  },
+  "selectedSuites": [
+    {
+      "kind": "catalog",
+      "source": {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+      },
+      "shard": 1,
+      "actualCaseCount": 43,
+      "allSourceExpandedNamesMatchActualInOrder": true,
+      "actualCases": [
+        {
+          "index": 1,
+          "sourceDeclarationLineOneBased": 95,
+          "fullName": "teamModelAvailability filters retired MiniMax text choices from the runtime picker without adding routes",
+          "status": "passed",
+          "durationMs": 13.201681999999948
+        },
+        {
+          "index": 2,
+          "sourceDeclarationLineOneBased": 95,
+          "fullName": "teamModelAvailability filters retired MiniMax text choices from the catalog picker without adding routes",
+          "status": "passed",
+          "durationMs": 2.7055290000000127
+        },
+        {
+          "index": 3,
+          "sourceDeclarationLineOneBased": 181,
+          "fullName": "teamModelAvailability keeps extension-bound model cursor-acp/auto visible but unavailable for team launch",
+          "status": "passed",
+          "durationMs": 0.9477410000000077
+        },
+        {
+          "index": 4,
+          "sourceDeclarationLineOneBased": 181,
+          "fullName": "teamModelAvailability keeps extension-bound model kiro/auto visible but unavailable for team launch",
+          "status": "passed",
+          "durationMs": 0.40899500000000444
+        },
+        {
+          "index": 5,
+          "sourceDeclarationLineOneBased": 196,
+          "fullName": "teamModelAvailability keeps Codex pending while its runtime checks a settled cached catalog",
+          "status": "passed",
+          "durationMs": 0.518936999999994
+        },
+        {
+          "index": 6,
+          "sourceDeclarationLineOneBased": 222,
+          "fullName": "teamModelAvailability keeps a hydrated OpenCode runtime ready while its catalog refreshes in the background",
+          "status": "passed",
+          "durationMs": 0.33645799999999326
+        },
+        {
+          "index": 7,
+          "sourceDeclarationLineOneBased": 232,
+          "fullName": "teamModelAvailability keeps an explicit provider or auth refresh loading even with cached models",
+          "status": "passed",
+          "durationMs": 0.2100709999999708
+        },
+        {
+          "index": 8,
+          "sourceDeclarationLineOneBased": 241,
+          "fullName": "teamModelAvailability keeps the OpenCode runtime pending until its first model snapshot arrives",
+          "status": "passed",
+          "durationMs": 0.42604999999997517
+        },
+        {
+          "index": 9,
+          "sourceDeclarationLineOneBased": 252,
+          "fullName": "teamModelAvailability keeps a passive app-server summary pending until its provider-scoped catalog settles",
+          "status": "passed",
+          "durationMs": 0.3743430000000103
+        },
+        {
+          "index": 10,
+          "sourceDeclarationLineOneBased": 266,
+          "fullName": "teamModelAvailability treats only ready, unexpired provider catalogs as fresh",
+          "status": "passed",
+          "durationMs": 0.4593189999999936
+        },
+        {
+          "index": 11,
+          "sourceDeclarationLineOneBased": 316,
+          "fullName": "teamModelAvailability treats a terminal OpenCode catalog as settled without calling it fresh",
+          "status": "passed",
+          "durationMs": 0.2881559999999581
+        },
+        {
+          "index": 12,
+          "sourceDeclarationLineOneBased": 344,
+          "fullName": "teamModelAvailability uses runtime-reported Codex models as the source of truth",
+          "status": "passed",
+          "durationMs": 0.6053949999999872
+        },
+        {
+          "index": 13,
+          "sourceDeclarationLineOneBased": 353,
+          "fullName": "teamModelAvailability filters only the Codex models that remain UI-disabled on the native runtime path",
+          "status": "passed",
+          "durationMs": 0.40851400000002513
+        },
+        {
+          "index": 14,
+          "sourceDeclarationLineOneBased": 368,
+          "fullName": "teamModelAvailability keeps 5.1 Codex Max available on the native runtime path",
+          "status": "passed",
+          "durationMs": 0.23537800000002562
+        },
+        {
+          "index": 15,
+          "sourceDeclarationLineOneBased": 384,
+          "fullName": "teamModelAvailability hides 5.1 Codex Max on the ChatGPT subscription-backed path",
+          "status": "passed",
+          "durationMs": 0.5298930000000155
+        },
+        {
+          "index": 16,
+          "sourceDeclarationLineOneBased": 402,
+          "fullName": "teamModelAvailability builds Codex model options from the runtime list plus disabled safety entries",
+          "status": "passed",
+          "durationMs": 0.4657190000000355
+        },
+        {
+          "index": 17,
+          "sourceDeclarationLineOneBased": 445,
+          "fullName": "teamModelAvailability treats runtime-reported unavailable models as non-selectable",
+          "status": "passed",
+          "durationMs": 0.6605270000000019
+        },
+        {
+          "index": 18,
+          "sourceDeclarationLineOneBased": 495,
+          "fullName": "teamModelAvailability keeps OpenCode raw ids intact while exposing readable labels and source badges",
+          "status": "passed",
+          "durationMs": 0.4022640000000024
+        },
+        {
+          "index": 19,
+          "sourceDeclarationLineOneBased": 537,
+          "fullName": "teamModelAvailability keeps the live OpenCode model list authoritative when the catalog is broader",
+          "status": "passed",
+          "durationMs": 0.48069100000003573
+        },
+        {
+          "index": 20,
+          "sourceDeclarationLineOneBased": 620,
+          "fullName": "teamModelAvailability uses the OpenCode model catalog when runtime models are empty",
+          "status": "passed",
+          "durationMs": 0.4003909999999564
+        },
+        {
+          "index": 21,
+          "sourceDeclarationLineOneBased": 677,
+          "fullName": "teamModelAvailability does not reject stale OpenCode selections when the runtime exposes only Default",
+          "status": "passed",
+          "durationMs": 0.43708600000002207
+        },
+        {
+          "index": 22,
+          "sourceDeclarationLineOneBased": 713,
+          "fullName": "teamModelAvailability reports OpenCode openai routes unavailable when OpenAI auth is invalid",
+          "status": "passed",
+          "durationMs": 0.5029629999999656
+        },
+        {
+          "index": 23,
+          "sourceDeclarationLineOneBased": 740,
+          "fullName": "teamModelAvailability clears stale Codex selections when runtime no longer reports that model",
+          "status": "passed",
+          "durationMs": 0.2990819999999985
+        },
+        {
+          "index": 24,
+          "sourceDeclarationLineOneBased": 747,
+          "fullName": "teamModelAvailability reports an explicit error when a Codex model is unsupported by the current runtime",
+          "status": "passed",
+          "durationMs": 0.34106400000001713
+        },
+        {
+          "index": 25,
+          "sourceDeclarationLineOneBased": 756,
+          "fullName": "teamModelAvailability does not raise a hard validation error while explicit Codex models are still loading",
+          "status": "passed",
+          "durationMs": 0.3283649999999625
+        },
+        {
+          "index": 26,
+          "sourceDeclarationLineOneBased": 761,
+          "fullName": "teamModelAvailability keeps known Codex selections stable while the runtime is still on placeholder checking state",
+          "status": "passed",
+          "durationMs": 0.8004829999999856
+        },
+        {
+          "index": 27,
+          "sourceDeclarationLineOneBased": 803,
+          "fullName": "teamModelAvailability keeps known Codex selections stable while Codex native account truth is loaded before the runtime model catalog",
+          "status": "passed",
+          "durationMs": 0.3078249999999798
+        },
+        {
+          "index": 28,
+          "sourceDeclarationLineOneBased": 822,
+          "fullName": "teamModelAvailability keeps runtime models selectable without per-model verification state",
+          "status": "passed",
+          "durationMs": 0.3865519999999947
+        },
+        {
+          "index": 29,
+          "sourceDeclarationLineOneBased": 829,
+          "fullName": "teamModelAvailability does not require runtime verification for Anthropic curated models",
+          "status": "passed",
+          "durationMs": 0.38038199999999733
+        },
+        {
+          "index": 30,
+          "sourceDeclarationLineOneBased": 834,
+          "fullName": "teamModelAvailability keeps Anthropic Fable, Sonnet 5, Opus 4.8, explicit 4.7, and explicit 4.6 in the fallback selector options",
+          "status": "passed",
+          "durationMs": 0.823537999999985
+        },
+        {
+          "index": 31,
+          "sourceDeclarationLineOneBased": 895,
+          "fullName": "teamModelAvailability does not let stale first-party Anthropic runtime labels downgrade the Opus alias",
+          "status": "passed",
+          "durationMs": 1.5013889999999606
+        },
+        {
+          "index": 32,
+          "sourceDeclarationLineOneBased": 958,
+          "fullName": "teamModelAvailability uses first-party Anthropic catalog models without curated fallback rows",
+          "status": "passed",
+          "durationMs": 1.0866269999999645
+        },
+        {
+          "index": 33,
+          "sourceDeclarationLineOneBased": 1062,
+          "fullName": "teamModelAvailability hides Claude Code removed Anthropic models even when the API catalog still lists them",
+          "status": "passed",
+          "durationMs": 0.5367640000000051
+        },
+        {
+          "index": 34,
+          "sourceDeclarationLineOneBased": 1130,
+          "fullName": "teamModelAvailability makes Mythos selectable when the first-party Anthropic catalog reports account access",
+          "status": "passed",
+          "durationMs": 0.5308440000000019
+        },
+        {
+          "index": 35,
+          "sourceDeclarationLineOneBased": 1201,
+          "fullName": "teamModelAvailability keeps known Anthropic full model ids selectable without runtime verification",
+          "status": "passed",
+          "durationMs": 0.4122600000000034
+        },
+        {
+          "index": 36,
+          "sourceDeclarationLineOneBased": 1217,
+          "fullName": "teamModelAvailability uses Anthropic-compatible runtime catalog models instead of curated Claude aliases",
+          "status": "passed",
+          "durationMs": 0.5914539999999988
+        },
+        {
+          "index": 37,
+          "sourceDeclarationLineOneBased": 1284,
+          "fullName": "teamModelAvailability keeps custom Anthropic-compatible model ids selectable when the catalog is degraded",
+          "status": "passed",
+          "durationMs": 0.3590409999999906
+        },
+        {
+          "index": 38,
+          "sourceDeclarationLineOneBased": 1315,
+          "fullName": "teamModelAvailability allows custom Anthropic-compatible model ids before a runtime catalog is available",
+          "status": "passed",
+          "durationMs": 0.3308789999999817
+        },
+        {
+          "index": 39,
+          "sourceDeclarationLineOneBased": 1340,
+          "fullName": "teamModelAvailability keeps stale Anthropic-compatible catalog models visible while allowing custom ids",
+          "status": "passed",
+          "durationMs": 0.4708259999999882
+        },
+        {
+          "index": 40,
+          "sourceDeclarationLineOneBased": 1390,
+          "fullName": "teamModelAvailability rejects custom Anthropic-compatible ids when a ready compatible catalog has visible models",
+          "status": "passed",
+          "durationMs": 0.3027879999999641
+        },
+        {
+          "index": 41,
+          "sourceDeclarationLineOneBased": 1473,
+          "fullName": "captured Claude SDK team model catalog uses only the resolved SDK offer without promoting its alias or authentication facts",
+          "status": "passed",
+          "durationMs": 1.0905219999999645
+        },
+        {
+          "index": 42,
+          "sourceDeclarationLineOneBased": 1506,
+          "fullName": "captured Claude SDK team model catalog keeps hidden and unavailable SDK rows refused without falling back when all offers are unavailable",
+          "status": "passed",
+          "durationMs": 1.4387969999999655
+        },
+        {
+          "index": 43,
+          "sourceDeclarationLineOneBased": 1579,
+          "fullName": "captured Claude SDK team model catalog retains curated fallback for unavailable SDK catalogs or ready catalogs without visible values",
+          "status": "passed",
+          "durationMs": 1.1756280000000174
+        }
+      ]
+    },
+    {
+      "kind": "runtime",
+      "source": {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      },
+      "shard": 2,
+      "actualCaseCount": 85,
+      "allSourceExpandedNamesMatchActualInOrder": true,
+      "actualCases": [
+        {
+          "index": 1,
+          "sourceDeclarationLineOneBased": 238,
+          "fullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'connect' (null, full=false)",
+          "status": "passed",
+          "durationMs": 46.98234200000002
+        },
+        {
+          "index": 2,
+          "sourceDeclarationLineOneBased": 238,
+          "fullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=false)",
+          "status": "passed",
+          "durationMs": 9.552201999999852
+        },
+        {
+          "index": 3,
+          "sourceDeclarationLineOneBased": 238,
+          "fullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=true)",
+          "status": "passed",
+          "durationMs": 8.796329000000014
+        },
+        {
+          "index": 4,
+          "sourceDeclarationLineOneBased": 238,
+          "fullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'forget' (null, full=false)",
+          "status": "passed",
+          "durationMs": 7.207975999999917
+        },
+        {
+          "index": 5,
+          "sourceDeclarationLineOneBased": 238,
+          "fullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=false)",
+          "status": "passed",
+          "durationMs": 6.714461000000028
+        },
+        {
+          "index": 6,
+          "sourceDeclarationLineOneBased": 238,
+          "fullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=true)",
+          "status": "passed",
+          "durationMs": 4.655596999999943
+        },
+        {
+          "index": 7,
+          "sourceDeclarationLineOneBased": 451,
+          "fullName": "useRuntimeProviderManagement skips unsupported shared directory reads after connect without a refresh warning",
+          "status": "passed",
+          "durationMs": 4.564953999999943
+        },
+        {
+          "index": 8,
+          "sourceDeclarationLineOneBased": 451,
+          "fullName": "useRuntimeProviderManagement skips unsupported shared directory reads after forget without a refresh warning",
+          "status": "passed",
+          "durationMs": 54.89133899999979
+        },
+        {
+          "index": 9,
+          "sourceDeclarationLineOneBased": 554,
+          "fullName": "useRuntimeProviderManagement cancels all active probe attempts when startConnect closes the picker",
+          "status": "passed",
+          "durationMs": 5.112257999999883
+        },
+        {
+          "index": 10,
+          "sourceDeclarationLineOneBased": 554,
+          "fullName": "useRuntimeProviderManagement cancels all active probe attempts when startReconnect closes the picker",
+          "status": "passed",
+          "durationMs": 3.4615069999999832
+        },
+        {
+          "index": 11,
+          "sourceDeclarationLineOneBased": 554,
+          "fullName": "useRuntimeProviderManagement cancels all active probe attempts when closeModelPicker closes the picker",
+          "status": "passed",
+          "durationMs": 7.040682000000061
+        },
+        {
+          "index": 12,
+          "sourceDeclarationLineOneBased": 554,
+          "fullName": "useRuntimeProviderManagement cancels all active probe attempts when switchProvider closes the picker",
+          "status": "passed",
+          "durationMs": 2.9719880000000103
+        },
+        {
+          "index": 13,
+          "sourceDeclarationLineOneBased": 619,
+          "fullName": "useRuntimeProviderManagement stops only one probe and ignores its late response after immediate restart",
+          "status": "passed",
+          "durationMs": 7.529467000000068
+        },
+        {
+          "index": 14,
+          "sourceDeclarationLineOneBased": 698,
+          "fullName": "useRuntimeProviderManagement keeps the probe running when stop is rejected",
+          "status": "passed",
+          "durationMs": 3.629212999999936
+        },
+        {
+          "index": 15,
+          "sourceDeclarationLineOneBased": 744,
+          "fullName": "useRuntimeProviderManagement uses a clicked model as the app default for new teams without a global success banner",
+          "status": "passed",
+          "durationMs": 2.2099070000001575
+        },
+        {
+          "index": 16,
+          "sourceDeclarationLineOneBased": 762,
+          "fullName": "useRuntimeProviderManagement opens only the public GitHub device-login URL from OAuth progress",
+          "status": "passed",
+          "durationMs": 3.8353619999998045
+        },
+        {
+          "index": 17,
+          "sourceDeclarationLineOneBased": 783,
+          "fullName": "useRuntimeProviderManagement passes projectPath to the runtime provider management API",
+          "status": "passed",
+          "durationMs": 2.4500500000001466
+        },
+        {
+          "index": 18,
+          "sourceDeclarationLineOneBased": 816,
+          "fullName": "useRuntimeProviderManagement defers the full managed view until explicitly requested",
+          "status": "passed",
+          "durationMs": 53.68585899999994
+        },
+        {
+          "index": 19,
+          "sourceDeclarationLineOneBased": 870,
+          "fullName": "useRuntimeProviderManagement opens a deep-linked provider setup after the directory row is ready",
+          "status": "passed",
+          "durationMs": 6.522776000000022
+        },
+        {
+          "index": 20,
+          "sourceDeclarationLineOneBased": 997,
+          "fullName": "useRuntimeProviderManagement reloads a requested Models view when native runtime identity settles",
+          "status": "passed",
+          "durationMs": 5.81579099999999
+        },
+        {
+          "index": 21,
+          "sourceDeclarationLineOneBased": 1042,
+          "fullName": "useRuntimeProviderManagement reopens a pending deep-linked Connect when native runtime identity settles",
+          "status": "passed",
+          "durationMs": 109.38838299999998
+        },
+        {
+          "index": 22,
+          "sourceDeclarationLineOneBased": 1146,
+          "fullName": "useRuntimeProviderManagement hydrates the full provider directory without a catalog refresh",
+          "status": "passed",
+          "durationMs": 55.536425000000236
+        },
+        {
+          "index": 23,
+          "sourceDeclarationLineOneBased": 1263,
+          "fullName": "useRuntimeProviderManagement keeps summary providers when the full catalog comes back empty",
+          "status": "passed",
+          "durationMs": 3.5789009999998598
+        },
+        {
+          "index": 24,
+          "sourceDeclarationLineOneBased": 1339,
+          "fullName": "useRuntimeProviderManagement paints same-scope curated cache while summary IPC is pending and retains errors",
+          "status": "passed",
+          "durationMs": 4.4917489999998
+        },
+        {
+          "index": 25,
+          "sourceDeclarationLineOneBased": 1404,
+          "fullName": "useRuntimeProviderManagement never emits a previous-project provider in the transition render",
+          "status": "passed",
+          "durationMs": 3.1350130000000718
+        },
+        {
+          "index": 26,
+          "sourceDeclarationLineOneBased": 1448,
+          "fullName": "useRuntimeProviderManagement does not project cached summary credentials into another project or global scope",
+          "status": "passed",
+          "durationMs": 109.84717199999977
+        },
+        {
+          "index": 27,
+          "sourceDeclarationLineOneBased": 1508,
+          "fullName": "useRuntimeProviderManagement recovers directory support when a newer OpenCode runtime replaces an unsupported one",
+          "status": "passed",
+          "durationMs": 54.465839999999844
+        },
+        {
+          "index": 28,
+          "sourceDeclarationLineOneBased": 1566,
+          "fullName": "useRuntimeProviderManagement ignores a pre-mutation directory response without changing the project",
+          "status": "passed",
+          "durationMs": 2.55920900000001
+        },
+        {
+          "index": 29,
+          "sourceDeclarationLineOneBased": 1617,
+          "fullName": "useRuntimeProviderManagement masks cached rows and ignores pending responses when the OpenCode binary changes",
+          "status": "passed",
+          "durationMs": 4.0393199999998615
+        },
+        {
+          "index": 30,
+          "sourceDeclarationLineOneBased": 1709,
+          "fullName": "useRuntimeProviderManagement reopens a cached full catalog without flashing the 16-provider summary",
+          "status": "passed",
+          "durationMs": 55.083344000000125
+        },
+        {
+          "index": 31,
+          "sourceDeclarationLineOneBased": 1828,
+          "fullName": "useRuntimeProviderManagement does not replace the cached full catalog with search results",
+          "status": "passed",
+          "durationMs": 254.1635550000001
+        },
+        {
+          "index": 32,
+          "sourceDeclarationLineOneBased": 1942,
+          "fullName": "useRuntimeProviderManagement reuses setup while preserving the connected auth method for reconnect",
+          "status": "passed",
+          "durationMs": 5.471468000000186
+        },
+        {
+          "index": 33,
+          "sourceDeclarationLineOneBased": 2102,
+          "fullName": "useRuntimeProviderManagement keeps provider search local until full-catalog search is explicitly requested",
+          "status": "passed",
+          "durationMs": 655.1763379999998
+        },
+        {
+          "index": 34,
+          "sourceDeclarationLineOneBased": 2151,
+          "fullName": "useRuntimeProviderManagement clears structured errors and stale provider state when disabled",
+          "status": "passed",
+          "durationMs": 2.929077000000234
+        },
+        {
+          "index": 35,
+          "sourceDeclarationLineOneBased": 2211,
+          "fullName": "useRuntimeProviderManagement ignores pending directory and setup-form responses after being disabled",
+          "status": "passed",
+          "durationMs": 3.9135349999996834
+        },
+        {
+          "index": 36,
+          "sourceDeclarationLineOneBased": 2317,
+          "fullName": "useRuntimeProviderManagement ignores stale provider views after project context changes",
+          "status": "passed",
+          "durationMs": 2.8989220000003115
+        },
+        {
+          "index": 37,
+          "sourceDeclarationLineOneBased": 2389,
+          "fullName": "useRuntimeProviderManagement reissues a requested view after temporary project-context hydration",
+          "status": "passed",
+          "durationMs": 4.014863999999761
+        },
+        {
+          "index": 38,
+          "sourceDeclarationLineOneBased": 2450,
+          "fullName": "useRuntimeProviderManagement restarts provider directory loading when project context changes while loading",
+          "status": "passed",
+          "durationMs": 27.268403000000035
+        },
+        {
+          "index": 39,
+          "sourceDeclarationLineOneBased": 2587,
+          "fullName": "useRuntimeProviderManagement drops stale model probe results after project context changes",
+          "status": "passed",
+          "durationMs": 12.360006999999769
+        },
+        {
+          "index": 40,
+          "sourceDeclarationLineOneBased": 2672,
+          "fullName": "useRuntimeProviderManagement drops stale set-default responses after project context changes",
+          "status": "passed",
+          "durationMs": 17.62248200000022
+        },
+        {
+          "index": 41,
+          "sourceDeclarationLineOneBased": 2757,
+          "fullName": "useRuntimeProviderManagement clears pending provider save state after project context changes",
+          "status": "passed",
+          "durationMs": 17.845264000000043
+        },
+        {
+          "index": 42,
+          "sourceDeclarationLineOneBased": 2903,
+          "fullName": "useRuntimeProviderManagement refreshes view and catalog after forgetting managed auth while local auth remains",
+          "status": "passed",
+          "durationMs": 14.496613000000252
+        },
+        {
+          "index": 43,
+          "sourceDeclarationLineOneBased": 3015,
+          "fullName": "useRuntimeProviderManagement refreshes the view and catalog after a confirmed connection",
+          "status": "passed",
+          "durationMs": 13.35185300000012
+        },
+        {
+          "index": 44,
+          "sourceDeclarationLineOneBased": 3161,
+          "fullName": "useRuntimeProviderManagement keeps provider data visible during catalog refresh",
+          "status": "passed",
+          "durationMs": 22.264008000000103
+        },
+        {
+          "index": 45,
+          "sourceDeclarationLineOneBased": 3269,
+          "fullName": "useRuntimeProviderManagement lazy-loads provider directory and ignores stale search responses",
+          "status": "passed",
+          "durationMs": 314.9881439999999
+        },
+        {
+          "index": 46,
+          "sourceDeclarationLineOneBased": 3431,
+          "fullName": "useRuntimeProviderManagement keeps the API key draft when provider connect fails",
+          "status": "passed",
+          "durationMs": 4.938236999999845
+        },
+        {
+          "index": 47,
+          "sourceDeclarationLineOneBased": 3524,
+          "fullName": "useRuntimeProviderManagement explains Copilot model access separately from GitHub authentication",
+          "status": "passed",
+          "durationMs": 4.601848999999675
+        },
+        {
+          "index": 48,
+          "sourceDeclarationLineOneBased": 3593,
+          "fullName": "useRuntimeProviderManagement keeps setup form diagnostics available when submit is attempted after form load failure",
+          "status": "passed",
+          "durationMs": 2.5651089999996657
+        },
+        {
+          "index": 49,
+          "sourceDeclarationLineOneBased": 3655,
+          "fullName": "useRuntimeProviderManagement submits a supported setup form without a secret as a null API key",
+          "status": "passed",
+          "durationMs": 3.285063999999693
+        },
+        {
+          "index": 50,
+          "sourceDeclarationLineOneBased": 3752,
+          "fullName": "useRuntimeProviderManagement keeps OpenCode API connect pending beyond the old UI deadline: late-success",
+          "status": "passed",
+          "durationMs": 5.8755300000002535
+        },
+        {
+          "index": 51,
+          "sourceDeclarationLineOneBased": 3752,
+          "fullName": "useRuntimeProviderManagement keeps OpenCode API connect pending beyond the old UI deadline: timeout",
+          "status": "passed",
+          "durationMs": 2.797290999999859
+        },
+        {
+          "index": 52,
+          "sourceDeclarationLineOneBased": 3852,
+          "fullName": "useRuntimeProviderManagement keeps setup open when the backend does not confirm a connected provider",
+          "status": "passed",
+          "durationMs": 3.4195910000003096
+        },
+        {
+          "index": 53,
+          "sourceDeclarationLineOneBased": 3911,
+          "fullName": "useRuntimeProviderManagement keeps the actual API credential hint when xAI refresh fails after connect",
+          "status": "passed",
+          "durationMs": 106.70199300000013
+        },
+        {
+          "index": 54,
+          "sourceDeclarationLineOneBased": 4062,
+          "fullName": "useRuntimeProviderManagement refreshes provider status after a cancelled OAuth child settles",
+          "status": "passed",
+          "durationMs": 4.881415999999717
+        },
+        {
+          "index": 55,
+          "sourceDeclarationLineOneBased": 4175,
+          "fullName": "useRuntimeProviderManagement preserves the full slow model-picker allowance: complete",
+          "status": "passed",
+          "durationMs": 3.9668799999999464
+        },
+        {
+          "index": 56,
+          "sourceDeclarationLineOneBased": 4175,
+          "fullName": "useRuntimeProviderManagement preserves the full slow model-picker allowance: timeout",
+          "status": "passed",
+          "durationMs": 3.7765650000001187
+        },
+        {
+          "index": 57,
+          "sourceDeclarationLineOneBased": 4265,
+          "fullName": "useRuntimeProviderManagement clears model loading when switching from model picker to setup form",
+          "status": "passed",
+          "durationMs": 3.3054819999997562
+        },
+        {
+          "index": 58,
+          "sourceDeclarationLineOneBased": 4391,
+          "fullName": "useRuntimeProviderManagement debounces provider model search and groups superseded picker requests",
+          "status": "passed",
+          "durationMs": 355.3711109999995
+        },
+        {
+          "index": 59,
+          "sourceDeclarationLineOneBased": 4465,
+          "fullName": "useRuntimeProviderManagement keeps Test results across a debounced catalog search reload",
+          "status": "passed",
+          "durationMs": 355.15141200000016
+        },
+        {
+          "index": 60,
+          "sourceDeclarationLineOneBased": 4554,
+          "fullName": "useRuntimeProviderManagement appends paged provider models without duplicates",
+          "status": "passed",
+          "durationMs": 4.036173000000417
+        },
+        {
+          "index": 61,
+          "sourceDeclarationLineOneBased": 4634,
+          "fullName": "useRuntimeProviderManagement tracks concurrent model probes independently",
+          "status": "passed",
+          "durationMs": 3.5633090000001175
+        },
+        {
+          "index": 62,
+          "sourceDeclarationLineOneBased": 4712,
+          "fullName": "useRuntimeProviderManagement drops stale model probe results after leaving the model picker",
+          "status": "passed",
+          "durationMs": 3.2905289999998786
+        },
+        {
+          "index": 63,
+          "sourceDeclarationLineOneBased": 4806,
+          "fullName": "useRuntimeProviderManagement refreshes global provider status after a current model test (ok=true)",
+          "status": "passed",
+          "durationMs": 2.03032500000063
+        },
+        {
+          "index": 64,
+          "sourceDeclarationLineOneBased": 4806,
+          "fullName": "useRuntimeProviderManagement refreshes global provider status after a current model test (ok=false)",
+          "status": "passed",
+          "durationMs": 1.4603219999999055
+        },
+        {
+          "index": 65,
+          "sourceDeclarationLineOneBased": 4841,
+          "fullName": "useRuntimeProviderManagement records an empty model test response as a row failure and refreshes provider status",
+          "status": "passed",
+          "durationMs": 2.1558590000004187
+        },
+        {
+          "index": 66,
+          "sourceDeclarationLineOneBased": 4875,
+          "fullName": "useRuntimeProviderManagement preserves successful model verification when its global status refresh rejects",
+          "status": "passed",
+          "durationMs": 1.8852509999996983
+        },
+        {
+          "index": 67,
+          "sourceDeclarationLineOneBased": 4909,
+          "fullName": "useRuntimeProviderManagement does not refresh global status from a model test after project change",
+          "status": "passed",
+          "durationMs": 2.1502510000000257
+        },
+        {
+          "index": 68,
+          "sourceDeclarationLineOneBased": 4909,
+          "fullName": "useRuntimeProviderManagement does not refresh global status from a model test after unmount",
+          "status": "passed",
+          "durationMs": 1.4791119999999864
+        },
+        {
+          "index": 69,
+          "sourceDeclarationLineOneBased": 4976,
+          "fullName": "useRuntimeProviderManagement keeps failed model probes scoped to the model result instead of a global success banner",
+          "status": "passed",
+          "durationMs": 1.8147629999994024
+        },
+        {
+          "index": 70,
+          "sourceDeclarationLineOneBased": 5009,
+          "fullName": "useRuntimeProviderManagement keeps structured runtime endpoint diagnostics on the model result",
+          "status": "passed",
+          "durationMs": 1.7524090000006254
+        },
+        {
+          "index": 71,
+          "sourceDeclarationLineOneBased": 5045,
+          "fullName": "useRuntimeProviderManagement keeps the model-test UI watchdog outside the runtime probe transport budget",
+          "status": "passed",
+          "durationMs": 2.403900999999678
+        },
+        {
+          "index": 72,
+          "sourceDeclarationLineOneBased": 5104,
+          "fullName": "useRuntimeProviderManagement promotes structured model probe failures to the global diagnostics alert state",
+          "status": "passed",
+          "durationMs": 2.2564830000001166
+        },
+        {
+          "index": 73,
+          "sourceDeclarationLineOneBased": 5145,
+          "fullName": "useRuntimeProviderManagement keeps successful model probes scoped to the model card instead of a global success banner",
+          "status": "passed",
+          "durationMs": 2.0175669999998718
+        },
+        {
+          "index": 74,
+          "sourceDeclarationLineOneBased": 5176,
+          "fullName": "useRuntimeProviderManagement saves a default without probing or fabricating verified model state",
+          "status": "passed",
+          "durationMs": 2.8988209999997707
+        },
+        {
+          "index": 75,
+          "sourceDeclarationLineOneBased": 5253,
+          "fullName": "useRuntimeProviderManagement keeps the effective project default selected when an all-projects default is shadowed",
+          "status": "passed",
+          "durationMs": 2.961927999999716
+        },
+        {
+          "index": 76,
+          "sourceDeclarationLineOneBased": 5344,
+          "fullName": "useRuntimeProviderManagement preserves project-scoped access evidence after a neutral all-projects probe",
+          "status": "passed",
+          "durationMs": 3.3911189999998896
+        },
+        {
+          "index": 77,
+          "sourceDeclarationLineOneBased": 5420,
+          "fullName": "useRuntimeProviderManagement does not clear a project override before the bundled runtime supports scoped defaults",
+          "status": "passed",
+          "durationMs": 2.5866790000000037
+        },
+        {
+          "index": 78,
+          "sourceDeclarationLineOneBased": 5465,
+          "fullName": "useRuntimeProviderManagement clears a valid project override with a compatible bundled runtime",
+          "status": "passed",
+          "durationMs": 3.8812559999996665
+        },
+        {
+          "index": 79,
+          "sourceDeclarationLineOneBased": 5547,
+          "fullName": "useRuntimeProviderManagement keeps the clear-project watchdog beyond the 300-second main-process timeout",
+          "status": "passed",
+          "durationMs": 4.052775000000111
+        },
+        {
+          "index": 80,
+          "sourceDeclarationLineOneBased": 5623,
+          "fullName": "useRuntimeProviderManagement does not clear project B while its view is still refreshing after switching from A",
+          "status": "passed",
+          "durationMs": 3.2136669999999867
+        },
+        {
+          "index": 81,
+          "sourceDeclarationLineOneBased": 5679,
+          "fullName": "useRuntimeProviderManagement clears loading for the current silent refresh and refuses a stale response",
+          "status": "passed",
+          "durationMs": 2.5012199999991935
+        },
+        {
+          "index": 82,
+          "sourceDeclarationLineOneBased": 5738,
+          "fullName": "useRuntimeProviderManagement clears pending loading when the current silent refresh ends with response-error",
+          "status": "passed",
+          "durationMs": 2.4702219999999215
+        },
+        {
+          "index": 83,
+          "sourceDeclarationLineOneBased": 5738,
+          "fullName": "useRuntimeProviderManagement clears pending loading when the current silent refresh ends with rejection",
+          "status": "passed",
+          "durationMs": 2.234107000000222
+        },
+        {
+          "index": 84,
+          "sourceDeclarationLineOneBased": 5800,
+          "fullName": "useRuntimeProviderManagement keeps a silent view completion inert after newer-request",
+          "status": "passed",
+          "durationMs": 3.5843629999999393
+        },
+        {
+          "index": 85,
+          "sourceDeclarationLineOneBased": 5800,
+          "fullName": "useRuntimeProviderManagement keeps a silent view completion inert after unmounted",
+          "status": "passed",
+          "durationMs": 2.44427799999994
+        }
+      ]
+    },
+    {
+      "kind": "status",
+      "source": {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+        "bytes": 11410,
+        "sha256": "e781760fcaf1aeb3a04694ab8d5c213017add94853a8835b096b4f9f79f81279",
+        "gitBlob": "bf0a54d585ef1dcd94a2649cebd75cb20da43339"
+      },
+      "shard": 1,
+      "actualCaseCount": 7,
+      "allSourceExpandedNamesMatchActualInOrder": true,
+      "actualCases": [
+        {
+          "index": 1,
+          "sourceDeclarationLineOneBased": 72,
+          "fullName": "the existing model/effort consumers receive native SDK metadata with no inferred auth, default or launch readiness",
+          "status": "passed",
+          "durationMs": 7.620291000000179
+        },
+        {
+          "index": 2,
+          "sourceDeclarationLineOneBased": 121,
+          "fullName": "wrong profile, duplicate model rows and late context results never enter the existing UI",
+          "status": "passed",
+          "durationMs": 3.75988899999993
+        },
+        {
+          "index": 3,
+          "sourceDeclarationLineOneBased": 141,
+          "fullName": "native default and named aliases of the same canonical model yield one existing selector option",
+          "status": "passed",
+          "durationMs": 1.2346719999995912
+        },
+        {
+          "index": 4,
+          "sourceDeclarationLineOneBased": 163,
+          "fullName": "independent native auth loggedIn=true survives existing renderer reconciliation without granting launch",
+          "status": "passed",
+          "durationMs": 1.371639000000414
+        },
+        {
+          "index": 5,
+          "sourceDeclarationLineOneBased": 163,
+          "fullName": "independent native auth loggedIn=false survives existing renderer reconciliation without granting launch",
+          "status": "passed",
+          "durationMs": 0.6367000000000189
+        },
+        {
+          "index": 6,
+          "sourceDeclarationLineOneBased": 189,
+          "fullName": "wrong auth revision and a context change during auth cannot create authoritative authentication",
+          "status": "passed",
+          "durationMs": 1.2025539999999637
+        },
+        {
+          "index": 7,
+          "sourceDeclarationLineOneBased": 212,
+          "fullName": "the exact finite runtime catalog offers its resolved model while auth and metadata keep launch unqualified",
+          "status": "passed",
+          "durationMs": 57.4380500000002
+        }
+      ]
+    }
+  ],
+  "skippedFiles": [
+    {
+      "shard": 2,
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "cases": 5,
+      "jsonFileStatus": "passed",
+      "logSymbol": "↓"
+    },
+    {
+      "shard": 2,
+      "path": "test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+      "cases": 2,
+      "jsonFileStatus": "passed",
+      "logSymbol": "↓"
+    },
+    {
+      "shard": 3,
+      "path": "test/main/utils/windowsProcessProbe.integration.test.ts",
+      "cases": 1,
+      "jsonFileStatus": "passed",
+      "logSymbol": "↓"
+    },
+    {
+      "shard": 3,
+      "path": "test/main/services/team/OpenCodeReviewPickup.live.tmp.test.ts",
+      "cases": 1,
+      "jsonFileStatus": "passed",
+      "logSymbol": "↓"
+    },
+    {
+      "shard": 3,
+      "path": "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.ollama-live.test.ts",
+      "cases": 1,
+      "jsonFileStatus": "passed",
+      "logSymbol": "↓"
+    },
+    {
+      "shard": 4,
+      "path": "test/scripts/fixtures/opencodeProofBoundary.test.ts",
+      "cases": 1,
+      "jsonFileStatus": "passed",
+      "logSymbol": "↓"
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "cases": 6,
+      "jsonFileStatus": "passed",
+      "logSymbol": "↓"
+    }
+  ],
+  "allSkippedCases": [
+    {
+      "shard": 1,
+      "path": "test/scripts/opencodeNativeTestNode.test.ts",
+      "index": 5,
+      "title": "accepts a real inherited-ACL-style Windows metadata transition on the owned fake copy",
+      "fullName": "TEST Node dependency staging without execution accepts a real inherited-ACL-style Windows metadata transition on the owned fake copy",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 1,
+      "path": "test/main/ipc/review.test.ts",
+      "index": 94,
+      "title": "authorizes a saved case-only rename path through its published transaction target",
+      "fullName": "review IPC path confinement authorizes a saved case-only rename path through its published transaction target",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 1,
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "index": 2,
+      "title": "backfills empty, attributed history, and duplicate replay: ascii",
+      "fullName": "actual app client / packaged Windows runtime (Unavailable: actual Windows execution is required) backfills empty, attributed history, and duplicate replay: ascii",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 1,
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "index": 3,
+      "title": "backfills empty, attributed history, and duplicate replay: spaces",
+      "fullName": "actual app client / packaged Windows runtime (Unavailable: actual Windows execution is required) backfills empty, attributed history, and duplicate replay: spaces",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 1,
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "index": 4,
+      "title": "backfills empty, attributed history, and duplicate replay: unicode",
+      "fullName": "actual app client / packaged Windows runtime (Unavailable: actual Windows execution is required) backfills empty, attributed history, and duplicate replay: unicode",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 1,
+      "path": "test/main/services/team/OpenCodeTaskLogStreamSource.fixture-e2e.test.ts",
+      "index": 1,
+      "title": "reads native persistence through the actual SDK read-only reader and projector without preparing a profile",
+      "fullName": "OpenCodeTaskLogStreamSource real OpenCode fixture e2e reads native persistence through the actual SDK read-only reader and projector without preparing a profile",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/scripts/opencodeNativeRealTaskPrompt.test.ts",
+      "index": 12,
+      "title": "executes the unchanged verifier in PowerShell and cmd",
+      "fullName": "cross-shell Windows verifier invocation executes the unchanged verifier in PowerShell and cmd",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "index": 2,
+      "title": "uses absolute APPDATA when Electron cannot return appData before ready on Windows",
+      "fullName": "applyElectronDevPathOverrides uses absolute APPDATA when Electron cannot return appData before ready on Windows",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "index": 3,
+      "title": "uses regular APPDATA when userData is unavailable before Windows Electron ready",
+      "fullName": "applyElectronDevPathOverrides uses regular APPDATA when userData is unavailable before Windows Electron ready",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "index": 10,
+      "title": "rejects a case-only alias of a nonexistent legacy profile",
+      "fullName": "applyElectronDevPathOverrides rejects a case-only alias of a nonexistent legacy profile",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/ReviewFileTransaction.safe-e2e.test.ts",
+      "index": 1,
+      "title": "classifies a published equal-content case-only Undo using its owned inode",
+      "fullName": "review file transaction safe E2E classifies a published equal-content case-only Undo using its owned inode",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "index": 0,
+      "title": "preserves adversarial argv through execCli for a spaced non-ASCII executable path",
+      "fullName": "Windows CLI shell fallback round trip preserves adversarial argv through execCli for a spaced non-ASCII executable path",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "index": 1,
+      "title": "preserves adversarial argv through spawnCli for a spaced non-ASCII executable path",
+      "fullName": "Windows CLI shell fallback round trip preserves adversarial argv through spawnCli for a spaced non-ASCII executable path",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "index": 2,
+      "title": "preserves adversarial argv through a batch launcher that forwards %*",
+      "fullName": "Windows CLI shell fallback round trip preserves adversarial argv through a batch launcher that forwards %*",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "index": 3,
+      "title": "preserves safe argv through batch parameter modifiers",
+      "fullName": "Windows CLI shell fallback round trip preserves safe argv through batch parameter modifiers",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "index": 4,
+      "title": "rejects shell syntax before a batch launcher can reparse positional arguments",
+      "fullName": "Windows CLI shell fallback round trip rejects shell syntax before a batch launcher can reparse positional arguments",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "index": 5,
+      "title": "reads real login and interactive startup exports with exact edge values",
+      "fullName": "shellEnv actual installed shells zsh reads real login and interactive startup exports with exact edge values",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "index": 6,
+      "title": "ignores startup banners and accepts a completed dump before a failing real logout",
+      "fullName": "shellEnv actual installed shells zsh ignores startup banners and accepts a completed dump before a failing real logout",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "index": 7,
+      "title": "falls back from a failing real login profile to the real interactive rc",
+      "fullName": "shellEnv actual installed shells zsh falls back from a failing real login profile to the real interactive rc",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "index": 8,
+      "title": "keeps its framing independent of an rc-defined printf function",
+      "fullName": "shellEnv actual installed shells zsh keeps its framing independent of an rc-defined printf function",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "index": 9,
+      "title": "keeps its framing independent of an rc-defined printf alias",
+      "fullName": "shellEnv actual installed shells zsh keeps its framing independent of an rc-defined printf alias",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts",
+      "index": 1,
+      "title": "selects the native OpenCode executable behind an nvm cmd shim",
+      "fullName": "OpenCode nvm-windows runtime resolution safe e2e selects the native OpenCode executable behind an nvm cmd shim",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+      "index": 0,
+      "title": "reports RSS for a bootstrap-confirmed Anthropic teammate discovered from the real process table",
+      "fullName": "Team runtime memory safe e2e reports RSS for a bootstrap-confirmed Anthropic teammate discovered from the real process table",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+      "index": 1,
+      "title": "reports RSS for a real Anthropic teammate CLI process",
+      "fullName": "Team runtime memory safe e2e reports RSS for a real Anthropic teammate CLI process",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "test/main/utils/windowsProcessProbe.integration.test.ts",
+      "index": 0,
+      "title": "observes this Node process through both table transports and its birth reader",
+      "fullName": "real Windows process identity readers observes this Node process through both table transports and its birth reader",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "test/features/member-work-sync/main/JsonMemberWorkSyncReportJournal.test.ts",
+      "index": 17,
+      "title": "returns commit_unknown if a Windows retry cannot sync the existing journal file",
+      "fullName": "strict JSON report journal returns commit_unknown if a Windows retry cannot sync the existing journal file",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "test/main/services/runtime/AnthropicAutoShellEnv.safe-e2e.test.ts",
+      "index": 2,
+      "title": "uses the native runtime to authenticate a cold shell configuration and infer with both models",
+      "fullName": "Anthropic Auto GUI shell safe e2e uses the native runtime to authenticate a cold shell configuration and infer with both models",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "test/main/services/team/OpenCodeReviewPickup.live.tmp.test.ts",
+      "index": 0,
+      "title": "delivers review pickup when the current unread review request is still in the foreground inbox",
+      "fullName": "OpenCode review pickup live e2e delivers review pickup when the current unread review request is still in the foreground inbox",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "test/main/services/team/ReviewApplierService.test.ts",
+      "index": 48,
+      "title": "ledger canonical-equivalent rename keeps the sole inode on a real temporary filesystem",
+      "fullName": "ReviewApplierService ledger canonical-equivalent rename keeps the sole inode on a real temporary filesystem",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.ollama-live.test.ts",
+      "index": 0,
+      "title": "probes, configures into a sandbox, and keeps the catalog model after an empty overlay",
+      "fullName": "OpenCodeLocalProviderConnector live Ollama probes, configures into a sandbox, and keeps the catalog model after an empty overlay",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "src/main/services/infrastructure/codexAppServer/__tests__/CodexBinaryResolver.real.test.ts",
+      "index": 3,
+      "title": "resolves and versions the current local Codex binary",
+      "fullName": "CodexBinaryResolver live local Codex smoke resolves and versions the current local Codex binary",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/scripts/fixtures/opencodeProofBoundary.test.ts",
+      "index": 0,
+      "title": "preserves wrapper ownership across real Vitest setup",
+      "fullName": "preserves wrapper ownership across real Vitest setup",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "index": 0,
+      "title": "resolves the current host as native macOS",
+      "fullName": "tmux installer macOS host e2e resolves the current host as native macOS",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "index": 1,
+      "title": "chooses Homebrew as the macOS install strategy on this machine",
+      "fullName": "tmux installer macOS host e2e chooses Homebrew as the macOS install strategy on this machine",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "index": 2,
+      "title": "finds the real tmux binary on this macOS host",
+      "fullName": "tmux installer macOS host e2e finds the real tmux binary on this macOS host",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "index": 3,
+      "title": "reports tmux as runtime-ready for the live macOS host path",
+      "fullName": "tmux installer macOS host e2e reports tmux as runtime-ready for the live macOS host path",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "index": 4,
+      "title": "keeps the current platform on the tmux runtime path",
+      "fullName": "tmux installer macOS host e2e keeps the current platform on the tmux runtime path",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "index": 5,
+      "title": "runs a real isolated tmux session on macOS and executes a shell command in it",
+      "fullName": "tmux installer macOS host e2e runs a real isolated tmux session on macOS and executes a shell command in it",
+      "status": "skipped",
+      "failureMessages": []
+    }
+  ],
+  "semanticFindings": [
+    "Catalog43: The observed whole file includes all original40 plus three accepted claude-sdk catalog regressions. Actual utility fixture behavior accepts only the offered resolved launch model, keeps alias/unoffered/hidden/unavailable refusal, separates metadata from authentication/verification, and preserves curated fallback only in the tested unavailable/empty/nonvisible catalog states.",
+    "Runtime85: All original80 and five accepted loading/currentness regressions pass. The existing hook source at fixed86f remains c2faa156015707bc5fbd7f8123a7ffd9c4faa486; the accepted change removed only the silent prefix from the original requestIsCurrent finally condition. These mocked-IPC React tests qualify renderer state/currentness behavior, not a live management call.",
+    "Captured status7: The new composition case passes with exactly offered TEST-claude-sonnet and separate api_key authentication data, while preserving modelVerification idle and no authoritative Team-launch/one-shot approval. This uses actual captured metadata/consumer code around a finite mocked request boundary; no actual SDK argv, real CLI/authentication, model inference or GUI launch is proved.",
+    "The source inventory and artifact population agree exactly after original exclusions. This is the whole configured four-shard frontend population at fixed86f, not an all-repository or all-platform test claim."
+  ],
+  "limitations": [
+    "The7wholly skipped files and all38skipped cases are not passes. JSONfile.status alone is insufficient because this reporter labels wholly skipped files passed.",
+    "The5,314 nested reporter suite counter is not an executed-file count. There are2,162distinct leaf paths and2,155passing leaf files.",
+    "Twenty-five thousand eight hundred forty-five is a count of passing reporter assertion records, not that many uniquely named/independent product obligations;42within-file repeated-name groups are explicitly accounted for.",
+    "No GUI/native/E2E aggregate/release readiness is inferred. WholeNode149, native-receipt26, original platform14 isolated semantics, standalone10 or GUI/native cleanup outcomes are not established by these frontend artifacts.",
+    "All source identities and outcomes are for immutable86f only. Later one-file extraction repair R1 or any future source/postimage has no runtime result from these artifacts.",
+    "Root's original jobSUCCESS and CRC capture statements are attributed. This reviewer made no liveCIor PR/ref observations.",
+    "Original default/test/workflow time budgets, exclusions, ownership and cleanup contracts are unchanged; recorded durations alone are not a new proof of independent cleanup or hard deadline preemption."
+  ],
+  "checks": [
+    {
+      "id": "C01",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "All four immutable complete capture UTF-8 identities match assigned Git/bytes/SHA256 pins.",
+      "evidence": "Captures indexed below; entire bodies fetched and hashed."
+    },
+    {
+      "id": "C02",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "All eight complete embedded UTF-8 member bodies rehash to their own recorded identities.",
+      "evidence": "9,496,186 member bytes; derived member Git identities were never fetched separately."
+    },
+    {
+      "id": "C03",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "Artifact/run/head bindings agree for all four shard captures.",
+      "evidence": "Run 44092933810, fixed source 86f52244b5375834a4040cbc63803d68cc708087; original CI3 cohort PR1223."
+    },
+    {
+      "id": "C04",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "Every complete artifact Vitest log is a contiguous match in the corresponding original complete job log after timestamp/ANSI normalization.",
+      "evidence": "No file/case row filtering was used for the join."
+    },
+    {
+      "id": "C05",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "The four original job logs show exactly one selected Vitest command each with the matching shard number.",
+      "evidence": "This concerns suite invocation, not dependency-installer retries."
+    },
+    {
+      "id": "C06",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "All original job log checkout/source assertions join the fixed source head.",
+      "evidence": "No later source publication is substituted."
+    },
+    {
+      "id": "C07",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "Observed commands match the unchanged workflow command and preserve all three exclusions.",
+      "evidence": "Original --maxWorkers=2 and --shard=$HOST_TEST_SHARD/4; no test-name filter."
+    },
+    {
+      "id": "C08",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "All four observed Vitest versions are 3.2.6.",
+      "evidence": "Complete job logs and complete embedded logs."
+    },
+    {
+      "id": "C09",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "Workspace Vitest Node and separately captured Host child Node are distinguished.",
+      "evidence": "Workspace Node26.12.1; AGENT_BACKEND_TEST_NODE captured Node24.21.0."
+    },
+    {
+      "id": "C10",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "All original job artifact identity/size/archive SHA rows join their captures.",
+      "evidence": "Root verified ZIP bytes/CRC; this reviewer rehashed all extracted UTF-8 bodies."
+    },
+    {
+      "id": "C11",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "All four JSON reports declare success with zero failed/todo cases and zero failed suites.",
+      "evidence": "Leaf and assertion inventories checked independently of success flag."
+    },
+    {
+      "id": "C12",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "All 25,883 assertion records have only passed/skipped statuses and no recorded failure messages.",
+      "evidence": "25,845 passed, 38 skipped; not an assertion of unique requirement names."
+    },
+    {
+      "id": "C13",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "Complete assertion records have nonempty inventory names and finite nonnegative reported durations.",
+      "evidence": "Reported durations are observations, not new deadline qualification."
+    },
+    {
+      "id": "C14",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "Every JSON leaf file has exactly one matching log file row and identical test/skip counts.",
+      "evidence": "All 2,162 rows processed; zero unknown/missing rows."
+    },
+    {
+      "id": "C15",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "No leaf file path is duplicated within or across the four shards.",
+      "evidence": "Complete path population after stripping only the exact workspace prefix."
+    },
+    {
+      "id": "C16",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "Leaf-file outcome total is 2,155 passed plus seven wholly skipped files, not 2,162 passed files.",
+      "evidence": "JSON labels even wholly skipped files passed; individual assertions and log arrows preserve the distinction."
+    },
+    {
+      "id": "C17",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "Case total is exactly 25,845 passed plus 38 skipped, with no case-count inflation from file or suite counters.",
+      "evidence": "All four summary totals equal the underlying assertion rows."
+    },
+    {
+      "id": "C18",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "The 5,314 top-level reporter suite count is kept separate from 2,162 leaf files.",
+      "evidence": "1357+1292+1316+1349 nested suite records; not extra executed files."
+    },
+    {
+      "id": "C19",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "Forty-two repeated-fullName groups remain same-file/same-shard records and are not promoted to uniquely named obligations.",
+      "evidence": "80 additional same-name registrations. No deduplication of legitimate reporter records and no repeated file execution inferred."
+    },
+    {
+      "id": "C20",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "Fresh complete immutable test and src tree censuses are untruncated.",
+      "evidence": "Exact tree identities and response digests indexed below."
+    },
+    {
+      "id": "C21",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "The configured include globs find 2,195 source candidates; original exclusions remove exactly 33.",
+      "evidence": "Only .test.ts/.test.tsx under test/ or src/; original live/live-e2e/native patterns."
+    },
+    {
+      "id": "C22",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "The remaining 2,162 regular source files match the actual artifact population with no missing or extra paths.",
+      "evidence": "1,501 under test and 661 under src."
+    },
+    {
+      "id": "C23",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "The whole catalog43 source identity and expanded source inventory match all 43 actual passing records in shard1.",
+      "evidence": "39 direct registrations + four expanded parameter rows; complete case appendix."
+    },
+    {
+      "id": "C24",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "The whole runtime-management85 source identity and expanded inventory match all 85 actual passing records in shard2.",
+      "evidence": "61 direct registrations +24 expanded parameter rows; complete case appendix."
+    },
+    {
+      "id": "C25",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "The whole captured-Claude-status7 source identity and expanded inventory match all seven actual passing records in shard1.",
+      "evidence": "Five direct registrations plus two boolean parameter rows; complete case appendix."
+    },
+    {
+      "id": "C26",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "All selected 135 case records pass with no skip/failure or duplicate selected fullName.",
+      "evidence": "Catalog43+runtime85+status7; no command-level targeted rerun."
+    },
+    {
+      "id": "C27",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "Catalog cases 41–43 preserve the resolved-offer, refusal, authorization separation and explicit curated-fallback boundary.",
+      "evidence": "Exact source append freshly read: TEST-claude-sonnet accepted; alias/unoffered/hidden/unavailable refusals; authentication/verification facts not promoted."
+    },
+    {
+      "id": "C28",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "Runtime cases 81–85 cover current silent completion/error/rejection and later-request/unmount inertness.",
+      "evidence": "Exact source append freshly read; all original80 also present and passing. IPC is mocked; this is renderer-hook qualification."
+    },
+    {
+      "id": "C29",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "Captured-status case7 checks actual metadata-to-existing-consumer composition while keeping launch authority unqualified.",
+      "evidence": "Exact entire259-line test source read. Finite fixture values and mocked request boundary; auth/model metadata do not grant Team launch or model verification."
+    },
+    {
+      "id": "C30",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "All 38 skipped case records are preserved as skipped, including the seven wholly skipped files.",
+      "evidence": "Complete skip appendix below; no OS/vendor/live test promotion."
+    },
+    {
+      "id": "C31",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "The unchanged frontend workflow default test timeout and original per-test source behavior are not relabeled as increased budgets.",
+      "evidence": "vitest.config.ts default15000ms; tests may carry their original explicit per-case budgets. Workflow45minutes/maxWorkers2 unchanged."
+    },
+    {
+      "id": "C32",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "No GUI/native/all-workflow/release or standalone proof is inferred from these four frontend jobs.",
+      "evidence": "The workflow aggregate also requires18 other UI lanes. Node149/diagnostic26 and standalone10 outcomes remain separate."
+    },
+    {
+      "id": "C33",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "No target runtime, source/ref/PR/CI action, live polling, artifact download or binary extraction was performed by this reviewer.",
+      "evidence": "Only immutable Git reads, pure data identity/inventory processing and this bare report retention."
+    },
+    {
+      "id": "C34",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "claim": "Full-data traversal and bounded semantic source reading are distinguished from a fresh audit of every test implementation.",
+      "evidence": "Complete capture/member/log bytes hashed; every structured file/case row and source-tree path processed; all135 selected names/source registrations read, plus selected assertion bodies and exact workflow/config. No claim of manually re-auditing2,162 test source bodies."
+    }
+  ],
+  "checkCount": 34,
+  "mutations": {
+    "bareReportOnly": true,
+    "source": false,
+    "controls": false,
+    "worktree": false,
+    "refs": false,
+    "pr": false,
+    "ci": false,
+    "runtime": false
+  },
+  "selfReadback": "To be reported after immutable bare-blob retention; no claim of future readback is made inside this pre-retention body."
+}

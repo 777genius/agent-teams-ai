@@ -1,0 +1,914 @@
+{
+  "schemaVersion": 1,
+  "kind": "bounded-source-semantics-advisory-claude-original-scheduled-reply-click",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_semantic",
+  "authoredAt": "2026-11-17 17:36:22 UTC",
+  "sourceHead": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+  "originalRunHead": "86f52244b5375834a4040cbc63803d68cc708087",
+  "decision": "NARROW_R1_CANDIDATE_IDENTIFIED_WITH_EXPLICIT_CAUSAL_LIMIT",
+  "purpose": "Advance the remaining original finite Claude GUI failure by identifying a minimal preserving harness readiness candidate or a precise missing diagnostic. This is advisory only; root remains sole author/executor and no new gate is introduced.",
+  "conclusions": [
+    "The source-visible gap is that the original scheduled Alice click can begin on a pre-schedule chat preview although the canonical task and finite peer journal have completed. The current driver does not use its existing per-element content prerequisite at this call.",
+    "The narrow candidate is to pass the already supported fourth click argument at this one call, using the common literal TEST scheduled followed by one space. This accepts the fixture's legitimate reply and complete preview forms. It keeps the existing post-click exact TEST scheduled reply visibility assertion.",
+    "This candidate is supported as a harness readiness improvement, not a proved account of the unavailable Claude final movement. It must retain the final point equality and fail if the row moves again; no retry, coordinate substitution, timeout change, extra timer or production UI change is justified.",
+    "The two actual successful lanes show that the current click operation can begin before the scheduled preview is hydrated: OpenCode dispatched on the older preview, while Codex adopted the newer preview during stabilization. They do not prove that waiting for the prefix would have prevented the particular Claude movement or that every future lane will pass.",
+    "If precise causality remains needed, retain the already compared stable/final point arrays and closed original action identity through the existing error-summary path. No additional DOM/Host/process sample is needed to expose those existing values; such diagnostics are not selected by this advisory."
+  ],
+  "primaryEvidence": [
+    {
+      "role": "prior complete Claude failure/source advisory",
+      "bytes": 26675,
+      "sha256": "ce530bfaeb56a6b4010261c288637ae78633369913747e891ea67b1942cf0571",
+      "gitBlob": "eb4910aecd055982eeb9131c6d0c5f261366670f",
+      "fullBodyRead": true,
+      "source": "immutable bare report",
+      "reused": false
+    },
+    {
+      "role": "complete original Claude job log",
+      "bytes": 206513,
+      "sha256": "65597d1ec42c204cefe466846c08e6b32919a34f9db7b8eacb4326cf3584e8b7",
+      "gitBlob": "722df52ca594c136a94bb8fcf2b2f4143e85f706",
+      "fullBodyRead": "Complete prior reading is joined by exact whole-byte identity; original failure summary and stack-related records re-read here."
+    },
+    {
+      "role": "complete finite Codex/OpenCode outcome report",
+      "bytes": 63217,
+      "sha256": "6e3a380d859eff1244e28fdb67237f507f71dce2fe4a0304218dc97fbe62d06f",
+      "gitBlob": "5e7304b308fce22a3efee5112230d9407f98f0ba",
+      "fullBodyRead": "Previously fully read/self-read and root-accepted; exact whole identity rejoined and full selected outcome/source/receipt sections re-read."
+    },
+    {
+      "role": "failed original artifact delivery record",
+      "gitBlob": "8926280627d911c37c39c512e386b2fdf31506c2",
+      "bytes": 5341,
+      "sha256": "2232d040baf87f9628c84731bb178db2028c8353fbdac87f7d7c6a5d4aaa9281",
+      "readBasis": "Joined from complete prior advisory; not re-fetched or treated as artifact body."
+    }
+  ],
+  "failedObservation": {
+    "runId": 44092933810,
+    "jobId": 134072511986,
+    "provider": "finite Claude TEST peer",
+    "platform": "linux-x64",
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "preparedAt": "2026-11-17T14:49:40.435Z",
+    "summaryAt": "2026-11-17T14:53:22.6621116Z",
+    "logLine": 1156,
+    "status": "INCOMPLETE",
+    "frames": [
+      "scripts/legacy-agent-host/desktop-ui-controls.ts:327:12",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts:647:3",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:421:12",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+    ],
+    "assertionMessageFromExactSource": "Original UI target moved after ownership check",
+    "originalAction": {
+      "selector": "button[aria-label^=\"alice,\"]",
+      "label": "show original scheduled reply",
+      "requiredContentCurrentlyAbsent": true
+    },
+    "observedByControlFlow": [
+      "Original task-first RunNow and matching completed task/effect returned.",
+      "Existing Back to chats and Alice scroll completed.",
+      "Original mouseMoved hover dispatched.",
+      "After-hover target read returned.",
+      "Existing loop obtained two consecutive equal point triples.",
+      "Final owned evaluate returned an available target.",
+      "deepEqual(final triple,stable triple) failed before the mouseClick step and before mousePressed/mouseReleased."
+    ],
+    "notObserved": [
+      "Actual stable/final x,y,tag values.",
+      "Failed original Alice text, bounding box or scroll position.",
+      "Which renderer state transition happened between final two reads.",
+      "Whether a prerequisite would have changed this exact outcome.",
+      "Full failed receipt/screenshots/ordinary app or Host cleanup."
+    ],
+    "reachedScopeLimit": "Prior operations are inferred from exact sequential control flow and the failure frame, not invented records from the unread archive. Later visible scheduled reply, schedule proof assignment, automatic cron, TaskActivity/Stream, held input and final Team Stop are unreached.",
+    "savedProjectionLimit": "The existing post-failure partial sample records provisioning ready/configReady,0 retained dialog entries and peerCleanup.absent=true. It is not atomic with the click, not complete DOM, and does not establish app/Host ordinary exit or complete cleanup."
+  },
+  "peerAndPreviewContract": {
+    "originalCaseAnchor": "desktop-emulated-runtime-ui.ts608–647",
+    "canonicalPrerequisites": "One original manually dispatched task-first run, one matching linked task ID, exact completed task count/owner and matching provider-specific finite effect before navigating back.",
+    "claude": {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "lines": "320–337",
+      "order": [
+        "task_list selects one Alice in-progress TEST task",
+        "task_complete phase completed",
+        "message_send to user with TEST scheduled reply phase completed",
+        "effect scheduled with matching taskId/inputId",
+        "finish emits TEST scheduled complete through original assistant/result protocol"
+      ]
+    },
+    "codexAndOpenCode": {
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "lines": "225–245,298–299,449",
+      "order": [
+        "task_list selects one Alice in-progress TEST task",
+        "task_lifecycle complete",
+        "message_send to user with TEST scheduled reply",
+        "effect scheduled-effect with task and both command IDs",
+        "provider-specific finish emits TEST scheduled complete"
+      ]
+    },
+    "candidateMarker": "TEST scheduled ",
+    "markerScope": "The same prefix exists in both finite scheduled messages. The common manual schedule is first at this branch, before the later real automatic schedule. Earlier Claude standalone outputs use TEST standalone..., which does not satisfy this prefix. The canonical matching-task/effect prerequisite remains mandatory; the text marker is not new input or process authority.",
+    "previewRules": "buildChatList scopes messages to the original participant; pickPreviewMessage prefers newest addressed-to-user, falling back to newest visible. View-model formatting uses sanitized summary/text, whitespace collapse and88-code-point truncation; a working draft overrides the message preview. The candidate never modifies those production rules.",
+    "noGuarantee": "These sources support accepting either known scheduled preview rather than one full reply literal. They do not establish that every provider always exposes either preview before all unrelated state changes; absence or a draft override must remain a bounded failure, never fallback to body text or a fabricated match."
+  },
+  "successfulComparisons": [
+    {
+      "provider": "opencode",
+      "jobId": 134072511958,
+      "manifest": "4ce54fbd20dc6dd4771c5a2d3b9d3fa5d385b7c5",
+      "receipt": {
+        "path": "TEST-desktop-backend-iyLjax/desktop-backend-receipt.json",
+        "bytes": 813587,
+        "sha256": "ce139255492bd23b758534e6d08bd4a478beb4f3b22ba9feb5e01944aa0cb16a",
+        "gitBlob": "8e251632b8f6b8ee489f9dcbd8a6b6bb992b552b",
+        "derivedArchiveMemberIdentity": true,
+        "notAnIndependentlyRetainedGitBlob": true
+      },
+      "originalRelevantSteps": [
+        {
+          "index": 180,
+          "action": "mouseMoved",
+          "label": "hover return to original chats before scheduled reply",
+          "selector": "button[aria-label=\"Back to chats\"]",
+          "target": {
+            "x": 26,
+            "y": 94,
+            "text": "",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "index": 181,
+          "action": "mouseClick",
+          "label": "return to original chats before scheduled reply",
+          "selector": "button[aria-label=\"Back to chats\"]",
+          "target": {
+            "x": 26,
+            "y": 94,
+            "text": "",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "index": 182,
+          "action": "mouseMoved",
+          "label": "hover show original scheduled reply",
+          "selector": "button[aria-label^=\"alice,\"]",
+          "target": {
+            "x": 169.5,
+            "y": 210.5,
+            "text": "aliceTEST approval allowed04:07 PM",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "index": 183,
+          "action": "mouseClick",
+          "label": "show original scheduled reply",
+          "selector": "button[aria-label^=\"alice,\"]",
+          "target": {
+            "x": 169.5,
+            "y": 210.5,
+            "text": "aliceTEST approval allowed04:07 PM",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        }
+      ],
+      "qualification": "Complete original receipt/text outcome was already fully read/hash-joined in5e7304. The exact steps above were re-read here. This task performs no runtime and does not infer Claude coordinates from another lane."
+    },
+    {
+      "provider": "codex",
+      "jobId": 134072512324,
+      "manifest": "2dd826303b947665c2cdc8b933292d8ee652e695",
+      "receipt": {
+        "path": "TEST-desktop-backend-SgSwEx/desktop-backend-receipt.json",
+        "bytes": 843011,
+        "sha256": "07ccc11f50c6aa378200538c23523555f189c88e1b3f0228eb2a84cfb6799fdb",
+        "gitBlob": "96f81d64b77d0e2436e760d8ed829ca1adf375dd",
+        "derivedArchiveMemberIdentity": true,
+        "notAnIndependentlyRetainedGitBlob": true
+      },
+      "originalRelevantSteps": [
+        {
+          "index": 174,
+          "action": "mouseMoved",
+          "label": "hover return to original chats before scheduled reply",
+          "selector": "button[aria-label=\"Back to chats\"]",
+          "target": {
+            "x": 26,
+            "y": 94,
+            "text": "",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "index": 175,
+          "action": "mouseClick",
+          "label": "return to original chats before scheduled reply",
+          "selector": "button[aria-label=\"Back to chats\"]",
+          "target": {
+            "x": 26,
+            "y": 94,
+            "text": "",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        },
+        {
+          "index": 176,
+          "action": "mouseMoved",
+          "label": "hover show original scheduled reply",
+          "selector": "button[aria-label^=\"alice,\"]",
+          "target": {
+            "x": 169.5,
+            "y": 210.5,
+            "text": "alice/cost04:20 PM",
+            "tag": "BUTTON"
+          }
+        },
+        {
+          "index": 177,
+          "action": "mouseClick",
+          "label": "show original scheduled reply",
+          "selector": "button[aria-label^=\"alice,\"]",
+          "target": {
+            "x": 169.5,
+            "y": 218.5,
+            "text": "aliceTEST scheduled complete04:20 PM22",
+            "tag": "BUTTON"
+          },
+          "state": "attempted"
+        }
+      ],
+      "qualification": "Complete original receipt/text outcome was already fully read/hash-joined in5e7304. The exact steps above were re-read here. This task performs no runtime and does not infer Claude coordinates from another lane."
+    }
+  ],
+  "asynchronousLifecycle": {
+    "messagePublication": "Peer task/effect completion and renderer current message-head adoption are different boundaries. teamMessagesProvenance reads page data asynchronously, retains scope/owner/revision checks and commits canonicalMessages only afterward.",
+    "invalidation": "The existing createHostTeamChanges implementation reads connections/feed, compares signatures and emits config/inbox invalidations, then schedules its next poll after2000ms. This source behavior is not a timestamped reconstruction of the Claude failure.",
+    "listReentry": "MessagesPanel's sidebar layout effect restores listScrollTop clamped against current scrollHeight/clientHeight when list/state changes. useTeamConversationSurface changes list/thread surface without waiting for a new message head.",
+    "readAndBadges": "Visible messages queue markAllRead through requestAnimationFrame. Canonical messages/readSet feed unread and attention counts. ChatListRow lays out timestamp and conditional unread badges in a right-side column; adding/removing those children can affect row geometry.",
+    "boundedInference": "These are concrete possible state/layout transitions. None is proven to be the actual cause of the unavailable Claude final point change. No production message-currentness, scrolling, sorting, draft or badge logic is selected for repair."
+  },
+  "minimalCandidate": {
+    "selected": false,
+    "postimageAuthored": false,
+    "proposedScope": [
+      "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts"
+    ],
+    "boundary": "The sole existing ui.click labeled show original scheduled reply at line647, immediately after the original bounded Alice scroll.",
+    "semanticChange": "Use the existing requiredContent parameter with the common scheduled-message prefix before target coordinates become eligible. Keep the exact selector/label and leave the optional exact-text argument unset. Do not author a new selector, helper or sampling loop.",
+    "preserved": [
+      "Original Back-to-chats click and bounded Alice scroll.",
+      "Original one-hover/one-physical-click path with no retry.",
+      "Sole eligible target requirement, positive geometry, center hit and disabled refusal.",
+      "Every original ownership check.",
+      "Existing two-stable-sample/15-sample ceiling and final exact point/tag equality.",
+      "Original30s read budgets, post-fulfilled cutoff and100ms cadence.",
+      "Later exact visible TEST scheduled reply assertion and every later schedule/cron/TaskActivity/Stream/Stop case.",
+      "Current798-line driver within800 cap, unchanged controls and whole149/catalog43/runtime85 case bodies.",
+      "Finite TEST provider authority and all source/custody/cleanup assertions."
+    ],
+    "forbiddenSubstitutes": [
+      "Re-reading a new coordinate after final movement and clicking it.",
+      "Adding a second click or mousePressed retry.",
+      "Extending waits or stabilizing for a new arbitrary interval.",
+      "Accepting body/neighbor text or choosing one of several Alice rows.",
+      "Treating a marker as proof of settled logs, process exit or native/vendor qualification.",
+      "Requiring only TEST scheduled reply and disregarding the legitimate TEST scheduled complete preview."
+    ]
+  },
+  "verificationPlan": {
+    "existingWholeTest": {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 165022,
+      "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+      "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+      "readExtent": "Previously complete retained whole149 source read; exact current body hash-joined; actual helper and four Selection forwarding cases at 2101–2238 re-read in full here. No source was compiled or executed.",
+      "wholeInventory": 149
+    },
+    "alreadyMeaningfulCases": "Actual createDesktopUiControls is exercised through its generated DOM expression, with controlled geometry/ownership and counted input. Cases2101–2215 cover delayed own reply, final movement with and without a ready preview, absent/neighbor/body/duplicate/zero/disabled/covered targets, literal serialization and revoked content. These tests do not copy the classifier.",
+    "existingForwardingLimit": "Actual Selection openChat forwarding cases2217–2238 cover that caller only. Do not describe them as a new test of runtime-ui647.",
+    "candidateStaticReview": "If root selects an R1, verify the eventual full driver inverse confines the edit to the one existing requiredContent argument and preserves every other byte and798/800 line cap. This advisory does not approve an unauthored postimage.",
+    "originalExecution": "Use the already selected existing whole component/E2E routes when separately authorized; keep all cases and predicates. No new workflow, harness, filter, venue or gate is requested here.",
+    "candidateRuntimeSuccessMustShow": "Original one RunNow and one Alice click, eventual exact scheduled reply visibility, preserved subsequent schedule and Stop obligations, and original cleanup. If final movement still occurs, preserve failure rather than retry.",
+    "qualification": "Prior247/247 component and7/7 installer observations remain prior results. No new candidate test, GUI PASS or overall E2E qualification is claimed."
+  },
+  "smallestMissingDiagnostic": {
+    "currentProducer": "desktop-backend-smoke.ts637–651 receives the original error and passes it to projectDesktopHarnessFailure; desktop-backend-failures.ts1–29 retains only assertion/error kind and selected source frames. projectDesktopProofReceiptSummary then includes that projection.",
+    "missingAlreadyObservedData": "At controls327, AssertionError actual is finalPoint[x,y,tag] and expected is stablePoint[x,y,tag]. Those arrays are sufficient to establish direction/magnitude/type of the refused change without another renderer read.",
+    "possibleFutureBoundary": "If selected separately by root, a narrowly identified movement assertion could expose only those existing finite coordinate pairs plus closed tag/action identity through the existing failure summary. It would preserve the original error and receipt/cleanup flow.",
+    "privacyAndBounds": "Read only own data descriptors from the exact known error shape, refuse malformed/accessor values, keep current output caps and unknown fallback, and omit arbitrary raw DOM text, HTML, paths, tokens and whole error actual/expected objects.",
+    "notSelected": true,
+    "limit": "The pair alone would quantify movement but still would not prove which async state caused it. No new sampler, extra await, screenshot, input or assertion weakening is justified."
+  },
+  "primarySources": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "bytes": 69370,
+      "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+      "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 29017,
+      "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+      "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "bytes": 21993,
+      "sha256": "2f929c1f5cfd1a9a3c9ec16d35f7197856c79a61adf166d30eebb8a1bd086f67",
+      "gitBlob": "adf5b4c418195e0fc4ab38ba7fde2b3436a6b835",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "bytes": 33227,
+      "sha256": "dc9ba0c735ea763a24bb06d93590373cf1072d5737c7fba67a31df1356c44dd5",
+      "gitBlob": "1430de1a6666a22a7582d38a21273d61d2f745b7",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/renderer/components/team/messages/MessagesPanel.tsx",
+      "bytes": 57559,
+      "sha256": "9f0360ec4994d315bf9f36a808784bb31e201bc8d5aca620183077d20669d2ed",
+      "gitBlob": "0c1375b2296c6d6a8d8a0259df0809a6c749a9c6",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/features/team-direct-chats/renderer/ui/ChatListRow.tsx",
+      "bytes": 4302,
+      "sha256": "045eccc1fb77b1e749f65e545ecfc31fc40152f96d757eef407858cf51d029ec",
+      "gitBlob": "1c73f21330861c55297dca91ce014069a2d90c40",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/features/team-direct-chats/renderer/ui/ChatList.tsx",
+      "bytes": 3605,
+      "sha256": "30677e58f85ba386b613a9fed9eb37bab8e5c9d8cc559e8065756575587a1af4",
+      "gitBlob": "f61c89591e28ec33e724e58c4b4b30b82319fa9a",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/features/team-direct-chats/renderer/ui/SortableChatListRow.tsx",
+      "bytes": 2744,
+      "sha256": "fecef5b086aaca873def76e16b2cf8dc2e5859499179becf9efed282eef2021c",
+      "gitBlob": "0ea3aded18834766267505cddae043e946b6126e",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/features/team-direct-chats/renderer/view-models/chatListViewModel.ts",
+      "bytes": 3952,
+      "sha256": "c373e96f6a26e455120bba9fbe9049261e885fe52555c5005416b9f8e894bb86",
+      "gitBlob": "1306276e2df8a4bba79dd2ed8fe0295246138135",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/features/team-direct-chats/core/domain/buildChatList.ts",
+      "bytes": 3394,
+      "sha256": "4412fe95b9e8fe0cf88ffc1e41b352ab8daade212a56d8ee37248f35e3d408cb",
+      "gitBlob": "46778c99c75d71896aaaff60937caa705ca5e4d1",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/features/team-direct-chats/core/domain/pickPreviewMessage.ts",
+      "bytes": 490,
+      "sha256": "3f502e8ba895eaaa01380d166c3f4451836044d61f8a10ce93c01f710d09b535",
+      "gitBlob": "252113492c852f26b1da6ce455520f87345d00b2",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/features/team-direct-chats/core/domain/sortChatList.ts",
+      "bytes": 1411,
+      "sha256": "18a6d8e4fe2d9af437fed974429c6eff8cf9b1daa9e52e11360bd0fa8cf5befd",
+      "gitBlob": "2004ac9112cf7fd041c3462110f6490476dade3d",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/renderer/components/team/messages/useMessagesPanelChats.ts",
+      "bytes": 5549,
+      "sha256": "9dfa555312a241101c9a6a546f251489fddf231a3e96c8194af81e2901c78d63",
+      "gitBlob": "629950dcea557abe819cb8f40a51310e30130344",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/renderer/components/team/messages/MessagesConversationList.tsx",
+      "bytes": 2847,
+      "sha256": "636e1e2dcc7e5bb4eba6c1cfb7f4dbee690c9ed136a866c427f93f8f17972e0d",
+      "gitBlob": "f79b4915ce9dc4990af1c8dd2c17306b3ea37448",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/features/team-direct-chats/renderer/ui/ChatPreviewLine.tsx",
+      "bytes": 1940,
+      "sha256": "fc4248c752e2fdb671b3108ee3bf4474ca924a75acb5a3f870572f58a7dc40aa",
+      "gitBlob": "c9caf3b191c84b191e0ca800eb6e50391c61559a",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/features/team-direct-chats/renderer/ui/ChatUnreadBadges.tsx",
+      "bytes": 2017,
+      "sha256": "64707f8627ce2d9ebb01cda263bd68a4591c72e3dc207a14c0804eeb3f2b0004",
+      "gitBlob": "1f9752221bc6c7a902af0ef9e1c774afd0dfa61b",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/features/team-direct-chats/core/domain/isUserUnreadMessage.ts",
+      "bytes": 1916,
+      "sha256": "678ec528d8d0b45abe35fdec57a09402ba1903a55e6a40573ef95b0670ac8b80",
+      "gitBlob": "bb673545fc7f63a128709bf0387d30847c648feb",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/features/team-direct-chats/core/domain/belongsToConversation.ts",
+      "bytes": 3907,
+      "sha256": "e04395992905a44eeb935592afa7cc3c90c5bfadf47307ce79a5459e086323f1",
+      "gitBlob": "6476ca3d4f34e07d15c155c11bda6471007fe114",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/features/team-direct-chats/renderer/hooks/useTeamConversationSurface.ts",
+      "bytes": 4235,
+      "sha256": "63776369460c60a3eff2949fccabf7081418e75e2e6a1a70cf42c54fe90077d8",
+      "gitBlob": "3ff2b20e36c1f0499e3f2255564c8442250cdf35",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/renderer/components/team/messages/MessagesSidebarSurface.tsx",
+      "bytes": 4302,
+      "sha256": "2d9df8694bbf0689e2018ecc54b79db98c5530173e008dc77c54ff46c3ba1889",
+      "gitBlob": "2fe37bfa23407fd9f51a7838b228221a8061f629",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/renderer/hooks/useTeamMessagesRead.ts",
+      "bytes": 2556,
+      "sha256": "2447d5fd66cb83573b338a951186175a9c301892631f50ab8fc55586c7f3b7ad",
+      "gitBlob": "8c86237e99e5a5b8e86fe8bd06e926f499503a01",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/renderer/store/team/teamMessagesProvenance.ts",
+      "bytes": 17813,
+      "sha256": "018257385a1dfd6846ca7557a9c03eabb3413c5fd80cbb32b0d2147891780c2f",
+      "gitBlob": "e4f9cbc7483381b22a74dd9901ea5db33b3896e7",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/renderer/components/team/messages/messagesPanelDerivedData.ts",
+      "bytes": 6537,
+      "sha256": "910d84f562c6d39743db391332a0075dd13410c4904e05b699d08a60ff96c304",
+      "gitBlob": "ef15b9bc1ba31b738440976405cd30af3ddae1ac",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/renderer/utils/chatPreview.ts",
+      "bytes": 286,
+      "sha256": "7ca7c8bf70176ded550fcba8761a122d22e8e057216a0d337534f05f1b828759",
+      "gitBlob": "7c8869dba13c1e20effcbf96e4c898beafe946ab",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/features/agent-backend/renderer/createHostTeamChanges.ts",
+      "bytes": 9557,
+      "sha256": "0fb4534fbd62a0593cebfc5bc34122228f840bd2ccda19bb50bd9c9ea39b8829",
+      "gitBlob": "daf8ec603a9d0a5b5990232d7617b9a4a67b10e1",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/renderer/utils/bootstrapPromptSanitizer.ts",
+      "bytes": 8863,
+      "sha256": "442888e37680099c097b2deaf1bc11c4dc0ede361eb69c2c98da64b6916063ed",
+      "gitBlob": "3963306fba13d08c51bdd4674826a7e8edb31d02",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/renderer/utils/teamMessageFiltering.ts",
+      "bytes": 9403,
+      "sha256": "f5614814395d3f05af8ac2610e638a7bd7400ce6b04160a1870fec8568bdbb21",
+      "gitBlob": "690d32e1829a6903970c7b3663a9749be91da621",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/renderer/components/team/messages/useMessagesReadState.ts",
+      "bytes": 1687,
+      "sha256": "9a91ba796cf95cf6c3f3b5cf0b863ffa02832731a384a3f08067c73e3e6c10c5",
+      "gitBlob": "6db2dfd28a4c15d3fadab10e231938dc0e7f1ecb",
+      "readExtent": "Complete body read in this bounded task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 165022,
+      "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+      "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+      "readExtent": "Previously complete retained whole149 source read; exact current body hash-joined; actual helper and four Selection forwarding cases at 2101–2238 re-read in full here. No source was compiled or executed."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "bytes": 39026,
+      "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a",
+      "gitBlob": "76f5d1953816fd125f576a966c42caefcfc297e2",
+      "readExtent": "Previously complete read joined through accepted finite outcome5e7304; current full body hash-equal, scheduledCompletion and both selected provider callsites225–245/298–299/449 re-read."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 54778,
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "gitBlob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "readExtent": "Previously complete read joined through finite outcome5e7304; current full body hash-equal; original catch/summary path637–675 re-read."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "bytes": 28804,
+      "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4",
+      "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28",
+      "readExtent": "Previously complete read joined through finite outcome5e7304 and diagnostics R2; current full body hash-equal; complete readiness projector and summary316–431 re-read."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "src/renderer/store/slices/teamSlice.ts",
+      "bytes": 184647,
+      "sha256": "87f07dfa0d132d20493add182d0bb05d40fa1c5f97b5ddb72fa9ab23b6df8e9a",
+      "gitBlob": "df9dd8391bdd9fcd2edc05057fa18a8cbd787dad",
+      "readExtent": "Whole bytes fetched/hash-verified; selected imports and complete delegated message-action/syncPending/send boundaries read. No claim to a new whole184647-byte semantic audit."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "scripts/legacy-agent-host/desktop-backend-failures.ts",
+      "bytes": 32872,
+      "sha256": "af840a158f0d765fd4ebd9ba9d8b7e378e5f5a5c7ed9ecd0659101fe7834849f",
+      "gitBlob": "55cbfa9ab573b41a7903360f0539ac0f137fc7d8",
+      "readExtent": "Whole bytes fetched/hash-verified; full projectDesktopHarnessFailure function1–29 read. Other independent failure projections are outside this task."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "bytes": 33423,
+      "sha256": "2f98ed35ffb34f090d58b4021f54b1d92938f2ae6263312dd867654b923e80c8",
+      "gitBlob": "dca0c1710273411656e3284db0302449a00ddaf6",
+      "readExtent": "Whole bytes fetched/hash-verified; import/re-export1–8 read only for the exact failure-projector call route. No new general observer audit."
+    }
+  ],
+  "readingSummary": {
+    "completeFreshSourceBodies": 28,
+    "previousCompleteBodiesReused": 4,
+    "selectedFunctionsInWholeHashedBodies": 3,
+    "totalWholeSourceBytes": 853051,
+    "fullBodyReadClaimIsPerRow": true
+  },
+  "checks": [
+    {
+      "id": "C01",
+      "status": "PASS_STATIC",
+      "finding": "Current driver and controls are exact unchanged CI3 bodies at aab3; driver remains798 physical lines, below800.",
+      "evidence": [
+        "source:desktop-emulated-runtime-ui.ts ff991b68",
+        "source:desktop-ui-controls.ts5286c036"
+      ]
+    },
+    {
+      "id": "C02",
+      "status": "PASS_STATIC",
+      "finding": "The retained Claude failure frame identifies the final stable-versus-final point assertion, not the initial model readiness or a dispatched click.",
+      "evidence": [
+        "log722df52c line1156",
+        "controls324–355",
+        "driver647"
+      ]
+    },
+    {
+      "id": "C03",
+      "status": "PASS_STATIC",
+      "finding": "Hover, after-hover read, two equal consecutive samples and the final owned read are prior reached control-flow boundaries; mousePressed/mouseReleased are later and unreached for this click.",
+      "evidence": [
+        "controls300–355"
+      ]
+    },
+    {
+      "id": "C04",
+      "status": "BOUNDED_UNKNOWN",
+      "finding": "The failed Claude stable/final coordinate pair, row preview and intervening layout facts are unavailable in the retained stdout. No geometric cause is proved.",
+      "evidence": [
+        "log722df52c line1156",
+        "prior eb4910ae"
+      ]
+    },
+    {
+      "id": "C05",
+      "status": "PASS_STATIC",
+      "finding": "Original RunNow, unique dispatched run, matching task ID, task completion and matching finite peer effect precede the click.",
+      "evidence": [
+        "driver633–647"
+      ]
+    },
+    {
+      "id": "C06",
+      "status": "PASS_STATIC",
+      "finding": "Those canonical task/effect facts do not wait for the renderer's own Alice preview; the current call omits the existing fourth click argument.",
+      "evidence": [
+        "driver639–647",
+        "controls212–225/357–358"
+      ]
+    },
+    {
+      "id": "C07",
+      "status": "PASS_STATIC",
+      "finding": "Claude publishes the MCP reply after task completion, then records scheduled and finishes with a separate complete reply; the exact two texts share one prefix.",
+      "evidence": [
+        "claudeProviderPeer320–337",
+        "claudeProviderPeer239–268"
+      ]
+    },
+    {
+      "id": "C08",
+      "status": "PASS_STATIC",
+      "finding": "The selected Codex/OpenCode peer performs the same two-stage scheduled publication through its actual scheduledCompletion and provider-specific finish calls.",
+      "evidence": [
+        "providerDesktopPeer225–245/298–299/449"
+      ]
+    },
+    {
+      "id": "C09",
+      "status": "PASS_STATIC",
+      "finding": "First common manual task-first schedule is before the real automatic schedule; earlier Claude-only standalone messages use a distinct TEST standalone prefix.",
+      "evidence": [
+        "drivercommon schedule608–655",
+        "claudeProviderPeer source",
+        "runtime-fixture selected fresh scope"
+      ]
+    },
+    {
+      "id": "C10",
+      "status": "PASS_STATIC",
+      "finding": "Preview selection prefers the newest addressed-to-user message, otherwise the newest visible message, rather than the first exact MCP reply forever.",
+      "evidence": [
+        "pickPreviewMessage",
+        "isUserUnreadMessage",
+        "buildChatList"
+      ]
+    },
+    {
+      "id": "C11",
+      "status": "PASS_STATIC",
+      "finding": "Preview formatting and draft override are separate from message visibility; a draft or newer legitimate row can affect the shown preview.",
+      "evidence": [
+        "chatListViewModel",
+        "ChatListRow",
+        "messagesPanelDerivedData"
+      ]
+    },
+    {
+      "id": "C12",
+      "status": "PASS_STATIC",
+      "finding": "Original successful OpenCode click used an old approval preview; the later original exact visible reply assertion nevertheless passed in the complete original outcome.",
+      "evidence": [
+        "OpenCode receipt steps182–183",
+        "5e7304"
+      ]
+    },
+    {
+      "id": "C13",
+      "status": "PASS_STATIC",
+      "finding": "Original successful Codex hover and click differ in preview and Y coordinate after the existing stabilization loop; final click shows TEST scheduled complete, not TEST scheduled reply.",
+      "evidence": [
+        "Codex receipt steps176–177",
+        "5e7304"
+      ]
+    },
+    {
+      "id": "C14",
+      "status": "PASS_STATIC",
+      "finding": "A full-reply-only prerequisite is not justified as the universal chat-list preview contract. The common TEST scheduled prefix admits both fixture-owned scheduled texts.",
+      "evidence": [
+        "C07–C13",
+        "controls217"
+      ]
+    },
+    {
+      "id": "C15",
+      "status": "PASS_STATIC",
+      "finding": "The existing prerequisite checks the sole positive-size eligible element, never body or neighbor text, before coordinate admission.",
+      "evidence": [
+        "controls212–225"
+      ]
+    },
+    {
+      "id": "C16",
+      "status": "PASS_STATIC",
+      "finding": "The same serialized expression is reused before hover, during stabilization and in the final direct read; target ambiguity, center-hit, disabled, ownership and final point refusals remain applicable.",
+      "evidence": [
+        "controls212–225/227–358"
+      ]
+    },
+    {
+      "id": "C17",
+      "status": "PASS_STATIC",
+      "finding": "Current waitRead retains its original30s deadline, post-fulfilled cutoff and100ms cadence; candidate requires no helper change or added await/timer.",
+      "evidence": [
+        "controls186–209/266/312–314"
+      ]
+    },
+    {
+      "id": "C18",
+      "status": "PASS_STATIC",
+      "finding": "Chat rows derive preview, unread/attention badges and timestamp from changing canonical data and readSet. Conditional badge content can change layout; this is a source-visible possibility only.",
+      "evidence": [
+        "MessagesPanel793–869",
+        "ChatListRow",
+        "ChatUnreadBadges"
+      ]
+    },
+    {
+      "id": "C19",
+      "status": "PASS_STATIC",
+      "finding": "List scroll restoration is a separate layout effect on list re-entry/state, and visible-message read marks flush through requestAnimationFrame. Neither is joined atomically to the peer journal.",
+      "evidence": [
+        "MessagesPanel614–619/824–849",
+        "MessagesSidebarSurface",
+        "useTeamConversationSurface"
+      ]
+    },
+    {
+      "id": "C20",
+      "status": "PASS_STATIC",
+      "finding": "Current Host changes implementation and message-head actions have asynchronous read/invalidation/commit boundaries with scope/currentness checks. No cache reuse or bypass is proposed.",
+      "evidence": [
+        "createHostTeamChanges",
+        "teamMessagesProvenance"
+      ]
+    },
+    {
+      "id": "C21",
+      "status": "BOUNDED_UNKNOWN",
+      "finding": "No retained Claude event identifies whether unread badge, scroll restoration, another row, draft, sorting, or another layout update caused the final movement.",
+      "evidence": [
+        "failure stdout",
+        "renderer source possibilities"
+      ]
+    },
+    {
+      "id": "C22",
+      "status": "PASS_STATIC",
+      "finding": "Existing actual-helper regression bodies cover own-row prerequisite readiness, movement at final check, body/neighbor refusal, duplicate/disabled/covered targets, literal serialization, revoked prerequisite and preserved owner error identity.",
+      "evidence": [
+        "whole14912c73fbc lines2101–2215"
+      ]
+    },
+    {
+      "id": "C23",
+      "status": "PASS_STATIC",
+      "finding": "Existing actual Selection openChat forwarding tests exercise its real extracted call path, but do not test the separate current runtime-ui647 caller or establish its scheduled-preview timing.",
+      "evidence": [
+        "whole149lines2217–2238"
+      ]
+    },
+    {
+      "id": "C24",
+      "status": "PASS_STATIC",
+      "finding": "Original CI3 eight-file component command passed247/247 and installer7/7 in the retained Claude log; those existing results are not a new candidate execution.",
+      "evidence": [
+        "prior eb4910ae componentScope",
+        "log722df52c"
+      ]
+    },
+    {
+      "id": "C25",
+      "status": "PASS_STATIC",
+      "finding": "A one-call argument-only R1 candidate can preserve the exact selector/label, existing scroll, original one-click semantics, later exact visible reply assertion and all following cases.",
+      "evidence": [
+        "driver644–647",
+        "controls357–358"
+      ]
+    },
+    {
+      "id": "C26",
+      "status": "BOUNDED_UNKNOWN",
+      "finding": "A marker-ready row can still move later. Existing ready-preview movement refusal demonstrates that the candidate is not a proof of a final PASS.",
+      "evidence": [
+        "whole149test2199–2215",
+        "missing Claude pair"
+      ]
+    },
+    {
+      "id": "C27",
+      "status": "PASS_STATIC",
+      "finding": "The smallest causal diagnostic is the already compared expected/actual point arrays; current failureSource emits kind/frames only. An optional future projection could consume error data without new observation, but no such change is selected here.",
+      "evidence": [
+        "desktop-backend-failures1–29",
+        "backend-smoke637–675",
+        "proof-evidence409–431"
+      ]
+    },
+    {
+      "id": "C28",
+      "status": "PASS_STATIC",
+      "finding": "No unavailable archive, new screenshot, live CI observation, source/control postimage or target runtime was used. Cleanup and native/vendor limits remain separate.",
+      "evidence": [
+        "prior archiveLimits",
+        "performedActions"
+      ]
+    }
+  ],
+  "checkCount": 28,
+  "statusCounts": {
+    "PASS_STATIC": 25,
+    "BOUNDED_UNKNOWN": 3
+  },
+  "blockersToAdvisory": [],
+  "runtimeQualification": "NONE. Original Claude GUI remains failed/INCOMPLETE; this advisory identifies a preserving candidate and explicit causal limits.",
+  "performedActions": [
+    "Immutable Git fetches.",
+    "Pure-data identity and exact-line comparisons.",
+    "Reuse of previously complete read/hash-joined retained captures.",
+    "Creation of this bare advisory report only."
+  ],
+  "prohibitedActionsNotPerformed": [
+    "No filesystem/shell/process/runtime/source execution or compilation.",
+    "No source/control postimage or branch/ref/PR/CI mutation.",
+    "No live CI polling/artifact download or archive renewal.",
+    "No real Claude/Codex invocation.",
+    "No selected new gate, venue or runtime attempt."
+  ],
+  "selfReadbackProtocol": "After retention, send exact pin immediately, then freshly fetch every byte, verify literal equality and identity and read the complete retained report before confirming."
+}

@@ -1,0 +1,317 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_COMPLETE_UTF8_CAPTURE_CHUNK_MANIFEST",
+  "repository": "777genius/agent-teams-ai",
+  "artifactId": 14346762789,
+  "runId": 44092933810,
+  "jobId": 134072512324,
+  "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+  "createdAt": "2026-11-17 16:42:53 UTC",
+  "encoding": "ordered-utf8-text-chunks",
+  "logicalCapture": {
+    "bytes": 9250963,
+    "sha256": "173a47d013864cdd1219e4c5e128b567a3e1a12ce07876a8019462fc2b09186d",
+    "gitBlob": "f1267577051253b2eb022c39ee8ab4c0ceae558d",
+    "derivedLogicalIdentity": true
+  },
+  "chunks": [
+    {
+      "index": 0,
+      "byteStart": 0,
+      "byteEnd": 3000000,
+      "pin": {
+        "bytes": 3000000,
+        "sha256": "73d2e4bafd7d5324ff5eeb37fbae49d6b24bb8eeb2cad3e8c770c107e981b6d4",
+        "gitBlob": "ad40f5d7e60010769085570b7acd22dfa4a0d6ca"
+      }
+    },
+    {
+      "index": 1,
+      "byteStart": 3000000,
+      "byteEnd": 6000000,
+      "pin": {
+        "bytes": 3000000,
+        "sha256": "031d9b7286e5a13056185ac28ed69415fb84dd8370d17f3f5bfd123020b81ed3",
+        "gitBlob": "f74d975583233921d56e5435b7f47391b3b40c90"
+      }
+    },
+    {
+      "index": 2,
+      "byteStart": 6000000,
+      "byteEnd": 9000000,
+      "pin": {
+        "bytes": 3000000,
+        "sha256": "174b528e7b2cae996352e9f4bd02b8c31ee663eaff3af6bde4c7d244030b751d",
+        "gitBlob": "7efc815d72d209ef1cbc6ca888da9f50aa3a897f"
+      }
+    },
+    {
+      "index": 3,
+      "byteStart": 9000000,
+      "byteEnd": 9250963,
+      "pin": {
+        "bytes": 250963,
+        "sha256": "36e6d9d400c5493544c5709715f956400983bd2aac6cbbf6be33248371ca6db5",
+        "gitBlob": "a3f16f48334ecc1e870a6825fa2f97cf36dde248"
+      }
+    }
+  ],
+  "chunkCount": 4,
+  "allChunksFreshSelfRead": true,
+  "completeReconstructionHashMatched": true,
+  "originalArchive": {
+    "bytes": 2935027,
+    "sha256": "d959f4290138cbf3672bf3860d25974c4bb0cbab4bc06eae86161b485fb59183",
+    "gitBlob": "33d26dbc087d3c20c7229115206bbf884b3c0bd2"
+  },
+  "members": [
+    {
+      "path": "TEST-desktop-backend-SgSwEx/desktop-backend-receipt.json",
+      "bytes": 843011,
+      "sha256": "07ccc11f50c6aa378200538c23523555f189c88e1b3f0228eb2a84cfb6799fdb",
+      "gitBlob": "96f81d64b77d0e2436e760d8ed829ca1adf375dd",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/desktop-app.log",
+      "bytes": 40278,
+      "sha256": "40d43cf5294a97e3b08da39ed452efaaeb3ad314308efb95600894a1f370d40f",
+      "gitBlob": "5788be20f87ed193b41cca35b5617a0736586a5e",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/TEST-peer-codex-scope/effects.ndjson",
+      "bytes": 15193,
+      "sha256": "ad0c10da7f061ab8a3a8c8abbb6e827acc5f916eda7751733a5a5b294b5fee6d",
+      "gitBlob": "9e9d356105c8cb45358f3587fe76ba9acd825fe4",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/desktop-descriptor.json",
+      "bytes": 2635,
+      "sha256": "7d80698955f80f8c2d20d4e04951a8c89a22fb4ba0174ca98f0887e9e0d4a6f0",
+      "gitBlob": "a1c1c7242b5f25572a284cdeeadd0b1ec7d86c5b",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/host-profile.json",
+      "bytes": 7265,
+      "sha256": "b8cc0a3c7e69a49902b08638e17dec1344bdd7de676d963e0be06546a32a6e9a",
+      "gitBlob": "f532c656e8eba28b46c80a0347227117013d093f",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/hoststore/management-commands/3c7f1fbf658bccce296b8ef430a702b7d39b0c68719f682d0cfcd1bb849f1586.json",
+      "bytes": 904,
+      "sha256": "d0efaa0afb6da57a1dfb75cb351d31b952099d76a5acda368ee878890fb29ab3",
+      "gitBlob": "de7218065e8d29b370ebc2c3fde5bd3ffa5daae8",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+      "bytes": 4637,
+      "sha256": "075753417b72ec68a8b26860fc94e6dcf0c79a16b6a847988c8565c98d143017",
+      "gitBlob": "b607671787b3692f1b7392f4efe614ae9a0a58c4",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/hoststore/teams/test-desktop-backend/inboxes/user.json",
+      "bytes": 822,
+      "sha256": "b0c3f51c9a037475c820e86140ec86c72220857ece8026ac46db71e7d8b02168",
+      "gitBlob": "8b44bc97595439673df50655feb61a76b8454f0c",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+      "gitBlob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-allow-pending.png",
+      "bytes": 149053,
+      "sha256": "39ad1140633841217fcfbcdc71978e1d2eb844fa9020e3614896418abfc92e88",
+      "gitBlob": "2944dcfe144cc636c2f6a21065c67cfb4335de73",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-completed.png",
+      "bytes": 136268,
+      "sha256": "a50dc6bec43567481f770c439945b6c34208edf563df0ecf0f2dd629d4e84add",
+      "gitBlob": "4be8601ce34c51a38761528ce6587d186c751fd9",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-cost.png",
+      "bytes": 150248,
+      "sha256": "c4d57ab34fcc87975b796ebf032b9f755d6114f13453f1b10a161db672f3def3",
+      "gitBlob": "4ee6d554b9dc3e8b4a706d7241ec75b0445192e0",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-deny-pending.png",
+      "bytes": 147766,
+      "sha256": "34a42718f534f34541c0b2be86a9adaff4621a88c52f36131c4d754055318953",
+      "gitBlob": "3d61acc6829827f7f3d457d76b0ffc44e0c74ce2",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-effects.json",
+      "bytes": 21077,
+      "sha256": "715b871d134b1179856646b0340d6f3e4f5d1dfecec666c02ae7dd70fb73ec8b",
+      "gitBlob": "7467a19a24588182b81be891c2f4a7ac547ae707",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-held.png",
+      "bytes": 117473,
+      "sha256": "b8d1733382e339b61320abad8e7f4e7c511107efce4f3a70c85f7a06c076ec88",
+      "gitBlob": "b7108e6d7671a9534a439afb9508cf18d2f867fe",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-launch.png",
+      "bytes": 101946,
+      "sha256": "e9a68b62387bb3dce8fd6a99965a2a4fe7dd436ad96bcc8a655b388d7f976014",
+      "gitBlob": "da459136a4bdd9cfa676d9ac87e7fbc87be711d5",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-lead-logs.png",
+      "bytes": 61198,
+      "sha256": "47d758c992c7e02364c1e0c39a883e355051c19ab60acae204281be0209ae1eb",
+      "gitBlob": "d5023595cd3fbc6f78e7ae235814651726b3cac7",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-logs.png",
+      "bytes": 145086,
+      "sha256": "97a33185a6f5758a7429bf7c75d73a9f2a228b9d5ca209c749774c0d8e547381",
+      "gitBlob": "5bdb5d919c348428443d1e24e7e5d32ad975bc49",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-partial.png",
+      "bytes": 105140,
+      "sha256": "4efe23d4bcb59cd9756ee5cc200b8342edb419ed5dc4dcae5de2b127a80fdd35",
+      "gitBlob": "ff9928e118a00586f06a35a609063891b82a29fe",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-question-decline-pending.png",
+      "bytes": 158732,
+      "sha256": "ce1ef8bbf903191f20655c7141916c8b93f1ab5ddb62a6afd9c4ef0ced841c71",
+      "gitBlob": "2983db9e8d10a41378df44d97a763b9dc80f5998",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-reloaded.png",
+      "bytes": 141559,
+      "sha256": "2f2ae9f5befe152d3624a0730c136f719b7480a6a57759ecbabd7ec19dd329b4",
+      "gitBlob": "427cecaaf2b71146fa0743aa57589939c7da683c",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-question-pending.png",
+      "bytes": 157107,
+      "sha256": "3074eb5441b6704fe311e9ed25c7ea1b1392244bab7f97a723e8446ca7a1ad42",
+      "gitBlob": "3563d033df5b67bcb81cf9599db258e1154b3c9f",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-schedule-automatic.png",
+      "bytes": 130632,
+      "sha256": "7b25e221a417c001a5a52c31062d9ec89bf4eb697495837b77f54ff059d85866",
+      "gitBlob": "ecb91a00820a61a6a2df3862f8baca84f8d0907f",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-schedule.png",
+      "bytes": 119185,
+      "sha256": "0952673bdd824683a6db471f897d1d1e012b1fc800e07d12702d7155393b9a9b",
+      "gitBlob": "f8bf70303649c0b333353ad871d1caa51e6f3e28",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-stats.png",
+      "bytes": 148469,
+      "sha256": "21a38ac65b4bb1777ee6e7abe3956abb9d40ea9bd4fb95cc0a41caedbd914bb0",
+      "gitBlob": "cacee51867cad21956c53d001d1d0bd9d4f23505",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-stopped.png",
+      "bytes": 137725,
+      "sha256": "17f8bc2f572e1684d5f6bf4f8892fb5e0d146f816582d314e2b619eb5f96af9d",
+      "gitBlob": "336f6c85a09c1b238de793265228a895d032e42d",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-task-activity.png",
+      "bytes": 174786,
+      "sha256": "dfb6cb977c9ba4a0b0b3823903ca63ac2ed50a4edf53e05c8a2334713e511b1b",
+      "gitBlob": "bde96cd5d4722d923b4c3e44c2cb671e36dedb43",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-task-log-stream.png",
+      "bytes": 150129,
+      "sha256": "93e16a2d2b475687274224fe9bc902dba1f39784c69a00e3533c28937ec07f9d",
+      "gitBlob": "ce39ce069e92c43942b4da05bd30f136bcf628ca",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-SgSwEx/ui-seed-receipt.json",
+      "bytes": 2335,
+      "sha256": "94609742039708f0f4cdddcd57ede3c912be4b7fa8c47a4c70c428db00d206d1",
+      "gitBlob": "1e66b9c025261032529f0148ca017d2ca4f7a399",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-59UgmL/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "gitBlob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "encoding": "base64"
+    },
+    {
+      "path": "host-emulated-emulated-codex-runtime-ui.log",
+      "bytes": 225,
+      "sha256": "9b35ab3a1d0ba23b3bfddf12bd88860a5426364abd36fcd26418f098f0df0d3d",
+      "gitBlob": "a29ef9ab3129ee0b6fadaf0729b83752347e206e",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1803,
+      "sha256": "52976a6251ddf284b0fbfb9651cb3cf0181ff06a363a0f085db11387223a56f9",
+      "gitBlob": "2272cadd8e54e7ba549780ad6e048e1dcdef851f",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-59UgmL/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "gitBlob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "sha256": "cb7192e6a8a9721f0587757437b963fc68cbf8037ef801a0b06e1250df0e4c91",
+      "gitBlob": "9a31a5ed211a86dfa3aaa980497726ee8bd8d56a",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "host-emulated-summary.json",
+      "bytes": 1658,
+      "sha256": "1a113b0622eb43104748ff81c2dc016fc06e907b541aa2c2fa1e4a56b2f6a284",
+      "gitBlob": "5163b43eb558d21fa4799e6f7ca57d9285da7ac9",
+      "encoding": "utf-8"
+    }
+  ],
+  "largeSingleBlobAttempt": null,
+  "instructions": "Fetch every ordered UTF-8 chunk as a complete Git blob, concatenate exact strings without added separators or normalization, verify logicalCapture bytes/SHA256/derived Git identity, then parse the complete JSON. Do not fetch the derived logical identity as a separate Git object. Original capture includes complete ZIP base64 and every complete UTF-8 or binary member.",
+  "qualification": "Lossless complete retained data only; no new execution or case qualification."
+}

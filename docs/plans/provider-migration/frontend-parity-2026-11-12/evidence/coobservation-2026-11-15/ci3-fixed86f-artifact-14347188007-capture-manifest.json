@@ -1,0 +1,248 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_COMPLETE_UTF8_CAPTURE_CHUNK_MANIFEST",
+  "repository": "777genius/agent-teams-ai",
+  "artifactId": 14347188007,
+  "runId": 44092933810,
+  "jobId": 134072512270,
+  "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+  "createdAt": "2026-11-17 17:15:18 UTC",
+  "encoding": "ordered-utf8-text-chunks",
+  "logicalCapture": {
+    "bytes": 4781937,
+    "sha256": "717b14ed3932b6c3697f2f27c01484c65d81b5f8f6c435f951e17729926a37fe",
+    "gitBlob": "03840f9fce4e9d390e20f622c48bd6ba017c9bf2",
+    "derivedLogicalIdentity": true
+  },
+  "chunks": [
+    {
+      "index": 0,
+      "byteStart": 0,
+      "byteEnd": 3000000,
+      "pin": {
+        "bytes": 3000000,
+        "sha256": "810e8a932493010900f4eb57882a2791e8f13962481541370c32db038c74ea38",
+        "gitBlob": "7849551c7e7d7da159764ee5c79ec345d7810baf"
+      }
+    },
+    {
+      "index": 1,
+      "byteStart": 3000000,
+      "byteEnd": 4781937,
+      "pin": {
+        "bytes": 1781937,
+        "sha256": "3fa697894449fb2b64d3d4db6bbb9ca41c9efc9d4ca4fe5ca1078180d235d0d5",
+        "gitBlob": "5b31560fff89f097103b25ef70afb062162db1fa"
+      }
+    }
+  ],
+  "chunkCount": 2,
+  "allChunksFreshSelfRead": true,
+  "completeReconstructionHashMatched": true,
+  "originalArchive": {
+    "bytes": 1315924,
+    "sha256": "0e7219105673c09b53fe95afbd823caff40b6064fbb45bbf9ad84bf4ae2bb6af",
+    "gitBlob": "eb97c78059afa4c29f298e64ffaa8a9eeb697087"
+  },
+  "members": [
+    {
+      "path": "TEST-desktop-backend-JXRrKV/TEST-peer-codex-scope/effects.ndjson",
+      "bytes": 14278,
+      "sha256": "6c0e40f9771681014d3eef77f0988bf5c5ee23c19d63dfd24821ad09e48340f2",
+      "gitBlob": "931d48bf9b76ecc58693e53466b2e9f9bcacd001",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/desktop-backend-receipt.json",
+      "bytes": 783352,
+      "sha256": "52d15e714db21231b9b775ada04a8b0a95414a4e0c172f37fa6e63e1b6ddd726",
+      "gitBlob": "20d82f829fa240f950fc5202ad170c90a513e38b",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/desktop-app.log",
+      "bytes": 27754,
+      "sha256": "e4c3d6ccb4ce19ead9078ac5010cd7131754f9783cb9e13d4c6eb3069f2a8a1a",
+      "gitBlob": "5e9b2fd8b3456e04d2ef9b2b5555a4ac889765a8",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/desktop-descriptor.json",
+      "bytes": 2635,
+      "sha256": "c4b2cda0806bd8fca0e1c8f8dac23fd3fe1b0eca26dc680489830eb6f7d5b313",
+      "gitBlob": "715424315f7ecd70ee85f4f1ce55e22d0bb591f8",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/host-profile.json",
+      "bytes": 7388,
+      "sha256": "77b9dae42c002fabe6237aa5bcf7303066d6affb15b2ab3700655fe327ef9691",
+      "gitBlob": "205806c79023c58bc8c2b915e6332f5e3ee44d76",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/hoststore/management-commands/5ee235c200ca2a2626c638cce826d1edf91e5680592ff470a28e9f4c93a73c5b.json",
+      "bytes": 929,
+      "sha256": "c57b70a77734908fb210ffa63b490e1c89c9e51cf0eb5991d43f3f89c8630a81",
+      "gitBlob": "c7b4f2dca2ac6aac2e33f2fc209fa4e63d635ad3",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/hoststore/management-commands/3662dd57bdc4da5fc579b9f72c7173cfae3bfd8161c8aa5b9f3171b759ebaa54.json",
+      "bytes": 923,
+      "sha256": "993b509a702509f37bf38a2b905b5ccf4e6ead9462c4303437078cde7a6ab588",
+      "gitBlob": "82bf85a2bf05244472e23228d085258fa90c1cfd",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/hoststore/management-commands/7badd8358bb144d8874025cfc853724924a2a2a8d84b4bd1106b3b8c9bd3983c.json",
+      "bytes": 904,
+      "sha256": "9420282590190562dca57ff320475fc0e6d1aa12621d6caae8b66cd571c832d1",
+      "gitBlob": "87057e515e0006eb64119a0f4e130df2c4f72502",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/hoststore/runtime-checkpoints/cp1-b72f977931220cdb4439fb8534a324bc498129c3f85113ee33e9afac5c30da86.json",
+      "bytes": 2318,
+      "sha256": "56da91ec671140cfd939a001307a4b4a230180f2cdaa0e9b60dce8b42de4f0c2",
+      "gitBlob": "6610b4d6db15e3125c18169876bb057147316551",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/hoststore/runtime-checkpoints/cp1-e4595827a173908b456a611f0fb497c85a7deae3f760f8b28e327c69850f3a1a.json",
+      "bytes": 1894,
+      "sha256": "6e186fdcc46330b46991b58a83ee6abb1e2a52a1e4de60696890d985a6656303",
+      "gitBlob": "70a934d1f8ffd78cacbde7a941ad1f1a8dfa49ed",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+      "bytes": 453,
+      "sha256": "d4758db97afd6cca06d99b874c18e1f150bf73c50b35c874c8ab0510f2787f0a",
+      "gitBlob": "b56aa6f5fa618e967ad972a439ed6bfa6985fce0",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/hoststore/teams/test-selection-next-team/inboxes/team-lead.json",
+      "bytes": 202,
+      "sha256": "2be4f8bf6b2e069dc8ccbb0891b83a36ea7bb5923f0b0881c49d8d72f1433fd7",
+      "gitBlob": "46343b7e12c040c271cb9cad24291bbab92301b4",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+      "gitBlob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/ui-emulated-selection-a-launch.png",
+      "bytes": 102033,
+      "sha256": "d76a13efe56f43fd11ff58cddf9be774c4e85a175bd32df0db9e3cee0ab02d48",
+      "gitBlob": "914e6242ba228fe0eeb715bef4d2c9eb05e0d2bb",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/ui-emulated-selection-b-launch.png",
+      "bytes": 98193,
+      "sha256": "45c7286f9a77dd44f8d39b37ffac6f8b2d2954ad190f3728681243bd153d5159",
+      "gitBlob": "503d2f97ff2e670c35e161b13c9b80987e2adf70",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/ui-emulated-selection-a-survived.png",
+      "bytes": 114731,
+      "sha256": "24d08b8ad6fb18ec8b17db282b2b7d89987916073cf12b7ce7f48f523c25567e",
+      "gitBlob": "a0d9069f72e139d3508645694ed51ded1b9e264f",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/ui-emulated-selection-completed.png",
+      "bytes": 115666,
+      "sha256": "4ac2a0be71db56576812c9b2418d4d3187d063d34fd2278cbebbef530d3897bb",
+      "gitBlob": "ed35c877f0d154e069c80b4d88673c96e77ca75e",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/ui-emulated-selection-effects.json",
+      "bytes": 20254,
+      "sha256": "45402e72e1deb51b372e4dbd68ea04241af638bbaec46b737dc45cc96f0bf80d",
+      "gitBlob": "b4f641c195d504ac96b5744c32307c4e6c4bf29c",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/ui-emulated-selection-reloaded.png",
+      "bytes": 111142,
+      "sha256": "926e7151afd6bb9e9fc611763d1551c66e67a84755635e7b6ba05867a7b7258b",
+      "gitBlob": "416228cef48fde7f0bf4b613f736bffb5c9a4d51",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/ui-emulated-selection-selected.png",
+      "bytes": 102653,
+      "sha256": "b670545c6c46c3c4aafe0d9a6ea9fec1bdd641bc7d2be933603a19d5ca755b6d",
+      "gitBlob": "740b69bffb58d1821bdb213f00b655c9f16709e2",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/ui-emulated-selection-stopped.png",
+      "bytes": 118186,
+      "sha256": "52a6585b8e01da8a392d930856c7e0feec0c4cc03289e1c4b27a78af1c73d8c8",
+      "gitBlob": "3f3c6c7468af8dfb5f49cfa65f4501f8cda0303b",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-desktop-backend-JXRrKV/ui-seed-receipt.json",
+      "bytes": 2335,
+      "sha256": "067658003b3823e65de5cc4024d2ede3eb2793fe1a6301f5141b6d5b1283702c",
+      "gitBlob": "3da0e5a893decb18bb854fec83d44971f28afde0",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-CMvMgH/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "gitBlob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "encoding": "base64"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-CMvMgH/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "gitBlob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1803,
+      "sha256": "4b30126b12379a6e8b08d984870b37fdfe1acd51dcf815396512f7a169a227b0",
+      "gitBlob": "6ff71cd8c28927f2d776405e3dcaeda0525067d0",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "sha256": "d40b0e7630daabe0eeb632c55f597743f672ff087c4cd0b027219c9116901a1a",
+      "gitBlob": "2460a90891c57b0e92c9626e48f2c06cb09b0552",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "host-emulated-emulated-selection-ui.log",
+      "bytes": 225,
+      "sha256": "151c0988ab33eae216c0739b54a76cb3effbc73d0104069e829606f7603af53a",
+      "gitBlob": "37a23ec91cfab86c4dcb31dc4fc0fd8d4fcb6616",
+      "encoding": "utf-8"
+    },
+    {
+      "path": "host-emulated-summary.json",
+      "bytes": 1050,
+      "sha256": "065a508abdaff6708fe0ad3470e8d0172896fd7112550240f7715a052e9992e4",
+      "gitBlob": "252e0f96755667f9c4b8c1768c0b187ece349b8b",
+      "encoding": "utf-8"
+    }
+  ],
+  "largeSingleBlobAttempt": null,
+  "instructions": "Fetch every ordered UTF-8 chunk as a complete Git blob, concatenate exact strings without added separators or normalization, verify logicalCapture bytes/SHA256/derived Git identity, then parse the complete JSON. Do not fetch the derived logical identity as a separate Git object. Original capture includes complete ZIP base64 and every complete UTF-8 or binary member.",
+  "qualification": "Lossless complete retained data only; no new execution or case qualification."
+}

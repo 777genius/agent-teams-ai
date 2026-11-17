@@ -1,0 +1,613 @@
+{
+  "schemaVersion": 1,
+  "kind": "bounded-darwin-arm-installer-listener-diagnostic-feasibility-advisory",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_guard",
+  "reviewedAtUtc": "2026-11-17 17:54:35 UTC",
+  "decision": "NO_SOURCE_BACKED_BEHAVIORAL_REPAIR_PROVED; BOUNDED_EXISTING_DATA_DIAGNOSTIC_FEASIBLE",
+  "qualification": "Read-only source/evidence follow-up. No fix, postimage, venue, runtime, retry or new gate is selected.",
+  "authorization": {
+    "rootSoleAuthorExecutor": true,
+    "immutableGitReads": true,
+    "pureDataProcessing": true,
+    "bareReportOnly": true,
+    "localFilesystem": false,
+    "shell": false,
+    "targetEvaluationCompilationImport": false,
+    "liveCiPrRefOrDownload": false,
+    "sourceControlRefMutation": false
+  },
+  "subject": {
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "currentSourceRef": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+    "runId": 44092933810,
+    "jobId": 134072512275,
+    "artifactId": 14342687436,
+    "platform": "darwin-arm64",
+    "proofMode": "emulated-installer-ui",
+    "currentSixSourceBodiesEqualOriginalFrozenHashes": true
+  },
+  "evidence": {
+    "priorOutcome": {
+      "bytes": 19800,
+      "sha256": "dd4bfc2b51066e1afdbcf868c66668681cd432ddcaaa8429c2883e2067d4e86e",
+      "gitBlob": "6595dbc355e58e7395aa70cb933255344c6f5fd8",
+      "fullBodyRead": true,
+      "author": "/root/red_publication_recovery",
+      "role": "accepted original failure/custody outcome, joined rather than replaced"
+    },
+    "originalJobLog": {
+      "bytes": 199208,
+      "sha256": "16602e195a28ced5b7332a6809693b37de89618c857fb484cb163cabcfcdfe56",
+      "gitBlob": "f672b39f9b4c4fd5936fbd095cb6dd086ef81e4b",
+      "readScope": "Complete body fetched/rehashed and parsed; original selected invocation, common test summary, original emitted failure summary, both later failure traces and artifact upload identity read. Dependency-install text and unrelated full verifier internals not re-audited."
+    },
+    "capture": {
+      "bytes": 1049495,
+      "sha256": "b379d9099b2af7071617f980eed26d98cb239e06499a264b3ce56866d23b4907",
+      "gitBlob": "3b8b1326a02d0bc7c7b1196107f8fc848dacaf5a",
+      "readScope": "Complete UTF-8 capture fetched/parsed/rehashed. All eleven complete UTF-8 member bodies independently hash-joined. Full application log, original emitted flow log, descriptor/profile, finite journals, input/seed members and decisive complete receipt subobjects read. Large duplicate source vectors joined as data, not visually repeated.",
+      "memberCount": 11,
+      "memberBytes": 731473,
+      "archive": {
+        "bytes": 195411,
+        "sha256": "358d861f83dc58889bb6c3a7c7284f042fde261558224781fc31095736069641",
+        "gitBlob": "6e33c1884ff014a1653738a633ae65e0773439d7",
+        "crcQualification": "Original complete ZIP CRC verification attributed to root; this reviewer did not download, inflate or execute the archive."
+      }
+    },
+    "sourceIndex": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+        "bytes": 33423,
+        "sha256": "2f98ed35ffb34f090d58b4021f54b1d92938f2ae6263312dd867654b923e80c8",
+        "gitBlob": "dca0c1710273411656e3284db0302449a00ddaf6",
+        "lines": 693,
+        "readScope": "Complete current body read. All listener acquisition, parsing, error retention, Linux-only supplemental diagnostic and original cleanup functions inspected without execution.",
+        "original86fFreezeJoined": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "bytes": 54778,
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+        "gitBlob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "lines": 791,
+        "readScope": "Complete current body read. Original admission, invocation, mode dispatch, error catch, listener-failure stdout, failure capture/Quit, finally and summary inspected.",
+        "original86fFreezeJoined": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+        "lines": 495,
+        "readScope": "Complete body independently hash-joined to accepted prior complete read; exact waitRead guard/evaluation/deadline and selected control authority reread.",
+        "original86fFreezeJoined": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+        "lines": 298,
+        "readScope": "Complete body independently hash-joined to the immediately preceding full Team/Selection source audit; exact openLaunch-before-launch boundary reread.",
+        "original86fFreezeJoined": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "scripts/legacy-agent-host/desktop-backend-failures.ts",
+        "bytes": 32872,
+        "sha256": "af840a158f0d765fd4ebd9ba9d8b7e378e5f5a5c7ed9ecd0659101fe7834849f",
+        "gitBlob": "55cbfa9ab573b41a7903360f0539ac0f137fc7d8",
+        "lines": 459,
+        "readScope": "Complete current body fetched/hash-joined; entire projectDesktopHarnessFailure and projectDesktopCodexInstallerFailure functions read. Unrelated failure projections not freshly re-audited.",
+        "original86fFreezeJoined": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+        "bytes": 28804,
+        "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4",
+        "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28",
+        "lines": 431,
+        "readScope": "Complete current body fetched/hash-joined to accepted prior read; full projectDesktopProofReceiptSummary function and its installer routing reread.",
+        "original86fFreezeJoined": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "bytes": 77457,
+        "sha256": "af9de97ec8da68ef394c5ce5b08ca7bfbfd4b099178bd6ae3c9c8c20831cbc3b",
+        "gitBlob": "cd74eecf610858412022bbd2c69f62c910465bad",
+        "lines": 1352,
+        "readScope": "Complete current body fetched/hash-joined; original child-admission/real listener diagnostic mock seam and summary tests read. This follow-up does not re-prove every test assertion or execute any test.",
+        "original86fFreezeJoined": false
+      }
+    ],
+    "sourceBytes": 281110,
+    "members": [
+      {
+        "path": "TEST-desktop-backend-yVQGun/TEST-codex-install/invocations.ndjson",
+        "bytes": 552,
+        "sha256": "361fa6fce910c9e8e21a2577fb4ce4ca13652eb0924429467eac516a52101cc1",
+        "gitBlob": "240ff04d8d6d1a85415c5c42fce10d946c0f446f",
+        "identityKind": "derived embedded member; not separately Git-fetched"
+      },
+      {
+        "path": "TEST-desktop-backend-yVQGun/TEST-codex-install/registry.ndjson",
+        "bytes": 306,
+        "sha256": "84fd5601aa391636dfa697d98342666f1feedf4729a8b2976818e5924f37d835",
+        "gitBlob": "f5b6e7d75ef902fa635ff2e7285cdc21ac13ac6c",
+        "identityKind": "derived embedded member; not separately Git-fetched"
+      },
+      {
+        "path": "TEST-desktop-backend-yVQGun/TEST-peer-codex-scope/effects.ndjson",
+        "bytes": 346,
+        "sha256": "2ac1f753a020f3c026e712e7b376afd52a3a0578cde2882c7f243b0f378d7f50",
+        "gitBlob": "f2665bf20d9fc60f2886448ccef4fc4d5fb0c9e2",
+        "identityKind": "derived embedded member; not separately Git-fetched"
+      },
+      {
+        "path": "TEST-desktop-backend-yVQGun/desktop-app.log",
+        "bytes": 16048,
+        "sha256": "4cb916378b1a42462a1bdb02db820390e36d17defabfac0c56c4d73a6d1bd51b",
+        "gitBlob": "dfcc6943d4b0c49d730dd8a1de2f7d097547c2de",
+        "identityKind": "derived embedded member; not separately Git-fetched"
+      },
+      {
+        "path": "TEST-desktop-backend-yVQGun/desktop-backend-receipt.json",
+        "bytes": 697669,
+        "sha256": "eb487bdac5bd151554a3de160af51d78d1bd4498abfe74c595b905c772a9ed85",
+        "gitBlob": "a40707d8d92fb4f8fb4cfb3bd3991631344488e1",
+        "identityKind": "derived embedded member; not separately Git-fetched"
+      },
+      {
+        "path": "TEST-desktop-backend-yVQGun/desktop-descriptor.json",
+        "bytes": 2664,
+        "sha256": "327fd1a021168afd153f92e3f6d2808e15c9db25820237578b956db87425a1d8",
+        "gitBlob": "c6223e0b0dd3a48d9a54c51a9e23e98892bd7181",
+        "identityKind": "derived embedded member; not separately Git-fetched"
+      },
+      {
+        "path": "TEST-desktop-backend-yVQGun/host-profile.json",
+        "bytes": 7471,
+        "sha256": "7c6043d21bba589aaa1a07eab74a13a7b46b3ac24891c96229d5ad60c6fca8fc",
+        "gitBlob": "4124debf048e7ba472c2a10406f4b61302f7b930",
+        "identityKind": "derived embedded member; not separately Git-fetched"
+      },
+      {
+        "path": "TEST-desktop-backend-yVQGun/sentinel-invocations.ndjson",
+        "bytes": 96,
+        "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+        "gitBlob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+        "identityKind": "derived embedded member; not separately Git-fetched"
+      },
+      {
+        "path": "TEST-desktop-backend-yVQGun/ui-seed-receipt.json",
+        "bytes": 2335,
+        "sha256": "55717891a3a5ff509619e6ef8584eefb4e7d9f27772de3f58d4633c42e893e5b",
+        "gitBlob": "fcf83ef68afd0f196b410db7e06a1020b069a7c2",
+        "identityKind": "derived embedded member; not separately Git-fetched"
+      },
+      {
+        "path": "host-emulated-emulated-installer-ui.log",
+        "bytes": 2931,
+        "sha256": "e4d3cc89ff77dd72ebaec5632cbbc1bd1550be3114aa525ede1644b97dc326ab",
+        "gitBlob": "4812ea1bc2d6be9677908a4b1c684b8d8efd9998",
+        "identityKind": "derived embedded member; not separately Git-fetched"
+      },
+      {
+        "path": "host-emulated-inputs.json",
+        "bytes": 1055,
+        "sha256": "4a15668caab0e10519798a2f8a855b53abbe9cc32127f1742673e191914b44a0",
+        "gitBlob": "3be86ee1dee790e45aac1a00dc8f3c0ad5adf6cc",
+        "identityKind": "derived embedded member; not separately Git-fetched"
+      }
+    ],
+    "method": "Only the previously approved pure UTF-8 identity helper was evaluated. No target source was evaluated, transpiled, compiled, imported or run. Static string checks and JSON/data joins are not runtime tests."
+  },
+  "observed": {
+    "originalFailure": "one CDP listener\n\n2 !== 1\n",
+    "failureSource": {
+      "kind": "assertion",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-backend-observations.ts:411:12",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:421:123",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:194:15",
+        "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts:77:29",
+        "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts:175:3",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:421:12"
+      ]
+    },
+    "status": "INCOMPLETE",
+    "initialAcceptedListener": 8064,
+    "failedCandidateValues": null,
+    "originalFailedLsofStdout": null,
+    "originalFailedGroupSnapshot": null,
+    "cardinalityInterpretation": "The retained 2 !== 1 is the exact cardinality of new Set(output.trim().split('\\n').map(Number)) at the Darwin guard. lsof -t intends numeric PID rows, but successful stdout is not separately token-validated by this code. Without retained stdout, two valid numeric PID identities cannot independently be reconstructed. Treat them as two distinct parsed candidates; do not infer a particular second process or socket.",
+    "reached": {
+      "steps": 7,
+      "lastStep": "One click opening the original saved Team Launch dialog",
+      "originalSettingsRead": "Failed ownership guard before renderer evaluation",
+      "initialRuntime": false,
+      "installerUpdate": false,
+      "savedSelection": false,
+      "nextRuntime": false,
+      "screenshots": false
+    },
+    "cleanup": {
+      "processGroup": 7428,
+      "remaining": [
+        {
+          "pid": 8064,
+          "ppid": 1,
+          "pgid": 7428
+        },
+        {
+          "pid": 12051,
+          "ppid": 8064,
+          "pgid": 7428
+        },
+        {
+          "pid": 12053,
+          "ppid": 8064,
+          "pgid": 7428
+        },
+        {
+          "pid": 12065,
+          "ppid": 8064,
+          "pgid": 7428
+        }
+      ],
+      "appExitCode": null,
+      "appSignalCode": "SIGTERM",
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded",
+      "quitRequested": false,
+      "failureQuit": {
+        "attempted": false,
+        "reason": "Owned CDP authority unavailable; no unrelated window was closed"
+      },
+      "finitePeerAbsent": true,
+      "finitePeerPids": [
+        10811,
+        12008
+      ],
+      "qualification": "App signal SIGTERM and four remaining group rows are not ordinary Quit or complete cleanup. Captured Host absence and two finite management peers absent are narrower observations."
+    },
+    "finitePeerJournal": [
+      {
+        "event": "launch",
+        "parentPid": 8506,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 10811
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 10811
+      },
+      {
+        "event": "launch",
+        "parentPid": 8506,
+        "argc": 3,
+        "provider": "codex",
+        "role": "management",
+        "pid": 12008
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "provider": "codex",
+        "role": "management",
+        "pid": 12008
+      }
+    ],
+    "appLog": {
+      "devToolsAnnouncements": 1,
+      "interpretation": "One DevTools announcement does not disprove another holder/listener candidate, shared inherited descriptor, parser anomaly or another later process. None of those specific causes is established.",
+      "laterWarnings": "Network/GPU service termination, renderer recovery scheduling and transport-closed diagnostics occur in the retained app log; they do not identify the earlier failed lsof candidates."
+    },
+    "testContext": {
+      "wholeOriginalCommand": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "reported": 247,
+      "passed": 246,
+      "failed": 0,
+      "skipped": 1,
+      "cancelled": 0,
+      "todo": 0,
+      "skippedCase": "Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder",
+      "meaning": "The platform-specific Linux diagnostic case was not a Darwin PASS. Existing command success did not qualify the subsequently failed GUI flow."
+    },
+    "sourceFreeze": {
+      "rows": 1757,
+      "beforeAfterLiteralEqual": true,
+      "qualification": "Selected original source corpus only; all six source functions in this diagnosis independently match current aab3 bodies and original hashes. No full live filesystem census."
+    }
+  },
+  "currentSourceTrace": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "boundary": "processTable/groupMembers, lines99–120",
+      "meaning": "A fresh /bin/ps -ax -o pid=,ppid=,pgid= census is parsed; group selection must be positive. It is a numeric non-atomic snapshot, not a retained birth/HANDLE authority."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "boundary": "assertOwnedCdpListener, lines366–429",
+      "command": {
+        "executableDarwin": "/usr/sbin/lsof",
+        "args": [
+          "-nP",
+          "-a",
+          "-p",
+          "<comma-separated PIDs from the original captured-group census>",
+          "-iTCP:<selectedCdpPort>",
+          "-sTCP:LISTEN",
+          "-t"
+        ],
+        "timeoutMs": 10000,
+        "maxBuffer": 1048576,
+        "precedingPsTimeoutMs": 3000
+      },
+      "meaning": "The -a conjunction, captured PID restriction and selected TCP LISTEN filter already exist. No machine-wide scan or missing -a defect is established."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "boundary": "original execFileSync catch",
+      "meaning": "Only status1 with no signal, positive PID-shaped Darwin stdout and blank stderr is allowed to continue. Timeouts, other statuses, signals, diagnostics or no matching stdout remain thrown original errors. Do not broaden this exception."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "boundary": "cardinality then fresh group-membership guard",
+      "meaning": "new Set(listeners).size must equal1; same-PID duplicate rows are already tolerated. Only afterward does a second original groupMembers call check membership of the selected listener. The failure occurred before this second check, so its result is absent and must not be fabricated."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "boundary": "catch and WeakMap retention, lines419–428; readOwnedCdpListenerFailure, lines313–326",
+      "meaning": "census exists only on Linux, so only Linux associates facts with the original Error. Its optional later fixture correlation may read /proc; a Darwin diagnostic branch must never enter that Linux supplement or add an observation."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "boundary": "waitRead, lines186–209",
+      "meaning": "assertOwnedRenderer runs before cdp.evaluate. It sits outside the navigation-error catch. The duplicate-candidate assertion aborts the original read; no mutation retry or relaxation follows. Original default30s/post-await cutoff/100ms cadence remain."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "boundary": "openLaunch77 then await openLaunch(a,true); const liveA=await launch(a), line175",
+      "meaning": "The initial saved-settings read precedes actual Team launch and installer first-runtime milestone. Later installer/selection outcomes are unreached."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "boundary": "catch beginning around line600",
+      "meaning": "Before optional renderer failure capture and failure Quit, the main catch reads the original per-error listener facts, assigns evidence.cdpListenerFailure, and emits TEST_CDP_LISTENER_FAILURE with its existing32KiB byte cap. Darwin currently supplies no facts, so this path is silent for the original refusal."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-failures.ts",
+      "boundary": "projectDesktopHarnessFailure, lines1–29",
+      "meaning": "Only positive source-local frame paths and kind are returned; raw message, arbitrary actual/expected values, environment and causes are deliberately absent. The original error object is available to the listener-specific catch, so no general privacy widening is required."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-failures.ts",
+      "boundary": "projectDesktopCodexInstallerFailure, lines309–427",
+      "meaning": "Only retained finite installer/selection stage, cleanup and timeout/connection classifications are projected. The current message matches no CDP timeout classification and numeric compared values/listener IDs are not read."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "boundary": "projectDesktopProofReceiptSummary, lines409–430",
+      "meaning": "Final non-PASS installer summary includes failureSource, installerFailure and selectionTargetFailure, but not cdpListenerFailure. The existing early dedicated listener stdout is already the narrow route to preserve original facts before finally's later assertion."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "boundary": "finally receipt write/summary/assertDesktopProofCompleted around lines768–770",
+      "meaning": "The final proof assertion reports INCOMPLETE versus PASS and supersedes the originally rethrown exception at process top level. A later workflow verifier fails again. These later comparisons must not be confused with the original count2-versus1."
+    }
+  ],
+  "causalAssessment": {
+    "supportedDefect": "A concrete diagnostic omission: Darwin's already-returned lsof text and mapped candidates are discarded at the exact original assertion, while the existing per-error diagnostic storage is Linux-only.",
+    "behavioralRepairProved": false,
+    "notSupported": [
+      "Deduplicate PID rows as a repair; Set already does this.",
+      "Choose initially accepted PID8064, a preferred owner or a first candidate.",
+      "Ignore a second candidate because there is only one DevTools announcement.",
+      "Retry lsof/renderer work until only one candidate remains.",
+      "Relax the one-listener predicate, original fresh membership guard, status1 error handling, deadline or cleanup oracle.",
+      "Infer an executable inheritance, Electron restart or installer bug from later non-atomic process rows."
+    ],
+    "preciseUnknown": "Which values the original failing lsof stdout contained; whether both were valid positive PID tokens; whether either equaled8064; their exact relationship to the original pre-query group snapshot; socket/file identity and birth; why this observation differed from earlier accepted ones."
+  },
+  "smallestPreservingDiagnosticOption": {
+    "selected": false,
+    "kind": "Passive original-data retention only; no executable postimage",
+    "producer": "Within the existing assertOwnedCdpListener assertion catch, associate a bounded Darwin-specific record with the same original Error, using only output/listeners/owned/group/selectedCdpPort already in local memory.",
+    "minimumFacts": [
+      "Explicit original-Darwin-lsof scope and atomic:false.",
+      "Original group/port, original candidate-set cardinality, original output byte length and a truncation/format status.",
+      "Bounded original candidate values or positive-safe PID list with separate invalid/nonfinite-token flags; never silently convert invalid candidates into valid PIDs.",
+      "Bounded original pre-query group identity rows (pid/ppid/pgid) or bounded per-candidate membership comparisons against those rows, clearly labelled before-original-lsof and not a fresh post-failure census.",
+      "Optional PID-only raw stdout under a small fixed diagnostic cap; only copy when it satisfies the PID/newline grammar, otherwise retain format/length flags rather than arbitrary raw text.",
+      "Only the original cardinality AssertionError's positive own-data numeric actual/expected and fixed strictEqual operator when recognizable; absence/accessors/unknown shapes remain unavailable. Never serialize arbitrary values, causes, argv, environment or broad stack."
+    ],
+    "boundedShapeSuggestion": "A possible representation is at most16 candidate/owned-correlation records and at most4096 bytes of PID-only raw stdout, full cardinality plus explicit truncation/format flags, remaining under the existing32KiB early diagnostic line cap. These are proposed serialization limits, not a changed process timeout or selected schema.",
+    "consumer": "Reuse readOwnedCdpListenerFailure and the existing main catch's evidence.cdpListenerFailure / TEST_CDP_LISTENER_FAILURE path. Keep a distinct Darwin record and return it without Linux /proc fixture correlation. Preserve original Linux facts byte-for-byte.",
+    "minimalFilesIfLaterSelected": [
+      "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "Potential tiny existing desktop-backend-smoke.ts adjustment only if the current overflow fallback must name the actual Darwin scope; no new acquisition or control path."
+    ],
+    "summaryPolicy": "The early dedicated diagnostic already reaches the original job log, and the same record is retained in the receipt. No change to generic projectDesktopHarnessFailure, installer interpretation, final PASS/INCOMPLETE assertion or ordinary cleanup is necessary to retain these facts. If a final summary echo is later chosen, it must only project the already-retained record with the same bounds, never resample.",
+    "invariants": [
+      "Same lsof executable/argv/count, same status1 admission, same ps call order, same10s/3s/1MiB limits.",
+      "Same distinct-candidate assertion and independent fresh group membership check.",
+      "Same original Error object rethrown even if diagnostic serialization/access fails.",
+      "No new /proc, ps, lsof, socket, CDP, model, network, timer, signal or filesystem observation.",
+      "No use of diagnostic data to authorize renderer input, listener selection or process cleanup.",
+      "No generic raw assertion values or new production API.",
+      "No new files/workflows/venue/gate selected by this advisory."
+    ],
+    "testSeam": "The existing observations.test.ts imports the actual guard and reader and already mocks childProcess.execFileSync, counts lsof/ps calls, forbids signals, checks same-error facts, same-PID descriptor acceptance, second-holder refusal, later-success nonoverwrite and diagnostic size/privacy. A later exact plan can extend that actual-function seam for Darwin PID-only data; do not copy the parser or import the CLI main.",
+    "discriminatingChecksIfSelected": [
+      "Two distinct candidates must still throw the original Error, with one lsof and only the original pre-query ps; facts retain the original candidates/compared count and no renderer call.",
+      "Repeated rows for one candidate retain the original success and second fresh membership check; membership refusal and status1/timeout/stderr failures are unchanged.",
+      "Capped/invalid/empty/large stdout and own-property getters never leak private text, synthesize PIDs or replace the original assertion.",
+      "Repeated failure projection or a later successful observation must not perform a fresh OS read or overwrite facts for the first Error; Linux existing diagnostic behavior and all original case prefixes remain."
+    ],
+    "executionLimit": "These are test-design requirements only, not executed tests or an additional approval/qualification gate. The original Darwin test command reports its existing Linux-only skip; skipped cases must not be relabelled PASS."
+  },
+  "checks": [
+    {
+      "id": "original_subject",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Exact immutable original Darwin ARM installer subject."
+    },
+    {
+      "id": "original_failure",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Original listener assertion distinct from later final-proof failures."
+    },
+    {
+      "id": "failure_stack",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Ownership assertion before renderer evaluation."
+    },
+    {
+      "id": "no_failure_facts",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Darwin failure facts absent."
+    },
+    {
+      "id": "no_runtime_milestone",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Seven UI steps; initial runtime milestone unreached."
+    },
+    {
+      "id": "initial_listener_only",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Earlier listener 8064 is not a failed-census identity."
+    },
+    {
+      "id": "ordinary_quit_refused",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Unowned renderer close refused."
+    },
+    {
+      "id": "partial_cleanup",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Four group rows remain; captured Host absent."
+    },
+    {
+      "id": "finite_peers",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Only two finite management peer launch/exit pairs, absent."
+    },
+    {
+      "id": "one_announcement",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "One announcement cannot refute candidate-set cardinality."
+    },
+    {
+      "id": "whole_members",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "All eleven complete UTF-8 members independently hash-joined; no PNG."
+    },
+    {
+      "id": "source_freeze",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Selected original1757-row before/after equality."
+    },
+    {
+      "id": "current_source_join",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Six current aab3 source bodies match original frozen source hashes."
+    },
+    {
+      "id": "original_lsof_selectors",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Captured-group AND selected TCP LISTEN port, PID-only Darwin output."
+    },
+    {
+      "id": "original_query_bounds",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Original lsof10s/1MiB and ps3s."
+    },
+    {
+      "id": "distinct_rule",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Repeated same numeric value already deduplicated."
+    },
+    {
+      "id": "original_membership_guard",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Separate fresh membership guard after cardinality."
+    },
+    {
+      "id": "darwin_raw_gap",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Darwin has no retained per-error facts; successful token validation absent."
+    },
+    {
+      "id": "status1_narrow",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Positive status1 exception retains signal/stderr/shape refusals."
+    },
+    {
+      "id": "original_log_seam",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Existing early listener receipt/stdout seam with32KiB bound."
+    },
+    {
+      "id": "original_throw_preserved",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Same original assertion object is rethrown."
+    },
+    {
+      "id": "no_summary_values",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Generic frame/final summary omits original values/listener facts."
+    },
+    {
+      "id": "source_control_order",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Guard before evaluation; original wait/cadence."
+    },
+    {
+      "id": "source_call_order",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Initial runtime launch follows failed observation."
+    },
+    {
+      "id": "existing_test_seam",
+      "status": "PASS_STATIC_OR_RETAINED_EVIDENCE",
+      "detail": "Actual-function mock seam and original Linux-only skip."
+    }
+  ],
+  "checkCount": 25,
+  "blockers": [],
+  "methodCorrections": [
+    "An internal schema check initially compared member.encoding to utf8; the actual capture uses utf-8. The check was corrected before report retention; no evidence bytes or conclusions changed.",
+    "The prior outcome's shorthand 'two listener PIDs' is narrowed here to two Number-mapped candidate values until original raw PID-only stdout can be retained. The guard remains failed and no primary outcome changes."
+  ],
+  "finalLimits": [
+    "No current CI4 outcome or later source runtime result is inferred from failed CI3 evidence.",
+    "All terminal original jobs remain terminal and unpolled; no retry or new lookup was issued.",
+    "One DevTools announcement does not disprove the duplicate-candidate observation.",
+    "Initial listener8064, later process rows and after-cleanup absence are not the missing original failure census.",
+    "No GUI installer success, full E2E, native/source-mutation P09 result, real vendor execution or blanket cleanup qualification.",
+    "A source-backed diagnostic omission is established; a behavioral cause and preserving behavior repair are not."
+  ]
+}

@@ -1,0 +1,621 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_SCHEDULED_PREVIEW_READINESS_R1_SEMANTIC_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_semantic",
+  "authoredAt": "2026-11-17 18:06:31 UTC",
+  "decision": "ACCEPT_SCOPED_R1_PLAN",
+  "subject": {
+    "bytes": 82537,
+    "sha256": "98cb75df75d8fd72be398a9b0232144d234bf1587c79061a1f80b86ea96549ba",
+    "gitBlob": "8c9beffb843278b3a4a8b35c425732d4b1308c67"
+  },
+  "blockers": [],
+  "acceptance": "The exact one-caller readiness plan is supported by the existing helper, finite peer and preview contracts. Acceptance applies to this R1 plan only; no unauthored source implementation or execution result is approved.",
+  "reviewScope": {
+    "fullSubjectRead": true,
+    "sourcePostimageAuthored": false,
+    "sourceEvaluatedOrCompiled": false,
+    "runtimeExecuted": false,
+    "localFilesystemUsed": false,
+    "liveCiRead": false,
+    "gitOrPrMutation": false,
+    "permittedRetention": "This bare review blob only.",
+    "reuse": "Complete prior immutable source reads are reused only after whole-body identity equality. No unrelated historical artifact or binary re-audit.",
+    "laterActualBoundary": "The90-document publication is a concrete bounded plan. Full current/parent document bodies, prefixes, catalog values, manifest and recursive pointer closure must be checked in the already existing actual publication readbacks; this static review does not claim those future operations occurred."
+  },
+  "inputs": {
+    "sourceActualGate": {
+      "bytes": 6196,
+      "sha256": "06f73d718018698225838883cad606c5e2a8924c9e7f90e5ea335735e27a0bc2",
+      "gitBlob": "ca1b9cc4a3666168a8f13ca0fd52aa4fab2abe47",
+      "closedAt": "2026-11-17 17:01:40 UTC",
+      "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "root": "834d86a61218cd70ec92d6f51f17dcd6531b574f",
+      "fullRead": true
+    },
+    "precedingDocumentationActualGate": {
+      "bytes": 9374,
+      "sha256": "8888ff9bd7c82108d0bd5847ee9d423f3f08e76d7aef199cb776f0f7b25baaa9",
+      "gitBlob": "d5a637f85e1faf4f3b3bc032b813dfb7b665dad0",
+      "closedAt": "2026-11-17 17:44:37 UTC",
+      "commit": "56ea675b480f229cdaa0a47beff48d8d3a03f501",
+      "root": "b1368574a268afae426d9490c72639fa4eb769ba",
+      "docs": "ce4f4daaa0e1f3d6e33fe01c687b340e2d6352d4",
+      "fullRead": true
+    },
+    "boundedAdvisory": {
+      "bytes": 46531,
+      "sha256": "aaf392fb3f8ec0cb15e6d24fea41ea20e00db306c800532899843b33245a49b7",
+      "gitBlob": "20f354b647a7e582d691e034f4dee6cb43cba6c5",
+      "fullPriorReadAndSelfRead": true,
+      "fullCurrentIdentityRechecked": true
+    },
+    "historicalFailureAndSuccess": {
+      "failure": {
+        "bytes": 26675,
+        "sha256": "ce530bfaeb56a6b4010261c288637ae78633369913747e891ea67b1942cf0571",
+        "gitBlob": "eb4910aecd055982eeb9131c6d0c5f261366670f"
+      },
+      "finiteTextOutcome": {
+        "gitBlob": "5e7304b308fce22a3efee5112230d9407f98f0ba",
+        "bytes": 63217,
+        "sha256": "6e3a380d859eff1244e28fdb67237f507f71dce2fe4a0304218dc97fbe62d06f"
+      },
+      "readBasis": "Previously complete retained evidence reads and exact joins in accepted20f354; original failed coordinates/full artifact remain unavailable. No duplicate outcome audit."
+    },
+    "rootVisual": {
+      "bytes": 23771,
+      "sha256": "a6d2855e648f15a436a8332fabf135fc5f89804c58c4d0298d1f4382584a7114",
+      "gitBlob": "98e5308d6e4b201f9c9eb1416702bc8a99fe78a9",
+      "fullTextRead": true,
+      "visualAttribution": "Root's actual33-image inspection; semantic reviewer did not open images again."
+    },
+    "primarySources": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "bytes": 69370,
+        "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+        "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f",
+        "physicalLines": 798,
+        "completeBodyIdentityRechecked": true,
+        "priorReadExtent": "Complete body read in this bounded task.",
+        "currentRead": "Selected driver/helper/test/peer/preview boundaries reread; controls and two short preview modules were read completely again."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+        "physicalLines": 495,
+        "completeBodyIdentityRechecked": true,
+        "priorReadExtent": "Complete body read in this bounded task.",
+        "currentRead": "Selected driver/helper/test/peer/preview boundaries reread; controls and two short preview modules were read completely again."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "bytes": 165022,
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+        "physicalLines": 2702,
+        "completeBodyIdentityRechecked": true,
+        "priorReadExtent": "Previously complete retained whole149 source read; exact current body hash-joined; actual helper and four Selection forwarding cases at 2101–2238 re-read in full here. No source was compiled or executed.",
+        "currentRead": "Selected driver/helper/test/peer/preview boundaries reread; controls and two short preview modules were read completely again."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "bytes": 21993,
+        "sha256": "2f929c1f5cfd1a9a3c9ec16d35f7197856c79a61adf166d30eebb8a1bd086f67",
+        "gitBlob": "adf5b4c418195e0fc4ab38ba7fde2b3436a6b835",
+        "physicalLines": 280,
+        "completeBodyIdentityRechecked": true,
+        "priorReadExtent": "Complete body read in this bounded task.",
+        "currentRead": "Selected driver/helper/test/peer/preview boundaries reread; controls and two short preview modules were read completely again."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+        "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "bytes": 33227,
+        "sha256": "dc9ba0c735ea763a24bb06d93590373cf1072d5737c7fba67a31df1356c44dd5",
+        "gitBlob": "1430de1a6666a22a7582d38a21273d61d2f745b7",
+        "physicalLines": 481,
+        "completeBodyIdentityRechecked": true,
+        "priorReadExtent": "Complete body read in this bounded task.",
+        "currentRead": "Selected driver/helper/test/peer/preview boundaries reread; controls and two short preview modules were read completely again."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+        "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "bytes": 39026,
+        "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a",
+        "gitBlob": "76f5d1953816fd125f576a966c42caefcfc297e2",
+        "physicalLines": 562,
+        "completeBodyIdentityRechecked": true,
+        "priorReadExtent": "Previously complete read joined through accepted finite outcome5e7304; current full body hash-equal, scheduledCompletion and both selected provider callsites225–245/298–299/449 re-read.",
+        "currentRead": "Selected driver/helper/test/peer/preview boundaries reread; controls and two short preview modules were read completely again."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/features/team-direct-chats/core/domain/pickPreviewMessage.ts",
+        "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "bytes": 490,
+        "sha256": "3f502e8ba895eaaa01380d166c3f4451836044d61f8a10ce93c01f710d09b535",
+        "gitBlob": "252113492c852f26b1da6ce455520f87345d00b2",
+        "physicalLines": 15,
+        "completeBodyIdentityRechecked": true,
+        "priorReadExtent": "Complete body read in this bounded task.",
+        "currentRead": "Selected driver/helper/test/peer/preview boundaries reread; controls and two short preview modules were read completely again."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/renderer/utils/chatPreview.ts",
+        "ref": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "bytes": 286,
+        "sha256": "7ca7c8bf70176ded550fcba8761a122d22e8e057216a0d337534f05f1b828759",
+        "gitBlob": "7c8869dba13c1e20effcbf96e4c898beafe946ab",
+        "physicalLines": 7,
+        "completeBodyIdentityRechecked": true,
+        "priorReadExtent": "Complete body read in this bounded task.",
+        "currentRead": "Selected driver/helper/test/peer/preview boundaries reread; controls and two short preview modules were read completely again."
+      }
+    ],
+    "totalPrimarySourceBytes": 358431
+  },
+  "callerContract": {
+    "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+    "before": {
+      "bytes": 69370,
+      "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+      "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+    },
+    "physicalLines": 798,
+    "maximumPhysicalLinesAfter": 798,
+    "cap": 800,
+    "originalBoundaryLine": 647,
+    "uniqueOldLine": "  await ui.click('button[aria-label^=\"alice,\"]', 'show original scheduled reply'); await visible('TEST scheduled reply');",
+    "selector": "button[aria-label^=\"alice,\"]",
+    "label": "show original scheduled reply",
+    "thirdArgument": "Explicit undefined retains current absent exact-text matching.",
+    "fourthArgument": {
+      "value": "TEST scheduled ",
+      "length": 15,
+      "trailingSpace": true,
+      "method": "Existing requiredContent, not a new classifier or selector."
+    },
+    "wholeBodyInverse": "Required at sourceR2: reverse only the selected argument addition and restore every byte of ff991b, with all other files and whole test bodies unchanged.",
+    "actualAfterIdentity": null,
+    "laterAssertion": "await visible('TEST scheduled reply'); remains literal.",
+    "precedingAuthority": "Original manual task/effect joins at driver633–643 remain unchanged and precede Back-to-chats/Alice scroll.",
+    "laterObligations": [
+      "Exact scheduled reply visible",
+      "Original schedule history and saved prompt not replayed",
+      "Real automatic wall-clock occurrence",
+      "Task Activity",
+      "Task Log Stream",
+      "Held input",
+      "Original Team Stop",
+      "Original application/Host/group cleanup"
+    ]
+  },
+  "semanticFindings": {
+    "helper": {
+      "pin": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      },
+      "anchors": "waitRead186–209; target212–226; clickExpression227–356; click357–358.",
+      "ownRow": "Target selection first requires exactly one positive-size eligible row; only that row's textContent may contain the marker.",
+      "unchangedSafety": [
+        "center-hit ownership and disabled refusal",
+        "literal serialization",
+        "same target expression at every read",
+        "original ownership checks",
+        "one hover",
+        "two stable consecutive point/tag samples within15",
+        "final availability and exact point/tag equality",
+        "one physical click pair only after final checks",
+        "revocation/refusal without retry"
+      ],
+      "timeScope": "The30s bound is each existing readPoint/waitRead budget, not an invented30s total-click bound. Final direct evaluate and existing stability/control flow are unchanged."
+    },
+    "peerAndPreview": {
+      "claude": "1430de1a lines320–337: completed MCP task, completed message_send('TEST scheduled reply'), original scheduled effect, then protocol finish('TEST scheduled complete').",
+      "codexOpenCode": "76f5d195 lines225–245 plus298–299/449: original advertised MCP tasks/message and matching effect, then provider finish('TEST scheduled complete').",
+      "canonicalPreview": "25211349 prefers newest addressed-to-user;7c8869db limits preview to88 code points. Both legitimate short finite messages retain the15-character prefix.",
+      "qualification": "The prefix is a renderer-content prerequisite only. Earlier canonical task/effect authority and later exact reply/cleanup assertions remain separate. A draft override or later movement may still cause the original bounded failure."
+    },
+    "regressions": {
+      "whole149": {
+        "bytes": 165022,
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+      },
+      "actualHelperRanges": "2101–2215",
+      "coverage": [
+        "delayed own reply before one click at hydrated coordinates",
+        "default final geometry refusal",
+        "body/neighbor/different/empty/missing/zero-size/disabled/covered/two-row refusals",
+        "literal marker serialization",
+        "revoked preview at unchanged final coordinates",
+        "same original owner error identity",
+        "final movement refusal even with ready content"
+      ],
+      "separateCallerRanges": "2217–2238: four Selection openChat forwarding cases; not this scheduled caller.",
+      "newRuntimeTestClaim": false,
+      "newTestSourceSelected": false,
+      "futureVerification": "Keep the existing whole commands and original full E2E cases against the eventual actually published source. Static exact caller inverse plus existing actual helper regressions support this small composition; no new copied or source-string-only regression is required by this R1."
+    },
+    "historicalLimits": {
+      "claudeFailure": "Final owned available target triple differed from the stable triple; hover and stability were reached, physical click was not.",
+      "exactCause": "UNKNOWN. No failed coordinate/text/layout artifact is available.",
+      "otherProviders": "OpenCode could click old approval preview; Codex changed from/cost atY210.5 to scheduled complete atY218.5. These observations support relevance, not a Claude reproduction or promised repair.",
+      "futurePass": false,
+      "visual": "Retained root PNG report keeps stale/partial/loading/native-absence limits; none is replaced by a filename or preview marker."
+    }
+  },
+  "publicationReview": {
+    "staticArithmetic": {
+      "eightPrimaryBytes": 358431,
+      "eightPrimaryAllJoined": true,
+      "sourceAuthoredFalse": true,
+      "oneScopeFile": true,
+      "oldLineUnique": true,
+      "trailingSpace": true,
+      "old798": true,
+      "capSelected": true,
+      "lateTotal": 113,
+      "lateNew": 75,
+      "lateOld": 38,
+      "allEvidencePathsDocs": true,
+      "allPathsUnique": true,
+      "completeLogs": 45,
+      "singleCaptures": 23,
+      "chunkManifestLeaves": 4,
+      "chunkLeaves": 19,
+      "allDeclaredLateModes": true,
+      "additions": 87,
+      "changes": 90,
+      "totalLeaves": 12431,
+      "docsLeaves": 3632,
+      "nonDocLeaves": 8799,
+      "catalogFields": 123,
+      "catalogKeysUnique": true,
+      "gatePrecedesR1": true
+    },
+    "verificationLevel": "Entire proposal/inventory read; counts/paths/modes/duplicates/arithmetic independently checked in memory. Not a fresh read of every unrelated retained capture or future publication body.",
+    "sourceEditInThisPublication": false,
+    "allCurrentCasesAndCommandsPreserved": true,
+    "currentCi4": {
+      "pr": 1228,
+      "sourceHead": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+      "publishedPacket": {
+        "bytes": 296986,
+        "sha256": "90c8d6e666a87411c3ec135acc1cd84a84280b18a67401c2bc9ea8a6ecd68fcf",
+        "gitBlob": "7c26f47943df19ce9472ace5275b522c03a5a542"
+      },
+      "refsAndMetadataFrozen": true,
+      "firstDiscoveryTerminalForever": [
+        44140796959,
+        44140796781
+      ],
+      "activeOriginalAttemptsObservedOnly": true,
+      "notValidationOfFuturePostimage": true
+    },
+    "preservedPreviousGateTimeline": "Historical source gate's earlier active CI3 list is not reused as current status. Later documentation gate binds all11 terminal and never-poll, consistent with this proposal.",
+    "advisoryTreatment": "a6f2 and15a98 remain evidence-only. Their inclusion selects no additional source repair.",
+    "contractSummary": {
+      "branch": "fix/frontend-parity-coobservation-c714-20261115",
+      "parent": "56ea675b480f229cdaa0a47beff48d8d3a03f501",
+      "parentTree": "b1368574a268afae426d9490c72639fa4eb769ba",
+      "parentDocs": "ce4f4daaa0e1f3d6e33fe01c687b340e2d6352d4",
+      "docsOnly": true,
+      "lateCheckpoint": {
+        "packet6": {
+          "bytes": 1371965,
+          "sha256": "9ae717bfbf47be3d492eac5e3961e8e7580ec3c89ad7214b88d7660c38ac125c",
+          "gitBlob": "1b25c62f65c1d8fe4b9f6d5a2ec13ccb84a7c9ec"
+        },
+        "packet7": {
+          "bytes": 1103314,
+          "sha256": "03b67f151448aedb634704acbd6f6bfc6c025b1afdb63078ece014a0115e1f91",
+          "gitBlob": "d9a8893f3206b284967d77a42dd7fa899de0a29e"
+        },
+        "completeLogicalCaptures": 27,
+        "singleCaptures": 23,
+        "chunkedCaptures": 4,
+        "chunkLeaves": 19,
+        "manifestLeaves": 4,
+        "completeJobLogs": 45,
+        "unavailableLogRequests": 3,
+        "unavailableArtifactDeliveries": 11,
+        "latePngActuallyViewed": 85,
+        "newEvidenceLeaves": 75,
+        "existingEvidenceReferences": 38,
+        "allInventoryRowsRead": 113
+      },
+      "ci4Checkpoint": {
+        "pr": 1228,
+        "head": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "base": "86f52244b5375834a4040cbc63803d68cc708087",
+        "packet1": {
+          "bytes": 296986,
+          "sha256": "90c8d6e666a87411c3ec135acc1cd84a84280b18a67401c2bc9ea8a6ecd68fcf",
+          "gitBlob": "7c26f47943df19ce9472ace5275b522c03a5a542"
+        },
+        "newEvidenceLeaves": 6,
+        "inventoryKeys": [
+          "actualGate",
+          "rootActual",
+          "independentActual",
+          "admission",
+          "preflight",
+          "packet1"
+        ]
+      },
+      "thisR1EvidenceLeaves": 5,
+      "manifestAdds": 1,
+      "canonicalDocumentsModified": 3,
+      "expectedChanged": 90,
+      "expectedAdds": 87,
+      "expectedMods": 3,
+      "totalLeaves": 12431,
+      "docsLeaves": 3632,
+      "nonDocLeaves": 8799,
+      "unchangedOtherRoots": 53,
+      "catalog117to123": true,
+      "newCatalogKeys": [
+        "fixed86fThirdCiLateEvidenceStage",
+        "fixed86fThirdCiLateEvidenceFiles",
+        "fixedAab3FourthCiActualStage",
+        "fixedAab3FourthCiActualEvidenceFiles",
+        "scheduledPreviewReadinessR1Stage",
+        "scheduledPreviewReadinessR1EvidenceFiles"
+      ],
+      "preserveAll117PriorValues": true,
+      "preserve27BundleTotals": true,
+      "preserveFullPlanStatusPrefixes": true,
+      "immediatePush": true,
+      "force": false,
+      "fullInventoryLocation": "Exact full113-row late inventory and6-row CI4 inventory reside in the reviewed subject8c9beffb; not duplicated in this review.",
+      "actualVerification": "Complete retained leaf bodies, old/new canonical documents and pointer closure are the already required later actual publication work."
+    }
+  },
+  "checks": [
+    {
+      "id": "S01",
+      "status": "PASS_STATIC_R1",
+      "title": "Exact complete subject",
+      "evidence": "All82,537 bytes of8c9beffb were fetched, hashed and read in contiguous untruncated segments; this is the only reviewed R1 subject."
+    },
+    {
+      "id": "S02",
+      "status": "PASS_STATIC_R1",
+      "title": "Closed source basis",
+      "evidence": "Complete ca1b9cc4 source gate binds aab3/root834d and closes17:01:40. Its existing source runtime qualification remains false."
+    },
+    {
+      "id": "S03",
+      "status": "PASS_STATIC_R1",
+      "title": "Closed documentation parent",
+      "evidence": "Complete d5a637f8 gate binds56ea/b136/ce4 and closes17:44:37, before this17:59:50 R1. It confirms a docs-only sole descendant of aab3."
+    },
+    {
+      "id": "S04",
+      "status": "PASS_STATIC_R1",
+      "title": "Eight primary bodies",
+      "evidence": "Every one of the eight complete immutable primary bodies was rehashed in memory and joined to its exact repository/path/ref/bytes/SHA256/Git tuple;358,431 total bytes."
+    },
+    {
+      "id": "S05",
+      "status": "PASS_STATIC_R1",
+      "title": "One existing caller",
+      "evidence": "The exact old scheduled click plus later visible assertion occurs once in current ff991b at physical line647."
+    },
+    {
+      "id": "S06",
+      "status": "PASS_STATIC_R1",
+      "title": "Line cap",
+      "evidence": "Current driver has798 physical lines. R1 selects at most798 after and cap800; only arguments on the existing line may change."
+    },
+    {
+      "id": "S07",
+      "status": "PASS_STATIC_R1",
+      "title": "Argument semantics",
+      "evidence": "An explicit undefined third argument preserves the unset exact-text constraint. The existing fourth requiredContent argument is the15-character literal TEST scheduled followed by one trailing space."
+    },
+    {
+      "id": "S08",
+      "status": "PASS_STATIC_R1",
+      "title": "Literal serialization",
+      "evidence": "The unchanged target helper embeds requiredContent only through desktopJsLiteral; the selected marker is data and adds no renderer action."
+    },
+    {
+      "id": "S09",
+      "status": "PASS_STATIC_R1",
+      "title": "Own target readiness",
+      "evidence": "Exactly one positive-size eligible selector match must exist before its own textContent is checked. Body text, neighbor text and a second matching Alice row cannot substitute."
+    },
+    {
+      "id": "S10",
+      "status": "PASS_STATIC_R1",
+      "title": "Geometry and hit authority",
+      "evidence": "Disabled and center-hit refusals remain after the content check. The content marker grants neither process authority nor permission to choose another target."
+    },
+    {
+      "id": "S11",
+      "status": "PASS_STATIC_R1",
+      "title": "All click phases",
+      "evidence": "click builds one target expression and passes it unchanged through initial read, after-hover read, stabilization samples and final direct evaluation."
+    },
+    {
+      "id": "S12",
+      "status": "PASS_STATIC_R1",
+      "title": "Original budgets",
+      "evidence": "Existing per-read30,000ms,100ms cadence, at most15 stabilization samples and two equal consecutive point triples are unchanged. No new timer/read loop is selected."
+    },
+    {
+      "id": "S13",
+      "status": "PASS_STATIC_R1",
+      "title": "Post-fulfilled cutoff",
+      "evidence": "The unchanged5286 waitRead rejects a fulfilled observation at or after its original cutoff before invoking isReady."
+    },
+    {
+      "id": "S14",
+      "status": "PASS_STATIC_R1",
+      "title": "Final movement and ownership",
+      "evidence": "Final target availability and exact x/y/tag equality, every original ownership check and original owner error identity remain unchanged."
+    },
+    {
+      "id": "S15",
+      "status": "PASS_STATIC_R1",
+      "title": "Single input and refusal",
+      "evidence": "One existing hover and one mousePressed/mouseReleased pair remain; a late movement or revoked content must fail without retry or adopting a new coordinate."
+    },
+    {
+      "id": "S16",
+      "status": "PASS_STATIC_R1",
+      "title": "Canonical manual schedule anchor",
+      "evidence": "The caller remains after one original manual task-first run, unique linked task, exact completed task/owner/count and matching provider effect. It remains before the real automatic schedule."
+    },
+    {
+      "id": "S17",
+      "status": "PASS_STATIC_R1",
+      "title": "Earlier standalone scope",
+      "evidence": "Earlier Claude-only standalone steps use TEST standalone messages and do not satisfy the selected scheduled prefix. No earlier task/effect prerequisite is bypassed."
+    },
+    {
+      "id": "S18",
+      "status": "PASS_STATIC_R1",
+      "title": "Two legitimate finite messages",
+      "evidence": "Current Claude and Codex/OpenCode peers send TEST scheduled reply through original MCP and then TEST scheduled complete through their original provider protocol. Both contain the exact selected prefix."
+    },
+    {
+      "id": "S19",
+      "status": "PASS_STATIC_R1",
+      "title": "Preview contract",
+      "evidence": "pickPreviewMessage selects newest addressed-to-user, else newest visible;88-code-point truncation retains either short message prefix. The plan does not change drafts/sorting/read marks or any production renderer rule."
+    },
+    {
+      "id": "S20",
+      "status": "PASS_STATIC_R1",
+      "title": "Exact later oracle",
+      "evidence": "The existing await visible('TEST scheduled reply') remains literally unchanged. A complete preview permits target readiness but does not substitute for the later exact reply observation."
+    },
+    {
+      "id": "S21",
+      "status": "PASS_STATIC_R1",
+      "title": "Later original cases",
+      "evidence": "Saved prompt/history, real automatic cron, Task Activity, Task Log Stream, held input, Team Stop and original application/Host/group cleanup remain required."
+    },
+    {
+      "id": "S22",
+      "status": "PASS_STATIC_R1",
+      "title": "Meaningful existing helper coverage",
+      "evidence": "Whole149 contains actual createDesktopUiControls/generated-expression cases for delayed own-row readiness, all listed refusals, literal data, revoked readiness and final owner/movement refusal. No copied new classifier is proposed."
+    },
+    {
+      "id": "S23",
+      "status": "PASS_STATIC_R1",
+      "title": "Caller-test scope honest",
+      "evidence": "Four actual Selection openChat forwarding cases exercise that other caller. R1 explicitly does not promote them into execution of runtime-ui647."
+    },
+    {
+      "id": "S24",
+      "status": "PASS_STATIC_R1",
+      "title": "Whole inventories frozen",
+      "evidence": "Whole149 including original139 plus imported10 remains exact12c73fbc; no tests, filters, helper, workflow, producer, dependency or executable control is changed by the selected source plan."
+    },
+    {
+      "id": "S25",
+      "status": "PASS_STATIC_R1",
+      "title": "Historical failure limit",
+      "evidence": "The exact original Claude frame proves final triple mismatch after stabilization before physical click. Missing failed coordinates/layout/full artifact remain unknown; no particular causal transition is invented."
+    },
+    {
+      "id": "S26",
+      "status": "PASS_STATIC_R1",
+      "title": "Successful comparisons scoped",
+      "evidence": "Original OpenCode old-approval preview and Codex /cost→scheduled-complete movement show why a content prerequisite is relevant. They neither reproduce the Claude failure nor qualify a future postimage."
+    },
+    {
+      "id": "S27",
+      "status": "PASS_STATIC_R1",
+      "title": "Visual limits retained",
+      "evidence": "Full root33-PNG report was read as attributed evidence. Partial/empty Logs, OpenCode Running/Stopping snapshot, stale-task warning and native-absence limits are not promoted into stronger claims."
+    },
+    {
+      "id": "S28",
+      "status": "PASS_STATIC_R1",
+      "title": "Combined docs inventory",
+      "evidence": "All113 named late evidence paths are unique under docs:75 new and38 existing. Six CI4 records are disjoint. No current source leaf is selected for this R1 publication."
+    },
+    {
+      "id": "S29",
+      "status": "PASS_STATIC_R1",
+      "title": "Complete-capture arithmetic",
+      "evidence": "The manifest describes45 complete logs,23 single captures,4 chunked captures,19 ordered chunk leaves and4 manifests. Derived members/logical captures are not individually requested as Git blobs by this review."
+    },
+    {
+      "id": "S30",
+      "status": "PASS_STATIC_R1",
+      "title": "Publication arithmetic",
+      "evidence": "75 late +6 CI4 +5 R1/reviews +1 manifest =87 additions; plus3 canonical modifications =90. Parent12344 total/3545 docs becomes12431/3632, leaving8799 non-docs and53 other roots."
+    },
+    {
+      "id": "S31",
+      "status": "PASS_STATIC_R1",
+      "title": "Catalog and prose preservation",
+      "evidence": "117 prior catalog values plus6 distinct new keys gives123; all old values/27 bundle totals/full plan-status prefixes are required unchanged. Actual complete body/pointer verification remains the existing later publication readback, not a new gate or a claim already executed here."
+    },
+    {
+      "id": "S32",
+      "status": "PASS_STATIC_R1",
+      "title": "Unrelated advisories remain advisory",
+      "evidence": "The retained V2 management a6f2 and Darwin listener15a98 are late evidence only. This R1 does not select a repair for V2, Windows readiness/Retry, Darwin/P09 or unknown cleanup."
+    },
+    {
+      "id": "S33",
+      "status": "PASS_STATIC_R1",
+      "title": "Frozen CI and spent attempts",
+      "evidence": "PR1228 fixedaab3 refs/metadata stay frozen; old terminal runs and spent standalone attempts stay excluded. Existing CI4 cannot qualify this unauthored caller change."
+    },
+    {
+      "id": "S34",
+      "status": "PASS_STATIC_R1",
+      "title": "Existing authority and sequence",
+      "evidence": "Root remains sole source/control author and executor. Four R1 reviews, docs publication/immediate push, existing root+independent actual gate, then actual sourceR2/full inverse and its existing publication/readbacks are retained."
+    },
+    {
+      "id": "S35",
+      "status": "PASS_STATIC_R1",
+      "title": "Acceptance scope",
+      "evidence": "No postimage, runtime PASS, complete E2E qualification, replay, new venue, additional executable R2 or additional gate is created by this semantic acceptance."
+    }
+  ],
+  "checkCount": 35,
+  "statusCounts": {
+    "PASS_STATIC_R1": 35
+  },
+  "qualification": {
+    "planAccepted": true,
+    "postimageApproved": false,
+    "postimageAuthored": false,
+    "sourcePublished": false,
+    "executionAdmitted": false,
+    "runtimeGreen": false,
+    "wholeE2E": false,
+    "newGate": false,
+    "unchanged": "All original149/43/85 and other component/native/GUI inventories, helper and producer bytes, deadlines, currentness, input and process ownership, cleanup, finite-provider restrictions, CI4 snapshot and terminal-run exclusions."
+  }
+}

@@ -1,0 +1,1349 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_FINITE_OPENCODE_CODEX_GUI_OUTCOME_SEMANTIC_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_semantic",
+  "createdAt": "2026-11-17 17:03:21 UTC",
+  "decision": "ACCEPT_ORIGINAL_SELECTED_FINITE_GUI_OUTCOMES_WITH_LIMITS",
+  "checkCount": 36,
+  "blockers": [],
+  "scope": "Independent read-only review of two original retained Linux finite-provider GUI executions at the frozen CI3 head. This is an outcome qualification, not source authorship, a new execution gate, a retry, or blanket end-to-end qualification.",
+  "summary": [
+    "Both original selected jobs report SUCCESS and their original receipt/UI proof report PASS: OpenCode job134072511958 and Codex job134072512324, run44092933810, PR1223, head86f52244b5375834a4040cbc63803d68cc708087.",
+    "Each job actually ran the same unfiltered 247-case eight-file Node command, including the complete149 team-UI aggregate and all ten deadline cases, followed by the original whole7 installer tests, with zero failed/cancelled/skipped/todo tests. These are two executions of the same inventories, not494 distinct cases.",
+    "The complete captures support the selected launch, stream, retained log, permission, member Logs/Stats, reload without replay, manual and actual future-cron schedule, Task Activity/Log Stream, held-input Stop/unknown, original Quit and final selected-process absence assertions.",
+    "Finite OpenCode protocol1.19.4 and finite Codex protocol0.162.0 are TEST peers in private namespaces. No real Claude/Codex command or vendor authentication is qualified. The one finite sentinel --version is explicitly separated from real vendor execution.",
+    "OpenCode native questions/slash/usage remain unsupported. Codex local /cost and question results are finite peer observations. The held input remains unknown, not successful terminal completion.",
+    "Root's visual observations retain a Tasks freshness warning, earlier partial log snapshots, and a stopped screenshot still showing Running/Stopping. This text review relies on the original later receipt/log/source assertions for its bounded outcome, and makes no all-screens-fresh or image-only final-stop claim."
+  ],
+  "subjects": [
+    {
+      "provider": "opencode",
+      "runId": 44092933810,
+      "jobId": 134072511958,
+      "artifactId": 14346795760,
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "manifest": {
+        "bytes": 11347,
+        "sha256": "5d37a6118705b33e53d0f2c5bb92beb338385dd2cb4e9f761a6551641aa1415b",
+        "gitBlob": "4ce54fbd20dc6dd4771c5a2d3b9d3fa5d385b7c5"
+      },
+      "chunks": [
+        {
+          "index": 0,
+          "bytes": 3000000,
+          "sha256": "2036399a68599338b0c60e4ebf2446fc308b146be8bf67950ae7dbef978ea96b",
+          "gitBlob": "00b4190e59fb649174e3423ca3686e2c26908449"
+        },
+        {
+          "index": 1,
+          "bytes": 3000000,
+          "sha256": "a1b31ed9860a550dd5d46db422ac1c2193b2dfd0da288944f25a72806b02d950",
+          "gitBlob": "610ae9468c0804ca2adfe5a7731491fee787cf49"
+        },
+        {
+          "index": 2,
+          "bytes": 1944895,
+          "sha256": "908efeb3351eea1f9cabee2908fd9f329c8fe33b80f160bb5410260c90c1cff5",
+          "gitBlob": "8ebab49fca4e7bfa7bb49a07f74e1347a10cdd30"
+        }
+      ],
+      "logicalCapture": {
+        "bytes": 7944895,
+        "sha256": "034ee86dd41c6571c68f434604c8defe363c2a19167c08f8c3140dd2f8fbecf4",
+        "gitBlob": "cf31503e44207f755bb5690bfff2971d0ac4a503",
+        "derivedIdentityOnly": true
+      },
+      "originalArchive": {
+        "bytes": 2472349,
+        "sha256": "a6b674a945f79938db87ff7a84ba5ab4bd73e665a564318b87de572713bf67f7",
+        "gitBlob": "7678ded45870d560177841797bb5a808878658d1",
+        "allMembersCrcVerified": true
+      },
+      "jobLog": {
+        "bytes": 201973,
+        "sha256": "eced67ad8ca1201831fbb4e8cd185f4d81ee8da507864f8666e2ca52311c75b6",
+        "gitBlob": "d36422c363d77f3167a671e44583772a6bc98dfd"
+      },
+      "mainReceipt": {
+        "path": "TEST-desktop-backend-iyLjax/desktop-backend-receipt.json",
+        "bytes": 813587,
+        "sha256": "ce139255492bd23b758534e6d08bd4a478beb4f3b22ba9feb5e01944aa0cb16a",
+        "gitBlob": "8e251632b8f6b8ee489f9dcbd8a6b6bb992b552b",
+        "derivedMemberIdentityOnly": true
+      },
+      "memberCensus": {
+        "total": 32,
+        "bytes": 3648115,
+        "utf8": 16,
+        "utf8Bytes": 905289,
+        "pngs": 15
+      },
+      "utf8MemberIdentities": [
+        {
+          "path": "TEST-desktop-backend-iyLjax/TEST-peer-opencode-scope/effects.ndjson",
+          "bytes": 7092,
+          "sha256": "f97943a87e8311339ecae002260576bc87a9471e8c5f9c0cf6e20f98a68138a4",
+          "gitBlob": "b784ab7beb8ab890214376e8d749366e7df6a51b",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/desktop-backend-receipt.json",
+          "bytes": 813587,
+          "sha256": "ce139255492bd23b758534e6d08bd4a478beb4f3b22ba9feb5e01944aa0cb16a",
+          "gitBlob": "8e251632b8f6b8ee489f9dcbd8a6b6bb992b552b",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/desktop-app.log",
+          "bytes": 44498,
+          "sha256": "980d00bb07ac0da8cd28cbc0172a71707700d89701ddd7790797249bc46d1982",
+          "gitBlob": "62a5e98e847f35c315ee2b292f67355666df2459",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/desktop-descriptor.json",
+          "bytes": 2653,
+          "sha256": "0424e82dfccef6119bb0dfbb6391116198ea12a2a9daf4f21cd984cfd6e04490",
+          "gitBlob": "1963fa2218aa31ffd07f173421c1513b55b52ae1",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/host-profile.json",
+          "bytes": 9801,
+          "sha256": "1c53fef689bde38897ad4b3372d25c07b89af19218bb4a67d52dd06def18844f",
+          "gitBlob": "3a66e48dadb90721ce108f6bccc0f4d61eac6561",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/hoststore/management-commands/59762eec720726aa6bdc6a184d8b905f525975748752cdbced9ffbf4f3883511.json",
+          "bytes": 5775,
+          "sha256": "5804956c0457c03b9f39806d1fff80f2340f0924e75f0ecf71512d31261d2fcd",
+          "gitBlob": "9951372c164cc7c7efbd447bdeb31a039f7bb9d1",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+          "bytes": 3866,
+          "sha256": "749a9471b8e1062865a1ce0185e903a328b514cdff3867da453a162c8e73e0c8",
+          "gitBlob": "0e166a9d6463c81d4848e4e5859d4fbd782564c3",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/hoststore/teams/test-desktop-backend/inboxes/user.json",
+          "bytes": 410,
+          "sha256": "8efdc01f316a408c7df431df168dba1713789f24ab3ea309a12e2cc53606cfd5",
+          "gitBlob": "d2854192099d2dd1fb074208088e07adcad4e07e",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/sentinel-invocations.ndjson",
+          "bytes": 96,
+          "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+          "gitBlob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/ui-emulated-runtime-effects.json",
+          "bytes": 9033,
+          "sha256": "2d1efde26eab859521451cb8fa3546338727aa1415a8f45980f314ed5f0334c8",
+          "gitBlob": "f227179aa00459256386c30a54678029720c14c8",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/ui-seed-receipt.json",
+          "bytes": 2335,
+          "sha256": "e6615e8c801aaf171c81a53bed1052acf20badf760b64a3c095caf07f8703c85",
+          "gitBlob": "5f29da830765fcefcdebb18ffade4ae242e0b5ac",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-emulated-ui-inputs-QCvl9Q/linux-child-exec/manifest.json",
+          "bytes": 2408,
+          "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+          "gitBlob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "host-emulated-emulated-opencode-runtime-ui.log",
+          "bytes": 225,
+          "sha256": "6c9adb01027f6b4005812225720fa2369592cfa69964e4ef9ec1449816dea54b",
+          "gitBlob": "502194a93839bdfd6d31eae6826def8d2f114c47",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "host-emulated-inputs.json",
+          "bytes": 1803,
+          "sha256": "209fc414606236eb7214de79841557e50a7b399e11b05275b048c9dd244f52d0",
+          "gitBlob": "9345d18a52df88ee8046e6c130ac9e8118595951",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "host-emulated-linux-child-exec-selection.json",
+          "bytes": 271,
+          "sha256": "74c2418c41b5750b6b677e5a3c7681c247f68bbf4ba3b8e393b948b84b4b9cda",
+          "gitBlob": "974c96becf7e7cea9a7c4611ab97692f68ef6147",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "host-emulated-summary.json",
+          "bytes": 1436,
+          "sha256": "8f3b99afef30cbf45b5fcf994eca2d3d7977e246c770ec83c82ce6f4d5768c01",
+          "gitBlob": "8b39874ccd200668cbabfdaf8aad7c8321e24235",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        }
+      ],
+      "outcome": {
+        "status": "PASS",
+        "selectedUiStatus": "PASS",
+        "stepRows": 237,
+        "originalComposerCommands": 4,
+        "protocol": "1.19.4",
+        "vendorsAllowed": false,
+        "catalog": [],
+        "unsupportedBaseline": [
+          "structured questions",
+          "native slash commands",
+          "native usage counters"
+        ],
+        "stats": {
+          "kind": "host_activity_stats",
+          "memberName": "alice",
+          "scope": "retained_runtime_activity",
+          "generations": 1,
+          "observedMessages": 4,
+          "compactions": 0,
+          "toolUsage": {
+            "bash": 2
+          },
+          "inputTokens": null,
+          "outputTokens": null,
+          "costUsd": null,
+          "gaps": [],
+          "computedAt": "2026-11-17T16:07:55.637Z"
+        },
+        "capturedLaunchId": "1cf8ba24-793d-5f4a-a96e-078628c2a2f1",
+        "selectedGeneration": "capture-de52f456-81dc-563e-b2c2-44129ab7f444",
+        "reloadWithoutReplay": true,
+        "leadLogFacts": {
+          "partial": {
+            "eventId": "c866a4dc3125e0f19eabe31d57be54f245948102ac629a9cba76310978fbaf40:13",
+            "sequence": 13,
+            "text": "TEST stream partial"
+          },
+          "complete": {
+            "eventId": "c866a4dc3125e0f19eabe31d57be54f245948102ac629a9cba76310978fbaf40:15",
+            "sequence": 15,
+            "text": "TEST stream partial complete"
+          },
+          "thinking": {
+            "partialEventId": "c866a4dc3125e0f19eabe31d57be54f245948102ac629a9cba76310978fbaf40:14",
+            "completeEventId": "c866a4dc3125e0f19eabe31d57be54f245948102ac629a9cba76310978fbaf40:16",
+            "messageRef": "msg_1ea43263e000TTTTTTTTTTTTT2",
+            "block": 1
+          },
+          "stderr": null,
+          "actualClipboard": true
+        },
+        "schedule": {
+          "manual": {
+            "scheduleId": "c7b3edf9-5e28-45e8-a9fb-5711374751fa",
+            "runId": "5761a617-4713-4d2e-bcb3-ede7c1d175a2",
+            "taskId": "175ec3a5-266a-54a1-82e5-83ada8a6e96d",
+            "status": "dispatched",
+            "savedPromptAcknowledged": true,
+            "savedPromptNotReplayed": true
+          },
+          "automatic": {
+            "scheduleId": "c7b3edf9-5e28-45e8-a9fb-5711374751fa",
+            "runId": "67d94757-f07f-499a-9c36-3acaa55f3e04",
+            "taskId": "eb87815e-7370-50e3-9bef-2f2e9ccc8eaf",
+            "armedAt": "2026-11-17T16:08:31.183Z",
+            "selectedNextRunAt": "2026-11-17T16:09:29.000Z",
+            "scheduledFor": "2026-11-17T16:09:29.002Z",
+            "startedAt": "2026-11-17T16:09:29.002Z",
+            "trigger": "real-cron-tick",
+            "runNowClicks": 0,
+            "taskCompleted": true,
+            "paused": true
+          }
+        },
+        "taskFact": {
+          "taskId": "eb87815e-7370-50e3-9bef-2f2e9ccc8eaf",
+          "inputId": "a75968e7-db38-589a-a24b-4f4ecaf67685",
+          "operationRef": "d93b60f5-80cc-4101-ad76-a0b83fe52549",
+          "eventId": "c866a4dc3125e0f19eabe31d57be54f245948102ac629a9cba76310978fbaf40:54",
+          "sequence": 54,
+          "activityDigest": "2bdcc3e845875246505b5142403e2030e01d621d31b2c94514c038208257baa4",
+          "addedInputs": 0,
+          "addedBusinessCommands": 0,
+          "addedProviderActions": 0
+        },
+        "stoppedInput": {
+          "inputId": "9f5c1428-fb19-57a4-9aee-d276b41e2e32",
+          "phase": "unknown",
+          "terminalConfirmed": false
+        },
+        "stopReleased": true
+      },
+      "effects": {
+        "snapshotRows": 36,
+        "finalRows": 37,
+        "originalPeerPids": [
+          5411,
+          5602,
+          5718
+        ],
+        "absent": true,
+        "remaining": [],
+        "proofIsExactPrefixOfFinal": true
+      },
+      "custody": {
+        "appPid": 4351,
+        "appGroup": 4351,
+        "hostChild": {
+          "pid": 4711,
+          "ppid": 4477,
+          "pgid": 4351,
+          "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+          "observedBeforeShutdown": true
+        },
+        "originalRequestedQuitExit": {
+          "initialExitCode": null,
+          "initialSignalCode": null,
+          "exitCode": 0,
+          "signalCode": null
+        },
+        "beforeHarnessCleanup": [],
+        "originalExitedGroup": null,
+        "cleanup": {
+          "processGroup": 4351,
+          "remaining": [],
+          "appExitCode": 0,
+          "appSignalCode": null,
+          "capturedHostObserved": true,
+          "capturedHostAbsent": true,
+          "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+        },
+        "traceSummary": {
+          "mainPid": 4477,
+          "event": "trace-summary",
+          "rows": 26,
+          "droppedObservations": 0,
+          "observedChildren": 12,
+          "unobservedChildren": 0,
+          "observationFailures": 0,
+          "limited": false,
+          "coverage": "node-async-and-unix-process-table-only"
+        },
+        "hostExitInBoundedNonatomicMainTrace": [
+          {
+            "mainPid": 4477,
+            "event": "async-exit",
+            "pid": 4711,
+            "status": 0,
+            "signal": null,
+            "observedAtMs": 1794931788466
+          }
+        ],
+        "finalSentinelCensus": {
+          "invocations": [
+            {
+              "executable": "claude-multimodel",
+              "allowed": true,
+              "argc": 1,
+              "command": null,
+              "flags": [
+                "--version"
+              ]
+            }
+          ],
+          "preQuitCount": 1,
+          "postQuitOrCleanupInvocations": [],
+          "refusedInvocations": [],
+          "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+        },
+        "linuxChildExecInputVerifiedAfterCleanup": true
+      },
+      "completeTextReadFlags": {
+        "proof": true,
+        "steps": true,
+        "effects": true,
+        "profile": true,
+        "remainingMembers": true,
+        "appLog": true,
+        "startupRendererCleanup": true
+      },
+      "screenshotJoin": {
+        "allProofImagePathsHashesMatch": true,
+        "pngs": 15,
+        "workflowRequired": 12,
+        "independentVisualReviewer": "/root"
+      }
+    },
+    {
+      "provider": "codex",
+      "runId": 44092933810,
+      "jobId": 134072512324,
+      "artifactId": 14346762789,
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "manifest": {
+        "bytes": 12501,
+        "sha256": "68833ef878c37f7c74941d67fe50e20121d7174d45cd3b95d60d82204a4195d1",
+        "gitBlob": "2dd826303b947665c2cdc8b933292d8ee652e695"
+      },
+      "chunks": [
+        {
+          "index": 0,
+          "bytes": 3000000,
+          "sha256": "73d2e4bafd7d5324ff5eeb37fbae49d6b24bb8eeb2cad3e8c770c107e981b6d4",
+          "gitBlob": "ad40f5d7e60010769085570b7acd22dfa4a0d6ca"
+        },
+        {
+          "index": 1,
+          "bytes": 3000000,
+          "sha256": "031d9b7286e5a13056185ac28ed69415fb84dd8370d17f3f5bfd123020b81ed3",
+          "gitBlob": "f74d975583233921d56e5435b7f47391b3b40c90"
+        },
+        {
+          "index": 2,
+          "bytes": 3000000,
+          "sha256": "174b528e7b2cae996352e9f4bd02b8c31ee663eaff3af6bde4c7d244030b751d",
+          "gitBlob": "7efc815d72d209ef1cbc6ca888da9f50aa3a897f"
+        },
+        {
+          "index": 3,
+          "bytes": 250963,
+          "sha256": "36e6d9d400c5493544c5709715f956400983bd2aac6cbbf6be33248371ca6db5",
+          "gitBlob": "a3f16f48334ecc1e870a6825fa2f97cf36dde248"
+        }
+      ],
+      "logicalCapture": {
+        "bytes": 9250963,
+        "sha256": "173a47d013864cdd1219e4c5e128b567a3e1a12ce07876a8019462fc2b09186d",
+        "gitBlob": "f1267577051253b2eb022c39ee8ab4c0ceae558d",
+        "derivedIdentityOnly": true
+      },
+      "originalArchive": {
+        "bytes": 2935027,
+        "sha256": "d959f4290138cbf3672bf3860d25974c4bb0cbab4bc06eae86161b485fb59183",
+        "gitBlob": "33d26dbc087d3c20c7229115206bbf884b3c0bd2",
+        "allMembersCrcVerified": true
+      },
+      "jobLog": {
+        "bytes": 201722,
+        "sha256": "5adc6ae21e68a2fd9ebaa3c9936738447e1870f084d98cb5a585dd379d59d6c2",
+        "gitBlob": "270a8468bd1dfb2601b9e8ed85181f82ec9df0fc"
+      },
+      "mainReceipt": {
+        "path": "TEST-desktop-backend-SgSwEx/desktop-backend-receipt.json",
+        "bytes": 843011,
+        "sha256": "07ccc11f50c6aa378200538c23523555f189c88e1b3f0228eb2a84cfb6799fdb",
+        "gitBlob": "96f81d64b77d0e2436e760d8ed829ca1adf375dd",
+        "derivedMemberIdentityOnly": true
+      },
+      "memberCensus": {
+        "total": 35,
+        "bytes": 4167728,
+        "utf8": 16,
+        "utf8Bytes": 944618,
+        "pngs": 18
+      },
+      "utf8MemberIdentities": [
+        {
+          "path": "TEST-desktop-backend-SgSwEx/desktop-backend-receipt.json",
+          "bytes": 843011,
+          "sha256": "07ccc11f50c6aa378200538c23523555f189c88e1b3f0228eb2a84cfb6799fdb",
+          "gitBlob": "96f81d64b77d0e2436e760d8ed829ca1adf375dd",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/desktop-app.log",
+          "bytes": 40278,
+          "sha256": "40d43cf5294a97e3b08da39ed452efaaeb3ad314308efb95600894a1f370d40f",
+          "gitBlob": "5788be20f87ed193b41cca35b5617a0736586a5e",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/TEST-peer-codex-scope/effects.ndjson",
+          "bytes": 15193,
+          "sha256": "ad0c10da7f061ab8a3a8c8abbb6e827acc5f916eda7751733a5a5b294b5fee6d",
+          "gitBlob": "9e9d356105c8cb45358f3587fe76ba9acd825fe4",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/desktop-descriptor.json",
+          "bytes": 2635,
+          "sha256": "7d80698955f80f8c2d20d4e04951a8c89a22fb4ba0174ca98f0887e9e0d4a6f0",
+          "gitBlob": "a1c1c7242b5f25572a284cdeeadd0b1ec7d86c5b",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/host-profile.json",
+          "bytes": 7265,
+          "sha256": "b8cc0a3c7e69a49902b08638e17dec1344bdd7de676d963e0be06546a32a6e9a",
+          "gitBlob": "f532c656e8eba28b46c80a0347227117013d093f",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/hoststore/management-commands/3c7f1fbf658bccce296b8ef430a702b7d39b0c68719f682d0cfcd1bb849f1586.json",
+          "bytes": 904,
+          "sha256": "d0efaa0afb6da57a1dfb75cb351d31b952099d76a5acda368ee878890fb29ab3",
+          "gitBlob": "de7218065e8d29b370ebc2c3fde5bd3ffa5daae8",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+          "bytes": 4637,
+          "sha256": "075753417b72ec68a8b26860fc94e6dcf0c79a16b6a847988c8565c98d143017",
+          "gitBlob": "b607671787b3692f1b7392f4efe614ae9a0a58c4",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/hoststore/teams/test-desktop-backend/inboxes/user.json",
+          "bytes": 822,
+          "sha256": "b0c3f51c9a037475c820e86140ec86c72220857ece8026ac46db71e7d8b02168",
+          "gitBlob": "8b44bc97595439673df50655feb61a76b8454f0c",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/sentinel-invocations.ndjson",
+          "bytes": 96,
+          "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+          "gitBlob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-effects.json",
+          "bytes": 21077,
+          "sha256": "715b871d134b1179856646b0340d6f3e4f5d1dfecec666c02ae7dd70fb73ec8b",
+          "gitBlob": "7467a19a24588182b81be891c2f4a7ac547ae707",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-seed-receipt.json",
+          "bytes": 2335,
+          "sha256": "94609742039708f0f4cdddcd57ede3c912be4b7fa8c47a4c70c428db00d206d1",
+          "gitBlob": "1e66b9c025261032529f0148ca017d2ca4f7a399",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "host-emulated-emulated-codex-runtime-ui.log",
+          "bytes": 225,
+          "sha256": "9b35ab3a1d0ba23b3bfddf12bd88860a5426364abd36fcd26418f098f0df0d3d",
+          "gitBlob": "a29ef9ab3129ee0b6fadaf0729b83752347e206e",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "host-emulated-inputs.json",
+          "bytes": 1803,
+          "sha256": "52976a6251ddf284b0fbfb9651cb3cf0181ff06a363a0f085db11387223a56f9",
+          "gitBlob": "2272cadd8e54e7ba549780ad6e048e1dcdef851f",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "TEST-emulated-ui-inputs-59UgmL/linux-child-exec/manifest.json",
+          "bytes": 2408,
+          "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+          "gitBlob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "host-emulated-linux-child-exec-selection.json",
+          "bytes": 271,
+          "sha256": "cb7192e6a8a9721f0587757437b963fc68cbf8037ef801a0b06e1250df0e4c91",
+          "gitBlob": "9a31a5ed211a86dfa3aaa980497726ee8bd8d56a",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        },
+        {
+          "path": "host-emulated-summary.json",
+          "bytes": 1658,
+          "sha256": "1a113b0622eb43104748ff81c2dc016fc06e907b541aa2c2fa1e4a56b2f6a284",
+          "gitBlob": "5163b43eb558d21fa4799e6f7ca57d9285da7ac9",
+          "derivedMemberIdentityOnly": true,
+          "crcVerifiedByRoot": true
+        }
+      ],
+      "outcome": {
+        "status": "PASS",
+        "selectedUiStatus": "PASS",
+        "stepRows": 231,
+        "originalComposerCommands": 6,
+        "protocol": "0.162.0",
+        "vendorsAllowed": false,
+        "catalog": [
+          "/cost"
+        ],
+        "unsupportedBaseline": null,
+        "stats": {
+          "kind": "host_activity_stats",
+          "memberName": "alice",
+          "scope": "retained_runtime_activity",
+          "generations": 1,
+          "observedMessages": 7,
+          "compactions": 0,
+          "toolUsage": {},
+          "inputTokens": 720,
+          "outputTokens": 42,
+          "costUsd": null,
+          "gaps": [],
+          "computedAt": "2026-11-17T16:20:19.000Z"
+        },
+        "capturedLaunchId": "671c2cbc-d609-5edc-857e-1e8c2d1c34a8",
+        "selectedGeneration": "capture-bc9a8281-3859-5e6c-84a5-e0a7254e8f74",
+        "reloadWithoutReplay": true,
+        "leadLogFacts": {
+          "partial": {
+            "eventId": "a12ea5a565d9579d46da42ac26dad777562a1c7134a6a272eea13855c17a717e:14",
+            "sequence": 14,
+            "text": "TEST stream partial"
+          },
+          "complete": {
+            "eventId": "a12ea5a565d9579d46da42ac26dad777562a1c7134a6a272eea13855c17a717e:16",
+            "sequence": 16,
+            "text": "TEST stream partial complete"
+          },
+          "thinking": null,
+          "stderr": {
+            "eventId": "a12ea5a565d9579d46da42ac26dad777562a1c7134a6a272eea13855c17a717e:15",
+            "sequence": 15,
+            "text": "TEST selected member stderr",
+            "inputId": null
+          },
+          "actualClipboard": true
+        },
+        "schedule": {
+          "manual": {
+            "scheduleId": "5c2be87b-be9f-4016-a31e-d9a6e619b9e7",
+            "runId": "1a98acc5-e23e-49b5-8815-9c524d0e8c8d",
+            "taskId": "fe69371d-d1e1-5f1b-a9ce-3694edbc8df5",
+            "status": "dispatched",
+            "savedPromptAcknowledged": true,
+            "savedPromptNotReplayed": true
+          },
+          "automatic": {
+            "scheduleId": "5c2be87b-be9f-4016-a31e-d9a6e619b9e7",
+            "runId": "b0557b33-f5a9-4e4f-9e33-9224ea138041",
+            "taskId": "78104f55-cb05-5fff-a1b1-536408047675",
+            "armedAt": "2026-11-17T16:20:53.658Z",
+            "selectedNextRunAt": "2026-11-17T16:21:51.000Z",
+            "scheduledFor": "2026-11-17T16:21:51.002Z",
+            "startedAt": "2026-11-17T16:21:51.002Z",
+            "trigger": "real-cron-tick",
+            "runNowClicks": 0,
+            "taskCompleted": true,
+            "paused": true
+          }
+        },
+        "taskFact": {
+          "taskId": "78104f55-cb05-5fff-a1b1-536408047675",
+          "inputId": "a4ad5350-7a94-5352-af98-e43783b91492",
+          "operationRef": "3a6cbe69-ac44-49b9-8063-9330e053621d",
+          "eventId": "a12ea5a565d9579d46da42ac26dad777562a1c7134a6a272eea13855c17a717e:74",
+          "sequence": 74,
+          "activityDigest": "964069d0a66f4952668736086ab133b0892588872c2caf9b0a71d5510af2d8e3",
+          "addedInputs": 0,
+          "addedBusinessCommands": 0,
+          "addedProviderActions": 0
+        },
+        "stoppedInput": {
+          "inputId": "3a352091-779b-5e4d-9d0f-53e8fe97ddff",
+          "phase": "unknown",
+          "terminalConfirmed": false
+        },
+        "stopReleased": true
+      },
+      "effects": {
+        "snapshotRows": 133,
+        "finalRows": 133,
+        "originalPeerPids": [
+          5248,
+          5410,
+          5420,
+          5431,
+          5451,
+          5485,
+          5499,
+          5592,
+          5601,
+          5609,
+          5617,
+          5625,
+          5633,
+          5641,
+          5690,
+          5765,
+          5915,
+          6118,
+          6424,
+          6692,
+          6992,
+          7177,
+          7327,
+          7489,
+          7663,
+          8161,
+          8507,
+          8518,
+          8791,
+          8800,
+          8815,
+          9069,
+          9077,
+          9272,
+          9291,
+          9313,
+          9385,
+          9394,
+          9403,
+          9412,
+          9457,
+          10166
+        ],
+        "absent": true,
+        "remaining": [],
+        "proofIsExactPrefixOfFinal": true
+      },
+      "custody": {
+        "appPid": 4356,
+        "appGroup": 4356,
+        "hostChild": {
+          "pid": 4655,
+          "ppid": 4475,
+          "pgid": 4356,
+          "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+          "observedBeforeShutdown": true
+        },
+        "originalRequestedQuitExit": {
+          "initialExitCode": 0,
+          "initialSignalCode": null,
+          "exitCode": 0,
+          "signalCode": null
+        },
+        "beforeHarnessCleanup": [
+          {
+            "pid": 4429,
+            "ppid": 1,
+            "pgid": 4356
+          }
+        ],
+        "originalExitedGroup": {
+          "settled": true,
+          "reason": "original-natural-exit-and-fresh-absence",
+          "initialMembers": [
+            {
+              "pid": 4429,
+              "ppid": 1,
+              "pgid": 4356
+            }
+          ],
+          "remaining": [],
+          "capturedHostAbsent": true,
+          "capturedDescendantsAbsent": true,
+          "appExitCode": 0,
+          "appSignalCode": null
+        },
+        "cleanup": {
+          "processGroup": 4356,
+          "remaining": [],
+          "appExitCode": 0,
+          "appSignalCode": null,
+          "capturedHostObserved": true,
+          "capturedHostAbsent": true,
+          "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+        },
+        "traceSummary": {
+          "mainPid": 4475,
+          "event": "trace-summary",
+          "rows": 32,
+          "droppedObservations": 0,
+          "observedChildren": 14,
+          "unobservedChildren": 0,
+          "observationFailures": 0,
+          "limited": false,
+          "coverage": "node-async-and-unix-process-table-only"
+        },
+        "hostExitInBoundedNonatomicMainTrace": [
+          {
+            "mainPid": 4475,
+            "event": "async-exit",
+            "pid": 4655,
+            "status": 0,
+            "signal": null,
+            "observedAtMs": 1794932529402
+          }
+        ],
+        "finalSentinelCensus": {
+          "invocations": [
+            {
+              "executable": "claude-multimodel",
+              "allowed": true,
+              "argc": 1,
+              "command": null,
+              "flags": [
+                "--version"
+              ]
+            }
+          ],
+          "preQuitCount": 1,
+          "postQuitOrCleanupInvocations": [],
+          "refusedInvocations": [],
+          "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+        },
+        "linuxChildExecInputVerifiedAfterCleanup": true
+      },
+      "completeTextReadFlags": {
+        "proof": true,
+        "steps": true,
+        "effects": true,
+        "profile": true,
+        "remainingMembers": true,
+        "appLog": true,
+        "startupRendererCleanup": true
+      },
+      "screenshotJoin": {
+        "allProofImagePathsHashesMatch": true,
+        "pngs": 18,
+        "workflowRequired": 15,
+        "independentVisualReviewer": "/root"
+      }
+    }
+  ],
+  "primarySources": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "bytes": 69370,
+      "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+      "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f",
+      "fullBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "bytes": 21993,
+      "sha256": "2f929c1f5cfd1a9a3c9ec16d35f7197856c79a61adf166d30eebb8a1bd086f67",
+      "gitBlob": "adf5b4c418195e0fc4ab38ba7fde2b3436a6b835",
+      "fullBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 54778,
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "gitBlob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "fullBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "bytes": 49613,
+      "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+      "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "fullBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "bytes": 28804,
+      "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4",
+      "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28",
+      "fullBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+      "bytes": 9569,
+      "sha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd",
+      "gitBlob": "44c8cba99e4932905da77539a59c904a39da4e36",
+      "fullBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "bytes": 39026,
+      "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a",
+      "gitBlob": "76f5d1953816fd125f576a966c42caefcfc297e2",
+      "fullBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 96872,
+      "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+      "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+      "fullBodyRead": true,
+      "selectedVerifierLines": "426–1106"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 29017,
+      "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+      "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+      "fullBodyRead": true
+    }
+  ],
+  "evidenceReading": {
+    "fullRetainedLogsRead": true,
+    "allSevenRawChunksFreshlyReadAndHashed": true,
+    "concatenation": "Complete UTF8 strings in manifest order, no separators, trimming or rewriting; verify complete logical identity before parsing.",
+    "allLogicalCaptureJsonParsed": true,
+    "allUtf8MembersReadAndIndividuallyHashed": true,
+    "allReceiptFieldsAndStepSequencesRead": true,
+    "derivedIdentityPolicy": "Logical capture/member Git IDs are computed identities of embedded data, not separately retained Git objects. They were not fetched as standalone blobs.",
+    "binaryBoundary": "This reviewer verified all binary base64 shape and decoded lengths within the hash-bound complete capture. Original binary SHA/ZIP all-member CRC verification is root's recorded work, not an independently repeated decompression or binary hashing by this reviewer.",
+    "noArchiveGetOrLiveCiRead": true
+  },
+  "sharedSourceCustody": {
+    "selectedPaths": 1757,
+    "uniquePaths": 1757,
+    "duplicatePaths": 0,
+    "beforeAfterWholeEqualWithinEachJob": true,
+    "wholeVectorEqualAcrossJobs": true,
+    "canonicalCompactVector": {
+      "bytes": 266427,
+      "sha256": "6cfc213509be24121cc7ee81bac0a626b1866556a3b36bbda976fb52f4abbc6c",
+      "gitBlob": "fbedc8c355f6359f8f4a52a8c8853c7771e1f446",
+      "derivedIdentityOnly": true
+    },
+    "allSevenSelectedImplementationPinsJoin": true,
+    "limit": "Monitored source census only. Not every repository leaf or every test file is in this1757-path vector; component execution is joined by the fixed-head workflow command and complete actual test output."
+  },
+  "sharedCompiledHashes": {
+    "rows": [
+      {
+        "path": "main/chunks/index-D9GX0Q6a.cjs",
+        "sha256": "89c988b7be61f7f30f0effaed6a2626a2279b0ed753228360e77e227884d0a92"
+      },
+      {
+        "path": "main/chunks/index-yaJFGvjB.cjs",
+        "sha256": "ec64b11e28a53961fd7846392857a0167886b8b086d14f54e20041ddc9927155"
+      },
+      {
+        "path": "main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+        "sha256": "7babbc9bd69c863a2210647b3d5f589d96437a9a80fd794b54196387849217f6"
+      },
+      {
+        "path": "main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+        "sha256": "c14cfc36aeec6fd7103c507f258097aaeccf552dbbf608fea43f9e3c7a7ef3b3"
+      },
+      {
+        "path": "main/chunks/taskChangeState-rZolvpL6.cjs",
+        "sha256": "f40557112189b351692a4b0f19244d7845a4dfe754f468326a21c36386efa1cd"
+      },
+      {
+        "path": "main/chunks/taskHistory-2kbwfqIg.cjs",
+        "sha256": "1d336b6cea5aa5c4768954541a24347fe89bb46a83faddaf8b26fd6e0afb7f85"
+      },
+      {
+        "path": "main/chunks/TeamDataService-DySh5-O-.cjs",
+        "sha256": "ed455bf2423e0511bf1fb8e30069280fe99b505e8e4968df3705309a7131556e"
+      },
+      {
+        "path": "main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+        "sha256": "2915a9af73772eda67fa92bd4499976d75724d9605cc947e356bd1dc1cee600c"
+      },
+      {
+        "path": "main/index.cjs",
+        "sha256": "034a183cd660552903c4e91343ae0b4ebfc2fcd6f0754ec2d7e6d8c12ab99aa4"
+      },
+      {
+        "path": "main/internal-storage-worker.cjs",
+        "sha256": "3433cb94575a5748d3133174952698af2a98ac2afb348cb159fcb1110e0b284f"
+      },
+      {
+        "path": "main/task-change-worker.cjs",
+        "sha256": "f8fcc24dd4dc9842cd0f70ffe02891d39eef84019d4aab4ed21b529ba9326446"
+      },
+      {
+        "path": "main/team-data-worker.cjs",
+        "sha256": "dc145e9f1fb5fdfa2e5f51ca6d6f2db8e22e89cb3ab34dae2745ccfd4e6f3823"
+      },
+      {
+        "path": "main/team-fs-worker.cjs",
+        "sha256": "6e6410a44a3d1b97065085259858215045ed137b5bd0dd27bf70f797091c9c83"
+      },
+      {
+        "path": "preload/index.js",
+        "sha256": "4f02e5f1659bb0373f5515d81c7edf5f9bc7af8b67a39f1600171f8acb291406"
+      }
+    ],
+    "all14RowsEqualAcrossJobs": true,
+    "limit": "Original observed output hashes; no reproducible source-to-bundle build claim and no independently retained complete compiled bundle or provider archive body."
+  },
+  "testExecution": {
+    "nodeVersion": "24.21.0",
+    "electronVersion": "44.10.1",
+    "platform": "Linux x64 / Ubuntu26.04.1 runner image20261111.196.1",
+    "command": "node --test",
+    "wholeFiles": [
+      "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+      "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+      "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+      "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts"
+    ],
+    "testNameFilter": null,
+    "perJobWholeNodeResult": {
+      "tests": 247,
+      "pass": 247,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "perJobWholeInstallerResult": {
+      "tests": 7,
+      "pass": 7,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "logJoins": [
+      {
+        "provider": "opencode",
+        "nodeSummaryLines": "1021–1027",
+        "installerSummaryLines": "1036–1042",
+        "allTenDeadlineCaseLines": "1005–1014",
+        "guiPassLine": 1149,
+        "nodeDurationMs": 13690.40474,
+        "installerDurationMs": 206.69542
+      },
+      {
+        "provider": "codex",
+        "nodeSummaryLines": "1018–1024",
+        "installerSummaryLines": "1033–1039",
+        "allTenDeadlineCaseLines": "1002–1011",
+        "guiPassLine": 1146,
+        "nodeDurationMs": 12439.606802,
+        "installerDurationMs": 178.361429
+      }
+    ],
+    "includedAddedScopes": "All ten actual generic-read/hover deadline cases, five retained-failure GUI projection tests and three shared finite-Claude Settings regressions appear as PASS in both complete logs.",
+    "separateScopes": "No inference for frontend runtime85/catalog43/CapturedClaudeStatus7, nativeUI8/nativeReceipt26, every other CI job, or the separately bound Node24.22.1 paired RED7F3P/GREEN10P standalone attempt."
+  },
+  "originalBudgetAndAuthority": {
+    "launchReadyMs": 90000,
+    "launchDialogCloseMs": 60000,
+    "genericUiReadMs": 30000,
+    "driverReadPollMs": 75000,
+    "driverCadenceMs": 100,
+    "existingDevStartupMs": 180000,
+    "originalQuitObservationMs": 3000,
+    "unchanged": true,
+    "qualification": "These existing distinct phase budgets are not summed into a new allowance. No deadline, filter, input, retry, case, control, native authority or cleanup requirement was changed by this review."
+  },
+  "visualReview": {
+    "reviewer": "/root",
+    "independentVisualReportSeparate": true,
+    "thisReviewerViewedImages": false,
+    "all33ImagePathHashJoinsClosed": true,
+    "rootInterimObservations": [
+      "All15 OpenCode PNGs were viewed by root. Launch includes Tasks could not be refreshed / Host read crossed a mutation boundary, previously loaded task retained and counts may be out of date.",
+      "OpenCode completed/logs filenames alone do not establish settled log freshness; an earlier completed image still retains partial left-log snapshots.",
+      "OpenCode stopped screenshot still shows Running and Stopping; it is not standalone final-stop or native-absence proof.",
+      "OpenCode Stats Unknown values are explicit; Allow/Deny modals and held partial state are visible according to root.",
+      "Codex visual review was still pending completion when this text report was authored."
+    ],
+    "limit": "The original later source assertions, receipt joins and bounded trace/absence observations support this text outcome. No global UI freshness, absence of background errors or screenshot-only native/process qualification is asserted."
+  },
+  "checks": [
+    {
+      "id": "S01",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Exact original run/job/head tuple is consistent in both complete captures, receipt source rows and complete job logs.",
+      "evidence": "CI3 PR1223; run44092933810; fixed head86f52244b5375834a4040cbc63803d68cc708087; OpenCode134072511958 and Codex134072512324."
+    },
+    {
+      "id": "S02",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "All seven ordered transport chunks were freshly read, individually hash-bound and concatenated without separators to the two exact complete logical captures.",
+      "evidence": "OpenCode3 chunks→7,944,895 bytes/cf31503e; Codex4 chunks→9,250,963 bytes/f1267577. Manifests4ce54fbd/2dd82630.",
+      "limit": "Logical capture IDs are derived identities, not separately retained Git blobs."
+    },
+    {
+      "id": "S03",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Both whole JSON captures parse without member omission; all32/35 metadata rows and all16/16 UTF8 member bodies were individually identity-checked and semantically read.",
+      "evidence": "OpenCode16 UTF8/905289 bytes,15 PNGs,1 childexec binary; Codex16 UTF8/944618 bytes,18 PNGs,1 childexec binary."
+    },
+    {
+      "id": "S04",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Original ZIP bytes and every binary member remain retained inside the exact logical captures.",
+      "evidence": "OpenCode ZIP2472349 bytes/SHAa6b674a9...; Codex ZIP2935027 bytes/SHAd959f429...; root records all-member CRC verification.",
+      "limit": "This reviewer verified complete UTF8 transport and base64 shape/decoded lengths, not a second binary SHA/ZIP decompression. Root's byte/CRC verification is attributed; no archive was downloaded or executed."
+    },
+    {
+      "id": "S05",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Complete before/after selected source censuses are identical within both jobs and across jobs.",
+      "evidence": "1757 unique paths, no duplicate paths; canonical compact vector266427 bytes/SHA6cfc2135..., derived fbedc8c3. All seven selected implementation identities match exact frozen sources.",
+      "limit": "This is the monitored1757-path census, not a claim that every repository file is represented."
+    },
+    {
+      "id": "S06",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Both jobs record the same fourteen compiled Main/preload JS hashes after owned app startup.",
+      "evidence": "main/index.cjs SHA034a183c..., preload/index.js SHA4f02e5f1..., all14 rows equal.",
+      "limit": "The receipt explicitly disclaims reproducible source-to-bundle rebuild; compiled bundles and provider archive bodies are not supplied as independent source attestation by these captures."
+    },
+    {
+      "id": "S07",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Node, Host CLI, package-manager and Linux child-exec input pins join the descriptors, profiles, inputs and final verification.",
+      "evidence": "Node24.21.0 SHA7fde7b8a...; Host CLI SHA7ff0d333...; childexec manifest e67ba493.../binary8fc3e5a7...; linuxChildExecInputVerifiedAfterCleanup=true in both."
+    },
+    {
+      "id": "S08",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Both jobs ran the unchanged unfiltered eight-file Node command and then the original whole installer test command.",
+      "evidence": "OpenCode247/247 at lines1021–1027, then7/7 at1036–1042; Codex247/247 at1018–1024, then7/7 at1033–1039. Both0fail/0cancel/0skip/0todo.",
+      "limit": "Counts are per original job execution and not a merged unique total across jobs."
+    },
+    {
+      "id": "S09",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "The eight-file command includes the entire current desktop-team-ui-smoke.test.ts aggregate and its literal imported deadline module.",
+      "evidence": "Original whole149 contract preserved; the complete logs contain all ten appended generic-read/hover cutoff cases and no test-name filter.",
+      "limit": "This is execution of the aggregate on CI Node24.21.0; it does not replace the separately bound Node24.22.1 paired RED/GREEN standalone attempt."
+    },
+    {
+      "id": "S10",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "The existing added backend-observation and finite-Claude Settings tests also run in the same actual247-case command.",
+      "evidence": "All five retained-failure projection cases and all three shared Claude auth/model-probe cases occur as successful original log entries.",
+      "limit": "CapturedClaudeStatus7 and catalog43/runtime85 are frontend suites, not implied by this Node/GUI result; nativeUI8 and nativeReceipt26 are also separate."
+    },
+    {
+      "id": "S11",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Runtime and management select only the exact finite TEST peer for each lane, with a private namespace and unchanged authority.",
+      "evidence": "OpenCode finite protocol1.19.4, saved selection test-provider/TEST-model; Codex finite protocol0.162.0, saved selection TEST-model. Descriptor/profile hashes and selected executable SHA values join."
+    },
+    {
+      "id": "S12",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "The one observed claude-multimodel --version invocation is the explicitly installed finite sentinel, not a real vendor command.",
+      "evidence": "Both96-byte sentinel files are identical; final census records one allowed version invocation and zero refused or post-Quit invocations. Source installs pinned finite wrappers and refuses native configurations.",
+      "limit": "No real Claude/Codex or vendor-authentication qualification follows; protocol peer names do not identify real vendor binaries."
+    },
+    {
+      "id": "S13",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Both original launches use the saved selection, await the original preflight predicate and submit exactly once.",
+      "evidence": "Driver90–115, one capture/member binding; each proof has one Launch click and original boot marker once.",
+      "limit": "Original90s enabled-Launch,60s dialog-close,30s generic UI controls and existing75s driver read polls remain unchanged. Existing180s dev startup budget is distinct."
+    },
+    {
+      "id": "S14",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Stream partial and completion are independently joined to original retained Host log event IDs and sequences.",
+      "evidence": "OpenCode partial13→complete15, Thinking14→16; Codex partial14→complete16 with separate stderr15. Source requires partial before terminal and later exact fact/clipboard reads.",
+      "limit": "A screenshot taken earlier in the flow need not show the later settled log value."
+    },
+    {
+      "id": "S15",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Original Lead Logs search, stream/kind filters, fullscreen, disclosure and actual clipboard actions reach their exact source assertions.",
+      "evidence": "Complete237/231 step sequences; leadLogs.defaultLeadRoute/filtersAndSearch/actualClipboard=true; addedInputs=0 and addedBusinessCommands=0."
+    },
+    {
+      "id": "S16",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Both finite permission branches exercise original Deny and Allow controls and preserve the denied versus allowed effect distinction.",
+      "evidence": "OpenCode interaction replies reject/once; Codex decline/accept; unchanged source checks effect-file absence/presence and terminal joins."
+    },
+    {
+      "id": "S17",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "The selected member reveal composition reaches the unchanged unique center-hit click and original Logs/Stats controls in both jobs.",
+      "evidence": "Frozen driver ff991b68 lines453–469; member clicks OpenCode index123 and Codex index115 at x414.3984375/y291; full subsequent dialog actions and Stats assertions.",
+      "limit": "This confirms these observed viewports, not all clipped/ambiguous/covered states or the precise cause of the older OpenCode failure."
+    },
+    {
+      "id": "S18",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Renderer reload preserves the original runtime inputs/effects and reuses the same retained completed facts.",
+      "evidence": "One original Page.reload(ignoreCache:false); proof.reloadWithoutReplay=true and exact same completed log IDs; OpenCode Thinking and Codex stderr facts re-read after reload.",
+      "limit": "No cold-renderer oversized-comment qualification is inferred."
+    },
+    {
+      "id": "S19",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Manual schedule create/edit/pause/resume/one Run now/delete reaches the original saved-prompt and task-effect assertions.",
+      "evidence": "Same schedule ID with exactly one manual run and a completed assigned task/reply; savedPromptAcknowledged=true and savedPromptNotReplayed=true."
+    },
+    {
+      "id": "S20",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Automatic scheduling uses the real future cron occurrence with no second Run now input.",
+      "evidence": "Both automatic scheduledFor values are selectedNextRunAt+2ms; OpenCode armed57817ms early, Codex57342ms; same schedule/different run IDs; one matching effect/task per automatic occurrence and paused=true.",
+      "limit": "This is the observed selected occurrence, not an exhaustive scheduler guarantee."
+    },
+    {
+      "id": "S21",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Task Activity and Task Log Stream join the same selected automatic task/input/binding/event/digest and preserve read-only behavior.",
+      "evidence": "Two views per job use one exact event/sequence; addedInputs/BusinessCommands/ProviderActions all0; source additionally compares whole session inputs, command rows, effects, task rows and retained digest.",
+      "limit": "Unattributed member stderr is explicitly excluded from exact Task logs."
+    },
+    {
+      "id": "S22",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Original Team Stop closes and releases the selected runtime but retains the held input as unknown.",
+      "evidence": "Both proof.stoppedInput.phase=unknown,terminalConfirmed=false; no terminal event for TEST_UI_HOLD; stopReleased=true; source waits original peers absent.",
+      "limit": "Interrupted work is not counted as successful completion. Root's separately reported OpenCode stopped screenshot still shows Running / Stopping, so that image alone is not final-stop or native-absence proof; the later original receipt/source assertions provide the bounded final outcome."
+    },
+    {
+      "id": "S23",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "OpenCode's final effect journal includes one management exit after the earlier UI effect snapshot.",
+      "evidence": "36 proof/snapshot rows are the exact prefix of37 final/cleanup rows; last row is management PID5411 exit0. All3 original peer PIDs are absent."
+    },
+    {
+      "id": "S24",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Codex's proof, saved effect snapshot, final NDJSON and cleanup effect array agree completely.",
+      "evidence": "133 exact rows,42 launch PIDs; configured catalog remains empty and actual managed reads select only team. All42 original peer PIDs absent.",
+      "limit": "Catalog rows do not each log an exit event, so row counts alone are not exit proof; final custody/absence observations supply that boundary."
+    },
+    {
+      "id": "S25",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Both requested app Quits reach original child exit0/null and final empty process groups.",
+      "evidence": "OpenCode app/group4351; Codex4356. Final cleanup capturedHostObserved=true/capturedHostAbsent=true and remaining[]."
+    },
+    {
+      "id": "S26",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "The Codex transient orphan is explicitly retained and settled through the existing fresh-absence observation.",
+      "evidence": "beforeHarnessCleanup contains esbuild PID4429,ppid1,pgid4356; originalExitedGroup.reason=original-natural-exit-and-fresh-absence,remaining[],capturedHostAbsent=true,capturedDescendantsAbsent=true.",
+      "limit": "Do not rewrite the earlier nonempty census as empty or claim that numeric PGID absence alone qualified exit."
+    },
+    {
+      "id": "S27",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Original app logs independently contain the selected Host child exit0/null events.",
+      "evidence": "OpenCode Main4477→Host4711 async-exit0/null; Codex Main4475→Host4655 async-exit0/null.",
+      "limit": "Receipt itself says no separate Host exit code is exposed. Main tracing is bounded, explicitly non-atomic and covers node-async/unix-process-table only; it is supporting evidence, not universal OS process attestation."
+    },
+    {
+      "id": "S28",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "The Main trace does not report lost rows or observed-child debt in either run.",
+      "evidence": "OpenCode summary26 rows/12 observed children; Codex32/14; dropped0,unobserved0,observationFailures0,limited=false. All final peer journals/censuses agree with their selected Host parent PIDs."
+    },
+    {
+      "id": "S29",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Both captured startup sequences reach actual Main readiness, renderer mount and store presence once before the UI flow.",
+      "evidence": "Original180000ms dev budget; startup outcomes23962ms/20074ms; final appReadiness observation mainReady/uiDidInit/storePresent=true,rootChildCount1; one discovery attempt each."
+    },
+    {
+      "id": "S30",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Retained renderer diagnostics and app logs remain visible rather than being erased by the successful result.",
+      "evidence": "Each renderer retains12 JavaScript warnings with moduleError=null, navigation records, and no captured module-load failure. App logs include missing private .claude/projects, DBus errors and unrelated provider-routing unavailable/not-dispatched messages. Both app logs also retain the enableGlobalVirtualStore/lockfile sync warning and build annotation warnings.",
+      "limit": "Bounded diagnostics do not prove a globally error-free app. Root's separate OpenCode visual observations retain Tasks could not be refreshed / Host read crossed a mutation boundary and previously loaded task counts; no universally fresh screen is claimed."
+    },
+    {
+      "id": "S31",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "OpenCode preserves its explicitly unsupported native capability baseline.",
+      "evidence": "catalog[], structured questions/native slash commands/native usage counters unsupported; Stats inputTokens/outputTokens/costUsd allnull with4 observed messages and2 bash uses.",
+      "limit": "Finite OpenCode1.19.4 GUI success does not qualify actual OpenCode2.1.4, native questions, slash commands or usage reporting."
+    },
+    {
+      "id": "S32",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Codex exercises both original structured question outcomes.",
+      "evidence": "Alpha selected/submitted once and a separate question declined through the original sheet; four interaction/reply pairs total including permissions; exact finite decisions Alpha/deny are retained."
+    },
+    {
+      "id": "S33",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "Codex /cost is the original Host-local command with no extra provider turn/input.",
+      "evidence": "One completed message.send nativeCommand receipt and exact reply; snapshot input720/output42/partialfalse; Stats same720/42,costUsdnull; source compares whole inputs and provider-input count before/after.",
+      "limit": "Token counters are finite TEST peer values, not billing/pricing validation."
+    },
+    {
+      "id": "S34",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "All proof screenshot references join unique original member paths/hashes with no extra or missing proof images.",
+      "evidence": "15 OpenCode images and18 Codex images; original workflow summary required12/15 respectively, with Lead Logs and two Task views retained in addition.",
+      "limit": "This reviewer performs text/metadata joins only. Root's independent visual review is separately attributed and remains outside this text-report decision; completed/logs/stopped filenames do not prove log freshness, final Stop or process absence."
+    },
+    {
+      "id": "S35",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "The successful selected lanes do not imply the remainder of CI3, packaged/native Windows/Darwin, release or vendor qualification.",
+      "evidence": "Both original summaries explicitly statusPASS/scope selected lane only/nativeProviders not executed/vendorAuthQualifiedfalse/releaseQualifiedfalse."
+    },
+    {
+      "id": "S36",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "claim": "This outcome review neither modifies nor executes the source under review.",
+      "evidence": "Immutable Git/retained bytes/pure data analysis only; no downloads, local processes, source/control edits, ref/PR/CI action, retry, budget change or new gate."
+    }
+  ],
+  "limitations": [
+    "Selected original Linux finite TEST lanes only; not real Claude/Codex, vendor authentication, actual OpenCode2.1.4, all-provider native qualification, packaged Windows/Darwin, release, or overall CI3 success.",
+    "OpenCode retains unsupported questions/slash/usage and unknown numeric Stats. Codex counters are finite peer values, not real billing validation.",
+    "Original Stop preserves held work as unknown and terminalConfirmed=false. Final release/absence does not relabel interrupted work as successful.",
+    "Codex's earlier nonempty group census with orphan esbuild PID4429 is retained; only the subsequent original natural-exit/fresh-absence branch qualifies the final empty group.",
+    "Receipt Host exit status is explicitly not exposed. Bounded Main async trace separately records exit0/null; tracing is node-async/unix-process-table only, non-atomic and not universal OS custody attestation.",
+    "Monitored1757 source paths and14 compiled output hashes do not provide complete repository/bundle reproducibility or a new provider-archive source attestation.",
+    "The archives contain the selected proof/profile/effects/inbox/management command members, not the entire Host store.",
+    "Original ZIP byte/CRC verification is attributed to root. Complete UTF8 and raw transport identities were independently verified here.",
+    "Visual review is separate; preserve the observed Tasks mutation-boundary warning and earlier screenshot freshness/Stopping limitations.",
+    "No new source/control/test/ref/PR/CI/runtime operation, no archive retrieval, no retries, and no new approval or execution gate."
+  ],
+  "performedActions": "Immutable Git and retained-evidence reads, pure in-memory data/hash comparisons, and this bare report retention only.",
+  "selfReadbackProtocol": "After retention, send exact pin immediately; then freshly fetch the complete report, verify exact literal/bytes/SHA/Git identity and JSON equality, fully read it and report confirmation separately."
+}

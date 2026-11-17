@@ -1,0 +1,248 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_FOUR_LINUX_GUI_VISUAL_READ",
+  "repository": "777genius/agent-teams-ai",
+  "at": "2026-11-17 15:52:36 UTC",
+  "imageCount": 22,
+  "rows": [
+    {
+      "artifactId": 14339231388,
+      "capture": {
+        "bytes": 4845218,
+        "sha256": "8e1509410f42c1eeb0900022a86dccdeb610479a3d60328c6c53364207827618",
+        "gitBlob": "fa1849026b8b06207a8277d060a47e0ce808b508"
+      },
+      "images": [
+        {
+          "path": "TEST-desktop-backend-Ek36rr/ui-skills-edit-applied.png",
+          "pin": {
+            "bytes": 92689,
+            "sha256": "10027b5d14d62024b9d3de3c0ef0a76f88add46a8959e647cdcee215d15f568f",
+            "gitBlob": "26851af5f62d43d08dafaaba8b561444fa5fb06f"
+          },
+          "observed": "Edited skill title/description and saved-success toast visible; detail pane still says loading."
+        },
+        {
+          "path": "TEST-desktop-backend-Ek36rr/ui-skills-import-applied.png",
+          "pin": {
+            "bytes": 116123,
+            "sha256": "9cdecbec1a7b3efea5c16816608eb7a6c0023de7d98840f08afaadd7f742da82",
+            "gitBlob": "dbdabb6f6fbfc850a4e80f53f1f647c1a9530f28"
+          },
+          "observed": "Imported skill title and exact-snapshot description visible with imported-success toast; detail loading remains visible."
+        },
+        {
+          "path": "TEST-desktop-backend-Ek36rr/ui-skills-import-review.png",
+          "pin": {
+            "bytes": 98281,
+            "sha256": "87ec415419aa6617fde4a7a1b28c53708b9dcdc36667a4540837878a82aae0d7",
+            "gitBlob": "423de25f7e839315f232c7de71d0d6a7eb7c97cb"
+          },
+          "observed": "Import review shows four changes: two new, one updated, one removed, one binary; exact change rows and warnings visible."
+        },
+        {
+          "path": "TEST-desktop-backend-Ek36rr/ui-skills-initial.png",
+          "pin": {
+            "bytes": 128946,
+            "sha256": "9a3ae9e6fc11acc787bfab424d29a1062f494241b54e77ac7004314475a9b928",
+            "gitBlob": "0006b727ec8d7c0af0ba34ae7562b88fb33cafc6"
+          },
+          "observed": "Original Skills view, personal/shared/Codex-only counts and existing TEST cards visible; provider-status loading banner visible."
+        },
+        {
+          "path": "TEST-desktop-backend-Ek36rr/ui-skills-known-rejected.png",
+          "pin": {
+            "bytes": 101850,
+            "sha256": "02c1b928106a087b7166d8dfbd82f27193cd6744d6fabd0c2ad5989ab5400d3f",
+            "gitBlob": "f3e20d2adaa100de53119c31d818e33466b49a12"
+          },
+          "observed": "Import review displays source-changed-after-review refusal; no success inferred."
+        },
+        {
+          "path": "TEST-desktop-backend-Ek36rr/ui-skills-stale-context.png",
+          "pin": {
+            "bytes": 86486,
+            "sha256": "2b85cdaaee07c618988c078ea93632da4ba284fec3ccb34a4a6e85f5f3e567fe",
+            "gitBlob": "531e2c4cebc3881ede851569252cfc0966c6b357"
+          },
+          "observed": "Import review displays requirement to review original import before saving in the stale-context case."
+        },
+        {
+          "path": "TEST-desktop-backend-Ek36rr/ui-skills-unknown-held.png",
+          "pin": {
+            "bytes": 121003,
+            "sha256": "134e84892fd9336306b9394f5dfc0c74728ecaf831ebcd803a10db2517a903fb",
+            "gitBlob": "01b2fb2784803401da54174c500a199a7f6db11e"
+          },
+          "observed": "Original held skill displays unconfirmed-original-change warning and request-query instruction; preserved TEST held bytes visible."
+        },
+        {
+          "path": "TEST-desktop-backend-Ek36rr/ui-skills-trash-completed.png",
+          "pin": {
+            "bytes": 98158,
+            "sha256": "e1d53f54e2519eef335208927527b92135c1eb5e37df86caaeef904a3ef18a44",
+            "gitBlob": "5dd4161c2a4dfde92c00c8198ba585c6e4317ec2"
+          },
+          "observed": "Filtered search for the created skill shows no matching card; no global absence inferred."
+        }
+      ]
+    },
+    {
+      "artifactId": 14338162048,
+      "capture": {
+        "bytes": 3111282,
+        "sha256": "19209eddea70a7bb2079a24f76dab78385d54e71ce7ac92c7ee2763222aaec63",
+        "gitBlob": "388ca56f4fc520890232437179d1910c8d9708df"
+      },
+      "images": [
+        {
+          "path": "TEST-desktop-backend-TvvaVr/ui-original-native-process-after-stop.png",
+          "pin": {
+            "bytes": 73017,
+            "sha256": "b820b373a1a5e1de5d67f864e543790cff766727484acac1a9f916ff501c9c2f",
+            "gitBlob": "8d955ddbf88838376e4d3bd74460c2dc348810d1"
+          },
+          "observed": "After-stop primary row is grey and has no visible Kill action; retained row and task remain; header counter0."
+        },
+        {
+          "path": "TEST-desktop-backend-TvvaVr/ui-original-native-process-before-stop.png",
+          "pin": {
+            "bytes": 73565,
+            "sha256": "a2bdec74e77d719c329610999cdab045ee4437a02fd9f79b667a0cf325378df8",
+            "gitBlob": "afe0ce254e9d96508b619d3fb6dbc2ed19778ff0"
+          },
+          "observed": "Before-stop primary row is green with Kill/Open visible; header counter0 is not a native process census."
+        }
+      ]
+    },
+    {
+      "artifactId": 14341928377,
+      "capture": {
+        "bytes": 4107817,
+        "sha256": "e90953550fd317dc022131177b31d52b0412bed666fb74aa93125b5efe74548b",
+        "gitBlob": "6350c60f632606b3ed7007eaca0e4ef6515c5b78"
+      },
+      "images": [
+        {
+          "path": "TEST-desktop-backend-ff3dGr/ui-emulated-management-final.png",
+          "pin": {
+            "bytes": 102051,
+            "sha256": "137977dd5282c5788b7d0f03e4882b2295edbc43a2ab46c66a02179e4ae09f93",
+            "gitBlob": "71855c3b6ad52a4772317abb6df9eece69fb21a8"
+          },
+          "observed": "Final provider settings retain API configured row and finite OAuth providers; model placeholders still loading."
+        },
+        {
+          "path": "TEST-desktop-backend-ff3dGr/ui-emulated-model-effort-reloaded.png",
+          "pin": {
+            "bytes": 44729,
+            "sha256": "a9312bc5632c10570a39265856cf448f4f5c3e8e051e926ccb63b90613d58a45",
+            "gitBlob": "718664beca5a71eed0e5388cefd8d3b46271560c"
+          },
+          "observed": "Reloaded Teams list contains saved TEST model-effort team marked offline."
+        },
+        {
+          "path": "TEST-desktop-backend-ff3dGr/ui-emulated-model-effort-selected.png",
+          "pin": {
+            "bytes": 63531,
+            "sha256": "7573c8da4b6c32a80fcc2a452e987e41ee8ebb5b107c1a0be7c76bb48fa10d99",
+            "gitBlob": "d060e55874c92c819022e521e79ddcb5eb6d52ad"
+          },
+          "observed": "Create Team model selection shows TEST-model and High effort; local context limits4096/1024 visible."
+        },
+        {
+          "path": "TEST-desktop-backend-ff3dGr/ui-emulated-oauth-device-waiting.png",
+          "pin": {
+            "bytes": 145374,
+            "sha256": "3ba8670b99eb7f261227b3966d0329386b968eb3f88c15fb364d69b43e90188c",
+            "gitBlob": "89bd8bdd492a63b404a19cfcd2ace81ed185596f"
+          },
+          "observed": "Finite device authorization waiting view shows TEST code and automatic confirmation-wait text."
+        },
+        {
+          "path": "TEST-desktop-backend-ff3dGr/ui-emulated-oauth-waiting.png",
+          "pin": {
+            "bytes": 100794,
+            "sha256": "5a74718c9d165ab4410d54367996cf9fceacdcb82361ee092e34fdd531890caf",
+            "gitBlob": "87c33f93edc2da683063fe93004a4994562c87ce"
+          },
+          "observed": "Finite authorization-code view shows redacted link text, code input, Continue and Cancel."
+        },
+        {
+          "path": "TEST-desktop-backend-ff3dGr/ui-emulated-provider-connected.png",
+          "pin": {
+            "bytes": 116581,
+            "sha256": "300d3fc0de07ad9b8e510f2a36558acd486a12b3dc3076eaf5e6753660b2095f",
+            "gitBlob": "8701f93826c61dce3cdefef0c6b49ba3111f43b3"
+          },
+          "observed": "TEST-api connected banner explicitly says model execution was not verified; model row needs test."
+        }
+      ]
+    },
+    {
+      "artifactId": 14340694525,
+      "capture": {
+        "bytes": 4307379,
+        "sha256": "698627ceb906e63dd115113069997845f04442811d061dc1545f30efc5d98131",
+        "gitBlob": "e7a2f970acd18a3a2c147531ccdaac76f2ddf34d"
+      },
+      "images": [
+        {
+          "path": "TEST-desktop-backend-LRlSRk/ui-import-source-attachment-lightbox.png",
+          "pin": {
+            "bytes": 102622,
+            "sha256": "44485f60e4abe3141ade3f7fb82d6c5ee3497536ff9cd4977650bbd1a7d64b08",
+            "gitBlob": "f00feebfcfc35411d5bdf21854f30b2c96551552"
+          },
+          "observed": "Attachment lightbox is open over the imported offline Team with navigation/zoom controls; source image is tiny."
+        },
+        {
+          "path": "TEST-desktop-backend-LRlSRk/ui-import-source-attachment-kanban.png",
+          "pin": {
+            "bytes": 127676,
+            "sha256": "35cd7e5f71dc279552e23e8ad9ae72c05b35de1a672a7810b9a7051a9297525e",
+            "gitBlob": "6d33d307fa49b8a2dcf77a788260e6e9224365d9"
+          },
+          "observed": "Imported offline Team/task Kanban shows original attachment thumbnail and two tasks."
+        },
+        {
+          "path": "TEST-desktop-backend-LRlSRk/ui-import-source-attachment-task-detail.png",
+          "pin": {
+            "bytes": 113643,
+            "sha256": "4730fb012eca4042e7205c4ec1f2e6d33f2cd885369c399a91b49573aa25899f",
+            "gitBlob": "4eb44141a6ffd1c977f4c3f676cb89072171640f"
+          },
+          "observed": "Imported task detail shows internal/external/missing references, source and saved attachments, and comment count."
+        },
+        {
+          "path": "TEST-desktop-backend-LRlSRk/ui-original-stopped-import-dialog.png",
+          "pin": {
+            "bytes": 123862,
+            "sha256": "6fe3d48de751e5051d0e0ca08f9cd02d3205a35f71e3641a362ee3e7c2857138",
+            "gitBlob": "eb13f674f9ad8baea970b1c4db59402a1152ec40"
+          },
+          "observed": "Original stopped-import Launch dialog shows Fresh Launch, no checkpoint, saved project, lead/member models/effort/role and imported prompt."
+        },
+        {
+          "path": "TEST-desktop-backend-LRlSRk/ui-original-stopped-import-reloaded.png",
+          "pin": {
+            "bytes": 124044,
+            "sha256": "94b08ea5824eb665a99f6c895ce9d430e49e9a98057dddc9c5b632bd08aa1b17",
+            "gitBlob": "9d6f673ce024e3f132dfafe053a3a6e0054ee25e"
+          },
+          "observed": "After reload the same stopped-import Launch dialog values remain visible."
+        },
+        {
+          "path": "TEST-desktop-backend-LRlSRk/userData/data/attachments/test-stopped-legacy/TEST-legacy-source-message/TEST-source-image--source-original.png",
+          "pin": {
+            "bytes": 71,
+            "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+            "gitBlob": "8d79cc731a6bbfd43247473d7ef6d2c0e9519994"
+          },
+          "observed": "Tiny source PNG rendered; raw bytes are separately captured and hashed."
+        }
+      ]
+    }
+  ],
+  "qualification": "Complete captured screenshots visually inspected. Each observation is limited to the single retained image; no atomic state, intent completion, native absence, subscription/vendor qualification, or whole-E2E result inferred. Independent receipt/source/log reviews establish any bounded scenario result."
+}

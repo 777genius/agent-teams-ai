@@ -1,0 +1,1267 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_WINDOWS_X64_SOURCE_READINESS_SEMANTIC_OUTCOME_ADVISORY",
+  "authoredAt": "2026-11-17 15:04:23 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_semantic",
+  "decision": "OpenCode V1 source-A reference-expiry failure is supported; earlier finite Codex and Claude source A/B passes and final cleanup are separately supported. No preserving latency repair is established by the available observations.",
+  "authority": {
+    "readOnly": true,
+    "rootSoleSourceControlAuthorExecutor": true,
+    "actionsTaken": [
+      "immutable retained Git and source reads",
+      "pure-memory literal and identity comparisons",
+      "this bare advisory retention"
+    ],
+    "actionsNotTaken": [
+      "local filesystem or process access",
+      "target source evaluation or compilation",
+      "runtime invocation",
+      "live CI reads, polling or downloads",
+      "source, ref, PR or CI mutation"
+    ],
+    "noNewGate": true,
+    "noFixSelected": true
+  },
+  "subject": {
+    "pullRequest": 1223,
+    "runId": 44092933972,
+    "jobId": 134072511732,
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "platform": "win32-x64",
+    "artifactId": 14338246689,
+    "jobConclusion": "failure",
+    "sourceCase": "OpenCode V1 TEST source-A / Team-A"
+  },
+  "retainedInputs": [
+    {
+      "role": "complete decoded original job log",
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 403779,
+      "sha256": "80cc9f31643a37cde4d26f1b9776dda64a1a90f01206b2738cedfd2f52a1b50e",
+      "gitBlob": "870cbeae575ce9aa59557fb240a20b6d98bb81d2"
+    },
+    {
+      "role": "complete root capture of archive and all 18 UTF-8 members",
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 538158,
+      "sha256": "e6b7f8094ae6972296dc0a83ead842981d94200565c8c6d7ac33a9025babe81d",
+      "gitBlob": "65a9bca411be67c5e9c12594625e94c8c9dffe42"
+    }
+  ],
+  "readingAndIdentity": {
+    "log": {
+      "bytes": 403779,
+      "characters": 403317,
+      "completeLiteralRead": true,
+      "range": [
+        0,
+        403317
+      ]
+    },
+    "capture": {
+      "completeOuterIdentityVerified": true,
+      "completeMemberCount": 18,
+      "completeTextBytes": 405161,
+      "all18CompleteTextBodiesHashed": true,
+      "all4ReceiptBodiesFullyRead": true
+    },
+    "archive": {
+      "bytes": 56572,
+      "sha256": "df0ca7b94da7ca8ec1127798e3c6fc509be866ddd0e29fe24dd81fbac9684dda",
+      "gitBlob": "3873f716e36490da0dae1d94452b7ab7d2f0cfba",
+      "identityKind": "derived archive identity embedded in root capture",
+      "crc": "Root verified full ZIP and every member CRC. Reviewer did not independently inflate or rerun CRC."
+    },
+    "textReuse": {
+      "description": "All nine artifact logs were matched in full, in order, to the already fully read original job log after removing only original job timestamps and ANSI color and normalizing CRLF to LF. Their raw member bytes were separately hashed. This is complete-content reuse, not a claim that raw log bytes are identical.",
+      "joins": [
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+          "nonemptyLines": 181,
+          "orderedFullTextIncluded": true,
+          "normalization": "remove job timestamp and ANSI color, CRLF to LF; raw member bytes independently hashed"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+          "nonemptyLines": 8,
+          "orderedFullTextIncluded": true,
+          "normalization": "remove job timestamp and ANSI color, CRLF to LF; raw member bytes independently hashed"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+          "nonemptyLines": 57,
+          "orderedFullTextIncluded": true,
+          "normalization": "remove job timestamp and ANSI color, CRLF to LF; raw member bytes independently hashed"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+          "nonemptyLines": 414,
+          "orderedFullTextIncluded": true,
+          "normalization": "remove job timestamp and ANSI color, CRLF to LF; raw member bytes independently hashed"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider.log",
+          "nonemptyLines": 12,
+          "orderedFullTextIncluded": true,
+          "normalization": "remove job timestamp and ANSI color, CRLF to LF; raw member bytes independently hashed"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+          "nonemptyLines": 414,
+          "orderedFullTextIncluded": true,
+          "normalization": "remove job timestamp and ANSI color, CRLF to LF; raw member bytes independently hashed"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude.log",
+          "nonemptyLines": 34,
+          "orderedFullTextIncluded": true,
+          "normalization": "remove job timestamp and ANSI color, CRLF to LF; raw member bytes independently hashed"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+          "nonemptyLines": 64,
+          "orderedFullTextIncluded": true,
+          "normalization": "remove job timestamp and ANSI color, CRLF to LF; raw member bytes independently hashed"
+        },
+        {
+          "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode.log",
+          "nonemptyLines": 29,
+          "orderedFullTextIncluded": true,
+          "normalization": "remove job timestamp and ANSI color, CRLF to LF; raw member bytes independently hashed"
+        }
+      ]
+    },
+    "duplicateBinaryList": "The two 1,723-byte binary-sha256.txt members are exact duplicates; one complete read plus literal identity equality covers both.",
+    "derivedMemberIdentityWarning": "Every member Git ID below is computed from the embedded complete text, not claimed to be a separately retained Git object. No member-ID fetch was made."
+  },
+  "memberIdentities": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt",
+      "bytes": 1723,
+      "sha256": "eab57770c9a770a05ce0a12d948262f96ed68fc10fcaa4092c096b7fb1fc2c3c",
+      "gitBlob": "bdc88519c50a0b9e440e550ebbfdee44dca48974"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "bytes": 20523,
+      "sha256": "fdfeb1d453003eb512e9730b2643013d08bc1322bd12b6cce09ef7436cd62a09",
+      "gitBlob": "e5f7f92e20c5e52d7ef589db9a565bee34b19f08"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "bytes": 757,
+      "sha256": "d3d932f4b626b46e4352b735a89341592d5c08244e3523ea131868baf5fa39af",
+      "gitBlob": "0cc077add40838fa982e7f4e575db9ecb76b3d00"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "bytes": 9498,
+      "sha256": "ba419a4b0273be0305002da639c3d3cd91b3976c0f7baaf1d9b5d2028d173e8a",
+      "gitBlob": "c15f55cc871110cea5130fe2c912c0531a0e898e"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "bytes": 41,
+      "sha256": "c6e83faca47c66153afed1e4b9891f856af87557ce95c1e8182e52db41d3c5e5",
+      "gitBlob": "fa471e932cea3bab5fa1f93968605b7d21ed6e71"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+      "bytes": 89074,
+      "sha256": "129f7936b533a15dbe2fb67c44d8edf65afde44eea7e6da7359018b4a3c1b90e",
+      "gitBlob": "47f7dfc6ab5edb7f046d9e98fa359619c2107411"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt",
+      "bytes": 1723,
+      "sha256": "eab57770c9a770a05ce0a12d948262f96ed68fc10fcaa4092c096b7fb1fc2c3c",
+      "gitBlob": "bdc88519c50a0b9e440e550ebbfdee44dca48974"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider-receipt.json",
+      "bytes": 2900,
+      "sha256": "21de7caa0a6a8e7897b45c3d42bc9ccee69edc44c88eac40a6b62782bc936a98",
+      "gitBlob": "765147b5377e8466104cfabcc5000d2144091856"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider.log",
+      "bytes": 1278,
+      "sha256": "88e3abab0f14442b2ef7e9ab3e41f23793340d7e62cf94921a7a19cfd228ce2d",
+      "gitBlob": "f3eddb7bb5c658705d8f13ee21847af750db2c19"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json",
+      "bytes": 193,
+      "sha256": "af5240f3ea75cb985c30c9528458c9e02c7670d1fd1ebef8a5eedb0e306faefb",
+      "gitBlob": "f6e73340270fd31902469d4d921ab734634b6bdc"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+      "bytes": 89022,
+      "sha256": "709e5a0a181b95d57e314c60b4f423aab0ac6407da67034a03e6a00da14e4c35",
+      "gitBlob": "3a4a88d5384b80ae3cffa23a8534b35eef11ba42"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json",
+      "bytes": 230,
+      "sha256": "afec2c3129b3702fb2a3e4019d46b60b84bb0f2741bee9ca0ed3ed8444a049ba",
+      "gitBlob": "e133a223210fbb1eb1cd7ca0f957b230c1557f2a"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude-receipt.json",
+      "bytes": 28255,
+      "sha256": "30d900de799304969c60987fac37b3dfb7db8eb82b58df2e56a72d97dec3d3a4",
+      "gitBlob": "a55552f913e81db6ba0def7b10e8862c1f2ad297"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude.log",
+      "bytes": 19004,
+      "sha256": "27e4113efc381038a86e47ecef4972c6630a8ca43127f8fa1c2370e129c0e7bf",
+      "gitBlob": "9c4b2d3dd1f3c25669241e282f08684b24b09c80"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+      "bytes": 60973,
+      "sha256": "632ede90f81be8cd131e84d3cb587b92a15edc3c42533ba35894156553579164",
+      "gitBlob": "759e68da90b836db3dd9b24e39290bfb144992f6"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+      "bytes": 49788,
+      "sha256": "94427be848e196609866dd7d210d8816f99f859df167f00c3bb039203bd95edc",
+      "gitBlob": "709d7055eb7011070dad0e6f9fe15ab000cf07f5"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode-receipt.json",
+      "bytes": 20225,
+      "sha256": "0f0a57db6fd702d5292f102305e584023abe3d2512bf401a734c5ffe4e5aa9aa",
+      "gitBlob": "1d96232cdddf150369e586bf057fd806cf19e071"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode.log",
+      "bytes": 9954,
+      "sha256": "e347f8192cb5f076c9839c454b785e54f4f38db818df1340d6c1089560242665",
+      "gitBlob": "deddf17a54f61670a88362356105884383c9c192"
+    }
+  ],
+  "sourceIdentities": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "bytes": 27229,
+      "sha256": "964c9b512a8cdb81053ddbd316cb74fb230bf57730541ad9550b102733c82f8a",
+      "gitBlob": "740f654c9c04318779fb4fd9f15b79b76711e53f"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "bytes": 60524,
+      "sha256": "07007c2c67a27fbab6bd4906982b9460a634928ca80f7349abd47fa7eb747447",
+      "gitBlob": "f2af726dd2f352a1ecc0fa40753b76e72d008e14"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "bytes": 14011,
+      "sha256": "4d95aa3c8c58d15554689224a3b8da78522932349370d88bdc609428fea24a30",
+      "gitBlob": "24aeae90de179269ff616a725d38ccc49374094b"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "bytes": 22714,
+      "sha256": "1f525b8dab2b9df0d40d2e76b7810c2c4bc576e53da920c59fbc3784c2afe97e",
+      "gitBlob": "febc16323b68c0e66d6fd55baaa9a020b451f0fc"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "bytes": 43732,
+      "sha256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14",
+      "gitBlob": "b9dd573db23b3033b5f3db7024b317681ce31499"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "bytes": 30721,
+      "sha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+      "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness.ts",
+      "bytes": 41304,
+      "sha256": "ce29f7bd17120001aee2252c2a96b85f6c7dc09f78792dabbffd8108e189a448",
+      "gitBlob": "3f73c810a03342c9e286b50cbaf1cf3f6637e1c6"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+      "bytes": 23243,
+      "sha256": "1f262a499ca1999c6a2188f5b90005c5c1c4c84f8fdb6fb40d08bbeeaab8bdf1",
+      "gitBlob": "78b22adbb55ab285186285e4e3f6ada38f413ecb"
+    }
+  ],
+  "sixPhysicalSourceJoins": [
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "gitBlob": "740f654c9c04318779fb4fd9f15b79b76711e53f",
+      "sourceSha256": "964c9b512a8cdb81053ddbd316cb74fb230bf57730541ad9550b102733c82f8a",
+      "crlfSha256": "1c2babaf2394a5b41f0e2d030639decd0300150f03b742e4219171e57a9e5180",
+      "receiptPin": "1c2babaf2394a5b41f0e2d030639decd0300150f03b742e4219171e57a9e5180"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "gitBlob": "f2af726dd2f352a1ecc0fa40753b76e72d008e14",
+      "sourceSha256": "07007c2c67a27fbab6bd4906982b9460a634928ca80f7349abd47fa7eb747447",
+      "crlfSha256": "00a56256f522300e3c21ba4e9348f7a160d9f61da0d86e9fbf492e20d89c3f05",
+      "receiptPin": "00a56256f522300e3c21ba4e9348f7a160d9f61da0d86e9fbf492e20d89c3f05"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "gitBlob": "24aeae90de179269ff616a725d38ccc49374094b",
+      "sourceSha256": "4d95aa3c8c58d15554689224a3b8da78522932349370d88bdc609428fea24a30",
+      "crlfSha256": "213bb449f3febdf0eeb06b52a436a649f38ea89123ed702264514ba5000239b5",
+      "receiptPin": "213bb449f3febdf0eeb06b52a436a649f38ea89123ed702264514ba5000239b5"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "gitBlob": "febc16323b68c0e66d6fd55baaa9a020b451f0fc",
+      "sourceSha256": "1f525b8dab2b9df0d40d2e76b7810c2c4bc576e53da920c59fbc3784c2afe97e",
+      "crlfSha256": "896fa49921694cd230a5f49f20b149c02df3e8b3bc608e363273207bbcbac9f6",
+      "receiptPin": "896fa49921694cd230a5f49f20b149c02df3e8b3bc608e363273207bbcbac9f6"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "gitBlob": "b9dd573db23b3033b5f3db7024b317681ce31499",
+      "sourceSha256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14",
+      "crlfSha256": "f514e025dfd60394442348f9f0871592e4315072067779b0aef2ad55812f7cbc",
+      "receiptPin": "f514e025dfd60394442348f9f0871592e4315072067779b0aef2ad55812f7cbc"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+      "sourceSha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+      "crlfSha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361",
+      "receiptPin": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361"
+    }
+  ],
+  "sourceReadScope": "Eight complete decisive source bodies were read, with unchanged complete prior reads reused for source profile, scenario, readiness observer, Host Windows launch and team model-readiness composition. New complete ModelProbeOwner, Main readiness-budget and OpenCode V1 member-provider bodies were read. The source-head and six CRLF joins bind the selected source; recorded dist/binary hashes are retained observations, not an independent rebuild.",
+  "outcome": {
+    "status": "INCOMPLETE",
+    "stage": "Team-A",
+    "cleanup": true,
+    "source": {
+      "sourceId": "dad55ed5f6143a9531bf12da396dbd8960ab533e7d815bf987fcfe24ca70aeb3",
+      "revision": "a2d062b5d7224a8a4471c22fa0a43ca8a62aa2775c43ab7125e5a8c491d235c6"
+    },
+    "readiness": {
+      "source": {
+        "sourceId": "dad55ed5f6143a9531bf12da396dbd8960ab533e7d815bf987fcfe24ca70aeb3",
+        "revision": "a2d062b5d7224a8a4471c22fa0a43ca8a62aa2775c43ab7125e5a8c491d235c6"
+      },
+      "image": "A",
+      "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+      "readCount": 77,
+      "elapsedMs": 15012.3773,
+      "lastRuntimeRead": {
+        "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+        "memberId": "alice-id",
+        "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+        "phase": "held",
+        "sealed": false,
+        "custody": "unknown",
+        "nativeReady": false,
+        "attached": false,
+        "diagnostic": "open-unknown"
+      }
+    },
+    "firstRefusal": {
+      "status": "observed",
+      "observations": [
+        {
+          "kind": "reference",
+          "commandDigest": "c45f263b511e75c55d53fba7dd830e4d0f70c64c80f3266ede9c2933d4574915",
+          "contextDigest": "a3d0d298f02b5e0a9a3ae6e890e56b233cd17f3750dc03b90d840c366d60f9a1",
+          "phase": "probe-expiry",
+          "reason": "held",
+          "probeCutoff": 1794926353619,
+          "probeNow": 1794926353682,
+          "scopeCutoff": null,
+          "scopeNow": null,
+          "preparationCutoff": null,
+          "preparationNow": null,
+          "ordinal": 1,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "dad55ed5f6143a9531bf12da396dbd8960ab533e7d815bf987fcfe24ca70aeb3",
+            "revision": "a2d062b5d7224a8a4471c22fa0a43ca8a62aa2775c43ab7125e5a8c491d235c6"
+          }
+        },
+        {
+          "kind": "consumer",
+          "actionDigest": "0999f35342307166abf6addfd3031950d31858d19f9b349ce1a23447a7d9253d",
+          "groupDigest": "24edad2b31761a33b2658e4bab6aebadb4b9b3874fc3f0f72687c177c1bf79d0",
+          "bindingDigest": "640cb520ecc9c07d18474766c7a1f8508a6f23b605438f709692da00fa750519",
+          "consumerId": "872920a82a8b1267128a3fef386f6e8fc29feaf447c4c8b8132acc88a2a24500",
+          "phase": "reference",
+          "reason": "threw",
+          "cutoff": 1794926353619,
+          "observedAt": 1794926353129,
+          "ordinal": 2,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "dad55ed5f6143a9531bf12da396dbd8960ab533e7d815bf987fcfe24ca70aeb3",
+            "revision": "a2d062b5d7224a8a4471c22fa0a43ca8a62aa2775c43ab7125e5a8c491d235c6"
+          }
+        },
+        {
+          "kind": "native",
+          "capability": "9deea9a1-74be-402a-9a77-915cc50d8713",
+          "phase": "prepare",
+          "reason": "current-false",
+          "dispatched": true,
+          "staged": true,
+          "rootCaptured": false,
+          "deadlineExpired": null,
+          "checkSite": null,
+          "ordinal": 3,
+          "mainEpoch": "d4299d6e-de74-4db1-8c2e-49d565fa06db",
+          "jobSlot": 2,
+          "source": {
+            "sourceId": "dad55ed5f6143a9531bf12da396dbd8960ab533e7d815bf987fcfe24ca70aeb3",
+            "revision": "a2d062b5d7224a8a4471c22fa0a43ca8a62aa2775c43ab7125e5a8c491d235c6"
+          }
+        }
+      ]
+    },
+    "runtimeProjection": {
+      "status": "observed",
+      "atomicWithFailure": false,
+      "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+      "bindingMatches": true,
+      "recordReady": false,
+      "providerReady": null,
+      "ownerCurrent": null,
+      "nativeReady": false
+    },
+    "irrelevantCodexObservation": {
+      "status": "unknown",
+      "reason": "missing-invalid-overflow-conflicting-or-unjoined"
+    },
+    "codeBoundary": {
+      "scenario": "nativeEmulatedSourceScenario.ts original poll checks the 15,000 ms cutoff both before and after every awaited RPC, then sleeps 25 ms. The x64 stack is line 64: the post-await deadline assertion.",
+      "openCodePreparation": "OpenCode uses the original Main aggregate preparation before the independent readiness poll: captureRequestReadinessBudget(host.requestTimeoutMs), physical source/currentness capture and team.launch.start with that same budget. host.requestTimeoutMs is 15,000 ms. The later readiness poll has a separately started monotonic clock; it cannot renew the earlier readiness reference.",
+      "exactRefusal": "ModelProbeOwner.captureReadinessReference lines 198–205 reads the retained row, inspects its current target, checks admission/target/scope/not-retired and completed/ok/resourceHeld=false, then rejects Date.now() >= saved.expiresAt. Reaching phase probe-expiry therefore supports successful released model-probe completion but not a fresh reusable grant.",
+      "consumer": "inspectMemberModelReadiness reads the consumer and captures observedAt before calling readPreparedModelReference. Its later nested reference check can cross the same cutoff; the earlier observedAt is not a contradictory final observation.",
+      "native": "HostWindowsLaunch.RemotePending.prepare first sets phase=prepare and runs assertInput(true). An expired currentness callback causes current-false and failed() before the original native prepare request. 'dispatched' records remote allocation/staging admission; it does not establish native process dispatch.",
+      "provider": "The selected OpenCodeMemberProvider is V1 (1.18.35/1.19.4), not OpenCode V2 ModelProbe or the Codex driver. startServer uses captured custody and the original currentness/allocation guards; native.open failure seals/aborts, confirms stopped and preserves failure. No replacement grant or cached successful probe is accepted."
+    },
+    "wallClockFacts": {
+      "consumerObservedAt": 1794926353129,
+      "sharedCutoff": 1794926353619,
+      "referenceProbeNow": 1794926353682,
+      "referenceExpiredByMs": 63,
+      "consumerSampleBeforeCutoffMs": 490,
+      "elapsedWallBetweenSamplesMs": 553,
+      "qualification": "These are two retained Date.now samples in one refusal chain, not exclusive CPU/IO durations and not a globally atomic failure snapshot."
+    },
+    "reachedAndUnreached": {
+      "reached": [
+        "publish-A and finite source-A version branch",
+        "Team-A launch and successful released model-probe state before expiry",
+        "runtime.read polling and the exact first-refusal chain",
+        "final original cleanup"
+      ],
+      "unreached": [
+        "OpenCode Team-A readiness acceptance",
+        "original Team-A boot input and post-readiness purpose/input/effect assertions",
+        "foreign-scope branch after Team-A",
+        "publish-B",
+        "B management/probe and Team-B",
+        "standalone-B",
+        "cold source read/restore checks"
+      ],
+      "versions": "A and B version fields are configured constants assigned before work. Only publish-A and its finite version execution are reached in this failed provider scenario."
+    }
+  },
+  "timing": {
+    "clock": "All per-job allocate/stage/prepare/resume/stop/drain/release timestamps below share the same Main epoch performance.now origin. The later 15,012.3773 ms readiness elapsed value uses its own later origin. Do not subtract those origins or infer wall-clock alignment.",
+    "measuredScope": "The observer measures original.handle(call) start through return/finally. Native prepare measurement ends before the additional capturedQueryableWitness wait. It does not measure total Host-side guard, serialization, IPC, scheduler, source/account/config inspection or event-loop time.",
+    "jobs": [
+      {
+        "slot": 0,
+        "rootCaptured": true,
+        "phases": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "firstStartMs": 1864.9185999999995,
+            "lastEndMs": 1865.9166,
+            "totalMs": 0.998000000000502
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "firstStartMs": 1877.2552,
+            "lastEndMs": 1911.0816,
+            "totalMs": 33.82639999999992
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "firstStartMs": 1939.7286,
+            "lastEndMs": 1950.5350999999996,
+            "totalMs": 10.806499999999687
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "firstStartMs": 2235.5233999999996,
+            "lastEndMs": 2237.0125000000003,
+            "totalMs": 1.4891000000006898
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "firstStartMs": 2240.7007,
+            "lastEndMs": 2241.0840999999996,
+            "totalMs": 0.3833999999997104
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "firstStartMs": 2242.6622999999995,
+            "lastEndMs": 2244.979,
+            "totalMs": 2.31670000000031
+          }
+        },
+        "staging": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.11459999999988213,
+            "firstStartMs": 1871.3183999999997,
+            "lastEndMs": 1871.4329999999995
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.5505000000002838,
+            "firstStartMs": 1873.9564999999998,
+            "lastEndMs": 1874.507
+          }
+        },
+        "firstCloseEntryMs": 22811.3432,
+        "finalOriginalHandleAbsent": true,
+        "cleanupKind": "original-HANDLE-wait"
+      },
+      {
+        "slot": 1,
+        "rootCaptured": true,
+        "phases": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "firstStartMs": 4141.221799999999,
+            "lastEndMs": 4141.448899999999,
+            "totalMs": 0.22710000000006403
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "firstStartMs": 4149.768099999999,
+            "lastEndMs": 4233.4472000000005,
+            "totalMs": 83.67910000000029
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "firstStartMs": 4260.1037,
+            "lastEndMs": 4297.0362000000005,
+            "totalMs": 36.93249999999989
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "firstStartMs": 5719.542100000001,
+            "lastEndMs": 5732.885700000001,
+            "totalMs": 13.343600000000151
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "firstStartMs": 5733.737999999999,
+            "lastEndMs": 5733.810299999999,
+            "totalMs": 0.07229999999981374
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "firstStartMs": 5734.2716,
+            "lastEndMs": 5735.7377,
+            "totalMs": 1.4661000000005515
+          }
+        },
+        "staging": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.06080000000019936,
+            "firstStartMs": 4146.0751,
+            "lastEndMs": 4146.135899999999
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.2175999999999476,
+            "firstStartMs": 4147.6291,
+            "lastEndMs": 4147.8467
+          }
+        },
+        "firstCloseEntryMs": 22811.3432,
+        "finalOriginalHandleAbsent": true,
+        "cleanupKind": "original-HANDLE-wait"
+      },
+      {
+        "slot": 2,
+        "rootCaptured": false,
+        "phases": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "firstStartMs": 13515.0925,
+            "lastEndMs": 13515.2837,
+            "totalMs": 0.1911999999992986
+          },
+          "prepare": {
+            "calls": 0,
+            "settled": 0,
+            "returned": 0,
+            "firstStartMs": null,
+            "lastEndMs": null,
+            "totalMs": 0
+          },
+          "resume": {
+            "calls": 0,
+            "settled": 0,
+            "returned": 0,
+            "firstStartMs": null,
+            "lastEndMs": null,
+            "totalMs": 0
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "firstStartMs": 18019.6007,
+            "lastEndMs": 18019.7702,
+            "totalMs": 0.1694999999999709
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "firstStartMs": 18048.9045,
+            "lastEndMs": 18048.9464,
+            "totalMs": 0.0419000000001688
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "firstStartMs": 18049.4407,
+            "lastEndMs": 18049.4996,
+            "totalMs": 0.05889999999999418
+          }
+        },
+        "staging": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.1058999999986554,
+            "firstStartMs": 14828.9905,
+            "lastEndMs": 14829.096399999999
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.2860000000000582,
+            "firstStartMs": 16103.792099999999,
+            "lastEndMs": 16104.078099999999
+          }
+        },
+        "firstCloseEntryMs": 22811.3432,
+        "finalOriginalHandleAbsent": false,
+        "cleanupKind": "confirmed-no-local-dispatch"
+      }
+    ],
+    "computedGaps": [
+      {
+        "from": "slot 1 release lastEnd",
+        "to": "slot 2 allocate firstStart",
+        "ms": 7779.354800000001
+      },
+      {
+        "from": "slot 2 allocate lastEnd",
+        "to": "slot 2 launch-chunk firstStart",
+        "ms": 1313.7068
+      },
+      {
+        "from": "slot 2 launch-chunk lastEnd",
+        "to": "slot 2 launch-commit firstStart",
+        "ms": 1274.6957000000002
+      },
+      {
+        "from": "slot 2 launch-commit lastEnd",
+        "to": "slot 2 stop firstStart",
+        "ms": 1915.5225999999984
+      }
+    ],
+    "gapsQualification": "These are real uninstrumented intervals between separately observed Main handlers. They are not evidence that one named function or disk operation consumed the whole interval.",
+    "jobPurposeQualification": "Slot 0 is the reached finite version job. Source order and the retained completed-probe state support slot 1 as the preparation job; the stronger post-readiness probe-purpose/input assertions were never reached and are not promoted to PASS. Slot 2 is directly joined by its capability, original source reference and first-refusal jobSlot.",
+    "missing": "No common monotonic timing span identifies each existing Host currentness/reference/account/source facet and corresponding Main request send/receive interval. No per-facet duration or count covers the unobserved gaps."
+  },
+  "cleanup": {
+    "finalReceipt": true,
+    "createdRoots": [
+      {
+        "slot": 0,
+        "root": {
+          "pid": 1784,
+          "birth": "01dd76a160be8618"
+        },
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true
+      },
+      {
+        "slot": 1,
+        "root": {
+          "pid": 7332,
+          "birth": "01dd76a162210a8e"
+        },
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true
+      }
+    ],
+    "nonDispatched": {
+      "kind": "confirmed-no-local-dispatch",
+      "mainEpoch": "d4299d6e-de74-4db1-8c2e-49d565fa06db",
+      "capability": "9deea9a1-74be-402a-9a77-915cc50d8713",
+      "allocatedOwner": {
+        "teamIncarnation": "d2d03233-5e2b-433e-bc85-57028b535b50",
+        "runId": "d2d03233-5e2b-433e-bc85-57028b535b50",
+        "laneId": "provider-native",
+        "processGeneration": "f56235e4-99af-40e0-9fec-97ddcc0d06ab"
+      },
+      "stop": {
+        "state": "confirmed",
+        "attemptRef": "provider-close-1",
+        "receiptRef": "ba873b18-1d57-40c2-a99d-16b550497826",
+        "receipt": {
+          "owner": {
+            "teamIncarnation": "d2d03233-5e2b-433e-bc85-57028b535b50",
+            "runId": "d2d03233-5e2b-433e-bc85-57028b535b50",
+            "laneId": "provider-native",
+            "processGeneration": "f56235e4-99af-40e0-9fec-97ddcc0d06ab"
+          },
+          "attemptId": "provider-close-1",
+          "coverage": "no-local-dispatch",
+          "rootExited": false,
+          "proofDigest": "1ddf5f7e9a21815f3b18902e89280c5388f8647e0fd5afd8030f5738447b9718"
+        }
+      },
+      "drain": {
+        "state": "complete",
+        "afterStopReceiptRef": "ba873b18-1d57-40c2-a99d-16b550497826"
+      },
+      "release": {
+        "state": "released",
+        "receiptRef": "ba873b18-1d57-40c2-a99d-16b550497826"
+      },
+      "observedCalls": {
+        "allocate": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1
+        },
+        "prepare": {
+          "calls": 0,
+          "settled": 0,
+          "returned": 0
+        },
+        "resume": {
+          "calls": 0,
+          "settled": 0,
+          "returned": 0
+        }
+      },
+      "witnessCaptured": false
+    },
+    "pending": {
+      "admitted": 1,
+      "revoked": 1
+    },
+    "serviceOperations": 0,
+    "stdoutVersusFinal": "The earlier slot-1 cleanup log had originalHandleAbsent=false before its final witness wait. The final receipt is true. Slot 2 remains originalHandleAbsent=false because no original root HANDLE exists; its complete confirmed-no-local-dispatch stop/drain/release proof is the applicable evidence.",
+    "controller": {
+      "state": "drained",
+      "rootExitCode": 1,
+      "activeProcesses": 0,
+      "wrapperExitCode": 104
+    },
+    "wrapperLimit": "The wrapper's generic 'did not confirm cleanup' failure text is broader than the complete retained receipt/controller observations. Preserve source outcome INCOMPLETE and root exit 1; also preserve confirmed cleanup. Neither observation erases the other.",
+    "globalLimit": "The job's later compiler orphan cleanup is separate. No blanket claim that every OS process or future source execution was qualified is made."
+  },
+  "precedingFiniteSuccesses": [
+    {
+      "provider": "codex",
+      "status": "PASS",
+      "stage": "complete",
+      "cleanup": true,
+      "limits": {
+        "real": false,
+        "desktop": false,
+        "release": false
+      },
+      "epochs": [
+        {
+          "id": "0fffcb69-de9e-406b-8bf0-f20642644d8d",
+          "jobs": 25,
+          "pending": {
+            "admitted": 2,
+            "revoked": 2
+          },
+          "allReleased": true,
+          "originalAbsent": 25,
+          "noLocalDispatch": 0,
+          "serviceOperations": 0
+        },
+        {
+          "id": "ba2f416e-11dc-42f5-b839-a33da94e6f98",
+          "jobs": 0,
+          "pending": {
+            "admitted": 1,
+            "revoked": 1
+          },
+          "allReleased": true,
+          "originalAbsent": 0,
+          "noLocalDispatch": 0,
+          "serviceOperations": 0
+        }
+      ],
+      "teams": 2,
+      "management": {
+        "source": {
+          "sourceId": "2726076ba5294d601c96082f2bdd5cda14f7b80c7cf6d3f7dc9dcd34eccbcc2a",
+          "revision": "ac38e2d9d76812c8fea06b4c2683537ad7ea6802907e7534ca69bd5be1e22c18"
+        },
+        "metadataRead": true,
+        "modelProbeCompleted": true,
+        "modelProbeReplayAllocated": false,
+        "modelProbeInputs": 1,
+        "metadataHostRetained": false
+      },
+      "standalone": {
+        "phase": "completed",
+        "source": {
+          "sourceId": "2726076ba5294d601c96082f2bdd5cda14f7b80c7cf6d3f7dc9dcd34eccbcc2a",
+          "revision": "ac38e2d9d76812c8fea06b4c2683537ad7ea6802907e7534ca69bd5be1e22c18"
+        },
+        "inputDigest": "784d2180e137da6dab62ea9f14da4507302cad7cec3f1a84c9a5815e2c0ba063",
+        "limits": null,
+        "ephemeral": true,
+        "replayAllocated": false
+      },
+      "cold": {
+        "currentB": true,
+        "retainedA": true,
+        "lookup": true,
+        "physicalReplayAllocations": 0,
+        "sourcePublishPendingAdmission": {
+          "admitted": 1,
+          "revoked": 1
+        },
+        "originalInputsReplayed": false,
+        "sdkPeerCheckpointRestored": false
+      }
+    },
+    {
+      "provider": "claude",
+      "status": "PASS",
+      "stage": "complete",
+      "cleanup": true,
+      "limits": {
+        "real": false,
+        "desktop": false,
+        "release": false
+      },
+      "epochs": [
+        {
+          "id": "bab95289-4ccf-491d-b1d0-90b42450ac7e",
+          "jobs": 8,
+          "pending": {
+            "admitted": 2,
+            "revoked": 2
+          },
+          "allReleased": true,
+          "originalAbsent": 8,
+          "noLocalDispatch": 0,
+          "serviceOperations": 0
+        },
+        {
+          "id": "9a65c436-5cdc-46f2-a16d-b61162e1894b",
+          "jobs": 1,
+          "pending": {
+            "admitted": 1,
+            "revoked": 1
+          },
+          "allReleased": true,
+          "originalAbsent": 1,
+          "noLocalDispatch": 0,
+          "serviceOperations": 0
+        }
+      ],
+      "teams": 2,
+      "management": {
+        "source": {
+          "sourceId": "8d62cebb0a20d458e1a22cdbab1e4a238ff72f6883f30b2d7df7db82add6ece9",
+          "revision": "20cb05a82f139a2812123070bf2dfa619675757645918c95f3dd28025d215d8d"
+        },
+        "metadataRead": true,
+        "modelProbeCompleted": true,
+        "modelProbeReplayAllocated": false,
+        "modelProbeInputs": 1,
+        "metadataHostRetained": false
+      },
+      "standalone": {
+        "phase": "completed",
+        "source": {
+          "sourceId": "8d62cebb0a20d458e1a22cdbab1e4a238ff72f6883f30b2d7df7db82add6ece9",
+          "revision": "20cb05a82f139a2812123070bf2dfa619675757645918c95f3dd28025d215d8d"
+        },
+        "inputDigest": "f81e17649fcdd822e22d2ff1a60d2b13248e1729e5aa921b278c8cbcf4bc2133",
+        "limits": {
+          "maxTurns": 6,
+          "maxBudgetUsd": 0.25
+        },
+        "ephemeral": true,
+        "replayAllocated": false
+      },
+      "cold": {
+        "currentB": true,
+        "retainedA": true,
+        "lookup": true,
+        "physicalReplayAllocations": 0,
+        "sourcePublishPendingAdmission": {
+          "admitted": 1,
+          "revoked": 1
+        },
+        "originalInputsReplayed": false,
+        "sdkPeerCheckpointRestored": true,
+        "originalNativeSessionRetained": true,
+        "restoredGeneration": "restore-1df81f0f0a618d44de9d94a48db68203b015628224c4d18622f9042c0ea64163",
+        "newInputId": "dbbb4077-46c9-53cd-8409-096b61a10cf8",
+        "source": {
+          "sourceId": "8d62cebb0a20d458e1a22cdbab1e4a238ff72f6883f30b2d7df7db82add6ece9",
+          "revision": "201cbddf39bdfe842a8bdf361de1e6cee67f2bb01e9d824abfb27d95aa49ab48"
+        }
+      }
+    }
+  ],
+  "precedingSuccessDetails": {
+    "codex": {
+      "teamAReadinessMs": 10182.1071,
+      "teamAReads": 87,
+      "teamBReadinessMs": 10346.3246,
+      "teamBReads": 88,
+      "standaloneReadinessMs": 10266.5473,
+      "standaloneReads": 106,
+      "originalRootCount": 25,
+      "finalAbsentRootCount": 25,
+      "coldAllocatedRoots": 0,
+      "controllerRootExit": 0,
+      "controllerActive": 0,
+      "wrapperExit": 0
+    },
+    "claude": {
+      "teamAReadinessMs": 3547.3729,
+      "teamAReads": 25,
+      "teamBReadinessMs": 3863.0074,
+      "teamBReads": 27,
+      "standaloneReadinessMs": 1664.6508,
+      "standaloneReads": 22,
+      "originalRootCount": 9,
+      "finalAbsentRootCount": 9,
+      "coldAllocatedRoots": 1,
+      "controllerRootExit": 0,
+      "controllerActive": 0,
+      "wrapperExit": 0
+    },
+    "shared": "Both complete receipts assert selected original A/B source identities, live and cold source rules, finite input/replay/management/standalone obligations and mandatory cleanup. All explicit realProviderExecuted, desktopQualified and releaseQualified flags remain false. Claude's original SDK-peer checkpoint restoration is true; Codex's is false and must not be promoted."
+  },
+  "earlierJobScope": {
+    "hostContracts": {
+      "total": 167,
+      "passed": 164,
+      "failed": 0,
+      "skipped": 3,
+      "skipSummary": "Two POSIX/Linux identity cases and the actual SDK POSIX-shebang test are Windows-skipped."
+    },
+    "broker": {
+      "files": 3,
+      "passed": 53
+    },
+    "retainedMain": {
+      "files": 8,
+      "passed": 81
+    },
+    "nativeNodeAndElectron": "Each original gate records 25 named results with its expected negative-case exit statuses, complete bounded ownership checks and drained controller/root exit 0. The finite wrapper/peer subscenario is also PASS. These earlier bounded results are not an all-provider, GUI, release or whole-149/catalog-43/runtime-85 qualification.",
+    "node": "24.21.0",
+    "electron": "44.10.1",
+    "embeddedElectronNode": "24.22.1",
+    "windowsImage": "windows-2022 / 20261112.366.7"
+  },
+  "armComparison": {
+    "report": {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "50b4119a9008aebca9c4fe0a21cec90dd3a81b3b",
+      "bytes": 26486,
+      "sha256": "2714419c0fd5fab1b69080bc666d02b957e2c0c2d8c553ac0b0b6688952d98df"
+    },
+    "guardReport": {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "bd130cd9838aaca28c71fef038b112f58ad35843",
+      "bytes": 46544,
+      "sha256": "f6ae5dc4af7888af3f68d3fc30caef5d76bfb8f9151e8d436023ba0e5ac6c25f"
+    },
+    "noReuseReport": {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "ceda91b9b0cf27d67051a34e0ca8e6411aee1dba",
+      "bytes": 29685,
+      "sha256": "d4456a704fb59e81118b462022b8e8b01fa5045f972cbda08936e09c00a39644"
+    },
+    "originalArmJob": 134072511664,
+    "distinction": "ARM failed Codex source-A at the pre-read line-62 cutoff while a catalog invocation remained before-await; its seven final original handles were absent. X64 completed Codex A/B and Claude A/B, then failed OpenCode V1 A at post-read line 64 with an explicit expired model reference and no native prepare on slot 2. Neither shared 'readiness timeout' wording nor physical slot/call count establishes a common cause.",
+    "fourFreshCatalogChecks": "The accepted no-reuse finding remains intact. This OpenCode failure supplies no basis for dropping, caching, reusing or parallelizing those separate Codex freshness boundaries."
+  },
+  "boundedNextEvidence": {
+    "repairStatus": "No specific semantics-preserving latency repair is proved by the retained evidence. The expiry refusal itself correctly preserves the original cutoff and authority.",
+    "smallestMissingFact": "If root separately chooses a diagnostic change, correlate passive entry/exit elapsed times and counts of the already invoked currentness/reference facets with the existing action/binding/capability and Main staging phase. That would distinguish reference/account/source validation time from serialization/IPC/scheduling before slot-2 native prepare. It must report unknown when incomplete and must not issue additional source/Host/OS reads.",
+    "exactCandidateBoundaries": [
+      "prepareTeamModelReadiness.ts inspectMemberModelReadiness current() and readPreparedModelReference/captureOpenCodeProbeAccountInspection",
+      "ModelProbeOwner.ts captureReadinessReference existing inspect and expiry phases",
+      "HostWindowsLaunch.ts RemotePending.assertInput and existing staging/prepare request boundaries"
+    ],
+    "unchangedObligations": [
+      "original 15,000 ms request/readiness cutoffs and 25 ms polling cadence",
+      "all source, owner, fence, currentness, original identity and fresh reference checks",
+      "all original cases and finite provider authority",
+      "original cleanup proof requirements and unknown classifications",
+      "no input retry, new reload, cache drop, deadline renewal/increase or unproved parallelization"
+    ],
+    "selection": "Advice only. No source candidate, executable control, additional gate, runtime or CI venue is authored or selected."
+  },
+  "reviewChecks": [
+    {
+      "id": "C01",
+      "status": "SUPPORTED",
+      "finding": "Exact full original log identity and complete literal read."
+    },
+    {
+      "id": "C02",
+      "status": "SUPPORTED",
+      "finding": "Exact full capture identity; all 18 complete embedded UTF-8 bodies independently hashed."
+    },
+    {
+      "id": "C03",
+      "status": "SUPPORTED",
+      "finding": "All four receipt bodies fully read and nine full artifact logs joined to the fully read original log."
+    },
+    {
+      "id": "C04",
+      "status": "SUPPORTED",
+      "finding": "Derived member IDs are kept distinct from retained Git objects; root CRC is attributed."
+    },
+    {
+      "id": "C05",
+      "status": "SUPPORTED",
+      "finding": "Frozen head/run/job/artifact tuple and original Windows x64 toolchain identified."
+    },
+    {
+      "id": "C06",
+      "status": "SUPPORTED",
+      "finding": "Eight complete decisive source bodies and six literal LF-to-CRLF physical source joins close."
+    },
+    {
+      "id": "C07",
+      "status": "SUPPORTED",
+      "finding": "Host contracts retain 167 total/164 pass/3 skip/0 fail without skip promotion."
+    },
+    {
+      "id": "C08",
+      "status": "SUPPORTED",
+      "finding": "Earlier broker/Main/native/finite-wrapper successes remain bounded to their executed scopes."
+    },
+    {
+      "id": "C09",
+      "status": "SUPPORTED",
+      "finding": "Complete Codex A/B, management/probe, standalone and cold read/replay observations are PASS."
+    },
+    {
+      "id": "C10",
+      "status": "SUPPORTED",
+      "finding": "Complete Claude A/B, management/probe, standalone and original cold SDK-peer restoration are PASS."
+    },
+    {
+      "id": "C11",
+      "status": "SUPPORTED",
+      "finding": "Codex 25 and Claude 9 final original HANDLE absences are preserved with their controller exit-0 observations."
+    },
+    {
+      "id": "C12",
+      "status": "SUPPORTED",
+      "finding": "OpenCode A failure occurs before Team input and every later B scenario."
+    },
+    {
+      "id": "C13",
+      "status": "SUPPORTED",
+      "finding": "X64 timeout is the original post-await line-64 deadline assertion with 77 reads/15012.3773 ms."
+    },
+    {
+      "id": "C14",
+      "status": "SUPPORTED",
+      "finding": "Runtime last state is held, unsealed, custody unknown and nativeReady/attached false."
+    },
+    {
+      "id": "C15",
+      "status": "SUPPORTED",
+      "finding": "First reference refusal is probe-expiry 63 ms after the original shared cutoff."
+    },
+    {
+      "id": "C16",
+      "status": "SUPPORTED",
+      "finding": "Actual ModelProbeOwner order proves completed/ok/resourceHeld=false before this expiry check."
+    },
+    {
+      "id": "C17",
+      "status": "SUPPORTED",
+      "finding": "Earlier consumer observedAt and later reference time are distinct samples with a 553 ms wall-clock interval."
+    },
+    {
+      "id": "C18",
+      "status": "SUPPORTED",
+      "finding": "Consumer reference throw and native current-false capability/slot/source joins are retained."
+    },
+    {
+      "id": "C19",
+      "status": "SUPPORTED",
+      "finding": "Native phase prepare is refused before local prepare/resume: both observed counts are zero."
+    },
+    {
+      "id": "C20",
+      "status": "SUPPORTED",
+      "finding": "Remote dispatched/staged is not conflated with creation of a native root."
+    },
+    {
+      "id": "C21",
+      "status": "SUPPORTED",
+      "finding": "Selected OpenCode V1 route is distinguished from V2 ModelProbe and Codex catalog paths."
+    },
+    {
+      "id": "C22",
+      "status": "SUPPORTED",
+      "finding": "Main readiness budget and later independent polling clock are not renewed or conflated."
+    },
+    {
+      "id": "C23",
+      "status": "SUPPORTED",
+      "finding": "Per-Main custody/staging timings are measured handler intervals; witness and Host work exclusions are explicit."
+    },
+    {
+      "id": "C24",
+      "status": "SUPPORTED",
+      "finding": "Inter-handler gaps are computed without assigning exclusive cause to any function or IO operation."
+    },
+    {
+      "id": "C25",
+      "status": "SUPPORTED",
+      "finding": "Final cleanup proves two original roots absent plus one complete no-local-dispatch chain."
+    },
+    {
+      "id": "C26",
+      "status": "SUPPORTED",
+      "finding": "Early stdout absence=false and final receipt absence=true are ordered observations, not contradictions."
+    },
+    {
+      "id": "C27",
+      "status": "SUPPORTED",
+      "finding": "INCOMPLETE/root-exit-1/wrapper-104 remain failure despite confirmed cleanup and drained controller."
+    },
+    {
+      "id": "C28",
+      "status": "SUPPORTED",
+      "finding": "Configured versions and unreachable post-readiness assertions are not execution proof."
+    },
+    {
+      "id": "C29",
+      "status": "SUPPORTED",
+      "finding": "ARM Codex pending-catalog failure is materially different from x64 OpenCode reference expiry."
+    },
+    {
+      "id": "C30",
+      "status": "LIMIT",
+      "finding": "No exclusive per-facet currentness/IO/IPC latency measurement supports a preserving repair."
+    },
+    {
+      "id": "C31",
+      "status": "LIMIT",
+      "finding": "No real Claude/Codex, GUI, release, entire-suite or cross-platform success is inferred."
+    },
+    {
+      "id": "C32",
+      "status": "LIMIT",
+      "finding": "Smallest possible passive timing evidence is advisory only; no new code, gate or execution is selected."
+    }
+  ],
+  "counts": {
+    "checks": 32,
+    "supportedEvidenceChecks": 29,
+    "explicitLimitChecks": 3
+  },
+  "selfReadProtocol": "Send this retained exact pin immediately, then fetch the bare report afresh and fully reread its exact literal body/hash. Self-read confirmation is external and must not be preclaimed in this immutable report."
+}

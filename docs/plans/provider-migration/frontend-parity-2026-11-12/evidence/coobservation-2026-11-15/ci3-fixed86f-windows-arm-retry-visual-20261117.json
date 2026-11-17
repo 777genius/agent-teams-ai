@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_WINDOWS_ARM_PACKAGED_SCREENSHOT_READ",
+  "repository": "777genius/agent-teams-ai",
+  "at": "2026-11-17 15:58:06 UTC",
+  "artifactId": 14342059294,
+  "capture": {
+    "bytes": 3057622,
+    "sha256": "932a6032f862a9d7215e17dd0968e98f0057625d46324fc719428118111ddc24",
+    "gitBlob": "379d2a0027779f8fb493aefab1f3434f63c532ce"
+  },
+  "image": {
+    "path": "_temp/windows-same-main-process-ui.before-crash.png",
+    "pin": {
+      "bytes": 79564,
+      "sha256": "86fac4a8ad6c901aaae3c1e3505a16943864ac1485b5d27c4fcd25b05b4ac530",
+      "gitBlob": "0a8f4d0dad1dc505a9486e5659a5019d7b7a0af3"
+    },
+    "observed": "Before-crash screen shows TEST team Running, Stop control, lead online, all four launch stages green, original registered-both-services message and saved TEST task."
+  },
+  "qualification": "One initial screenshot only. No after-Retry or final-stop image is retained. This does not qualify the failed original Retry deadline or final cleanup."
+}

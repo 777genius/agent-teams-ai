@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_DARWIN_X64_PACKAGED_SCREENSHOT_READ",
+  "repository": "777genius/agent-teams-ai",
+  "at": "2026-11-17 16:08:42 UTC",
+  "artifactId": 14344905416,
+  "capture": {
+    "bytes": 3418119,
+    "sha256": "1ff055a6dbe00238a672677c86a7bed755dd1874b1fa9662509d4a7193102a2c",
+    "gitBlob": "2d3690dbced319abbadc5aeb8c69305335964731"
+  },
+  "images": [
+    {
+      "path": "_temp/TEST-desktop-backend-W4UOsy/ui-automatic-app-relaunch-successor.png",
+      "pin": {
+        "bytes": 70747,
+        "sha256": "1f02532ba80a77ece8f2b6f192b343af1053d29137f74eb8d49c0bbb9f5035eb",
+        "gitBlob": "c9792725631175b2808a78fbee0d5f673d21eb0d"
+      },
+      "observed": "Automatically relaunched window shows home/project selection surface with retained TEST sidebar task; provider statuses still loading/unknown."
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-W4UOsy/ui-emulated-lifecycle-launch.png",
+      "pin": {
+        "bytes": 107226,
+        "sha256": "20e012d40239ac132888f137c8c2e5dff77959c4e643f94c9abbf7d5992c0b20",
+        "gitBlob": "2570c12a90f89d6f238a9b27d550b6eac671e8c2"
+      },
+      "observed": "Original launch shows Alice on TEST-claude-sonnet/Low, TEST_UI_BOOT and TEST boot ready, and all four launch stages green."
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-W4UOsy/ui-emulated-lifecycle-stopped.png",
+      "pin": {
+        "bytes": 98552,
+        "sha256": "0d9d0e1841babac1ea866fc63350c779385e1a1890243e334e25b9a1a3e4b77a",
+        "gitBlob": "ddb915d168141b0196663a7b44fde0d1c2bf9c88"
+      },
+      "observed": "Original Stop screen shows offline Team/Alice, Launch action, and the same boot message and sidebar/task content retained."
+    }
+  ],
+  "qualification": "Three retained screenshots visually inspected. They do not prove atomic state, original-process exit, receipt custody, Quit reply, native P09, cold Resume, vendor authentication or whole-E2E qualification."
+}

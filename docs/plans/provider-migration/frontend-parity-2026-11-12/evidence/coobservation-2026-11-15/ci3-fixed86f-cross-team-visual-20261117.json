@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_CROSS_TEAM_ROOT_PNG_VISUAL_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "root",
+  "at": "2026-11-17 17:25:15 UTC",
+  "artifactId": 14343718271,
+  "jobId": 134072511974,
+  "runId": 44092933810,
+  "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+  "completeCaptureManifest": {
+    "bytes": 15907,
+    "sha256": "492ccdcf9e63bc7d145095b92b6287fc11f620501225f9e99e83a7a7507e6f12",
+    "gitBlob": "074917c65330c7decb48c3b5204c41fb098be528"
+  },
+  "textOutcomeReport": {
+    "gitBlob": "01039e2260f3fd19b612a7cdf6827ef083c454bd",
+    "bytes": 92908,
+    "sha256": "7f1b794407d2dfca3eb9d481c7354db2577b75909913e91453ed3ef16202fd11"
+  },
+  "imageCount": 18,
+  "method": "All18original retained PNGs opened and actually viewed in pairs; no transformation or target execution.",
+  "images": [
+    {
+      "path": "TEST-desktop-backend-kCT5R4/ui-cross-team-reply.png",
+      "bytes": 114967,
+      "sha256": "bcdda11886495aceb8f1bc9d6742b744a78e82609c86a7f8b6f88bc55070446f",
+      "gitBlob": "d70b6ca958318f3ba37da529048a410cdfc909cd",
+      "identityKind": "Derived complete ZIP member; no separately stored Git object assumed",
+      "viewed": true,
+      "observation": "Cross-team reply: selected TEST Cross Alpha, outgoing TEST_CROSS_TEAM_ONE addressed to test-cross-beta, a returned beta row visible but truncated; full reply content and routing require retained receipt, not screenshot alone."
+    },
+    {
+      "path": "TEST-desktop-backend-kCT5R4/ui-owner-routing-task-opened.png",
+      "bytes": 109984,
+      "sha256": "2120274469f98fc4830fe53cb30aea2d3eb8075e132317bb942de834d36cace6",
+      "gitBlob": "89170777036cb7562281c0328f347abe0e948bfe",
+      "identityKind": "Derived complete ZIP member; no separately stored Git object assumed",
+      "viewed": true,
+      "observation": "Owner-routing task opened: B's original pending Task during A outage opens in test-owner-routing-b; Host-runtime-not-installed and partial task-loading warnings remain visible, including unavailable teams/owner-count unknown. This is partial availability, not complete task census."
+    },
+    {
+      "path": "TEST-desktop-backend-kCT5R4/ui-owner-routing-tasks-filtered.png",
+      "bytes": 116074,
+      "sha256": "cc506fead1b13f40f39a95efc1e1faf5d30d17b68a3191dfabecf4c1d0e6129e",
+      "gitBlob": "2cf5624521eaac3ef51b2d4c734d95639ea63bcd",
+      "identityKind": "Derived complete ZIP member; no separately stored Git object assumed",
+      "viewed": true,
+      "observation": "Owner tasks filtered: original B task stays on its board; sidebar filter has no loaded match, while visible warning still says one loaded, three unavailable teams and one unavailable owner/count unknown. No false all-tasks-empty conclusion."
+    },
+    {
+      "path": "TEST-desktop-backend-kCT5R4/ui-owner-routing-tasks.png",
+      "bytes": 115542,
+      "sha256": "f3132e0dff2cb86fd7b68126c7bccb0af9107787885600b1c5d1ef695011c57d",
+      "gitBlob": "fae9a90947e039cc2b907a409bbd65209ac9346e",
+      "identityKind": "Derived complete ZIP member; no separately stored Git object assumed",
+      "viewed": true,
+      "observation": "Owner tasks: B original task visible in both board and loaded sidebar; warning separately preserves three unavailable teams and one unavailable owner with unknown team count, plus unavailable runtime banner."
+    },
+    {
+      "path": "TEST-desktop-backend-kCT5R4/ui-owner-routing-teams-filtered.png",
+      "bytes": 83516,
+      "sha256": "35841e0afa3f3df20e96b5b71bd205e6534f126ca96385ec0345fe406e04535c",
+      "gitBlob": "e61a7f7f3f9f484ce12dcbb63fca5e9d31b1087c",
+      "identityKind": "Derived complete ZIP member; no separately stored Git object assumed",
+      "viewed": true,
+      "observation": "Owner teams filtered: search has no loaded match, but original warning remains one loaded, three unavailable teams and one unavailable owner/count unknown; task sidebar still exposes B's loaded task. No all-team absence inferred."
+    },
+    {
+      "path": "TEST-desktop-backend-kCT5R4/ui-owner-routing-teams.png",
+      "bytes": 88914,
+      "sha256": "3f79b71cf582759824943829e9f09788770eaa0ec89cb2126e4851315aebdb24",
+      "gitBlob": "fa66d6ee896df65530f66b828504571c069d1062",
+      "identityKind": "Derived complete ZIP member; no separately stored Git object assumed",
+      "viewed": true,
+      "observation": "Owner teams: test-owner-routing-b card visible with Unknown status and one pending task; separate team/task partial-availability warnings and unavailable Host runtime banner preserved."
+    },
+    {
+      "path": "TEST-desktop-backend-kCT5R4/ui-task-board-assigned-blocked.png",
+      "bytes": 109184,
+      "sha256": "f6a997ae4c7039fc2f27cefe3c2f6978bbee8d38e611d84a52cb64047484ebe9",
+      "gitBlob": "7fb5cfe7699d51e157b6524aa11b5cecb96ceec9",
+      "identityKind": "Derived complete ZIP member; no separately stored Git object assumed",
+      "viewed": true,
+      "observation": "Assigned-blocked task: original dependent task Pending, assigned alice, Awaiting clarification from you, blocked by exact seed#49b0ed70, Mark resolved available; no start success inferred."
+    },
+    {
+      "path": "TEST-desktop-backend-kCT5R4/ui-task-board-attachment-added.png",
+      "bytes": 127434,
+      "sha256": "9b519a7895b674580b0df8537cc0ced1c815f05b76553a03acf0b894b5858b6d",
+      "gitBlob": "338e4c546013dbe953b860862c38de1d2fd02ae2",
+      "identityKind": "Derived complete ZIP member; no separately stored Git object assumed",
+      "viewed": true,
+      "observation": "Attachment-added: same task In Progress with one actual image thumbnail, dependency displayed as resolved green and system dependency-resolved comment. Workflow history and original assignee retained."
+    },
+    {
+      "path": "TEST-desktop-backend-kCT5R4/ui-task-board-attachment-removed.png",
+      "bytes": 116814,
+      "sha256": "4350db588fd2e110de417963367d71a6025e466ae727164f84805b70d312fbbb",
+      "gitBlob": "2c6f8fca8ea34f624e3c9d83534956d5c0f4ecc7",
+      "identityKind": "Derived complete ZIP member; no separately stored Git object assumed",
+      "viewed": true,
+      "observation": "Attachment-removed: attachment section count0/empty after removal, original TEST attachment comment original retained with a file icon in comment, and dependency-resolved system comment remains. No conflation between task attachment removal and comment attachment."
+    },
+    {
+      "path": "TEST-desktop-backend-kCT5R4/ui-task-board-attachments-reloaded.png",
+      "bytes": 114959,
+      "sha256": "a9d6aaac745be5783c247bfe18959668b18acdc7f3073076063e78e21bb609f9",
+      "gitBlob": "d8865e5fe5f5b1ebbcbb621129bcd343393a55fe",
+      "identityKind": "Derived complete ZIP member; no separately stored Git object assumed",
+      "viewed": true,
+      "observation": "Attachments-reloaded: same dependent task remains In Progress/assigned alice with attachment count1 and same visible gradient thumbnail, Comments2 and awaiting reply shown."
+    },
+    {
+      "path": "TEST-desktop-backend-kCT5R4/ui-task-board-blocked-start.png",
+      "bytes": 132141,
+      "sha256": "244afcc5486c7b34ea6a6095e05c6f3871099a39c4ed06626b7ddd7906411de8",
+      "gitBlob": "8f46893ce792bb3a74d59ba88f83123791ef7889",
+      "identityKind": "Derived complete ZIP member; no separately stored Git object assumed",
+      "viewed": true,
+      "observation": "Blocked-start: dependent task remains TODO with Blocked by seed, original start quick action visible, team/members offline. No successful start inferred from this screenshot alone."
+    },
+    {
+      "path": "TEST-desktop-backend-kCT5R4/ui-task-board-initial.png",
+      "bytes": 93176,
+      "sha256": "b8d86c6868c777e3b32e60d1eec95d4c12c419e0c5caea0865c24b1f4220753d",
+      "gitBlob": "db248a3a8e64c57b49ae0c3f0da4536008b0d392",
+      "identityKind": "Derived complete ZIP member; no separately stored Git object assumed",
+      "viewed": true,
+      "observation": "Initial: team offline with two members and persisted seed in task sidebar; central Tasks1 region has not yet rendered board rows/columns in this snapshot. This initial image alone does not establish a settled populated board."
+    },
+    {
+      "path": "TEST-desktop-backend-kCT5R4/ui-task-board-reloaded.png",
+      "bytes": 124244,
+      "sha256": "d33a317305441286423a1607867ba60f3e209c65ae6ad5798dc1ed9f65d7b264",
+      "gitBlob": "fbcd793c38b1e3ecbf9113ab43761264fbfd0e1e",
+      "identityKind": "Derived complete ZIP member; no separately stored Git object assumed",
+      "viewed": true,
+      "observation": "Board reloaded: dependent task retained In Progress with alice and one comment; original seed is completed in sidebar, dependency retained as Depends on; team still offline. Exact data persistence is corroborated visually."
+    },
+    {
+      "path": "TEST-desktop-backend-kCT5R4/ui-task-board-reordered.png",
+      "bytes": 132064,
+      "sha256": "e282be06ba0f082ada9d9213f0f6f723ddb848e420f2f31ba4a08139186910ba",
+      "gitBlob": "2509bec917af709dd7719b8e3366a028266c28c2",
+      "identityKind": "Derived complete ZIP member; no separately stored Git object assumed",
+      "viewed": true,
+      "observation": "Board reordered: dependent task appears before original seed in TODO, assigned alice and blocked relation retained; order observation does not itself prove storage or successful start."
+    },
+    {
+      "path": "TEST-desktop-backend-kCT5R4/ui-task-large-comment-cold-readback.png",
+      "bytes": 77844,
+      "sha256": "b674a9777aa747b1f5b1998d444c0845aa5dc6a34c8becdc2c34f798c02841ec",
+      "gitBlob": "569b8c9cb73dcb775628aac785d961bde8f6e2c0",
+      "identityKind": "Derived complete ZIP member; no separately stored Git object assumed",
+      "viewed": true,
+      "observation": "Large-comment cold readback: very long repeated content fills the modal viewport, rendered as square glyphs. This image does not demonstrate legibility, all600000bytes, or composer admission; exact cold DOM/text/hash and pre-start Host admission are separate receipt evidence."
+    },
+    {
+      "path": "TEST-desktop-backend-kCT5R4/ui-task-notification-quick-actions.png",
+      "bytes": 134369,
+      "sha256": "4da394b512e09b4ee34facdfea396a963f30672b37fa528a23ea172f1ce18a00",
+      "gitBlob": "68b4e76696603cc22af73f6173443bd7fbad3a78",
+      "identityKind": "Derived complete ZIP member; no separately stored Git object assumed",
+      "viewed": true,
+      "observation": "Notification quick actions: seven notification rows/categories visible, Task Created row exposes delete/view icons. Task sidebar explicitly warns Host read crossed a mutation boundary and previously loaded counts may be stale; no fresh all-task census inferred."
+    },
+    {
+      "path": "TEST-desktop-backend-kCT5R4/ui-task-review-approved.png",
+      "bytes": 114619,
+      "sha256": "ae147695596d256cac54170696478ee69b9ba434fbfffd9ca8cc4a96773507a6",
+      "gitBlob": "fa99f99d55903dd0775922a983df77869cbfcc7f",
+      "identityKind": "Derived complete ZIP member; no separately stored Git object assumed",
+      "viewed": true,
+      "observation": "Review-approved: dependent task appears in APPROVED with alice and retained dependency; original seed is DONE. Sidebar still explicitly warns retained results/counts may be stale after mutation-boundary failure."
+    },
+    {
+      "path": "TEST-desktop-backend-kCT5R4/ui-task-trash-original-row.png",
+      "bytes": 103145,
+      "sha256": "909cadda632d2cd4eca4e6a4eceb90a6cba46b3f014701c685215cd6dbc9960a",
+      "gitBlob": "9d215a22bae5ad5bb6efebaa46aae6b42e90d8c9",
+      "identityKind": "Derived complete ZIP member; no separately stored Git object assumed",
+      "viewed": true,
+      "observation": "Trash original row: Trash dialog contains original seed#49b0ed70 with its exact subject, unassigned owner and restore control; dependent task remains visible in background/sidebar. Later restoration requires original receipt, not this pre-restore snapshot."
+    }
+  ],
+  "limitations": [
+    "Early initial board screenshot is not yet populated; later task actions/readbacks supply the actual contract evidence.",
+    "Unavailable owners/teams and unknown counts stay visibly separate from loaded filtered results; no full-census claim.",
+    "Tasks mutation-boundary warnings preserve previous loaded results; screenshot counts are not universally fresh.",
+    "Large-comment screenshot has repeated square glyphs and does not prove legibility or complete600000-byte content/composer admission.",
+    "Truncated reply preview and pending trash restore require exact retained receipt assertions.",
+    "Images do not prove process absence, full native custody, real provider execution or new aab3 qualification."
+  ],
+  "qualification": {
+    "allOriginalImagesViewed": true,
+    "scope": "Original fixed86f Linux cross-team visual corroboration only",
+    "allScreensSettled": false,
+    "nativeAbsenceFromImages": false,
+    "wholeE2E": false
+  }
+}

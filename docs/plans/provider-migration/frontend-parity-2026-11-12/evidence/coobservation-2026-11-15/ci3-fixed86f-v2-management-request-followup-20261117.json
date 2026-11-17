@@ -1,0 +1,620 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_V2_MANAGEMENT_LOADING_SOURCE_FOLLOWUP",
+  "reviewer": "/root/producer_r2_semantic",
+  "repository": "777genius/agent-teams-ai",
+  "createdAtUtc": "2026-11-17 17:53:21 UTC",
+  "decision": "ADVISORY_COMPLETE_NO_FUNCTIONAL_REPAIR_ESTABLISHED",
+  "summary": [
+    "The full current source trace narrows the original failure, but does not establish a preserving functional change.",
+    "A possible overlap between the first Models full-view read and the post-connect silent refresh is source-supported. Its occurrence, duration and causal role in this job are unobserved.",
+    "The current loading-finally implementation is the accepted c2faa body; settled current silent responses/errors clear loading, and stale responses retain the required currentness refusal.",
+    "Before the first Models wait, original control flow requires two finite model intents to complete and their recorded native probe children to be absent at the existing post-receipt observations. Persistent metadata owners are a separate scope.",
+    "The smallest already-captured output improvement is a bounded summary of original effects, finite-model request outcomes, and saved native-probe observations at the existing failure boundary. It cannot invent the absent current request/queue/stage trace."
+  ],
+  "scope": {
+    "historicalJob": {
+      "pullRequest": 1223,
+      "runId": 44092933810,
+      "jobId": 134072512024,
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "platform": "linux-x64",
+      "lane": "opencode-v2-management",
+      "jobIdAttribution": "Root assigned exact job ID; retained log independently binds the source/lane/run context."
+    },
+    "currentSourceHead": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+    "currentSourceUnchangedForSelectedPaths": true,
+    "allowed": "Immutable Git and retained evidence reads plus pure in-memory data/identity operations and this bare advisory.",
+    "prohibitedActionsPerformed": [],
+    "sourceOrControlAuthored": false,
+    "runtimeExecuted": false,
+    "venueSelected": false,
+    "newGate": false,
+    "qualification": "Source-only follow-up; the original GUI remains INCOMPLETE and CI4 fixed source is unchanged."
+  },
+  "evidence": {
+    "priorAdvisory": {
+      "bytes": 49806,
+      "sha256": "7feb4ccef7d67cd8a7ca71de7e919a9643180887f9fd931c39561b229d740e99",
+      "gitBlob": "5b1cc71ce7333d2ca41882b193878cdd35af6cd8",
+      "fullBodyRead": true
+    },
+    "currentLog": {
+      "bytes": 133008,
+      "sha256": "c7bc42330d01884db5bff7f745102db259c385cdc36dee5cfc12525b83d52f11",
+      "gitBlob": "32d667765fd2fb51fe66ab2ee902d66049154819",
+      "lines": 1397,
+      "readScope": "Fresh complete body fetched and hash-joined. Previous full textual read is reused through the fully read exact5b1cc71 report; current failure/env/stack section1191–1255 freshly read. No new complete log semantic reread claimed."
+    },
+    "unavailableArtifact": {
+      "artifactId": 14340275045,
+      "archiveBytesRead": 0,
+      "delivery": "Previously expired before byte GET; never requested again by this review.",
+      "receiptAvailable": false,
+      "appLogAvailable": false,
+      "pngAvailable": false
+    },
+    "sourceIndex": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+        "bytes": 20435,
+        "sha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6",
+        "gitBlob": "7f224d52e429bbdecb173d65b470a2ac154de475",
+        "readScope": "Complete immutable body freshly fetched, identity verified, and fully read for this follow-up."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+        "bytes": 12302,
+        "sha256": "91bfb3b90c18e38af200e23d167811e526b339d1525ccc502db43759a5e6bf77",
+        "gitBlob": "6f8e3da7ba0cda6a13d5cfbafd1ecaf58ac738dd",
+        "readScope": "Complete immutable body freshly fetched, identity verified, and fully read for this follow-up."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-fixture.ts",
+        "bytes": 8880,
+        "sha256": "cc7a6d5aaf57a1a35608025819847b43f43a418558858e95baf4a39bcc564112",
+        "gitBlob": "35518a67d9e6e9c987395bef9b4cb1012ac77bb2",
+        "readScope": "Complete immutable body freshly fetched, identity verified, and fully read for this follow-up."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-model.ts",
+        "bytes": 5678,
+        "sha256": "e3e2b49684125157aa0a958e2e9800de81686aa4f227545c0111864250f88e39",
+        "gitBlob": "6ce3b1342c187e7ea9bc0d5233296f3fa3811e4a",
+        "readScope": "Complete immutable body freshly fetched, identity verified, and fully read for this follow-up."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-process.ts",
+        "bytes": 5096,
+        "sha256": "1a01a3b5538e2838f5926358c1c69bd0f0fe9b40537d26c355a457bc64451e92",
+        "gitBlob": "8463257cb866eed1f222e76aa4b23ae6b07440cf",
+        "readScope": "Complete immutable body freshly fetched, identity verified, and fully read for this follow-up."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.ts",
+        "bytes": 12815,
+        "sha256": "356fde85403680c557633ba90e4df4840d69bfea4e8c58b39ad6855e3e2596ab",
+        "gitBlob": "4cb498c7846dd6b24c46b987266e148065add852",
+        "readScope": "Complete immutable body freshly fetched, identity verified, and fully read for this follow-up."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "src/features/runtime-provider-management/renderer/RuntimeProviderManagementPanel.tsx",
+        "bytes": 12020,
+        "sha256": "fdeae416c9017d9b377625a32ee4487b8391cc8b6041fb09c2ee292b71f9db31",
+        "gitBlob": "32403fc3f01c93153e1325dd1bf1a6b17fa64499",
+        "readScope": "Complete immutable body freshly fetched, identity verified, and fully read for this follow-up."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+        "readScope": "Complete immutable body freshly fetched, identity verified, and fully read for this follow-up."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "src/features/runtime-provider-management/renderer/hooks/refreshRuntimeProviderConnection.ts",
+        "bytes": 5385,
+        "sha256": "b5b887dacbc987d3ccabfa1be2d5f7befa54d8a30cc79b2d90ac43c0adbf4450",
+        "gitBlob": "a3a6ee5182d48416eef42766b846e4a3921d714d",
+        "readScope": "Complete immutable body freshly fetched, identity verified, and fully read for this follow-up."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderProjectContext.ts",
+        "bytes": 1300,
+        "sha256": "94e4ebc5b9e343b12ebc40f5251bab30372d9668aab295a57930653b20b6730f",
+        "gitBlob": "33744a0abc543ab39e13d0b5a784de719e40ec58",
+        "readScope": "Complete immutable body freshly fetched, identity verified, and fully read for this follow-up."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient.ts",
+        "bytes": 23900,
+        "sha256": "fe9b1bdc4e4dfb4eba417e1bb4a3b29987cbd1ccfdbf9766582e2d49a7a53568",
+        "gitBlob": "6849549eacb871ea1342a37f4cecd27ed7795c32",
+        "readScope": "Complete immutable body freshly fetched, identity verified, and fully read for this follow-up."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "src/features/runtime-provider-management/main/adapters/output/capturedManagementPreferences.ts",
+        "bytes": 2201,
+        "sha256": "32fa7f106d94bea044cf9a4db3df7056c4e626312ec079e18409e1056af9ef23",
+        "gitBlob": "9a680f0ed4f847ae4612809e342a25ca448036be",
+        "readScope": "Complete immutable body freshly fetched, identity verified, and fully read for this follow-up."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "src/features/agent-backend/main/infrastructure/CapturedProviderManagement.ts",
+        "bytes": 5433,
+        "sha256": "8ea983e9aec5c56ca5e2438a39e4272c0133ae6c2d4839bbcb6926afb605b760",
+        "gitBlob": "60b08011e5aa2df1a6d2215155d7dabf0b2b15af",
+        "readScope": "Complete immutable body freshly fetched, identity verified, and fully read for this follow-up."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "packages/legacy-agent-host/src/composition/createProviderManagementMethods.ts",
+        "bytes": 4523,
+        "sha256": "7854ee3a07c27b95294b2e49fd5b4d39cffa00c8040eb6de15d1c231a1b3d927",
+        "gitBlob": "708d880bb9be0dcaae978b97b0686b548b7873a3",
+        "readScope": "Complete immutable body freshly fetched, identity verified, and fully read for this follow-up."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts",
+        "bytes": 36898,
+        "sha256": "e54fda9c30ec3d53f20027d59faf81f59c75fd3ad3987593bd4cd64315a17d3a",
+        "gitBlob": "3e0d1ae7a3aa852fb5772821f7df1059edd7cead",
+        "readScope": "Complete immutable body freshly fetched, identity verified, and fully read for this follow-up."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts",
+        "bytes": 21840,
+        "sha256": "0d97f35fcb8ffab937b25ff6656509f51267d43f7d9a5018928f7ea194c91f42",
+        "gitBlob": "384b4c00a05d5886cce267ae76166c93d5892262",
+        "readScope": "Complete immutable body freshly fetched, identity verified, and fully read for this follow-up."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts",
+        "bytes": 5861,
+        "sha256": "43a2186091a78d7fca3cb642b2f665439b1f0aedb176dc0a5488035c4aa612de",
+        "gitBlob": "6c8bfdfcf34298a7b513f7a9600301d0256bed32",
+        "readScope": "Complete immutable body freshly fetched, identity verified, and fully read for this follow-up."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+        "bytes": 97366,
+        "sha256": "11871dd43b1c704230c83e722577ba4cdd4f4fd6c2eebce89cab02457b52b81a",
+        "gitBlob": "176344903eaee49ced9607a29f28a3c556e59f6e",
+        "readScope": "Whole body fetched and identity verified; only the listed relevant component/callback slices freshly read. No full unrelated component audit claimed.",
+        "lineRanges": [
+          [
+            2113,
+            2447
+          ]
+        ]
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx",
+        "bytes": 128683,
+        "sha256": "9eb9612f1665d54e46869f5b5e41f4fbb31b91cd51f839ae5d37ef7f0d7da71e",
+        "gitBlob": "ddef9d560b53af7c9f4be3af7a65ba841a17f2a7",
+        "readScope": "Whole body fetched and identity verified; only the listed relevant component/callback slices freshly read. No full unrelated component audit claimed.",
+        "lineRanges": [
+          [
+            706,
+            755
+          ],
+          [
+            1869,
+            1925
+          ]
+        ]
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+        "readScope": "Whole body freshly fetched and exact canonical path joined; known whole85 inventory reused. Complete confirmed-connection case and all final five current-silent/newer/unmount cases freshly read; no execution.",
+        "lineRanges": [
+          [
+            3015,
+            3159
+          ],
+          [
+            5679,
+            5894
+          ]
+        ]
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+        "readScope": "Exact current frozen body fully read in immediately preceding closed semantic advisory20f354; reused unchanged. waitRead186–209 is the selected boundary."
+      }
+    ],
+    "wholeSourceBytes": 701863,
+    "sourceIndexNotes": [
+      "All Git blob identities in sourceIndex are complete-source identities, even when readScope explicitly lists a relevant slice.",
+      "The initial unverified test path suggested in coordination returned404 and was excluded. Canonical test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts was independently fetched at aab3 and literally matched76495189.",
+      "An incidental fetched startup-passive-observer.ts body is not used to claim any metadata diagnostic subscription; the selected metadata publisher and direct stderr writer are the only diagnostic source claims below."
+    ]
+  },
+  "originalOutcome": {
+    "error": "UI read timed out: original default inheritance; no mutation retry",
+    "modelsWaitFailureAt": "2026-11-17T14:55:26.9043423Z",
+    "summaryAt": "2026-11-17T14:55:32.5305630Z",
+    "status": "INCOMPLETE",
+    "lastAcceptedObservation": {
+      "inheritanceCard": false,
+      "modelsTabActive": true,
+      "modelsTabDisabled": false,
+      "refreshSpinner": true,
+      "legacyModelsPanel": true,
+      "projectContextSelector": true,
+      "publicError": false,
+      "publicWarning": false
+    },
+    "sampleMeaning": "Last object accepted by the existing wait predicate before its cutoff. It is not an atomic request/owner/native-state snapshot; a later fulfilled CDP read can be rejected before updating last.",
+    "reachedByOriginalControlFlow": [
+      "reject-key receipt/rejection checks",
+      "connect-key receipt/Connected and closed form checks",
+      "both original finite-model observer/finish paths and post-receipt native-probe observations",
+      "model.assertPassive(2)",
+      "first single Models scroll/click and original inheritance wait"
+    ],
+    "unreached": [
+      "project selection after first Models wait",
+      "global-default",
+      "project-default",
+      "project-test",
+      "later inheritance clearing and renderer reload proof",
+      "complete five-intent proof",
+      "ordinary successful close/PASS path"
+    ],
+    "currentFinalCleanup": "UNKNOWN: source finally is reached and summary is logged, but current receipt/app/native cleanup values are unavailable.",
+    "budgets": {
+      "guiInheritanceMs": 30000,
+      "guiPollMs": 100,
+      "metadataProfileMs": 120000,
+      "modelProbeProfileMs": 120000,
+      "credentialDefaultIntentMs": 250000,
+      "initialSettingsAndInputMs": 150000,
+      "metadataCloseDrainMs": 5000
+    },
+    "budgetInterpretation": "Independent accepted bounds; the GUI may expire while metadata is still admitted. This is compatible with the symptom only, not a diagnosis or a selected deadline change."
+  },
+  "sourceTrace": {
+    "renderer": [
+      {
+        "path": "src/features/runtime-provider-management/renderer/RuntimeProviderManagementPanel.tsx",
+        "lines": "164–180,187–238",
+        "fact": "The panel defers full view, retains project/runtime context, and makes credential blocking depend on a saving provider plus a currently selected non-OAuth setup method."
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+        "lines": "2175–2189,2266–2330",
+        "fact": "Models becomes active and calls refresh only for absent view and not loading. Spinner follows state.loading. Legacy fallback is compatible with pending null view. Outer disabled/selected-provider-loading guards remain effective."
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "lines": "451–511,663–722",
+        "fact": "Sequence/context guards own success/error/finally; only current completion clears loading. Disable clears loading and invalidates sequences; a requested view is reissued when the active scope settles."
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "lines": "1332–1401",
+        "fact": "Connected directory state and closed setup form precede the awaited post-connection refresh. savingProviderId is cleared only in the final current-context branch."
+      }
+    ],
+    "possibleOverlap": {
+      "classification": "SOURCE_SUPPORTED_INTERLEAVING_NOT_OBSERVED_CAUSE",
+      "sequence": [
+        "connectProvider returns a verified connected provider; setup form and selected auth option are cleared.",
+        "Original harness Connected/form-closed predicate may succeed before the original submitConnect promise has completed.",
+        "While permitted by outer disabled/provider-loading state, the first Models selection can issue a non-silent full-view request.",
+        "Post-connect refresh starts its shared summary, awaits external refresh and then the summary, and only afterward evaluates refreshView.",
+        "If viewRequestedRef became true, refreshView issues a newer silent request. Its sequence supersedes the earlier full-view request and current loading remains owned by the newer request.",
+        "The Host serializes catalog reads per profile, and mode changes require confirmed original-owner closure. Whether this happened or caused delay is absent from current evidence."
+      ],
+      "whyNotRemoveAutomatically": "The refresh sequence explicitly invalidates pre-credential observations and waits for the shared summary before replacement reads because a failed summary may invalidate the scope again. External refresh may also change runtime/configuration identity. Reusing an earlier view without proving the same post-invalidation capture and generation could restore stale authority.",
+      "outerCaller": {
+        "path": "src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx",
+        "lines": "744–755,1897–1911",
+        "fact": "The selected parent forwards connection to onRefreshProvider('opencode','provider_setup') and applies disabled/selectedProviderLoading. This review does not claim a full audit of that large component or all upstream status callbacks."
+      }
+    },
+    "main": [
+      "CapturedRuntimeProviderManagementClient.loadView copies input, captures the private target, reads catalog, reads selected preferences, validates target currentness, and returns the full managed view.",
+      "The post-credential connection reply performs a selected-provider catalog read. That reply does not contain or replace the whole inheritance view.",
+      "captureProviderManagement checks selected owner/foreground before start, after start, and after request. Catalog is a work operation. No bypass or replacement owner is introduced.",
+      "createProviderManagementMethods routes exact management.catalog into the coordinator with original sealed/availability guards."
+    ],
+    "host": [
+      "Coordinator.catalog captures the original absolute profile deadline, queues behind the previous same-profile catalog, then reselects and validates the credential target.",
+      "readV2Catalog preserves the directory/provider mode boundary. A mismatch closes the exact previous owner; only confirmed closure admits a replacement.",
+      "OpenCodeV2ManagementHost preserves native client/custody validation, identity/plugins/permissions/MCP/credential/directory/activation/currentness/projection/disposal/result-current checks.",
+      "tracked resolves/removes its own pending marker before error cleanup, avoiding a self-pending close wait at that specific source seam.",
+      "Metadata close seals, drains original work within5s, aborts the original wire, stops the owned server, and removes only original namespace identities. Unknown cleanup remains held."
+    ],
+    "earlierProbeBoundary": {
+      "sourcePaths": [
+        "scripts/legacy-agent-host/desktop-opencode-v2-management-model.ts",
+        "scripts/legacy-agent-host/desktop-opencode-v2-management-process.ts",
+        "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts"
+      ],
+      "proof": "The finite model waits for observeProbe(step) before recording/answering each original request. observe(step) records exactly one probe and refuses reused PID/birth. Each originalStep waits its original selected settled receipt, calls model.finish and then native.observe() without a step. That observer compares the birth identity of every recorded probe and requires it to be absent before setting absentAfterReceipt=true. assertPassive(2) occurs before first Models.",
+      "limit": "The stack proves those source assertions were passed to reach this boundary, but no actual current command IDs/PID records are independently visible. This excludes neither deliberately live metadata catalogs nor later unobserved work and does not qualify final cleanup."
+    }
+  },
+  "existingTests": {
+    "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+    "identity": {
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+    },
+    "wholeInventory": 85,
+    "readCases": [
+      {
+        "lines": "3015–3159",
+        "name": "refreshes the view and catalog after a confirmed connection",
+        "meaning": "Awaits submitConnect to completion before asserting final refresh counts/saving state; it does not reproduce a UI click between form clearing and refresh completion."
+      },
+      {
+        "lines": "5679–5736",
+        "name": "clears loading for the current silent refresh and refuses a stale response",
+        "meaning": "Current successful silent result clears loading and the earlier response remains inert."
+      },
+      {
+        "lines": "5738–5798",
+        "name": "clears pending loading when the current silent refresh ends with response-error/rejection",
+        "expandedCases": 2,
+        "meaning": "Both current failure forms clear loading without allowing an older result to overwrite state."
+      },
+      {
+        "lines": "5800–5892",
+        "name": "keeps a silent view completion inert after newer-request/unmounted",
+        "expandedCases": 2,
+        "meaning": "Currentness and unmount protection remain, including not clearing loading for a newer request."
+      }
+    ],
+    "runtimeClaim": false,
+    "prospectiveDiscriminatingTestOnly": "If root later selects lifecycle work, use the existing actual-hook test seam with a deferred shared-summary/external refresh and a first Models refresh between form clearing and connection completion. Observe actual request counts/sequence/currentness and settle both original promises. This would establish interleaving behavior, not prove it caused the historical GUI timeout; no test or source candidate is authored here."
+  },
+  "minimalEvidenceOpportunity": {
+    "selected": false,
+    "existingInMemoryFailureSummary": {
+      "boundary": "Existing modelsTab catch at UI159–164, or existing smoke catch/final summary with the same retained evidence object.",
+      "allowlistedFacts": [
+        "Exact existing eight boolean observation with label last accepted sample.",
+        "Already recorded effects restricted to finite step, kind, phase and resourceHeld; no command/source paths or credential payload.",
+        "Already recorded finite-model request count and finite step/outcome/authorizationMatched/promptMatched/tools facts; no raw request body/header/key.",
+        "Already recorded native probe step and absentAfterReceipt flag, clearly labelled as the earlier saved observation; never renamed current absence.",
+        "Counts of already captured native child roles probe/catalog/key, with existing32-child ceiling, missing/overflow/invalid explicitly unknown."
+      ],
+      "constraints": "Use only retained in-memory arrays/objects and own data descriptors, finite allowlists and a fixed output bound. Missing/malformed/capped observations remain unknown. Do not invoke commands(), native.observe(), remaining(), cdp.evaluate(), a new model request, or any extra cleanup/validation read for this projection.",
+      "value": "Makes the already-reached original intent/probe evidence available outside an unread ZIP. It does not identify the current metadata stage."
+    },
+    "existingAppStreamFacts": {
+      "source": "createOpenCodeMetadataDiagnostic in createClaudeCloseDiagnostic.ts and smoke80.",
+      "facts": "Original metadata owner already writes bounded-by-lifecycle ready/released/cleanup-unknown lines containing captured profile hash, mode, optional provider hash, original PID/start identity. App stderr is currently piped only to the saved app log.",
+      "possibleProjection": "If separately selected, a bounded allowlisted projection can consume those already-arriving pipe bytes and omit raw logs/paths/credentials. It must preserve chunk/malformed/overflow unknowns and cannot label ready as released or sampled absence.",
+      "limit": "This is an optional source-design boundary, not a claim that the unread current app log contains particular lines. It adds no metadata/native request. It still cannot identify a queue wait or an active read stage.",
+      "metadataFailureChannel": "agent-teams:opencode-v2:metadata-read-failed already exposes stage, allowlisted reason, elapsedMs, deadlineExpired and aborted only on a failure and only if subscribed. This review does not establish an active subscriber for this GUI lane; do not promise such a row."
+    },
+    "decisiveMissingFact": "For the one original current full-view request at the30s cutoff: its local request sequence/context-generation relation and last entered/completed capture/catalog-queue/native-read/preferences stage. Existing saved arrays and eight booleans do not contain this fact.",
+    "ifFurtherDiagnosticWorkSelected": "Use existing request/capture identifiers and existing await/stage transitions to correlate a bounded passive lifecycle record; do not sample another request or add a timer/await/read. Before choosing any source change, distinguish manual versus silent/current versus stale, queue versus original-owner closure versus native operation, and result delivery. New instrumentation would be explicit source work under the existing process, not an extra gate.",
+    "notSelected": [
+      "Disable or bypass Models",
+      "Wait outside or increase the original30s cutoff",
+      "Retry the Models click or metadata request",
+      "Reuse pre-invalidation/provider-specific catalog as full-view authority",
+      "Drop owner closure/currentness/disposal checks",
+      "Assume successful cleanup or a missing preference binding",
+      "Change CI4 head, workflow, case inventory or fixture"
+    ]
+  },
+  "checks": [
+    {
+      "id": "C01",
+      "status": "PASS_STATIC",
+      "title": "Exact prior advisory joined",
+      "evidence": "5b1cc71 complete 49,806-byte body was fetched, rehashed and fully read; its current-evidence exclusions remain in force."
+    },
+    {
+      "id": "C02",
+      "status": "PASS_STATIC",
+      "title": "Current source identity",
+      "evidence": "Selected full bodies were fetched at immutable aab3. The management hook, driver, Main client and Host bodies equal the earlier86f pins. CI4 fixed source is not modified."
+    },
+    {
+      "id": "C03",
+      "status": "PASS_STATIC",
+      "title": "Original outcome",
+      "evidence": "Retained job log binds source86f, Linux x64 management lane, first Models/default-inheritance timeout and final INCOMPLETE; no later UI/default success is inferred."
+    },
+    {
+      "id": "C04",
+      "status": "PASS_STATIC",
+      "title": "Last accepted sample",
+      "evidence": "The eight printed booleans are the original wait predicate's last accepted object, not an atomic request/owner snapshot or a continuous trace."
+    },
+    {
+      "id": "C05",
+      "status": "PASS_STATIC",
+      "title": "Original wait preserved",
+      "evidence": "UI138 uses30,000ms with existing controls5286; the original post-fulfilled cutoff prevents late success. No extra wait, retry or timeout change is recommended."
+    },
+    {
+      "id": "C06",
+      "status": "PASS_STATIC",
+      "title": "Initial view admission",
+      "evidence": "Panel passes loadViewOnEnable=false. Models selection requests refresh only when view is absent and loading is false."
+    },
+    {
+      "id": "C07",
+      "status": "PASS_STATIC",
+      "title": "Current loading completion",
+      "evidence": "Hook451–511 increments the sequence and applies response/error/finally only for the selected current context. Current silent completion clears loading; older completions cannot clear a newer request."
+    },
+    {
+      "id": "C08",
+      "status": "PASS_STATIC",
+      "title": "Whole85 source/test boundary",
+      "evidence": "Canonical current test path and full76495189 body match. Selected confirmed-connection and final five loading/currentness cases were read; no new test execution is claimed."
+    },
+    {
+      "id": "C09",
+      "status": "PASS_STATIC",
+      "title": "Connection success is earlier than refresh completion",
+      "evidence": "Hook1332–1349 updates connected state and clears setup form before awaiting refreshRuntimeProviderConnection. Original UI212 waits only for form absence plus Connected."
+    },
+    {
+      "id": "C10",
+      "status": "PASS_STATIC",
+      "title": "Conditional overlap exists in source",
+      "evidence": "After external/shared refresh, the connection callback evaluates viewRequestedRef at invocation time and can issue a newer silent loadView if Models requested a view meanwhile. Outer disabled/selected-provider-loading guards still apply."
+    },
+    {
+      "id": "C11",
+      "status": "BOUNDED_UNKNOWN",
+      "title": "Overlap occurrence and cost",
+      "evidence": "No retained current request sequence, issue/settle times or queue position proves this interleaving occurred in the failed job or consumed its30s budget."
+    },
+    {
+      "id": "C12",
+      "status": "PASS_STATIC",
+      "title": "Refresh order retained",
+      "evidence": "The existing post-credential sequence invalidates stale directory reads, starts a shared summary, awaits external refresh and summary, then awaits both view and directory. The summary may invalidate scope again; the order has an explicit freshness purpose."
+    },
+    {
+      "id": "C13",
+      "status": "PASS_STATIC",
+      "title": "Main view composition",
+      "evidence": "loadView captures the original management target, awaits catalog, reads selected preferences, and validates currentness before full view output. Connection result and directory result do not substitute for this view."
+    },
+    {
+      "id": "C14",
+      "status": "PASS_STATIC",
+      "title": "Host catalog serialization",
+      "evidence": "Coordinator sets the original profile deadline at catalog admission and serializes per profile. Each queued read reselects and validates the target before readV2Catalog."
+    },
+    {
+      "id": "C15",
+      "status": "PASS_STATIC",
+      "title": "Metadata owner replacement",
+      "evidence": "Directory/provider mode mismatch closes the exact existing owner and requires confirmed cleanup before replacement. Unknown cleanup remains held; no cache reuse or unowned replacement is proposed."
+    },
+    {
+      "id": "C16",
+      "status": "PASS_STATIC",
+      "title": "Native metadata lifecycle",
+      "evidence": "Complete Host read preserves native identity/plugins/permissions/MCP/credential/directory/activation/currentness/projection/disposal/result-current stages and original error identity."
+    },
+    {
+      "id": "C17",
+      "status": "PASS_STATIC",
+      "title": "No tracked self-wait defect established",
+      "evidence": "tracked removes and resolves its pending marker before close on error. close seals, drains existing work within original5s, aborts original wire, stops owned server and removes only unchanged namespace identities."
+    },
+    {
+      "id": "C18",
+      "status": "PASS_STATIC",
+      "title": "Earlier finite requests",
+      "evidence": "The finite model invokes the existing native-probe observer before recording each response; originalStep validates its selected receipt, finishes the intent, then observes probe retirement. assertPassive(2) precedes Models."
+    },
+    {
+      "id": "C19",
+      "status": "PASS_STATIC",
+      "title": "Narrow pre-Models probe exclusion",
+      "evidence": "Reaching first Models requires both recorded original probe PID/birth pairs to be absent at the existing post-receipt observations. This is source-control-flow attribution, not an independent current receipt identity audit or final cleanup proof."
+    },
+    {
+      "id": "C20",
+      "status": "BOUNDED_UNKNOWN",
+      "title": "Pending view stage",
+      "evidence": "The original current stage could be capture/start/work admission, per-profile queue/owner replacement/native read, preferences, response delivery or a superseded view. The eight booleans do not select among them."
+    },
+    {
+      "id": "C21",
+      "status": "PASS_STATIC",
+      "title": "Legacy panel is not schema diagnosis",
+      "evidence": "A null pending full view makes scoped inheritance unsupported and renders the legacy panel. The retained fallback does not prove missing preferences or an incompatible final schema."
+    },
+    {
+      "id": "C22",
+      "status": "PASS_STATIC",
+      "title": "Existing captured projection seam",
+      "evidence": "UI already accumulates effects/model requests/steps; smoke already retains native children/probes and writes the complete receipt. A bounded allowlisted failure summary can reuse these values without another DOM/Host/OS read."
+    },
+    {
+      "id": "C23",
+      "status": "PASS_STATIC",
+      "title": "Existing metadata diagnostics limit",
+      "evidence": "The metadata owner emits existing ready/released/cleanup-unknown stderr lines. The separate metadata-read-failed channel emits only after failure and only with a subscriber; neither supplies an always-current pending-stage record."
+    },
+    {
+      "id": "C24",
+      "status": "BOUNDED_UNKNOWN",
+      "title": "Artifact and cleanup",
+      "evidence": "Artifact14340275045 remains unread and unavailable, with0archive bytes. Current app log/receipt/PNG/native final cleanup are unknown; no old cleanup or source-after state is transferred."
+    },
+    {
+      "id": "C25",
+      "status": "BOUNDED_UNKNOWN",
+      "title": "Functional repair",
+      "evidence": "Neither removal/coalescing of refreshes nor reuse of earlier metadata is justified by the retained evidence.30s versus120s remains compatible, not a cause or a reason to enlarge either budget."
+    },
+    {
+      "id": "C26",
+      "status": "PASS_STATIC",
+      "title": "Scope and action boundary",
+      "evidence": "No source/control candidate, test, executable harness, runtime, new gate, ref/PR/CI action, archive request or local probe was authored or performed. All original five intents, fixtures, budgets and custody checks remain selected unchanged."
+    }
+  ],
+  "checkCount": 26,
+  "checkSummary": {
+    "PASS_STATIC": 22,
+    "BOUNDED_UNKNOWN": 4
+  },
+  "finalQualification": "This advisory advances source localization and an existing-capture diagnostic seam only. It supplies no new execution result, no historical cause assignment, no native/GUI qualification, and no permission or gate for changing source or rerunning the failed job."
+}

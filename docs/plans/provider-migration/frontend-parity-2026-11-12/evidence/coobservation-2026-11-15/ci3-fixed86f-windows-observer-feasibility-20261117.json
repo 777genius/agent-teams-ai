@@ -1,0 +1,683 @@
+{
+  "schemaVersion": 1,
+  "kind": "windows-arm-packaged-retry-fresh-observer-transport-feasibility-advisory",
+  "reviewer": "/root/producer_r2_guard",
+  "repository": "777genius/agent-teams-ai",
+  "createdAt": "2026-11-17 17:04:47 UTC",
+  "decision": "ADVISORY_ONLY: no existing complete-census native drop-in and no proven sub-10-second repair; one concrete transport-preserving candidate is described, unselected and unexecuted.",
+  "scope": {
+    "immutableSourceRef": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+    "priorFailureSource": "86f52244b5375834a4040cbc63803d68cc708087",
+    "rootTask": "Identify a genuinely fresh ordered observation alternative without dropping/coalescing/caching currentness checks, narrowing the full census, increasing deadlines or authoring a candidate.",
+    "currentPublicationBoundary": "The inspected c54 source is the immutable accepted R1 publication. The separately accepted two-file R2 changes only collaboration expected-model literals and fixture missing-settlement handling. This advisory neither reads a moving branch nor claims a fresh actual publication of that R2.",
+    "permittedActions": "Immutable Git reads, pure in-memory text/hash analysis, bare advisory retention.",
+    "actionsNotPerformed": [
+      "No filesystem or shell access",
+      "No target or control execution, compilation, import or evaluation",
+      "No runtime/native/model/OS probe",
+      "No application branch/ref/PR or live CI lookup, poll, artifact download, mutation or retry; only the explicitly indexed immutable application sources and official Node version-tag metadata were read.",
+      "No source/control postimage or workflow authored",
+      "No real Claude/Codex invocation including version"
+    ]
+  },
+  "outcomeFirst": [
+    "The measured expensive seam is already one PowerShell process containing both ordered queries. Merely combining process and listener acquisition again cannot remove the observed cost.",
+    "No inspected existing native witness, broker operation, controller or build target supplies the required complete process rows plus every owner of the selected listening port.",
+    "A potentially preserving candidate is one controller-owned persistent PowerShell interpreter used only as a transport for the unchanged process-then-listener query. Every existing synchronous guard would still submit and wait for a fresh request.",
+    "This is not a ready replacement: synchronous integration, request completion semantics, bounded framing and original child cleanup must be implemented and proved. A Promise or an early JSON line would weaken current authority.",
+    "The possible saving is repeated interpreter startup. The evidence does not measure that component or establish that the remaining original Retry work would fit within ten seconds."
+  ],
+  "evidence": {
+    "priorAdvisory": {
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 45459,
+      "sha256": "af587be9cf0fc9c50f6f618e41a3bf4bef69086e2b7889d1ed5debef610806f3",
+      "gitBlob": "d3cfa847d6adcf99f95044f27e44c3180653e75b",
+      "read": "Complete retained report fetched, hashed and read; its archived timing/custody results are reused with attribution. No new artifact bytes or live CI fetched in this task."
+    },
+    "sourceIndex": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "pin": {
+          "bytes": 37970,
+          "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+          "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3"
+        },
+        "matchedPrior": true,
+        "read": "Complete current immutable body fetched, independently hashed, and fully read."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+        "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "pin": {
+          "bytes": 31223,
+          "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+          "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+        },
+        "matchedPrior": true,
+        "read": "Complete body fetched/hash-joined; complete accepted prior R1/R2 source read reused by exact identity."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "pin": {
+          "bytes": 12389,
+          "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+          "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+        },
+        "matchedPrior": true,
+        "read": "Complete current immutable body fetched, independently hashed, and fully read."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "pin": {
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        "matchedPrior": true,
+        "read": "Complete current immutable body fetched, independently hashed, and fully read."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+        "path": "tools/owned-process-broker/nativeFixture.cpp",
+        "pin": {
+          "bytes": 15038,
+          "sha256": "42749224f0194fd70f4b3df50f5fc64fbb2e11c58801c629463387cb4a4a1e25",
+          "gitBlob": "a42f7513e9a5d2732c5c9f65fa1cc6cf1c970062"
+        },
+        "matchedPrior": true,
+        "read": "Complete current immutable body fetched, independently hashed, and fully read."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+        "path": "tools/owned-process-broker/nativeGateContext.ts",
+        "pin": {
+          "bytes": 7278,
+          "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+          "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31"
+        },
+        "matchedPrior": true,
+        "read": "Complete current immutable body fetched, independently hashed, and fully read."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+        "path": "tools/owned-process-broker/gateController.cpp",
+        "pin": {
+          "bytes": 5935,
+          "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+          "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5"
+        },
+        "matchedPrior": true,
+        "read": "Complete current immutable body fetched, independently hashed, and fully read."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+        "path": "tools/owned-process-broker/CMakeLists.txt",
+        "pin": {
+          "bytes": 2160,
+          "sha256": "c58f71f7f341fd6f77fce721db77a4ae843a719e744a227757268b8eb6778e2e",
+          "gitBlob": "cf158110832d24afd7f97b6e9ef2dbf7472b0410"
+        },
+        "matchedPrior": true,
+        "read": "Complete current immutable body fetched, independently hashed, and fully read."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+        "path": "tools/owned-process-broker/broker.cpp",
+        "pin": {
+          "bytes": 25929,
+          "sha256": "c9b35397e4beb534a9a4298b6a6b7c8c8745571381b69b3301ab3b60fccd6dc3",
+          "gitBlob": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e"
+        },
+        "matchedPrior": true,
+        "read": "Complete current immutable body fetched, independently hashed, and fully read."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+        "path": "tools/owned-process-broker/protocol.h",
+        "pin": {
+          "bytes": 11700,
+          "sha256": "f33e5f48373336dee460a5829c38f51ae0238f92477b7c26c528ab1e91598289",
+          "gitBlob": "8301cd73299220be2c5c9d95d87745f2937dc715"
+        },
+        "matchedPrior": true,
+        "read": "Complete current immutable body fetched, independently hashed, and fully read."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+        "path": "tools/owned-process-broker/ownedJob.h",
+        "pin": {
+          "bytes": 554,
+          "sha256": "f1865ac01ff84885f10ae05a2f3a34615ac8a144e8f9a6447f381074f9a8450d",
+          "gitBlob": "b940d7c72932c7f7466d8aa72e2190be85abff59"
+        },
+        "matchedPrior": true,
+        "read": "Complete current immutable body fetched, independently hashed, and fully read."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+        "path": "scripts/e2e/opencode-diagnostics/packaged.mjs",
+        "pin": {
+          "bytes": 27780,
+          "sha256": "5fd9116cb656ce7804dc3253decb3f386e2c17feda57cc40586cc6e0df6fd8d5",
+          "gitBlob": "7da83c7a4e631f7599fc57861f19e14629db6036"
+        },
+        "read": "Complete body fetched, hashed and read in two contiguous chunks."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "pin": {
+          "bytes": 20830,
+          "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+          "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+        },
+        "read": "Complete 391-line, 14-case body fetched, hashed and read."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+        "pin": {
+          "bytes": 50377,
+          "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+          "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+        },
+        "read": "Complete 745-line, 8-case body fetched, hashed and read."
+      },
+      {
+        "repository": "nodejs/node",
+        "ref": "955266bfdd854cd280dffd47548673914484e4c0",
+        "path": "doc/api/worker_threads.md",
+        "pin": {
+          "bytes": 66967,
+          "sha256": "148bc99fe9b4a2b991dd0966168d3f2188c75e1e673d3eb723ede3dd32accd81",
+          "gitBlob": "49ec391e4008498ad5445ac1a0af7037e8d83fe3"
+        },
+        "read": "Complete body read in contiguous chunks; official v24.21.0 tag peeled to this immutable commit."
+      },
+      {
+        "repository": "nodejs/node",
+        "ref": "955266bfdd854cd280dffd47548673914484e4c0",
+        "path": "deps/v8/src/builtins/builtins-sharedarraybuffer.cc",
+        "pin": {
+          "bytes": 12875,
+          "sha256": "a9d27d1f149e9b2e1d87d4271b6062c90a9cb46db1df71db1d895fab91f66197",
+          "gitBlob": "d7ef20f93ee46687fb6cd9a5f7ea858087a04093"
+        },
+        "read": "Complete body read. This is API/implementation feasibility evidence, not a runtime execution."
+      },
+      {
+        "repository": "nodejs/node",
+        "ref": "955266bfdd854cd280dffd47548673914484e4c0",
+        "path": "lib/child_process.js",
+        "pin": {
+          "bytes": 29162,
+          "sha256": "df028ee287a6adad4bb69bd5daf4975311ceffe19c95c18fdc9f0662ea32ef68",
+          "gitBlob": "779aebab83183153fea6f5fcbc3ccc339492ee80"
+        },
+        "read": "Complete body fetched and hashed; only relevant lines 60-110, 810-950 and 967-1005 read. No full-file audit claimed."
+      }
+    ],
+    "fullAppSourceBodies": 14,
+    "fullAppSourceBytes": 278180,
+    "nodeVersionBasis": {
+      "repository": "nodejs/node",
+      "tag": "v24.21.0",
+      "annotatedTag": "f37d7da830134b5314a14ced553273786a2bb4cd",
+      "peeledCommit": "955266bfdd854cd280dffd47548673914484e4c0",
+      "meaning": "Read-only API/implementation evidence for the already-used CI Node version; not a new runtime selection or runtime admission.",
+      "limitations": "Two guessed upstream test paths returned 404 and are not evidence. No upstream tests or runtime were run."
+    },
+    "directoryRead": "All 41 path/type/SHA/size rows of tools/owned-process-broker were read as directory metadata. This is not a claim to have read every source file in that directory.",
+    "currentSourceJoins": "The eleven source bodies in the prior advisory were independently fetched at c54 and matched exactly. The packaged lineage module and two existing test modules were also completely read.",
+    "lineCounts": {
+      "platform": 312,
+      "nativeWindowsAppGate": 653,
+      "sharedControls": 495,
+      "platformTests": 391,
+      "nativeUiTests": 745
+    }
+  },
+  "observedCost": {
+    "originalRetryBudgetMs": 10000,
+    "sourceDefinedClock": "Original performance.now phase/observation clock; phase admission and post-read remaining checks stay authoritative.",
+    "operationCounts": {
+      "pairedSnapshot": 10,
+      "processOnlyCensus": 1,
+      "total": 11,
+      "preClickPairedGuards": 7
+    },
+    "totalObservationMs": 7840.521400000027,
+    "sevenPreClickGuardsMs": 4965.133000000016,
+    "observationDurationsMs": [
+      {
+        "index": 1,
+        "operation": "process-listener-snapshot",
+        "durationMs": 711.112300000008
+      },
+      {
+        "index": 2,
+        "operation": "process-listener-snapshot",
+        "durationMs": 710.5400000000081
+      },
+      {
+        "index": 3,
+        "operation": "process-listener-snapshot",
+        "durationMs": 719.5714000000007
+      },
+      {
+        "index": 4,
+        "operation": "process-listener-snapshot",
+        "durationMs": 703.6855999999971
+      },
+      {
+        "index": 5,
+        "operation": "process-listener-snapshot",
+        "durationMs": 697.3331000000035
+      },
+      {
+        "index": 6,
+        "operation": "process-listener-snapshot",
+        "durationMs": 691.6460999999981
+      },
+      {
+        "index": 7,
+        "operation": "process-listener-snapshot",
+        "durationMs": 731.2445000000007
+      },
+      {
+        "index": 8,
+        "operation": "process-census",
+        "durationMs": 591.2054000000062
+      },
+      {
+        "index": 9,
+        "operation": "process-listener-snapshot",
+        "durationMs": 724.9253000000026
+      },
+      {
+        "index": 10,
+        "operation": "process-listener-snapshot",
+        "durationMs": 750.5797999999922
+      },
+      {
+        "index": 11,
+        "operation": "process-listener-snapshot",
+        "durationMs": 808.6779000000097
+      }
+    ],
+    "originalStageOffsetsMs": {
+      "clickReturnedMs": 5235,
+      "writerObservedMs": 7322,
+      "hostCheckedMs": 7915,
+      "uiReadyMs": 9516
+    },
+    "lastRead": {
+      "index": 11,
+      "operation": "process-listener-snapshot",
+      "startOffsetMs": 9516.42899999999,
+      "endOffsetMs": 10325.106899999999,
+      "durationMs": 808.6779000000097,
+      "returned": true,
+      "qualification": "returned=true records a synchronous read return only. validateCensus rejects on the original expired deadline before public binding acquisition and before acceptance of the final listener proof."
+    },
+    "remainingRetryWork": "At UI ready the original phase still owed the complete public binding, native afterRetry witnesses/runtime identity, fresh public Processes, paired full DOM rows, same-Main check and screenshot. Their duration and final outcomes are absent.",
+    "laterFlow": "The two original UI stops and qualified ordinary Quit/cleanup still have to complete in their own original phases. Their absence cannot be repaired by accepting UI-ready alone.",
+    "outcome": "Original receipt INCOMPLETE/cleanup false; app exit 0 and later controller zero membership do not qualify the missing two UI stops or Retry completion.",
+    "unmeasured": [
+      "PowerShell startup alone",
+      "CIM provider/query time alone",
+      "Serialization/parser time alone",
+      "Cost of the unreached original Retry remainder",
+      "Cost/cleanup behavior of any proposed persistent observer"
+    ]
+  },
+  "exactObservationContract": {
+    "processQuery": "@(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,CreationDate,ExecutablePath | Where-Object CreationDate | ForEach-Object { [pscustomobject]@{pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; birth=$_.CreationDate.ToUniversalTime().ToString('o'); executable=$_.ExecutablePath} }) | ConvertTo-Json -Compress",
+    "listenerQuerySource": "`Get-CimInstance -Namespace 'Root\\\\StandardCimv2' -ClassName MSFT_NetTCPConnection -Filter \"LocalPort = ${port} AND State = 2\" | Select-Object -ExpandProperty OwningProcess`;",
+    "rawProcessFields": [
+      {
+        "field": "pid",
+        "source": "[int] Win32_Process.ProcessId",
+        "required": "All original eligible rows, not only owned/selected PIDs."
+      },
+      {
+        "field": "parent",
+        "source": "[int] Win32_Process.ParentProcessId",
+        "required": "Retain the full parent relationship used by controller-driver and lineage/orphan checks."
+      },
+      {
+        "field": "birth",
+        "source": "CreationDate.ToUniversalTime().ToString('o')",
+        "required": "Preserve the exact original UTC round-trip string/precision. Do not replace it with PID-only identity or lossy Date parsing."
+      },
+      {
+        "field": "executable",
+        "source": "Win32_Process.ExecutablePath",
+        "required": "Preserve the original optional/falsy-path behavior; do not omit inaccessible rows merely to manufacture complete paths."
+      }
+    ],
+    "universeQualification": "The existing query already filters rows lacking CreationDate. 'Full' means that exact original eligible universe, including foreign processes, with no new PID/owner/process-name restriction.",
+    "listenerContract": "MSFT_NetTCPConnection in Root\\StandardCimv2, LocalPort=9222 for this gate and State=2. No LocalAddress/address-family filter: preserve all returned IPv4 and IPv6 owners, including foreign owners. Original parser requires positive integer PIDs and deduplicates by first occurrence.",
+    "ordering": "Finish the current full process acquisition first, then acquire listeners. It is a fresh ordered pair, not an atomic snapshot; the candidate must not claim atomicity.",
+    "errorSemantics": "A successful empty listener result is distinct from provider/access/namespace/query failure. Any failed query, incomplete envelope or executor error refuses the whole observation. No partial stdout recovery, retry, fallback or stale last-success result.",
+    "authorityAfterParse": "Keep validateCensus and all current sameIdentity, controller-parent, Main lineage, orphan/overflow, all-listener PID/birth ownership and post-read deadline checks literal in behavior."
+  },
+  "alternatives": [
+    {
+      "option": "Use existing native witness/broker/controller",
+      "status": "NOT A PRESERVING DROP-IN",
+      "finding": "query-wait-gated retains one selected PID/birth HANDLE witness; broker service operations act on selected captures; controller membership covers its Job. None supplies the complete Win32_Process rows and selected-port/all-owner listener set.",
+      "prohibition": "Do not reinterpret a held HANDLE or zero Job count as the omitted full process/listener observation."
+    },
+    {
+      "option": "Owned persistent PowerShell with a synchronous worker bridge",
+      "status": "CONCRETE DESIGN CANDIDATE ONLY; not selected, authored, executed or performance-qualified",
+      "preservationMechanism": "Retain the exact current CIM query bodies and parsers. Change only how the already-combined query is delivered: one new request at each original paired-snapshot call, processed by one owned interpreter. Keep other exported process/listener/default one-shot functions unchanged.",
+      "boundedScope": "The ten paired calls in this observed Retry could avoid ten repeated interpreter starts after one initial startup. The process-only host census remains unchanged. Future call counts remain controlled by the original code and predicates, not by imposing a new fixed 11-call cap.",
+      "syncBridge": "Existing shared UI controls invoke assertOwnedRenderer(): void synchronously. A same-file Node worker may own the interpreter and drain its pipes while the main thread waits on a finite SharedArrayBuffer/Atomics reply. No caller may continue with a Promise or merely queued work.",
+      "requests": "One in-flight request, per-instance identity plus strictly increasing safe-integer sequence, a closed observation operation and validated selected port. No arbitrary script/command input, no background preread, prefetch, cache, TTL, coalescing, replay or automatic child restart.",
+      "completionBarrier": "The old executor returns only after the child has completed with no exec error/nonzero exit. A persistent process cannot use a per-request process exit. Its closed loop must emit a distinct correlated completion record only after both queries and serialization have succeeded, with a failure latch for every exception. A complete-looking data line followed by a query error must not be admitted.",
+      "frameAndMemory": "Bound raw query output and errors consistently with the current 1 MiB synchronous-process limit, then separately bound protocol framing/shared memory. Validate instance, request, operation, status, length, encoding and terminal marker before exposing the unchanged parser input. Partial, duplicate, stale, reordered or trailing frames and overflow are failures; never empty-success.",
+      "clock": "Retain the original 30-second query-executor maximum and all original phase/outer pre- and post-read checks without increasing any budget. The bridge must have a finite validated wait; undefined/NaN cannot become an infinite Atomics wait. Initialization and shutdown consume existing outer/controller allowance, and any setup phase timing must remain inside the existing phase rules.",
+      "workerSafety": "Use a fixed audited same-file worker role and explicit empty execArgv to avoid inherited TS/preload recursion. Preserve the parent's exact intended PowerShell executable/environment/cwd; do not share mutable env or log its values. Worker-side pipe draining and shared-memory completion must not depend on blocked parent stdio.",
+      "normalCleanup": "Retain the original child object and pipe ownership and preserve controller confinement. If a helper PID/birth/path join is needed, derive it from an existing fresh full census; never add PID-only authority or replace the original census. Include the observer naturally in the complete process universe, not in a filtered-out special category. It is a driver child, not a Main descendant. Actual descendant confinement remains an implementation/qualification obligation, not a proved new observation here.",
+      "failureCleanup": "Close once after the last use within the existing ordinary finally allowance, drain bounded tails, and require the original child terminal/pipe completion plus worker exit before qualification. A worker exit/terminate/unref alone does not prove its OS child absent. If custody is lost, refusal/emergency controller containment remains FAIL. Do not signal by a recycled PID, hide a cleanup error, replace the primary error, reset a deadline or relaunch the observer.",
+      "rawEvidence": "Preserve existing censusReads timing/result/truncation records and all source/input/phase/cleanup evidence. Any new transport lifecycle fields must report only observed bounded state, not convert receipt counters or successful parsing into OS absence.",
+      "unproved": "This source analysis establishes an API route for a synchronous bridge, not a completed protocol implementation, actual child containment proof, native field equivalence test or speedup. Those concrete implementation details do not yet exist."
+    },
+    {
+      "option": "New native full-process plus TCP-table collector",
+      "status": "LARGER UNPROVED ALTERNATIVE",
+      "finding": "Direct native enumeration could avoid the interpreter, but no such complete collector is present in the inspected sources. A selected-HANDLE helper is insufficient.",
+      "missingEvidence": "A concrete API/source implementation would need proof of the exact original row universe, creation-time precision/timezone, parent identity, optional path/access behavior, IPv4+IPv6 all-owner listener coverage, success-empty versus provider/query errors, completeness/overflow and ordered acquisition. No Toolhelp/WMI/extended-TCP-table replacement has been authored or audited here.",
+      "scopeLimit": "No native target, controller protocol, CMake entry or extra file is proposed for selection by this advisory."
+    }
+  ],
+  "prospectiveFileBoundary": [
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "currentLines": 312,
+      "possibleChange": "A fixed same-file worker/closed observation transport and explicit owned factory, preserving all existing default exported functions and original parsers/query text. No target API exports or production provider changes."
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "currentLines": 653,
+      "possibleChange": "Own one observer lifecycle and pass its synchronous executor into only the existing paired-snapshot seam; retain all business/click/Retry/row/census/cleanup checks and clocks. Explicit helper cleanup must join the final qualification."
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "currentLines": 391,
+      "possibleChange": "Preserve the whole existing 14-case prefix and append actual transport/guard/lifecycle regressions if the root selects this design. New case count and exact postimage are not chosen."
+    }
+  ],
+  "unchangedBoundary": {
+    "frozen": "Shared controls and whole 149/43/85 remain unchanged. The 8-case native UI test file can remain exact; it has only 55 lines of headroom under the original 800 cap.",
+    "build": "The described same-file built-in worker design needs no new package, dependency, native binary or CMake/workflow change. Actual candidate line counts and source freeze coverage remain to be checked if authored; fit is not claimed.",
+    "testsRoute": "The already accepted native-receipt whole-file import covers the existing platform test module through the current static entry. This advisory neither changes a workflow nor selects a new CI venue. It does not claim these hypothetical new tests have run.",
+    "notAllowed": [
+      "No repeated/batched reuse of a prior observation",
+      "No TTL/cache/PID-only authority",
+      "No omission of the process-only census or any of seven click guards",
+      "No coalescing currentness checks across awaits",
+      "No delayed or shortened assertion list",
+      "No retries or deadline increases",
+      "No new native/GUI PASS"
+    ]
+  },
+  "meaningfulRegressionRequirementsIfSelected": [
+    {
+      "boundary": "Exact acquisition",
+      "proof": "Exercise the actual new transport/paired function with two successive different full snapshots. Assert exact current query text, one fresh process-then-listener execution per call, unchanged parsers, no reuse or prefetch."
+    },
+    {
+      "boundary": "Complete data",
+      "proof": "Retain parent and high-precision birth strings, optional paths, foreign processes/orphans, PID reuse, multiple/duplicate/foreign selected-port owners and both-family fixtures. Successful empty listener output remains a valid data result that the ownership guard later refuses."
+    },
+    {
+      "boundary": "Request failure",
+      "proof": "The actual loop must refuse a complete-looking payload followed by a query error, mid-frame EOF, nonzero child completion, failure before/after data, malformed/stale/reordered/duplicate IDs, unknown status, trailing output, byte overflow and timeout. No retry or previous-success fallback."
+    },
+    {
+      "boundary": "Synchronous authority",
+      "proof": "Use the actual executor and existing source-slice gate harness: no downstream DOM evaluation/input can run while the correlated observation is pending; the guard returns only after complete proof or throws. A Promise-returning counterfactual must fail."
+    },
+    {
+      "boundary": "Deadline",
+      "proof": "A late completed observation cannot pass the existing post-read remaining check. Invalid wait values cannot become infinite waits. No test replaces or extends the original production deadline."
+    },
+    {
+      "boundary": "Cleanup",
+      "proof": "Exercise actual finite owned-child/worker closure, EOF/tail handling and first-error preservation. A worker-only exit, lost child terminal status, close failure, timeout or forced containment cannot qualify cleanup. One close attempt/no automatic restart."
+    },
+    {
+      "boundary": "Original flow",
+      "proof": "Preserve all current native UI cases and complete platform prefix. Future real Windows x64/ARM packaged execution of the unchanged original flow is the only evidence that the concrete implementation preserves actual CIM/Job behavior and completes Retry within the existing ten seconds; mock/protocol tests alone do not establish it."
+    }
+  ],
+  "limits": {
+    "currentEvidence": "Prior failure receipt and current source establish expensive repeated observation calls and the exact refusal boundary. They do not identify a faulty Windows provider, a specific OS call causing delay, or a guaranteed speedup.",
+    "synchronousRisk": "The main thread blocks today and would block on a preserving synchronous bridge. Callback-only timeout/error delivery cannot protect that blocked interval; finite shared-state completion/expiry and final original clock checks are necessary.",
+    "processCompletionRisk": "Persistent transport changes the completion witness from child exit per request to a protocol barrier. Preserving error semantics is a concrete implementation burden, not an assumption or a proved property of this report.",
+    "helperCustodyRisk": "Keeping an observer alive adds a controlled process lifetime. Its original child/stream closure and controller containment must be demonstrated by the actual future implementation; existing app cleanup alone does not prove helper cleanup.",
+    "timingRisk": "Even eliminating all repeated startup cost may be insufficient because the original unfinished Retry work is unmeasured. No expected-millisecond saving or sub-ten-second claim is made.",
+    "taskCompletion": "A source-supported candidate and exact missing proof are supplied. No executable repair, fix selection, new gate or runtime qualification is supplied."
+  },
+  "checks": [
+    {
+      "id": "G01",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Exact prior advisory identity",
+      "evidence": "d3cfa847 / 45,459 B / af587be9...; complete retained report read, no new artifact or CI access."
+    },
+    {
+      "id": "G02",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Eleven current source joins",
+      "evidence": "All eleven immutable c54 source bodies exactly match the indexed prior source identities."
+    },
+    {
+      "id": "G03",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Current complete core source sizes",
+      "evidence": "Gate 653, platform 312, controls 495 physical lines; no edits."
+    },
+    {
+      "id": "G04",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Full original process universe",
+      "evidence": "Every original row with CreationDate remains eligible; no owner/PID subset. Missing-CreationDate filtering is already part of the original query."
+    },
+    {
+      "id": "G05",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Original selected-port listener universe",
+      "evidence": "Same local CIM class, LISTEN State 2 and selected LocalPort; no address-family, LocalAddress, or owner-PID restriction."
+    },
+    {
+      "id": "G06",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "One ordered query invocation",
+      "evidence": "The existing paired function calls one executor and runs the full process query before the listener query."
+    },
+    {
+      "id": "G07",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Strict envelope and original parsers",
+      "evidence": "Both envelope values must be strings; the unchanged whole process/listener parsers enforce shape and positive listener IDs."
+    },
+    {
+      "id": "G08",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "No partial-output recovery",
+      "evidence": "Executor errors propagate through the paired function; successful-looking partial stdout is not a fallback observation."
+    },
+    {
+      "id": "G09",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Current process launch bound",
+      "evidence": "One exact SystemRoot Windows PowerShell executable per call, Stop error preference, original 30-second execFileSync bound."
+    },
+    {
+      "id": "G10",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Ownership hook is synchronous",
+      "evidence": "A Promise-returning replacement would not be awaited by the existing shared UI controls. Any preserving replacement must finish synchronously before returning."
+    },
+    {
+      "id": "G11",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Each gate invocation takes a new observation",
+      "evidence": "No cache or retained observation exists at the current gate seam."
+    },
+    {
+      "id": "G12",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Full census authority remains",
+      "evidence": "Controller and driver identities, full census bound and exact driver-parent relationship are checked on each validated snapshot."
+    },
+    {
+      "id": "G13",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Birth-qualified lineage and orphan refusal",
+      "evidence": "Main PID/birth, full retained lineage, overflow refusal and unexplained-child rejection are distinct from a narrow retained HANDLE witness."
+    },
+    {
+      "id": "G14",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Every listener owner is checked",
+      "evidence": "Every selected-port owner must be present in the current full census with a retained Main-family PID/birth identity."
+    },
+    {
+      "id": "G15",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Original post-read deadline remains authoritative",
+      "evidence": "A read that returns after the original phase cutoff cannot be promoted to an accepted ownership check."
+    },
+    {
+      "id": "G16",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Timing population and sum",
+      "evidence": "11 original Retry observations: ten paired snapshots and one process-only census; total 7,840.5214 ms."
+    },
+    {
+      "id": "G17",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Seven separated click guards",
+      "evidence": "The seven actual pre-click guards consumed 4,965.133 ms and are separated by DOM/input awaits; no equivalence proof permits merging or reusing them."
+    },
+    {
+      "id": "G18",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Late final read is not PASS",
+      "evidence": "The last read returned at 10,325.1069 ms; post-read validation failed before the original public binding observation."
+    },
+    {
+      "id": "G19",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Remaining work is not omitted",
+      "evidence": "After UI-ready the original Retry still owed binding, afterRetry, public process data, both complete DOM rows, same-Main check and screenshot; later original stop/cleanup obligations also remain."
+    },
+    {
+      "id": "G20",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Native witness scope is narrow",
+      "evidence": "Complete nativeFixture/nativeGateContext read establishes a selected PID/birth retained-handle query/wait witness, not a full process or listener snapshot."
+    },
+    {
+      "id": "G21",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "No global snapshot broker opcode",
+      "evidence": "Complete protocol and broker reads expose selected launch/resume/stop/release and service capture/query/stop/settle operations. No existing full process-plus-listener opcode or implementation was found in these complete bodies."
+    },
+    {
+      "id": "G22",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Controller deadlines and failure containment are unchanged",
+      "evidence": "Original root/controller containment and emergency-failure cleanup remain; zero Job membership cannot substitute for each full observation."
+    },
+    {
+      "id": "G23",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "No existing native snapshot build target",
+      "evidence": "Complete CMake and the inspected native entrypoints establish no ready full-census native drop-in."
+    },
+    {
+      "id": "G24",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Existing platform tests are whole and bounded",
+      "evidence": "14 current tests include exact query/executor ordering, malformed/empty/foreign-owner data, partial-output failures and timing-observer preservation."
+    },
+    {
+      "id": "G25",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Existing native UI tests can stay unchanged",
+      "evidence": "The complete 8-case file already exercises actual control/source-slice authority and paired final rows; its 800-line cap leaves only 55 lines."
+    },
+    {
+      "id": "G26",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Worker API has a supported shared-memory seam",
+      "evidence": "Official exact-version worker docs support shared memory and a same-file worker entry; no worker or target code was executed."
+    },
+    {
+      "id": "G27",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Blocking main-thread I/O hazard is explicit",
+      "evidence": "Worker stdio may wait on the blocked main thread; output draining and reply completion must not rely on parent stdio. resourceLimits do not provide the needed external-buffer cap."
+    },
+    {
+      "id": "G28",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Atomics wait needs a finite validated bound",
+      "evidence": "Exact V8 implementation maps undefined/NaN to an infinite wait and may refuse blocking by isolate policy. A finite validated wait and actual selected-runtime qualification are necessary design conditions."
+    },
+    {
+      "id": "G29",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Current execFileSync success is stronger than one stdout line",
+      "evidence": "Read official implementation slices: default 1 MiB buffer, ret.error/nonzero-status refusal and child completion precede returned stdout. Persistent mode needs an explicit equivalent all-query-success barrier."
+    },
+    {
+      "id": "G30",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "Source and runtime claims are separated",
+      "evidence": "This report retains immutable evidence and design obligations only. It authors no executable candidate and claims no native runtime, latency or GUI success."
+    },
+    {
+      "id": "G31",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "No speedup decomposition exists",
+      "evidence": "The prior retained timings include startup, CIM, serialization and parsing together; neither the startup fraction nor completion of the remaining original flow is observed."
+    },
+    {
+      "id": "G32",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "name": "No selected fix or extra gate",
+      "evidence": "Root retains all selection/authorship/execution authority. This advisory adds no R1/R2/venue requirement and does not retry any prior attempt."
+    }
+  ],
+  "checkCount": 32,
+  "runtimeClaim": false,
+  "postimageAuthored": false,
+  "fixSelected": false,
+  "additionalGate": false,
+  "authority": "Root remains sole source/control author, applier, stager and executor. This bare blob is advisory evidence only."
+}

@@ -1,0 +1,451 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-darwin-arm-installer-original-failure-advisory",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/red_publication_recovery",
+  "completedAtUtc": "2026-11-17 15:56:59 UTC",
+  "decision": "ACCEPTED_BOUNDED_EVIDENCE_ANALYSIS_ONLY",
+  "qualification": "The retained failed boundary is established; the identities and origin of the two failing listeners remain unknown. This advisory does not create an execution gate or select a source change.",
+  "subject": {
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "runId": 44092933810,
+    "jobId": 134072512275,
+    "artifactId": 14342687436,
+    "platform": "darwin-arm64",
+    "nodeVersionObserved": "v24.21.0"
+  },
+  "directInputTuples": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "complete-job-log",
+      "gitBlob": "f672b39f9b4c4fd5936fbd095cb6dd086ef81e4b",
+      "bytes": 199208,
+      "sha256": "16602e195a28ced5b7332a6809693b37de89618c857fb484cb163cabcfcdfe56",
+      "encoding": "utf-8",
+      "method": "complete retained Git blob read and independent full-body hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "complete-artifact-capture",
+      "gitBlob": "3b8b1326a02d0bc7c7b1196107f8fc848dacaf5a",
+      "bytes": 1049495,
+      "sha256": "b379d9099b2af7071617f980eed26d98cb239e06499a264b3ce56866d23b4907",
+      "encoding": "utf-8",
+      "method": "complete retained Git blob read and independent full-body hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "observations",
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "bytes": 33423,
+      "sha256": "2f98ed35ffb34f090d58b4021f54b1d92938f2ae6263312dd867654b923e80c8",
+      "gitBlob": "dca0c1710273411656e3284db0302449a00ddaf6",
+      "encoding": "utf-8",
+      "mode": "100644",
+      "method": "accepted exact complete source-body cache; complete independent rehash and accepted exact scripts-tree leaf join",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "scriptsTree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "smoke",
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 54778,
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "gitBlob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "encoding": "utf-8",
+      "mode": "100644",
+      "method": "accepted exact complete source-body cache; complete independent rehash and accepted exact scripts-tree leaf join",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "scriptsTree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "controls",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 29017,
+      "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+      "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+      "encoding": "utf-8",
+      "mode": "100644",
+      "method": "accepted exact complete source-body cache; complete independent rehash and accepted exact scripts-tree leaf join",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "scriptsTree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "selection",
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "bytes": 24759,
+      "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+      "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+      "encoding": "utf-8",
+      "mode": "100644",
+      "method": "accepted exact complete source-body cache; complete independent rehash and accepted exact scripts-tree leaf join",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "scriptsTree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc"
+    }
+  ],
+  "directInputCount": 6,
+  "directInputBytes": 1390680,
+  "embeddedMemberTuples": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "TEST-desktop-backend-yVQGun/TEST-codex-install/invocations.ndjson",
+      "bytes": 552,
+      "sha256": "361fa6fce910c9e8e21a2577fb4ce4ca13652eb0924429467eac516a52101cc1",
+      "gitBlob": "240ff04d8d6d1a85415c5c42fce10d946c0f446f",
+      "encoding": "utf-8",
+      "method": "derived complete literal capture.members[0].body; independently rehashed; not separately Git-fetched",
+      "originCaptureGitBlob": "3b8b1326a02d0bc7c7b1196107f8fc848dacaf5a",
+      "fullBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "TEST-desktop-backend-yVQGun/TEST-codex-install/registry.ndjson",
+      "bytes": 306,
+      "sha256": "84fd5601aa391636dfa697d98342666f1feedf4729a8b2976818e5924f37d835",
+      "gitBlob": "f5b6e7d75ef902fa635ff2e7285cdc21ac13ac6c",
+      "encoding": "utf-8",
+      "method": "derived complete literal capture.members[1].body; independently rehashed; not separately Git-fetched",
+      "originCaptureGitBlob": "3b8b1326a02d0bc7c7b1196107f8fc848dacaf5a",
+      "fullBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "TEST-desktop-backend-yVQGun/TEST-peer-codex-scope/effects.ndjson",
+      "bytes": 346,
+      "sha256": "2ac1f753a020f3c026e712e7b376afd52a3a0578cde2882c7f243b0f378d7f50",
+      "gitBlob": "f2665bf20d9fc60f2886448ccef4fc4d5fb0c9e2",
+      "encoding": "utf-8",
+      "method": "derived complete literal capture.members[2].body; independently rehashed; not separately Git-fetched",
+      "originCaptureGitBlob": "3b8b1326a02d0bc7c7b1196107f8fc848dacaf5a",
+      "fullBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "TEST-desktop-backend-yVQGun/desktop-app.log",
+      "bytes": 16048,
+      "sha256": "4cb916378b1a42462a1bdb02db820390e36d17defabfac0c56c4d73a6d1bd51b",
+      "gitBlob": "dfcc6943d4b0c49d730dd8a1de2f7d097547c2de",
+      "encoding": "utf-8",
+      "method": "derived complete literal capture.members[3].body; independently rehashed; not separately Git-fetched",
+      "originCaptureGitBlob": "3b8b1326a02d0bc7c7b1196107f8fc848dacaf5a",
+      "fullBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "TEST-desktop-backend-yVQGun/desktop-backend-receipt.json",
+      "bytes": 697669,
+      "sha256": "eb487bdac5bd151554a3de160af51d78d1bd4498abfe74c595b905c772a9ed85",
+      "gitBlob": "a40707d8d92fb4f8fb4cfb3bd3991631344488e1",
+      "encoding": "utf-8",
+      "method": "derived complete literal capture.members[4].body; independently rehashed; not separately Git-fetched",
+      "originCaptureGitBlob": "3b8b1326a02d0bc7c7b1196107f8fc848dacaf5a",
+      "fullBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "TEST-desktop-backend-yVQGun/desktop-descriptor.json",
+      "bytes": 2664,
+      "sha256": "327fd1a021168afd153f92e3f6d2808e15c9db25820237578b956db87425a1d8",
+      "gitBlob": "c6223e0b0dd3a48d9a54c51a9e23e98892bd7181",
+      "encoding": "utf-8",
+      "method": "derived complete literal capture.members[5].body; independently rehashed; not separately Git-fetched",
+      "originCaptureGitBlob": "3b8b1326a02d0bc7c7b1196107f8fc848dacaf5a",
+      "fullBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "TEST-desktop-backend-yVQGun/host-profile.json",
+      "bytes": 7471,
+      "sha256": "7c6043d21bba589aaa1a07eab74a13a7b46b3ac24891c96229d5ad60c6fca8fc",
+      "gitBlob": "4124debf048e7ba472c2a10406f4b61302f7b930",
+      "encoding": "utf-8",
+      "method": "derived complete literal capture.members[6].body; independently rehashed; not separately Git-fetched",
+      "originCaptureGitBlob": "3b8b1326a02d0bc7c7b1196107f8fc848dacaf5a",
+      "fullBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "TEST-desktop-backend-yVQGun/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+      "gitBlob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "encoding": "utf-8",
+      "method": "derived complete literal capture.members[7].body; independently rehashed; not separately Git-fetched",
+      "originCaptureGitBlob": "3b8b1326a02d0bc7c7b1196107f8fc848dacaf5a",
+      "fullBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "TEST-desktop-backend-yVQGun/ui-seed-receipt.json",
+      "bytes": 2335,
+      "sha256": "55717891a3a5ff509619e6ef8584eefb4e7d9f27772de3f58d4633c42e893e5b",
+      "gitBlob": "fcf83ef68afd0f196b410db7e06a1020b069a7c2",
+      "encoding": "utf-8",
+      "method": "derived complete literal capture.members[8].body; independently rehashed; not separately Git-fetched",
+      "originCaptureGitBlob": "3b8b1326a02d0bc7c7b1196107f8fc848dacaf5a",
+      "fullBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "host-emulated-emulated-installer-ui.log",
+      "bytes": 2931,
+      "sha256": "e4d3cc89ff77dd72ebaec5632cbbc1bd1550be3114aa525ede1644b97dc326ab",
+      "gitBlob": "4812ea1bc2d6be9677908a4b1c684b8d8efd9998",
+      "encoding": "utf-8",
+      "method": "derived complete literal capture.members[9].body; independently rehashed; not separately Git-fetched",
+      "originCaptureGitBlob": "3b8b1326a02d0bc7c7b1196107f8fc848dacaf5a",
+      "fullBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "host-emulated-inputs.json",
+      "bytes": 1055,
+      "sha256": "4a15668caab0e10519798a2f8a855b53abbe9cc32127f1742673e191914b44a0",
+      "gitBlob": "3be86ee1dee790e45aac1a00dc8f3c0ad5adf6cc",
+      "encoding": "utf-8",
+      "method": "derived complete literal capture.members[10].body; independently rehashed; not separately Git-fetched",
+      "originCaptureGitBlob": "3b8b1326a02d0bc7c7b1196107f8fc848dacaf5a",
+      "fullBodyRead": true
+    }
+  ],
+  "embeddedMemberCount": 11,
+  "embeddedMemberBytes": 731473,
+  "archiveBoundary": "The complete capture was read, including its archive record. This diagnostic review independently hashes all complete UTF-8 members. It does not add a new ZIP decompression/CRC or visual-image qualification claim.",
+  "findings": {
+    "originalFailure": "one CDP listener\n\n2 !== 1\n",
+    "failureSource": {
+      "kind": "assertion",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-backend-observations.ts:411:12",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:421:123",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:194:15",
+        "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts:77:29",
+        "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts:175:3",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:421:12"
+      ]
+    },
+    "secondaryFailure": "Later assertDesktopProofCompleted reports original receipt INCOMPLETE and is not the original cause.",
+    "sourceOrder": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "line": 175,
+        "meaning": "openLaunch(a,true) precedes actual launch(a)"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "line": 77,
+        "meaning": "waitRead observes saved launch settings"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "line": 194,
+        "meaning": "assertOwnedRenderer runs before the renderer expression read"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+        "line": 411,
+        "meaning": "unique listener PID cardinality must equal one"
+      }
+    ],
+    "diagnosis": {
+      "scope": "Immutable retained Darwin ARM installer failure only",
+      "log": {
+        "gitBlob": "f672b39f9b4c4fd5936fbd095cb6dd086ef81e4b",
+        "bytes": 199208,
+        "sha256": "16602e195a28ced5b7332a6809693b37de89618c857fb484cb163cabcfcdfe56"
+      },
+      "capture": {
+        "gitBlob": "3b8b1326a02d0bc7c7b1196107f8fc848dacaf5a",
+        "bytes": 1049495,
+        "sha256": "b379d9099b2af7071617f980eed26d98cb239e06499a264b3ce56866d23b4907"
+      },
+      "originalFailure": "one CDP listener\n\n2 !== 1\n",
+      "boundary": "desktop-backend-observations.ts:411 unique CDP listener assertion before desktop-ui-controls.ts:194 renderer read; called by desktop-emulated-selection-ui.ts:77/175 via desktop-backend-smoke.ts:421",
+      "actualUniqueListenerCount": 2,
+      "initialAcceptedListener": 8064,
+      "failedListenerPids": null,
+      "originalLsofOutput": null,
+      "whyMissing": "Darwin PID-only -t branch does not construct Linux-only census/failure facts",
+      "reached": "Seven recorded UI steps, last click opens saved Team Launch dialog",
+      "unreached": [
+        "launch(a)",
+        "first runtime capture",
+        "installer first-runtime milestone",
+        "screenshots"
+      ],
+      "appLogDevToolsAnnouncements": 1,
+      "cleanup": {
+        "remainingPids": [
+          8064,
+          12051,
+          12053,
+          12065
+        ],
+        "capturedHostAbsent": true,
+        "finitePeersAbsent": true,
+        "quitRequested": false,
+        "appSignal": "SIGTERM",
+        "allAbsentPass": false
+      },
+      "finiteManagementPeerPids": [
+        10811,
+        12008
+      ],
+      "concreteBehaviorRepairSupported": false,
+      "preservingDiagnosticOption": "Record already-returned Darwin lsof PID output and already-observed ownership snapshot on the original assertion; preserve existing uniqueness/ownership predicates, read count, deadlines, and no-retry behavior.",
+      "diagnosticOptionSelected": false,
+      "sourcePostimagesAuthored": false,
+      "targetExecution": false,
+      "liveCiRead": false,
+      "unresolvedCause": "The two failing listener PID identities and relationship to initially accepted listener 8064 are unavailable."
+    },
+    "receiptStatus": "INCOMPLETE",
+    "receiptCleanup": {
+      "processGroup": 7428,
+      "remaining": [
+        {
+          "pid": 8064,
+          "ppid": 1,
+          "pgid": 7428
+        },
+        {
+          "pid": 12051,
+          "ppid": 8064,
+          "pgid": 7428
+        },
+        {
+          "pid": 12053,
+          "ppid": 8064,
+          "pgid": 7428
+        },
+        {
+          "pid": 12065,
+          "ppid": 8064,
+          "pgid": 7428
+        }
+      ],
+      "appExitCode": null,
+      "appSignalCode": "SIGTERM",
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "receiptFailureQuit": {
+      "attempted": false,
+      "reason": "Owned CDP authority unavailable; no unrelated window was closed"
+    },
+    "finiteManagementPeerPids": [
+      10811,
+      12008
+    ],
+    "noSupportedBehavioralRepair": "The two failing PID identities are unavailable. Selecting a listener, ignoring a second listener, retrying until one remains, or widening a deadline is not justified by these observations.",
+    "optionalPreservingDiagnostics": "If separately selected later, retain already-returned Darwin PID-only lsof stdout and already-observed group identity data on the original failed assertion, preserving all current ownership/uniqueness requirements and existing read counts, deadlines and no-retry behavior.",
+    "relationshipToUpcomingR1": "Separate from proposed collaboration expected-model literals and Windows completeStop readiness repair; this advisory selects neither an expansion of that R1 nor a new execution."
+  },
+  "checks": [
+    {
+      "id": "full-log-identity",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "detail": "Complete 199,208-byte retained job log independently rehashed."
+    },
+    {
+      "id": "full-capture-identity",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "detail": "Complete 1,049,495-byte artifact capture independently rehashed."
+    },
+    {
+      "id": "full-eleven-member-bodies",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "detail": "All 11 complete UTF-8 member bodies are available and independently hash-matched."
+    },
+    {
+      "id": "exact-source-head",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "detail": "Capture and complete original receipt identify the same immutable source head; receipt reports dirty:false."
+    },
+    {
+      "id": "exact-run-job-artifact",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "detail": "Retained metadata joins the selected original Darwin ARM installer job."
+    },
+    {
+      "id": "full-four-source-joins",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "detail": "All four complete source bodies are rehashed and joined to accepted source-head scripts tree leaves."
+    },
+    {
+      "id": "original-assertion",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "detail": "Original receipt preserves the distinct-listener count assertion, separate from later incomplete-proof assertion."
+    },
+    {
+      "id": "failure-stack",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "detail": "Exact stack joins selected ownership assertion before renderer evaluation."
+    },
+    {
+      "id": "initial-listener-only",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "detail": "Initial listener is retained, but failing raw stdout/PID set is not present in original receipt."
+    },
+    {
+      "id": "darwin-census-gap",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "detail": "Full source shows Darwin PID-only branch with uniqueness assertion; error facts are attached only when Linux census exists."
+    },
+    {
+      "id": "failure-before-runtime-launch",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "detail": "Full call order establishes failed openLaunch before actual launch(a); exact source lines are recorded in findings."
+    },
+    {
+      "id": "one-devtools-announcement",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "detail": "Complete app log contains one DevTools-listening announcement; no second listener identity is established."
+    },
+    {
+      "id": "no-png-artifact",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "detail": "No PNG member exists in this complete capture."
+    },
+    {
+      "id": "failure-quit-refused",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "detail": "Original receipt retains refusal to close a renderer without established ownership."
+    },
+    {
+      "id": "partial-cleanup",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "detail": "Four group PIDs remain despite captured Host absence; no cleanup PASS is inferred."
+    },
+    {
+      "id": "finite-peer-journal",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "detail": "Two complete finite-peer launch/exit pairs concern management, not later team-runtime launch."
+    },
+    {
+      "id": "qualification-boundary",
+      "status": "PASS_READ_ONLY_EVIDENCE",
+      "detail": "Original runtime result remains INCOMPLETE; neither E2E PASS nor source repair is asserted."
+    }
+  ],
+  "checkCount": 17,
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "unresolvedDiagnosticQuestions": [
+    "Which two PIDs were returned by the original failing Darwin lsof observation?",
+    "Why were two distinct candidate listener PIDs present, and how did they relate to initially accepted listener 8064?"
+  ],
+  "actions": {
+    "targetExecution": false,
+    "sourceAuthorship": false,
+    "controlAuthorship": false,
+    "filesystemAccess": false,
+    "liveCiRead": false,
+    "refOrPrMutation": false,
+    "onlyBareAdvisoryBlobRetained": true
+  }
+}

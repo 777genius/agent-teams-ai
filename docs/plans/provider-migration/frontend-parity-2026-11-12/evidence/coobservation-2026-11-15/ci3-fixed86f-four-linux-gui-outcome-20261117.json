@@ -1,0 +1,2423 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_FOUR_LINUX_GUI_GUARD_OUTCOME_ADVISORY",
+  "reviewer": "/root/producer_r2_guard",
+  "repository": "777genius/agent-teams-ai",
+  "at": "2026-11-17 16:05:39 UTC",
+  "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+  "runId": 44092933810,
+  "decision": "ACCEPT_FOUR_ORIGINAL_BOUNDED_OUTCOMES_WITH_EXPLICIT_LIMITATIONS",
+  "summary": "All four original lane verifiers complete and their retained receipts, relevant source, ledgers/effects and ordinary cleanup joins support only their stated bounded GUI outcomes. Skills Host exits1/null; no normal Host-exit0 claim. Intermediate process unknown-stop, loading UI, finite-only credentials/probes and synthetic saved-draft import limits are retained.",
+  "qualifiedOutcomes": {
+    "skills": {
+      "decision": "ACCEPT_BOUNDED_ORIGINAL_SKILLS_UI_OUTCOME; Host normal-exit qualification is explicitly withheld",
+      "originalReach": [
+        "78 retained step records; original Skills route, current search, scoped review/confirm, Create/Edit/Trash UI actions and stale/held refusal cases complete.",
+        "First import review checks exact target, proposed tree and warnings without disk/journal mutation. The fixture changes the source between that review and its one confirmation. The old grant is refused; original target and original journal remain unchanged.",
+        "A newly reviewed import uses source v2 exactly, including binary/reference changes, while preserving unmanaged keep.txt and empty-sidecar; hidden/obsolete entries have the asserted absence.",
+        "One Create save and one Edit save persist exact original SKILL.md content through real UI and canonical disk reads.",
+        "One Trash confirmation is bound to the original staged dev/inode; a replacement at the old pathname survives. Original staged path is absent and the native-trash command is completed/resourceHeld=false.",
+        "Two intentional UI attempts against the preseeded unknown original intent are refusal observations, not two admitted mutations: held command/resource and original bytes remain unchanged; journal count does not grow.",
+        "The local service context changes while an import review is open. The existing confirmation is refused under stale authority, without a new effect."
+      ],
+      "journal": "Five total entries = four completed mutations plus one intentionally held original request; not five completed mutations. All five complete archive bodies join finalJournal exactly.",
+      "custody": "Final outer app exit 0/null, captured Host and process group absent, child-exec input reverified. The independently retained app trace records Host 5024 exit 1/null; no separate successful Host-normal-exit claim is made.",
+      "unqualified": [
+        "OS Trash destination inventory was not read; staged original absence plus surviving replacement is the original tested invariant.",
+        "No real Claude/Codex execution or native model inference. The skills metadata refusals and finite version sentinels remain intentional.",
+        "The app log contains expected refusal errors, unavailable Codex metadata, service-worker exit 1 and Host exit 1. Their precise causal relation is not proved."
+      ]
+    },
+    "processes": {
+      "decision": "ACCEPT_BOUNDED_CONTROLLED_LINUX_NATIVE_CUSTODY_AND_ORIGINAL_UI_STOP_OUTCOME",
+      "originalReach": [
+        "Original finite no-provider capture registers a native version-3 Linux root/target tuple and a separate neighbor, with original pidfd/namespace/boot identities, before the UI.",
+        "Host A 4688 completes handshake/list, closes via graceful EOF with exit 0/null and releases its writer lock. Host B 5039 is distinct and reads the same canonical registration before any Stop. This is an actual normal Host restart, not a crash-recovery claim.",
+        "The existing ProcessesSection Kill action is invoked once for the exact displayed original processRef and original row after current owner checks. The retained attempted-action marker and unique command 38dfc1e0-6e60-416e-8cf1-f144a63b6e04 join the canonical original capture.",
+        "The intermediate requested/held path produces a recorded OriginalProcessStopUnknown renderer exception. The original command is later read through bounded read-only lookups, without another terminate call, and becomes completed/observed-absent/signalAccepted=true.",
+        "The terminal command receipt still contains its historical pendingStop projection. Later canonical and renderer reads independently show no pending Stop, no Kill, stopped styling, and the same original row identity.",
+        "The primary service lifecycle records one original SIGTERM; the neighbor lifecycle is byte-for-byte unchanged across the UI Stop observation.",
+        "Controlled-root ordinary cleanup records primaryCleanupSignals=0, neighborCleanupSignals=1, root/service exits 0/null, and all three original native identities absent."
+      ],
+      "displayLimit": "The screenshot header badge 0 is source-defined from TeamDetailView data.isAlive; this stopped Team has false. ProcessesSection separately treats a captured original processRef plus observation=same-live as live. Header 0 is not a global OS/native-process count.",
+      "scope": "runtimeCustody=NOT_ALLOCATED; providerSessions=0, inputs=0, modelServers=0. This positively qualifies the controlled Linux kernel/canonical-owner/normal Host restart/original UI Stop path, not provider runtime custody, Windows/macOS, full M19, or arbitrary process discovery.",
+      "errorLimit": "The intermediate renderer exception remains part of the outcome. The flow is not described as error-free. createHostProcessControls preserves the frozen original command/ref and fails unknown rather than selecting a replacement or replaying Stop.",
+      "custody": "Outer app and Host B trace both exit 0/null; full captured app group absent. The separate controlled services/root cleanup is also joined to its original receipt and lifecycle members."
+    },
+    "management": {
+      "decision": "ACCEPT_BOUNDED_FINITE_OPENCODE_V1_MANAGEMENT_UI_OUTCOME",
+      "originalReach": [
+        "65 retained steps execute the original save-only Create Team path, selecting opencode/local/TEST-model/high and explicitly leaving launch unselected. One published creation command persists those settings, with no runtime captures.",
+        "A genuine Page.reload/timeOrigin change retains the same saved selection and canonical published creation; no second creation is admitted.",
+        "One API-key submission writes the TEST credential in the private finite peer store. Secret text is absent from the UI, and one Forget removes it.",
+        "One manual OAuth Start reaches waiting-for-code with the original resource held; one Cancel settles the same command to cancelled/resourceHeld=false, credentials remain absent, and exactly one finite opener was observed.",
+        "One automatic/device OAuth Start reaches completing under its original :auto completion id, with code/copy/privacy/cancel UI assertions. One Cancel settles that original command cancelled/resourceHeld=false. No credential completion is asserted.",
+        "All four durable command members are unique and joined: credential.set completed, credential.forget completed, and two original OAuth cancellations. Same selected profile/config/resource authority is preserved."
+      ],
+      "effects": "UI effect snapshot has seven events. Final native-effects has eight: a third launch PID 6816 after that snapshot. Original final cleanup includes all three births [5494,6645,6816] and confirms absence; the later child is not omitted or assigned an unproved cause.",
+      "scope": "This is the closed finite localhost HTTP OpenCode V1 TEST peer path, not the separate real OpenCode V2 management Models-tab failure. No real credential, provider account, model inference or OAuth credential completion is qualified.",
+      "visualLimit": "The connected banner explicitly says model execution is not verified and model needs test. Final model placeholders may still be loading; receipt/ledger assertions establish these finite mutations and cancellations, not fully settled whole Settings.",
+      "custody": "Outer app and captured Host 4688 trace exit 0/null; final group, captured Host and all three finite management peers are absent."
+    },
+    "import": {
+      "decision": "ACCEPT_BOUNDED_SAVED_DRAFT_LEGACY_FORMAT_IMPORT_AND_FINITE_MODEL_PREFLIGHT_UI_OUTCOME",
+      "originalReach": [
+        "Receipt sourceKind is exactly legacy-format-test-archive; snapshot header kind is saved-draft with intentionally missing history/evidence. The source is a never-launched synthetic TEST saved Team, not a recovered historical provider session.",
+        "The original legacy detail Launch control admits one canonical Host import. The original source settings, lead/member models and effort, separate prompt/permissions/context fields, two Tasks, one original comment, attachment declarations and source-qualified references are preserved.",
+        "The Launch dialog resolves to one canonical host-team:94e647b0-fb17-54fa-8603-74c78253bb29 destination. Two actual finite SDK probes request claude-sonnet-4-6/low and produce exactly two original inputs and two successful terminal OK effects. Both durable model-test commands complete/resourceHeld=false.",
+        "The first ready dialog is closed without Launch submit. After a real renderer reload it reopens the same import/lookup/owner/dialog target; no second import and no additional original model probe are admitted.",
+        "Original 2x1 PNG bytes are decoded through actual thumbnail/lightbox/task-detail surfaces; owner-bound file read and one browser download preserve exact 44-byte content/hash. The 36-byte task attachment is preserved.",
+        "Opaque im1 attachment refs remain bound to the imported owner. Internal task refs resolve to the destination; external archive/missing references keep contextual source owner and unavailable state instead of ambient local fallback.",
+        "All seven original source files remain byte-identical before/after. The import is published, noLaunchSubmit=true, sameOriginalImportAfterReload=true and runtimeSessions=[]."
+      ],
+      "peers": "The selected wrapper is claudeSavedImportPeer.mjs plus claudeSettingsAuthPeer.ts under the private saved-import namespace. It permits finite metadata/auth and exactly bounded model probes; all ten launch births are retained and absent at final cleanup. The existing TEST-LOCALHOST-ONLY dummy API-key/baseURL context is not a real credential or a newly added auth seam.",
+      "scope": "No Team business input, real provider/model execution, native session adoption, previously launched cold Claude/OpenCode history or full M16/Stage1/release qualification.",
+      "custody": "Outer app and captured Host 4668 trace exit 0/null; app group and all ten original finite peer births absent."
+    }
+  },
+  "common": {
+    "readMethod": "All four complete retained capture JSONs and whole job logs fetched/identity-verified. Every one of 79 embedded UTF8 member bodies (3,129,391 bytes) rehashed. Complete receipts read through original objects/proof sections and full source-census joins; small exact duplicate JSON members reused only by whole-object equality. Full app logs read, including warnings and terminal traces. Job-log full-line coverage used literal already-read line reuse plus complete novel-line projections; no pattern-only search was treated as a full read.",
+    "binaryBoundary": "All 106 member identities/censuses are retained; root independently verified original ZIP CRC/bytes and viewed all 22 PNGs. This reviewer did not download, execute, extract to disk, or visually inspect binary members. Derived member Git IDs are identities inside captures, not independently retained Git objects.",
+    "scope": "PR1223 attempt1, fixed head86f, Host run44092933810, four independent original jobs. Each contains one prepared and one PASS marker, its original verifier, and its exact artifact upload. No reexecution, changed case/filter/deadline or new action is performed here.",
+    "source": "Each receipt contains 1,757 unique selected source paths before/after; all four arrays equal. Twenty relevant current immutable source bodies were fetched/hashed and joined; 18 fully read, with TeamDetailView limited to exact badge/callsite and desktop-captured-app limited to its complete cleanup function. Original full workflow body is pinned; full lane/common verifier was read.",
+    "compiled": "Fourteen exact compiled main/preload JS hashes after startup are equal across these jobs. This is actual output identity, not proof of reproducible rebuilding.",
+    "deadlines": "The original source-defined 180,000 ms dev startup/readiness budget is unchanged; startup main-target elapsed is 24,556/23,132/23,299/22,389 ms in skills/processes/management/import. This is not a new increase. Original UI read budgets, provider timeouts, original-control guard checks, finite trace limits and per-operation action ordering remain unchanged. No success is inferred from elapsed alone.",
+    "cleanup": "Common shutdown requests the original windowControls.close API, waits the original captured Host and group, and retains original requested-child exit plus final group absence. It is not described as a human Quit-button action. Skills/management/import initially observe a remaining esbuild process, which exits during the original exited-group observation; no fallback TERM was needed in these four recorded paths. All outer apps exit0/null and final group/Host absence is true; actual Host exit codes are separately joined from the bounded app trace.",
+    "traceLimit": "Every app trace summary reports droppedObservations=0, unobservedChildren=0, observationFailures=0 and limited=false. Coverage remains exactly node-async-and-unix-process-table-only, non-atomic. It is not a syscall census or proof about arbitrary processes.",
+    "errors": "App logs retain sync-store warning, build annotation warnings, DBus errors, private projects-directory absence and unavailable unselected backend reads; processes retains OriginalProcessStopUnknown and import/processes late no-handler warnings. Bounded original outcomes do not imply error-free application operation.",
+    "realVendorBoundary": "Profile/descriptor/wrapper/sentinel joins bind private TEST executables and finite peers. Finite emulated --version/auth/metadata commands may appear with vendor names; they are not real Claude/Codex binaries. No real vendor authentication, native model inference, release/default activation or full E2E result is inferred.",
+    "noNewGate": "Outcome advisory only. No source/control/PR/ref/CI or local-runtime action; no new qualification/admission gate is created."
+  },
+  "referenceCorrection": {
+    "lane": "processes",
+    "originalMistypedLog": "9cdb123201f6edd6d21f94f612c4fce82f25bd872",
+    "correctRetainedLog": "9cdb123201f6edd6d21f94f612c4fce82f25bd87",
+    "effect": "One erroneous trailing2 corrected from root's retained store. The full log bytes did not change; no live CI lookup."
+  },
+  "evidence": {
+    "captures": [
+      {
+        "lane": "skills",
+        "artifactId": 14339231388,
+        "jobId": 134072511776,
+        "runId": 44092933810,
+        "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+        "capture": {
+          "bytes": 4845218,
+          "sha256": "8e1509410f42c1eeb0900022a86dccdeb610479a3d60328c6c53364207827618",
+          "gitBlob": "fa1849026b8b06207a8277d060a47e0ce808b508"
+        },
+        "jobLog": {
+          "bytes": 202664,
+          "sha256": "def7af40a945ab7c7ad192f0f047f65759587c2dcb4007feb4c8d15037119398",
+          "gitBlob": "8bcc777b520eade66e09a3e79732ce979db5716e",
+          "blob": "8bcc777b520eade66e09a3e79732ce979db5716e"
+        },
+        "receipt": {
+          "bytes": 715853,
+          "sha256": "418f64a781b53becb8487a0773e85736f8b1918d50cccda1bc52db1efd1136c6",
+          "gitBlob": "437079a59c8091ee8133cc79979c451b2282bde5"
+        },
+        "archive": {
+          "bytes": 1378498,
+          "sha256": "32eb4e0ab35a8e946c4e184fa004a7c79c60a068d8f73f8a2e8eb18d63ff3408",
+          "gitBlob": "8b061b347c1a952b7e2210f8f2c826a19c9b5f13",
+          "crcVerifiedByRootCapture": true
+        },
+        "members": [
+          {
+            "path": "TEST-desktop-backend-Ek36rr/desktop-app.log",
+            "bytes": 26454,
+            "sha256": "69896ec4d075d839de6ac73f49775411c848c740c3fdf8f50cabaf4e1a5a9611",
+            "gitBlob": "c4ac2b86931299a721b813872c1fc42f9ef8d0e2",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/desktop-descriptor.json",
+            "bytes": 2419,
+            "sha256": "7a4bd86a49d2426c397cfd8b20aa79c822cdacabc96b0376561c2453de673a57",
+            "gitBlob": "41c96c38033d7ff8fe3a2ec58965b5034aa9d47b",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/desktop-backend-receipt.json",
+            "bytes": 715853,
+            "sha256": "418f64a781b53becb8487a0773e85736f8b1918d50cccda1bc52db1efd1136c6",
+            "gitBlob": "437079a59c8091ee8133cc79979c451b2282bde5",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/host-profile.json",
+            "bytes": 2674,
+            "sha256": "0a9bad828cc611e243777293884f73b6bab41849c758b906bd3edfa29c02721f",
+            "gitBlob": "d53dae2b2584e11e232c7fe96e3a4aa81d0038fa",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/hoststore/management-commands/a92b23fd021e16cf1b349fcc020165420e61eb79c19ef4b9b9ad31988875fe69.json",
+            "bytes": 869,
+            "sha256": "5e4a726fece9baba41d49c2b5a9a84ce8fd13a5238c98df46604226b63e437c6",
+            "gitBlob": "3677551eb9e23d4a72be70dd60eb177f11061c73",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/hoststore/management-commands/bd94e9ee48da85b3b1c3cd99baacc3a427b7916c3fd8efb2e7935e266f326100.json",
+            "bytes": 869,
+            "sha256": "78e88bd02ab1dac08911d1a7ce4ddf91a997d602c2a9f0444cb31a812a641b7d",
+            "gitBlob": "8099345aca3a0d66884ddf43fa023c27634a96f2",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/hoststore/management-commands/d259a2f21c23fe0861b409824484a152033a0e25ce7dfa9edffc061e09655796.json",
+            "bytes": 820,
+            "sha256": "a442cc719aaae650d85925c7475eb7e3cf72c0302f2488a3a5da8c47bed46fb2",
+            "gitBlob": "be408742a752baadc42a778e290c0d280d5891f7",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/hoststore/management-commands/dbd34d524782385b04b8212ce10b1492ce098ca1407520fbe5f9201eed0b319d.json",
+            "bytes": 869,
+            "sha256": "084acd08e877ee8b961b401d757cedac8b17666fc82a926771df1ad487f81f04",
+            "gitBlob": "50b7c8b2d710cbf598aaffdc5b8a94997b576b35",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/hoststore/management-commands/fa81060ef9134bdbcfa2d0d6d60ccfcebb7ade784c2411e289a91b1c03228fa1.json",
+            "bytes": 1223,
+            "sha256": "31a7375185e8902eedcef96f5bbcdfac7480d783e3bbf398d65319b26ace57ab",
+            "gitBlob": "a1593b3868014bb38e61bc0f7cbd9a5249e2f557",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/sentinel-invocations.ndjson",
+            "bytes": 1203,
+            "sha256": "4e0ff0821ed4463535cef0640d9be7ee6caefca2030b9ece23954b1bea10674d",
+            "gitBlob": "de4b1d75379729211348486c1b042b9656b5d437",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/ui-seed-receipt.json",
+            "bytes": 2037,
+            "sha256": "ec809228fcbdf469cf2bc169fe2865668d247210c034bab730064b772f02ed22",
+            "gitBlob": "475fafb9723484d5b95f07239e196dfd921cb679",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/ui-skills-edit-applied.png",
+            "bytes": 92689,
+            "sha256": "10027b5d14d62024b9d3de3c0ef0a76f88add46a8959e647cdcee215d15f568f",
+            "gitBlob": "26851af5f62d43d08dafaaba8b561444fa5fb06f",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/ui-skills-import-applied.png",
+            "bytes": 116123,
+            "sha256": "9cdecbec1a7b3efea5c16816608eb7a6c0023de7d98840f08afaadd7f742da82",
+            "gitBlob": "dbdabb6f6fbfc850a4e80f53f1f647c1a9530f28",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/ui-skills-import-review.png",
+            "bytes": 98281,
+            "sha256": "87ec415419aa6617fde4a7a1b28c53708b9dcdc36667a4540837878a82aae0d7",
+            "gitBlob": "423de25f7e839315f232c7de71d0d6a7eb7c97cb",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/ui-skills-initial.png",
+            "bytes": 128946,
+            "sha256": "9a3ae9e6fc11acc787bfab424d29a1062f494241b54e77ac7004314475a9b928",
+            "gitBlob": "0006b727ec8d7c0af0ba34ae7562b88fb33cafc6",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/ui-skills-known-rejected.png",
+            "bytes": 101850,
+            "sha256": "02c1b928106a087b7166d8dfbd82f27193cd6744d6fabd0c2ad5989ab5400d3f",
+            "gitBlob": "f3e20d2adaa100de53119c31d818e33466b49a12",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/ui-skills-stale-context.png",
+            "bytes": 86486,
+            "sha256": "2b85cdaaee07c618988c078ea93632da4ba284fec3ccb34a4a6e85f5f3e567fe",
+            "gitBlob": "531e2c4cebc3881ede851569252cfc0966c6b357",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/ui-skills-unknown-held.png",
+            "bytes": 121003,
+            "sha256": "134e84892fd9336306b9394f5dfc0c74728ecaf831ebcd803a10db2517a903fb",
+            "gitBlob": "01b2fb2784803401da54174c500a199a7f6db11e",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/ui-skills-trash-completed.png",
+            "bytes": 98158,
+            "sha256": "e1d53f54e2519eef335208927527b92135c1eb5e37df86caaeef904a3ef18a44",
+            "gitBlob": "5dd4161c2a4dfde92c00c8198ba585c6e4317ec2",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-emulated-ui-inputs-PXcz8e/linux-child-exec/linux-child-exec",
+            "bytes": 790608,
+            "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+            "gitBlob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-emulated-ui-inputs-PXcz8e/linux-child-exec/manifest.json",
+            "bytes": 2408,
+            "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+            "gitBlob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "host-emulated-inputs.json",
+            "bytes": 1803,
+            "sha256": "f7126d4097bf3e573b4dd673e514208c5e5fd029e75c30b16f7bd9e36fc0970f",
+            "gitBlob": "c39afdb7c430a5d7a18cec9d437c710c29cf608c",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "host-emulated-linux-child-exec-selection.json",
+            "bytes": 271,
+            "sha256": "7ad6b43cb602d321e10543c6b5147737d607adf4a8767baa6d42cfcd9478d1fa",
+            "gitBlob": "1f35a8daa9b26acb8b85a38432916a654416d814",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "host-emulated-skills-ui.log",
+            "bytes": 225,
+            "sha256": "73987a6a552c2d4ce9b8cb3247a21663b03f786c51b86bd405a2cbecdfa85427",
+            "gitBlob": "d25f620bfb525b01802deea68a13ea668ab552c4",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "host-emulated-summary.json",
+            "bytes": 1111,
+            "sha256": "5eae5ca9bed00764b857dd709bf8130acdcb57bb0019ec28fe2aa57562f665dc",
+            "gitBlob": "85e1144f0d5eb4c07f99069416e155a603c6a120",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          }
+        ]
+      },
+      {
+        "lane": "processes",
+        "artifactId": 14338162048,
+        "jobId": 134072511597,
+        "runId": 44092933810,
+        "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+        "capture": {
+          "bytes": 3111282,
+          "sha256": "19209eddea70a7bb2079a24f76dab78385d54e71ce7ac92c7ee2763222aaec63",
+          "gitBlob": "388ca56f4fc520890232437179d1910c8d9708df"
+        },
+        "jobLog": {
+          "bytes": 211492,
+          "sha256": "bda94e68f15b974bb6d2e7b1bfc79128c8208657bb8674fda150c38759faa3b2",
+          "gitBlob": "9cdb123201f6edd6d21f94f612c4fce82f25bd87",
+          "blob": "9cdb123201f6edd6d21f94f612c4fce82f25bd87"
+        },
+        "receipt": {
+          "bytes": 721210,
+          "sha256": "69d75ae1ad96972e4ec887b044a3ea1ae5b406bf8f61753c29c5bf6c7958e364",
+          "gitBlob": "fad897b42655d8b1487257abaac915fb53e7ed95"
+        },
+        "archive": {
+          "bytes": 724697,
+          "sha256": "7453a1a6bf02c6a31f665cafb83405cffce574242e817f85228bcaf5db59e9f8",
+          "gitBlob": "e13838ab47720cdfb4f7151368904459e819d633",
+          "crcVerifiedByRootCapture": true
+        },
+        "members": [
+          {
+            "path": "TEST-desktop-backend-TvvaVr/controlled-process-before-restart.json",
+            "bytes": 10983,
+            "sha256": "20942cbf11fefd15a9f9981c0b199ac5dd527ae2dccc89fd9691837d38a6eaef",
+            "gitBlob": "612fa7b33805fde069879447e211688e5d7dc07a",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/desktop-app.log",
+            "bytes": 13263,
+            "sha256": "8be1f158b2f77c1b7865666f7b3f96e3d0a0dceecaeb78928f4e4b6f517bb35e",
+            "gitBlob": "97ec2c51a34e48e040aee3a43e0a1b411b0ee378",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/controlled-process-root-result.json",
+            "bytes": 415,
+            "sha256": "f529863526608640bf1f3c4ad1290ca3fd2272750c1e45f3c04d37b75bd9b996",
+            "gitBlob": "4ee0af289ebac54160901b267ebfc066ae1af49d",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/controlled-process-cold-ui-receipt.json",
+            "bytes": 18263,
+            "sha256": "a9afd6091419d5f1988163c89b9f06776737ac9571b1e47cf9c03f2f17ccb86b",
+            "gitBlob": "6b2be353afbad5db24baf57b79fa0e6c7bbf84b5",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/desktop-backend-receipt.json",
+            "bytes": 721210,
+            "sha256": "69d75ae1ad96972e4ec887b044a3ea1ae5b406bf8f61753c29c5bf6c7958e364",
+            "gitBlob": "fad897b42655d8b1487257abaac915fb53e7ed95",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/desktop-descriptor.json",
+            "bytes": 1895,
+            "sha256": "64f10a0974577063610af9b01f5960c1f524eacd664755ac8f19696d7f179f63",
+            "gitBlob": "d990ae01c0e658337f841f97af810afd725a545c",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/host-profile.json",
+            "bytes": 1288,
+            "sha256": "fbe81b0461f3a7d3d1ffcd5affbbba6c5571925eae47286d650acae03ba047df",
+            "gitBlob": "36bf3aeaaba679117aedf36a262eeff9ae3fe23f",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/process-ui-seed.json",
+            "bytes": 269,
+            "sha256": "aef53ac0fe9f0050aa68e385a1f98032eedfefe2d2b598bb7a384c01ab2b1b62",
+            "gitBlob": "3a58324a25e93416a232b30cbfeed17c9bb79f8e",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/sentinel-invocations.ndjson",
+            "bytes": 96,
+            "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+            "gitBlob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/ui-original-native-process-after-stop.png",
+            "bytes": 73017,
+            "sha256": "b820b373a1a5e1de5d67f864e543790cff766727484acac1a9f916ff501c9c2f",
+            "gitBlob": "8d955ddbf88838376e4d3bd74460c2dc348810d1",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/ui-original-native-process-before-stop.png",
+            "bytes": 73565,
+            "sha256": "a2bdec74e77d719c329610999cdab045ee4437a02fd9f79b667a0cf325378df8",
+            "gitBlob": "afe0ce254e9d96508b619d3fb6dbc2ed19778ff0",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/ui-seed-receipt.json",
+            "bytes": 2070,
+            "sha256": "e1cfd63b25997bc85d1d7da623c82b80a48bcec038b38c1bb53a605fb9927969",
+            "gitBlob": "e8fdbb208689aa1c12f3bb30208e176ccf87d38b",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/ui-original-process-stop-attempted.json",
+            "bytes": 239,
+            "sha256": "52ec1102c8b8dc1a8f042fab54c5530769b741fb0b0cbded01f7a65f7d8e1587",
+            "gitBlob": "92051c8a5879cf4dfe901f58628cdba401eeabd0",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/workspace/process-neighbor-lifecycle.ndjson",
+            "bytes": 372,
+            "sha256": "7e9786515cc667512d9ac12857a2c8a67338fe0b3c30b6e9e664eff6d97664b4",
+            "gitBlob": "5208aa853ace0bdc5dda0e7a6c7b951c36da5730",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/workspace/process-neighbor.json",
+            "bytes": 168,
+            "sha256": "f03fd1a3207e6b972a48391b31bd53d1185c4f1c22cec94a88d22304e6c2aaf6",
+            "gitBlob": "16141bf98edafd1ecfc51d15a70d483c7c901f2a",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/workspace/process-primary-lifecycle.ndjson",
+            "bytes": 369,
+            "sha256": "7c0519c982f2e2d823bc01da7f2b706c678b61ac8c4f091315d81f953a173fd8",
+            "gitBlob": "56eb0fc22a073ac2ec8df9a27531fe35f42e96d4",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/workspace/process-primary.json",
+            "bytes": 167,
+            "sha256": "7ff868d42489c8ec748fe9cdf3b69936f02c095e7403397f82b5a37ca606c582",
+            "gitBlob": "d877288467954435eb07828df5b18d8afb749f33",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-emulated-ui-inputs-6Lib6j/linux-child-exec/manifest.json",
+            "bytes": 2406,
+            "sha256": "4ef7cd76c1a549d6fef41c4dc7561b5433547278d59b0c2907affe2be9a646f1",
+            "gitBlob": "9d295189c6e88a7f57193e79097621d00f21c395",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-emulated-ui-inputs-6Lib6j/linux-child-exec/linux-child-exec",
+            "bytes": 790608,
+            "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+            "gitBlob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-emulated-ui-inputs-6Lib6j/process-custody/manifest.json",
+            "bytes": 1168,
+            "sha256": "0c3624888f36bebde6859c0385b3b211bf27820d55479fad47497d2bcc74f3a2",
+            "gitBlob": "22281065d247adc4b032e8632c78c757765fd520",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-emulated-ui-inputs-6Lib6j/process-custody/registered-process.node",
+            "bytes": 35304,
+            "sha256": "7720b1a21fd5650834abf4fad9dbfc8b0c72636454fe1b87b6d2b515fb3bed01",
+            "gitBlob": "f617887b54fa3c77ed601e5308641ecb1c0105e3",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-emulated-ui-inputs-6Lib6j/process-ui-capture.json",
+            "bytes": 1646,
+            "sha256": "4dc098a42eb185cf6d9d2645775b7d2c84e9ab19c2a75091b7fb383db1d99ade",
+            "gitBlob": "56e5b5f910943cdd6f471bf97c383d029309e1f4",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "host-emulated-inputs.json",
+            "bytes": 2429,
+            "sha256": "5c86fee7425cef3ca0fccd71ee18155ed16a631e3c2640f789fb25bb9692c0fa",
+            "gitBlob": "0ca4fd99eb1fe95b2a4bac31d2debfdb04a3f7c4",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "host-emulated-linux-child-exec-selection.json",
+            "bytes": 271,
+            "sha256": "dd9c584783822dd24c2ec944f41aae9bec7ebf014af0f17d28b7c327d879aa4d",
+            "gitBlob": "b07778b74f718f7449159cc643cc9b91806e62da",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "host-emulated-process-cold-ui.log",
+            "bytes": 225,
+            "sha256": "adf57febc4ab6a72fd930ce1e6060cf190f9cbd1e3daf0347ff117473b7f3158",
+            "gitBlob": "6bf6b5d17a7bdf340e5b431c31ee1d0a201f8266",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "host-emulated-summary.json",
+            "bytes": 664,
+            "sha256": "12cf295e0cac789535c7f370272f0ea1c4d8feebc7f8deacef17cb22b7e7adf2",
+            "gitBlob": "43909ba0c8363ef4f5fad86127692e843c3b1683",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          }
+        ]
+      },
+      {
+        "lane": "management",
+        "artifactId": 14341928377,
+        "jobId": 134072512115,
+        "runId": 44092933810,
+        "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+        "capture": {
+          "bytes": 4107817,
+          "sha256": "e90953550fd317dc022131177b31d52b0412bed666fb74aa93125b5efe74548b",
+          "gitBlob": "6350c60f632606b3ed7007eaca0e4ef6515c5b78"
+        },
+        "jobLog": {
+          "bytes": 202112,
+          "sha256": "06f32d54b6813eed3a10383d5e316dfb08f4a93dc6030a80d2da59b31494b493",
+          "gitBlob": "3d9ee92ec75ff10ffe75df8ef4867162531f2432",
+          "blob": "3d9ee92ec75ff10ffe75df8ef4867162531f2432"
+        },
+        "receipt": {
+          "bytes": 702390,
+          "sha256": "793954ec6d959c2fff14dcd5ab2771c7f7b8b56c9bcc46d555c190a368de7648",
+          "gitBlob": "d1a41616616b52cef8149239273a003833b049f0"
+        },
+        "archive": {
+          "bytes": 1108424,
+          "sha256": "4c355854ecb64d36f79211ed9c042664deae6a05d67e74eb6b454a0ac85adfc0",
+          "gitBlob": "06aac3df38e3c48e90d1c151139ec9fcf2ed3a32",
+          "crcVerifiedByRootCapture": true
+        },
+        "members": [
+          {
+            "path": "TEST-desktop-backend-ff3dGr/TEST-oauth-host-management/native-effects.ndjson",
+            "bytes": 421,
+            "sha256": "a1a752e6ccf52c979d6c38153c0e42b26fed2bf3490fc525ddccaf27a8aec802",
+            "gitBlob": "21ff2480d5a04578879a1d292db937b5641e7411",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-ff3dGr/desktop-app.log",
+            "bytes": 24801,
+            "sha256": "7b7df5311f86c48ae05bf3159550a5fd85fddffc1a28ff2dc92a16f7159a05fa",
+            "gitBlob": "6fee944647a8c8bb339bb45f60f69f78a68fa6e3",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-ff3dGr/desktop-backend-receipt.json",
+            "bytes": 702390,
+            "sha256": "793954ec6d959c2fff14dcd5ab2771c7f7b8b56c9bcc46d555c190a368de7648",
+            "gitBlob": "d1a41616616b52cef8149239273a003833b049f0",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-ff3dGr/desktop-descriptor.json",
+            "bytes": 2609,
+            "sha256": "16f84f965712b9aa46ee898f4c38f636bf6edfc5aa3c25f9a3aaca99d7559638",
+            "gitBlob": "7dc1d3df58dd2681aa2fdc5658055c39d3a209c3",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-ff3dGr/host-profile.json",
+            "bytes": 2773,
+            "sha256": "0837b06b11d9976ca94d0e3896fcf016e167e0f91632dc4867dacaee620b4e39",
+            "gitBlob": "4cd436c91e33bdda4d8cc7dc8c0cdbc40dc01124",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-ff3dGr/hoststore/management-commands/33876128d20b2ea579d0909170b96599a3a2d03682ab6e5a11afe7b46e57e0f8.json",
+            "bytes": 642,
+            "sha256": "650bd5c78b4a6b43f8350612401032135cebfe435ce2749f63d1b5e482832c95",
+            "gitBlob": "6f5bb68d0062cf97e60bb999f9deedc1f9f59609",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-ff3dGr/hoststore/management-commands/b8d50d6cbd7ca898dd4a52af94aa589db2f77cdf9f92e9815a3cefc533be7804.json",
+            "bytes": 645,
+            "sha256": "e46a06b954a12ebb4be4018d7c35a6978cc2405479042a4bbf37e1378e8da932",
+            "gitBlob": "c512e83ca92a0bb55255327cc467dc6df41efb03",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-ff3dGr/hoststore/management-commands/edafb3fc8c3e6dfcb9f11d6c16fdfa0b226051136a897cf780b4d29102bd90c9.json",
+            "bytes": 729,
+            "sha256": "b55780eae92855756a2a70223bbeb5fa76dbce43935e52ab7b20d30217a1ba39",
+            "gitBlob": "dc51dc1b422be3671b4b7882a6323071dcfb03c1",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-ff3dGr/hoststore/management-commands/f71d2a1d81f9cd4029d8ef9ac5024dc1c1f3106e5ca5cd15a4250c0d3de45af0.json",
+            "bytes": 894,
+            "sha256": "f2453fbc8868ae365f36c612e9f09752962786f86408539695094425cff5bd73",
+            "gitBlob": "2825b6132e29b132711c982989939f39856e64c6",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-ff3dGr/sentinel-invocations.ndjson",
+            "bytes": 194,
+            "sha256": "a947db1d1a9368a9741a79d871cf8c5c755f5cbac26a239431371e54cb5aaf3b",
+            "gitBlob": "0efac897d88cb9c13cbe984603f1abd535327351",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-ff3dGr/ui-emulated-management-effects.json",
+            "bytes": 2438,
+            "sha256": "2af890a7cf211585c75f4fa50a71abe17da963976b4aff929308e96fa6c90203",
+            "gitBlob": "fb5898cffb39bdb5f4eebef53be3b07e4d8aae56",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-ff3dGr/ui-emulated-management-final.png",
+            "bytes": 102051,
+            "sha256": "137977dd5282c5788b7d0f03e4882b2295edbc43a2ab46c66a02179e4ae09f93",
+            "gitBlob": "71855c3b6ad52a4772317abb6df9eece69fb21a8",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-ff3dGr/ui-emulated-model-effort-reloaded.png",
+            "bytes": 44729,
+            "sha256": "a9312bc5632c10570a39265856cf448f4f5c3e8e051e926ccb63b90613d58a45",
+            "gitBlob": "718664beca5a71eed0e5388cefd8d3b46271560c",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-ff3dGr/ui-emulated-model-effort-selected.png",
+            "bytes": 63531,
+            "sha256": "7573c8da4b6c32a80fcc2a452e987e41ee8ebb5b107c1a0be7c76bb48fa10d99",
+            "gitBlob": "d060e55874c92c819022e521e79ddcb5eb6d52ad",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-ff3dGr/ui-emulated-oauth-device-waiting.png",
+            "bytes": 145374,
+            "sha256": "3ba8670b99eb7f261227b3966d0329386b968eb3f88c15fb364d69b43e90188c",
+            "gitBlob": "89bd8bdd492a63b404a19cfcd2ace81ed185596f",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-ff3dGr/ui-emulated-oauth-waiting.png",
+            "bytes": 100794,
+            "sha256": "5a74718c9d165ab4410d54367996cf9fceacdcb82361ee092e34fdd531890caf",
+            "gitBlob": "87c33f93edc2da683063fe93004a4994562c87ce",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-ff3dGr/ui-emulated-provider-connected.png",
+            "bytes": 116581,
+            "sha256": "300d3fc0de07ad9b8e510f2a36558acd486a12b3dc3076eaf5e6753660b2095f",
+            "gitBlob": "8701f93826c61dce3cdefef0c6b49ba3111f43b3",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-ff3dGr/ui-seed-receipt.json",
+            "bytes": 2037,
+            "sha256": "9cb7e80677fad2444bd3d9dc46140a2ee04bf02ba66482ac38987e4edbcd06b3",
+            "gitBlob": "dd2f204071007e51b57e8957a6cb166dabf2eb0b",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-emulated-ui-inputs-bM4wzR/linux-child-exec/linux-child-exec",
+            "bytes": 790608,
+            "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+            "gitBlob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-emulated-ui-inputs-bM4wzR/linux-child-exec/manifest.json",
+            "bytes": 2408,
+            "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+            "gitBlob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "host-emulated-emulated-management-ui.log",
+            "bytes": 225,
+            "sha256": "2b32990ac7bf6d56d092605b7c579081a5c0805bcee87d9d59d2723ec9a43c93",
+            "gitBlob": "23c738bf6083eb4f57ba5ed7f7ef7de283e2501a",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "host-emulated-inputs.json",
+            "bytes": 1803,
+            "sha256": "327c67e2f03cc8d86ac346ce53e1bce284faa0baa20ce087bfc8840865179fbc",
+            "gitBlob": "da004e2898fc97d30575da01670728f55018f347",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "host-emulated-linux-child-exec-selection.json",
+            "bytes": 271,
+            "sha256": "1deb74d945602a44aa096594addb6041d59531c203bbf73b4c58f4f1ec00030d",
+            "gitBlob": "bed4f908415877c6ade0c130e391e375c12fad65",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "host-emulated-summary.json",
+            "bytes": 976,
+            "sha256": "2477299e2f0daf13bac4ebe76f7b1e6246bdd5c5ef8bab123ce21e307f95ce39",
+            "gitBlob": "2028b4f021580d433df2e5e4ede7c2b2aa036833",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          }
+        ]
+      },
+      {
+        "lane": "import",
+        "artifactId": 14340694525,
+        "jobId": 134072512068,
+        "runId": 44092933810,
+        "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+        "capture": {
+          "bytes": 4307379,
+          "sha256": "698627ceb906e63dd115113069997845f04442811d061dc1545f30efc5d98131",
+          "gitBlob": "e7a2f970acd18a3a2c147531ccdaac76f2ddf34d"
+        },
+        "jobLog": {
+          "bytes": 201888,
+          "sha256": "771b13cbe757179da1c0fc8bee9fba6e60a52ab341639196e559fed8e2697225",
+          "gitBlob": "44c8ecccae543f70a20eb38cf013aa91378030a7",
+          "blob": "44c8ecccae543f70a20eb38cf013aa91378030a7"
+        },
+        "receipt": {
+          "bytes": 777574,
+          "sha256": "9ee163abc02bb965a1709dadf40b788f0030c52cb49ffc22b069f5c268c0306f",
+          "gitBlob": "32457639dd7bd6fdfe60a83670dac7a6918bfcc5"
+        },
+        "archive": {
+          "bytes": 1160003,
+          "sha256": "ce2f8cf46abfcc8d1c1fd85eb198b0fb123fbb171525bc18a47ef011aa08807e",
+          "gitBlob": "4779d24dfa82a308340f8bd04bb36905419662b0",
+          "crcVerifiedByRootCapture": true
+        },
+        "members": [
+          {
+            "path": "TEST-desktop-backend-LRlSRk/TEST-peer-claude-scope/effects.ndjson",
+            "bytes": 6512,
+            "sha256": "45d2c76479183f269dbdb5f321d08e3cc68931e6bf08c0288bd810df602e4401",
+            "gitBlob": "91471c9cfb27130c2d1a4d5c93cffc39f7c0f0af",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/claude/tasks/test-stopped-legacy/TEST-legacy-task-b.json",
+            "bytes": 275,
+            "sha256": "8f98381b570d70ebf4d7106265457d68fef0eba8c556e74695a914313ad85db2",
+            "gitBlob": "b027ff500e62cbbf77799e4f1cab9e517f24b456",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/claude/tasks/test-stopped-legacy/TEST-legacy-task-a.json",
+            "bytes": 2946,
+            "sha256": "a0b079fc6cc6d25e82f333f403a91f91c09b066eb23cc366f38f2c3eeb1220cd",
+            "gitBlob": "f3222f2a97aa4062b650bbb06111e59bcae866d0",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/claude/teams/test-stopped-legacy/members.meta.json",
+            "bytes": 401,
+            "sha256": "4d152072317c20f63bb57a0f3e21e59e1d4b568bf7cd06320348aa955c66ffed",
+            "gitBlob": "ac64086cebc4a408a864be466200a0024a737e9b",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/claude/teams/test-stopped-legacy/team.meta.json",
+            "bytes": 503,
+            "sha256": "57aa40cb0943f911d62088e5b3860fd3a9aa0a2e95ceef26d1ec3fb66c32858a",
+            "gitBlob": "ab1b17c73127814c06c1da53eb1fd20e002b54b8",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/desktop-app.log",
+            "bytes": 26300,
+            "sha256": "a4f6af5e7930088e31fbd25db128a9111d1bef16c71bca0e757c019445a32ce1",
+            "gitBlob": "d1dce02873348fc55aa07819db422c0eaf8785e9",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/desktop-backend-receipt.json",
+            "bytes": 777574,
+            "sha256": "9ee163abc02bb965a1709dadf40b788f0030c52cb49ffc22b069f5c268c0306f",
+            "gitBlob": "32457639dd7bd6fdfe60a83670dac7a6918bfcc5",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/desktop-descriptor.json",
+            "bytes": 2688,
+            "sha256": "84bd504cd03c2e85345bc5a723182773f344c1b9016461cd626e64729ea9b03b",
+            "gitBlob": "e75e657cd7d004277b18c71575fd7c94d604330b",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/home/Downloads/source-original.txt",
+            "bytes": 44,
+            "sha256": "9cead239aa70dc3908cf22064703f55ef6c62ba70d43702b18bbdca8801750f3",
+            "gitBlob": "3e6dc92bc40f9fe0218fc03625d321c189c9d2ce",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/host-profile.json",
+            "bytes": 7838,
+            "sha256": "4d58fba6f0b063c4482a5adb081bb3926d2c198e39e19b2b83d8a666b631acae",
+            "gitBlob": "ba681e78720d444e68c61611eac4659226833e03",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/hoststore/management-commands/704a4caf493f3271a2ca1754a20513fa2f1c03c493fb139b6d6d896300e282c1.json",
+            "bytes": 969,
+            "sha256": "5c680740ba316698c278b32c040785aa102818165f2aa9e2a7abb7f2f7cec3b8",
+            "gitBlob": "c4ec4ed8419ce2ca6157d5fc9ca121cd2cd25857",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/hoststore/management-commands/8be403bde9373e656a7c25c33bc503abe3a9686352f1831c0437c85d61d85307.json",
+            "bytes": 969,
+            "sha256": "8b24a8ff4102acc0f68b605ecf61b6adbdeb0cbdd637600ba3ac2557eb137b98",
+            "gitBlob": "9fe5a2fe59a3c7c4c119af3adeff1ceaca5336bc",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/hoststore/tasks/test-stopped-legacy/TEST-legacy-task-a.json",
+            "bytes": 2762,
+            "sha256": "b5d8636462b666e0c9c21d086a3c16bf6ff060b9e5e871f1e4cd03e6988598ee",
+            "gitBlob": "5a8fb9d9aad0de296fd738daf30b96b7437cab04",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/hoststore/tasks/test-stopped-legacy/TEST-legacy-task-b.json",
+            "bytes": 226,
+            "sha256": "1a05b312ef4b7b431d89fce136affb655a4af84615e51172d5adbd548513eaa2",
+            "gitBlob": "d83ece1c05f1e53d8cf16c2155760254abc75566",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/sentinel-invocations.ndjson",
+            "bytes": 96,
+            "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+            "gitBlob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/stopped-import-ui-seed.json",
+            "bytes": 4034,
+            "sha256": "f845ce98af5f35a1c528870d5f7cb081e1cddd5581e2a24a86bf2fea60211372",
+            "gitBlob": "c31b45ef8a777340477fc5a1dea12ccfc2a32190",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/ui-import-source-attachment-lightbox.png",
+            "bytes": 102622,
+            "sha256": "44485f60e4abe3141ade3f7fb82d6c5ee3497536ff9cd4977650bbd1a7d64b08",
+            "gitBlob": "f00feebfcfc35411d5bdf21854f30b2c96551552",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/ui-import-source-attachment-kanban.png",
+            "bytes": 127676,
+            "sha256": "35cd7e5f71dc279552e23e8ad9ae72c05b35de1a672a7810b9a7051a9297525e",
+            "gitBlob": "6d33d307fa49b8a2dcf77a788260e6e9224365d9",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/ui-import-source-attachment-task-detail.png",
+            "bytes": 113643,
+            "sha256": "4730fb012eca4042e7205c4ec1f2e6d33f2cd885369c399a91b49573aa25899f",
+            "gitBlob": "4eb44141a6ffd1c977f4c3f676cb89072171640f",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/ui-original-stopped-import-dialog.png",
+            "bytes": 123862,
+            "sha256": "6fe3d48de751e5051d0e0ca08f9cd02d3205a35f71e3641a362ee3e7c2857138",
+            "gitBlob": "eb13f674f9ad8baea970b1c4db59402a1152ec40",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/ui-original-stopped-import-reloaded.png",
+            "bytes": 124044,
+            "sha256": "94b08ea5824eb665a99f6c895ce9d430e49e9a98057dddc9c5b632bd08aa1b17",
+            "gitBlob": "9d6f673ce024e3f132dfafe053a3a6e0054ee25e",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/ui-seed-receipt.json",
+            "bytes": 2335,
+            "sha256": "02cf00cfcff7036fa2e5045d0e142fc12742f1b422d665d01844c81f83cf1bac",
+            "gitBlob": "bd1f4a7724c787c107abf4aa892b0521fa7638ce",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/userData/data/attachments/test-stopped-legacy/TEST-legacy-source-message/TEST-source-file--source-original.txt",
+            "bytes": 44,
+            "sha256": "9cead239aa70dc3908cf22064703f55ef6c62ba70d43702b18bbdca8801750f3",
+            "gitBlob": "3e6dc92bc40f9fe0218fc03625d321c189c9d2ce",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/userData/data/attachments/test-stopped-legacy/TEST-legacy-source-message/TEST-source-image--source-original.png",
+            "bytes": 71,
+            "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+            "gitBlob": "8d79cc731a6bbfd43247473d7ef6d2c0e9519994",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/userData/data/task-attachments/test-stopped-legacy/TEST-legacy-task-a/TEST-task-blob--saved-note.txt",
+            "bytes": 36,
+            "sha256": "186805c9a2e1c1386e0ec589c688e01919e55929f876664d0ac755f17b5841cf",
+            "gitBlob": "440117c49430f33a38e49db16da321673de724a2",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-emulated-ui-inputs-UGjBo3/linux-child-exec/linux-child-exec",
+            "bytes": 790608,
+            "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+            "gitBlob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+            "encoding": "base64",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "TEST-emulated-ui-inputs-UGjBo3/linux-child-exec/manifest.json",
+            "bytes": 2408,
+            "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+            "gitBlob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "host-emulated-emulated-import-ui.log",
+            "bytes": 225,
+            "sha256": "af3909b9b2630e81ffea72421e6428ef94532520fba9c6917a21192ba88d24e6",
+            "gitBlob": "c9ab939ea1b34a97bab167bf8a62e7769142e072",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "host-emulated-inputs.json",
+            "bytes": 1803,
+            "sha256": "fba153f0e1e3bccbeb9f3caaf190fbfc539a69882dca23491898bada4619b6be",
+            "gitBlob": "95717d11758045b0e22b625cecc523e90cb94514",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "host-emulated-linux-child-exec-selection.json",
+            "bytes": 271,
+            "sha256": "bc10dfef9f77e2412c1f0c6f91bfcea843410724da6bc1db1208b5930a174f5e",
+            "gitBlob": "2552b2613ddd03b80bdeee6266820a94f9432ce3",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          },
+          {
+            "path": "host-emulated-summary.json",
+            "bytes": 892,
+            "sha256": "fbade215e3e86269b9a0d7eb07edf0e60aaeae5bc0226291284d4e31fb3281c9",
+            "gitBlob": "c86ceaed03de639bcebd59a2e27a284a2db5f593",
+            "encoding": "utf-8",
+            "crcVerifiedByCapture": true
+          }
+        ]
+      }
+    ],
+    "workflow": {
+      "repository": "777genius/agent-teams-ai",
+      "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 96872,
+      "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+      "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+      "readScope": "Whole accepted body; complete current common/four-lane verifier read."
+    },
+    "sources": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "bytes": 54778,
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+        "gitBlob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "readScope": "Complete body read"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-skills-ui-smoke.ts",
+        "bytes": 18641,
+        "sha256": "e0b6d31fd3674c0fa4677bdfc6a2668ca6a54eae5871a4cf4aeb82e4480a0e8f",
+        "gitBlob": "2e9991d85d9df0eeec1b35e16e63ff37f3904f5d",
+        "readScope": "Complete body read"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-skills-fixture.ts",
+        "bytes": 11904,
+        "sha256": "2c37ce7c1912f56fb7d502f990a5ae2d2b10d0dd21989230e72b4e899e201a1e",
+        "gitBlob": "2e66f0a1ce72e910dc76f77e868be61d67a60ea0",
+        "readScope": "Complete body read"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.ts",
+        "bytes": 22604,
+        "sha256": "ebb52ab95cdbf0ddc86ce44b534a3c7255c7e8454e5cadb2cbb83278daa53a0f",
+        "gitBlob": "12f4a7b122843acea95e8c37f876917331842a4a",
+        "readScope": "Complete body read"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-controlled-process-fixture.ts",
+        "bytes": 22578,
+        "sha256": "6125e6a5f52ca5db258b9022525b29b5ddb57c0fa7f4611b96176ebb6e2dc3de",
+        "gitBlob": "b504e2d8f31020ba3de19f808f0ac026da0da132",
+        "readScope": "Complete body read"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-emulated-management-ui.ts",
+        "bytes": 22331,
+        "sha256": "3416d9cfb5e9320bda70f94e5ebab3f1aa7a16bcc6cc44320c96256392a898a9",
+        "gitBlob": "974279d277e8f9dbac84cf0c41e5978ffad2914d",
+        "readScope": "Complete body read"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-emulated-management-fixture.ts",
+        "bytes": 9606,
+        "sha256": "18744741dbd4c6cd2b5ecbc0374198f9f0920b59fbe14e5b55c4537cff64017d",
+        "gitBlob": "444632e731eeaf8d6cd652dd9e42309e10952d8e",
+        "readScope": "Complete body read"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-emulated-import-ui.ts",
+        "bytes": 5233,
+        "sha256": "7c52626bc69292c68bb9ee2a6cacbe97deb78195136a879a9a1777abd1841feb",
+        "gitBlob": "9d1c622aceac77992031f8d485e599ae178ed330",
+        "readScope": "Complete body read"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-emulated-import-fixture.ts",
+        "bytes": 1134,
+        "sha256": "93badefbcd027087cb987591b995768a39b3b2bbcc5ba78143074d37eb3b349d",
+        "gitBlob": "b3760353a51fab7ad6acd04d805640a613165726",
+        "readScope": "Complete body read"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-stopped-import-ui-smoke.ts",
+        "bytes": 29836,
+        "sha256": "5bc2bf5eaf158ad479e407c80e19623def9e9de4cbaec85635ba85b641b31309",
+        "gitBlob": "d417307665cb533dbcc2bfc4321d31b097d8472b",
+        "readScope": "Complete body read"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/renderer/components/team/ProcessesSection.tsx",
+        "bytes": 9397,
+        "sha256": "aabad65903c8ef3abb1351309cacea2ef3db4ac4ecb043c0255244e75ad87717",
+        "gitBlob": "fdfa9b971390730492af0359f5b59c233cc5ee7b",
+        "readScope": "Complete body read"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-stopped-import-fixture.ts",
+        "bytes": 20472,
+        "sha256": "0f4ddb414df8631074a00c982ba876ce54c5f17eca4d55fa0846bb1c7b025275",
+        "gitBlob": "b69f6132475fd33ab6d9c6d6b7d7ff4acf97e881",
+        "readScope": "Complete body read"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-stopped-import-attachments-ui.ts",
+        "bytes": 14341,
+        "sha256": "7f7c7cfd2f9d666b17d21b88d4fb20e8dfab0182470f9367036a9bb7228703e3",
+        "gitBlob": "d9796236155df9b5b87c66de6997323635673cea",
+        "readScope": "Complete body read"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-emulated-claude-settings-fixture.ts",
+        "bytes": 5663,
+        "sha256": "0370ef4c293ffc173d5952cc04671459022dfff2782b5c915209c6d93195c7b6",
+        "gitBlob": "5f18c861f297cbf62b9acaceba615079d0b77d0d",
+        "readScope": "Complete body read"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "packages/legacy-agent-host/tests/fixtures/management-opencode-process.ts",
+        "bytes": 10836,
+        "sha256": "ab59330054c01a929bc3c7e0e3afe00081068efe19b58cd0865d8efd2786bff2",
+        "gitBlob": "496a36328075db9540116bf2a37bef1c42b20d20",
+        "readScope": "Complete body read"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/fixtures/claudeSavedImportPeer.mjs",
+        "bytes": 8779,
+        "sha256": "cbc968693fd081c7434e6eacd508e50f7775ed669d9ff9cfd493b20465990bb7",
+        "gitBlob": "2afe7d59194aeb8e0fbe85dd7a3f3dc0f61480c0",
+        "readScope": "Complete body read"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/fixtures/claudeSettingsAuthPeer.ts",
+        "bytes": 2154,
+        "sha256": "e21bfb7f4b548ad37d6f07d2cc8e9b61407822b11cb8c0e5051a68e34b1b382d",
+        "gitBlob": "329a0d3b3c35f5c6736bd214c3ed9717248c1d7d",
+        "readScope": "Complete body read"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/features/agent-backend/renderer/createHostProcessControls.ts",
+        "bytes": 4525,
+        "sha256": "9a2dd63aef4514283159749f75aa7509534846b8b8a02afe633508bdc7424be5",
+        "gitBlob": "5afcf5def9570b4863eedad3998611d87b4e2028",
+        "readScope": "Complete body read"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/renderer/components/team/TeamDetailView.tsx",
+        "bytes": 137728,
+        "sha256": "ea327a3b17e896013d88693deea9f0844ae7d52733dd9be23ffdfabe38c62f82",
+        "gitBlob": "e1fe249d7e5f760f80f87e93918b0ff253b3f450",
+        "readScope": "Whole identity and scoped badge/ProcessesSection callsite read; not a fresh full-file audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "bytes": 49613,
+        "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+        "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+        "readScope": "Whole identity and complete cleanupCapturedDesktopApp read; other historical source scope reused"
+      }
+    ],
+    "rootVisual": {
+      "bytes": 11519,
+      "sha256": "15ab12082a94a947afad4203b0cbd47a2420dd4b2de2404727bb67010a9976d7",
+      "gitBlob": "665ff1423afe4f8dce139d5252a5773e8b760612",
+      "attribution": "Root's full 22-image observation record fetched, rehashed, read in full; this reviewer did not personally inspect images."
+    },
+    "logFullLineCoverage": [
+      {
+        "lane": "skills",
+        "rawLines": 1981,
+        "knownExactLineText": 1654,
+        "newLineCount": 327,
+        "newCharacters": 38892
+      },
+      {
+        "lane": "processes",
+        "rawLines": 2057,
+        "knownExactLineText": 1708,
+        "newLineCount": 349,
+        "newCharacters": 41480
+      },
+      {
+        "lane": "management",
+        "rawLines": 1971,
+        "knownExactLineText": 1644,
+        "newLineCount": 327,
+        "newCharacters": 39358
+      },
+      {
+        "lane": "import",
+        "rawLines": 1969,
+        "knownExactLineText": 1653,
+        "newLineCount": 316,
+        "newCharacters": 38094
+      }
+    ],
+    "duplicateArtifactJoins": [
+      {
+        "lane": "skills",
+        "joins": [
+          {
+            "path": "TEST-desktop-backend-Ek36rr/hoststore/management-commands/a92b23fd021e16cf1b349fcc020165420e61eb79c19ef4b9b9ad31988875fe69.json",
+            "by": "receipt.skillsUiProof.finalJournal.0"
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/hoststore/management-commands/bd94e9ee48da85b3b1c3cd99baacc3a427b7916c3fd8efb2e7935e266f326100.json",
+            "by": "receipt.skillsUiProof.finalJournal.1"
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/hoststore/management-commands/d259a2f21c23fe0861b409824484a152033a0e25ce7dfa9edffc061e09655796.json",
+            "by": "receipt.skillsUiProof.finalJournal.2"
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/hoststore/management-commands/dbd34d524782385b04b8212ce10b1492ce098ca1407520fbe5f9201eed0b319d.json",
+            "by": "receipt.skillsUiProof.finalJournal.3"
+          },
+          {
+            "path": "TEST-desktop-backend-Ek36rr/hoststore/management-commands/fa81060ef9134bdbcfa2d0d6d60ccfcebb7ade784c2411e289a91b1c03228fa1.json",
+            "by": "receipt.skillsUiProof.finalJournal.4"
+          },
+          {
+            "path": "host-emulated-linux-child-exec-selection.json",
+            "by": "receipt.linuxChildExecInput"
+          }
+        ]
+      },
+      {
+        "lane": "processes",
+        "joins": [
+          {
+            "path": "TEST-desktop-backend-TvvaVr/controlled-process-root-result.json",
+            "by": "receipt.controlledProcessColdUi.cleanup.result"
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/controlled-process-cold-ui-receipt.json",
+            "by": "receipt.controlledProcessColdUi"
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/sentinel-invocations.ndjson",
+            "by": "receipt.finalSentinelCensus.invocations.0"
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/workspace/process-neighbor.json",
+            "by": "receipt.controlledProcessColdUi.services.neighbor"
+          },
+          {
+            "path": "TEST-desktop-backend-TvvaVr/workspace/process-primary.json",
+            "by": "receipt.controlledProcessColdUi.services.primary"
+          },
+          {
+            "path": "host-emulated-linux-child-exec-selection.json",
+            "by": "receipt.linuxChildExecInput"
+          }
+        ]
+      },
+      {
+        "lane": "management",
+        "joins": [
+          {
+            "path": "TEST-emulated-ui-inputs-bM4wzR/linux-child-exec/manifest.json",
+            "by": "identical earlier artifact body"
+          },
+          {
+            "path": "host-emulated-linux-child-exec-selection.json",
+            "by": "receipt.linuxChildExecInput"
+          }
+        ]
+      },
+      {
+        "lane": "import",
+        "joins": [
+          {
+            "path": "TEST-desktop-backend-LRlSRk/hoststore/management-commands/704a4caf493f3271a2ca1754a20513fa2f1c03c493fb139b6d6d896300e282c1.json",
+            "by": "receipt.stoppedImportUiProof.modelPreflightReceipts.0"
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/hoststore/management-commands/8be403bde9373e656a7c25c33bc503abe3a9686352f1831c0437c85d61d85307.json",
+            "by": "receipt.stoppedImportUiProof.modelPreflightReceipts.1"
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/hoststore/tasks/test-stopped-legacy/TEST-legacy-task-a.json",
+            "by": "receipt.stoppedImportUiProof.importedTask"
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/sentinel-invocations.ndjson",
+            "by": "identical earlier artifact body"
+          },
+          {
+            "path": "TEST-desktop-backend-LRlSRk/userData/data/attachments/test-stopped-legacy/TEST-legacy-source-message/TEST-source-file--source-original.txt",
+            "by": "identical earlier artifact body"
+          },
+          {
+            "path": "TEST-emulated-ui-inputs-UGjBo3/linux-child-exec/manifest.json",
+            "by": "identical earlier artifact body"
+          },
+          {
+            "path": "host-emulated-linux-child-exec-selection.json",
+            "by": "receipt.linuxChildExecInput"
+          }
+        ]
+      }
+    ]
+  },
+  "checkCount": 64,
+  "checks": [
+    {
+      "id": "skills.capture_identity",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "bytes": 4845218,
+        "sha256": "8e1509410f42c1eeb0900022a86dccdeb610479a3d60328c6c53364207827618",
+        "gitBlob": "fa1849026b8b06207a8277d060a47e0ce808b508"
+      }
+    },
+    {
+      "id": "skills.cohort",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "head": "86f52244b5375834a4040cbc63803d68cc708087",
+        "run": 44092933810,
+        "job": 134072511776,
+        "artifact": 14339231388,
+        "attempt": "1 from retained complete job context; no live reads"
+      }
+    },
+    {
+      "id": "skills.utf8_identity",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "textMembers": 16,
+        "totalMembers": 25,
+        "textBytes": 761108,
+        "mismatches": [],
+        "binaryAndCrc": "Retained root capture attribution; no binary member fetched as UTF8"
+      }
+    },
+    {
+      "id": "skills.archive_digest",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "bytes": 1378498,
+        "sha256": "32eb4e0ab35a8e946c4e184fa004a7c79c60a068d8f73f8a2e8eb18d63ff3408",
+        "crc": "root retained complete archive/member verification"
+      }
+    },
+    {
+      "id": "skills.source_snapshot",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "rows": 1757,
+        "arrayIdentity": {
+          "bytes": 266427,
+          "sha256": "6cfc213509be24121cc7ee81bac0a626b1866556a3b36bbda976fb52f4abbc6c",
+          "gitBlob": "fbedc8c355f6359f8f4a52a8c8853c7771e1f446"
+        },
+        "scope": "Captured selected-source census; not independent physical filesystem audit"
+      }
+    },
+    {
+      "id": "skills.common_inputs",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "mode": "skills-ui",
+        "platform": "linux",
+        "architecture": "x64"
+      }
+    },
+    {
+      "id": "skills.descriptor_profile_and_binary",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "descriptor": "41c96c38033d7ff8fe3a2ec58965b5034aa9d47b",
+        "profile": "d53dae2b2584e11e232c7fe96e3a4aa81d0038fa",
+        "manifest": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+        "binary": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807"
+      }
+    },
+    {
+      "id": "skills.summary_flow",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "summary": "85e1144f0d5eb4c07f99069416e155a603c6a120",
+        "mode": "skills-ui"
+      }
+    },
+    {
+      "id": "skills.one_original_flow",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "flow": "d25f620bfb525b01802deea68a13ea668ab552c4",
+        "rows": [
+          {
+            "phase": "prepared",
+            "receipt": "/home/runner/work/_temp/TEST-desktop-backend-Ek36rr/desktop-backend-receipt.json"
+          },
+          {
+            "status": "PASS",
+            "receipt": "/home/runner/work/_temp/TEST-desktop-backend-Ek36rr/desktop-backend-receipt.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "skills.screenshots",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "expectedUiImages": 8,
+        "allPngMembers": 8,
+        "visual": "Root-only attribution 665ff142"
+      }
+    },
+    {
+      "id": "skills.ordinary_app_cleanup",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "app": 4664,
+        "host": 5024,
+        "originalRequestedQuitExit": {
+          "initialExitCode": 0,
+          "initialSignalCode": null,
+          "exitCode": 0,
+          "signalCode": null
+        },
+        "beforeHarnessCleanup": [
+          {
+            "pid": 4738,
+            "ppid": 1,
+            "pgid": 4664
+          }
+        ],
+        "originalExitedGroup": {
+          "settled": true,
+          "reason": "original-natural-exit-and-fresh-absence",
+          "initialMembers": [
+            {
+              "pid": 4738,
+              "ppid": 1,
+              "pgid": 4664
+            }
+          ],
+          "remaining": [],
+          "capturedHostAbsent": true,
+          "capturedDescendantsAbsent": true,
+          "appExitCode": 0,
+          "appSignalCode": null
+        },
+        "cleanup": {
+          "processGroup": 4664,
+          "remaining": [],
+          "appExitCode": 0,
+          "appSignalCode": null,
+          "capturedHostObserved": true,
+          "capturedHostAbsent": true,
+          "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+        }
+      }
+    },
+    {
+      "id": "skills.host_trace_join",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "appLog": "c4ac2b86931299a721b813872c1fc42f9ef8d0e2",
+        "host": 5024,
+        "hostExits": [
+          {
+            "mainPid": 4791,
+            "event": "async-exit",
+            "pid": 5024,
+            "status": 1,
+            "signal": null,
+            "observedAtMs": 1794926690736
+          }
+        ],
+        "summary": [
+          {
+            "mainPid": 4791,
+            "event": "trace-summary",
+            "rows": 21,
+            "droppedObservations": 0,
+            "observedChildren": 9,
+            "unobservedChildren": 0,
+            "observationFailures": 0,
+            "limited": false,
+            "coverage": "node-async-and-unix-process-table-only"
+          }
+        ],
+        "limit": "Async Node/Unix table observation is non-atomic; skills Host exit1 retained; no global OS trace claim"
+      }
+    },
+    {
+      "id": "processes.capture_identity",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "bytes": 3111282,
+        "sha256": "19209eddea70a7bb2079a24f76dab78385d54e71ce7ac92c7ee2763222aaec63",
+        "gitBlob": "388ca56f4fc520890232437179d1910c8d9708df"
+      }
+    },
+    {
+      "id": "processes.cohort",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "head": "86f52244b5375834a4040cbc63803d68cc708087",
+        "run": 44092933810,
+        "job": 134072511597,
+        "artifact": 14338162048,
+        "attempt": "1 from retained complete job context; no live reads"
+      }
+    },
+    {
+      "id": "processes.utf8_identity",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "textMembers": 22,
+        "totalMembers": 26,
+        "textBytes": 779876,
+        "mismatches": [],
+        "binaryAndCrc": "Retained root capture attribution; no binary member fetched as UTF8"
+      }
+    },
+    {
+      "id": "processes.archive_digest",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "bytes": 724697,
+        "sha256": "7453a1a6bf02c6a31f665cafb83405cffce574242e817f85228bcaf5db59e9f8",
+        "crc": "root retained complete archive/member verification"
+      }
+    },
+    {
+      "id": "processes.source_snapshot",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "rows": 1757,
+        "arrayIdentity": {
+          "bytes": 266427,
+          "sha256": "6cfc213509be24121cc7ee81bac0a626b1866556a3b36bbda976fb52f4abbc6c",
+          "gitBlob": "fbedc8c355f6359f8f4a52a8c8853c7771e1f446"
+        },
+        "scope": "Captured selected-source census; not independent physical filesystem audit"
+      }
+    },
+    {
+      "id": "processes.common_inputs",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "mode": "process-cold-ui",
+        "platform": "linux",
+        "architecture": "x64"
+      }
+    },
+    {
+      "id": "processes.descriptor_profile_and_binary",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "descriptor": "d990ae01c0e658337f841f97af810afd725a545c",
+        "profile": "36bf3aeaaba679117aedf36a262eeff9ae3fe23f",
+        "manifest": "9d295189c6e88a7f57193e79097621d00f21c395",
+        "binary": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807"
+      }
+    },
+    {
+      "id": "processes.summary_flow",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "summary": "43909ba0c8363ef4f5fad86127692e843c3b1683",
+        "mode": "process-cold-ui"
+      }
+    },
+    {
+      "id": "processes.one_original_flow",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "flow": "6bf6b5d17a7bdf340e5b431c31ee1d0a201f8266",
+        "rows": [
+          {
+            "phase": "prepared",
+            "receipt": "/home/runner/work/_temp/TEST-desktop-backend-TvvaVr/desktop-backend-receipt.json"
+          },
+          {
+            "status": "PASS",
+            "receipt": "/home/runner/work/_temp/TEST-desktop-backend-TvvaVr/desktop-backend-receipt.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "processes.screenshots",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "expectedUiImages": 2,
+        "allPngMembers": 2,
+        "visual": "Root-only attribution 665ff142"
+      }
+    },
+    {
+      "id": "processes.ordinary_app_cleanup",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "app": 4700,
+        "host": 5039,
+        "originalRequestedQuitExit": {
+          "initialExitCode": null,
+          "initialSignalCode": null,
+          "exitCode": 0,
+          "signalCode": null
+        },
+        "beforeHarnessCleanup": [],
+        "originalExitedGroup": null,
+        "cleanup": {
+          "processGroup": 4700,
+          "remaining": [],
+          "appExitCode": 0,
+          "appSignalCode": null,
+          "capturedHostObserved": true,
+          "capturedHostAbsent": true,
+          "hostExitCode": "controlled cold Host app shutdown; no provider Runtime allocation; first standalone Host separately observed exit0/null"
+        }
+      }
+    },
+    {
+      "id": "processes.host_trace_join",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "appLog": "97ec2c51a34e48e040aee3a43e0a1b411b0ee378",
+        "host": 5039,
+        "hostExits": [
+          {
+            "mainPid": 4821,
+            "event": "async-exit",
+            "pid": 5039,
+            "status": 0,
+            "signal": null,
+            "observedAtMs": 1794926521519
+          }
+        ],
+        "summary": [
+          {
+            "mainPid": 4821,
+            "event": "trace-summary",
+            "rows": 18,
+            "droppedObservations": 0,
+            "observedChildren": 8,
+            "unobservedChildren": 0,
+            "observationFailures": 0,
+            "limited": false,
+            "coverage": "node-async-and-unix-process-table-only"
+          }
+        ],
+        "limit": "Async Node/Unix table observation is non-atomic; skills Host exit1 retained; no global OS trace claim"
+      }
+    },
+    {
+      "id": "management.capture_identity",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "bytes": 4107817,
+        "sha256": "e90953550fd317dc022131177b31d52b0412bed666fb74aa93125b5efe74548b",
+        "gitBlob": "6350c60f632606b3ed7007eaca0e4ef6515c5b78"
+      }
+    },
+    {
+      "id": "management.cohort",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "head": "86f52244b5375834a4040cbc63803d68cc708087",
+        "run": 44092933810,
+        "job": 134072512115,
+        "artifact": 14341928377,
+        "attempt": "1 from retained complete job context; no live reads"
+      }
+    },
+    {
+      "id": "management.utf8_identity",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "textMembers": 17,
+        "totalMembers": 24,
+        "textBytes": 746256,
+        "mismatches": [],
+        "binaryAndCrc": "Retained root capture attribution; no binary member fetched as UTF8"
+      }
+    },
+    {
+      "id": "management.archive_digest",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "bytes": 1108424,
+        "sha256": "4c355854ecb64d36f79211ed9c042664deae6a05d67e74eb6b454a0ac85adfc0",
+        "crc": "root retained complete archive/member verification"
+      }
+    },
+    {
+      "id": "management.source_snapshot",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "rows": 1757,
+        "arrayIdentity": {
+          "bytes": 266427,
+          "sha256": "6cfc213509be24121cc7ee81bac0a626b1866556a3b36bbda976fb52f4abbc6c",
+          "gitBlob": "fbedc8c355f6359f8f4a52a8c8853c7771e1f446"
+        },
+        "scope": "Captured selected-source census; not independent physical filesystem audit"
+      }
+    },
+    {
+      "id": "management.common_inputs",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "mode": "emulated-management-ui",
+        "platform": "linux",
+        "architecture": "x64"
+      }
+    },
+    {
+      "id": "management.descriptor_profile_and_binary",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "descriptor": "7dc1d3df58dd2681aa2fdc5658055c39d3a209c3",
+        "profile": "4cd436c91e33bdda4d8cc7dc8c0cdbc40dc01124",
+        "manifest": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+        "binary": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807"
+      }
+    },
+    {
+      "id": "management.summary_flow",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "summary": "2028b4f021580d433df2e5e4ede7c2b2aa036833",
+        "mode": "emulated-management-ui"
+      }
+    },
+    {
+      "id": "management.one_original_flow",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "flow": "23c738bf6083eb4f57ba5ed7f7ef7de283e2501a",
+        "rows": [
+          {
+            "phase": "prepared",
+            "receipt": "/home/runner/work/_temp/TEST-desktop-backend-ff3dGr/desktop-backend-receipt.json"
+          },
+          {
+            "status": "PASS",
+            "receipt": "/home/runner/work/_temp/TEST-desktop-backend-ff3dGr/desktop-backend-receipt.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "management.screenshots",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "expectedUiImages": 6,
+        "allPngMembers": 6,
+        "visual": "Root-only attribution 665ff142"
+      }
+    },
+    {
+      "id": "management.ordinary_app_cleanup",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "app": 4367,
+        "host": 4688,
+        "originalRequestedQuitExit": {
+          "initialExitCode": null,
+          "initialSignalCode": null,
+          "exitCode": 0,
+          "signalCode": null
+        },
+        "beforeHarnessCleanup": [
+          {
+            "pid": 4441,
+            "ppid": 1,
+            "pgid": 4367
+          }
+        ],
+        "originalExitedGroup": {
+          "settled": true,
+          "reason": "original-natural-exit-and-fresh-absence",
+          "initialMembers": [
+            {
+              "pid": 4441,
+              "ppid": 1,
+              "pgid": 4367
+            }
+          ],
+          "remaining": [],
+          "capturedHostAbsent": true,
+          "capturedDescendantsAbsent": true,
+          "appExitCode": 0,
+          "appSignalCode": null
+        },
+        "cleanup": {
+          "processGroup": 4367,
+          "remaining": [],
+          "appExitCode": 0,
+          "appSignalCode": null,
+          "capturedHostObserved": true,
+          "capturedHostAbsent": true,
+          "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+        }
+      }
+    },
+    {
+      "id": "management.host_trace_join",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "appLog": "6fee944647a8c8bb339bb45f60f69f78a68fa6e3",
+        "host": 4688,
+        "hostExits": [
+          {
+            "mainPid": 4491,
+            "event": "async-exit",
+            "pid": 4688,
+            "status": 0,
+            "signal": null,
+            "observedAtMs": 1794929285144
+          }
+        ],
+        "summary": [
+          {
+            "mainPid": 4491,
+            "event": "trace-summary",
+            "rows": 29,
+            "droppedObservations": 0,
+            "observedChildren": 13,
+            "unobservedChildren": 0,
+            "observationFailures": 0,
+            "limited": false,
+            "coverage": "node-async-and-unix-process-table-only"
+          }
+        ],
+        "limit": "Async Node/Unix table observation is non-atomic; skills Host exit1 retained; no global OS trace claim"
+      }
+    },
+    {
+      "id": "import.capture_identity",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "bytes": 4307379,
+        "sha256": "698627ceb906e63dd115113069997845f04442811d061dc1545f30efc5d98131",
+        "gitBlob": "e7a2f970acd18a3a2c147531ccdaac76f2ddf34d"
+      }
+    },
+    {
+      "id": "import.cohort",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "head": "86f52244b5375834a4040cbc63803d68cc708087",
+        "run": 44092933810,
+        "job": 134072512068,
+        "artifact": 14340694525,
+        "attempt": "1 from retained complete job context; no live reads"
+      }
+    },
+    {
+      "id": "import.utf8_identity",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "textMembers": 24,
+        "totalMembers": 31,
+        "textBytes": 842151,
+        "mismatches": [],
+        "binaryAndCrc": "Retained root capture attribution; no binary member fetched as UTF8"
+      }
+    },
+    {
+      "id": "import.archive_digest",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "bytes": 1160003,
+        "sha256": "ce2f8cf46abfcc8d1c1fd85eb198b0fb123fbb171525bc18a47ef011aa08807e",
+        "crc": "root retained complete archive/member verification"
+      }
+    },
+    {
+      "id": "import.source_snapshot",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "rows": 1757,
+        "arrayIdentity": {
+          "bytes": 266427,
+          "sha256": "6cfc213509be24121cc7ee81bac0a626b1866556a3b36bbda976fb52f4abbc6c",
+          "gitBlob": "fbedc8c355f6359f8f4a52a8c8853c7771e1f446"
+        },
+        "scope": "Captured selected-source census; not independent physical filesystem audit"
+      }
+    },
+    {
+      "id": "import.common_inputs",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "mode": "emulated-import-ui",
+        "platform": "linux",
+        "architecture": "x64"
+      }
+    },
+    {
+      "id": "import.descriptor_profile_and_binary",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "descriptor": "e75e657cd7d004277b18c71575fd7c94d604330b",
+        "profile": "ba681e78720d444e68c61611eac4659226833e03",
+        "manifest": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+        "binary": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807"
+      }
+    },
+    {
+      "id": "import.summary_flow",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "summary": "c86ceaed03de639bcebd59a2e27a284a2db5f593",
+        "mode": "emulated-import-ui"
+      }
+    },
+    {
+      "id": "import.one_original_flow",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "flow": "c9ab939ea1b34a97bab167bf8a62e7769142e072",
+        "rows": [
+          {
+            "phase": "prepared",
+            "receipt": "/home/runner/work/_temp/TEST-desktop-backend-LRlSRk/desktop-backend-receipt.json"
+          },
+          {
+            "status": "PASS",
+            "receipt": "/home/runner/work/_temp/TEST-desktop-backend-LRlSRk/desktop-backend-receipt.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "import.screenshots",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "expectedUiImages": 5,
+        "allPngMembers": 6,
+        "visual": "Root-only attribution 665ff142"
+      }
+    },
+    {
+      "id": "import.ordinary_app_cleanup",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "app": 4356,
+        "host": 4668,
+        "originalRequestedQuitExit": {
+          "initialExitCode": 0,
+          "initialSignalCode": null,
+          "exitCode": 0,
+          "signalCode": null
+        },
+        "beforeHarnessCleanup": [
+          {
+            "pid": 4430,
+            "ppid": 1,
+            "pgid": 4356
+          }
+        ],
+        "originalExitedGroup": {
+          "settled": true,
+          "reason": "original-natural-exit-and-fresh-absence",
+          "initialMembers": [
+            {
+              "pid": 4430,
+              "ppid": 1,
+              "pgid": 4356
+            }
+          ],
+          "remaining": [],
+          "capturedHostAbsent": true,
+          "capturedDescendantsAbsent": true,
+          "appExitCode": 0,
+          "appSignalCode": null
+        },
+        "cleanup": {
+          "processGroup": 4356,
+          "remaining": [],
+          "appExitCode": 0,
+          "appSignalCode": null,
+          "capturedHostObserved": true,
+          "capturedHostAbsent": true,
+          "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+        }
+      }
+    },
+    {
+      "id": "import.host_trace_join",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "appLog": "d1dce02873348fc55aa07819db422c0eaf8785e9",
+        "host": 4668,
+        "hostExits": [
+          {
+            "mainPid": 4480,
+            "event": "async-exit",
+            "pid": 4668,
+            "status": 0,
+            "signal": null,
+            "observedAtMs": 1794929043576
+          }
+        ],
+        "summary": [
+          {
+            "mainPid": 4480,
+            "event": "trace-summary",
+            "rows": 34,
+            "droppedObservations": 0,
+            "observedChildren": 16,
+            "unobservedChildren": 0,
+            "observationFailures": 0,
+            "limited": false,
+            "coverage": "node-async-and-unix-process-table-only"
+          }
+        ],
+        "limit": "Async Node/Unix table observation is non-atomic; skills Host exit1 retained; no global OS trace claim"
+      }
+    },
+    {
+      "id": "common.compiled_bundle_equal",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "rows": 14,
+        "scope": "Actual post-startup bytes; not reproducibility"
+      }
+    },
+    {
+      "id": "common.source_census_equal",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "rows": 1757
+      }
+    },
+    {
+      "id": "skills.original_five_ledger_join",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "commands": [
+          {
+            "commandId": "skills-14d2463c9d7af6b931852eae66c8a3f9e85569c4c7d2bb9ba79423f51e3a6819",
+            "phase": "completed",
+            "resourceHeld": false
+          },
+          {
+            "commandId": "skills-4f0ce096b24823f2ea1dfc1f58fe7d4dd57859720d4abed7400b362190a6b64c",
+            "phase": "completed",
+            "resourceHeld": false
+          },
+          {
+            "commandId": "TEST-original-unknown-skill-trash",
+            "phase": "held",
+            "resourceHeld": true
+          },
+          {
+            "commandId": "skills-a8f9df25fae0de51c41e644c9a2cb4128bb39e7599ed34dd905322eaecc3efc7",
+            "phase": "completed",
+            "resourceHeld": false
+          },
+          {
+            "commandId": "skills-8ca575667c157e980e8f4a749d39ce07efd1b5348cc5f59efee99012589349c3",
+            "phase": "completed",
+            "resourceHeld": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "management.exact_original_four_commands",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "commands": [
+          {
+            "commandId": "e8aa8654-3bbb-4e33-96de-dd53dddb5576",
+            "kind": "credential.set",
+            "phase": "completed",
+            "resourceHeld": false
+          },
+          {
+            "commandId": "56209ac3-1d57-47da-b39c-2718b82a8db1",
+            "kind": "credential.forget",
+            "phase": "completed",
+            "resourceHeld": false
+          },
+          {
+            "commandId": "c39abb46-ace2-4129-a9a5-41f38fb2e6e8",
+            "kind": "oauth",
+            "phase": "cancelled",
+            "resourceHeld": false
+          },
+          {
+            "commandId": "02b12648-562f-40d6-8f24-04d387ad54b0",
+            "kind": "oauth",
+            "phase": "cancelled",
+            "resourceHeld": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "management.effect_snapshot_is_prefix",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "finalEvents": 8,
+        "uiSnapshotEvents": 7,
+        "lastEvent": {
+          "event": "launch",
+          "pid": 6816
+        },
+        "qualification": "Third child included in original final cleanup; UI snapshot is earlier"
+      }
+    },
+    {
+      "id": "management.all_finite_births_cleanup",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "births": [
+          5494,
+          6645,
+          6816
+        ],
+        "cleanup": {
+          "originalPeerPids": [
+            6816,
+            5494,
+            6645
+          ],
+          "observedDirectChildPids": [
+            6816
+          ],
+          "launchPids": [
+            5494,
+            6645,
+            6816
+          ],
+          "remaining": [],
+          "absent": true,
+          "logSha256": "a1a752e6ccf52c979d6c38153c0e42b26fed2bf3490fc525ddccaf27a8aec802"
+        }
+      }
+    },
+    {
+      "id": "management.saved_original_selection",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "selection": {
+          "providerId": "opencode",
+          "model": "local/TEST-model",
+          "effort": "high"
+        },
+        "commandId": "7cbff780-5225-493d-9155-7eebc93a4964",
+        "phase": "published"
+      }
+    },
+    {
+      "id": "processes.cold_custody_join",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "HostA": {
+          "pid": 4688,
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true,
+          "diagnosticBytes": 0,
+          "frames": [
+            {
+              "id": 1,
+              "method": "host.handshake",
+              "ok": true
+            },
+            {
+              "id": 2,
+              "method": "team.process.list",
+              "ok": true
+            }
+          ],
+          "writerLockReleased": true
+        },
+        "HostB": {
+          "pid": 5039,
+          "distinctFromHostA": true
+        },
+        "scope": "Controlled native kernel/canonical owner registration, real Host restart, existing UI original-ref Stop; no SDK session"
+      }
+    },
+    {
+      "id": "processes.original_stop_identity",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "commandId": "38dfc1e0-6e60-416e-8cf1-f144a63b6e04",
+        "processRef": "p1:5e5db477-ea6b-490f-b0ca-b61f6575f689:a7e2d20c90f6dde8394e158cfc9c4934dcaa56a12229fe082c03af526ff96884",
+        "signalEvidence": "One admitted UI stop command, one accepted original native request, one observed TEST service SIGTERM; no syscall tracing claim"
+      }
+    },
+    {
+      "id": "processes.lifecycle_exact",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "primarySignals": 0,
+        "neighborSignals": 1,
+        "rootExitCode": 0,
+        "rootSignalCode": null
+      }
+    },
+    {
+      "id": "import.exact_two_probes",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "commands": [
+          "team-preflight-9690da356f7ae40c8f5f0df0a5277089314394e1f70ec6c00bcbee90b7347834",
+          "team-preflight-ddcecb25f128cb62644ee3dd3e5551947cdcf6def7f70f76624be15bfbabd928"
+        ],
+        "probeInputs": [
+          {
+            "pid": 5673,
+            "inputId": "92d42934-5057-455c-91b2-5cd14d7d5993",
+            "model": "claude-sonnet-4-6",
+            "effort": "low"
+          },
+          {
+            "pid": 5728,
+            "inputId": "6b944be0-709d-4af3-bb92-c7fadd02b6ed",
+            "model": "claude-sonnet-4-6",
+            "effort": "low"
+          }
+        ]
+      }
+    },
+    {
+      "id": "import.all_ten_original_births_cleanup",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "births": [
+          5376,
+          5432,
+          5569,
+          5661,
+          5673,
+          5728,
+          5972,
+          6017,
+          6063,
+          6157
+        ],
+        "remaining": [],
+        "absent": true
+      }
+    },
+    {
+      "id": "import.original_source_unchanged",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "sourceRows": 7,
+        "beforeAfterEqual": true
+      }
+    },
+    {
+      "id": "import.saved_only_boundary",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "sourceKind": "legacy-format-test-archive",
+        "headerKind": "saved-draft",
+        "commandId": "stopped-import-58c2cf89d36137d574f6fa8a98b50d4f028fc840879c4a559843a933d0ce32d0",
+        "phase": "published",
+        "noLaunchSubmit": true,
+        "runtimeSessions": [],
+        "methodCorrection": "The preliminary data checker expected abbreviated 'legacy-format'; actual source and receipt use the more specific literal 'legacy-format-test-archive'. The original fixture/source meaning is the claimed TEST archive, not a historical native archive; only the checker expectation was corrected."
+      }
+    },
+    {
+      "id": "import.attachments_embedded_and_download",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "downloadBytes": 44,
+        "imageBytes": 71,
+        "imageSha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+        "blobBytes": 36,
+        "importedTask": "5a8fb9d9aad0de296fd738daf30b96b7437cab04"
+      }
+    },
+    {
+      "id": "source.current_leaf_joins",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "evidence": {
+        "bodyCount": 20,
+        "paths": [
+          "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+          "scripts/legacy-agent-host/desktop-skills-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-skills-fixture.ts",
+          "scripts/legacy-agent-host/desktop-native-process-ui.ts",
+          "scripts/legacy-agent-host/desktop-controlled-process-fixture.ts",
+          "scripts/legacy-agent-host/desktop-emulated-management-ui.ts",
+          "scripts/legacy-agent-host/desktop-emulated-management-fixture.ts",
+          "scripts/legacy-agent-host/desktop-emulated-import-ui.ts",
+          "scripts/legacy-agent-host/desktop-emulated-import-fixture.ts",
+          "scripts/legacy-agent-host/desktop-stopped-import-ui-smoke.ts",
+          "src/renderer/components/team/ProcessesSection.tsx",
+          "scripts/legacy-agent-host/desktop-stopped-import-fixture.ts",
+          "scripts/legacy-agent-host/desktop-stopped-import-attachments-ui.ts",
+          "scripts/legacy-agent-host/desktop-emulated-claude-settings-fixture.ts",
+          "packages/legacy-agent-host/tests/fixtures/management-opencode-process.ts",
+          "tools/owned-process-broker/fixtures/claudeSavedImportPeer.mjs",
+          "tools/owned-process-broker/fixtures/claudeSettingsAuthPeer.ts",
+          "src/features/agent-backend/renderer/createHostProcessControls.ts",
+          "src/renderer/components/team/TeamDetailView.tsx",
+          "scripts/legacy-agent-host/desktop-captured-app.ts"
+        ]
+      }
+    }
+  ],
+  "limitations": [
+    "No live CI lookup or independent runtime reproduction was performed.",
+    "No new source, workflow, control, ref or PR change is selected or approved by this outcome report.",
+    "No global native/process absence from screenshots, badges or finite asynchronous traces.",
+    "No full frontend, native, GUI matrix, Stage1, release, vendor account, paid inference or real provider qualification.",
+    "Skills original flow PASS is compatible with recorded Host exit1 because its original verifier requires captured absence, not a separate Host exit0. The unknown cause remains open.",
+    "Management V1 finite-peer success does not close the separate real OpenCode V2 pending Models-tab failure.",
+    "Import saved-draft TEST archive does not prove native cold-session recovery or historical migration."
+  ]
+}

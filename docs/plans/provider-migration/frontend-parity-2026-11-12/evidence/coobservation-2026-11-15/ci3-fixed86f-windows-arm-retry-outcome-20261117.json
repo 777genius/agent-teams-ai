@@ -1,0 +1,947 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_WINDOWS_ARM_PACKAGED_RETRY_DEADLINE_SEMANTIC_ADVISORY",
+  "reviewer": "/root/producer_r2_semantic",
+  "repository": "777genius/agent-teams-ai",
+  "createdAt": "2026-11-17 16:16:17 UTC",
+  "decision": "CLASSIFIED_FAILURE_WITH_MEASURED_OBSERVER_COST_NO_PROVED_PRESERVING_REPAIR",
+  "scope": "Bounded original CI3 packaged Windows ARM64 same-Main Retry failure. Evidence/static review only; separate from the accepted two-file R1.",
+  "subject": {
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "runId": 44092933873,
+    "jobId": 134098865184,
+    "artifactId": 14342059294,
+    "platform": "win32-arm64",
+    "capture": {
+      "bytes": 3057622,
+      "sha256": "932a6032f862a9d7215e17dd0968e98f0057625d46324fc719428118111ddc24",
+      "gitBlob": "379d2a0027779f8fb493aefab1f3434f63c532ce"
+    },
+    "jobLog": {
+      "bytes": 337430,
+      "sha256": "ec69e355a85d1cf07772594e0e9dfb6523613dfa911578dc04a930d942d9dba3",
+      "gitBlob": "28656354afc91b2e2b6751b855390462c4baf3bc"
+    }
+  },
+  "outcomeFirst": {
+    "statement": "Original UI readiness was observed at 9.516 seconds of the whole 10-second Retry phase. The immediately following fresh originalBinding ownership census returned at 10.325 seconds and the unchanged post-read cutoff rejected before the public binding read. The phase and complete GUI journey failed.",
+    "recordedStatus": "INCOMPLETE",
+    "cleanup": false,
+    "counts": {
+      "mainStarts": 1,
+      "initialRuntimeOpen": 1,
+      "businessInput": 1,
+      "refreshClicks": 1,
+      "retryClicks": 1,
+      "uiStops": 0,
+      "quit": 1
+    },
+    "error": "AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: one-explicit-same-Main-Retry\n    at remaining (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:123:10)\n    at validateCensus (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:179:3)\n    at assertOwnedRenderer (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:207:20)\n    at originalBinding (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:238:3)\n    at file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:543:9",
+    "noProvedLatencyRepair": "The available source and timings identify substantial observation cost, but do not prove a safe redundant operation, cache/reuse rule, native drop-in replacement, or implementation change that preserves every original fresh authority check and ordering.",
+    "unreached": [
+      "post-Retry getConnections invocation",
+      "fixture.afterRetry original provider and two selected process witnesses",
+      "fresh public Processes read",
+      "paired same-evaluation full original process-row comparisons",
+      "sameMainAfterRetry census",
+      "after-retry screenshot",
+      "original primary UI Kill",
+      "original neighbor UI Kill",
+      "complete native cleanup qualification"
+    ]
+  },
+  "evidenceReading": {
+    "allTextMemberChecks": [
+      {
+        "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+        "bytes": 1154527,
+        "sha256": "3c2b58ee9b02a2c3881d6f0f329f9a999a2e54ceb91724bc799e838be797dc8c",
+        "gitBlob": "9717a5904dd686671fa980cd6de7de43588f7ce9",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "gitMatch": true
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-native.json",
+        "bytes": 5389,
+        "sha256": "18329a17892b4d731de45f745e4d23dce29271fdee8830a9fad1ad2b393cfa83",
+        "gitBlob": "c779d5983d189d70eb59395fefa096b883e6e867",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "gitMatch": true
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-inputs.json",
+        "bytes": 782,
+        "sha256": "c428523143674ca3b3dd5e2e509d95966eb22774f50172d2417cde14b2cb0c5c",
+        "gitBlob": "c686df28dda21d1415be12eb2d293e77d4b21e1a",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "gitMatch": true
+      },
+      {
+        "path": "_temp/opencode-v2-packaged.json",
+        "bytes": 1188,
+        "sha256": "2bee337cacb14d99730096ad5e05975659ebe020e38499c8769c34600bfb4747",
+        "gitBlob": "4693aae93c0994c9ef41dcda79886ca3c3e629b9",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "gitMatch": true
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.app.log",
+        "bytes": 5210,
+        "sha256": "fe380c70217f506fee9cba3967da5bdc3ad3c09dcce909beabcb5dd3b638ec25",
+        "gitBlob": "1232cb3679c064e09238b60cadd6ca490179b99f",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "gitMatch": true
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.controller.log",
+        "bytes": 43567,
+        "sha256": "e0a60d7ecfe8287d6e5b7851d52c0273165091c7ac9fc9a9226a89096dfe59af",
+        "gitBlob": "f8132eb9b28601d136770d3b3be43c86ba2748d0",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "gitMatch": true
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.json",
+        "bytes": 756291,
+        "sha256": "23750a673687588f395eae563a3b20545a4e99649147f2356f99a7726a26e06f",
+        "gitBlob": "0a54082962aa87455b97748b0100ea9805fd15f1",
+        "bytesMatch": true,
+        "shaMatch": true,
+        "gitMatch": true
+      }
+    ],
+    "derivedIdentityNote": "Member and Windows CRLF identities are calculated from complete embedded or source strings, not separately retained Git objects; they were not fetched as standalone blobs.",
+    "archive": {
+      "bytes": 625925,
+      "sha256": "cc4c964fd2f2a709f38b76e3a4523fa712ad28e881c8b9ae8fabede4d9bf13c5",
+      "memberCount": 8,
+      "totalUncompressedBytes": 2046518,
+      "utf8Members": 7,
+      "totalUtf8Bytes": 1966954,
+      "pngCount": 1,
+      "pngBytes": 79564,
+      "crc": "Root capture records all member CRCs verified; not independently decoded here."
+    },
+    "logCoverage": {
+      "totalLines": 2834,
+      "exactPriorNormalizedMatches": 1747,
+      "unmatchedLines": 1087,
+      "uniqueUnmatchedLines": 639,
+      "normalization": "ISO timestamp prefix and ANSI color codes only; complete raw log retained and hashed",
+      "method": "Full raw body hashed. Complete timestamp/BOM/ANSI-normalized line comparison to the previously fully read x64 body, then all 639 unique unmatched ARM values read, preserving occurrence mapping. No case or error is selected away."
+    },
+    "controllerCoverage": {
+      "totalLines": 690,
+      "uniqueExactLineValues": 22,
+      "xmlWrapperErrorRecords": 85,
+      "final": {
+        "gateController": "drained",
+        "rootExitCode": 1,
+        "activeProcesses": 0
+      }
+    },
+    "candidateManifest": {
+      "schema": 1,
+      "kind": "TEST_PACKAGED_OPENCODE_V2_INPUTS",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "platform": "win32-arm64",
+      "node": {
+        "schemaVersion": 1,
+        "platform": "win32-arm64",
+        "version": "24.21.0",
+        "archiveSha256": "8779b1bde1d39f8d420e3b57aa657b39891af434d3de44a919044cec06785921",
+        "binarySha256": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+        "executable": "node.exe",
+        "source": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-win-arm64.zip"
+      },
+      "nodeExecutable": "node/v24.21.0/win32-arm64/node.exe",
+      "hostPackage": "host/packages/0000",
+      "hostEntry": "host/packages/0000/dist/cli.js",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "hostSourceDigest": "8af548348ab2a8f732c5471d28ca00696462d6ea8a57b718364e0d59c6a98e26",
+      "harnessSha256": "ca3b52430ef84e2460f278654588bef0a9ac1fa95f790bfab9896e79b8573b43",
+      "packages": 120,
+      "files": 8131,
+      "packagePathsUnique": 120,
+      "fileKeysUnique": 8131,
+      "allHashesValid": true,
+      "allExecutableBoolean": true,
+      "allPathsRelative": true,
+      "hostEntryMatches": [
+        {
+          "packagePath": "packages/0000",
+          "path": "dist/cli.js",
+          "sha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+          "executable": false
+        }
+      ],
+      "artifacts": [
+        {
+          "name": "@agent-teams/provider-implementations",
+          "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+        },
+        {
+          "name": "@agent-teams/provider-session-contracts",
+          "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+        }
+      ],
+      "bun": {
+        "path": "native/opencode-v2/bun.exe",
+        "sha256": "b662cf80f932866036fc2ef33d0d4e2efcf9e4ba282d2deb3391effdcfe0b98f",
+        "version": "1.4.3"
+      },
+      "engine": {
+        "directory": "native/opencode-v2/engine",
+        "manifestSha256": "64fb47f2378124e0fbe5564e9ffb0221272ffb4937d326756551edfa27cf76f5",
+        "version": "2.1.4"
+      }
+    },
+    "sourceArrayCheck": {
+      "sourceRows": 1798,
+      "sourceLiteralEqual": true,
+      "sourceUnique": 1798,
+      "sourceValid": true,
+      "censusCount": 57,
+      "allCensusReturned": true,
+      "allCensusOrdered": true,
+      "finalCensusCount": 151,
+      "finalDrained": true,
+      "ownedRemaining": [],
+      "listenerPids": [],
+      "remainingLineage": [],
+      "hostExitSelected": [
+        {
+          "pid": 10820,
+          "parent": 8632,
+          "birth": "2026-11-17T15:34:49.0260460Z",
+          "executable": "C:\\a\\_temp\\TEST-Windows-UI-build-44092933873-ARM64\\Release\\owned-process-gate-controller.exe"
+        },
+        {
+          "pid": 4756,
+          "parent": 10820,
+          "birth": "2026-11-17T15:34:49.0441940Z",
+          "executable": "C:\\hostedtoolcache\\windows\\node\\24.21.0\\arm64\\node.exe"
+        },
+        {
+          "pid": 5436,
+          "parent": 4756,
+          "birth": "2026-11-17T15:35:19.2505320Z",
+          "executable": "C:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-arm64-unpacked\\AgentTeamsAI.exe"
+        },
+        {
+          "pid": 9092,
+          "parent": 712,
+          "birth": "2026-11-17T15:35:34.7684250Z",
+          "executable": "C:\\a\\_temp\\TEST-Windows-UI-build-44092933873-ARM64\\Release\\owned-process-fixture.exe"
+        },
+        {
+          "pid": 10000,
+          "parent": 712,
+          "birth": "2026-11-17T15:35:36.5377370Z",
+          "executable": "C:\\a\\_temp\\TEST-Windows-UI-build-44092933873-ARM64\\Release\\owned-process-fixture.exe"
+        }
+      ],
+      "finalSelected": [
+        {
+          "pid": 10820,
+          "parent": 8632,
+          "birth": "2026-11-17T15:34:49.0260460Z",
+          "executable": "C:\\a\\_temp\\TEST-Windows-UI-build-44092933873-ARM64\\Release\\owned-process-gate-controller.exe"
+        },
+        {
+          "pid": 4756,
+          "parent": 10820,
+          "birth": "2026-11-17T15:34:49.0441940Z",
+          "executable": "C:\\hostedtoolcache\\windows\\node\\24.21.0\\arm64\\node.exe"
+        }
+      ]
+    }
+  },
+  "sourceBoundary": {
+    "main": [
+      {
+        "name": "gate",
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "git": {
+          "bytes": 37970,
+          "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+          "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3"
+        },
+        "physicalCRLF": {
+          "bytes": 38623,
+          "sha256": "f326a8b9122d0bcde8f6c46f3a49d8d5634b6d2e17f030eec0ea69e509a002a1",
+          "gitBlob": "2a56b1d0342a7ded2d94e7d12526cd445250e413"
+        },
+        "receipt": {
+          "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+          "sha256": "f326a8b9122d0bcde8f6c46f3a49d8d5634b6d2e17f030eec0ea69e509a002a1"
+        },
+        "joined": true,
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087"
+      },
+      {
+        "name": "fixture",
+        "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "git": {
+          "bytes": 31223,
+          "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+          "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+        },
+        "physicalCRLF": {
+          "bytes": 31708,
+          "sha256": "9be5af55b58539523c03194b62ebb68f5b1b5363c8c3994deee833d91fed7499",
+          "gitBlob": "2ea379d6d92f92310cb586132ec9aeed7a2814ae"
+        },
+        "receipt": {
+          "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+          "sha256": "9be5af55b58539523c03194b62ebb68f5b1b5363c8c3994deee833d91fed7499"
+        },
+        "joined": true,
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087"
+      },
+      {
+        "name": "platform",
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "git": {
+          "bytes": 12389,
+          "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+          "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+        },
+        "physicalCRLF": {
+          "bytes": 12701,
+          "sha256": "ef387da8674cc61385bfd9802ff0b80ab290dfe0688fa8c6f705e395a1e41fab",
+          "gitBlob": "a4e0d8d1195f5ec5c677fe1edf61ad5f7d9067ce"
+        },
+        "receipt": {
+          "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "sha256": "ef387da8674cc61385bfd9802ff0b80ab290dfe0688fa8c6f705e395a1e41fab"
+        },
+        "joined": true,
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087"
+      },
+      {
+        "name": "controls",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "git": {
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        "physicalCRLF": {
+          "bytes": 29512,
+          "sha256": "608e19645e332dec5adb2dc3e2faad51b0a4ea967722afb0bdcc3e9ce8ef99b0",
+          "gitBlob": "23bd6fce4539ae99b68f77ce6ccf532a29d8275f"
+        },
+        "receipt": {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "sha256": "608e19645e332dec5adb2dc3e2faad51b0a4ea967722afb0bdcc3e9ce8ef99b0"
+        },
+        "joined": true,
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087"
+      }
+    ],
+    "nativeFeasibilityOnly": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/nativeFixture.cpp",
+        "bytes": 15038,
+        "sha256": "42749224f0194fd70f4b3df50f5fc64fbb2e11c58801c629463387cb4a4a1e25",
+        "gitBlob": "a42f7513e9a5d2732c5c9f65fa1cc6cf1c970062",
+        "read": "Complete immutable body read; target not evaluated or executed."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/nativeGateContext.ts",
+        "bytes": 7278,
+        "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+        "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+        "read": "Complete immutable body read; target not evaluated or executed."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/gateController.cpp",
+        "bytes": 5935,
+        "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+        "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+        "read": "Complete immutable body read; target not evaluated or executed."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/CMakeLists.txt",
+        "bytes": 2160,
+        "sha256": "c58f71f7f341fd6f77fce721db77a4ae843a719e744a227757268b8eb6778e2e",
+        "gitBlob": "cf158110832d24afd7f97b6e9ef2dbf7472b0410",
+        "read": "Complete immutable body read; target not evaluated or executed."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/broker.cpp",
+        "bytes": 25929,
+        "sha256": "c9b35397e4beb534a9a4298b6a6b7c8c8745571381b69b3301ab3b60fccd6dc3",
+        "gitBlob": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e",
+        "read": "Complete immutable body read; target not evaluated or executed."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/protocol.h",
+        "bytes": 11700,
+        "sha256": "f33e5f48373336dee460a5829c38f51ae0238f92477b7c26c528ab1e91598289",
+        "gitBlob": "8301cd73299220be2c5c9d95d87745f2937dc715",
+        "read": "Complete immutable body read; target not evaluated or executed."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/ownedJob.h",
+        "bytes": 554,
+        "sha256": "f1865ac01ff84885f10ae05a2f3a34615ac8a144e8f9a6447f381074f9a8450d",
+        "gitBlob": "b940d7c72932c7f7466d8aa72e2190be85abff59",
+        "read": "Complete immutable body read; target not evaluated or executed."
+      }
+    ],
+    "fullBodyReading": "Gate and fixture reuse their prior complete immutable reads; their whole identities freshly join this ARM receipt. Platform, controls and the seven bounded native entry/build/protocol bodies were completely read. None was executed.",
+    "lineEvidence": {
+      "tools/owned-process-broker/nativeWindowsAppGate.mjs": "121-180 original phase cutoff and post-census refusal; 182-211 measured fresh snapshot and listener ownership; 225-246 renderer/current binding; 467-558 one Retry and all later original proofs; 594-649 failed cleanup/status.",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts": "waitRead and clickExpression complete source: fresh ownership before each read, after hover/stability and before the one original input; generic post-await read cutoff retained.",
+      "scripts/e2e/opencode-diagnostics/platform.mjs": "8-25 PowerShell query constants/execution; 135-149 one fresh ordered process/listener envelope and strict parsing.",
+      "tools/owned-process-broker/nativeWindowsAppFixture.ts": "388-403 actual Host exit/afterRetry witnesses and runtime identity; 405-464 original Stops; 466-478 complete cleanup requires both Stops before original HANDLE/lock proofs.",
+      "tools/owned-process-broker/nativeFixture.cpp": "97-131 original one-HANDLE query/wait mode; four Q maximum, W original wait; no global census/listener output.",
+      "tools/owned-process-broker/nativeGateContext.ts": "85-147 wrapper admission, finite sequential original HANDLE queries and bounded output.",
+      "tools/owned-process-broker/gateController.cpp": "21-23 Job active count; 62-108 root exit, nonemergency drain, bounded emergency branch and final status.",
+      "tools/owned-process-broker/protocol.h": "Closed Op set and wire scope; no complete system census/listener opcode.",
+      "tools/owned-process-broker/broker.cpp": "serviceOperation and main dispatch key ServiceQuery to a captured scope; original private Job accounting is not whole-system observation."
+    }
+  },
+  "timing": {
+    "phase": {
+      "phase": "one-explicit-same-Main-Retry",
+      "atMs": 43650.8619,
+      "budgetMs": 10000
+    },
+    "originalBudgetMs": 10000,
+    "stages": {
+      "clickReturnedMs": 5235,
+      "writerObservedMs": 7322,
+      "hostCheckedMs": 7915,
+      "uiReadyMs": 9516
+    },
+    "sampleCount": 2,
+    "sampleCap": false,
+    "lastAtMs": 9515,
+    "atomicWithFailure": false,
+    "last": {
+      "surfacePresent": true,
+      "refresh": "enabled",
+      "firstRefreshBusy": false,
+      "retryPresent": false,
+      "alertPresent": false,
+      "ready": true
+    },
+    "rows": [
+      {
+        "index": 1,
+        "operation": "process-listener-snapshot",
+        "startOffsetMs": 3.603099999992992,
+        "endOffsetMs": 714.715400000001,
+        "durationMs": 711.112300000008,
+        "returned": true
+      },
+      {
+        "index": 2,
+        "operation": "process-listener-snapshot",
+        "startOffsetMs": 720.2176999999938,
+        "endOffsetMs": 1430.757700000002,
+        "durationMs": 710.5400000000081,
+        "returned": true
+      },
+      {
+        "index": 3,
+        "operation": "process-listener-snapshot",
+        "startOffsetMs": 1438.0195999999996,
+        "endOffsetMs": 2157.5910000000003,
+        "durationMs": 719.5714000000007,
+        "returned": true
+      },
+      {
+        "index": 4,
+        "operation": "process-listener-snapshot",
+        "startOffsetMs": 2277.628899999996,
+        "endOffsetMs": 2981.314499999993,
+        "durationMs": 703.6855999999971,
+        "returned": true
+      },
+      {
+        "index": 5,
+        "operation": "process-listener-snapshot",
+        "startOffsetMs": 3093.322199999995,
+        "endOffsetMs": 3790.6552999999985,
+        "durationMs": 697.3331000000035,
+        "returned": true
+      },
+      {
+        "index": 6,
+        "operation": "process-listener-snapshot",
+        "startOffsetMs": 3795.834499999997,
+        "endOffsetMs": 4487.480599999995,
+        "durationMs": 691.6460999999981,
+        "returned": true
+      },
+      {
+        "index": 7,
+        "operation": "process-listener-snapshot",
+        "startOffsetMs": 4492.742799999993,
+        "endOffsetMs": 5223.987299999993,
+        "durationMs": 731.2445000000007,
+        "returned": true
+      },
+      {
+        "index": 8,
+        "operation": "process-census",
+        "startOffsetMs": 7323.326799999995,
+        "endOffsetMs": 7914.5322000000015,
+        "durationMs": 591.2054000000062,
+        "returned": true
+      },
+      {
+        "index": 9,
+        "operation": "process-listener-snapshot",
+        "startOffsetMs": 7916.281099999993,
+        "endOffsetMs": 8641.206399999995,
+        "durationMs": 724.9253000000026,
+        "returned": true
+      },
+      {
+        "index": 10,
+        "operation": "process-listener-snapshot",
+        "startOffsetMs": 8758.0521,
+        "endOffsetMs": 9508.631899999993,
+        "durationMs": 750.5797999999922,
+        "returned": true
+      },
+      {
+        "index": 11,
+        "operation": "process-listener-snapshot",
+        "startOffsetMs": 9516.42899999999,
+        "endOffsetMs": 10325.106899999999,
+        "durationMs": 808.6779000000097,
+        "returned": true
+      }
+    ],
+    "totalCensusMs": 7840.521400000027,
+    "preClickSevenCensusMs": 4965.133000000016,
+    "postReadyCensus": {
+      "index": 11,
+      "operation": "process-listener-snapshot",
+      "startOffsetMs": 9516.42899999999,
+      "endOffsetMs": 10325.106899999999,
+      "durationMs": 808.6779000000097,
+      "returned": true
+    },
+    "clockQualification": "All census and phase offsets use the original performance.now origin. Stage values are rounded to milliseconds. begin records atMs just after setting activeDeadline; therefore the exact cutoff is not reconstructed merely by adding 10000 to atMs. The observed failure and last return nevertheless establish expiration. Samples are explicitly non-atomic with failure.",
+    "interpretation": "7.841 seconds of synchronous snapshot cost lies inside the whole Retry budget. UI ready is one subcondition, not completion. The late snapshot's returned=true only records a successful read return; validateCensus rejects before returning the validated snapshot or checking this final listener set.",
+    "sevenChecks": "Initial target read, pre-hover check, post-hover read, two stable-target reads, final-target remeasurement check, and pre-input check. They are separated by actual DOM/input awaits; no currentness-equivalence proof permits reuse.",
+    "remainingWork": "At UI ready the original phase still owed the complete public binding, native afterRetry witnesses/runtime identity, fresh public Processes, paired full DOM rows, same-Main check and screenshot. Their duration and final outcomes are absent."
+  },
+  "custodyAndCleanup": {
+    "originalController": {
+      "pid": 10820,
+      "parent": 8632,
+      "birth": "2026-11-17T15:34:49.0260460Z",
+      "executable": "C:\\a\\_temp\\TEST-Windows-UI-build-44092933873-ARM64\\Release\\owned-process-gate-controller.exe"
+    },
+    "originalDriver": {
+      "pid": 4756,
+      "parent": 10820,
+      "birth": "2026-11-17T15:34:49.0441940Z",
+      "executable": "C:\\hostedtoolcache\\windows\\node\\24.21.0\\arm64\\node.exe"
+    },
+    "originalMain": {
+      "pid": 5436,
+      "parent": 4756,
+      "birth": "2026-11-17T15:35:19.2505320Z",
+      "executable": "C:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-arm64-unpacked\\AgentTeamsAI.exe"
+    },
+    "originalHost": {
+      "identity": {
+        "pid": 4328,
+        "parent": 5436,
+        "birth": "2026-11-17T15:35:22.5196260Z",
+        "executable": "C:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-arm64-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-arm64\\node.exe"
+      },
+      "writer": {
+        "pid": 4328,
+        "token": "97ca89f5-9485-4b8f-9306-1d1afe3c169c",
+        "publishedAtMs": 1794929725058,
+        "sha256": "2f56bb5d00cc05377a6ef1915cb327af8d7d1ffd2a119a9b66de7953e29d7a26",
+        "dev": "2222135570",
+        "ino": "562949954630183"
+      }
+    },
+    "successorHost": {
+      "identity": {
+        "pid": 9128,
+        "parent": 5436,
+        "birth": "2026-11-17T15:36:08.4608410Z",
+        "executable": "C:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-arm64-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-arm64\\node.exe"
+      },
+      "writer": {
+        "pid": 9128,
+        "token": "d6619546-5994-417e-b3e5-c97082ef7a7c",
+        "publishedAtMs": 1794929770158,
+        "sha256": "15bae564124ab2b90d17e0ac34ef8a1ed0eb31ce6cebc2447320db3650508c8f",
+        "dev": "2222135570",
+        "ino": "844424931340839"
+      }
+    },
+    "actualHostSuccessors": 1,
+    "hostBirths": [
+      {
+        "pid": 4328,
+        "parentPid": 5436
+      },
+      {
+        "pid": 9128,
+        "parentPid": 5436
+      }
+    ],
+    "hostExitCensus": {
+      "rows": 164,
+      "hostAOriginalAbsent": true,
+      "sameMainPresent": true
+    },
+    "quit": {
+      "attempted": true,
+      "endpoint": "ws://127.0.0.1:9222/devtools/browser/e7393378-c53c-403e-8933-90788b36cd51",
+      "command": {
+        "at": 1794929777236,
+        "id": 1,
+        "method": "Browser.close"
+      },
+      "socketClosed": {
+        "at": 1794929778990,
+        "afterSend": true
+      },
+      "acknowledgement": "socket-closed"
+    },
+    "appExit": {
+      "code": 0,
+      "signal": null
+    },
+    "finalObservation": {
+      "censusRows": 151,
+      "retainedLineageRows": 17,
+      "remainingMatchingLineage": [],
+      "ownedRemaining": [],
+      "listenerPids": [],
+      "drained": true,
+      "controllerStatus": "drained, rootExitCode 1, activeProcesses 0"
+    },
+    "cleanupFailure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 2\n\n    at Object.afterQuit (C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeWindowsAppFixture.ts:467:16)\n    at file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:604:56\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async within (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:141:20)\n    at async file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:604:29",
+    "qualification": "The final census and native controller drain establish their bounded observed absence/containment facts. They do not establish the unreached nativeCleanup object, both service exits, all three original query-witness exit statuses, writer-lock removal or original runtime-generation qualification.",
+    "originalRuntimeGenerations": null,
+    "peer": {
+      "provider": "codex",
+      "connected": 1,
+      "registrations": 1,
+      "serviceExitObservations": 0,
+      "failures": 0,
+      "modelRequests": 0,
+      "probes": 0,
+      "realVendorExecutions": 0
+    },
+    "inputs": {
+      "count": 17,
+      "packagedAndNativeInputsUnchanged": true,
+      "selectedSourceRows": 1798
+    }
+  },
+  "prerequisitesAndSeparatePass": {
+    "runner": {
+      "windows": "Windows 11 Enterprise 10.0.26200",
+      "image": "windows-11-vs2026-arm64 20261112.217.1",
+      "msvc": "19.52.37029.0 ARM64",
+      "sdk": "10.0.26100",
+      "buildNode": "26.12.1",
+      "hostAndDriverNode": "24.21.0",
+      "electron": "44.10.1"
+    },
+    "build": "Original log reaches all required native target builds, original Host build/staging (120 packages/8131 files), bundle verification, original native/controller selection and same-Main UI flow. Source/hashes remain fixed.",
+    "priorPackagedOpenCode": {
+      "wrapperStatus": "PASS",
+      "wrapperCleanup": true,
+      "nativeStatus": "PASS",
+      "nativeCleanup": true,
+      "version": "2.1.4",
+      "steps": 6,
+      "hostEpochExitCodes": [
+        0,
+        0
+      ],
+      "provider": "actual OpenCode with local scripted model endpoint",
+      "desktopJourneyQualified": false,
+      "vendorQualified": false,
+      "releaseQualified": false
+    },
+    "limit": "Preceding OpenCode packaged assertions are independent of the finite Codex same-Main Windows journey. Neither the original compile nor this narrower PASS eliminates the later Retry failure."
+  },
+  "boundedFeasibility": {
+    "existingObserver": "One synchronous PowerShell process executes full Win32_Process first and selected-port MSFT_NetTCPConnection second, then strict JSON parsing. The current selected-port improvement is already present; combining two process launches is not an available remaining optimization at this call site.",
+    "costAttribution": "No available duration split identifies observer-process startup versus CIM provider/query work versus serialization/transport/parsing. Repeated wrapper XML diagnostics have no per-call timing join and are not established as the cause.",
+    "existingNativeCapabilities": [
+      {
+        "capability": "capturedQueryableWitness / query-wait-gated",
+        "facts": "One retained original HANDLE, at most four sequential alive/absent observations, original wait/exit proof.",
+        "notEquivalent": "No complete system process rows, ancestry, executable paths or selected-port listeners."
+      },
+      {
+        "capability": "gateController Job accounting",
+        "facts": "Original owned Job active process count and root exit/drain.",
+        "notEquivalent": "A private Job count cannot establish full census, original PID/birth mapping or foreign listener refusal."
+      },
+      {
+        "capability": "broker ServiceQuery",
+        "facts": "Facts for one registered captured service scope/key.",
+        "notEquivalent": "No public whole-system census/listener command. Replacing the renderer guard with it drops original coverage."
+      }
+    ],
+    "smallestMissingPassiveFact": "For the same already-required ordered observation, correlate call/phase and elapsed divisions for process startup/roundtrip, full-process CIM, selected-port CIM, serialization and parent parsing. This is only a missing-evidence description: no added sample, OS/Host/DOM read, input, timer, threshold or implementation is authored or selected.",
+    "possibleSeparateBoundary": "A different bounded observer could only be considered as an explicit separate source/control change preserving each existing fresh call, complete census universe, PID/parent/birth/path/error/truncation semantics, all selected-port listener owners, read order, original cutoffs and full child custody/drain. No already-existing equivalent entry point or latency benefit is proven here.",
+    "notSelected": [
+      "new native observer",
+      "persistent observer process",
+      "PowerShell change",
+      "query caching",
+      "snapshot reuse or coalescing",
+      "guard removal",
+      "phase extension",
+      "input retry",
+      "source/runner/workflow changes"
+    ],
+    "caseProofRequirement": "Any future selected implementation would need to satisfy the same original complete-case, strict error and custody obligations; this advisory creates no extra gate and grants no execution or qualification."
+  },
+  "separateAcceptedPlan": {
+    "subject": "203e6dd6e1e124d55339ff890c74d94ce95f1558",
+    "ourReview": {
+      "gitBlob": "97a2c9f1147aa6ca6d17d5a4a24f9c4b9bfa9e60",
+      "bytes": 28565,
+      "sha256": "8bfceab347ada58db878c6b551af1f704dcc9839e1a5e6842a88583505186370"
+    },
+    "x64PriorAdvisory": {
+      "gitBlob": "623b68edeca2a6a7d9db08a0907d09cfc8eafa4b",
+      "bytes": 36685,
+      "sha256": "230e6e07aa463ab9cd5e664c966fbfc7361a09be5845397c5e3fd93530a65cac"
+    },
+    "separation": "The x64 source-visible completed-absence/settlement intermediate and two collaboration expected-model literals remain their exact selected plan. This ARM failure occurs earlier, before either UI Stop; it is not a new issue in that plan and does not broaden it."
+  },
+  "checks": [
+    {
+      "id": "01-exact-subject",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "Capture 379d2a00 and job log 28656354 were fetched as complete immutable Git bodies and independently byte/SHA256/Git-blob verified."
+    },
+    {
+      "id": "02-exact-tuple",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "Archive metadata, input receipt, candidate manifest, wrapper receipt and UI receipt bind source 86f52244, run 44092933873, job 134098865184, win32-arm64; no live CI read."
+    },
+    {
+      "id": "03-seven-text-members",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "All seven complete embedded UTF8 member strings independently match their byte counts, SHA256 and derived Git identities. Derived member IDs were not fetched as separate blobs."
+    },
+    {
+      "id": "04-archive-limit",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "Capture records root-verified ZIP CRC and eight members. This review reads embedded text and metadata; it does not claim an independent ZIP decode, binary attestation or PNG inspection."
+    },
+    {
+      "id": "05-whole-log",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "All 2,834 log lines are covered by complete normalized comparison to the prior fully read x64 log plus every unique unmatched ARM line; original raw bytes are retained unchanged."
+    },
+    {
+      "id": "06-controller-log",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "All 690 controller-log lines were covered by all 22 unique exact line values and their complete occurrence map. Final controller status is drained, rootExitCode 1, activeProcesses 0."
+    },
+    {
+      "id": "07-source-freeze",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "All 1,798 unique valid selectedSourceHashes rows equal the entire selectedSourceHashesAfterFlow array; packagedAndNativeInputsUnchanged is true."
+    },
+    {
+      "id": "08-physical-source-joins",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "Full Gate, fixture, platform and controls Git bodies reproduce the receipt's Windows CRLF hashes exactly; conversion identities are derived, not separate retained source blobs."
+    },
+    {
+      "id": "09-manifest",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "Complete candidate metadata parses 120 unique package paths and 8,131 unique relative file entries with valid hashes and executable flags; Host entry hash matches the manifest and recorded input pin."
+    },
+    {
+      "id": "10-build-prerequisites",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "The complete original log reaches ARM64 MSVC compilation, Host build/staging, packaged verification and original native/controller launch. Missing compiler or absent Host build is not the observed failure."
+    },
+    {
+      "id": "11-separate-opencode-pass",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "The preceding real OpenCode 2.1.4 packaged/native receipts are PASS with their own cleanup and six-step scope. Their scope does not include the later failed same-Main Windows GUI journey."
+    },
+    {
+      "id": "12-original-scenario",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "The UI receipt reaches one Main, one initial Runtime Open, one original business input, actual Host-A exit, one metadata Refresh and one explicit Retry."
+    },
+    {
+      "id": "13-original-authority",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "Original Main, Host-A and successor Host-B PID/birth/parent and Node executable/writer tokens are retained; the source enforces one original Main and exactly one explicit successor."
+    },
+    {
+      "id": "14-no-extra-input",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "Counts are mainStarts 1, initialRuntimeOpen 1, businessInput 1, refreshClicks 1, retryClicks 1, uiStops 0 and quit 1. No input retry or changed case is inferred."
+    },
+    {
+      "id": "15-exact-retry-cutoff",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "The original Retry phase remains 10,000 ms. Gate remaining() uses the minimum active/outer monotonic cutoff and refuses after the last synchronous census returns."
+    },
+    {
+      "id": "16-readiness-sample",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "The original recovery wait records two samples, last ready=true at rounded 9,515 ms and uiReady at 9,516 ms; atomicWithFailure is explicitly false."
+    },
+    {
+      "id": "17-last-observation",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "The last fresh process/listener snapshot starts at phase offset 9,516.429 ms and ends at 10,325.1069 ms, duration 808.6779 ms; returned=true means the OS read returned, not that subsequent validation passed."
+    },
+    {
+      "id": "18-failure-boundary",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "Failure is remaining -> validateCensus -> assertOwnedRenderer -> originalBinding at Gate line 543. Public getConnections at line 239 is not reached on this post-Retry call."
+    },
+    {
+      "id": "19-unreached-proof",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "fixture.afterRetry, fresh public rows, paired full DOM row comparisons, sameMainAfterRetry, after-retry screenshot and both original UI Kill flows remain unreached."
+    },
+    {
+      "id": "20-total-census-cost",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "The eleven Retry census calls total 7,840.5214 ms; the first seven original click ownership checks total 4,965.1330 ms. These durations are measured within the original phase, not additional reads."
+    },
+    {
+      "id": "21-all-timing-rows",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "All 57 retained census timing rows have finite ordered endpoints and returned=true; censusReadsTruncated=false. Phase timing and census timing share the original performance-clock origin."
+    },
+    {
+      "id": "22-click-order",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "Full original controls show fresh checks before target reads, hover, two stable samples, final remeasurement and the one click. Awaited DOM/input work separates those checks; this read does not prove one removable."
+    },
+    {
+      "id": "23-currentness-preserved",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "The post-await controls deadline check, renderer URL/preload/backend identity guard, whole binding equality, process PID/birth, full lineage and listener ownership assertions remain necessary and unchanged."
+    },
+    {
+      "id": "24-query-composition",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "Current platform windowsProcessListenerSnapshot already performs one PowerShell process for an ordered full Win32_Process query and selected-port MSFT_NetTCPConnection query, followed by strict envelope parsing."
+    },
+    {
+      "id": "25-cost-causal-limit",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "The recorded interval combines observer startup, CIM work, serialization/transport and parsing. No internal split or timestamped query-stage result identifies which component dominates."
+    },
+    {
+      "id": "26-no-cache-or-coalescing",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "No safe cache, earlier observation reuse, dropped full census, skipped guard, reordered read, extra input, longer deadline or coalescing is established by this evidence."
+    },
+    {
+      "id": "27-query-witness-scope",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "Complete nativeFixture and nativeGateContext implement at most four sequential Q observations of one original HANDLE, alive/absent only, plus its original W exit wait; they do not return a system census/listener set."
+    },
+    {
+      "id": "28-controller-scope",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "Complete gateController reads only its owned Job active count for containment/drain; that count cannot establish the complete process/listener ownership evidence."
+    },
+    {
+      "id": "29-broker-scope",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "Complete broker/protocol expose launch/resume/stop/release and captured service-scope operations. ServiceQuery returns facts for one key, not the whole system PID/parent/birth/path or all TCP listeners."
+    },
+    {
+      "id": "30-native-build-surface",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "Complete CMake builds the existing broker variants, fixture, controller and pending-write fixture; the reviewed entry points expose no drop-in complete native census/listener command."
+    },
+    {
+      "id": "31-minimum-missing-fact",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "A source-preserving latency repair is unproved. The smallest timing gap is the division of an existing ordered snapshot's cost into observer startup/roundtrip, full-process query, listener query and serialization/parsing, correlated to the same call."
+    },
+    {
+      "id": "32-cleanup-facts",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "Recorded product Browser.close is followed by app exit 0/null; final census is drained with no owned remaining or listener PIDs, and none of the 17 retained PID/birth lineage identities remains."
+    },
+    {
+      "id": "33-cleanup-limit",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "Full cleanup is false: afterQuit fails its first stops.size===2 assertion with 0!==2, before original provider/witness exit and writer-lock assertions. Controller drain does not replace these original obligations."
+    },
+    {
+      "id": "34-finite-provider",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "The same-Main GUI peer evidence records one finite Codex connection/registration, zero service exits, model requests, probes and real vendor executions. It is not real Codex product qualification."
+    },
+    {
+      "id": "35-log-error-limit",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "The 85 controller-wrapper XML error records and later app 'No handler registered' log are retained observations. Neither is causally joined to the original cutoff failure; no source repair is inferred from their text."
+    },
+    {
+      "id": "36-no-qualification-promotion",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "UI receipt status remains INCOMPLETE, cleanup=false, originalRuntimeGenerations=null, no stops proof. Readiness and preceding OpenCode PASS are not whole GUI/native/all-provider PASS."
+    },
+    {
+      "id": "37-separate-r1",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "Accepted two-file R1 203e6dd6 changes two collaboration expectations and the x64 settlement observation window. This earlier ARM Retry cutoff is outside that plan and is not repaired by it."
+    },
+    {
+      "id": "38-authority",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "detail": "This review used immutable Git, retained bodies and pure-data checks only. No local/runtime/source/control/ref/PR/CI/download action, replay, new candidate or new gate was performed."
+    }
+  ],
+  "checkCount": 38,
+  "runtimeClaim": "No target code was run by this reviewer. Evidence describes the one retained original failed job and separately bounded earlier PASS receipts. No hypothetical repair is accepted or claimed to pass.",
+  "authority": "Read-only immutable Git, retained evidence and pure-data/hash processing. Bare advisory retention only. No local process/filesystem probe, source/control authorship, live CI/download, replay, ref/PR/CI mutation or new gate."
+}

@@ -1,0 +1,2539 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-ci3-linux-cross-team-retained-outcome-review",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "red_publication_recovery",
+  "reviewedAtUtc": "2026-11-17 17:15:43 UTC",
+  "subject": {
+    "captureManifest": {
+      "bytes": 15907,
+      "sha256": "492ccdcf9e63bc7d145095b92b6287fc11f620501225f9e99e83a7a7507e6f12",
+      "gitBlob": "074917c65330c7decb48c3b5204c41fb098be528"
+    },
+    "logicalCapture": {
+      "bytes": 28617790,
+      "sha256": "75579f6d6761304ef52d6b600eaa9088c6138d4ad30260371db61a4561dd7deb",
+      "gitBlob": "84c9442a09bd09e9809b1730013a96168cfc6ff0"
+    },
+    "jobLog": {
+      "bytes": 202475,
+      "sha256": "d3fe4fe5d23a2e999373efa0b1ba87de34e4890e0ef4e934fc884de063aca74a",
+      "gitBlob": "0e92a234d092f1cb4113da772316cee58d0dde0c"
+    },
+    "artifactId": 14343718271,
+    "runId": 44092933810,
+    "jobId": 134072511974,
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087"
+  },
+  "decision": "ACCEPT_BOUNDED_RETAINED_CROSS_TEAM_PASS_WITH_EXPLICIT_LIMITS",
+  "scope": "Read-only independent interpretation of the original complete Linux-x64 cross-team artifact and job log. This report creates no execution, publication or admission gate.",
+  "outcome": {
+    "status": "PASS",
+    "mode": "task-board-cross-team-ui",
+    "nodeVersion": "24.21.0",
+    "originalScope": "Original Electron controls, standalone Host persistence and renderer reload; only separately pinned TEST provider peers permitted",
+    "originalExcluded": [
+      "provider sessions",
+      "vendor authentication",
+      "native model execution",
+      "full Stage1/release/default activation"
+    ],
+    "proofs": [
+      {
+        "name": "taskBoardUiProof",
+        "status": "PASS",
+        "recordedSteps": 100
+      },
+      {
+        "name": "taskReviewCycleUiProof",
+        "status": "PASS",
+        "recordedSteps": 61
+      },
+      {
+        "name": "taskNotificationUiProof",
+        "status": "PASS",
+        "recordedSteps": 10
+      },
+      {
+        "name": "crossTeamUiProof",
+        "status": "PASS",
+        "recordedSteps": 40
+      },
+      {
+        "name": "oversizedCommentUiProof",
+        "status": "PASS",
+        "recordedSteps": 22
+      },
+      {
+        "name": "f08ReadTimingProof",
+        "status": "PASS",
+        "recordedSteps": 33
+      },
+      {
+        "name": "taskTrashRestoreUiProof",
+        "status": "PASS",
+        "recordedSteps": 19
+      },
+      {
+        "name": "ownerDefaultRoutingProof",
+        "status": "PASS",
+        "recordedSteps": null
+      }
+    ],
+    "originalMainQuit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "originalCleanup": {
+      "processGroup": 4653,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "ownerEpochs": [
+      {
+        "phase": "default-b",
+        "status": "PASS",
+        "recordedSteps": 45,
+        "cleanup": {
+          "remaining": [],
+          "hosts": [
+            {
+              "pid": 12864,
+              "ppid": 12707,
+              "pgid": 12579
+            },
+            {
+              "pid": 12879,
+              "ppid": 12707,
+              "pgid": 12579
+            }
+          ],
+          "hostsAbsent": true,
+          "appExitCode": 0,
+          "appSignalCode": null,
+          "quitAttempted": true,
+          "signalAttempted": false,
+          "scope": "Guarded original app close and established exact-identity wrapper cleanup; no universal natural-exit qualification"
+        },
+        "quit": {
+          "attempted": true,
+          "scope": "Close only the verified TEST window before stopping its dev wrapper",
+          "reply": "acknowledged",
+          "listenerAbsent": true
+        }
+      },
+      {
+        "phase": "unavailable-a",
+        "status": "PASS",
+        "recordedSteps": 22,
+        "cleanup": {
+          "remaining": [],
+          "hosts": [
+            {
+              "pid": 14594,
+              "ppid": 14428,
+              "pgid": 14303
+            }
+          ],
+          "hostsAbsent": true,
+          "appExitCode": null,
+          "appSignalCode": "SIGTERM",
+          "quitAttempted": true,
+          "signalAttempted": true,
+          "scope": "Guarded original app close and established exact-identity wrapper cleanup; no universal natural-exit qualification"
+        },
+        "quit": {
+          "attempted": true,
+          "scope": "Close only the verified TEST window before stopping its dev wrapper",
+          "reply": "acknowledged",
+          "listenerAbsent": true
+        }
+      },
+      {
+        "phase": "rollback-a",
+        "status": "PASS",
+        "recordedSteps": 24,
+        "cleanup": {
+          "remaining": [],
+          "hosts": [
+            {
+              "pid": 17356,
+              "ppid": 17192,
+              "pgid": 17065
+            },
+            {
+              "pid": 17371,
+              "ppid": 17192,
+              "pgid": 17065
+            }
+          ],
+          "hostsAbsent": true,
+          "appExitCode": 0,
+          "appSignalCode": null,
+          "quitAttempted": true,
+          "signalAttempted": false,
+          "scope": "Guarded original app close and established exact-identity wrapper cleanup; no universal natural-exit qualification"
+        },
+        "quit": {
+          "attempted": true,
+          "scope": "Close only the verified TEST window before stopping its dev wrapper",
+          "reply": "acknowledged",
+          "listenerAbsent": true
+        }
+      }
+    ],
+    "universalNaturalExitQualified": false,
+    "notificationMarkRead": "unavailable: original viewed Team notification already read",
+    "visualInspectionByThisReviewer": false
+  },
+  "inputCustody": {
+    "manifest": {
+      "bytes": 15907,
+      "sha256": "492ccdcf9e63bc7d145095b92b6287fc11f620501225f9e99e83a7a7507e6f12",
+      "gitBlob": "074917c65330c7decb48c3b5204c41fb098be528"
+    },
+    "log": {
+      "bytes": 202475,
+      "sha256": "d3fe4fe5d23a2e999373efa0b1ba87de34e4890e0ef4e934fc884de063aca74a",
+      "gitBlob": "0e92a234d092f1cb4113da772316cee58d0dde0c"
+    },
+    "chunks": [
+      {
+        "index": 0,
+        "byteStart": 0,
+        "byteEnd": 3000000,
+        "pin": {
+          "bytes": 3000000,
+          "sha256": "f3b8ae7b79853ccf4ed56d1c1e98d1d52d0081c2548fc272e870c2ea9890a474",
+          "gitBlob": "b169332b1f9e3b8b63936fca72122069f31b013e"
+        },
+        "completeBodyRead": true
+      },
+      {
+        "index": 1,
+        "byteStart": 3000000,
+        "byteEnd": 6000000,
+        "pin": {
+          "bytes": 3000000,
+          "sha256": "594c1fe2381f8bff5d1e2d977cb78743fab4ebabd5eeb138007d4d3298910fe9",
+          "gitBlob": "5fb4a255489ef05f1668815c321a669aff403498"
+        },
+        "completeBodyRead": true
+      },
+      {
+        "index": 2,
+        "byteStart": 6000000,
+        "byteEnd": 9000000,
+        "pin": {
+          "bytes": 3000000,
+          "sha256": "2a5b8f0978ac767e8da9830aa337ec0eb3e2d9342d1f04c5c25047e46d7ab0eb",
+          "gitBlob": "ffeac62788ee7a851e405a26ac6cfa360521756b"
+        },
+        "completeBodyRead": true
+      },
+      {
+        "index": 3,
+        "byteStart": 9000000,
+        "byteEnd": 11999998,
+        "pin": {
+          "bytes": 2999998,
+          "sha256": "afed1369c0fa7a3fc33b1a4f0b0ae55541022ee0a55e33ad618afb7d82684475",
+          "gitBlob": "522d8413d49b7d79d115b1ea9c273fb11e2d492d"
+        },
+        "completeBodyRead": true
+      },
+      {
+        "index": 4,
+        "byteStart": 11999998,
+        "byteEnd": 14999997,
+        "pin": {
+          "bytes": 2999999,
+          "sha256": "01ffaa23d8a8e74309415fe80bd0b040e4c0e244efae2365aa15609e8db67447",
+          "gitBlob": "6043156fe0b7031f5d80caacebee67343680af63"
+        },
+        "completeBodyRead": true
+      },
+      {
+        "index": 5,
+        "byteStart": 14999997,
+        "byteEnd": 17999996,
+        "pin": {
+          "bytes": 2999999,
+          "sha256": "a09d530cef579b6da2fb15d6cd27e4aab1f795eed9f9ac6c568b6133c902e33a",
+          "gitBlob": "65f9d58e8a5753c4d13fe234918cc1b982397ad6"
+        },
+        "completeBodyRead": true
+      },
+      {
+        "index": 6,
+        "byteStart": 17999996,
+        "byteEnd": 20999995,
+        "pin": {
+          "bytes": 2999999,
+          "sha256": "bd19faea7e3b4aaa1d094af5e928f1e1ca9fedeb2158ca4bc626c273bf379d73",
+          "gitBlob": "39aebfc33e80340001151f3938c0cf6708f87415"
+        },
+        "completeBodyRead": true
+      },
+      {
+        "index": 7,
+        "byteStart": 20999995,
+        "byteEnd": 23999995,
+        "pin": {
+          "bytes": 3000000,
+          "sha256": "1573e7aee9f63100d885a1ff49d1ab138e531e99d6399e1b73e0dca7a625f958",
+          "gitBlob": "f0adcdb535a07892cf312d0bbbe701ca2d3089b3"
+        },
+        "completeBodyRead": true
+      },
+      {
+        "index": 8,
+        "byteStart": 23999995,
+        "byteEnd": 26999995,
+        "pin": {
+          "bytes": 3000000,
+          "sha256": "b0e22fb4a290cabb0670114623973a7617f8cd5984a5aef5e3246762f2454c81",
+          "gitBlob": "931e71a1b79f26864d9f4f26c26b691285e09c2c"
+        },
+        "completeBodyRead": true
+      },
+      {
+        "index": 9,
+        "byteStart": 26999995,
+        "byteEnd": 28617790,
+        "pin": {
+          "bytes": 1617795,
+          "sha256": "934e171abb1e5b5064c5dc9cd403f750a02241525e68ed121af3d3711afaef34",
+          "gitBlob": "d91bdbf3b734836d30ddd3b62bac5d705b3b3b8d"
+        },
+        "completeBodyRead": true
+      }
+    ],
+    "logicalCapture": {
+      "bytes": 28617790,
+      "sha256": "75579f6d6761304ef52d6b600eaa9088c6138d4ad30260371db61a4561dd7deb",
+      "gitBlob": "84c9442a09bd09e9809b1730013a96168cfc6ff0",
+      "method": "Ordered complete UTF8 chunk strings, concatenated without separator or normalization; full UTF8/Git/SHA256 independently verified. Derived logical Git identity was not fetched."
+    },
+    "archive": {
+      "bytes": 2763631,
+      "sha256": "caf761d6f1b9ad9790edd96f3d6ad4b6f79bf9f12b46c472019313e57d841005",
+      "gitBlob": "c27ad2f0c1f264987c373e8360b91a03bfedbb39",
+      "method": "Complete base64 decoded into bytes, independently hashed; no new artifact download.",
+      "originalCaptureAllMembersCrcVerified": true,
+      "independentArchiveInflationClaim": false
+    },
+    "members": [
+      {
+        "path": "TEST-desktop-backend-kCT5R4/desktop-app.log",
+        "pin": {
+          "bytes": 41394,
+          "sha256": "da35a99447f4a9522921815ec840dc9a169fb65b39c609bfc1f5cabd84dc5b4f",
+          "gitBlob": "92b6e8b3afe42cdb515df108f047cc9ce2fa2dcc"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/desktop-backend-receipt.json",
+        "pin": {
+          "bytes": 20791698,
+          "sha256": "cd2a28ed57c8facbcad0c3cf3efb814436415c57606967deac78293c092ec82b",
+          "gitBlob": "89345e677f64c028f527ef3534550bff5ea04c0f"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/desktop-descriptor.json",
+        "pin": {
+          "bytes": 4700,
+          "sha256": "705f5c3a70a7a2a6a0007347552b201e245465c03d828489d59fe318060a999b",
+          "gitBlob": "8a02628defaabec1864a0fba012464167e508f81"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/host-profile.json",
+        "pin": {
+          "bytes": 2618,
+          "sha256": "5bbe1b969e7e22f2994969b23a09c426274ac21d3803b2b5101e298386ccfab1",
+          "gitBlob": "4caf30d483980c852aca9656e8d4fcf17c687ab7"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/hoststore/teams/test-cross-alpha/inboxes/team-lead.json",
+        "pin": {
+          "bytes": 1863,
+          "sha256": "00584610e8d373013723a0cfa75db89cbe973d9538792a0f149f962b82f0c7fc",
+          "gitBlob": "5fc11ecfe7f9b74a2590074e7bb80b9f7ae82c43"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/hoststore/teams/test-cross-beta/inboxes/team-lead.json",
+        "pin": {
+          "bytes": 1733,
+          "sha256": "921aae217b9c87b8a038a98c6ab469ad89fe0822d782e2fcac2169411122d701",
+          "gitBlob": "e523be07996bd42d85003ba821d8efe04a14a48e"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/hoststore/teams/test-desktop-backend/group-chats.json",
+        "pin": {
+          "bytes": 340,
+          "sha256": "da5adcbfdda25e56d5f672641dc91c92e603c52f66621f5f37564a092bd21909",
+          "gitBlob": "77978ff535d592db93ae5ff9ca29b65a049f2d40"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+        "pin": {
+          "bytes": 4633,
+          "sha256": "c0cc0088b556c4f1618f02d34bb2d7f3fa7c1f26d1fa5e4696ff363ced1859ae",
+          "gitBlob": "ccea4c9edf403bf4f6718dc56453f37adba87ad4"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/owner-routing-default-b.log",
+        "pin": {
+          "bytes": 18871,
+          "sha256": "7cfdd97a24cf4df5895bc08ff614de5076ca78abb6ed287c2ccb06a845d188ba",
+          "gitBlob": "f5547f928e0adfc908fc41c5bf405deaa5102641"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/owner-routing-rollback-a.log",
+        "pin": {
+          "bytes": 14118,
+          "sha256": "6701db0b33db03ea634ef00696e8c3fe2cae27f7cf7a9d030ce68398b90705aa",
+          "gitBlob": "5d9fd8d1952dbe092e4e8739e3d0d4ffa3a87f95"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/owner-routing-unavailable-a.log",
+        "pin": {
+          "bytes": 20017,
+          "sha256": "6956a1a241509c42b03ceb21ba711e640661ea13bc5e446c51ef86e65371ff81",
+          "gitBlob": "4f7768b6a9f1e68a3b309e86634d6abdce7e3f31"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/sentinel-invocations.ndjson",
+        "pin": {
+          "bytes": 384,
+          "sha256": "84573dede733753d58cb4f24a9a6e3065888b86f8f053787e84cd79228581468",
+          "gitBlob": "874023a78ae07cd38c99cfa25f5e1963e3310861"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-cross-team-reply.png",
+        "pin": {
+          "bytes": 114967,
+          "sha256": "bcdda11886495aceb8f1bc9d6742b744a78e82609c86a7f8b6f88bc55070446f",
+          "gitBlob": "d70b6ca958318f3ba37da529048a410cdfc909cd"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-group-seed-receipt.json",
+        "pin": {
+          "bytes": 593,
+          "sha256": "d29d7f5fce8acedf1a2d955ca9eb2cfa84f0a163e9fe00dbf82b98ff622b3c91",
+          "gitBlob": "cec38a6dbeecead6a162c0fb22e9d4ea2cbe7e5a"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-owner-routing-task-opened.png",
+        "pin": {
+          "bytes": 109984,
+          "sha256": "2120274469f98fc4830fe53cb30aea2d3eb8075e132317bb942de834d36cace6",
+          "gitBlob": "89170777036cb7562281c0328f347abe0e948bfe"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-owner-routing-tasks-filtered.png",
+        "pin": {
+          "bytes": 116074,
+          "sha256": "cc506fead1b13f40f39a95efc1e1faf5d30d17b68a3191dfabecf4c1d0e6129e",
+          "gitBlob": "2cf5624521eaac3ef51b2d4c734d95639ea63bcd"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-owner-routing-tasks.png",
+        "pin": {
+          "bytes": 115542,
+          "sha256": "f3132e0dff2cb86fd7b68126c7bccb0af9107787885600b1c5d1ef695011c57d",
+          "gitBlob": "fae9a90947e039cc2b907a409bbd65209ac9346e"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-owner-routing-teams-filtered.png",
+        "pin": {
+          "bytes": 83516,
+          "sha256": "35841e0afa3f3df20e96b5b71bd205e6534f126ca96385ec0345fe406e04535c",
+          "gitBlob": "e61a7f7f3f9f484ce12dcbb63fca5e9d31b1087c"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-owner-routing-teams.png",
+        "pin": {
+          "bytes": 88914,
+          "sha256": "3f79b71cf582759824943829e9f09788770eaa0ec89cb2126e4851315aebdb24",
+          "gitBlob": "fa66d6ee896df65530f66b828504571c069d1062"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-seed-receipt.json",
+        "pin": {
+          "bytes": 2197,
+          "sha256": "86129fe1baf045086ca75ecdddda19295e0fa5b3472d09d8c4a6fa1f6ebaa419",
+          "gitBlob": "5b706df7a259b0821b16d33d3f206a2c52b2dfd1"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-board-assigned-blocked.png",
+        "pin": {
+          "bytes": 109184,
+          "sha256": "f6a997ae4c7039fc2f27cefe3c2f6978bbee8d38e611d84a52cb64047484ebe9",
+          "gitBlob": "7fb5cfe7699d51e157b6524aa11b5cecb96ceec9"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-board-attachment-added.png",
+        "pin": {
+          "bytes": 127434,
+          "sha256": "9b519a7895b674580b0df8537cc0ced1c815f05b76553a03acf0b894b5858b6d",
+          "gitBlob": "338e4c546013dbe953b860862c38de1d2fd02ae2"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-board-attachment-removed.png",
+        "pin": {
+          "bytes": 116814,
+          "sha256": "4350db588fd2e110de417963367d71a6025e466ae727164f84805b70d312fbbb",
+          "gitBlob": "2c6f8fca8ea34f624e3c9d83534956d5c0f4ecc7"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-board-attachments-reloaded.png",
+        "pin": {
+          "bytes": 114959,
+          "sha256": "a9d6aaac745be5783c247bfe18959668b18acdc7f3073076063e78e21bb609f9",
+          "gitBlob": "d8865e5fe5f5b1ebbcbb621129bcd343393a55fe"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-board-blocked-start.png",
+        "pin": {
+          "bytes": 132141,
+          "sha256": "244afcc5486c7b34ea6a6095e05c6f3871099a39c4ed06626b7ddd7906411de8",
+          "gitBlob": "8f46893ce792bb3a74d59ba88f83123791ef7889"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-board-initial.png",
+        "pin": {
+          "bytes": 93176,
+          "sha256": "b8d86c6868c777e3b32e60d1eec95d4c12c419e0c5caea0865c24b1f4220753d",
+          "gitBlob": "db248a3a8e64c57b49ae0c3f0da4536008b0d392"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-board-reloaded.png",
+        "pin": {
+          "bytes": 124244,
+          "sha256": "d33a317305441286423a1607867ba60f3e209c65ae6ad5798dc1ed9f65d7b264",
+          "gitBlob": "fbcd793c38b1e3ecbf9113ab43761264fbfd0e1e"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-board-reordered.png",
+        "pin": {
+          "bytes": 132064,
+          "sha256": "e282be06ba0f082ada9d9213f0f6f723ddb848e420f2f31ba4a08139186910ba",
+          "gitBlob": "2509bec917af709dd7719b8e3366a028266c28c2"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-large-comment-cold-readback.png",
+        "pin": {
+          "bytes": 77844,
+          "sha256": "b674a9777aa747b1f5b1998d444c0845aa5dc6a34c8becdc2c34f798c02841ec",
+          "gitBlob": "569b8c9cb73dcb775628aac785d961bde8f6e2c0"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-notification-quick-actions.png",
+        "pin": {
+          "bytes": 134369,
+          "sha256": "4da394b512e09b4ee34facdfea396a963f30672b37fa528a23ea172f1ce18a00",
+          "gitBlob": "68b4e76696603cc22af73f6173443bd7fbad3a78"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-review-approved.png",
+        "pin": {
+          "bytes": 114619,
+          "sha256": "ae147695596d256cac54170696478ee69b9ba434fbfffd9ca8cc4a96773507a6",
+          "gitBlob": "fa99f99d55903dd0775922a983df77869cbfcc7f"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-trash-original-row.png",
+        "pin": {
+          "bytes": 103145,
+          "sha256": "909cadda632d2cd4eca4e6a4eceb90a6cba46b3f014701c685215cd6dbc9960a",
+          "gitBlob": "9d215a22bae5ad5bb6efebaa46aae6b42e90d8c9"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-desktop-backend-ovBm9F/host-profile.json",
+        "pin": {
+          "bytes": 560,
+          "sha256": "4dd54cb528bd891b487f100932062da5afee931588ac0dff618dc5ff4bc5c5fe",
+          "gitBlob": "444bb59110fe582d0879bec8a575e77bb6a6af94"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-DjKEPA/linux-child-exec/linux-child-exec",
+        "pin": {
+          "bytes": 790608,
+          "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+          "gitBlob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807"
+        },
+        "encoding": "binary",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-DjKEPA/linux-child-exec/manifest.json",
+        "pin": {
+          "bytes": 2408,
+          "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+          "gitBlob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "host-emulated-inputs.json",
+        "pin": {
+          "bytes": 1803,
+          "sha256": "6f184605b4d376129c772fff8cf11e878e31d19512c0a10badfe85fcde9127e2",
+          "gitBlob": "bb028da636569072737124a43bebc4f610020a00"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "host-emulated-linux-child-exec-selection.json",
+        "pin": {
+          "bytes": 271,
+          "sha256": "53eca2229e4f450c136490826eba3f98dc12eda8e0472ee4733d2cbb88f94ec6",
+          "gitBlob": "57f37f95086d488ebf6db5625c7fe790bb424145"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "host-emulated-summary.json",
+        "pin": {
+          "bytes": 1282,
+          "sha256": "debd36b401c24d2c3d495294ea3dcd8f4f51982214f2aac89c7767fcc21318a0",
+          "gitBlob": "be486f1d23a0a6f1ebe676f465642e80690de7b6"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      },
+      {
+        "path": "host-emulated-task-board-cross-team-ui.log",
+        "pin": {
+          "bytes": 225,
+          "sha256": "6e6724eecf2afa632f46b2df6cbca6a6ab0b092833600856fabc0ec9158c1e72",
+          "gitBlob": "d6829fdc34b339b83c1772dc3b582797e19b0b89"
+        },
+        "encoding": "utf-8",
+        "completeBodyRead": true,
+        "completeHashMatched": true,
+        "derivedFromLogicalCapture": true
+      }
+    ],
+    "memberCensus": {
+      "members": 39,
+      "utf8": 20,
+      "binary": 19,
+      "utf8Bytes": 20911708,
+      "binaryBytes": 2799598,
+      "pngCount": 18,
+      "archiveBytes": 2763631
+    },
+    "pngHeaderChecks": [
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-cross-team-reply.png",
+        "pin": {
+          "bytes": 114967,
+          "sha256": "bcdda11886495aceb8f1bc9d6742b744a78e82609c86a7f8b6f88bc55070446f",
+          "gitBlob": "d70b6ca958318f3ba37da529048a410cdfc909cd"
+        },
+        "width": 1400,
+        "height": 900,
+        "pngHeader": true,
+        "visualInspection": false
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-owner-routing-task-opened.png",
+        "pin": {
+          "bytes": 109984,
+          "sha256": "2120274469f98fc4830fe53cb30aea2d3eb8075e132317bb942de834d36cace6",
+          "gitBlob": "89170777036cb7562281c0328f347abe0e948bfe"
+        },
+        "width": 1400,
+        "height": 900,
+        "pngHeader": true,
+        "visualInspection": false
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-owner-routing-tasks-filtered.png",
+        "pin": {
+          "bytes": 116074,
+          "sha256": "cc506fead1b13f40f39a95efc1e1faf5d30d17b68a3191dfabecf4c1d0e6129e",
+          "gitBlob": "2cf5624521eaac3ef51b2d4c734d95639ea63bcd"
+        },
+        "width": 1400,
+        "height": 900,
+        "pngHeader": true,
+        "visualInspection": false
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-owner-routing-tasks.png",
+        "pin": {
+          "bytes": 115542,
+          "sha256": "f3132e0dff2cb86fd7b68126c7bccb0af9107787885600b1c5d1ef695011c57d",
+          "gitBlob": "fae9a90947e039cc2b907a409bbd65209ac9346e"
+        },
+        "width": 1400,
+        "height": 900,
+        "pngHeader": true,
+        "visualInspection": false
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-owner-routing-teams-filtered.png",
+        "pin": {
+          "bytes": 83516,
+          "sha256": "35841e0afa3f3df20e96b5b71bd205e6534f126ca96385ec0345fe406e04535c",
+          "gitBlob": "e61a7f7f3f9f484ce12dcbb63fca5e9d31b1087c"
+        },
+        "width": 1400,
+        "height": 900,
+        "pngHeader": true,
+        "visualInspection": false
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-owner-routing-teams.png",
+        "pin": {
+          "bytes": 88914,
+          "sha256": "3f79b71cf582759824943829e9f09788770eaa0ec89cb2126e4851315aebdb24",
+          "gitBlob": "fa66d6ee896df65530f66b828504571c069d1062"
+        },
+        "width": 1400,
+        "height": 900,
+        "pngHeader": true,
+        "visualInspection": false
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-board-assigned-blocked.png",
+        "pin": {
+          "bytes": 109184,
+          "sha256": "f6a997ae4c7039fc2f27cefe3c2f6978bbee8d38e611d84a52cb64047484ebe9",
+          "gitBlob": "7fb5cfe7699d51e157b6524aa11b5cecb96ceec9"
+        },
+        "width": 1400,
+        "height": 900,
+        "pngHeader": true,
+        "visualInspection": false
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-board-attachment-added.png",
+        "pin": {
+          "bytes": 127434,
+          "sha256": "9b519a7895b674580b0df8537cc0ced1c815f05b76553a03acf0b894b5858b6d",
+          "gitBlob": "338e4c546013dbe953b860862c38de1d2fd02ae2"
+        },
+        "width": 1400,
+        "height": 900,
+        "pngHeader": true,
+        "visualInspection": false
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-board-attachment-removed.png",
+        "pin": {
+          "bytes": 116814,
+          "sha256": "4350db588fd2e110de417963367d71a6025e466ae727164f84805b70d312fbbb",
+          "gitBlob": "2c6f8fca8ea34f624e3c9d83534956d5c0f4ecc7"
+        },
+        "width": 1400,
+        "height": 900,
+        "pngHeader": true,
+        "visualInspection": false
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-board-attachments-reloaded.png",
+        "pin": {
+          "bytes": 114959,
+          "sha256": "a9d6aaac745be5783c247bfe18959668b18acdc7f3073076063e78e21bb609f9",
+          "gitBlob": "d8865e5fe5f5b1ebbcbb621129bcd343393a55fe"
+        },
+        "width": 1400,
+        "height": 900,
+        "pngHeader": true,
+        "visualInspection": false
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-board-blocked-start.png",
+        "pin": {
+          "bytes": 132141,
+          "sha256": "244afcc5486c7b34ea6a6095e05c6f3871099a39c4ed06626b7ddd7906411de8",
+          "gitBlob": "8f46893ce792bb3a74d59ba88f83123791ef7889"
+        },
+        "width": 1400,
+        "height": 900,
+        "pngHeader": true,
+        "visualInspection": false
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-board-initial.png",
+        "pin": {
+          "bytes": 93176,
+          "sha256": "b8d86c6868c777e3b32e60d1eec95d4c12c419e0c5caea0865c24b1f4220753d",
+          "gitBlob": "db248a3a8e64c57b49ae0c3f0da4536008b0d392"
+        },
+        "width": 1400,
+        "height": 900,
+        "pngHeader": true,
+        "visualInspection": false
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-board-reloaded.png",
+        "pin": {
+          "bytes": 124244,
+          "sha256": "d33a317305441286423a1607867ba60f3e209c65ae6ad5798dc1ed9f65d7b264",
+          "gitBlob": "fbcd793c38b1e3ecbf9113ab43761264fbfd0e1e"
+        },
+        "width": 1400,
+        "height": 900,
+        "pngHeader": true,
+        "visualInspection": false
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-board-reordered.png",
+        "pin": {
+          "bytes": 132064,
+          "sha256": "e282be06ba0f082ada9d9213f0f6f723ddb848e420f2f31ba4a08139186910ba",
+          "gitBlob": "2509bec917af709dd7719b8e3366a028266c28c2"
+        },
+        "width": 1400,
+        "height": 900,
+        "pngHeader": true,
+        "visualInspection": false
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-large-comment-cold-readback.png",
+        "pin": {
+          "bytes": 77844,
+          "sha256": "b674a9777aa747b1f5b1998d444c0845aa5dc6a34c8becdc2c34f798c02841ec",
+          "gitBlob": "569b8c9cb73dcb775628aac785d961bde8f6e2c0"
+        },
+        "width": 1400,
+        "height": 900,
+        "pngHeader": true,
+        "visualInspection": false
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-notification-quick-actions.png",
+        "pin": {
+          "bytes": 134369,
+          "sha256": "4da394b512e09b4ee34facdfea396a963f30672b37fa528a23ea172f1ce18a00",
+          "gitBlob": "68b4e76696603cc22af73f6173443bd7fbad3a78"
+        },
+        "width": 1400,
+        "height": 900,
+        "pngHeader": true,
+        "visualInspection": false
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-review-approved.png",
+        "pin": {
+          "bytes": 114619,
+          "sha256": "ae147695596d256cac54170696478ee69b9ba434fbfffd9ca8cc4a96773507a6",
+          "gitBlob": "fa99f99d55903dd0775922a983df77869cbfcc7f"
+        },
+        "width": 1400,
+        "height": 900,
+        "pngHeader": true,
+        "visualInspection": false
+      },
+      {
+        "path": "TEST-desktop-backend-kCT5R4/ui-task-trash-original-row.png",
+        "pin": {
+          "bytes": 103145,
+          "sha256": "909cadda632d2cd4eca4e6a4eceb90a6cba46b3f014701c685215cd6dbc9960a",
+          "gitBlob": "9d215a22bae5ad5bb6efebaa46aae6b42e90d8c9"
+        },
+        "width": 1400,
+        "height": 900,
+        "pngHeader": true,
+        "visualInspection": false
+      }
+    ]
+  },
+  "sourceCustody": {
+    "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+    "rootTree": "11ccb7c57cc49af613c62620a1d348bf6de8aa3d",
+    "scriptsTree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+    "githubTree": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+    "immutableTreeProof": "Reuse of previously complete accepted source86f commit/root and root-anchored scripts/github trees; each selected body independently rehashed and joined to its exact leaf. No live ref or CI reads.",
+    "completeSelectedSourceBodies": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "pin": {
+          "bytes": 54778,
+          "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+          "gitBlob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e"
+        },
+        "method": "exact complete cached immutable body rehashed",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+        "pin": {
+          "bytes": 33737,
+          "sha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+          "gitBlob": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587"
+        },
+        "method": "exact complete cached immutable body rehashed",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+        "pin": {
+          "bytes": 27829,
+          "sha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf",
+          "gitBlob": "9aa43a43d6186c62bc92dae60dab4fe57cc63fe6"
+        },
+        "method": "exact complete cached immutable body rehashed",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+        "pin": {
+          "bytes": 8576,
+          "sha256": "4e62a8eee6a03074e05bf75f17c8cdfb2b717cd99f923d188a0ffe7f3db54e6a",
+          "gitBlob": "db4d98b333e1fb1103c82cf7851a252c0ecff3a5"
+        },
+        "method": "fresh full immutable Git blob",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "pin": {
+          "bytes": 36260,
+          "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+          "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+        },
+        "method": "exact complete cached immutable body rehashed",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-task-board-attachments-ui.ts",
+        "pin": {
+          "bytes": 25110,
+          "sha256": "83b92a2f8a1f2141bf1672548d9f01402a514720783f850897bf3cd98560e656",
+          "gitBlob": "e128514aef972fd4f3fcf745155b8a937fbbc71e"
+        },
+        "method": "fresh full immutable Git blob",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "pin": {
+          "bytes": 33036,
+          "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+          "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+        },
+        "method": "exact complete cached immutable body rehashed",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-cross-team-ui-smoke.ts",
+        "pin": {
+          "bytes": 12268,
+          "sha256": "cab98f75e7c63f214b46e3ad86a680dee687847f121fd906796a5c0393b5ae40",
+          "gitBlob": "18a58758b3016ce86212215af79ac0f0fd4be34e"
+        },
+        "method": "fresh full immutable Git blob",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-task-trash-ui-smoke.ts",
+        "pin": {
+          "bytes": 16963,
+          "sha256": "21bcac42433bedee315a11017e389f1994d7a2121c6c12247df243bd24fbb0aa",
+          "gitBlob": "c1c379fbcfd5d09676ee528c5bd2b45745a744da"
+        },
+        "method": "fresh full immutable Git blob",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-owner-routing-epoch.ts",
+        "pin": {
+          "bytes": 5254,
+          "sha256": "0be302b884538c6156fd20b6ef8e6a27d73a525058c503f5a2b685b89be76aec",
+          "gitBlob": "be0e7434575a22d4d15230aa997009f50695181c"
+        },
+        "method": "fresh full immutable Git blob",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-owner-routing-fixture.ts",
+        "pin": {
+          "bytes": 9339,
+          "sha256": "a709c413e0c558bf1432381630fd9178541952ca7ecdb3dbce69dc6bd928253d",
+          "gitBlob": "eb267a1a5852a1beacdf19b3b2dd376cc6a92dd3"
+        },
+        "method": "fresh full immutable Git blob",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-owner-routing-ui-smoke.ts",
+        "pin": {
+          "bytes": 34664,
+          "sha256": "3f6fca400262952bec3fdbde3047049973f04ea71e6e40b6adffbce0926df564",
+          "gitBlob": "b0863b23171786c2bcaa127c415e1df102241164"
+        },
+        "method": "fresh full immutable Git blob",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts",
+        "pin": {
+          "bytes": 12335,
+          "sha256": "5d05c61bb9a5b0f8abb2533df0f7f12babd1162a57bb636e21b88f63b19b597b",
+          "gitBlob": "d0c2e893bcede89c56c516242469e6e88cf43a88"
+        },
+        "method": "fresh full immutable Git blob",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-host-routing-proof.ts",
+        "pin": {
+          "bytes": 38755,
+          "sha256": "08eeddfc3bf660de24ff8a0948dcba405aff6e14ab1ac6569f75a3425c121177",
+          "gitBlob": "59b6a357505c4d08ad035b26c8af85bb7382e658"
+        },
+        "method": "fresh full immutable Git blob",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-oversized-comment-ui-smoke.ts",
+        "pin": {
+          "bytes": 10086,
+          "sha256": "312e42b78ad2975b0a3d1fb83b63c4835eab0aaa89b7831c2e06c5050028ab44",
+          "gitBlob": "23aab1f3fbf713eacc2e9741be6513fcc9de18e5"
+        },
+        "method": "fresh full immutable Git blob",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": false
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-owner-routing-product-census.ts",
+        "pin": {
+          "bytes": 4022,
+          "sha256": "af69541cc3ac9fa3740a05ef312b837096d4c239dacaf42241748cb897028e35",
+          "gitBlob": "ea9ed87dd6e0571843d807f68e7158c9cf469ee8"
+        },
+        "method": "fresh full immutable Git blob",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": false
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+        "pin": {
+          "bytes": 52632,
+          "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a",
+          "gitBlob": "a8be2617b2c765091cecce789f028ef2bf67af60"
+        },
+        "method": "fresh full immutable Git blob",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+        "pin": {
+          "bytes": 33423,
+          "sha256": "2f98ed35ffb34f090d58b4021f54b1d92938f2ae6263312dd867654b923e80c8",
+          "gitBlob": "dca0c1710273411656e3284db0302449a00ddaf6"
+        },
+        "method": "exact complete cached immutable body rehashed",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+        "pin": {
+          "bytes": 28804,
+          "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4",
+          "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28"
+        },
+        "method": "exact complete cached immutable body rehashed",
+        "treeSha": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "receiptPinMatched": true
+      }
+    ],
+    "workflow": {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "pin": {
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      },
+      "fullBodyRead": true,
+      "actualTreeLeafMatched": true
+    },
+    "sourceReadCensus": {
+      "selectedBodies": 19,
+      "selectedBytes": 477871,
+      "workflowBodies": 1,
+      "workflowBytes": 96872,
+      "freshSelectedBodyReads": 12,
+      "rehashedExactCachedBodies": 7,
+      "receiptSourceRowsMatched": 17,
+      "gitOnlySupportingSourcePaths": [
+        "scripts/legacy-agent-host/desktop-oversized-comment-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-owner-routing-product-census.ts"
+      ]
+    },
+    "wholeBeforeAfterReceiptSourceCensus": {
+      "rows": 1757,
+      "uniquePaths": 1757,
+      "literalEquality": true,
+      "derivedCompactJsonIdentity": {
+        "bytes": 266427,
+        "sha256": "6cfc213509be24121cc7ee81bac0a626b1866556a3b36bbda976fb52f4abbc6c",
+        "gitBlob": "fbedc8c355f6359f8f4a52a8c8853c7771e1f446"
+      },
+      "serialization": "JSON.stringify(receipt.selectedSourceHashesBeforeApp), no indent or terminal LF; equals selectedSourceHashesAfterFlow. This is derived data, not a Git body download.",
+      "limitation": "Receipt records the original physical before/after observation. Reviewer has not physically re-censused the workspace and has not claimed full hashing of all1,757 source bodies."
+    },
+    "originalVerifier": {
+      "completeWorkflowPin": {
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      },
+      "derivedVerifierPin": {
+        "bytes": 52353,
+        "sha256": "4f0e7eedbfd261f1e18d06a44e23115ee67931bdaae520cbd713dbbd69716320",
+        "gitBlob": "1b161d36239df270f76ff7bb620b11be96c119d4"
+      },
+      "extractedLiteralEqual": true,
+      "logLiteralOccurrences": 1,
+      "executionByReviewer": false
+    }
+  },
+  "finiteProviderBoundary": {
+    "receiptEmulation": {
+      "only": true,
+      "runtimeConfigured": false,
+      "managementConfigured": false,
+      "noNativeHostChildrenBeforeUi": true,
+      "noNativeHostChildren": true
+    },
+    "originalMainSentinel": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": 1,
+      "postQuitOrCleanupInvocations": [],
+      "refusedInvocations": [],
+      "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+    },
+    "continuationSentinelCounts": [
+      {
+        "phase": "default-b",
+        "before": 2,
+        "after": 2,
+        "unchangedAcrossQuit": true
+      },
+      {
+        "phase": "unavailable-a",
+        "before": 3,
+        "after": 3,
+        "unchangedAcrossQuit": true
+      },
+      {
+        "phase": "rollback-a",
+        "before": 4,
+        "after": 4,
+        "unchangedAcrossQuit": true
+      }
+    ],
+    "sourceRule": "desktop-backend-fixture.ts creates private TEST sentinels accepting exactly the finite --version shape and refusing native agent invocation. The recorded executable name claude-multimodel is this TEST sentinel; it is not evidence of running a real Claude/Codex agent or vendor login.",
+    "noRuntimeOrManagementProfile": true
+  },
+  "f08CompleteOriginalResultJoins": [
+    {
+      "kind": "same-A-stale-product-snapshot",
+      "status": "released",
+      "physicalCalls": 1,
+      "commandId": "8d777542-a5ad-4738-b629-5939cd9b741f",
+      "operation": "team.snapshot",
+      "completeJsonMatched": true,
+      "resultPin": {
+        "bytes": 1277,
+        "sha256": "f36605e042a0cb89018c79127007567983677c81544955e13bb926fa6ce48522",
+        "gitBlob": "69c7ed18be1836a1908e6ae87bed987c4dc6afa5"
+      },
+      "sha256Matched": true
+    },
+    {
+      "kind": "same-A-stale-feed",
+      "status": "released",
+      "physicalCalls": 1,
+      "commandId": "32320619-2209-440e-a806-61a93261371d",
+      "operation": "team.changes.read",
+      "completeJsonMatched": true,
+      "resultPin": {
+        "bytes": 250,
+        "sha256": "3e10c88e1eba29dd9ee13afe96097556861aebe3aa6f5a8d0ae53a77efe386bf",
+        "gitBlob": "1cdf954aa0b56e6cdeffd9b955ceb9cda7d0453c"
+      },
+      "sha256Matched": true
+    },
+    {
+      "kind": "same-A-newer-snapshot",
+      "status": "received",
+      "physicalCalls": 1,
+      "commandId": "5d027d7e-ff4d-4a2f-a83d-bfe1f0caa50c",
+      "operation": "team.snapshot",
+      "completeJsonMatched": true,
+      "resultPin": {
+        "bytes": 1277,
+        "sha256": "ddc374097679d8fdd41840e7f99dc595e0eab8f32d05aa1aa6e204c26dffc154",
+        "gitBlob": "bac30f1e1fff985b17e552d9d8c575d6ee310333"
+      },
+      "sha256Matched": true
+    },
+    {
+      "kind": "same-A-after-stale",
+      "status": "received",
+      "physicalCalls": 1,
+      "commandId": "38f24c5f-f510-49a1-a20f-af0130dd93a3",
+      "operation": "team.changes.read",
+      "completeJsonMatched": true,
+      "resultPin": {
+        "bytes": 337,
+        "sha256": "e0295efca38df5a212fc36b2a51ad603853805bad736aa9d690bb38139461d4a",
+        "gitBlob": "4ad03e8b169d4b68d4e1d6a1f751ebd1834cea06"
+      },
+      "sha256Matched": true
+    },
+    {
+      "kind": "shared-feed-response-loss",
+      "status": "lost",
+      "physicalCalls": 1,
+      "commandId": "0577371b-14b9-4d5a-8966-a849d21bb126",
+      "operation": "team.changes.read",
+      "completeJsonMatched": true,
+      "resultPin": {
+        "bytes": 250,
+        "sha256": "45ac82876ddf85d16ccc50fb6aba2f99c21a3596e4a1203e40f0d43845b9b924",
+        "gitBlob": "29a5a31cd67c68ea3f55990c3306338965405362"
+      },
+      "sha256Matched": true
+    },
+    {
+      "kind": "shared-feed-after-loss",
+      "status": "received",
+      "physicalCalls": 1,
+      "commandId": "05b60122-10e5-4026-9661-eccdde61ade9",
+      "operation": "team.changes.read",
+      "completeJsonMatched": true,
+      "resultPin": {
+        "bytes": 250,
+        "sha256": "45ac82876ddf85d16ccc50fb6aba2f99c21a3596e4a1203e40f0d43845b9b924",
+        "gitBlob": "29a5a31cd67c68ea3f55990c3306338965405362"
+      },
+      "sha256Matched": true
+    },
+    {
+      "kind": "shared-feed-cursor-loss",
+      "status": "received",
+      "physicalCalls": 1,
+      "commandId": "b3f60278-7ae8-4448-a35b-59fcb9fea6cb",
+      "operation": "team.changes.read",
+      "completeJsonMatched": true,
+      "resultPin": {
+        "bytes": 277,
+        "sha256": "269318d30b15194f838c0b6fe9d995a94a1280187de34819d6d268da7a845fc1",
+        "gitBlob": "a15cde8b137029da413d67e7d4e56c8b73db4b92"
+      },
+      "sha256Matched": true
+    },
+    {
+      "kind": "selected-snapshot-hold",
+      "status": "released",
+      "physicalCalls": 1,
+      "commandId": "f6592199-78cd-4d80-a6fa-6ed2c36dff1f",
+      "operation": "team.snapshot",
+      "completeJsonMatched": true,
+      "resultPin": {
+        "bytes": 1277,
+        "sha256": "ddc374097679d8fdd41840e7f99dc595e0eab8f32d05aa1aa6e204c26dffc154",
+        "gitBlob": "bac30f1e1fff985b17e552d9d8c575d6ee310333"
+      },
+      "sha256Matched": true
+    },
+    {
+      "kind": "selected-getData-tail",
+      "status": "received",
+      "physicalCalls": 1,
+      "commandId": "3521fdda-4ddb-4514-945b-5feb5ee0aa5b",
+      "operation": "team.roster.read",
+      "completeJsonMatched": true,
+      "resultPin": {
+        "bytes": 462,
+        "sha256": "abb1d204322627d4e2e83efc8bf6332ad7065660b23fc814b534bd09a27fc53c",
+        "gitBlob": "4957c6320a0e6bde7258d751a1ac75b25d089863"
+      },
+      "sha256Matched": true
+    }
+  ],
+  "qualificationLimits": [
+    "Only the original Linux-x64 cross-team lane at source86f is supported. No runtime result transfers to aab3, current evidence commits, Darwin, Windows or another lane.",
+    "All18 PNG bodies/hash/header/dimensions are retained and verified; this reviewer has not viewed them. Visual signoff remains unclaimed.",
+    "Original main flow exits0 naturally. The middle owner-default availability epoch uses original exact-identity SIGTERM cleanup; all captured Hosts/groups are absent afterward. Universal natural-exit/atomic process-custody qualification is not made.",
+    "Captured Host absence is observed. A separate main-owned Host exit code is explicitly unavailable in the receipt; no exit code is invented.",
+    "Notification View/Delete pass; Mark-as-read remains unavailable because the original notification was already read.",
+    "The600000-byte large comment was accepted by the Host before app start and then cold-read through original UI. This does not bypass or qualify the composer size limit.",
+    "F08 covers the specific original nine read records and one comment, unchanged stale responses, resync/cursor-gap and late selected-read handling. Its original excluded races/reconnect/live-default-switch/fullF08/M18/Stage1 remain excluded.",
+    "Owner routing uses three cold epochs, including explicit profile withholding and rollback. This is not an in-process default-owner switch.",
+    "Final A profile bytes are restored. Final descriptor intentionally retains both published owner handles and returns default/creation to A; it is not identical to the initial one-owner descriptor.",
+    "Product-file and compiled-bundle hash arrays inside receipts are original observed evidence; not every referenced product file or executable is separately archived. No fabricated full binary/source-body custody is asserted.",
+    "No real provider sessions, native inference, vendor authentication, release/default activation, full end-to-end parity or blanketGREEN is established by this one lane."
+  ],
+  "reviewMethod": {
+    "executedTargetCode": false,
+    "compiledOrImportedTargetCode": false,
+    "localFilesystemOrShell": false,
+    "liveCiPrRefReads": false,
+    "newDownloads": false,
+    "sourceControlRefMutation": false,
+    "bareReportBlobOnly": true,
+    "sourceAndVerifierReadAsData": true,
+    "hashingAndJsonOnly": true,
+    "preliminaryDataPathCorrection": "An in-memory lookup initially named nonexistent desktop-ui-smoke.ts and stopped before any fetch; the actual uiSourceSha256 matched desktop-team-ui-smoke.ts. No source bytes changed."
+  },
+  "checks": [
+    {
+      "id": "BW01",
+      "name": "Exact logical capture reconstructed from all ten complete immutable chunks",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "manifest": {
+          "bytes": 15907,
+          "sha256": "492ccdcf9e63bc7d145095b92b6287fc11f620501225f9e99e83a7a7507e6f12",
+          "gitBlob": "074917c65330c7decb48c3b5204c41fb098be528"
+        },
+        "logical": {
+          "bytes": 28617790,
+          "sha256": "75579f6d6761304ef52d6b600eaa9088c6138d4ad30260371db61a4561dd7deb",
+          "gitBlob": "84c9442a09bd09e9809b1730013a96168cfc6ff0"
+        },
+        "method": "Ordered raw UTF8 strings, no separator or normalization; logical Git identity is derived only."
+      }
+    },
+    {
+      "id": "BW02",
+      "name": "Original artifact binding and whole archive identity agree",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "artifactId": 14343718271,
+        "runId": 44092933810,
+        "jobId": 134072511974,
+        "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+        "archive": {
+          "bytes": 2763631,
+          "sha256": "caf761d6f1b9ad9790edd96f3d6ad4b6f79bf9f12b46c472019313e57d841005",
+          "gitBlob": "c27ad2f0c1f264987c373e8360b91a03bfedbb39"
+        }
+      }
+    },
+    {
+      "id": "BW03",
+      "name": "All 39 complete UTF8 and binary member identities verified",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "members": 39,
+        "utf8": 20,
+        "binary": 19,
+        "utf8Bytes": 20911708,
+        "binaryBytes": 2799598,
+        "pngCount": 18,
+        "archiveBytes": 2763631
+      }
+    },
+    {
+      "id": "BW04",
+      "name": "All 18 retained PNGs have actual 1400x900 PNG headers; no visual claim",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "count": 18,
+        "width": 1400,
+        "height": 900,
+        "visualInspection": false
+      }
+    },
+    {
+      "id": "BW05",
+      "name": "Original complete workflow verifier matches exactly one normalized job-log literal",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "completeWorkflowPin": {
+          "bytes": 96872,
+          "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+          "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+        },
+        "derivedVerifierPin": {
+          "bytes": 52353,
+          "sha256": "4f0e7eedbfd261f1e18d06a44e23115ee67931bdaae520cbd713dbbd69716320",
+          "gitBlob": "1b161d36239df270f76ff7bb620b11be96c119d4"
+        },
+        "extractedLiteralEqual": true,
+        "logLiteralOccurrences": 1,
+        "executionByReviewer": false
+      }
+    },
+    {
+      "id": "BW06",
+      "name": "Summary and original lane log report bounded PASS",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "summaryPin": {
+          "bytes": 1282,
+          "sha256": "debd36b401c24d2c3d495294ea3dcd8f4f51982214f2aac89c7767fcc21318a0",
+          "gitBlob": "be486f1d23a0a6f1ebe676f465642e80690de7b6"
+        },
+        "laneLogPin": {
+          "bytes": 225,
+          "sha256": "6e6724eecf2afa632f46b2df6cbca6a6ab0b092833600856fabc0ec9158c1e72",
+          "gitBlob": "d6829fdc34b339b83c1772dc3b582797e19b0b89"
+        },
+        "scope": "selected lane only",
+        "nativeProviders": "not executed",
+        "releaseQualified": false
+      }
+    },
+    {
+      "id": "BW07",
+      "name": "Actual receipt is clean source86f, not current aab3",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "status": "PASS",
+        "mode": "task-board-cross-team-ui",
+        "source": {
+          "head": "86f52244b5375834a4040cbc63803d68cc708087",
+          "dirty": false
+        },
+        "actualCurrentWorkingSourceQualified": false
+      }
+    },
+    {
+      "id": "BW08",
+      "name": "Nineteen complete selected source bodies join immutable86f scripts tree",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "root": "11ccb7c57cc49af613c62620a1d348bf6de8aa3d",
+        "scripts": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "fullBodies": 19,
+        "bytes": 477871,
+        "receiptRowsMatched": 17,
+        "gitOnlySupportingBodies": [
+          "scripts/legacy-agent-host/desktop-oversized-comment-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-owner-routing-product-census.ts"
+        ]
+      }
+    },
+    {
+      "id": "BW09",
+      "name": "Whole before/after1757-row source census is equal",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "rows": 1757,
+        "derivedCompactJsonIdentity": {
+          "bytes": 266427,
+          "sha256": "6cfc213509be24121cc7ee81bac0a626b1866556a3b36bbda976fb52f4abbc6c",
+          "gitBlob": "fbedc8c355f6359f8f4a52a8c8853c7771e1f446"
+        },
+        "physicalEvidence": "Original receipt before/after census; reviewer performed no new physical census."
+      }
+    },
+    {
+      "id": "BW10",
+      "name": "Offline source scope configures no Runtime or management provider",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "emulation": {
+          "only": true,
+          "runtimeConfigured": false,
+          "managementConfigured": false,
+          "noNativeHostChildrenBeforeUi": true,
+          "noNativeHostChildren": true
+        },
+        "excluded": [
+          "provider sessions",
+          "vendor authentication",
+          "native model execution",
+          "full Stage1/release/default activation"
+        ]
+      }
+    },
+    {
+      "id": "BW11",
+      "name": "Captured Node24.21 and complete linux-child-exec input join",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "node": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+        "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "linuxChildExec": {
+          "manifestPath": "/home/runner/work/_temp/TEST-emulated-ui-inputs-DjKEPA/linux-child-exec/manifest.json",
+          "manifestSha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+          "binarySha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+        },
+        "afterCleanupVerified": true,
+        "scope": "Binary bytes are retained; Node executable and built host/bundles are pin/receipt evidence, not additionally retained binaries."
+      }
+    },
+    {
+      "id": "BW12",
+      "name": "Main original app and captured Host identities agree",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "app": {
+          "pid": 4653,
+          "processGroup": 4653,
+          "identity": "Tue Nov 17 15:39:13 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-DjKEPA/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox",
+          "invocation": [
+            "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+            "/home/runner/work/_temp/TEST-emulated-ui-inputs-DjKEPA/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+            "dev:mcp",
+            "--remoteDebuggingPort",
+            "9222",
+            "--noSandbox"
+          ]
+        },
+        "cdpListener": 4808,
+        "host": {
+          "pid": 5044,
+          "ppid": 4808,
+          "pgid": 4653,
+          "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+          "observedBeforeShutdown": true
+        }
+      }
+    },
+    {
+      "id": "BW13",
+      "name": "Taskboard original controls completed100 recorded steps",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "steps": 100,
+        "createdTask": "120cdc0a-fa21-523c-85ca-1656de5ed0b6",
+        "qaInventory": [
+          "Create dependency through original optional fields; reciprocal canonical graph and visible blocker",
+          "Original Group chat filter supplies Create Task association; exact receipt/snapshot and renderer reload retain it",
+          "Change assignee through existing Radix MemberSelect; retained captured owner",
+          "TEST API sets clarification because no set control exists; original Mark resolved clears it",
+          "Columns/Manual controls and one trusted pointer drag change canonical column order",
+          "Blocked Start refuses unresolved dependency; exact detached canonical oracle; same control succeeds after actual blocker Complete",
+          "Renderer reload retains original task IDs, assignment, clarification and order without new commands",
+          "Existing Task PNG and comment text file upload; canonical refs, reload/read/download and Task image removal"
+        ],
+        "excluded": [
+          "native agents/inference",
+          "logs or runtime readiness",
+          "nonexistent add/remove relationship UI",
+          "full Stage1",
+          "visual signoff before screenshot review"
+        ]
+      }
+    },
+    {
+      "id": "BW14",
+      "name": "Original group association survives renderer reload",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "groupChatId": "10000000-0000-4000-8000-000000000017",
+        "commandId": "TEST-task-board-group-seed",
+        "groupChatPreserved": "10000000-0000-4000-8000-000000000017",
+        "originalOwnerPagesComplete": true
+      }
+    },
+    {
+      "id": "BW15",
+      "name": "Assignment and one original clarification clear retain exact task identity",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "assignmentCommand": "50bc3eb2-17e5-4d46-b5cc-de979b13c7f1",
+        "clarificationCommand": "8a409e38-6901-4817-a53a-33d871e22766",
+        "setupViaTestApi": true,
+        "clearViaOriginalUi": true
+      }
+    },
+    {
+      "id": "BW16",
+      "name": "Dependency refusal and completed blocker lead to original successful Start",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "blockedStart": "18f5b199-71d7-41e8-989b-62dd6b270a93",
+        "exactBlockedReason": "Cannot set task #120cdc0a to in_progress: unresolved dependencies #49b0ed70 (pending). Wait or work on another task, then retry once dependencies are resolved. Ask the lead if a dependency is incorrect.",
+        "taskStates": [
+          {
+            "id": "120cdc0a-fa21-523c-85ca-1656de5ed0b6",
+            "status": "in_progress",
+            "blocks": [],
+            "blockedBy": [
+              "49b0ed70-1a81-5186-ac84-54b203391740"
+            ]
+          },
+          {
+            "id": "49b0ed70-1a81-5186-ac84-54b203391740",
+            "status": "completed",
+            "blocks": [
+              "120cdc0a-fa21-523c-85ca-1656de5ed0b6"
+            ],
+            "blockedBy": []
+          }
+        ]
+      }
+    },
+    {
+      "id": "BW17",
+      "name": "Task PNG and comment-file original upload/read/download/removal are bounded",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "imageBytes": 71,
+        "commentBytes": 39,
+        "downloadPolicy": {
+          "method": "Page.setDownloadBehavior",
+          "behavior": "allow",
+          "downloadPath": "/home/runner/work/_temp/TEST-desktop-backend-kCT5R4/home/Downloads",
+          "rendererBrowserContextId": "6F129931E768FB52ACF533A361AB3A3A",
+          "acknowledged": true,
+          "scope": "captured TEST renderer context via current Page target"
+        },
+        "download": {
+          "path": "/home/runner/work/_temp/TEST-desktop-backend-kCT5R4/home/Downloads/TEST-comment-owned.txt",
+          "size": 39,
+          "sha256": "73fb26db42b2bc7dc47e44d4ea9d74c32827870be2693efc1cb80e4d398a7b1b"
+        },
+        "removeCommand": "198a0f44-9f3a-4eb5-af6e-59f403b15dc2",
+        "excluded": [
+          "boundary-size qualification",
+          "native image delivery",
+          "chat attachments",
+          "native picker",
+          "cold app restart",
+          "blob garbage collection"
+        ]
+      }
+    },
+    {
+      "id": "BW18",
+      "name": "Review cycle records all nine original state transitions",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "steps": 61,
+        "states": [
+          {
+            "commandId": "d614dd0a-f70e-4321-9ece-d9c73da3b27a",
+            "status": "completed",
+            "reviewState": "none"
+          },
+          {
+            "commandId": "558d3874-05ba-4195-85c6-7603ad22625c",
+            "status": "completed",
+            "reviewState": "review"
+          },
+          {
+            "commandId": "cadb3d3a-f609-4d14-8f6c-611aa44b63dc",
+            "status": "pending",
+            "reviewState": "needsFix"
+          },
+          {
+            "commandId": "a1ee46c2-242a-4008-aa95-ec02090f2d24",
+            "status": "in_progress",
+            "reviewState": "none"
+          },
+          {
+            "commandId": "6b9f3d76-f8bf-421b-b3d3-726d60c14c97",
+            "status": "in_progress",
+            "reviewState": "none"
+          },
+          {
+            "commandId": "82bd9b3f-39d3-49ae-b4d9-64fd220b9bbe",
+            "status": "completed",
+            "reviewState": "none"
+          },
+          {
+            "commandId": "b8d3f51f-2eba-4a0f-bd9a-017406c49062",
+            "status": "completed",
+            "reviewState": "review"
+          },
+          {
+            "commandId": "bcdde3f8-5105-49e2-bac3-6f95fb5bf42f",
+            "status": "completed",
+            "reviewState": "approved"
+          },
+          {
+            "commandId": "b306172e-4118-48eb-9b93-62eb21b96237",
+            "status": "completed",
+            "reviewState": "none"
+          }
+        ],
+        "approvedToDone": {
+          "status": "PASS",
+          "commandId": "b306172e-4118-48eb-9b93-62eb21b96237",
+          "statusAfter": "completed",
+          "reviewStateAfter": "none",
+          "doneControlsVisible": true
+        },
+        "excluded": [
+          "native inference/execution",
+          "code edits",
+          "visible history widget qualification",
+          "atomic multi-file publication",
+          "crash/replay qualification",
+          "Stage2"
+        ]
+      }
+    },
+    {
+      "id": "BW19",
+      "name": "Notification navigation and delete pass; Mark-as-read is not qualified",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "notificationId": "ef26eb59-c79a-4448-82fc-e85190c3cf45",
+        "navigate": "PASS",
+        "delete": "PASS",
+        "markRead": "unavailable: original viewed Team notification already read",
+        "runtimeSessions": 0
+      }
+    },
+    {
+      "id": "BW20",
+      "name": "Cross-team Send and Reply join complete retained inbox bodies",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "commandIds": [
+          "c80da1fc-12d3-45c9-b165-3e45ab426c36",
+          "c3155461-14dd-4fee-aaab-10a1c5ee5f12"
+        ],
+        "conversationId": "0357e2cb-009a-4f35-8afa-70a98b1abb15",
+        "summaryTexts": [
+          "TEST_CROSS_TEAM_ONE",
+          "TEST_CROSS_TEAM_TWO"
+        ],
+        "scope": "Original existing Messages cross-Team selector/Send, target Reply through same Composer, canonical source/target receipts and reload",
+        "excluded": [
+          "native provider input/response",
+          "cross-owner protocol",
+          "full M05",
+          "Stage2"
+        ]
+      }
+    },
+    {
+      "id": "BW21",
+      "name": "Accepted600000-byte Host comment is read through cold-reloaded Task UI",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "commandId": "TEST-large-accepted-task-comment",
+        "commentId": "6bb42b13-1647-5d72-bb43-3c27d2f882e4",
+        "bytes": 600000,
+        "sha256": "5968038a7bc48ca6a631182a4662cc1ef91917813e05871b555328e31aa2efcb",
+        "composerCapNotBypassed": true
+      }
+    },
+    {
+      "id": "BW22",
+      "name": "F08 one real comment and nine one-call records retain exact response JSON/hash",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "commentCommand": "0e6cbc5b-ad1e-4dff-a02e-eeb532d0aca4",
+        "records": [
+          {
+            "kind": "same-A-stale-product-snapshot",
+            "status": "released",
+            "physicalCalls": 1,
+            "commandId": "8d777542-a5ad-4738-b629-5939cd9b741f",
+            "operation": "team.snapshot",
+            "completeJsonMatched": true,
+            "resultPin": {
+              "bytes": 1277,
+              "sha256": "f36605e042a0cb89018c79127007567983677c81544955e13bb926fa6ce48522",
+              "gitBlob": "69c7ed18be1836a1908e6ae87bed987c4dc6afa5"
+            },
+            "sha256Matched": true
+          },
+          {
+            "kind": "same-A-stale-feed",
+            "status": "released",
+            "physicalCalls": 1,
+            "commandId": "32320619-2209-440e-a806-61a93261371d",
+            "operation": "team.changes.read",
+            "completeJsonMatched": true,
+            "resultPin": {
+              "bytes": 250,
+              "sha256": "3e10c88e1eba29dd9ee13afe96097556861aebe3aa6f5a8d0ae53a77efe386bf",
+              "gitBlob": "1cdf954aa0b56e6cdeffd9b955ceb9cda7d0453c"
+            },
+            "sha256Matched": true
+          },
+          {
+            "kind": "same-A-newer-snapshot",
+            "status": "received",
+            "physicalCalls": 1,
+            "commandId": "5d027d7e-ff4d-4a2f-a83d-bfe1f0caa50c",
+            "operation": "team.snapshot",
+            "completeJsonMatched": true,
+            "resultPin": {
+              "bytes": 1277,
+              "sha256": "ddc374097679d8fdd41840e7f99dc595e0eab8f32d05aa1aa6e204c26dffc154",
+              "gitBlob": "bac30f1e1fff985b17e552d9d8c575d6ee310333"
+            },
+            "sha256Matched": true
+          },
+          {
+            "kind": "same-A-after-stale",
+            "status": "received",
+            "physicalCalls": 1,
+            "commandId": "38f24c5f-f510-49a1-a20f-af0130dd93a3",
+            "operation": "team.changes.read",
+            "completeJsonMatched": true,
+            "resultPin": {
+              "bytes": 337,
+              "sha256": "e0295efca38df5a212fc36b2a51ad603853805bad736aa9d690bb38139461d4a",
+              "gitBlob": "4ad03e8b169d4b68d4e1d6a1f751ebd1834cea06"
+            },
+            "sha256Matched": true
+          },
+          {
+            "kind": "shared-feed-response-loss",
+            "status": "lost",
+            "physicalCalls": 1,
+            "commandId": "0577371b-14b9-4d5a-8966-a849d21bb126",
+            "operation": "team.changes.read",
+            "completeJsonMatched": true,
+            "resultPin": {
+              "bytes": 250,
+              "sha256": "45ac82876ddf85d16ccc50fb6aba2f99c21a3596e4a1203e40f0d43845b9b924",
+              "gitBlob": "29a5a31cd67c68ea3f55990c3306338965405362"
+            },
+            "sha256Matched": true
+          },
+          {
+            "kind": "shared-feed-after-loss",
+            "status": "received",
+            "physicalCalls": 1,
+            "commandId": "05b60122-10e5-4026-9661-eccdde61ade9",
+            "operation": "team.changes.read",
+            "completeJsonMatched": true,
+            "resultPin": {
+              "bytes": 250,
+              "sha256": "45ac82876ddf85d16ccc50fb6aba2f99c21a3596e4a1203e40f0d43845b9b924",
+              "gitBlob": "29a5a31cd67c68ea3f55990c3306338965405362"
+            },
+            "sha256Matched": true
+          },
+          {
+            "kind": "shared-feed-cursor-loss",
+            "status": "received",
+            "physicalCalls": 1,
+            "commandId": "b3f60278-7ae8-4448-a35b-59fcb9fea6cb",
+            "operation": "team.changes.read",
+            "completeJsonMatched": true,
+            "resultPin": {
+              "bytes": 277,
+              "sha256": "269318d30b15194f838c0b6fe9d995a94a1280187de34819d6d268da7a845fc1",
+              "gitBlob": "a15cde8b137029da413d67e7d4e56c8b73db4b92"
+            },
+            "sha256Matched": true
+          },
+          {
+            "kind": "selected-snapshot-hold",
+            "status": "released",
+            "physicalCalls": 1,
+            "commandId": "f6592199-78cd-4d80-a6fa-6ed2c36dff1f",
+            "operation": "team.snapshot",
+            "completeJsonMatched": true,
+            "resultPin": {
+              "bytes": 1277,
+              "sha256": "ddc374097679d8fdd41840e7f99dc595e0eab8f32d05aa1aa6e204c26dffc154",
+              "gitBlob": "bac30f1e1fff985b17e552d9d8c575d6ee310333"
+            },
+            "sha256Matched": true
+          },
+          {
+            "kind": "selected-getData-tail",
+            "status": "received",
+            "physicalCalls": 1,
+            "commandId": "3521fdda-4ddb-4514-945b-5feb5ee0aa5b",
+            "operation": "team.roster.read",
+            "completeJsonMatched": true,
+            "resultPin": {
+              "bytes": 462,
+              "sha256": "abb1d204322627d4e2e83efc8bf6332ad7065660b23fc814b534bd09a27fc53c",
+              "gitBlob": "4957c6320a0e6bde7258d751a1ac75b25d089863"
+            },
+            "sha256Matched": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "BW23",
+      "name": "Same-A stale snapshot is rejected after newer actual mutation",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "outcome": {
+          "status": "rejected",
+          "message": "Host read crossed a mutation boundary"
+        },
+        "stale": {
+          "streamId": "a6a124b6-e409-42e7-a11b-3ca7cf4748c2",
+          "cursor": "e65ca83d-0730-4129-92f7-187def0fe31c",
+          "sequence": 20
+        },
+        "newer": {
+          "streamId": "a6a124b6-e409-42e7-a11b-3ca7cf4748c2",
+          "cursor": "b45d1911-d1a2-43d4-86bb-eff8babc8fd3",
+          "sequence": 21
+        },
+        "scope": "Direct original public getData crossing the original UI Comment; not a teamSlice deduplicated read response"
+      }
+    },
+    {
+      "id": "BW24",
+      "name": "Same-A old feed and late source read do not replace selected data",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "sameAFeedExact": true,
+        "targetReadReleaseExact": true,
+        "selectedReadRequest": {
+          "handle": {
+            "handleId": "TEST-desktop-handle-TEST-desktop-backend-kCT5R4"
+          },
+          "commandId": "f6592199-78cd-4d80-a6fa-6ed2c36dff1f",
+          "operation": "team.snapshot",
+          "payload": {}
+        },
+        "priorNonce": 3,
+        "scope": "Original same-A shared feed after newer real snapshot acceptance; separate direct public stale-product refusal, no first-global-subscription qualification"
+      }
+    },
+    {
+      "id": "BW25",
+      "name": "Original response-loss/cursor-gap recovery is restored with no pending observation",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "events": [
+          {
+            "type": "config",
+            "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-kCT5R4",
+            "detail": "host-subscription-resync"
+          },
+          {
+            "type": "inbox",
+            "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-kCT5R4",
+            "detail": "host-subscription-resync"
+          },
+          {
+            "type": "config",
+            "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-kCT5R4",
+            "detail": "host-product-gap"
+          },
+          {
+            "type": "inbox",
+            "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-kCT5R4",
+            "detail": "host-product-gap"
+          }
+        ],
+        "observerReads": 4,
+        "pending": 0,
+        "violations": [],
+        "scope": "Same actual Electron shared adapter: one original Task comment, uniquely named public getData product snapshot refused across its mutation boundary, same-A old feed delivered unchanged after newer real snapshot acceptance, real read response loss, actual Host cursor gap and late public observer resync; separate original selected-Team read held across original target navigation",
+        "excluded": [
+          "first global snapshot-subscription race",
+          "stale original teamSlice refresh response across an in-flight mutation",
+          "transport reconnect or Host restart",
+          "live default-owner switch",
+          "unavailable A physical fault",
+          "cross-owner routing",
+          "full F08/M18/Stage1"
+        ]
+      }
+    },
+    {
+      "id": "BW26",
+      "name": "Original Task Delete and Restore retain exact task and return pending",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "taskId": "49b0ed70-1a81-5186-ac84-54b203391740",
+        "commands": [
+          "5574826d-9c94-4b1e-be4c-e5f2ee166250",
+          "fb36ccf8-889a-4f1b-8ce4-4ecf962d6e7e"
+        ],
+        "restoredStatus": "pending",
+        "peerTeamsUnchanged": [
+          "test-cross-alpha",
+          "test-cross-beta"
+        ],
+        "scope": "Original seeded Task Delete hover control, themed confirmation, count-only Task Trash, exact subject/display-ID row and original Restore task; canonical restore returns pending",
+        "excluded": [
+          "native providers",
+          "global Trash UI",
+          "crash/replay qualification",
+          "full Stage1"
+        ]
+      }
+    },
+    {
+      "id": "BW27",
+      "name": "Original selected main Quit ends exit0 without residual process rows",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "quitRequested": true,
+        "originalExit": {
+          "initialExitCode": 0,
+          "initialSignalCode": null,
+          "exitCode": 0,
+          "signalCode": null
+        },
+        "cleanup": {
+          "processGroup": 4653,
+          "remaining": [],
+          "appExitCode": 0,
+          "appSignalCode": null,
+          "capturedHostObserved": true,
+          "capturedHostAbsent": true,
+          "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+        },
+        "noSeparateHostExitCode": true
+      }
+    },
+    {
+      "id": "BW28",
+      "name": "Three cold owner-routing epochs match selected sequence",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "phases": [
+          "default-b",
+          "unavailable-a",
+          "rollback-a"
+        ],
+        "budgetMs": 720000,
+        "budgetScope": "nonrenewable continuation bound within the unchanged 45-minute existing job; original cold startup/action bounds are not increased",
+        "selectionBoundary": "Cold trusted descriptor changes both defaultOwner and explicit creation.owner; neither an in-process switch nor a claim that defaultOwner alone chooses unbound creation. The original model Default control is separate.",
+        "scope": "Original A epoch, clean default/creation B configuration, original A Task Create and unbound save-only B Create, original A handle refusal with its real profile path unavailable, clean rollback preserving both published handles",
+        "excluded": [
+          "in-process preference setter",
+          "native allocation or inference",
+          "provider authentication",
+          "original UNKNOWN debt release",
+          "full F08/M18/Stage1"
+        ]
+      }
+    },
+    {
+      "id": "BW29",
+      "name": "Default-B creation preserves original A data and retained handles",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "publishedBHandle": {
+          "handleId": "a8e00333-53e4-5a92-aeb2-fe8829c8ef6c"
+        },
+        "originalAHandle": {
+          "handleId": "TEST-desktop-handle-TEST-desktop-backend-kCT5R4"
+        },
+        "createCommand": "5f7ce694-1c96-4747-a387-593a448f9326",
+        "aBeforeAfterCensusesEqual": true
+      }
+    },
+    {
+      "id": "BW30",
+      "name": "Unavailable-A original request refuses once and both product censuses stay exact",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "request": {
+          "handle": {
+            "handleId": "TEST-desktop-handle-TEST-desktop-backend-kCT5R4"
+          },
+          "commandId": "TEST-unavailable-a-1daa4f7d-7e8d-4367-86bb-8f2c6d09ae5d",
+          "operation": "task.create",
+          "payload": {
+            "subject": "TEST unavailable original A command must not reach B"
+          }
+        },
+        "result": {
+          "ok": false,
+          "code": "unavailable",
+          "outcome": "not-dispatched"
+        },
+        "noRetry": true,
+        "profileAbsent": true
+      }
+    },
+    {
+      "id": "BW31",
+      "name": "Partial availability UI reads preserve both owners and open healthy B",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "observations": [
+          {
+            "surface": "teams",
+            "filtered": false
+          },
+          {
+            "surface": "teams",
+            "filtered": true
+          },
+          {
+            "surface": "tasks",
+            "filtered": false
+          },
+          {
+            "surface": "tasks",
+            "filtered": true
+          }
+        ],
+        "identity": {
+          "contextId": "local",
+          "teamName": "host-team:a8e00333-53e4-5a92-aeb2-fe8829c8ef6c",
+          "taskId": "0c33a450-d321-5102-84a2-c24a6aaf7334",
+          "ownerResourceRef": "453c0bc66f2b7201a0ccb148b26e5349df85440174ef3dade4327de976bfe04a"
+        },
+        "openedTask": {
+          "contextId": "local",
+          "teamName": "host-team:a8e00333-53e4-5a92-aeb2-fe8829c8ef6c",
+          "taskId": "0c33a450-d321-5102-84a2-c24a6aaf7334",
+          "phase": "ready"
+        }
+      }
+    },
+    {
+      "id": "BW32",
+      "name": "Rollback keeps both owner bindings and avoids cross-owner writes",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "bindingFiles": [
+          {
+            "name": "05191dc993dedb20026ad3c9ad61a3a219dccd8dddd12d4486d03c35b71d9c46.json",
+            "sha256": "9783f9ed46c7ae6812a7803a0e4ff0ec9dbc488d88a60b7888e5337fda4c97dd"
+          },
+          {
+            "name": "37b65fdc58d971951a3ed28a8e974df9c9e6a76d9bf758ef01a2a3d3e56a540b.json",
+            "sha256": "889dde0d29dd9718d2b1c6f0078da0f743a77dbcb41215ab9905bb9cafc94a70"
+          },
+          {
+            "name": "5fe80264f063e8282cdee908443e08fa038a2fea4e347fadf7831d019ee6ad61.json",
+            "sha256": "41be6bf1f6c9136d372b48cca4da0320d113e8e8acf02dce16d37d81274bc12c"
+          },
+          {
+            "name": "d8eb2c05b6ec260798d2fba6412bf0503d0bf0511cc80c7ce4e9b3478028b67b.json",
+            "sha256": "eaa17c1972cad08a65440c40663057d15a6c3bc11b419541a14779497832b6ba"
+          }
+        ],
+        "otherOwnerProductCensusesExact": true
+      }
+    },
+    {
+      "id": "BW33",
+      "name": "Actual profile restoration and intentional final descriptor match retained bytes",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "initialDescriptorSha256": "21580346c11ea6b30d9278f7223425250b795dcf7288a6482fa2775c5a5441c4",
+        "finalDescriptorSha256": "705f5c3a70a7a2a6a0007347552b201e245465c03d828489d59fe318060a999b",
+        "note": "Descriptor intentionally retains both published handles and defaults/creation back to A; it is not byte-identical to the initial one-owner descriptor.",
+        "profileASha256": "5bbe1b969e7e22f2994969b23a09c426274ac21d3803b2b5101e298386ccfab1",
+        "profileBSha256": "4dd54cb528bd891b487f100932062da5afee931588ac0dff618dc5ff4bc5c5fe"
+      }
+    },
+    {
+      "id": "BW34",
+      "name": "All three owner groups/Hosts are absent and middle SIGTERM is explicit",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "epochs": [
+          {
+            "phase": "default-b",
+            "cleanup": {
+              "remaining": [],
+              "hosts": [
+                {
+                  "pid": 12864,
+                  "ppid": 12707,
+                  "pgid": 12579
+                },
+                {
+                  "pid": 12879,
+                  "ppid": 12707,
+                  "pgid": 12579
+                }
+              ],
+              "hostsAbsent": true,
+              "appExitCode": 0,
+              "appSignalCode": null,
+              "quitAttempted": true,
+              "signalAttempted": false,
+              "scope": "Guarded original app close and established exact-identity wrapper cleanup; no universal natural-exit qualification"
+            },
+            "quit": {
+              "attempted": true,
+              "scope": "Close only the verified TEST window before stopping its dev wrapper",
+              "reply": "acknowledged",
+              "listenerAbsent": true
+            }
+          },
+          {
+            "phase": "unavailable-a",
+            "cleanup": {
+              "remaining": [],
+              "hosts": [
+                {
+                  "pid": 14594,
+                  "ppid": 14428,
+                  "pgid": 14303
+                }
+              ],
+              "hostsAbsent": true,
+              "appExitCode": null,
+              "appSignalCode": "SIGTERM",
+              "quitAttempted": true,
+              "signalAttempted": true,
+              "scope": "Guarded original app close and established exact-identity wrapper cleanup; no universal natural-exit qualification"
+            },
+            "quit": {
+              "attempted": true,
+              "scope": "Close only the verified TEST window before stopping its dev wrapper",
+              "reply": "acknowledged",
+              "listenerAbsent": true
+            }
+          },
+          {
+            "phase": "rollback-a",
+            "cleanup": {
+              "remaining": [],
+              "hosts": [
+                {
+                  "pid": 17356,
+                  "ppid": 17192,
+                  "pgid": 17065
+                },
+                {
+                  "pid": 17371,
+                  "ppid": 17192,
+                  "pgid": 17065
+                }
+              ],
+              "hostsAbsent": true,
+              "appExitCode": 0,
+              "appSignalCode": null,
+              "quitAttempted": true,
+              "signalAttempted": false,
+              "scope": "Guarded original app close and established exact-identity wrapper cleanup; no universal natural-exit qualification"
+            },
+            "quit": {
+              "attempted": true,
+              "scope": "Close only the verified TEST window before stopping its dev wrapper",
+              "reply": "acknowledged",
+              "listenerAbsent": true
+            }
+          }
+        ],
+        "universalNaturalExitQualified": false
+      }
+    },
+    {
+      "id": "BW35",
+      "name": "All recorded executable-name version invocations are finite TEST sentinel events",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "originalCount": 1,
+        "continuationCumulativeCounts": [
+          2,
+          3,
+          4
+        ],
+        "finiteSentinelSource": {
+          "bytes": 33737,
+          "sha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+          "gitBlob": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587"
+        },
+        "nativeProviderExecutionQualified": false
+      }
+    },
+    {
+      "id": "BW36",
+      "name": "Original complete verifier selected ten screenshot hashes within18 retained PNGs",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "originalVerifierSelected": 10,
+        "fullRetained": 18,
+        "allHeadersAndHashesMatched": true,
+        "visualSignoff": false
+      }
+    },
+    {
+      "id": "BW37",
+      "name": "No broader provider/release/platform/source-transfer qualification",
+      "status": "PASS_RETAINED_OUTCOME",
+      "evidence": {
+        "nativeInference": false,
+        "vendorAuthentication": false,
+        "release": false,
+        "fullStage1": false,
+        "fullF08M18": false,
+        "currentAab3Runtime": false,
+        "otherPlatforms": false,
+        "visualSignoff": false
+      }
+    }
+  ],
+  "checkCount": 37,
+  "passedChecks": [
+    "BW01",
+    "BW02",
+    "BW03",
+    "BW04",
+    "BW05",
+    "BW06",
+    "BW07",
+    "BW08",
+    "BW09",
+    "BW10",
+    "BW11",
+    "BW12",
+    "BW13",
+    "BW14",
+    "BW15",
+    "BW16",
+    "BW17",
+    "BW18",
+    "BW19",
+    "BW20",
+    "BW21",
+    "BW22",
+    "BW23",
+    "BW24",
+    "BW25",
+    "BW26",
+    "BW27",
+    "BW28",
+    "BW29",
+    "BW30",
+    "BW31",
+    "BW32",
+    "BW33",
+    "BW34",
+    "BW35",
+    "BW36",
+    "BW37"
+  ],
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "unresolvedBlockers": [],
+  "selfReadProtocol": "Pin is sent immediately after retention. A complete fresh readback and literal/hash/schema/count comparison follows separately."
+}

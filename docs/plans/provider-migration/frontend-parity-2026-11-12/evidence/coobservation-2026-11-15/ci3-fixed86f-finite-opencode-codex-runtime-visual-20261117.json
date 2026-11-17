@@ -1,0 +1,356 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_FINITE_OPENCODE_CODEX_ROOT_PNG_VISUAL_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "root",
+  "at": "2026-11-17 17:05:18 UTC",
+  "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+  "runId": 44092933810,
+  "method": "Original retained PNGs were opened with view_image and actually inspected. An earlier six-image Codex tool output was truncated and did not count; all18 Codex images were subsequently reopened in pairs. No image transformation or target runtime execution.",
+  "subjects": [
+    {
+      "artifactId": 14346795760,
+      "logicalCapture": {
+        "bytes": 7944895,
+        "sha256": "034ee86dd41c6571c68f434604c8defe363c2a19167c08f8c3140dd2f8fbecf4",
+        "gitBlob": "cf31503e44207f755bb5690bfff2971d0ac4a503",
+        "derivedLogicalIdentity": true
+      },
+      "retainedManifest": {
+        "bytes": 11347,
+        "sha256": "5d37a6118705b33e53d0f2c5bb92beb338385dd2cb4e9f761a6551641aa1415b",
+        "gitBlob": "4ce54fbd20dc6dd4771c5a2d3b9d3fa5d385b7c5"
+      },
+      "images": [
+        {
+          "path": "TEST-desktop-backend-iyLjax/ui-emulated-runtime-allow-pending.png",
+          "bytes": 149945,
+          "sha256": "2ba6052a30802c2f8439ff41c7a5b2834959fc8191a60bb172cc6deb1edff05d",
+          "gitBlob": "a3266dcb76fcddcc71b39c30f0b5a1cc65505dc8",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Allow-pending shows the TEST bash approval card with Allow/Deny, a prior denied outcome and current Delivering state."
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/ui-emulated-runtime-completed.png",
+          "bytes": 133217,
+          "sha256": "e7004ea6eb0b136d5e54ac579a9bac5c77ca9af0464700044b75510b74934fb3",
+          "gitBlob": "d2a72100e94fc2fffa12c5baea82f8ca6fb77684",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Completed chat shows TEST stream partial complete; the log pane in this snapshot still displays partial thought/output. This is not visual proof of final log freshness."
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/ui-emulated-runtime-deny-pending.png",
+          "bytes": 140721,
+          "sha256": "180a31fcfe8949c2c0127ba49412918a1b385aafdff3d1128c74505bff6a0ff6",
+          "gitBlob": "5a9b59d58f05ebcf8b91b0c82a6f98090f92a5ef",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Deny-pending shows the TEST bash approval card with both original decision controls and earlier completed stream content."
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/ui-emulated-runtime-held.png",
+          "bytes": 116986,
+          "sha256": "c2865489aef9f43bc44a35e7054ab5bd9ce28fd30e85c988175877988d84d0b4",
+          "gitBlob": "cac1b8e35204c75e39d6cc0e090aa87cc1fa2283",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Held snapshot shows TEST_UI_HOLD and held partial content, two completed scheduled tasks and an empty schedules area; no runtime absence inferred."
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/ui-emulated-runtime-launch.png",
+          "bytes": 114954,
+          "sha256": "10ff96e4d72f91d2ca594eeda11d03671c222a3f7fb60c36cdf5cacf29252e24",
+          "gitBlob": "fc77f335e79b5b3bbe9b5f3e3c568091e76256aa",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Launch shows Team launched - lead online and TEST boot ready, plus Tasks could not be refreshed / Host read crossed a mutation boundary; previous task row is retained with explicitly stale-count warning."
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/ui-emulated-runtime-lead-logs.png",
+          "bytes": 59941,
+          "sha256": "238c98c79f40f1a59fbdc33a71b6b48ae2f8656148383e08a2ae8a32bf373f8d",
+          "gitBlob": "6f563242f624462ad6b05fd59fc620221471732c",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Lead Logs dialog visibly filters and highlights TEST stream partial complete; generation and two observed messages are shown with timestamps unavailable."
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/ui-emulated-runtime-logs.png",
+          "bytes": 137455,
+          "sha256": "1745602ad74a5780f4fcec990e29d51f48c68d1ba406b4c022ecd3dc4a5994b7",
+          "gitBlob": "5d0b985b281fde5a215de0101f3f3caf116311de",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Member Logs tab opens with captured-generation summary and four observed messages, while the member dialog event area is visually empty at this snapshot; underlying logs show allow/deny outcomes."
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/ui-emulated-runtime-partial.png",
+          "bytes": 105366,
+          "sha256": "c18cbca2d5cdbffd02eccca21f2ef7486eacc561475194672451dfa329bc1403",
+          "gitBlob": "0d0f4b1cce8c81587a69e9560fb8848a20767e25",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Partial snapshot shows TEST stream partial in chat; the header idle badge does not independently prove completion."
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/ui-emulated-runtime-reloaded.png",
+          "bytes": 132671,
+          "sha256": "d4ec6cf95eecee9512097b7e058cc11102b2003836c37cdc08b26e176e522852",
+          "gitBlob": "29bab819d9e6aa1ca7623c84ee8e56ce3bc84450",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Reloaded screen retains Running/Stop, saved task, approval-allowed chat and completed thought/output history."
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/ui-emulated-runtime-schedule-automatic.png",
+          "bytes": 141511,
+          "sha256": "3fa06dfe2e2e534f5db7fcc9a0730545c128e0ec96c19d9af4740cd061dd3cf1",
+          "gitBlob": "2c9e69034aac49e196788fd3b7ae17ee834b9d96",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Automatic-schedule snapshot shows two Done scheduled tasks, a paused schedule and a dispatched row whose work-completion text is truncated/unverified; no additional timing inference from PNG."
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/ui-emulated-runtime-schedule.png",
+          "bytes": 122157,
+          "sha256": "1a6b3ee3626ef2472357066856fa88fcc9922223ce4c476ca53716060a7ce5ab",
+          "gitBlob": "e80bc23f713bdac13a1967bc2f92a8435981582c",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Schedule screen shows one Done task and an Active schedule; Run requested explicitly asks the user to inspect handoff history, so this screenshot alone does not prove scheduled work completion."
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/ui-emulated-runtime-stats.png",
+          "bytes": 143467,
+          "sha256": "ac7aa099d79c5e70a0f1555438aff63b9872e52d2cf1bcb60c3b216ef9808524",
+          "gitBlob": "ea42ab9a1478636f9bf777cc0e5f4890a751fc7b",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Stats labels input/output tokens and cost Unknown, with4 observed messages,2 tool calls,0 compaction observations and explicit native timestamp/lifetime limits."
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/ui-emulated-runtime-stopped.png",
+          "bytes": 132426,
+          "sha256": "93899e4335575483e1c2f29fbd34aac921f3d253f74eed9322a301b8fa5f4927",
+          "gitBlob": "9b8fe7d1649cbd7af725cb4c53bd1d8861c0b5bb",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Stopped-named snapshot still displays Running and Stopping... plus held partial; it is not visual proof of final stop completion or process absence."
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/ui-emulated-runtime-task-activity.png",
+          "bytes": 174211,
+          "sha256": "e00271d9453ec28ccef3183fef36e3fe42d4697c29880f17b131aa7483a34a4f",
+          "gitBlob": "bf5ddd69d25a6f7d79adf34cf01044922ef25fd0",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Task Activity visibly records created, pending→in_progress and alice in_progress→completed, plus retained scheduled output and native/lifetime limitations."
+        },
+        {
+          "path": "TEST-desktop-backend-iyLjax/ui-emulated-runtime-task-log-stream.png",
+          "bytes": 147190,
+          "sha256": "594f3217d248b65fef237faae25cd4975a86821408d46d2f3fbda0b2690053df",
+          "gitBlob": "f872b5004339623e7f8f55d8699c136aa81c1f5d",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Task Log Stream shows the selected task Completed, succeeded result and TEST scheduled complete, explicitly scoped to retained task runtime observations."
+        }
+      ]
+    },
+    {
+      "artifactId": 14346762789,
+      "logicalCapture": {
+        "bytes": 9250963,
+        "sha256": "173a47d013864cdd1219e4c5e128b567a3e1a12ce07876a8019462fc2b09186d",
+        "gitBlob": "f1267577051253b2eb022c39ee8ab4c0ceae558d",
+        "derivedLogicalIdentity": true
+      },
+      "retainedManifest": {
+        "bytes": 12501,
+        "sha256": "68833ef878c37f7c74941d67fe50e20121d7174d45cd3b95d60d82204a4195d1",
+        "gitBlob": "2dd826303b947665c2cdc8b933292d8ee652e695"
+      },
+      "images": [
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-allow-pending.png",
+          "bytes": 149053,
+          "sha256": "39ad1140633841217fcfbcdc71978e1d2eb844fa9020e3614896418abfc92e88",
+          "gitBlob": "2944dcfe144cc636c2f6a21065c67cfb4335de73",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Allow-pending: Codex TEST-model finite runtime, original Terminal approval TEST write approved-effect.txt with Allow/Deny, previous TEST approval denied, member Delivering; no actual allow inferred from pending screenshot."
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-completed.png",
+          "bytes": 136268,
+          "sha256": "a50dc6bec43567481f770c439945b6c34208edf563df0ecf0f2dd629d4e84add",
+          "gitBlob": "4be8601ce34c51a38761528ce6587d186c751fd9",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Completed: conversation shows TEST stream partial complete; selected Logs still show TEST stream partial in the expanded earlier row and generation with 2 observed messages. This image alone does not establish settled completed log freshness."
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-cost.png",
+          "bytes": 150248,
+          "sha256": "c4d57ab34fcc87975b796ebf032b9f755d6114f13453f1b10a161db672f3def3",
+          "gitBlob": "4ee6d554b9dc3e8b4a706d7241ec75b0445192e0",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Cost: chat reports scoped retained Codex usage input720/output42, price not reported, elapsed47s. Logs show six observed messages including TEST question Alpha and TEST approval allowed; not native lifetime billing."
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-deny-pending.png",
+          "bytes": 147766,
+          "sha256": "34a42718f534f34541c0b2be86a9adaff4621a88c52f36131c4d754055318953",
+          "gitBlob": "3d61acc6829827f7f3d457d76b0ffc44e0c74ce2",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Deny-pending: original Terminal approval with Allow/Deny is visible, current TEST_UI_APPROVAL_DENY is Delivering. Logs now visibly contain full TEST stream partial complete, unlike earlier completed snapshot."
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-held.png",
+          "bytes": 117473,
+          "sha256": "b8d1733382e339b61320abad8e7f4e7c511107efce4f3a70c85f7a06c076ec88",
+          "gitBlob": "b7108e6d7671a9534a439afb9508cf18d2f867fe",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Held: TEST_UI_HOLD and TEST held partial are visible; two edited-schedule tasks are Done; Schedules panel says No schedules yet. No process absence inferred."
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-launch.png",
+          "bytes": 101946,
+          "sha256": "e9a68b62387bb3dce8fd6a99965a2a4fe7dd436ad96bcc8a655b388d7f976014",
+          "gitBlob": "da459136a4bdd9cfa676d9ac87e7fbc87be711d5",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Launch: Team launched - lead online, TEST_UI_BOOT/TEST boot ready, finite Codex TEST-model lead, persisted seed task shown in TODO/sidebar. No refresh warning visible in this Codex launch image."
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-lead-logs.png",
+          "bytes": 61198,
+          "sha256": "47d758c992c7e02364c1e0c39a883e355051c19ab60acae204281be0209ae1eb",
+          "gitBlob": "d5023595cd3fbc6f78e7ae235814651726b3cac7",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Lead-logs: fullscreen Logs filters and highlights TEST selected member stderr, scoped generation and three observed messages, timestamps unavailable."
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-logs.png",
+          "bytes": 145086,
+          "sha256": "97a33185a6f5758a7429bf7c75d73a9f2a228b9d5ca209c749774c0d8e547381",
+          "gitBlob": "5bdb5d919c348428443d1e24e7e5d32ad975bc49",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Logs: member detail opens Logs with seven observed messages, activity15/tokens762; visible event area is empty in this snapshot. Underlying log contains question declined and Alpha. No settled modal event content inferred."
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-partial.png",
+          "bytes": 105140,
+          "sha256": "4efe23d4bcb59cd9756ee5cc200b8342edb419ed5dc4dcae5de2b127a80fdd35",
+          "gitBlob": "ff9928e118a00586f06a35a609063891b82a29fe",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Partial: chat retains TEST_UI_STREAM and TEST stream partial without complete result; lead row idle label alone is not a completion oracle."
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-question-decline-pending.png",
+          "bytes": 158732,
+          "sha256": "ce1ef8bbf903191f20655c7141916c8b93f1ab5ddb62a6afd9c4ef0ced841c71",
+          "gitBlob": "2983db9e8d10a41378df44d97a763b9dc80f5998",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Question-decline-pending: current TEST_UI_QUESTION_DECLINE is Delivering, original question card offers Alpha/Beta and Deny; prior TEST question Alpha visible. Pending image does not prove decline action."
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-reloaded.png",
+          "bytes": 141559,
+          "sha256": "2f2ae9f5befe152d3624a0730c136f719b7480a6a57759ecbabd7ec19dd329b4",
+          "gitBlob": "427cecaaf2b71146fa0743aa57589939c7da683c",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Reloaded: persisted TEST team Running with Stop button, original saved seed, full TEST stream partial complete and member stderr in Logs. Scoped usage retains720/42 and price unknown."
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-question-pending.png",
+          "bytes": 157107,
+          "sha256": "3074eb5441b6704fe311e9ed25c7ea1b1392244bab7f97a723e8446ca7a1ad42",
+          "gitBlob": "3563d033df5b67bcb81cf9599db258e1154b3c9f",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Question-pending: TEST_UI_QUESTION with Alpha/Beta choices and Submit/Deny, prior TEST approval allowed. Original pending interaction visibly preserved."
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-schedule-automatic.png",
+          "bytes": 130632,
+          "sha256": "7b25e221a417c001a5a52c31062d9ec89bf4eb697495837b77f54ff059d85866",
+          "gitBlob": "ecb91a00820a61a6a2df3862f8baca84f8d0907f",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Schedule-automatic: paused edited schedule, dispatch record for task#78104f55 with work completion not yet verified/truncated; screenshot still shows one Done task, while prior manual TEST scheduled complete is visible. No automatic completion inferred solely from this image."
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-schedule.png",
+          "bytes": 119185,
+          "sha256": "0952673bdd824683a6db471f897d1d1e012b1fc800e07d12702d7155393b9a9b",
+          "gitBlob": "f8bf70303649c0b333353ad871d1caa51e6f3e28",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Schedule: edited schedule Active; Run requested, check history to see whether work was handed off; one Done task and TEST scheduled complete from earlier sequence retained."
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-stats.png",
+          "bytes": 148469,
+          "sha256": "21a38ac65b4bb1777ee6e7abe3956abb9d40ea9bd4fb95cc0a41caedbd914bb0",
+          "gitBlob": "cacee51867cad21956c53d001d1d0bd9d4f23505",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Stats: retained one-generation usage input720/output42, cost Unknown, seven observed messages, zero observed tool/compaction; native timestamps/cache/file-line/lifetime limitations explicit."
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-stopped.png",
+          "bytes": 137725,
+          "sha256": "17f8bc2f572e1684d5f6bf4f8892fb5e0d146f816582d314e2b619eb5f96af9d",
+          "gitBlob": "336f6c85a09c1b238de793265228a895d032e42d",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Stopped: Codex image shows Team is offline and Launch button, member offline, held partial remains, three tasks retained. This visually supports stopped UI; native absence still depends on receipt/census, and historical Team launched banner is also retained."
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-task-activity.png",
+          "bytes": 174786,
+          "sha256": "dfb6cb977c9ba4a0b0b3823903ca63ac2ed50a4edf53e05c8a2334713e511b1b",
+          "gitBlob": "bde96cd5d4722d923b4c3e44c2cb671e36dedb43",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Task-activity: task created pending, status pending→in_progress, alice in_progress→completed; retained Task input three facts, succeeded result/usage120/7 and TEST scheduled complete. Native timestamp/lifetime limitations explicit."
+        },
+        {
+          "path": "TEST-desktop-backend-SgSwEx/ui-emulated-runtime-task-log-stream.png",
+          "bytes": 150129,
+          "sha256": "93e16a2d2b475687274224fe9bc902dba1f39784c69a00e3533c28937ec07f9d",
+          "gitBlob": "ce39ce069e92c43942b4da05bd30f136bcf628ca",
+          "identityKind": "derived from complete retained ZIP member bytes; not assumed a separately retained Git blob",
+          "viewed": true,
+          "observation": "Task-log-stream: selected task#78104f55 Completed, alice, task-scoped retained runtime generation, succeeded result/usage120/7 and full TEST scheduled complete; source limitations about native clocks/files explicit."
+        }
+      ]
+    }
+  ],
+  "imageCount": 33,
+  "qualification": {
+    "actualImageInspection": true,
+    "standaloneImageProofOfNativeAbsence": false,
+    "allScreensFresh": false,
+    "sourceRuntimeQualifiedBeyondFrozenHead": false,
+    "wholeE2E": false
+  },
+  "materialLimits": [
+    "OpenCode launch reports Tasks read crossed mutation boundary and retained previous rows/counts; no fresh snapshot claimed there.",
+    "Earlier completed Logs screenshots show partial content, and member Logs modal screenshots have an empty event region. Later exact receipt/log assertions retain authority for settled readback.",
+    "OpenCode stopped PNG remains Running/Stopping; Codex stopped PNG is offline/Launch. Neither alone proves native process absence.",
+    "Codex automatic-schedule screenshot still has one Done row and unverified dispatch; later completed-task activity/log evidence is distinct.",
+    "Unknown/unreported usage/cost/native timestamps remain unknown; finite TEST UI is not vendor account or lifetime usage proof."
+  ]
+}
