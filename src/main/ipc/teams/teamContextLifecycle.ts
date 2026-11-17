@@ -47,8 +47,12 @@ export async function stopLogicalTeam(
   try {
     const contexts = await ownedHistoryContexts(logicalTeamName, meta, registry);
     if (contexts.length === 0) return stopNative(logicalTeamName);
-    if (contexts.some((row) => row.state !== 'ready')) {
-      throw new Error('Project context is still preparing or requires recovery');
+    for (const row of contexts) {
+      if (row.state !== 'ready') {
+        // Before native ready, an owned process may already be alive. An
+        // unmarked/missing alias cannot be stopped safely.
+        await registry.assertReservedStopOwnership(logicalTeamName, row.executionTeamName);
+      }
     }
     for (const row of contexts) {
       const result = await stopNative(row.executionTeamName);

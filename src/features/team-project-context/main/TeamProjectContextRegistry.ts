@@ -297,6 +297,24 @@ export class TeamProjectContextRegistry {
   }
 
   /**
+   * Reserved aliases can contain a live process before native provisioning
+   * emits ready. Never stop one unless its alias comes from this team's
+   * manifest AND its current owner marker proves this app profile.
+   */
+  async assertReservedStopOwnership(
+    logicalTeamName: string,
+    executionTeamName: string
+  ): Promise<void> {
+    await this.assertOwnedDirectory(logicalTeamName);
+    const row = (await this.readIndex(logicalTeamName)).contexts.find(
+      (context) =>
+        context.executionTeamName === executionTeamName && context.state === 'reserved'
+    );
+    if (!row) throw new TeamProjectContextUnavailableError('Unknown pending project runtime');
+    await this.assertOwnedDirectory(row.executionTeamName);
+  }
+
+  /**
    * Read-only inspection for navigation. Reserved entries are distinct from
    * ready native contexts and never authorize task or message access.
    */

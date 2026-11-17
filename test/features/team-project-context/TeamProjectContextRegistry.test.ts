@@ -177,6 +177,24 @@ describe('TeamProjectContextRegistry', () => {
       .rejects.toBeInstanceOf(TeamProjectContextUnavailableError);
   });
 
+  it('permits stopping only a reserved native alias with this profile ownership', async () => {
+    const f = await fixture();
+    const row = await f.registry.reserve('logical-team', f.workspaceA);
+    await expect(f.registry.assertReservedStopOwnership('logical-team', row.executionTeamName))
+      .rejects.toThrow();
+    await simulateNativeProvisioning(f, row.executionTeamName);
+    await expect(f.registry.assertReservedStopOwnership('logical-team', row.executionTeamName))
+      .resolves.toBeUndefined();
+    await expect(f.registry.assertReservedStopOwnership('logical-team', 'unrelated'))
+      .rejects.toThrow('Unknown pending project runtime');
+    await writeFile(
+      path.join(f.teamsBasePath, row.executionTeamName, '.agent-teams-owner.json'),
+      JSON.stringify({ schemaVersion: 1, profileScope: 'foreign', claimedAt: new Date().toISOString(), reason: 'create' })
+    );
+    await expect(f.registry.assertReservedStopOwnership('logical-team', row.executionTeamName))
+      .rejects.toThrow('different or unknown profile');
+  });
+
   it('lists pending reservations without treating them as ready histories', async () => {
     const f = await fixture();
     const reserved = await f.registry.reserve('logical-team', f.workspaceA);

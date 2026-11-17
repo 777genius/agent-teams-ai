@@ -31,6 +31,7 @@ function fixture(mode?: 'shared' | 'per_project') {
     hasRetainedIndex: vi.fn(async () => mode === 'per_project'),
     beginSoftDelete: vi.fn(async () => undefined),
     cancelSoftDelete: vi.fn(async () => undefined),
+    assertReservedStopOwnership: vi.fn(async () => { throw new Error('unowned pending alias'); }),
   };
   return { meta, registry };
 }
@@ -76,6 +77,20 @@ describe('project team lifecycle projection', () => {
     const result = await stopLogicalTeam('builders', stop, f.meta, f.registry as never);
     expect(result.success).toBe(false);
     expect(stop).not.toHaveBeenCalled();
+  });
+
+  it('allows stopping a materialized reserved alias only after ownership check passes', async () => {
+    const f = fixture('per_project');
+    f.registry.list.mockResolvedValue([{ ...entry, state: 'reserved' }]);
+    f.registry.assertReservedStopOwnership.mockResolvedValue(undefined);
+    const stopped: string[] = [];
+    const result = await stopLogicalTeam('builders', async (name) => {
+      stopped.push(name);
+      return { success: true as const, data: undefined };
+    }, f.meta, f.registry as never);
+    expect(result.success).toBe(true);
+    expect(stopped).toEqual(['ptc-a', 'builders']);
+    expect(f.registry.assertReservedStopOwnership).toHaveBeenCalledWith('builders', 'ptc-a');
   });
 
   it('never reports logical stop when a physical stop fails', async () => {
