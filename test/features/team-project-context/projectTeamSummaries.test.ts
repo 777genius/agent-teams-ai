@@ -1,0 +1,48 @@
+import { describe, expect, it, vi } from 'vitest';
+
+import { projectTeamSummaries } from '../../../src/features/team-project-context/main/projectTeamSummaries';
+
+import type { TeamSummary } from '../../../src/shared/types/team';
+import type { PersistedTeamWorkContext } from '../../../src/features/team-project-context/main';
+
+const teams: TeamSummary[] = [
+  { teamName: 'builders', displayName: 'Builders', description: '', memberCount: 1, taskCount: 0, lastActivity: null },
+  { teamName: 'ptc-owned', displayName: 'Builders', description: '', memberCount: 1, taskCount: 3, lastActivity: null },
+  { teamName: 'ptc-foreign', displayName: 'Foreign', description: '', memberCount: 1, taskCount: 0, lastActivity: null },
+  { teamName: 'old-team', displayName: 'Old team', description: '', memberCount: 1, taskCount: 0, lastActivity: null },
+];
+
+const ctx: PersistedTeamWorkContext = {
+  id: '11111111-1111-4111-8111-111111111111', projectKey: '/sandbox/a', projectPath: '/sandbox/a',
+  executionTeamName: 'ptc-owned', state: 'ready',
+};
+
+function fixture() {
+  const meta = { getMeta: vi.fn(async (name: string) => name === 'builders'
+    ? { version: 1 as const, cwd: '/sandbox/a', createdAt: 1, projectContextMode: 'per_project' as const }
+    : null) };
+  const registry = { list: vi.fn(async () => [ctx]) };
+  return { meta, registry };
+}
+
+describe('projectTeamSummaries', () => {
+  it('shows only one logical team row and preserves unrelated native/foreign teams', async () => {
+    const f = fixture();
+    const visible = await projectTeamSummaries(teams, f.meta, f.registry);
+    expect(visible.map((v) => v.teamName)).toEqual(['builders', 'ptc-foreign', 'old-team']);
+    expect(visible[0]?.projectContextMode).toBe('per_project');
+  });
+
+  it('does not trust a pending reservation as authority to hide a physical team', async () => {
+    const f = fixture();
+    f.registry.list.mockResolvedValue([{ ...ctx, state: 'reserved' }]);
+    const visible = await projectTeamSummaries(teams, f.meta, f.registry);
+    expect(visible.some((t) => t.teamName === 'ptc-owned')).toBe(true);
+  });
+
+  it('fails open for visibility, never silently hides teams after mapping errors', async () => {
+    const f = fixture();
+    f.registry.list.mockRejectedValue(new Error('corrupt index'));
+    expect((await projectTeamSummaries(teams, f.meta, f.registry)).length).toBe(teams.length);
+  });
+});
