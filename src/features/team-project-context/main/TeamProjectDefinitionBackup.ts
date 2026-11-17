@@ -192,6 +192,10 @@ export async function recoverMissingProjectTeamDefinition(teamName: string): Pro
   const teamsRoot = getTeamsBasePath();
   await fs.mkdir(teamsRoot, { recursive: true, mode: 0o700 });
   const staged = path.join(teamsRoot, '.project-restore-' + randomUUID());
+  const tasksDir = path.join(getTasksBasePath(), teamName);
+  const installed: string[] = [];
+  let claimedTarget = false;
+  let claimedTasks = false;
   await fs.mkdir(staged, { mode: 0o700 });
   try {
     for (const [name, record] of Object.entries(snapshot.files)) {
@@ -202,11 +206,41 @@ export async function recoverMissingProjectTeamDefinition(teamName: string): Pro
         mode: 0o600, flag: 'wx',
       });
     }
-    // Do not overwrite even an empty foreign directory or a newly created team.
-    if (await exists(targetDir)) return false;
-    await fs.rename(staged, targetDir);
-    await fs.mkdir(path.join(getTasksBasePath(), teamName), { recursive: true, mode: 0o700 });
+    // An existence check followed by rename could REPLACE another process's
+    // newly created empty directory on Linux. Claim the name exclusively.
+    try {
+      await fs.mkdir(targetDir, { mode: 0o700 });
+      claimedTarget = true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'EEXIST') return false;
+      throw error;
+    }
+    await fs.mkdir(getTasksBasePath(), { recursive: true, mode: 0o700 });
+    await fs.mkdir(tasksDir, { mode: 0o700 });
+    claimedTasks = true;
+    // Publish ownership last. Until then an incomplete restored definition is
+    // not recognized as profile-owned by background file watchers.
+    const ownerName = TEAM_PROFILE_OWNER_MARKER_FILE;
+    for (const name of Object.keys(snapshot.files).filter((value) => value !== ownerName)) {
+      await fs.rename(path.join(staged, name), path.join(targetDir, name));
+      installed.push(name);
+    }
+    await fs.rename(path.join(staged, ownerName), path.join(targetDir, ownerName));
     return true;
+  } catch (error) {
+    // Roll back only files this recovery wrote. Never recursively delete a
+    // directory another process might have started to use.
+    if (claimedTarget) {
+      for (const name of installed) {
+        const dest = path.join(targetDir, name);
+        if ((await fs.readFile(dest, 'utf8').catch(() => null)) === snapshot.files[name]?.content) {
+          await fs.unlink(dest).catch(() => undefined);
+        }
+      }
+      await fs.rmdir(targetDir).catch(() => undefined);
+    }
+    if (claimedTasks) await fs.rmdir(tasksDir).catch(() => undefined);
+    throw error;
   } finally {
     await fs.rm(staged, { recursive: true, force: true });
   }

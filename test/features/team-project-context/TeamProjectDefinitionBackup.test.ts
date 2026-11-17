@@ -94,6 +94,20 @@ describe('logical per-project team definition backup', () => {
     expect(await recoverMissingProjectTeamDefinition(f.name)).toBe(false);
   });
 
+  it('allows exactly one recovery publisher when two processes race for the name', async () => {
+    const f = await fixture();
+    await backupProjectTeamDefinition(f.name);
+    await fs.rm(f.logical, { recursive: true });
+    await fs.rm(f.tasks, { recursive: true });
+    const settled = await Promise.all([
+      recoverMissingProjectTeamDefinition(f.name),
+      recoverMissingProjectTeamDefinition(f.name),
+    ]);
+    expect(settled.sort()).toEqual([false, true]);
+    expect(await readTeamOwnerProfileScope(f.logical)).toBe(resolveThisAppProfileScope());
+    expect(await fs.stat(f.tasks)).toBeTruthy();
+  });
+
   it('does not resurrect a deleted empty team from a retained backup', async () => {
     const f = await fixture(false);
     await backupProjectTeamDefinition(f.name);
