@@ -1,5 +1,6 @@
 import { TeamProjectContextRegistry, TeamProjectContextRuntimeResolver } from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
@@ -55,9 +56,12 @@ export async function stopLogicalTeam(
 export async function deleteLogicalTeamWithContexts(
   teamName: unknown,
   stopPhysical: (teamName: string) => Promise<IpcResult<void>>,
+  softDeletePhysical: (teamName: string) => Promise<void>,
   deleteLogical: () => Promise<IpcResult<void>>,
   meta: LifecycleReader = new TeamMetaStore(),
-  registry: TeamProjectContextRegistry = TeamProjectContextRegistry.fromCurrentApp()
+  registry: TeamProjectContextRegistry = TeamProjectContextRegistry.fromCurrentApp(),
+  hasActiveSchedules: (names: readonly string[]) => Promise<boolean> = (names) =>
+    hasTeamSchedules(names, false)
 ): Promise<IpcResult<void>> {
   if (typeof teamName !== 'string' || !teamName.trim()) return deleteLogical();
   try {
@@ -67,9 +71,15 @@ export async function deleteLogicalTeamWithContexts(
     if (contexts.some((row) => row.state !== 'ready')) {
       throw new Error('Cannot delete a team with an unreconciled project context');
     }
+    if (await hasActiveSchedules([teamName, ...contexts.map((c) => c.executionTeamName)])) {
+      throw new Error('Pause active schedules before moving the team to trash');
+    }
     for (const context of contexts) {
       const stopped = await stopPhysical(context.executionTeamName);
       if (!stopped.success) return stopped;
+      // Prevent orphaned physical context routes from continuing to accept
+      // work while their logical team is in the trash.
+      await softDeletePhysical(context.executionTeamName);
     }
     return deleteLogical();
   } catch (error) {
@@ -91,6 +101,7 @@ export async function permanentlyDeleteLogicalTeam(
     meta?: LifecycleReader;
     registry?: PermanentDeleteRegistry;
     isNativePresent?(name: string): Promise<boolean>;
+    hasAnySchedules?(names: readonly string[]): Promise<boolean>;
   }
 ): Promise<IpcResult<void>> {
   if (typeof logicalTeamName !== 'string' || !logicalTeamName.trim()) {
@@ -107,6 +118,11 @@ export async function permanentlyDeleteLogicalTeam(
     // The logical team remains present until all physical contexts are fully
     // removed, enabling idempotent retries after an interrupted deletion.
     const rows = await registry.listForPermanentDeletion(logicalTeamName);
+    const names = [logicalTeamName, ...rows.map((row) => row.executionTeamName)];
+    const anySchedules = ports.hasAnySchedules ?? ((ids: readonly string[]) => hasTeamSchedules(ids, true));
+    if (await anySchedules(names)) {
+      throw new Error('Remove team schedules before permanent deletion');
+    }
     for (const row of rows) {
       const exists = ports.isNativePresent
         ? await ports.isNativePresent(row.executionTeamName)
@@ -130,6 +146,40 @@ export async function permanentlyDeleteLogicalTeam(
       if (!forgotten) throw new Error('Context mapping changed during permanent deletion');
     }
     return ports.deleteLogical();
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+async function hasTeamSchedules(names: readonly string[], includeInactive: boolean): Promise<boolean> {
+  const schedules = new JsonScheduleRepository();
+  for (const name of names) {
+    const rows = await schedules.getSchedulesByTeam(name);
+    if (rows.some((row) => includeInactive || row.status === 'active')) return true;
+  }
+  return false;
+}
+
+/** Restore owned native project histories before making the logical team visible. */
+export async function restoreLogicalTeamWithContexts(
+  teamName: unknown,
+  restorePhysical: (teamName: string) => Promise<void>,
+  restoreLogical: () => Promise<IpcResult<void>>,
+  meta: LifecycleReader = new TeamMetaStore(),
+  registry: TeamProjectContextRegistry = TeamProjectContextRegistry.fromCurrentApp()
+): Promise<IpcResult<void>> {
+  if (typeof teamName !== 'string' || !teamName.trim()) return restoreLogical();
+  try {
+    const mode = await contextReader(meta, registry).getMode(teamName);
+    if (mode === 'shared') return restoreLogical();
+    const contexts = await registry.list(teamName);
+    if (contexts.some((row) => row.state !== 'ready')) {
+      throw new Error('Cannot restore a team with an unreconciled project context');
+    }
+    for (const row of contexts) {
+      await restorePhysical(row.executionTeamName);
+    }
+    return restoreLogical();
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
