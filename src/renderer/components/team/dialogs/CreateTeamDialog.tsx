@@ -224,6 +224,7 @@ import type {
   TeamCreateRequest,
   TeamFastMode,
   TeamProviderId,
+  TeamProjectContextMode,
 } from '@shared/types';
 
 export type { ActiveTeamRef, TeamCopyData } from './CreateTeamDialog.types';
@@ -328,6 +329,8 @@ export const CreateTeamDialog = ({
     setRuntimeSelection,
     teamName,
     setTeamName,
+    projectContextMode,
+    setProjectContextMode,
     members,
     setMembers,
     syncModelsWithLead,
@@ -1801,6 +1804,7 @@ export const CreateTeamDialog = ({
     () => ({
       runtimeSelectionVersion,
       teamName: sanitizedTeamName,
+      projectContextMode,
       description: description.trim() || undefined,
       color: teamColor || undefined,
       members: soloTeam
@@ -1834,6 +1838,7 @@ export const CreateTeamDialog = ({
       runtimeSelectionVersion,
       runtimeSelectionUnresolved,
       sanitizedTeamName,
+      projectContextMode,
       description,
       teamColor,
       soloTeam,
@@ -2185,6 +2190,7 @@ export const CreateTeamDialog = ({
             api.teams.createConfig({
               runtimeSelectionVersion: request.runtimeSelectionVersion,
               teamName: request.teamName,
+              projectContextMode: request.projectContextMode,
               displayName: request.displayName,
               description: request.description,
               color: request.color,
@@ -2761,6 +2767,30 @@ export const CreateTeamDialog = ({
                   : 'var(--color-surface-overlay)',
               }}
             >
+              <div className="mb-4 space-y-2">
+                <Label htmlFor="team-project-context-mode">
+                  {t('create.projectContextMode.label')}
+                </Label>
+                <Select
+                  value={projectContextMode}
+                  onValueChange={(value) => {
+                    if (value === 'shared' || value === 'per_project') {
+                      setProjectContextMode(value as TeamProjectContextMode);
+                    }
+                  }}
+                >
+                  <SelectTrigger id="team-project-context-mode" aria-label={t('create.projectContextMode.label')}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="per_project">{t('create.projectContextMode.perProject')}</SelectItem>
+                    <SelectItem value="shared">{t('create.projectContextMode.shared')}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  {t('create.projectContextMode.description')}
+                </p>
+              </div>
               <div className="flex items-start gap-3">
                 <Checkbox
                   id="launch-team"

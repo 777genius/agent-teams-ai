@@ -19,6 +19,7 @@ import { isCreateTeamDraftGenerationCurrent } from './createTeamDraftGeneration'
 
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
+  TeamProjectContextMode,
   TeamFastMode,
   TeamMemberMcpPolicy,
   TeamProviderBackendId,
@@ -53,6 +54,8 @@ export interface SerializedMemberDraft {
 export interface CreateTeamDraftSnapshot {
   version: number;
   teamName: string;
+  /** Legacy unsent form snapshots have no mode: treat them as a NEW team. */
+  projectContextMode?: TeamProjectContextMode;
   runtimeSelectionVersion?: 1;
   runtimeProviderId?: TeamProviderId;
   runtimeModel?: string;
@@ -140,6 +143,7 @@ function isValidSnapshot(data: unknown): data is CreateTeamDraftSnapshot {
     typeof obj.version === 'number' &&
     obj.version === SNAPSHOT_VERSION &&
     typeof obj.teamName === 'string' &&
+    (obj.projectContextMode === undefined || obj.projectContextMode === 'shared' || obj.projectContextMode === 'per_project') &&
     (obj.runtimeSelectionVersion === undefined || obj.runtimeSelectionVersion === 1) &&
     (obj.runtimeProviderId === undefined || isTeamProviderId(obj.runtimeProviderId)) &&
     (obj.runtimeModel === undefined || typeof obj.runtimeModel === 'string') &&
@@ -261,6 +265,7 @@ function emptySnapshot(): CreateTeamDraftSnapshot {
   return {
     version: SNAPSHOT_VERSION,
     teamName: '',
+    projectContextMode: 'per_project',
     members: [],
     syncModelsWithLead: true,
     teammateWorktreeDefault: false,
