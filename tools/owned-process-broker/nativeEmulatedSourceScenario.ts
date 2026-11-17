@@ -31,6 +31,7 @@ import { capturedQueryableWitness } from './nativeGateContext';
 import { createNativeGateEvents } from './nativeGateEvents';
 import { fileHash } from './nativeEmulatedProfile';
 import { finiteSourceProbe, prepareEmulatedSourceProfile } from './nativeEmulatedSourceProfile';
+import { nativeEmulatedSourceCold } from './nativeEmulatedSourceCold';
 import { readEmulatedSourceActionProbe, observeEmulatedSourcePeerReadiness } from './nativeEmulatedSourceReadiness';
 
 import type { HostCustodyOwner, RuntimeSourceProcessOrigin } from '@agent-teams/legacy-agent-host/owned-process';
@@ -140,7 +141,7 @@ const custodyTimings = (): Record<CustodyPhase, CustodyTiming> => ({
 const stagingTimings = (): Record<StagingPhase, CustodyTiming> => ({
   'launch-chunk': custodyTiming(), 'launch-commit': custodyTiming(),
 });
-interface Job {
+export interface Job {
   capability: string;
   timings: Record<CustodyPhase, CustodyTiming>;
   stagingTimings: Record<StagingPhase, CustodyTiming>;
@@ -406,11 +407,12 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       return { input, result, source: result.selection };
     };
     stage('publish-A'); const a = await publish('A', captured);
-    const launch = async (team: number, source: RuntimeSourceSummary, image: 'A' | 'B') => {
-      const roster = await first.rpc(team, 'team.roster.read', `TEST-roster-${image}`, {});
-      await first.rpc(team, 'team.roster.replace', `TEST-save-${image}`, { expectedRevision: roster.revision,
+    const launch = async (epoch: ReturnType<typeof open>, team: number, source: RuntimeSourceSummary,
+      image: 'A' | 'B', action: 'A' | 'B' | 'B-fresh') => {
+      const roster = await epoch.rpc(team, 'team.roster.read', `TEST-roster-${action}`, {});
+      await epoch.rpc(team, 'team.roster.replace', `TEST-save-${action}`, { expectedRevision: roster.revision,
         members: [], savedSettings: fixture.profile.teams[team]!.savedSettings });
-      const capturedLaunch = await first.rpc(team, 'team.launch.capture', `TEST-capture-${image}`, { rosterCommandId: `TEST-save-${image}` });
+      const capturedLaunch = await epoch.rpc(team, 'team.launch.capture', `TEST-capture-${action}`, { rosterCommandId: `TEST-save-${action}` });
       const selectedLaunch = object(capturedLaunch.launch), launchId = text(selectedLaunch.launchId);
       const store = new TeamOwnerStore(fixture.profile.owner.storageRoot, fixture.profile.teams[team]!.binding.teamName);
       const capturePath = join(store.directory, `launches/${runtimeDigest(launchId)}.json`);
@@ -418,8 +420,8 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       const capturedDefinition = object(record.definition);
       const canonical = runtimeCaptureSourceSchema.parse(capturedDefinition.capture);
       assert.deepEqual(canonical.recipeSources, [{ memberId: 'alice-id', ...sourceRef(source) }]);
-      const before = first.jobs.length, inputsBefore = inputs().length;
-      const commandId = `TEST-start-${image}`, payload = { launchId, rosterRevision: text(selectedLaunch.rosterRevision) };
+      const before = epoch.jobs.length, inputsBefore = inputs().length;
+      const commandId = `TEST-start-${action}`, payload = { launchId, rosterRevision: text(selectedLaunch.rosterRevision) };
       diagnosticLaunches.push({ actionDigest: runtimeDigest(commandId), bindingDigests: rows(capturedDefinition.members).map(member => managementDigest(object(member.binding))), launchId, source: sourceRef(source) });
       let memberReadinessDeadline: number | undefined;
       if (provider !== 'claude') {
@@ -445,10 +447,10 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         const bindingRoot = join(fixture.root, 'TEST-source-main-bindings');
         await mkdir(bindingRoot, { recursive: true, mode: 0o700 });
         const router = new BackendOwnerRouter(new FileHandleBindingStore(bindingRoot));
-        router.registerOwner({ ...fixture.profile.owner, client: first.client, nativeCustody: first.physical });
+        router.registerOwner({ ...fixture.profile.owner, client: epoch.client, nativeCustody: epoch.physical });
         const handle = await router.createHandle(selectedHandle.handleId, definition.scope, selectedHandle.owner);
         assert.deepEqual(router.ownerBinding(selectedHandle.owner), fixture.profile.owner);
-        const guard = { isCurrent: first.current };
+        const guard = { isCurrent: epoch.current };
         const read = await readCapturedLaunchReadiness({ router, handle, definition: selectedHandle,
           commandId, ...payload, guard, budget, capture: true });
         assert.equal(read.capture, null, 'Only the original Host read can establish this initial branch');
@@ -465,7 +467,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         assert.equal(selected.selected.effort, undefined);
         const seed = fixture.profile.runtime!.members.find(member => member.teamId === definition.binding.teamId);
         assert.ok(seed && seed.provider === 'opencode' && seed.environment.HOME);
-        const current = () => { assert.ok(first.current(), 'Original source Main owner remains current'); };
+        const current = () => { assert.ok(epoch.current(), 'Original source Main owner remains current'); };
         const origin = await captureLocalModelReadinessOrigin({
           kind: 'team', owner: router.ownerBinding(selectedHandle.owner), contextId: selectedHandle.contextId,
           commandId, selection: { handleId: handle.handleId, scope: definition.scope, payload },
@@ -477,7 +479,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         });
         unwrap(await router.request(handle, { commandId, method: 'team.launch.start', payload,
           guard, requestBudget: budget, localModelReadinessOrigin: createReadinessPreparation(origin, budget) }));
-      } else await first.rpc(team, 'team.launch.start', commandId, payload);
+      } else await epoch.rpc(team, 'team.launch.start', commandId, payload);
       // Original readiness observation starts once after the Start acknowledgement.
       if (provider !== 'claude') memberReadinessDeadline = performance.now() + 15000;
       let view: Record<string, unknown> = {};
@@ -486,7 +488,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       evidence.lastLaunchReadiness = readiness;
       const readinessStarted = performance.now();
       try {
-        await poll(async () => { view = await first.rpc(team, 'runtime.read', `TEST-ready-${image}`, { memberId: 'alice-id' });
+        await poll(async () => { view = await epoch.rpc(team, 'runtime.read', `TEST-ready-${action}`, { memberId: 'alice-id' });
           try { lastRuntimeViewDigest = runtimeDigest(view); } catch { lastRuntimeViewDigest = undefined; }
           Object.assign(readiness, { readCount: readiness.readCount + 1, elapsedMs: performance.now() - readinessStarted,
             lastRuntimeRead: { viewDigest: lastRuntimeViewDigest ?? null, memberId: view.memberId, generation: view.generation, phase: view.phase,
@@ -497,7 +499,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       } finally {
         console.log(JSON.stringify({ kind: 'TEST_SOURCE_READINESS', provider, ...readiness }));
       }
-      const jobs = first.jobs.slice(before);
+      const jobs = epoch.jobs.slice(before);
       assertSourceJobs(jobs, source, image, 'runtime', fixture.profile.teams[team]!.binding.teamId);
       const live = jobs.filter(job => !job.released); assert.equal(live.length, 1);
       if (provider === 'opencode') {
@@ -515,9 +517,9 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         const receipt = readEmulatedSourceActionProbe({ profile: fixture.profile, team,
           handleId: descriptor.handles[team]!.handleId, contextId: descriptor.handles[team]!.contextId,
           commandId, payload, fingerprint: text(record.fingerprint), captureDigest: runtimeDigest(canonical) });
-        const replayJobs = first.jobs.length, replayInputs = inputs();
-        await first.rpc(team, 'team.launch.start', commandId, payload);
-        assert.equal(first.jobs.length, replayJobs); assert.deepEqual(inputs(), replayInputs);
+        const replayJobs = epoch.jobs.length, replayInputs = inputs();
+        await epoch.rpc(team, 'team.launch.start', commandId, payload);
+        assert.equal(epoch.jobs.length, replayJobs); assert.deepEqual(inputs(), replayInputs);
         if (evidence.modelPreparations === undefined) evidence.modelPreparations = [];
         assert.ok(Array.isArray(evidence.modelPreparations));
         evidence.modelPreparations.push({ source: sourceRef(source), image, startCommandId: commandId,
@@ -542,7 +544,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       }, 'Original source input terminal');
       return inputId;
     };
-    stage('Team-A'); const teamA = await launch(0, a.source, 'A');
+    stage('Team-A'); const teamA = await launch(first, 0, a.source, 'A', 'A');
     const inputA = await boot(first, 0, 'TEST-boot-A', teamA.generation);
     const originalAInputs = inputs().filter(value => value.pid === teamA.entry.pid);
     assert.equal(originalAInputs.length, 1); assert.equal(originalAInputs[0]!.marker, 'TEST_UI_BOOT');
@@ -595,7 +597,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
     assert.equal(first.jobs.length, probePhysical); assert.equal(inputs().length, probeInputs);
     evidence.management = { source: sourceRef(b.source), metadataRead: true, modelProbeCompleted: true,
       modelProbeReplayAllocated: false, modelProbeInputs: 1, metadataHostRetained: provider === 'opencode' };
-    stage('Team-B'); const teamB = await launch(1, b.source, 'B');
+    stage('Team-B'); const teamB = await launch(first, 1, b.source, 'B', 'B');
     const inputB = await boot(first, 1, 'TEST-boot-B', teamB.generation);
     assert.equal(await teamA.job.witness!.observe(), 'alive');
     assert.deepEqual(inputs().filter(value => value.pid === teamA.entry.pid), originalAInputs);
@@ -672,6 +674,19 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       const stopped = await first.rpc(index, 'runtime.stop', `TEST-stop-${index}`, { memberId: 'alice-id', expectedGeneration: team.generation });
       assert.equal(stopped.phase, 'closed'); assert.equal(stopped.custody, 'released');
     }
+    let stoppedCheckpoint: Record<string, unknown> | undefined;
+    if (checkpoint) {
+      const available = await first.rpc(0, 'runtime.checkpoints.read', 'TEST-stopped-A-checkpoint-read', {
+        memberId: 'alice-id', expectedGeneration: teamA.generation });
+      assert.equal(available.memberId, 'alice-id'); assert.equal(available.sourceGeneration, teamA.generation);
+      assert.equal(available.status, 'owner-eligible'); assert.equal(available.reason, 'native-backing-unverified');
+      assert.equal(available.nativeBacking, 'unverified');
+      const matching = rows(available.checkpoints).filter(value => value.checkpointId === checkpoint!.checkpointId && value.reference === checkpoint!.reference);
+      assert.equal(matching.length, 1); assert.equal(matching[0]!.status, 'owner-eligible');
+      assert.equal(matching[0]!.reason, 'native-backing-unverified');
+      stoppedCheckpoint = { checkpointId: checkpoint.checkpointId, reference: checkpoint.reference,
+        sourceGeneration: available.sourceGeneration, status: available.status, reason: available.reason, nativeBacking: available.nativeBacking };
+    }
     await first.close(); assert.equal(sentinel.exitCode, null);
     const beforeColdInputs = inputs(), beforeColdEntries = entries();
     stage('cold-read-and-replay'); const cold = open(); epochs.push(cold); await cold.client.start();
@@ -690,31 +705,13 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
     assert.equal(cold.jobs.length, 0); assert.deepEqual(inputs(), beforeColdInputs); assert.deepEqual(entries(), beforeColdEntries);
     evidence.cold = { currentB: true, retainedA: true, lookup: true, physicalReplayAllocations: 0,
       sourcePublishPendingAdmission: { ...cold.pending }, originalInputsReplayed: false, sdkPeerCheckpointRestored: false };
-    if (checkpoint) {
-      stage('cold-Claude-restore-A');
-      const restoreInput = { memberId: 'alice-id', reference: checkpoint.reference, expectedGeneration: teamA.generation };
-      const restored = await cold.rpc(0, 'runtime.restore', 'TEST-restore-A', restoreInput);
-      assert.equal(restored.nativeReady, true); const generation = text(restored.generation);
-      assert.notEqual(generation, teamA.generation);
-      assertSourceJobs(cold.jobs, a.source, 'A', 'runtime', fixture.profile.teams[0]!.binding.teamId);
-      const original = effects().find(value => value.event === 'initialized' && value.pid === teamA.entry.pid); assert.ok(original);
-      const restoredJob = cold.jobs.filter(job => !job.released); assert.equal(restoredJob.length, 1);
-      const restoredEntry = jobEntry(restoredJob[0]!, 'peer');
-      const initialized = effects().filter(value => value.event === 'initialized' && value.pid === restoredEntry.pid);
-      assert.equal(initialized.length, 1); assert.equal(initialized[0]!.restored, true);
-      assert.equal(initialized[0]!.sessionId, original.sessionId); assert.deepEqual(inputs(), beforeColdInputs);
-      const restoredJobs = cold.jobs.length, restoredEntries = entries();
-      assert.deepEqual(await cold.sources.current(), b.source);
-      assert.deepEqual(await cold.rpc(0, 'runtime.restore', 'TEST-restore-A', restoreInput), restored);
-      assert.equal(cold.jobs.length, restoredJobs); assert.deepEqual(entries(), restoredEntries);
-      assert.deepEqual(inputs(), beforeColdInputs);
-      const restoredInput = await boot(cold, 0, 'TEST-restored-A-new-input', generation);
-      assert.equal(inputs().length, beforeColdInputs.length + 1);
-      const stopped = await cold.rpc(0, 'runtime.stop', 'TEST-stop-restored-A', { memberId: 'alice-id', expectedGeneration: generation });
-      assert.equal(stopped.phase, 'closed'); assert.equal(stopped.custody, 'released');
-      Object.assign(object(evidence.cold), { sdkPeerCheckpointRestored: true, originalNativeSessionRetained: true,
-        restoredGeneration: generation, newInputId: restoredInput, source: sourceRef(a.source) });
-    }
+    if (checkpoint) await nativeEmulatedSourceCold({
+      cold: { rpc: cold.rpc, jobs: cold.jobs, sources: { current: () => cold.sources.current() } },
+      teamA, sourceA: a.source, sourceB: b.source, teamId: fixture.profile.teams[0]!.binding.teamId,
+      checkpoint, stoppedCheckpoint: stoppedCheckpoint!, beforeColdInputs, inputA, entries, effects, inputs,
+      jobEntry, assertSourceJobs, boot: (commandId, generation) => boot(cold, 0, commandId, generation),
+      launchFresh: () => launch(cold, 0, b.source, 'B', 'B-fresh'), stage, evidence: object(evidence.cold),
+    });
     await cold.close();
     evidence.selections = { A: a.source, B: b.source };
     evidence.teams = [{ launchId: teamA.launchId, generation: teamA.generation, inputId: inputA, captureDigest: teamA.captureDigest, source: sourceRef(a.source) },
