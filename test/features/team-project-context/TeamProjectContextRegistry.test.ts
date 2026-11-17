@@ -141,6 +141,41 @@ describe('TeamProjectContextRegistry', () => {
     expect(await f.registry.list('logical-team')).toEqual([a]);
   });
 
+  it('allows idempotent permanent deletion of exactly owned and fully removed contexts', async () => {
+    const f = await fixture();
+    const a = await f.registry.reserve('logical-team', f.workspaceA);
+    const b = await f.registry.reserve('logical-team', f.workspaceB);
+    await simulateNativeProvisioning(f, a.executionTeamName);
+    await simulateNativeProvisioning(f, b.executionTeamName);
+    await f.registry.confirmReady('logical-team', f.workspaceA, a.executionTeamName);
+    await f.registry.confirmReady('logical-team', f.workspaceB, b.executionTeamName);
+
+    expect(await f.registry.listForPermanentDeletion('logical-team')).toHaveLength(2);
+    await expect(f.registry.forgetPermanentlyDeletedContext(
+      'logical-team', a.executionTeamName, a.id
+    )).rejects.toThrow('still exists');
+
+    await rm(path.join(f.teamsBasePath, a.executionTeamName), { recursive: true });
+    await rm(path.join(f.tasksBasePath, a.executionTeamName), { recursive: true });
+    expect(await f.registry.listForPermanentDeletion('logical-team')).toHaveLength(2);
+    expect(await f.registry.forgetPermanentlyDeletedContext(
+      'logical-team', a.executionTeamName, a.id
+    )).toBe(true);
+    expect(await f.registry.forgetPermanentlyDeletedContext(
+      'logical-team', a.executionTeamName, a.id
+    )).toBe(false);
+    const remaining = await f.registry.listForPermanentDeletion('logical-team');
+    expect(remaining.map((row) => row.executionTeamName)).toEqual([b.executionTeamName]);
+  });
+
+  it('fails closed on orphan tasks without a proven owned team directory', async () => {
+    const f = await fixture();
+    const row = await f.registry.reserve('logical-team', f.workspaceA);
+    await mkdir(path.join(f.tasksBasePath, row.executionTeamName));
+    await expect(f.registry.listForPermanentDeletion('logical-team'))
+      .rejects.toThrow('unowned orphan');
+  });
+
   it('fails closed for a foreign-owned logical team', async () => {
     const f = await fixture();
     const foreign = new TeamProjectContextRegistry({

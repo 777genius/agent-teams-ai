@@ -230,6 +230,64 @@ export class TeamProjectContextRegistry {
   }
 
   /**
+   * Inspect a permanent-deletion transaction. A context fully removed in an
+   * interrupted earlier attempt is still eligible for index cleanup. Any
+   * remaining physical directory must prove the same app-profile ownership.
+   */
+  async listForPermanentDeletion(
+    logicalTeamName: string
+  ): Promise<readonly PersistedTeamWorkContext[]> {
+    await this.assertOwnedDirectory(logicalTeamName);
+    const rows = (await this.readIndex(logicalTeamName)).contexts;
+    for (const row of rows) {
+      const teamDir = path.join(this.paths.teamsBasePath, row.executionTeamName);
+      const tasksDir = path.join(this.paths.tasksBasePath, row.executionTeamName);
+      const teamExists = await exists(teamDir);
+      if (!teamExists) {
+        if (await exists(tasksDir)) {
+          throw new TeamProjectContextUnavailableError(
+            'Cannot safely delete an unowned orphan task directory'
+          );
+        }
+        continue;
+      }
+      await this.assertOwnedDirectory(row.executionTeamName);
+    }
+    return rows;
+  }
+
+  /**
+   * Advance deletion only after native cleanup has actually removed both
+   * physical roots. A retry after a crash can finish the remaining contexts.
+   */
+  async forgetPermanentlyDeletedContext(
+    logicalTeamName: string,
+    executionTeamName: string,
+    expectedId: string
+  ): Promise<boolean> {
+    await this.assertOwnedDirectory(logicalTeamName);
+    return withFileLock(this.indexPath(logicalTeamName), async () => {
+      await this.assertOwnedDirectory(logicalTeamName);
+      const index = await this.readIndex(logicalTeamName);
+      const entry = index.contexts.find(
+        (row) => row.executionTeamName === executionTeamName && row.id === expectedId
+      );
+      if (!entry) return false;
+      if (
+        (await exists(path.join(this.paths.teamsBasePath, entry.executionTeamName))) ||
+        (await exists(path.join(this.paths.tasksBasePath, entry.executionTeamName)))
+      ) {
+        throw new TeamProjectContextUnavailableError(
+          'Native project data still exists after permanent deletion'
+        );
+      }
+      index.contexts = index.contexts.filter((row) => row.id !== entry.id);
+      await this.writeIndex(index);
+      return true;
+    }, { preventLiveOwnerTakeover: true });
+  }
+
+  /**
    * Reserve an opaque native name without creating a physical directory.
    * The EXISTING Team Provisioning create flow remains the sole writer of
    * native team config, tasks and launch state.
