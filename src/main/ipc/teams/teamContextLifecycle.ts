@@ -86,7 +86,7 @@ export async function deleteLogicalTeamWithContexts(
       return deleteLogical();
     }
     await registry.beginSoftDelete(teamName);
-    let contexts: Awaited<ReturnType<TeamProjectContextRegistry['list']>>;
+    let contexts: Awaited<ReturnType<typeof ownedHistoryContexts>>;
     try {
       contexts = await ownedHistoryContexts(teamName, meta, registry);
       if (contexts.some((row) => row.state !== 'ready')) {

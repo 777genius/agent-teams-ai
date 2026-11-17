@@ -2187,7 +2187,7 @@ async function handleLaunchTeamUnlocked(
     { ...payload, teamName: tn, cwd } as TeamLaunchRequest,
     { data: getTeamDataService(), runtime: getTeamRuntimeApi(), run: getTeamProvisioningRunApi() },
     (selected, mapper) => handleLaunchTeamUnlocked(event, selected, mapper)
-  ).catch((error: unknown) => teamReadFailureResult(error));
+  ).catch((error: unknown) => teamReadFailureResult<TeamLaunchResponse>(error));
   if (rerouted) return rerouted;
   const configPath = path.join(getTeamsBasePath(), tn, 'config.json');
   let isDraft = false;

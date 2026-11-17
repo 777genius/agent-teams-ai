@@ -4,6 +4,7 @@
  * A team's working directory or a teammate's worktree isolation is not this mode.
  */
 export type { TeamProjectContextMode } from '@shared/types/team';
+import type { TeamProjectContextMode } from '@shared/types/team';
 
 /** Navigation must not expose a native team alias before its owner is verified. */
 export type TeamProjectContextView =

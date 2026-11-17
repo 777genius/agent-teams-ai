@@ -34,7 +34,7 @@ export async function prepareTeamContextLaunch(
 
   const address = { logicalTeamName: request.teamName, projectPath: request.cwd };
   const reserved = await parts.resolver.reserveForProvisioning(address);
-  if (!reserved.workContextId) throw new Error('Missing project context identity');
+  if (!reserved.workContextId || !reserved.projectPath) throw new Error('Missing project context identity');
   const canonicalAddress = {
     logicalTeamName: address.logicalTeamName,
     projectPath: reserved.projectPath,

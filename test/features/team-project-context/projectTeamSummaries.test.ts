@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { projectTeamSummaries } from '../../../src/features/team-project-context/main/projectTeamSummaries';
 
 import type { TeamSummary } from '../../../src/shared/types/team';
+import type { TeamMetaFile } from '../../../src/main/services/team/TeamMetaStore';
 import type { PersistedTeamWorkContext } from '../../../src/features/team-project-context/main';
 
 const teams: TeamSummary[] = [
@@ -18,7 +19,7 @@ const ctx: PersistedTeamWorkContext = {
 };
 
 function fixture() {
-  const meta = { getMeta: vi.fn(async (name: string) => name === 'builders'
+  const meta = { getMeta: vi.fn(async (name: string): Promise<TeamMetaFile | null> => name === 'builders'
     ? { version: 1 as const, cwd: '/sandbox/a', createdAt: 1, projectContextMode: 'per_project' as const }
     : null) };
   const registry = { list: vi.fn(async () => [ctx]), listRetained: vi.fn(async () => [ctx]) };

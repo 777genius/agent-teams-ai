@@ -78,7 +78,7 @@ describe('useCreateTeamDraft', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     let root = createRoot(host);
-    let current: ReturnType<typeof useCreateTeamDraft> | null = null;
+    let current!: ReturnType<typeof useCreateTeamDraft>;
     await renderLoadedDraft(root, (draft) => {
       current = draft;
     });

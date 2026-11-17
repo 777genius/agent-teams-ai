@@ -21,7 +21,7 @@ const { state, getView, launchTeam } = vi.hoisted(() => {
 });
 
 vi.mock('@renderer/store', () => ({
-  useStore: (selector: (state: typeof state) => unknown) => selector(state),
+  useStore: (selector: (store: typeof state) => unknown) => selector(state),
 }));
 vi.mock('@renderer/api', () => ({ api: { teams: { getProjectContextView: getView, launchTeam, onProvisioningProgress: () => () => undefined } } }));
 vi.mock('@features/localization/renderer', () => ({

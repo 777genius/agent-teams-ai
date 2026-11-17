@@ -11,7 +11,7 @@ function fixture(mode?: 'shared' | 'per_project') {
     })),
     metadataFileExists: vi.fn(async () => true),
     updateMode: vi.fn(async () => undefined),
-    withLogicalTeamLock: vi.fn(async <T>(_: string, operation: () => Promise<T>) => operation()),
+    withLogicalTeamLock: async <T>(_: string, operation: () => Promise<T>): Promise<T> => operation(),
     assertProfileOwnedForModeChange: vi.fn(async () => undefined),
     listContexts: vi.fn(async () => []),
     getRuntimeState: vi.fn(async (name) => ({

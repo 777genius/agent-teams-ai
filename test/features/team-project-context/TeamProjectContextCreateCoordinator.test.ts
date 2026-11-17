@@ -24,16 +24,16 @@ const context = {
 const ready = { ...context, state: 'ready' as const };
 
 function fixture() {
-  let nativeProgress: ((event: TeamProvisioningProgress) => void) | null = null;
+  const nativeProgressRef: { current: ((event: TeamProvisioningProgress) => void) | null } = { current: null };
   const ports = {
     createLogicalDraft: vi.fn(async () => undefined),
-    withLogicalTeamLock: vi.fn(async <T>(_: string, fn: () => Promise<T>): Promise<T> => fn()),
+    withLogicalTeamLock: async <T>(_: string, fn: () => Promise<T>): Promise<T> => fn(),
     reserve: vi.fn(async () => context),
     releaseUnusedReservation: vi.fn(async () => true),
     assertOtherContextsStopped: vi.fn(async () => undefined),
     ensurePhysicalDraft: vi.fn(async () => context),
     createNativeTeam: vi.fn(async (_: TeamCreateRequest, emit: (event: TeamProvisioningProgress) => void) => {
-      nativeProgress = emit;
+      nativeProgressRef.current = emit;
       return { runId: 'run-a' };
     }),
     confirmReady: vi.fn(async () => ready),
@@ -42,8 +42,9 @@ function fixture() {
     create: new TeamProjectContextCreateCoordinator(ports),
     ports,
     emit: (event: TeamProvisioningProgress) => {
-      if (!nativeProgress) throw new Error('Not launched');
-      nativeProgress(event);
+      const emitNative = nativeProgressRef.current;
+      if (!emitNative) throw new Error('Not launched');
+      emitNative(event);
     },
   };
 }

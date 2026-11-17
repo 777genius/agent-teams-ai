@@ -15,6 +15,7 @@ import { claimTeamForThisProfile } from '../../../src/main/services/team/provisi
 import { TeamProjectContextRegistry } from '../../../src/features/team-project-context/main';
 
 import type {
+  TeamLaunchRequest,
   TeamCreateConfigRequest,
   TeamCreateRequest,
   TeamProvisioningProgress,
@@ -249,7 +250,7 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
       const saved = await original(name);
       return saved ? { ...saved, providerId: 'codex' } : null;
     };
-    const invoke = vi.fn(async () => ({ success: true as const }));
+    const invoke = vi.fn(async (_request: TeamLaunchRequest) => ({ success: true as const }));
     await expect(withPreparedContextLaunch({
       teamName: 'builders', cwd: f.projectPath, effort: 'xhigh',
     }, f.ports, invoke)).resolves.toMatchObject({ success: true });

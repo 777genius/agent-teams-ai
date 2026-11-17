@@ -56,7 +56,7 @@ export class TeamProjectContextCreateCoordinator {
 
     return this.ports.withLogicalTeamLock(request.teamName, async () => {
       const reserved = await this.ports.reserve(address);
-      if (!reserved.workContextId || reserved.mode !== 'per_project') {
+      if (!reserved.workContextId || !reserved.projectPath || reserved.mode !== 'per_project') {
         throw new Error('Expected a reserved project-specific team context');
       }
       const canonicalAddress: TeamWorkContextAddress = {
