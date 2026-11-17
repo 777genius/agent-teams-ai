@@ -1,0 +1,1227 @@
+{
+  "schemaVersion": 1,
+  "kind": "bounded-semantic-advisory-original-linux-cold-renderer-module-load-failure",
+  "at": "2026-11-17 06:30:49 UTC",
+  "reviewer": "/root/producer_r2_semantic",
+  "repository": "777genius/agent-teams-ai",
+  "verdict": "ORIGINAL_FAILURE_CONFIRMED_PRE_MAIN_IMPORT; UNDERLYING_RESOURCE_CAUSE_UNRESOLVED",
+  "summary": "The original task-board/cross-team job fails in the later oversized-comment cold-renderer wait. Earlier retained subflow PASS states remain separate. A new document was loaded, but its main module import failed with recorded Script ERR_INSUFFICIENT_RESOURCES and a TypeError for /main.tsx. No comment UI action or complete oversized-comment rendering proof followed. The existing initial loader has no failure handler, but correcting that reporting gap alone cannot restore or qualify the failed E2E.",
+  "subject": {
+    "packet": {
+      "bytes": 43216,
+      "sha256": "baf4a9f2de58d967366c652bf7cba5d28e7b4d3c3f576f3d359f04516f31c972",
+      "gitBlob": "33e472d38720bda64a2483041af43405c2eec085"
+    },
+    "receipt": {
+      "bytes": 4433079,
+      "sha256": "8368acfb8c066be5b9498331c50f3e1ef2fdcc3aecc1ced1b13ca4b8fcabd3e5",
+      "gitBlob": "26ab0e2ca84fb6b50a092bfa49e30a7c212d856c"
+    },
+    "sourceHead": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "runId": 44008782843,
+    "jobId": 133790458946,
+    "attempt": 1,
+    "artifactId": 14301704730
+  },
+  "method": {
+    "allowed": "Immutable Git/source/retained evidence reads and pure memory parsing/identity comparisons; one bare advisory blob.",
+    "performed": "Complete packet and complete receipt transport/hash/JSON validation. Full retained rendererDiagnostics and rendererFailureSnapshot, including every retained event and resource row, were read. Ten complete decisive source bodies were read. Complete app log and artifact log were read; the original job log was fully fetched/hashed and its tuple, invocation, original failure, assertion, exit and archive publication sections read.",
+    "boundedReceiptScope": "The large receipt contains earlier task snapshots and receipts. This advisory reads preceding proof status/source/sequence metadata and the complete failure/diagnostic/custody sections; it does not claim a new full semantic audit of every earlier task-board business receipt.",
+    "screenshots": "PNG/member identities are retained by the capture packet. This reviewer did not visually inspect those PNGs or independently reopen the ZIP.",
+    "noExecution": true,
+    "noSourceOrControlAuthorship": true,
+    "noLiveCiReads": true,
+    "noRefOrPrChanges": true,
+    "identityHelper": {
+      "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8",
+      "bytes": 3982,
+      "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7"
+    }
+  },
+  "evidence": [
+    {
+      "role": "capture",
+      "bytes": 43216,
+      "sha256": "baf4a9f2de58d967366c652bf7cba5d28e7b4d3c3f576f3d359f04516f31c972",
+      "gitBlob": "33e472d38720bda64a2483041af43405c2eec085"
+    },
+    {
+      "role": "wholeReceipt",
+      "bytes": 4433079,
+      "sha256": "8368acfb8c066be5b9498331c50f3e1ef2fdcc3aecc1ced1b13ca4b8fcabd3e5",
+      "gitBlob": "26ab0e2ca84fb6b50a092bfa49e30a7c212d856c"
+    },
+    {
+      "role": "wholeAppLog",
+      "bytes": 34373,
+      "sha256": "d29fae97c2a6ceef0b26833a47b046d0a578ddb38b7ccae7b91bccd4cd352bb9",
+      "gitBlob": "0b3c2e7f708b1252917ef6de23f975ca9150a22a"
+    },
+    {
+      "role": "wholeArtifactLog",
+      "bytes": 3626,
+      "sha256": "2835722accd53dda5c668c0e92df45e9fb3829f85a3437b758721c44d2081e51",
+      "gitBlob": "69565a8195ede73df37e33c6e1d6057294e7a81d"
+    },
+    {
+      "role": "wholeOriginalJobLog",
+      "bytes": 205582,
+      "sha256": "030518550461d1e92325c726d082f720a440f8224b41b443eaa065d9eafe5d44",
+      "gitBlob": "7d8d96ddc845584671f99f9f00833da19d9d3319"
+    }
+  ],
+  "archiveJoin": {
+    "name": "host-emulated-linux-x64-9c9c73190840592963142d36562ea07d2b5d2d71-cross-team",
+    "artifactId": 14301704730,
+    "runId": 44008782843,
+    "bytes": 3172440,
+    "sha256": "667894e24aba748e3210144e5a9505eb78d5d424af6d611637af7d800e3b08be",
+    "fileCount": 28,
+    "uncompressedBytes": 7889055,
+    "packetReportsCompleteMembers": true,
+    "originalLogReportsSameIdentity": true,
+    "transferNote": "The root's first Unicode-heavy data transport was refused before retaining a mismatched receipt; the final full literal receipt fetched here hashes to the requested identity. That data-copy refusal is not a second target execution."
+  },
+  "completeSourceBodies": {
+    "sourceHead": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "files": [
+      {
+        "role": "crossTeamSource",
+        "path": "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+        "bytes": 8576,
+        "sha256": "4e62a8eee6a03074e05bf75f17c8cdfb2b717cd99f923d188a0ffe7f3db54e6a",
+        "gitBlob": "db4d98b333e1fb1103c82cf7851a252c0ecff3a5"
+      },
+      {
+        "role": "oversizedSource",
+        "path": "scripts/legacy-agent-host/desktop-oversized-comment-ui-smoke.ts",
+        "bytes": 10086,
+        "sha256": "312e42b78ad2975b0a3d1fb83b63c4835eab0aaa89b7831c2e06c5050028ab44",
+        "gitBlob": "23aab1f3fbf713eacc2e9741be6513fcc9de18e5"
+      },
+      {
+        "role": "backendSource",
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "bytes": 54778,
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+        "gitBlob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e"
+      },
+      {
+        "role": "observationsSource",
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+        "bytes": 33423,
+        "sha256": "2f98ed35ffb34f090d58b4021f54b1d92938f2ae6263312dd867654b923e80c8",
+        "gitBlob": "dca0c1710273411656e3284db0302449a00ddaf6"
+      },
+      {
+        "role": "viteSource",
+        "path": "electron.vite.config.ts",
+        "bytes": 13238,
+        "sha256": "a0b6a4ee707718251fad2efc26526e0f942e7278aa922cb4bcc2e328c4076bf7",
+        "gitBlob": "9045260aab02891055e324607b83e1bb39c7110a"
+      },
+      {
+        "role": "rendererMain",
+        "path": "src/renderer/main.tsx",
+        "bytes": 10453,
+        "sha256": "b00a401b98ddce0ea75905f6cea16f1dd030b692f8a0f6bc6c136a5c801ffe05",
+        "gitBlob": "0df14ce0092a7e19dd36dbcd17eb3530faee36ff"
+      },
+      {
+        "role": "rendererIndex",
+        "path": "src/renderer/index.html",
+        "bytes": 48941,
+        "sha256": "9f93e99a694a7e0c6abf980df00c2250a1e32aebf132c4713f2e0ea55cd31ccf",
+        "gitBlob": "761d6d1c2bba51d405fcafab526b090a66f75cee"
+      },
+      {
+        "role": "teamUiSource",
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+        "bytes": 27829,
+        "sha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf",
+        "gitBlob": "9aa43a43d6186c62bc92dae60dab4fe57cc63fe6"
+      },
+      {
+        "role": "capturedAppSource",
+        "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "bytes": 49613,
+        "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+        "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608"
+      },
+      {
+        "role": "recoverySource",
+        "path": "src/renderer/utils/dynamicImportRecovery.ts",
+        "bytes": 1557,
+        "sha256": "2d899528da666804a821a939f96fc5c42d883f292a92d3f34a8e0d9813e150f7",
+        "gitBlob": "d3f6df31536564eb36f24fd92524d1657b41c723"
+      }
+    ],
+    "totalBytes": 258494,
+    "executed": false
+  },
+  "originalFlow": {
+    "mode": "task-board-cross-team-ui",
+    "scope": "Original Electron controls, standalone Host persistence and renderer reload; only separately pinned TEST provider peers permitted",
+    "excluded": [
+      "provider sessions",
+      "vendor authentication",
+      "native model execution",
+      "full Stage1/release/default activation"
+    ],
+    "retainedOverallStatus": "INCOMPLETE",
+    "priorProofStatuses": [
+      {
+        "key": "taskBoardUiProof",
+        "status": "PASS",
+        "steps": 100,
+        "sourceSha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38"
+      },
+      {
+        "key": "taskReviewCycleUiProof",
+        "status": "PASS",
+        "steps": 61,
+        "sourceSha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9"
+      },
+      {
+        "key": "taskNotificationUiProof",
+        "status": "PASS",
+        "steps": 10,
+        "sourceSha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9"
+      },
+      {
+        "key": "crossTeamUiProof",
+        "status": "PASS",
+        "steps": 40,
+        "sourceSha256": "cab98f75e7c63f214b46e3ad86a680dee687847f121fd906796a5c0393b5ae40"
+      }
+    ],
+    "proofQualification": "These are exact retained PASS flags and step counts, not new blanket qualification from this bounded failure audit.",
+    "ordering": [
+      "Existing Task Board UI flow.",
+      "Existing Task review cycle.",
+      "Existing notification UI.",
+      "Existing cross-team flow.",
+      "Oversized-comment verification begins, validates the seeded original command/task metadata, captures previous timeOrigin and requests one Page.reload(ignoreCache:false).",
+      "The first cold original Task renderer wait fails; later comment UI actions and proof completion are not reached.",
+      "Backend F08, Trash/Restore and owner-routing continuation remain unreached."
+    ],
+    "failure": "UI read timed out: cold original Task renderer; no mutation retry",
+    "failureSource": {
+      "kind": "error",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:208:11",
+        "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts:153:46",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:470:7",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+      ]
+    },
+    "oversizedSeed": {
+      "commandId": "TEST-large-accepted-task-comment",
+      "commentId": "a8fb74e7-aa2a-50a0-b434-f7729501e989",
+      "textBytes": 600000,
+      "textSha256": "5968038a7bc48ca6a631182a4662cc1ef91917813e05871b555328e31aa2efcb"
+    },
+    "oversizedProofPresent": false,
+    "oversizedStepsPresent": false,
+    "retentionSeam": "The aggregator assigns oversizedCommentUiProof and oversizedCommentUiSteps only after the awaited function returns. A thrown failure therefore does not retain that local steps array in those fields. This is a source fact, not permission to infer successful actions from the missing fields.",
+    "unreachedObligations": [
+      "Cold renderer readiness and input observation.",
+      "Original Task selection/detail opening and exact comment-card presence.",
+      "Original long-comment expansion and Markdown Show all.",
+      "Every one of the200,000 Unicode characters visible through the original UI.",
+      "Post-read byte equality for the original canonical Task and command receipt, plus unchanged command-name census.",
+      "Success screenshot and original Escape dismissal.",
+      "F08, Trash/Restore and owner-routing continuation."
+    ]
+  },
+  "coldEpoch": {
+    "precedingCrossTeamLast": {
+      "monotonicMs": 206598,
+      "action": "mouseClick",
+      "label": "reopen original Group chat after reload",
+      "selector": "button[aria-label^=\"Group chat,\"]",
+      "target": {
+        "x": 169.5,
+        "y": 152,
+        "text": "Group chattest-cross-beta.user: TEST_CROSS_TEAM_TWO05:38 AM",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    "navigation": {
+      "monotonicMs": 206898,
+      "event": "Page.frameNavigated",
+      "mainFrame": true,
+      "path": "/"
+    },
+    "defaultContext": {
+      "monotonicMs": 206898,
+      "event": "contextCreated",
+      "id": 11,
+      "frameId": "9E42ED3ABC61AEF8D17BD6A4CDAC966A",
+      "default": true
+    },
+    "documentLoad": {
+      "monotonicMs": 206937,
+      "event": "Page.loadEventFired"
+    },
+    "firstRecordedNetworkFailureMs": 210118,
+    "entryFailure": {
+      "monotonicMs": 210127,
+      "event": "Runtime.exceptionThrown",
+      "path": "/",
+      "line": 0,
+      "column": 0,
+      "className": "TypeError",
+      "moduleError": "TypeError: Failed to fetch dynamically imported module: /main.tsx"
+    },
+    "lastRetainedNetworkFailureMs": 210137,
+    "relativeTiming": {
+      "navigationAfterLastCrossTeamActionMs": 300,
+      "firstRecordedNetworkFailureAfterNavigationMs": 3220,
+      "entryFailureAfterNavigationMs": 3229
+    },
+    "initialAppReady": {
+      "originMatches": true,
+      "mainReady": true,
+      "errorPresent": false,
+      "phase": "ready",
+      "uiDidInit": true,
+      "storePresent": true,
+      "rootChildCount": 1
+    },
+    "failureState": {
+      "readyState": "complete",
+      "uiDidInit": false,
+      "rootChildCount": 0,
+      "store": null,
+      "dialogs": [],
+      "inputEvents": [],
+      "splashPresent": true,
+      "splashStatus": "Preparing workspace...",
+      "startup": {
+        "state": "returned",
+        "ready": true,
+        "phase": "ready",
+        "errorPresent": false,
+        "steps": [
+          {
+            "phase": "runtime-flavor",
+            "startedAt": 1794893724043,
+            "finishedAt": 1794893724043
+          },
+          {
+            "phase": "runtime-configured-path",
+            "startedAt": 1794893724043,
+            "finishedAt": 1794893724043
+          },
+          {
+            "phase": "runtime-configured-path-found",
+            "startedAt": 1794893724043,
+            "finishedAt": 1794893724043
+          },
+          {
+            "phase": "runtime-environment",
+            "startedAt": 1794893724043,
+            "finishedAt": 1794893724053
+          },
+          {
+            "phase": "runtime-work-sync",
+            "startedAt": 1794893724053,
+            "finishedAt": 1794893724057
+          },
+          {
+            "phase": "runtime-mcp",
+            "startedAt": 1794893724057,
+            "finishedAt": 1794893724058
+          },
+          {
+            "phase": "mcp-source-entry",
+            "startedAt": 1794893724058,
+            "finishedAt": 1794893724058
+          },
+          {
+            "phase": "mcp-workspace-bundle",
+            "startedAt": 1794893724058,
+            "finishedAt": 1794893724058
+          },
+          {
+            "phase": "mcp-node-runtime",
+            "startedAt": 1794893724058,
+            "finishedAt": 1794893724200
+          },
+          {
+            "phase": "mcp-node-runtime-found",
+            "startedAt": 1794893724200,
+            "finishedAt": 1794893726144
+          },
+          {
+            "phase": "runtime-bridge",
+            "startedAt": 1794893726144,
+            "finishedAt": 1794893726149
+          },
+          {
+            "phase": "settings",
+            "startedAt": 1794893726149,
+            "finishedAt": 1794893726155
+          },
+          {
+            "phase": "team-backups",
+            "startedAt": 1794893726155,
+            "finishedAt": 1794893729111
+          },
+          {
+            "phase": "ipc",
+            "startedAt": 1794893729111,
+            "finishedAt": 1794893729166
+          },
+          {
+            "phase": "readying",
+            "startedAt": 1794893729166,
+            "finishedAt": 1794893729170
+          },
+          {
+            "phase": "ready",
+            "startedAt": 1794893729170,
+            "finishedAt": 1794893729170
+          }
+        ]
+      }
+    },
+    "interpretation": "Initial application readiness had succeeded. The later document reaches DOM/load readiness and can answer the Main startup bridge, while React/store initialization in the new document remains absent. Document readiness and Main readiness do not prove the renderer module graph loaded."
+  },
+  "diagnostics": {
+    "scope": "bounded read-only module/load evidence",
+    "retainedEventCount": 96,
+    "eventCap": 96,
+    "eventCapReached": true,
+    "eventCounts": {
+      "Page.frameNavigated": 5,
+      "Network.loadingFailed": 45,
+      "Log.entryAdded": 45,
+      "Runtime.exceptionThrown": 1
+    },
+    "networkFailureShape": "Every one of the45 retained failure rows is type Script, canceled false and net::ERR_INSUFFICIENT_RESOURCES. The rows omit requestId and URL; adjacent Log.entryAdded paths are separately retained observations, not a proven per-request join.",
+    "networkErrorPaths": [
+      {
+        "monotonicMs": 210119,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/team-direct-chats/renderer/view-models/chatListViewModel.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210119,
+        "path": "/components/team/ProvisioningProgressBlock.tsx",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210119,
+        "path": "/components/team/useTeamProvisioningPresentation.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210119,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/chat-visualizations/contracts/fenceProjection.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210119,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/chat-visualizations/renderer/librarySchemas.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210120,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/chat-visualizations/renderer/disableDevtools.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210120,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/chat-visualizations/renderer/programGuards.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210120,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/@openuidev+react-ui@0.17.0_@openuidev+react-headless@0.17.0_react@19.2.4_zod@4.6.7_zust_0082092641db7ad0d4a2219a88ae571b/node_modules/@openuidev/react-ui/dist/components/index.css",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210120,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/chat-visualizations/renderer/ui/chatVisualization.css",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210120,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/chat-visualizations/renderer/evaluateChatVisualization.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210120,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/chat-visualizations/renderer/parseChatVisualization.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210120,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/chat-visualizations/renderer/ui/OpenUIVisualization.tsx",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210120,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/chat-visualizations/renderer/ui/VisualizationShell.tsx",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210122,
+        "path": "/utils/platformKeys.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210123,
+        "path": "/components/ui/MentionSuggestionList.tsx",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210127,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/member-log-reads/core/application/DetailReadCoordinator.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210128,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/member-log-reads/renderer/memberLogReadScope.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210128,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/member-log-reads/renderer/readMemberLogDetail.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210128,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/member-log-reads/renderer/useCompletionRead.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210128,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/member-log-reads/renderer/useReadRefreshing.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210128,
+        "path": "/components/chat/LastOutputDisplay.tsx",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210128,
+        "path": "/components/chat/SystemChatGroup.tsx",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210128,
+        "path": "/components/chat/items/BaseItem.tsx",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210129,
+        "path": "/components/chat/items/linkedTool/renderHelpers.tsx",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210129,
+        "path": "/utils/toolRendering/index.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210129,
+        "path": "/components/chat/items/LinkedToolItem.tsx",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210129,
+        "path": "/components/chat/items/SlashItem.tsx",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210129,
+        "path": "/components/chat/items/SubagentItem.tsx",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210129,
+        "path": "/components/chat/items/TeammateMessageItem.tsx",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210129,
+        "path": "/components/chat/items/TextItem.tsx",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210129,
+        "path": "/components/chat/items/ThinkingItem.tsx",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210131,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/member-log-stream/renderer/hooks/useMemberLogStream.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210131,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/recent-projects/renderer/utils/activeProjectTeams.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210131,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/recent-projects/renderer/utils/recentProjectsClientCache.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210134,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/recent-projects/renderer/view-models/recentProjectsSectionViewModel.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210135,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/recent-projects/renderer/hooks/useOpenRecentProject.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210135,
+        "path": "/components/common/ProviderBrandLogo.tsx",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210135,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/running-teams/core/domain/policies/buildRunningTeamsDashboard.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210135,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/running-teams/renderer/view-models/runningTeamsSectionViewModel.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210135,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210136,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210136,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/runtime-provider-management/renderer/hooks/loadOpenCodeScopedCatalog.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210136,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/runtime-provider-management/renderer/hooks/catalogFailure.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210136,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/runtime-provider-management/renderer/connectedCountObservationPolicy.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      },
+      {
+        "monotonicMs": 210137,
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/runtime-provider-management/renderer/hooks/openCodePassiveCatalogNormalization.ts",
+        "source": "network",
+        "level": "error",
+        "moduleError": null
+      }
+    ],
+    "entryException": {
+      "monotonicMs": 210127,
+      "event": "Runtime.exceptionThrown",
+      "path": "/",
+      "line": 0,
+      "column": 0,
+      "className": "TypeError",
+      "moduleError": "TypeError: Failed to fetch dynamically imported module: /main.tsx"
+    },
+    "resourceCollection": {
+      "count": 160,
+      "sourceCap": 160,
+      "capReached": true,
+      "allRecordedResponseStatus200": true,
+      "earliestRecordedStartMs": 156,
+      "latestRecordedStartPlusDurationMs": 464
+    },
+    "limits": [
+      "The first96 event slots are full. The number45 is a retained lower bound on the recorded failure population, not an uncapped total.",
+      "Only the last160 same-origin entries available from ResourceTiming were returned. That successful subset is not a complete request census, and it does not prove failed requests later completed.",
+      "Network failure rows lack request identifiers and resource allocation/limit measurements.",
+      "No memory, file-descriptor, resource-dispatcher or concurrent-request threshold is proved by the error code alone.",
+      "Failure snapshot follows the timeout; it is an observation, not an atomic snapshot at the exact first network error."
+    ]
+  },
+  "sourceDiagnosis": {
+    "loader": "The complete frozen index.html makes an unawaited, uncaught import('./main.tsx') in its final inline module. The static splash exists before that import. Failure is not handled by an entry-owned terminal state.",
+    "main": "The complete main.tsx imports App, store, Sentry, telemetry and styles before its top-level statements. It registers dynamic-import recovery before mount but only after the module's eager dependencies load. It cannot install that listener when the entry graph itself fails.",
+    "recovery": "The complete utility handles vite:preloadError, calls preventDefault and schedules window.location.reload with a10-second sessionStorage throttle. Moving or expanding that automatic retry is not recommended or selected by this advisory.",
+    "splash": "The observed Preparing workspace... is the initial static text from index.html. Main's ready response does not update it because the main renderer module did not initialize.",
+    "devRoute": "The original app log records Vite6.4.4 development serving at localhost:5173. The complete config contains optimizeDeps include/exclude rules and a production Rollup openui-icons chunk rule; the latter is not evidence of equivalent chunking of the development request graph.",
+    "resourceRootCause": "The artifacts identify module loading as the failed stage but do not prove the exact exhausted resource or the smallest resource-restoring implementation. No memory/request/descriptor diagnosis is substituted for missing measurements.",
+    "lateAppLog": "The app log later ends with network-service restart and GPU launch/fatal messages during shutdown. The retained failure and cleanup record already show a guarded close timeout and group SIGTERM. Those late log messages are preserved without promoting them to the cause of the earlier main import failure."
+  },
+  "sourceCustody": {
+    "receiptSource": {
+      "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "dirty": false
+    },
+    "beforeRows": 1757,
+    "uniquePaths": 1757,
+    "wholeBeforeAfterRowsEqual": true,
+    "decisiveMembership": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+        "pin": "db4d98b333e1fb1103c82cf7851a252c0ecff3a5",
+        "sha256": "4e62a8eee6a03074e05bf75f17c8cdfb2b717cd99f923d188a0ffe7f3db54e6a",
+        "before": "4e62a8eee6a03074e05bf75f17c8cdfb2b717cd99f923d188a0ffe7f3db54e6a",
+        "after": "4e62a8eee6a03074e05bf75f17c8cdfb2b717cd99f923d188a0ffe7f3db54e6a"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-oversized-comment-ui-smoke.ts",
+        "pin": "23aab1f3fbf713eacc2e9741be6513fcc9de18e5",
+        "sha256": "312e42b78ad2975b0a3d1fb83b63c4835eab0aaa89b7831c2e06c5050028ab44",
+        "before": null,
+        "after": null
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "pin": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+        "before": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+        "after": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+        "pin": "dca0c1710273411656e3284db0302449a00ddaf6",
+        "sha256": "2f98ed35ffb34f090d58b4021f54b1d92938f2ae6263312dd867654b923e80c8",
+        "before": "2f98ed35ffb34f090d58b4021f54b1d92938f2ae6263312dd867654b923e80c8",
+        "after": "2f98ed35ffb34f090d58b4021f54b1d92938f2ae6263312dd867654b923e80c8"
+      },
+      {
+        "path": "electron.vite.config.ts",
+        "pin": "9045260aab02891055e324607b83e1bb39c7110a",
+        "sha256": "a0b6a4ee707718251fad2efc26526e0f942e7278aa922cb4bcc2e328c4076bf7",
+        "before": "a0b6a4ee707718251fad2efc26526e0f942e7278aa922cb4bcc2e328c4076bf7",
+        "after": "a0b6a4ee707718251fad2efc26526e0f942e7278aa922cb4bcc2e328c4076bf7"
+      },
+      {
+        "path": "src/renderer/main.tsx",
+        "pin": "0df14ce0092a7e19dd36dbcd17eb3530faee36ff",
+        "sha256": "b00a401b98ddce0ea75905f6cea16f1dd030b692f8a0f6bc6c136a5c801ffe05",
+        "before": "b00a401b98ddce0ea75905f6cea16f1dd030b692f8a0f6bc6c136a5c801ffe05",
+        "after": "b00a401b98ddce0ea75905f6cea16f1dd030b692f8a0f6bc6c136a5c801ffe05"
+      },
+      {
+        "path": "src/renderer/index.html",
+        "pin": "761d6d1c2bba51d405fcafab526b090a66f75cee",
+        "sha256": "9f93e99a694a7e0c6abf980df00c2250a1e32aebf132c4713f2e0ea55cd31ccf",
+        "before": null,
+        "after": null
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+        "pin": "9aa43a43d6186c62bc92dae60dab4fe57cc63fe6",
+        "sha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf",
+        "before": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf",
+        "after": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "pin": "865494ab5f5e45c5158fbf74ac858987fb322608",
+        "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+        "before": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+        "after": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73"
+      },
+      {
+        "path": "src/renderer/utils/dynamicImportRecovery.ts",
+        "pin": "d3f6df31536564eb36f24fd92524d1657b41c723",
+        "sha256": "2d899528da666804a821a939f96fc5c42d883f292a92d3f34a8e0d9813e150f7",
+        "before": null,
+        "after": null
+      }
+    ],
+    "missingIndividualRows": [
+      "scripts/legacy-agent-host/desktop-oversized-comment-ui-smoke.ts",
+      "src/renderer/index.html",
+      "src/renderer/utils/dynamicImportRecovery.ts"
+    ],
+    "qualification": "The complete immutable bodies of those three missing-row files were read at the frozen source head, but this capture has no individual physical before/after SHA rows for them and no full served-renderer-body attestation. This is a retained evidence limit, not a finding that the files changed.",
+    "compiledBundles": [
+      {
+        "path": "main/chunks/index-D9GX0Q6a.cjs",
+        "sha256": "89c988b7be61f7f30f0effaed6a2626a2279b0ed753228360e77e227884d0a92"
+      },
+      {
+        "path": "main/chunks/index-yaJFGvjB.cjs",
+        "sha256": "ec64b11e28a53961fd7846392857a0167886b8b086d14f54e20041ddc9927155"
+      },
+      {
+        "path": "main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+        "sha256": "7babbc9bd69c863a2210647b3d5f589d96437a9a80fd794b54196387849217f6"
+      },
+      {
+        "path": "main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+        "sha256": "c14cfc36aeec6fd7103c507f258097aaeccf552dbbf608fea43f9e3c7a7ef3b3"
+      },
+      {
+        "path": "main/chunks/taskChangeState-rZolvpL6.cjs",
+        "sha256": "f40557112189b351692a4b0f19244d7845a4dfe754f468326a21c36386efa1cd"
+      },
+      {
+        "path": "main/chunks/taskHistory-2kbwfqIg.cjs",
+        "sha256": "1d336b6cea5aa5c4768954541a24347fe89bb46a83faddaf8b26fd6e0afb7f85"
+      },
+      {
+        "path": "main/chunks/TeamDataService-DySh5-O-.cjs",
+        "sha256": "ed455bf2423e0511bf1fb8e30069280fe99b505e8e4968df3705309a7131556e"
+      },
+      {
+        "path": "main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+        "sha256": "2915a9af73772eda67fa92bd4499976d75724d9605cc947e356bd1dc1cee600c"
+      },
+      {
+        "path": "main/index.cjs",
+        "sha256": "867e1c3eb691d4f291d91cd0021a64a5ec5494e0663bc4da029db2fe5db46e10"
+      },
+      {
+        "path": "main/internal-storage-worker.cjs",
+        "sha256": "3433cb94575a5748d3133174952698af2a98ac2afb348cb159fcb1110e0b284f"
+      },
+      {
+        "path": "main/task-change-worker.cjs",
+        "sha256": "f8fcc24dd4dc9842cd0f70ffe02891d39eef84019d4aab4ed21b529ba9326446"
+      },
+      {
+        "path": "main/team-data-worker.cjs",
+        "sha256": "dc145e9f1fb5fdfa2e5f51ca6d6f2db8e22e89cb3ab34dae2745ccfd4e6f3823"
+      },
+      {
+        "path": "main/team-fs-worker.cjs",
+        "sha256": "6e6410a44a3d1b97065085259858215045ed137b5bd0dd27bf70f797091c9c83"
+      },
+      {
+        "path": "preload/index.js",
+        "sha256": "4f02e5f1659bb0373f5515d81c7edf5f9bc7af8b67a39f1600171f8acb291406"
+      }
+    ],
+    "bundleProvenance": "Actual compiled main/preload JS bytes hashed after owned app startup; no claim of reproducible source-to-bundle rebuild",
+    "noNewCensus": "No working tree, filesystem, binary or live process was inspected in this review."
+  },
+  "cleanup": {
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "unconfirmed",
+      "reason": "timeout",
+      "listenerAbsent": false
+    },
+    "quitRequested": true,
+    "originalRequestedQuitExit": {
+      "initialExitCode": null,
+      "initialSignalCode": null,
+      "exitCode": null,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [
+      {
+        "pid": 4302,
+        "ppid": 4268,
+        "pgid": 4302
+      },
+      {
+        "pid": 4316,
+        "ppid": 4302,
+        "pgid": 4302
+      },
+      {
+        "pid": 4317,
+        "ppid": 4316,
+        "pgid": 4302
+      },
+      {
+        "pid": 4338,
+        "ppid": 4317,
+        "pgid": 4302
+      },
+      {
+        "pid": 4362,
+        "ppid": 4338,
+        "pgid": 4302
+      },
+      {
+        "pid": 4376,
+        "ppid": 4362,
+        "pgid": 4302
+      },
+      {
+        "pid": 4429,
+        "ppid": 4362,
+        "pgid": 4302
+      },
+      {
+        "pid": 4431,
+        "ppid": 4429,
+        "pgid": 4302
+      },
+      {
+        "pid": 4432,
+        "ppid": 4429,
+        "pgid": 4302
+      },
+      {
+        "pid": 4472,
+        "ppid": 4431,
+        "pgid": 4302
+      },
+      {
+        "pid": 4478,
+        "ppid": 4429,
+        "pgid": 4302
+      },
+      {
+        "pid": 4494,
+        "ppid": 4432,
+        "pgid": 4302
+      },
+      {
+        "pid": 4631,
+        "ppid": 4429,
+        "pgid": 4302
+      },
+      {
+        "pid": 10995,
+        "ppid": 4429,
+        "pgid": 4302
+      },
+      {
+        "pid": 10996,
+        "ppid": 10995,
+        "pgid": 4302
+      },
+      {
+        "pid": 10997,
+        "ppid": 10996,
+        "pgid": 4302
+      }
+    ],
+    "hostChildOnFailure": {
+      "pid": 4631,
+      "ppid": 4429,
+      "pgid": 4302,
+      "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+      "observedBeforeHarnessCleanup": true
+    },
+    "cleanup": {
+      "processGroup": 4302,
+      "remaining": [],
+      "appExitCode": null,
+      "appSignalCode": "SIGTERM",
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "finalSentinelCensus": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": null,
+      "postQuitOrCleanupInvocations": null,
+      "refusedInvocations": [],
+      "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+    },
+    "qualification": "The wrapper received SIGTERM through the guarded captured-group fallback. Empty final group and Host absence are retained observations after harness cleanup; app normal exit and Host exit/signal status are not established. No native custody, ordinary Quit or full E2E PASS is inferred."
+  },
+  "boundedNextAdvice": {
+    "selectedFix": false,
+    "postimageAuthored": false,
+    "newTestOrRuntimeSelected": false,
+    "sourceSupportedReportingCandidate": "If root selects a separate source correction, the existing initial loader can own an explicit rejection/failure state before main.tsx. It should retain the original import error and stop claiming that preparation is progressing. This is a concrete product error-reporting gap, not a repair of the underlying resource failure.",
+    "reportingSemantics": [
+      "Keep the successful import and normal mounting route unchanged.",
+      "On entry import rejection, report a terminal startup failure without requiring the failing main graph to load.",
+      "Do not mark UI initialized, remove the splash as success, substitute alternate UI, issue another import, reload the page or retry the journey.",
+      "Retain the original failure and existing cleanup/result accounting."
+    ],
+    "functionalFixObligation": "Before selecting a functional module-loading correction, establish from primary source and bounded original observations which request/allocation limit failed and how the proposed source change prevents that failure. A development dependency-fan-out change might be a candidate only if that link is proved; this capture alone does not establish it.",
+    "meaningfulFutureVerification": "Any eventual resource correction must still execute the original cold reload and the unchanged full oversized-comment assertions: exact original task/comment identity, real controls, all Unicode content and no canonical command/task replay. A finite entry-error test can discriminate correct failure reporting but cannot stand in for that E2E.",
+    "notSupported": [
+      "Increasing the30-second readiness budget",
+      "Automatic retry or reload",
+      "Dropping/splitting away the cold-renderer or oversized-comment assertions to obtain PASS",
+      "Changing user-content size to avoid the obligation",
+      "Treating Main ready or DOM complete as renderer-ready",
+      "Promoting cleanup absence to normal exit",
+      "Selecting a memory/FD/request-limit fix from the error string alone"
+    ],
+    "scopeIsolation": "This advisory does not amend accepted R1b16bf or its future exact source/control R2, and it does not authorize mutation or polling of frozen PR1218."
+  },
+  "checks": [
+    {
+      "id": "C01",
+      "status": "PASS_EVIDENCE",
+      "claim": "The full retained packet and receipt identities match their immutable Git bodies.",
+      "evidence": "Packet 33e472: 43,216 bytes, SHA256 baf4a9f2de58d967366c652bf7cba5d28e7b4d3c3f576f3d359f04516f31c972. Receipt 26ab0: 4,433,079 bytes, SHA256 8368acfb8c066be5b9498331c50f3e1ef2fdcc3aecc1ced1b13ca4b8fcabd3e5. Complete JSON parsed without truncation."
+    },
+    {
+      "id": "C02",
+      "status": "PASS_EVIDENCE",
+      "claim": "The failure belongs to the original frozen Linux cross-team job.",
+      "evidence": "Original retained log names Offline Host Desktop (linux-x64, cross-team), checks out 9c9c73190840592963142d36562ea07d2b5d2d71 and runs mode task-board-cross-team-ui. Packet binds run44008782843, job133790458946, attempt1 and artifact14301704730."
+    },
+    {
+      "id": "C03",
+      "status": "PASS_EVIDENCE",
+      "claim": "Archive and log identities join the same capture.",
+      "evidence": "Original job log reports the exact ZIP byte length3,172,440, SHA256667894e24aba748e3210144e5a9505eb78d5d424af6d611637af7d800e3b08be, artifact14301704730 and28 files recorded by the capture packet. This reviewer did not independently reopen or decompress the ZIP."
+    },
+    {
+      "id": "C04",
+      "status": "PASS_EVIDENCE",
+      "claim": "The four preceding subflows have retained PASS status; the overall receipt remains INCOMPLETE.",
+      "evidence": "taskBoardUiProof PASS/100 steps, taskReviewCycleUiProof PASS/61, taskNotificationUiProof PASS/10 and crossTeamUiProof PASS/40. This bounded review reads their status/source/sequence metadata, not a new full semantic qualification of every earlier business receipt."
+    },
+    {
+      "id": "C05",
+      "status": "PASS_STATIC",
+      "claim": "The orchestration source invokes oversized-comment verification after the cross-team flow completes.",
+      "evidence": "Full db4d source: runDesktopTaskBoardUiSmoke, review, notification, cross-team, then runDesktopOversizedCommentUiSmoke at line153. Its later assignment only completes if that awaited helper returns."
+    },
+    {
+      "id": "C06",
+      "status": "PASS_EVIDENCE",
+      "claim": "The original failure is the oversized-comment cold renderer wait.",
+      "evidence": "Receipt failure is UI read timed out: cold original Task renderer; no mutation retry. The unique source label follows Page.reload and precedes observeInput, Task selection, comment opening or expansion."
+    },
+    {
+      "id": "C07",
+      "status": "PASS_STATIC",
+      "claim": "No oversized-comment rendering assertion was reached or established.",
+      "evidence": "Full oversized source places the cold readiness wait before all comment UI actions, full Unicode assertion, unchanged canonical Task/receipt checks, final screenshot and Escape. No oversizedCommentUiProof or oversizedCommentUiSteps fields are present because assignment was pending."
+    },
+    {
+      "id": "C08",
+      "status": "PASS_STATIC",
+      "claim": "Later F08, Trash and owner continuation are unreached.",
+      "evidence": "Full backend source calls F08 and Trash only after the whole offline task-board helper resolves. Owner continuation is returned only after original overall PASS and cleanup. This failure prevents those branches."
+    },
+    {
+      "id": "C09",
+      "status": "PASS_EVIDENCE",
+      "claim": "A distinct cold renderer epoch is recorded after the cross-team activity.",
+      "evidence": "Last cross-team action at206598 ms; main-frame navigation/default context11 at206898 ms; document load at206937 ms. These are retained controller-relative monotonic values, not newly observed clocks."
+    },
+    {
+      "id": "C10",
+      "status": "PASS_EVIDENCE",
+      "claim": "The new document loaded while the application UI did not initialize.",
+      "evidence": "Failure snapshot: readyState complete, uiDidInit false, rootChildCount0, store null, no dialogs/tabs/input events, splash present with Preparing workspace.... Main startup API separately returned ready true/phase ready/error false."
+    },
+    {
+      "id": "C11",
+      "status": "PASS_EVIDENCE",
+      "claim": "The retained diagnostics establish a renderer module-load failure.",
+      "evidence": "45 recorded Network.loadingFailed events, all Script/canceled false/net::ERR_INSUFFICIENT_RESOURCES, between210118 and210137 ms; explicit TypeError at210127 ms says Failed to fetch dynamically imported module: /main.tsx."
+    },
+    {
+      "id": "C12",
+      "status": "PASS_STATIC",
+      "claim": "The network event collection is capped and has reached its cap.",
+      "evidence": "Full attachRendererDiagnostics source retains only the first96 events. This receipt contains exactly96:5 navigations,45 network failures,45 network log entries and1 exception. Later diagnostic events may be omitted;45 is not asserted to be the total failures."
+    },
+    {
+      "id": "C13",
+      "status": "PASS_STATIC",
+      "claim": "The resource timing collection cannot establish completeness of the failed requests.",
+      "evidence": "Full snapshot source returns the last160 same-origin ResourceTiming entries. The receipt has exactly160, all status200, latest recorded start+duration464 ms. That successful subset does not account for the later failure events and contains no request identifiers joining them."
+    },
+    {
+      "id": "C14",
+      "status": "PASS_STATIC",
+      "claim": "The initial renderer entry has no rejection handler.",
+      "evidence": "Complete frozen index.html ends with import('./main.tsx') in an inline module without await/catch. The failure therefore need not change the static splash to a failed state."
+    },
+    {
+      "id": "C15",
+      "status": "PASS_STATIC",
+      "claim": "The existing dynamic-import recovery is too late to handle this main entry failure.",
+      "evidence": "Complete main.tsx eagerly imports App/store and other dependencies, then calls registerDynamicImportRecovery. The complete utility registers vite:preloadError with a throttled location.reload. It cannot be registered by a main module whose dependency graph never finishes loading."
+    },
+    {
+      "id": "C16",
+      "status": "PASS_STATIC",
+      "claim": "The selected source and logs show a development module-serving route.",
+      "evidence": "Full Vite config and app log identify Vite6.4.4 dev serving http://localhost:5173, dependency optimization and separate production Rollup manualChunks. Production chunking is not evidence that the dev requests were bundled or bounded in the same way."
+    },
+    {
+      "id": "C17",
+      "status": "PASS_EVIDENCE",
+      "claim": "The original source census is unchanged within its recorded membership.",
+      "evidence": "All1,757 unique before/after path/SHA rows compare identically. Seven decisive source files fetched from the frozen head match their captured physical SHA rows."
+    },
+    {
+      "id": "C18",
+      "status": "PASS_EVIDENCE",
+      "claim": "Three decisive source files lack individual physical census rows.",
+      "evidence": "desktop-oversized-comment-ui-smoke.ts, src/renderer/index.html and dynamicImportRecovery.ts are absent from the1,757 rows. Their complete frozen-head Git bodies were read and hashed here; the receipt reports dirty false. No unrecorded physical or served-byte attestation is invented."
+    },
+    {
+      "id": "C19",
+      "status": "PASS_EVIDENCE",
+      "claim": "Cleanup is retained as signaled harness cleanup, with an unknown Host exit status.",
+      "evidence": "Failure close was attempted but unconfirmed/timeout; requested app exit remained null/null. Captured group4302 then has remaining[], appSignalCode SIGTERM, captured Host observed and absent. No separate Host exit code or normal app exit is recorded."
+    },
+    {
+      "id": "C20",
+      "status": "PASS_STATIC",
+      "claim": "Cleanup source preserves the boundary between guarded request, fallback signal and absence.",
+      "evidence": "Full captured-app cleanup waits for original requested exit, checks original leader identity, sends guarded group SIGTERM and observes absence. The final receipt cannot be read as ordinary Quit or native custody qualification."
+    },
+    {
+      "id": "C21",
+      "status": "PASS_EVIDENCE",
+      "claim": "The original terminal job remains failed despite earlier subflow success.",
+      "evidence": "Retained log at05:39:11.6965737Z reports exit1 after assertDesktopProofCompleted rejects INCOMPLETE. The failure artifact is uploaded afterward. No rerun or new runtime occurred here."
+    },
+    {
+      "id": "C22",
+      "status": "OPEN_CAUSE",
+      "claim": "The exact underlying exhausted resource is not identified by this capture.",
+      "evidence": "No complete request-in-flight census, allocation/FD/resource-limit history, relevant operating-system exhaustion record or uncapped failure trace is retained. ERR_INSUFFICIENT_RESOURCES alone does not distinguish memory, request slots, descriptors or another allocation limit."
+    },
+    {
+      "id": "C23",
+      "status": "PASS_ADVISORY",
+      "claim": "A concrete source error-reporting gap can be addressed without treating it as a functional E2E fix.",
+      "evidence": "A failure boundary owned by the initial loader could retain the original import rejection and show a terminal startup error before main.tsx runs. It must not set uiDidInit, mount alternate UI, clear the splash as success, automatically reload or retry. No postimage is authored or selected by this advisory."
+    },
+    {
+      "id": "C24",
+      "status": "PASS_ADVISORY",
+      "claim": "Functional restoration requires source-supported resource diagnosis and unchanged-flow evidence.",
+      "evidence": "Any later functional correction must address the demonstrated module-load failure and preserve the same cold reload, original Task/comment controls, complete Unicode assertion and canonical no-replay checks under existing budgets. Passing an error-state test would not meet those obligations."
+    },
+    {
+      "id": "C25",
+      "status": "PASS_SCOPE",
+      "claim": "This evidence advice does not alter the current R1/R2 or frozen CI snapshot.",
+      "evidence": "Read-only Git/evidence/pure data work and this bare report only. No shell, runtime, browser, live CI polling, ref/PR/source/control changes, retries, timeout increases or native/vendor actions."
+    },
+    {
+      "id": "C26",
+      "status": "PASS_SCOPE",
+      "claim": "The prior accepted renderer85 and current149/43/10 claims remain separate.",
+      "evidence": "This failed GUI receipt neither retracts the independently accepted exact renderer85 unit result nor establishes later149, catalog43, standalone10, packaged/native or full E2E qualification."
+    }
+  ],
+  "resultCounts": {
+    "checks": 26,
+    "verifiedOrBounded": 25,
+    "openCause": 1,
+    "newExecutions": 0,
+    "ordinaryExitQualified": false,
+    "oversizedCommentQualified": false,
+    "overallJobPass": false
+  },
+  "selfReadback": "This report's exact retained pin is sent first; complete literal/hash/parsed equality and full report readback are confirmed afterward in a separate message."
+}

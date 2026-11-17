@@ -1,0 +1,559 @@
+{
+  "schemaVersion": 1,
+  "kind": "root-combined-member-reveal-inode64-R2-static-review",
+  "at": "2026-11-17 06:37:24 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "bytes": 29036,
+    "sha256": "0737bd331fb0ac13e8589b75c1aa392a3a428e8ca4b81e3a763bcba4d1bdcdec",
+    "gitBlob": "bb9a1cddc7add50dae7a907e247dd2a5efc61885"
+  },
+  "verdict": "ACCEPT_EXACT_BOUNDED_SOURCE_CONTROL_R2_STATIC",
+  "accepted": true,
+  "authorshipGate": {
+    "bytes": 4441,
+    "sha256": "11dd4fe224bb0531f2432fc73f5de4a0f06c7afe9118d09981674d96fe6dfd8c",
+    "gitBlob": "6bbf83caa77cb9eaab9e262f46bed45f03494968"
+  },
+  "source": {
+    "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+    "before": {
+      "bytes": 69194,
+      "sha256": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+      "gitBlob": "43ab487464098fed0425ffd51441a38abc206f3b"
+    },
+    "after": {
+      "bytes": 69370,
+      "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+      "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+    },
+    "beforeVector": {
+      "bytes": 3481,
+      "sha256": "075a300c213fcb595ce025c7f9ba3af9dc955ca5ca61f9a0a1b17ebf4f7c938b",
+      "gitBlob": "866c64a6d2c90fc92988c1094cbdd81b469c2c10"
+    },
+    "afterVector": {
+      "bytes": 3481,
+      "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+      "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+    }
+  },
+  "controls": {
+    "beforeRunner": {
+      "bytes": 25389,
+      "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+      "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced"
+    },
+    "afterRunner": {
+      "bytes": 25819,
+      "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+      "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+    },
+    "beforeBinding": {
+      "bytes": 105210,
+      "sha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+      "gitBlob": "a206a4432f4e9f77f682b91d340c191826b5f25b"
+    },
+    "afterBinding": {
+      "bytes": 107295,
+      "sha256": "d8626f22a432926350c4d69c657313a61b935764dae972159a1a88fc03163b5b",
+      "gitBlob": "381c51a331b9d03f5aab87835af3dad5a6643d3c"
+    }
+  },
+  "completeRetainedBodyReads": [
+    {
+      "role": "driver",
+      "bytes": 69370,
+      "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+      "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f",
+      "fullLiteralRead": true
+    },
+    {
+      "role": "beforeVector",
+      "bytes": 3481,
+      "sha256": "075a300c213fcb595ce025c7f9ba3af9dc955ca5ca61f9a0a1b17ebf4f7c938b",
+      "gitBlob": "866c64a6d2c90fc92988c1094cbdd81b469c2c10",
+      "fullLiteralRead": true
+    },
+    {
+      "role": "afterVector",
+      "bytes": 3481,
+      "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+      "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b",
+      "fullLiteralRead": true
+    },
+    {
+      "role": "runner",
+      "bytes": 25819,
+      "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+      "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197",
+      "fullLiteralRead": true
+    },
+    {
+      "role": "binding",
+      "bytes": 107295,
+      "sha256": "d8626f22a432926350c4d69c657313a61b935764dae972159a1a88fc03163b5b",
+      "gitBlob": "381c51a331b9d03f5aab87835af3dad5a6643d3c",
+      "fullLiteralRead": true
+    },
+    {
+      "role": "proposal",
+      "bytes": 29036,
+      "sha256": "0737bd331fb0ac13e8589b75c1aa392a3a428e8ca4b81e3a763bcba4d1bdcdec",
+      "gitBlob": "bb9a1cddc7add50dae7a907e247dd2a5efc61885",
+      "fullLiteralRead": true
+    }
+  ],
+  "checks": [
+    {
+      "id": "closed-exact-R1-before-authorship",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "gate": {
+          "bytes": 4441,
+          "sha256": "11dd4fe224bb0531f2432fc73f5de4a0f06c7afe9118d09981674d96fe6dfd8c",
+          "gitBlob": "6bbf83caa77cb9eaab9e262f46bed45f03494968"
+        },
+        "closed": "2026-11-17 06:33:57 UTC",
+        "authored": "2026-11-17 06:34:30 UTC"
+      }
+    },
+    {
+      "id": "complete-six-retained-postimage-data-reads",
+      "status": "PASS_STATIC",
+      "evidence": [
+        {
+          "role": "driver",
+          "bytes": 69370,
+          "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+          "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f",
+          "fullLiteralRead": true
+        },
+        {
+          "role": "beforeVector",
+          "bytes": 3481,
+          "sha256": "075a300c213fcb595ce025c7f9ba3af9dc955ca5ca61f9a0a1b17ebf4f7c938b",
+          "gitBlob": "866c64a6d2c90fc92988c1094cbdd81b469c2c10",
+          "fullLiteralRead": true
+        },
+        {
+          "role": "afterVector",
+          "bytes": 3481,
+          "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+          "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b",
+          "fullLiteralRead": true
+        },
+        {
+          "role": "runner",
+          "bytes": 25819,
+          "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+          "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197",
+          "fullLiteralRead": true
+        },
+        {
+          "role": "binding",
+          "bytes": 107295,
+          "sha256": "d8626f22a432926350c4d69c657313a61b935764dae972159a1a88fc03163b5b",
+          "gitBlob": "381c51a331b9d03f5aab87835af3dad5a6643d3c",
+          "fullLiteralRead": true
+        },
+        {
+          "role": "proposal",
+          "bytes": 29036,
+          "sha256": "0737bd331fb0ac13e8589b75c1aa392a3a428e8ca4b81e3a763bcba4d1bdcdec",
+          "gitBlob": "bb9a1cddc7add50dae7a907e247dd2a5efc61885",
+          "fullLiteralRead": true
+        }
+      ]
+    },
+    {
+      "id": "driver-exact-only-insertion",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "before": {
+          "bytes": 69194,
+          "sha256": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+          "gitBlob": "43ab487464098fed0425ffd51441a38abc206f3b"
+        },
+        "after": {
+          "bytes": 69370,
+          "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+          "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+        },
+        "insertion": {
+          "bytes": 176,
+          "sha256": "ba8e0c7f6e3ce552c49657131dcaeafba4b86c807e09865a80ffa42892eff303",
+          "gitBlob": "a20184d0e817d8b55488545733684b252426905c"
+        }
+      }
+    },
+    {
+      "id": "driver-existing794-to798-cap",
+      "status": "PASS_STATIC",
+      "evidence": "One4-line call;2lines remaining under800; no exception."
+    },
+    {
+      "id": "original-649byte-click-unchanged",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 649,
+        "sha256": "41c01f7e76509f264fe9337294554e84bc7c22e355558ab000469f9dae086f24",
+        "gitBlob": "0119d9327d234e9eeacb4d68e0422c5a038c79f9"
+      }
+    },
+    {
+      "id": "unique-insertion-boundary",
+      "status": "PASS_STATIC",
+      "evidence": "Reveal immediately precedes original member click."
+    },
+    {
+      "id": "exact-target-and-existing-fifth-argument",
+      "status": "PASS_STATIC",
+      "evidence": "Actual existing helper signature and exact row-scoped name, max12 and center-hit options."
+    },
+    {
+      "id": "13-exact-unique-vector-rows",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "before": {
+          "bytes": 3481,
+          "sha256": "075a300c213fcb595ce025c7f9ba3af9dc955ca5ca61f9a0a1b17ebf4f7c938b",
+          "gitBlob": "866c64a6d2c90fc92988c1094cbdd81b469c2c10"
+        },
+        "after": {
+          "bytes": 3481,
+          "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+          "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+        }
+      }
+    },
+    {
+      "id": "only-driver-vector-diff",
+      "status": "PASS_STATIC",
+      "evidence": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+          "mode": "100644",
+          "bytes": 69194,
+          "sha256": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+          "gitBlob": "43ab487464098fed0425ffd51441a38abc206f3b"
+        }
+      ]
+    },
+    {
+      "id": "original12-source-rows-unchanged",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 2784,
+        "sha256": "6a212eb715b312ae74c25e58078fd26b1247695d94f5c47536dc2a20aed49ce1",
+        "gitBlob": "fff972049718ae5ddaa7000e17341fade490233e"
+      }
+    },
+    {
+      "id": "entire-runner-inverse",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "before": {
+          "bytes": 25389,
+          "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+          "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced"
+        },
+        "after": {
+          "bytes": 25819,
+          "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+          "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+        },
+        "allowed": [
+          "exactNode function",
+          "STAGE literal",
+          "SCOPE literal"
+        ]
+      }
+    },
+    {
+      "id": "no-old-path-retained",
+      "status": "PASS_STATIC",
+      "evidence": "Fresh paths only; spent runner/stage not edited."
+    },
+    {
+      "id": "raw-metadata-function-unchanged",
+      "status": "PASS_STATIC",
+      "evidence": "Source/control raw inode censuses remain identical."
+    },
+    {
+      "id": "same-five-node-callers",
+      "status": "PASS_STATIC",
+      "evidence": "One definition plus5unchanged call expressions."
+    },
+    {
+      "id": "range-bounds-before-normalization",
+      "status": "PASS_STATIC",
+      "evidence": "function exactNode(pin) {\n  assert.equal(fs.realpathSync(NODE), NODE);\n  const m = metadata(NODE);\n  assert.equal(m.type, 'file'); assert.equal(m.mode, 0o755);\n  const rawInode = BigInt(m.inode), expectedInode = BigInt(pin.inode);\n  assert(rawInode >= -(1n << 63n) && rawInode < (1n << 63n), 'Node signed64 inode');\n  assert(expectedInode >= 0n && expectedInode < (1n << 64n), 'Node unsigned64 inode pin');\n  const inode = { rawSigned64: m.inode, canonicalUnsigned64: String(BigInt.asUintN(64, rawInode)) };\n  assert.equal(inode.canonicalUnsigned64, pin.inode, 'Node inode');\n  for (const k of ['device', 'uid', 'gid', 'mtimeNs', 'ctimeNs'])\n    assert.equal(m[k], pin[k], 'Node ' + k);\n  assert.equal(m.bytes, pin.bytes);\n  const digest = sha(fs.readFileSync(NODE)); assert.equal(digest, pin.sha256);\n  return { path: NODE, realpath: NODE, metadata: m, inode, sha256: digest };\n}"
+    },
+    {
+      "id": "observed-inode-all-bits-equal",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "raw": "-9223372036854733364",
+        "expected": "9223372036854818252",
+        "hex": "800000000000a5cc"
+      }
+    },
+    {
+      "id": "range-mapping-bijective-domain-data",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "cases": [
+          {
+            "raw": "-9223372036854775808",
+            "unsigned": "9223372036854775808",
+            "roundtrip": "-9223372036854775808"
+          },
+          {
+            "raw": "-1",
+            "unsigned": "18446744073709551615",
+            "roundtrip": "-1"
+          },
+          {
+            "raw": "0",
+            "unsigned": "0",
+            "roundtrip": "0"
+          },
+          {
+            "raw": "9223372036854775807",
+            "unsigned": "9223372036854775807",
+            "roundtrip": "9223372036854775807"
+          }
+        ],
+        "meaning": "Pure integer data reasoning, not target Node runtime or a test execution."
+      }
+    },
+    {
+      "id": "raw-canonical-evidence-preserved",
+      "status": "PASS_STATIC",
+      "evidence": "Raw metadata plus added canonical identity; all other metadata/hash/size checks unchanged."
+    },
+    {
+      "id": "supervisor-JavaScript-syntax",
+      "status": "PASS_STATIC",
+      "evidence": "Parsed only by orchestration V8 Function constructor without invocation; no require/source body ran, no Node binary/parser/test invoked. This is not canonical Node runtime evidence."
+    },
+    {
+      "id": "exact-node-pin-unchanged",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "bytes": 126939688,
+        "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+        "device": "27",
+        "inode": "9223372036854818252",
+        "uid": "65534",
+        "gid": "65534",
+        "mode": "0o755",
+        "mtimeNs": "1794515386000000000",
+        "ctimeNs": "1794515386000000000",
+        "versionPreviouslyObserved": "v24.22.1"
+      }
+    },
+    {
+      "id": "all4-embedded-source-bodies-identical",
+      "status": "PASS_STATIC",
+      "evidence": [
+        {
+          "path": "package.json",
+          "pin": {
+            "bytes": 26839,
+            "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+            "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+          }
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "pin": {
+            "bytes": 7883,
+            "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+            "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+          }
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "pin": {
+            "bytes": 28974,
+            "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+            "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+          }
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "pin": {
+            "bytes": 29017,
+            "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+            "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+          }
+        }
+      ]
+    },
+    {
+      "id": "unchanged-binding-stageFiles",
+      "status": "PASS_STATIC",
+      "evidence": [
+        "execution-admission.json",
+        "waitread-binding.json",
+        "waitread-supervisor.cjs"
+      ]
+    },
+    {
+      "id": "unchanged-binding-testArgv",
+      "status": "PASS_STATIC",
+      "evidence": [
+        "--test",
+        "--test-reporter=tap",
+        "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+      ]
+    },
+    {
+      "id": "unchanged-binding-childEnvironment",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "PATH": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin",
+        "LANG": "C.UTF-8",
+        "TZ": "UTC"
+      }
+    },
+    {
+      "id": "unchanged-binding-parentEnvironment",
+      "status": "PASS_STATIC",
+      "evidence": "empty via bash exec -c; no NODE_OPTIONS/preloads/config/compile-cache environment"
+    },
+    {
+      "id": "unchanged-binding-phaseWallMs",
+      "status": "PASS_STATIC",
+      "evidence": 60000
+    },
+    {
+      "id": "unchanged-binding-supervisorWallMs",
+      "status": "PASS_STATIC",
+      "evidence": 135000
+    },
+    {
+      "id": "unchanged-binding-cleanupWallMs",
+      "status": "PASS_STATIC",
+      "evidence": 4000
+    },
+    {
+      "id": "unchanged-binding-outputLimitBytes",
+      "status": "PASS_STATIC",
+      "evidence": 8388608
+    },
+    {
+      "id": "unchanged-binding-phases",
+      "status": "PASS_STATIC",
+      "evidence": [
+        {
+          "phase": "RED",
+          "cases": 10,
+          "fail": 7,
+          "exitCode": 1
+        },
+        {
+          "phase": "GREEN",
+          "cases": 10,
+          "fail": 0,
+          "exitCode": 0
+        }
+      ]
+    },
+    {
+      "id": "unchanged-binding-sourceR2",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 19187,
+        "sha256": "8bb84de228b570dfc121233893d32209a9389da44aa1747c7924dff936fa4c1a",
+        "gitBlob": "1318b887473a61e1cbfb3960812fbc84e3b4df13"
+      }
+    },
+    {
+      "id": "unchanged-binding-sourceBeforeVector",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 2552,
+        "sha256": "647b7a268b8b8921d875327e3394726916d54cc3c10c1bb8d2e2e9538db2d496",
+        "gitBlob": "ae0aa3e814cb90d9568cef5f35be6a0d8f46a361"
+      }
+    },
+    {
+      "id": "unchanged-binding-sourceAfterVector",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 2784,
+        "sha256": "6a212eb715b312ae74c25e58078fd26b1247695d94f5c47536dc2a20aed49ce1",
+        "gitBlob": "fff972049718ae5ddaa7000e17341fade490233e"
+      }
+    },
+    {
+      "id": "actual-r1-source-anchors",
+      "status": "PASS_STATIC",
+      "evidence": "Known6d anchor; closed actual source equality; prior674 source R2 remains explicitly historical."
+    },
+    {
+      "id": "binding-exact-runner-and-new-token",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "runner": {
+          "bytes": 25819,
+          "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+          "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+        },
+        "token": "c714-waitread-inode64-20261117-original-one-shot",
+        "scope": "/workspace/scratch/c714-waitread-inode64-20261117",
+        "stage": "/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117"
+      }
+    },
+    {
+      "id": "only11-required-binding-metadata-differences",
+      "status": "PASS_STATIC",
+      "evidence": [
+        "attemptToken",
+        "sourceCommit",
+        "sourceTree",
+        "sourceActualGate",
+        "r1",
+        "r1ActualGate",
+        "scope",
+        "stage",
+        "runner",
+        "classifications",
+        "sourceAnchorEvidence"
+      ]
+    },
+    {
+      "id": "external-admission-remains-noncircular",
+      "status": "PASS_STATIC",
+      "evidence": "Binding names known source commit, later admission names actual combined sole-child publication and complete readbacks; no future SHA or self-hash embedded."
+    },
+    {
+      "id": "full-old-deadlines-cleanup-raw-TAP-sampling-preserved",
+      "status": "PASS_STATIC",
+      "evidence": "Whole inverse equality preserves every function outside selected exactNode/path edits, including synchronous cutoff, single cleanup interval, process-before-validation and raw TAP retention."
+    },
+    {
+      "id": "source-no-other-program-behavior",
+      "status": "PASS_STATIC",
+      "evidence": "No test/helper/import/product/provider/auth/default behavior edited; final click/read/Logs/Stats/reload/schedule/Stop assertions remain."
+    },
+    {
+      "id": "physical-runtime-remains-unadmitted",
+      "status": "PASS_STATIC",
+      "evidence": "Execution environment unavailable; no physical staging, Node probe, test or GUI run. Newattempt notinvoked; originalspent0cases unchanged."
+    }
+  ],
+  "checkCount": 40,
+  "failedChecks": [],
+  "blockers": [],
+  "unresolvedPointers": [],
+  "runtimeExecuted": false,
+  "sourceStaged": false,
+  "controlsStaged": false,
+  "qualification": "Static exact postimage approval only. Full independent R2 plus actual publication readbacks precede any executable admission; physical environment unavailable. Standalone10/newdriverGUI/149/43/native/fullE2E remain unexecuted here."
+}

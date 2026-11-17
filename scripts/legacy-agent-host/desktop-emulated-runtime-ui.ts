@@ -450,6 +450,10 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     assert.equal(stats.compactions, 1);
   }
   proof.stats = stats;
+  await ui.scrollTo(
+    'div[role="button"][tabindex="0"][class~="group/member"] span',
+    'reveal original member detail name', 'alice', 12, { requireCenterHit: true }
+  );
   await ui.clickExpression(`(()=>{const rows=[...document.querySelectorAll('div[role="button"][tabindex="0"][class~="group/member"]')].filter(e=>[...e.querySelectorAll('span')].some(n=>n.textContent.trim()==='alice'));
     if(rows.length!==1)return null;const e=rows[0],names=[...e.querySelectorAll('span')].filter(n=>n.textContent.trim()==='alice');if(names.length!==1)return null;
     const n=names[0],r=n.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);

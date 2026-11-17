@@ -1,0 +1,1966 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-bounded-windows-original-failure-advisory",
+  "reviewer": "/root/producer_r2_guard",
+  "at": "2026-11-17 06:39:38 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "sourceHead": "9c9c73190840592963142d36562ea07d2b5d2d71",
+  "runId": 44008782844,
+  "attempt": 1,
+  "decision": "ADVISORY_ONLY_BOTH_ORIGINAL_WINDOWS_UI_JOBS_FAILED",
+  "conclusion": [
+    "x64 proves the explicit same-Main Host successor and unchanged canonical public original process references before the original10s Retry phase expires during a later fresh ownership census. Immediate observed cause is deadline exhaustion in observation work; product recovery or stale-ref failure is not demonstrated.",
+    "ARM fails one phase earlier in the same census-validation layer after original Host exit and metadata Refresh. Its absent final receipt prevents detailed per-census or final cleanup/source attribution.",
+    "The narrow investigation target is fresh Windows ownership-query cost/composition under the existing deadlines. No fix/postimage or new qualification is selected or approved."
+  ],
+  "custody": {
+    "packet": {
+      "bytes": 43216,
+      "sha256": "baf4a9f2de58d967366c652bf7cba5d28e7b4d3c3f576f3d359f04516f31c972",
+      "gitBlob": "33e472d38720bda64a2483041af43405c2eec085"
+    },
+    "totalWindowsUtf8Members": 13,
+    "totalWindowsUtf8Bytes": 3154769,
+    "archives": [
+      {
+        "artifactId": 14301589073,
+        "arch": "x64",
+        "members": 8,
+        "textMembers": 7,
+        "archiveBytes": 625974,
+        "archiveSha256": "55b1e264d666cb7b459b6b1c777db05e86112a9c1d3fd874b5be1c5769ac7961"
+      },
+      {
+        "artifactId": 14302559293,
+        "arch": "arm64",
+        "members": 7,
+        "textMembers": 6,
+        "archiveBytes": 426870,
+        "archiveSha256": "89aa290866ce4799bfe68d8caf18d72fa1262dae16a296e36443ca19193ecd1f"
+      }
+    ],
+    "members": [
+      {
+        "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+        "bytes": 1154517,
+        "sha256": "6025cb42bc3ffe43ed60a863394584737f6316c8ea2b6abe35f8a9f31a78bb58",
+        "gitBlob": "5d3e2fef0dfe5344dc337fdb1c2ffaf509c821a6",
+        "crc32": 1862377573,
+        "artifactId": 14301589073,
+        "architecture": "x64"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-inputs.json",
+        "bytes": 780,
+        "sha256": "cd8d1ac55a1f41e466b84ead9eabcb3a4d3aaa163c1a9faf7e2dd20b25ce9b96",
+        "gitBlob": "49a77c938b22354675c2cdbd333cd10bacfa5f7c",
+        "crc32": 1619716369,
+        "artifactId": 14301589073,
+        "architecture": "x64"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-native.json",
+        "bytes": 5382,
+        "sha256": "71c69ab8f10797f7373a7f5ad269ff7df73ae6ecde35ced47e3b874530584583",
+        "gitBlob": "d45fcfbc8b09cc221f6da8d3042c9ab7ac529ede",
+        "crc32": 1441048217,
+        "artifactId": 14301589073,
+        "architecture": "x64"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged.json",
+        "bytes": 1186,
+        "sha256": "02d25a10e65d63659304ba21a4b3a312b61c8066caa1e982adee29f36333593f",
+        "gitBlob": "b3c5e7686cebebabc94ed598c0e10b0392b349b1",
+        "crc32": 2858305211,
+        "artifactId": 14301589073,
+        "architecture": "x64"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.app.log",
+        "bytes": 4914,
+        "sha256": "509cf0e8b1db7b917e07035660f5b3e0976d0756f89857fe81cad1dc6af9a515",
+        "gitBlob": "1153738d1571aa540be0edaf902bd7c46b0a2441",
+        "crc32": 428704385,
+        "artifactId": 14301589073,
+        "architecture": "x64"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.controller.log",
+        "bytes": 42975,
+        "sha256": "ab60976fa70f2a938e7d16b61c23c5458620affd55c6ae2b68c94e815d731c46",
+        "gitBlob": "b857a9321c2551324f0868fb0157856a2a6b0dc4",
+        "crc32": 3789284045,
+        "artifactId": 14301589073,
+        "architecture": "x64"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.json",
+        "bytes": 750631,
+        "sha256": "cf9c74713f42fbad360375ff883711a9b8baf8a434b8b39fd4beb412d6b635c9",
+        "gitBlob": "a5032a87abfe9c9a7a91227e31408993d6ee073a",
+        "crc32": 559415777,
+        "artifactId": 14301589073,
+        "architecture": "x64"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+        "bytes": 1154527,
+        "sha256": "7477a641cd5890b7c66ddf98ab9871adafb0543546d19b83f76869a075924bcf",
+        "gitBlob": "5f2fb46bd6a2a473485966c2265218d76f459440",
+        "crc32": 2815801880,
+        "artifactId": 14302559293,
+        "architecture": "arm64"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-inputs.json",
+        "bytes": 782,
+        "sha256": "97708ada5f12409ab0c76616faa862c7ab2c0653dd26d8a8ff07c45a0257970b",
+        "gitBlob": "4ba8beccd0bfcf09ed7908172ff92a1672e743fe",
+        "crc32": 2163553552,
+        "artifactId": 14302559293,
+        "architecture": "arm64"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-native.json",
+        "bytes": 5389,
+        "sha256": "4dfe4c379d39214db299aa1453cba5f30fbe6d4a8aa6cfa4de546eb4fed9bfb4",
+        "gitBlob": "9d946bd6a94cd36ca6b5dfde00fcd88347b35388",
+        "crc32": 1477699452,
+        "artifactId": 14302559293,
+        "architecture": "arm64"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged.json",
+        "bytes": 1188,
+        "sha256": "6fb6b8cfa4d83b9a42b69fa1d47f24d7eda5f25a3d009e3b6e92672aea0d405b",
+        "gitBlob": "daa6ff826b3cb9f363382e9de1684b0c64229713",
+        "crc32": 1496358666,
+        "artifactId": 14302559293,
+        "architecture": "arm64"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.app.log",
+        "bytes": 5358,
+        "sha256": "affd5a8be8c702498b827b71a68c4cd2deb399ed261f07ad8c5f2b35c6049251",
+        "gitBlob": "35721835473fc579bed733d0b3193b13e0040239",
+        "crc32": 2493602112,
+        "artifactId": 14302559293,
+        "architecture": "arm64"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.controller.log",
+        "bytes": 27140,
+        "sha256": "b3700847f600f2e95e363812056a0be2d04f4edf0accb133f18707ef8d93caa9",
+        "gitBlob": "0819a850ec382082407c303a6696728397284cad",
+        "crc32": 1265677698,
+        "artifactId": 14302559293,
+        "architecture": "arm64"
+      }
+    ],
+    "logs": [
+      {
+        "jobId": 133811711774,
+        "bytes": 314038,
+        "sha256": "cda333a227c35c883aaec38d6b1d5abec4fc127d26182f516eeb00f4138fb372",
+        "gitBlob": "9c8644ce67a2d128840ba7d0ead3b502711e9a8d"
+      },
+      {
+        "jobId": 133811711677,
+        "bytes": 302089,
+        "sha256": "8893e4df94f2776532c4a351e12a43abd844df1c2c5a8296300d01042ddba115",
+        "gitBlob": "1f63836439a091bbed19df3b7ad466f0fe1cae1c"
+      }
+    ],
+    "sourceTreeBasis": {
+      "commit": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "scripts": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+      "tools": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+      "note": "Exact frozen subtrees reused from completed prior full reads; no mutable-ref lookup."
+    },
+    "sources": [
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "subtree": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+        "treeMatches": true,
+        "windowsCRLF": {
+          "bytes": 38339,
+          "sha256": "a76135c8e2a09fbcc939c2856f626e1299c6dc9d684fe6fb31458a4f957d167f",
+          "gitBlob": "abe77d2e042df9dd2adbea58a8038ee14951c19c"
+        },
+        "runtimeSourceSha256": "a76135c8e2a09fbcc939c2856f626e1299c6dc9d684fe6fb31458a4f957d167f",
+        "runtimeSourceJoin": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "bytes": 31223,
+        "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+        "subtree": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+        "treeMatches": true,
+        "windowsCRLF": {
+          "bytes": 31708,
+          "sha256": "9be5af55b58539523c03194b62ebb68f5b1b5363c8c3994deee833d91fed7499",
+          "gitBlob": "2ea379d6d92f92310cb586132ec9aeed7a2814ae"
+        },
+        "runtimeSourceSha256": "9be5af55b58539523c03194b62ebb68f5b1b5363c8c3994deee833d91fed7499",
+        "runtimeSourceJoin": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+        "bytes": 7926,
+        "sha256": "8cdc9a1bcc80b61998e93813959f53542a85cb5953c93ae1feb2397e37d9080e",
+        "gitBlob": "67180ac5c567cbeb089d4ef3248391c792e1ba4d",
+        "subtree": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+        "treeMatches": true,
+        "windowsCRLF": {
+          "bytes": 8031,
+          "sha256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961",
+          "gitBlob": "5af36ca5a9819feeec6c6e05ba08020f45cba54f"
+        },
+        "runtimeSourceSha256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961",
+        "runtimeSourceJoin": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGateContext.ts",
+        "bytes": 7278,
+        "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+        "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+        "subtree": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+        "treeMatches": true,
+        "windowsCRLF": {
+          "bytes": 7470,
+          "sha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+          "gitBlob": "a63327ce75e28af163f48f480da0b763a1c079bb"
+        },
+        "runtimeSourceSha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+        "runtimeSourceJoin": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGateEvents.ts",
+        "bytes": 1367,
+        "sha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+        "gitBlob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+        "subtree": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+        "treeMatches": true,
+        "windowsCRLF": {
+          "bytes": 1406,
+          "sha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+          "gitBlob": "b66dab301ae13ba0c8fffe4c423a7d26558ff1ab"
+        },
+        "runtimeSourceSha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+        "runtimeSourceJoin": true
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+        "bytes": 9569,
+        "sha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd",
+        "gitBlob": "44c8cba99e4932905da77539a59c904a39da4e36",
+        "subtree": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+        "treeMatches": true,
+        "windowsCRLF": {
+          "bytes": 9722,
+          "sha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+          "gitBlob": "0b4bd3fc052d29003ce3b35430473522580aa44d"
+        },
+        "runtimeSourceSha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+        "runtimeSourceJoin": true
+      },
+      {
+        "path": "tools/owned-process-broker/gateController.cpp",
+        "bytes": 5935,
+        "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+        "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+        "subtree": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+        "treeMatches": true,
+        "windowsCRLF": {
+          "bytes": 6043,
+          "sha256": "604a73ce8f1e31c3ee094a1ceb7a866c71270590ba40f94c70d7f0c1a7543518",
+          "gitBlob": "e4ae753ca927a0b7c3a4e325289e143556775069"
+        },
+        "runtimeSourceSha256": "604a73ce8f1e31c3ee094a1ceb7a866c71270590ba40f94c70d7f0c1a7543518",
+        "runtimeSourceJoin": true
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "subtree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+        "treeMatches": true,
+        "windowsCRLF": {
+          "bytes": 12647,
+          "sha256": "8b44f15d068ebda80de79947b58cd41ef0c8e7f86006ca2897d0b046394b9bdf",
+          "gitBlob": "f5f15e0ce99780690da8dcfa361516ca0185863c"
+        },
+        "runtimeSourceSha256": "8b44f15d068ebda80de79947b58cd41ef0c8e7f86006ca2897d0b046394b9bdf",
+        "runtimeSourceJoin": true
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/packaged.mjs",
+        "bytes": 27780,
+        "sha256": "5fd9116cb656ce7804dc3253decb3f386e2c17feda57cc40586cc6e0df6fd8d5",
+        "gitBlob": "7da83c7a4e631f7599fc57861f19e14629db6036",
+        "subtree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+        "treeMatches": true,
+        "windowsCRLF": {
+          "bytes": 28529,
+          "sha256": "866967ed1d8d4a15593de409336c09f3154d0907c9d3dab09745a8a0bd0d611a",
+          "gitBlob": "f281a6c128bd753928e8c4e27a0cf71af623b2d6"
+        },
+        "runtimeSourceSha256": "866967ed1d8d4a15593de409336c09f3154d0907c9d3dab09745a8a0bd0d611a",
+        "runtimeSourceJoin": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.ts",
+        "bytes": 22604,
+        "sha256": "ebb52ab95cdbf0ddc86ce44b534a3c7255c7e8454e5cadb2cbb83278daa53a0f",
+        "gitBlob": "12f4a7b122843acea95e8c37f876917331842a4a",
+        "subtree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+        "treeMatches": true,
+        "windowsCRLF": {
+          "bytes": 23030,
+          "sha256": "7e66f25cba75a9e13940a41175471659231095248113bd7139e07b4a4a7e9e1e",
+          "gitBlob": "9c02a90dbdbec5718739e4ab4aad66ccf33e8676"
+        },
+        "runtimeSourceSha256": "7e66f25cba75a9e13940a41175471659231095248113bd7139e07b4a4a7e9e1e",
+        "runtimeSourceJoin": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+        "subtree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+        "treeMatches": true,
+        "windowsCRLF": {
+          "bytes": 29468,
+          "sha256": "c61b3b5689773bfd589674cfdd860e46b6d7d0642a211b655374627cff2278f9",
+          "gitBlob": "06db8e61441c7e6720d18706adff04976506b565"
+        },
+        "runtimeSourceSha256": "c61b3b5689773bfd589674cfdd860e46b6d7d0642a211b655374627cff2278f9",
+        "runtimeSourceJoin": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeFixture.cpp",
+        "bytes": 15038,
+        "sha256": "42749224f0194fd70f4b3df50f5fc64fbb2e11c58801c629463387cb4a4a1e25",
+        "gitBlob": "a42f7513e9a5d2732c5c9f65fa1cc6cf1c970062",
+        "subtree": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+        "treeMatches": true,
+        "windowsCRLF": {
+          "bytes": 15321,
+          "sha256": "df6b01e1d7aa64474bfff02174f24874e0792fc5a94f1b4f08cf96ec49914872",
+          "gitBlob": "89d0cebeb12ff0e9f5eb42b8854ef3c1506fe043"
+        },
+        "runtimeSourceSha256": null,
+        "runtimeSourceJoin": null,
+        "qualification": "Native actor source is anchored in frozen 9c9 tree/build command; its compiled binary is an originalInputPin. This CPP file is not claimed as part of the receipt's selected 1,798 source rows."
+      }
+    ],
+    "readMethod": "All13complete raw UTF8 members independently fetched and rehashed. Every JSON field/array parsed; all16,262package inventory rows and both1,798source arrays traversed/validated. Substantive x64 fields, registrations, public reads, input pins, full census timings and lineage reviewed. Entire app logs read. All controller log unique lines and ordered structured events read, every occurrence joined to full original joblogs. Original joblogs fully fetched/hashed, every line parsed/indexed; selected checkout/build/Node/invocation/failure/artifact segments read fully. No semantic qualification of every preceding dependency/build step is claimed.",
+    "binaryBoundary": "Archive/member CRC custody is attributed to the original capture. No new decompression, binary execution, package behavior audit or syscall trace was performed.",
+    "viewedPngs": [
+      "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation13/14301589073/members/_temp/windows-same-main-process-ui.before-crash.png",
+      "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation14/14302559293/members/_temp/windows-same-main-process-ui.before-crash.png"
+    ],
+    "methodCorrections": [
+      "An initial data checker incorrectly required executable on every census row. The complete primary parser intentionally omits executable for system processes with no path. Corrected data-only check accepts its optional field; 14 such rows in each census were fully inspected. No target/source/evidence bytes changed.",
+      "An oversized metadata print was truncated and not accepted as full reading; complete arrays were reprocessed with explicit traversal and bounded summaries, and all substantive omitted fields were read separately.",
+      "An unstored advisory construction hit an undefined local metadata variable before retention. It was replaced by this complete bounded report; no Git/source/runtime action resulted from that failed construction."
+    ]
+  },
+  "tupleJoins": [
+    {
+      "arch": "x64",
+      "jobId": 133811711774,
+      "artifactId": 14301589073,
+      "manifest": {
+        "bytes": 1154517,
+        "sha256": "6025cb42bc3ffe43ed60a863394584737f6316c8ea2b6abe35f8a9f31a78bb58",
+        "gitBlob": "5d3e2fef0dfe5344dc337fdb1c2ffaf509c821a6"
+      },
+      "packages": 120,
+      "files": 8131,
+      "chainJoins": {
+        "sourceHead": true,
+        "platform": true,
+        "manifest": true,
+        "bun": true,
+        "engine": true,
+        "node": true,
+        "host": true,
+        "native": true,
+        "artifacts": true
+      },
+      "separateNativePrefix": {
+        "nativeStatus": "PASS",
+        "packagedStatus": "PASS",
+        "cleanup": true,
+        "modelOrigin": "localhost-scripted",
+        "modelRequests": 11,
+        "desktopQualified": false,
+        "desktopJourneyQualified": false,
+        "vendorAuthQualified": false,
+        "releaseQualified": false
+      },
+      "log": {
+        "bytes": 314038,
+        "sha256": "cda333a227c35c883aaec38d6b1d5abec4fc127d26182f516eeb00f4138fb372",
+        "gitBlob": "9c8644ce67a2d128840ba7d0ead3b502711e9a8d",
+        "lines": 2585,
+        "checkoutLiteral": true,
+        "checkoutResult": true,
+        "nodeVersion": true,
+        "controllerInvocationCount": 1,
+        "failureRows": [
+          {
+            "kind": "TEST_WINDOWS_PACKAGED_UI_FAILURE",
+            "phase": "one-explicit-same-Main-Retry",
+            "error": "AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: one-explicit-same-Main-Retry\n    at remaining (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:123:10)\n    at validateCensus (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:179:3)\n    at Object.assertOwnedRenderer (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:207:20)\n    at Object.waitRead (D:\\a\\agent-teams-ai\\agent-teams-ai\\scripts\\legacy-agent-host\\desktop-ui-controls.ts:194:15)\n    at file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:547:35",
+            "errorTruncated": false,
+            "retryUiObservation": {
+              "schemaVersion": 1,
+              "source": "original-recovery-wait",
+              "atomicWithFailure": false,
+              "stages": {
+                "clickReturnedMs": 5409,
+                "writerObservedMs": 6735,
+                "hostCheckedMs": 7079,
+                "uiReadyMs": 7948
+              },
+              "sampleCount": 1,
+              "sampleCountCapped": false,
+              "lastAtMs": 7948,
+              "last": {
+                "surfacePresent": true,
+                "refresh": "enabled",
+                "firstRefreshBusy": false,
+                "retryPresent": false,
+                "alertPresent": false,
+                "ready": true
+              }
+            }
+          }
+        ],
+        "controllerRows": [
+          {
+            "gateController": "drained",
+            "rootExitCode": 1,
+            "activeProcesses": 0
+          }
+        ],
+        "completeControllerLinesJoined": true,
+        "artifactIdMention": true
+      },
+      "controller": {
+        "identity": {
+          "bytes": 42975,
+          "sha256": "ab60976fa70f2a938e7d16b61c23c5458620affd55c6ae2b68c94e815d731c46",
+          "gitBlob": "b857a9321c2551324f0868fb0157856a2a6b0dc4"
+        },
+        "lineCount": 682,
+        "uniqueLineCount": 27,
+        "structured": [
+          {
+            "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+            "phase": "packaged-App-startup",
+            "atMs": 0.06279999999969732,
+            "budgetMs": 120000
+          },
+          {
+            "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+            "phase": "one-initial-Runtime-Open",
+            "atMs": 4622.688700000001,
+            "budgetMs": 45000
+          },
+          {
+            "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+            "phase": "one-original-business-input-and-UI",
+            "atMs": 9212.9184,
+            "budgetMs": 35000
+          },
+          {
+            "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+            "phase": "actual-Host-A-exit-and-metadata-Refresh",
+            "atMs": 30562.028299999998,
+            "budgetMs": 10000
+          },
+          {
+            "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+            "phase": "one-explicit-same-Main-Retry",
+            "atMs": 39152.124899999995,
+            "budgetMs": 10000
+          },
+          {
+            "kind": "TEST_WINDOWS_PACKAGED_UI_FAILURE",
+            "phase": "one-explicit-same-Main-Retry",
+            "error": "AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: one-explicit-same-Main-Retry\n    at remaining (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:123:10)\n    at validateCensus (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:179:3)\n    at Object.assertOwnedRenderer (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:207:20)\n    at Object.waitRead (D:\\a\\agent-teams-ai\\agent-teams-ai\\scripts\\legacy-agent-host\\desktop-ui-controls.ts:194:15)\n    at file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:547:35",
+            "errorTruncated": false,
+            "retryUiObservation": {
+              "schemaVersion": 1,
+              "source": "original-recovery-wait",
+              "atomicWithFailure": false,
+              "stages": {
+                "clickReturnedMs": 5409,
+                "writerObservedMs": 6735,
+                "hostCheckedMs": 7079,
+                "uiReadyMs": 7948
+              },
+              "sampleCount": 1,
+              "sampleCountCapped": false,
+              "lastAtMs": 7948,
+              "last": {
+                "surfacePresent": true,
+                "refresh": "enabled",
+                "firstRefreshBusy": false,
+                "retryPresent": false,
+                "alertPresent": false,
+                "ready": true
+              }
+            }
+          },
+          {
+            "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+            "phase": "original-product-Quit",
+            "atMs": 49621.280600000006,
+            "budgetMs": 30000
+          },
+          {
+            "gateController": "drained",
+            "rootExitCode": 1,
+            "activeProcesses": 0
+          }
+        ]
+      }
+    },
+    {
+      "arch": "arm64",
+      "jobId": 133811711677,
+      "artifactId": 14302559293,
+      "manifest": {
+        "bytes": 1154527,
+        "sha256": "7477a641cd5890b7c66ddf98ab9871adafb0543546d19b83f76869a075924bcf",
+        "gitBlob": "5f2fb46bd6a2a473485966c2265218d76f459440"
+      },
+      "packages": 120,
+      "files": 8131,
+      "chainJoins": {
+        "sourceHead": true,
+        "platform": true,
+        "manifest": true,
+        "bun": true,
+        "engine": true,
+        "node": true,
+        "host": true,
+        "native": true,
+        "artifacts": true
+      },
+      "separateNativePrefix": {
+        "nativeStatus": "PASS",
+        "packagedStatus": "PASS",
+        "cleanup": true,
+        "modelOrigin": "localhost-scripted",
+        "modelRequests": 11,
+        "desktopQualified": false,
+        "desktopJourneyQualified": false,
+        "vendorAuthQualified": false,
+        "releaseQualified": false
+      },
+      "log": {
+        "bytes": 302089,
+        "sha256": "8893e4df94f2776532c4a351e12a43abd844df1c2c5a8296300d01042ddba115",
+        "gitBlob": "1f63836439a091bbed19df3b7ad466f0fe1cae1c",
+        "lines": 2583,
+        "checkoutLiteral": true,
+        "checkoutResult": true,
+        "nodeVersion": true,
+        "controllerInvocationCount": 1,
+        "failureRows": [
+          {
+            "kind": "TEST_WINDOWS_PACKAGED_UI_FAILURE",
+            "phase": "actual-Host-A-exit-and-metadata-Refresh",
+            "error": "AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: actual-Host-A-exit-and-metadata-Refresh\n    at remaining (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:123:10)\n    at validateCensus (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:179:3)\n    at Object.assertOwnedRenderer (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:207:20)\n    at Object.waitRead (C:\\a\\agent-teams-ai\\agent-teams-ai\\scripts\\legacy-agent-host\\desktop-ui-controls.ts:194:15)\n    at file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:451:30",
+            "errorTruncated": false,
+            "retryUiObservation": null
+          }
+        ],
+        "controllerRows": [
+          {
+            "gateController": "emergency-fail",
+            "rootExitCode": 99,
+            "activeProcesses": 0
+          }
+        ],
+        "completeControllerLinesJoined": true,
+        "artifactIdMention": true
+      },
+      "controller": {
+        "identity": {
+          "bytes": 27140,
+          "sha256": "b3700847f600f2e95e363812056a0be2d04f4edf0accb133f18707ef8d93caa9",
+          "gitBlob": "0819a850ec382082407c303a6696728397284cad"
+        },
+        "lineCount": 425,
+        "uniqueLineCount": 19,
+        "structured": [
+          {
+            "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+            "phase": "packaged-App-startup",
+            "atMs": 0.07660000000032596,
+            "budgetMs": 120000
+          },
+          {
+            "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+            "phase": "one-initial-Runtime-Open",
+            "atMs": 14380.2146,
+            "budgetMs": 45000
+          },
+          {
+            "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+            "phase": "one-original-business-input-and-UI",
+            "atMs": 20125.3243,
+            "budgetMs": 35000
+          },
+          {
+            "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+            "phase": "actual-Host-A-exit-and-metadata-Refresh",
+            "atMs": 50546.206900000005,
+            "budgetMs": 10000
+          },
+          {
+            "kind": "TEST_WINDOWS_PACKAGED_UI_FAILURE",
+            "phase": "actual-Host-A-exit-and-metadata-Refresh",
+            "error": "AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: actual-Host-A-exit-and-metadata-Refresh\n    at remaining (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:123:10)\n    at validateCensus (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:179:3)\n    at Object.assertOwnedRenderer (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:207:20)\n    at Object.waitRead (C:\\a\\agent-teams-ai\\agent-teams-ai\\scripts\\legacy-agent-host\\desktop-ui-controls.ts:194:15)\n    at file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:451:30",
+            "errorTruncated": false,
+            "retryUiObservation": null
+          },
+          {
+            "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+            "phase": "original-product-Quit",
+            "atMs": 61314.541,
+            "budgetMs": 30000
+          },
+          {
+            "gateController": "emergency-fail",
+            "rootExitCode": 99,
+            "activeProcesses": 0
+          }
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "CAPTURE",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "Complete packet 33e472 and all 13 Windows UTF-8 members (3,154,769 bytes) independently fetched and rehashed. Both original job logs fully fetched/rehashed; no live CI read."
+    },
+    {
+      "id": "ARCHIVES",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "Complete x64 and ARM archive censuses: 8/7 members including 7/6 UTF-8 respectively. No ARM final Windows UI receipt. Original CRC/binary custody is attributed to retained capture, not a new decompression."
+    },
+    {
+      "id": "SOURCE_CHECKOUT",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "Original logs both select exact frozen 9c9, confirm git log result, Node v24.21.0 and one original controller invocation."
+    },
+    {
+      "id": "CONTROLLER_LOG_JOIN",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "Every retained controller log line joins its original job log after timestamp/ANSI removal; all unique lines and ordered structured events were reviewed."
+    },
+    {
+      "id": "MANIFESTS",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "All 120 packages/8,131 file inventory rows per tuple were traversed. Full manifest/input/native/packaged identity joins succeed."
+    },
+    {
+      "id": "PREFIX_LIMIT",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "The separately preceding packaged V2 prefix reports PASS/cleanup and 11 localhost-scripted model requests, but expressly does not qualify desktop/vendor/release. Neither later Windows UI failure becomes PASS."
+    },
+    {
+      "id": "FULL_SOURCES",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "Twelve complete relevant source bodies join exact frozen Git subtrees. Eleven included paths also match x64 runtime source hashes after exact LF→CRLF checkout conversion."
+    },
+    {
+      "id": "SOURCE_CENSUS",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "All 1,798 before and after selected source rows are unique/schema-valid and exactly equal. This is the receipt's bounded full observation, not a fresh filesystem read of all source."
+    },
+    {
+      "id": "X64_PREFIX",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "One original Main, one initial Runtime open, one business input, two process registrations, one Refresh and one explicit Retry are retained. Finite peer connected/registered once, no model/probe/real-vendor executions reported."
+    },
+    {
+      "id": "X64_HOST",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "Positive HostA PID/birth absence and one distinct HostB under the same original Main are retained; writer tokens differ and two append-only birth rows are exact."
+    },
+    {
+      "id": "X64_READY",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "Original recovery predicate accepted at 7,948 ms. atomicWithFailure=false means this is an earlier sample, not a snapshot at the failure."
+    },
+    {
+      "id": "X64_PUBLIC_REFS",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "Before-crash and after-Retry public process records are exactly equal: both original IDs/PIDs/refs remain same-live/canTerminate. No stale public process reference is demonstrated."
+    },
+    {
+      "id": "X64_FAILURE_SITE",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "Trace remaining123→validateCensus179→assertOwnedRenderer207→waitRead194→gate547 places refusal before that iteration's DOM evaluation."
+    },
+    {
+      "id": "X64_TIMING",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "All 56 timing rows are ordered/returned/untruncated. Retry has 11 process/listener snapshots and one process census, totaling 8,754.6225 ms. Final snapshot starts 9,700.1787 ms and returns 10,465.4607 ms across the unchanged10s cutoff."
+    },
+    {
+      "id": "CLICK_COST",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "Seven pre-click fresh snapshots follow existing helper guards: initial point, hover ownership, post-hover point, two stable points, final-point ownership and final-click ownership. They are safeguards, not disposable duplicated assertions."
+    },
+    {
+      "id": "ACQUISITION",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "platform.mjs already batches fresh process + listener queries in one PowerShell call. Queries remain ordered/non-atomic. Strict identity, full census, orphan and listener checks must remain."
+    },
+    {
+      "id": "POST_RECOVERY_PREFIX",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "fixture.afterRetry and canonical readProcesses completed before the owner loop. A first-row success is supported only as sequential source/timing inference; the second ownership snapshot fails before evaluation. No individual per-row serialized result is invented."
+    },
+    {
+      "id": "UNREACHED_STOPS",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "sameMainAfterRetry assignment, after-Retry screenshot, both original UI Kill phases, stopped-row reconciliation and nativeCleanup were not reached in x64."
+    },
+    {
+      "id": "X64_QUIT",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "Actual Browser.close was sent; Main exits0; complete133-row final census has every17 retained family identity absent, no listener and drained=true. This cannot replace original Stop qualification."
+    },
+    {
+      "id": "STOP_ASSERTION",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "afterQuit0!==2 is its original stops.size guard before provider/HANDLE completion. Neither Stop was admitted, so original2commands/absence witnesses/service exits remain unmet."
+    },
+    {
+      "id": "X64_OUTER",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "drained/rootExitCode1/activeProcesses0 is bounded failure followed by drain, not PASS; original controller source returns nonzero for root code1."
+    },
+    {
+      "id": "ARM_SITE",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "ARM fails at gate451 in actual-Host-A-exit-and-metadata-Refresh. By immutable sequential flow it had returned from Host absence, afterOriginalExit, recovery surface, and one physical Refresh; readError assignment did not complete."
+    },
+    {
+      "id": "ARM_LIMIT",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "Retained-row outage proof, Retry, successor proof, both Stops and final cleanup/source/model counters are unqualified. No final receipt and retryUiObservation=null are preserved."
+    },
+    {
+      "id": "ARM_OUTER",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "emergency-fail/rootExitCode99/activeProcesses0 is emergency cleanup. Code99 may be the controller's initialized default on timeout; no voluntary Node exit99 or ordinary cleanup success is inferred."
+    },
+    {
+      "id": "CLOCKS",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "Native controller starts its120,000ms wait at originalNode resume; JS starts its300,000ms clock after preflight/artifact/source/profile work. Final receipt is deferred through Quit, witness close and input/source rehash. External timeout may interrupt publication."
+    },
+    {
+      "id": "ARM_WALL_TIME",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "Original log sandbox at05:42:46.7578502 and terminal05:44:46.8091537 span~120.051s. Quit phase begins roughly95s into that lifetime with nominal30s. This supports external deadline interruption, without identifying pending work."
+    },
+    {
+      "id": "WARNINGS",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "Complete controller logs contain repeated XML/Error-stream formatting warnings. They are observed diagnostic noise; neither a product error nor their share of census cost is proven."
+    },
+    {
+      "id": "VISUAL",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "Both exact before-crash PNGs were viewed: successful original team/alice/registration prefix. Neither depicts after-Retry/Stop/final state."
+    },
+    {
+      "id": "FINITE_AUTHORITY",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "Selected Codex is a pinned local TEST protocol peer plus native actor; restricted PATH, explicit TEST-only metadata overrides and no real vendor fallback. Query witnesses retain original HANDLE/birth, at most4Q, thenW; natural finite exit0 cannot count as admitted UI Stop exit1."
+    },
+    {
+      "id": "SCOPE",
+      "status": "PASS_BOUNDED_EVIDENCE_OR_STATIC",
+      "finding": "Only immutable source/evidence, pure data checks and existing PNG views were used. No shell/runtime/target probes, source/control/ref/PR/CI mutation, live polling or replay. Root remains sole author/executor."
+    }
+  ],
+  "x64": {
+    "receipt": {
+      "bytes": 750631,
+      "sha256": "cf9c74713f42fbad360375ff883711a9b8baf8a434b8b39fd4beb412d6b635c9",
+      "gitBlob": "a5032a87abfe9c9a7a91227e31408993d6ee073a"
+    },
+    "status": "INCOMPLETE",
+    "cleanup": false,
+    "counts": {
+      "mainStarts": 1,
+      "initialRuntimeOpen": 1,
+      "businessInput": 1,
+      "refreshClicks": 1,
+      "retryClicks": 1,
+      "uiStops": 0,
+      "quit": 1
+    },
+    "phases": [
+      {
+        "phase": "packaged-App-startup",
+        "atMs": 0.06279999999969732,
+        "budgetMs": 120000
+      },
+      {
+        "phase": "one-initial-Runtime-Open",
+        "atMs": 4622.688700000001,
+        "budgetMs": 45000
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "atMs": 9212.9184,
+        "budgetMs": 35000
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "atMs": 30562.028299999998,
+        "budgetMs": 10000
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "atMs": 39152.124899999995,
+        "budgetMs": 10000
+      },
+      {
+        "phase": "original-product-Quit",
+        "atMs": 49621.280600000006,
+        "budgetMs": 30000
+      }
+    ],
+    "originalController": {
+      "pid": 7944,
+      "parent": 6696,
+      "birth": "2026-11-17T05:30:18.4957870Z",
+      "executable": "D:\\a\\_temp\\TEST-Windows-UI-build-44008782844-X64\\Release\\owned-process-gate-controller.exe"
+    },
+    "originalDriver": {
+      "pid": 5780,
+      "parent": 7944,
+      "birth": "2026-11-17T05:30:18.5027190Z",
+      "executable": "C:\\hostedtoolcache\\windows\\node\\24.21.0\\x64\\node.exe"
+    },
+    "originalMain": {
+      "pid": 1980,
+      "parent": 5780,
+      "birth": "2026-11-17T05:30:34.9009740Z",
+      "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\AgentTeamsAI.exe"
+    },
+    "originalHost": {
+      "identity": {
+        "pid": 5596,
+        "parent": 1980,
+        "birth": "2026-11-17T05:30:37.4206090Z",
+        "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe"
+      },
+      "writer": {
+        "pid": 5596,
+        "token": "af83e42d-7c40-47f9-9f22-74bb96b4fc9e",
+        "publishedAtMs": 1794893438792,
+        "sha256": "dc3b23ab355ff51b8befaf14f1b266a1d5ae1f52b71ba9384033450b6c0d700b",
+        "dev": "2695480082",
+        "ino": "844424931845058"
+      }
+    },
+    "successorHost": {
+      "identity": {
+        "pid": 1120,
+        "parent": 1980,
+        "birth": "2026-11-17T05:31:19.7083010Z",
+        "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe"
+      },
+      "writer": {
+        "pid": 1120,
+        "token": "97ef2d64-fe99-4152-8100-e9f2520c8cb4",
+        "publishedAtMs": 1794893480759,
+        "sha256": "24bff55ab4aaa42d2912f21edb53c38c569e4cfed8b41aa97d0af6166e7590ff",
+        "dev": "2695480082",
+        "ino": "1125899908555714"
+      }
+    },
+    "hostBirths": [
+      {
+        "pid": 5596,
+        "parentPid": 1980
+      },
+      {
+        "pid": 1120,
+        "parentPid": 1980
+      }
+    ],
+    "actualHostSuccessors": 1,
+    "originalPublicBinding": {
+      "handle": {
+        "handleId": "TEST-windows-same-main-8fec7917-e982-439a-b086-62d80d2a3b2e"
+      },
+      "label": "test-emulated-processes",
+      "ownerResourceRef": "3972488065548172058840a6a469da25090a96542601bd3f8daa4f197de3c2af",
+      "teamResourceRef": "163a1cb1-2ca2-5839-a973-e0f347c8dba9",
+      "members": [
+        {
+          "memberId": "alice-id",
+          "label": "alice"
+        }
+      ]
+    },
+    "originalRuntime": {
+      "memberId": "alice-id",
+      "generation": "1",
+      "phase": "allocated",
+      "sealed": false,
+      "custody": "owned",
+      "nativeReady": true,
+      "attached": true,
+      "inputs": [
+        {
+          "inputId": "01c8dfcb-f25f-5669-8ad4-52a974580286",
+          "phase": "terminal",
+          "terminal": "succeeded"
+        }
+      ],
+      "interactions": [],
+      "sessionCommands": [
+        {
+          "name": "cost",
+          "description": "Show reported token usage for this captured session"
+        }
+      ],
+      "attachmentCapabilities": {
+        "images": true,
+        "documents": false,
+        "textFiles": false
+      }
+    },
+    "registrationSummary": [
+      {
+        "commandId": "TEST-register-TEST-primary",
+        "phase": "completed",
+        "principalId": "alice-session",
+        "capture": {
+          "mainEpoch": "fd88aa04-937a-4193-a381-0614a2978d50",
+          "providerCapability": "d37f330d-7834-49a0-b950-507d92e7aa62",
+          "providerGeneration": "5e07925e-770a-4aa4-b75a-52a06e231088",
+          "root": {
+            "pid": 1480,
+            "birth": "01dd7654c987108b"
+          },
+          "version": 5,
+          "platform": "win32",
+          "admission": "main-owned-job-scope-v1",
+          "target": {
+            "pid": 2388,
+            "key": "0000000000000002",
+            "birth": "01dd7654cc89e874"
+          },
+          "registrar": {
+            "backendId": "TEST-owner-c3b9255c-2f13-43c8-bf7f-dde266e40a56",
+            "teamId": "TEST-team",
+            "runId": "TEST-run",
+            "memberId": "alice-id",
+            "generation": "1"
+          }
+        },
+        "result": {
+          "id": "23d1762a-9d7a-423d-aea5-f09d226c63cb",
+          "pid": 2388,
+          "label": "TEST-primary",
+          "registeredAt": "2026-11-17T05:30:47.936Z",
+          "registeredBy": "alice",
+          "processRef": "p1:23d1762a-9d7a-423d-aea5-f09d226c63cb:ce99cccc8bb6f0f11b9f51778c290c72a70fd6b4c4c2398314fc787b517edbbe",
+          "observation": "unknown",
+          "canTerminate": false
+        }
+      },
+      {
+        "commandId": "TEST-register-TEST-neighbor",
+        "phase": "completed",
+        "principalId": "alice-session",
+        "capture": {
+          "mainEpoch": "fd88aa04-937a-4193-a381-0614a2978d50",
+          "providerCapability": "d37f330d-7834-49a0-b950-507d92e7aa62",
+          "providerGeneration": "5e07925e-770a-4aa4-b75a-52a06e231088",
+          "root": {
+            "pid": 1480,
+            "birth": "01dd7654c987108b"
+          },
+          "version": 5,
+          "platform": "win32",
+          "admission": "main-owned-job-scope-v1",
+          "target": {
+            "pid": 7544,
+            "key": "0000000000000004",
+            "birth": "01dd7654cd12883e"
+          },
+          "registrar": {
+            "backendId": "TEST-owner-c3b9255c-2f13-43c8-bf7f-dde266e40a56",
+            "teamId": "TEST-team",
+            "runId": "TEST-run",
+            "memberId": "alice-id",
+            "generation": "1"
+          }
+        },
+        "result": {
+          "id": "5771d901-f4d3-410f-b901-239bd511f91b",
+          "pid": 7544,
+          "label": "TEST-neighbor",
+          "registeredAt": "2026-11-17T05:30:48.725Z",
+          "registeredBy": "alice",
+          "processRef": "p1:5771d901-f4d3-410f-b901-239bd511f91b:ccab1bc1eafa4d5863f8a17f7db0d5e0e639a0116736970a9836d572bd210d9e",
+          "observation": "unknown",
+          "canTerminate": false
+        }
+      }
+    ],
+    "beforeCrashPublic": {
+      "processes": [
+        {
+          "id": "23d1762a-9d7a-423d-aea5-f09d226c63cb",
+          "pid": 2388,
+          "label": "TEST-primary",
+          "registeredAt": "2026-11-17T05:30:47.936Z",
+          "processRef": "p1:23d1762a-9d7a-423d-aea5-f09d226c63cb:ce99cccc8bb6f0f11b9f51778c290c72a70fd6b4c4c2398314fc787b517edbbe",
+          "canTerminate": true,
+          "observation": "same-live",
+          "registeredBy": "alice"
+        },
+        {
+          "id": "5771d901-f4d3-410f-b901-239bd511f91b",
+          "pid": 7544,
+          "label": "TEST-neighbor",
+          "registeredAt": "2026-11-17T05:30:48.725Z",
+          "processRef": "p1:5771d901-f4d3-410f-b901-239bd511f91b:ccab1bc1eafa4d5863f8a17f7db0d5e0e639a0116736970a9836d572bd210d9e",
+          "canTerminate": true,
+          "observation": "same-live",
+          "registeredBy": "alice"
+        }
+      ],
+      "readRoute": "packaged-public-process-list"
+    },
+    "afterRetryPublic": {
+      "processes": [
+        {
+          "id": "23d1762a-9d7a-423d-aea5-f09d226c63cb",
+          "pid": 2388,
+          "label": "TEST-primary",
+          "registeredAt": "2026-11-17T05:30:47.936Z",
+          "processRef": "p1:23d1762a-9d7a-423d-aea5-f09d226c63cb:ce99cccc8bb6f0f11b9f51778c290c72a70fd6b4c4c2398314fc787b517edbbe",
+          "canTerminate": true,
+          "observation": "same-live",
+          "registeredBy": "alice"
+        },
+        {
+          "id": "5771d901-f4d3-410f-b901-239bd511f91b",
+          "pid": 7544,
+          "label": "TEST-neighbor",
+          "registeredAt": "2026-11-17T05:30:48.725Z",
+          "processRef": "p1:5771d901-f4d3-410f-b901-239bd511f91b:ccab1bc1eafa4d5863f8a17f7db0d5e0e639a0116736970a9836d572bd210d9e",
+          "canTerminate": true,
+          "observation": "same-live",
+          "registeredBy": "alice"
+        }
+      ],
+      "readRoute": "packaged-public-process-list"
+    },
+    "samePublicRecords": true,
+    "readError": "Host team read unavailable",
+    "retryUiObservation": {
+      "schemaVersion": 1,
+      "source": "original-recovery-wait",
+      "atomicWithFailure": false,
+      "stages": {
+        "clickReturnedMs": 5409,
+        "writerObservedMs": 6735,
+        "hostCheckedMs": 7079,
+        "uiReadyMs": 7948
+      },
+      "sampleCount": 1,
+      "sampleCountCapped": false,
+      "lastAtMs": 7948,
+      "last": {
+        "surfacePresent": true,
+        "refresh": "enabled",
+        "firstRefreshBusy": false,
+        "retryPresent": false,
+        "alertPresent": false,
+        "ready": true
+      }
+    },
+    "error": "AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: one-explicit-same-Main-Retry\n    at remaining (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:123:10)\n    at validateCensus (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:179:3)\n    at Object.assertOwnedRenderer (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:207:20)\n    at Object.waitRead (D:\\a\\agent-teams-ai\\agent-teams-ai\\scripts\\legacy-agent-host\\desktop-ui-controls.ts:194:15)\n    at file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:547:35",
+    "censusTiming": {
+      "phaseStart": 39152.124899999995,
+      "phaseDeadline": 49152.124899999995,
+      "rows": [
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 39154.6945,
+          "endMs": 39918.0205,
+          "returned": true,
+          "startIntoPhase": 2.569600000002538,
+          "endIntoPhase": 765.8956000000035,
+          "durationMs": 763.3260000000009
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 39923.1847,
+          "endMs": 40665.720499999996,
+          "returned": true,
+          "startIntoPhase": 771.0598000000027,
+          "endIntoPhase": 1513.5956000000006,
+          "durationMs": 742.5357999999978
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 40675.9468,
+          "endMs": 41421.316699999996,
+          "returned": true,
+          "startIntoPhase": 1523.8219000000026,
+          "endIntoPhase": 2269.1918000000005,
+          "durationMs": 745.3698999999979
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 41526.569599999995,
+          "endMs": 42248.994099999996,
+          "returned": true,
+          "startIntoPhase": 2374.4447,
+          "endIntoPhase": 3096.869200000001,
+          "durationMs": 722.424500000001
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 42353.072,
+          "endMs": 43082.3454,
+          "returned": true,
+          "startIntoPhase": 3200.947100000005,
+          "endIntoPhase": 3930.220500000003,
+          "durationMs": 729.2733999999982
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 43086.5888,
+          "endMs": 43834.836299999995,
+          "returned": true,
+          "startIntoPhase": 3934.4639000000025,
+          "endIntoPhase": 4682.7114,
+          "durationMs": 748.2474999999977
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 43838.8781,
+          "endMs": 44552.8369,
+          "returned": true,
+          "startIntoPhase": 4686.7532000000065,
+          "endIntoPhase": 5400.712000000007,
+          "durationMs": 713.9588000000003
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-census",
+          "startMs": 45887.882099999995,
+          "endMs": 46230.0783,
+          "returned": true,
+          "startIntoPhase": 6735.7572,
+          "endIntoPhase": 7077.953400000006,
+          "durationMs": 342.1962000000058
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 46232.4511,
+          "endMs": 47094.1448,
+          "returned": true,
+          "startIntoPhase": 7080.326200000003,
+          "endIntoPhase": 7942.019900000007,
+          "durationMs": 861.6937000000034
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 47101.0329,
+          "endMs": 47974.0182,
+          "returned": true,
+          "startIntoPhase": 7948.908000000003,
+          "endIntoPhase": 8821.893300000003,
+          "durationMs": 872.9853000000003
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 48100.744099999996,
+          "endMs": 48848.0735,
+          "returned": true,
+          "startIntoPhase": 8948.619200000001,
+          "endIntoPhase": 9695.948600000003,
+          "durationMs": 747.3294000000024
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 48852.3036,
+          "endMs": 49617.5856,
+          "returned": true,
+          "startIntoPhase": 9700.178700000004,
+          "endIntoPhase": 10465.460700000003,
+          "durationMs": 765.2819999999992
+        }
+      ],
+      "totalSnapshotMs": 8754.622500000005,
+      "sameBeforeAfterPublic": true,
+      "sourceRowsEqual": true
+    },
+    "allCensusRows": [
+      {
+        "phase": "packaged-App-startup",
+        "operation": "process-census",
+        "startMs": 340.90649999999914,
+        "endMs": 703.0851999999995,
+        "returned": true
+      },
+      {
+        "phase": "packaged-App-startup",
+        "operation": "process-listener-snapshot",
+        "startMs": 1946.8972999999987,
+        "endMs": 3094.172800000002,
+        "returned": true
+      },
+      {
+        "phase": "packaged-App-startup",
+        "operation": "process-listener-snapshot",
+        "startMs": 3137.3052000000007,
+        "endMs": 4003.5522,
+        "returned": true
+      },
+      {
+        "phase": "packaged-App-startup",
+        "operation": "process-census",
+        "startMs": 4276.9668,
+        "endMs": 4621.219600000002,
+        "returned": true
+      },
+      {
+        "phase": "one-initial-Runtime-Open",
+        "operation": "process-listener-snapshot",
+        "startMs": 4623.5607,
+        "endMs": 5875.695300000001,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 9213.6608,
+        "endMs": 10134.757599999999,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 10890.1887,
+        "endMs": 12017.2643,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 12446.3726,
+        "endMs": 13345.6632,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 13818.3559,
+        "endMs": 14650.1467,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-census",
+        "startMs": 14861.445399999999,
+        "endMs": 15185.5819,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 15197.114,
+        "endMs": 15999.398,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 16006.722899999999,
+        "endMs": 16877.7178,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 16881.476799999997,
+        "endMs": 17672.9666,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 17678.2319,
+        "endMs": 18471.531199999998,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 18498.805800000002,
+        "endMs": 19265.9398,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 19371.292499999996,
+        "endMs": 20142.553099999997,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 20148.338799999998,
+        "endMs": 20904.487499999996,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 20954.022599999997,
+        "endMs": 21832.588599999995,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 21836.975999999995,
+        "endMs": 22687.903,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 22708.0291,
+        "endMs": 23483.237799999995,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 23588.846899999997,
+        "endMs": 24350.7408,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 24455.8761,
+        "endMs": 25205.619399999996,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 25209.2037,
+        "endMs": 26006.428999999996,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 26010.602999999996,
+        "endMs": 26812.262300000002,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 26885.313499999997,
+        "endMs": 27860.3205,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 27887.149400000002,
+        "endMs": 28789.869099999996,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 28794.7955,
+        "endMs": 29678.2621,
+        "returned": true
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "operation": "process-listener-snapshot",
+        "startMs": 29727.301099999997,
+        "endMs": 30510.523699999998,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-census",
+        "startMs": 30564.0271,
+        "endMs": 30861.8857,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 31266.569899999995,
+        "endMs": 32017.225699999995,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 32023.566899999998,
+        "endMs": 32779.4739,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 32784.3112,
+        "endMs": 33542.532999999996,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 33550.3943,
+        "endMs": 34312.1395,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 34417.950899999996,
+        "endMs": 35139.9431,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 35244.8552,
+        "endMs": 36058.2665,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 36062.343799999995,
+        "endMs": 36862.4877,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 36867.2187,
+        "endMs": 37620.087999999996,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 37631.8276,
+        "endMs": 38398.153,
+        "returned": true
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "operation": "process-listener-snapshot",
+        "startMs": 38402.055,
+        "endMs": 39146.767,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 39154.6945,
+        "endMs": 39918.0205,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 39923.1847,
+        "endMs": 40665.720499999996,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 40675.9468,
+        "endMs": 41421.316699999996,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 41526.569599999995,
+        "endMs": 42248.994099999996,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 42353.072,
+        "endMs": 43082.3454,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 43086.5888,
+        "endMs": 43834.836299999995,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 43838.8781,
+        "endMs": 44552.8369,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-census",
+        "startMs": 45887.882099999995,
+        "endMs": 46230.0783,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 46232.4511,
+        "endMs": 47094.1448,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 47101.0329,
+        "endMs": 47974.0182,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 48100.744099999996,
+        "endMs": 48848.0735,
+        "returned": true
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "operation": "process-listener-snapshot",
+        "startMs": 48852.3036,
+        "endMs": 49617.5856,
+        "returned": true
+      },
+      {
+        "phase": "original-product-Quit",
+        "operation": "process-census",
+        "startMs": 49621.3559,
+        "endMs": 49905.1303,
+        "returned": true
+      },
+      {
+        "phase": "original-product-Quit",
+        "operation": "process-census",
+        "startMs": 49905.8289,
+        "endMs": 50201.0268,
+        "returned": true
+      },
+      {
+        "phase": "original-product-Quit",
+        "operation": "process-census",
+        "startMs": 50859.6191,
+        "endMs": 51160.4125,
+        "returned": true
+      },
+      {
+        "phase": "original-product-Quit",
+        "operation": "process-census",
+        "startMs": 51803.5234,
+        "endMs": 52091.75919999999,
+        "returned": true
+      },
+      {
+        "phase": "original-product-Quit",
+        "operation": "process-census",
+        "startMs": 54102.4126,
+        "endMs": 54394.262500000004,
+        "returned": true
+      }
+    ],
+    "fullReceiptDataChecks": {
+      "sourceRowsEqual": true,
+      "hostAAbsentAtHostExit": true,
+      "originalMainAtExit": {
+        "pid": 1980,
+        "parent": 5780,
+        "birth": "2026-11-17T05:30:34.9009740Z",
+        "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\AgentTeamsAI.exe"
+      },
+      "allFinalLineageAbsent": true,
+      "finalListenerPids": [],
+      "finalOwnedRemaining": [],
+      "finalLineageMatches": true,
+      "hostExitCensusCount": 146,
+      "finalCensusCount": 133,
+      "counts": {
+        "mainStarts": 1,
+        "initialRuntimeOpen": 1,
+        "businessInput": 1,
+        "refreshClicks": 1,
+        "retryClicks": 1,
+        "uiStops": 0,
+        "quit": 1
+      },
+      "hostBirths": [
+        {
+          "pid": 5596,
+          "parentPid": 1980
+        },
+        {
+          "pid": 1120,
+          "parentPid": 1980
+        }
+      ],
+      "censusReadsAllReturned": true,
+      "censusReadsAllFiniteOrdered": true,
+      "censusReadsTruncated": false
+    },
+    "stopAndCleanup": {
+      "unreached": [
+        "sameMainAfterRetry assignment",
+        "after-Retry screenshot",
+        "primary UI Kill",
+        "neighbor UI Kill",
+        "both original completed Stop/absence/changed-ref proofs",
+        "full nativeCleanup"
+      ],
+      "counts": {
+        "mainStarts": 1,
+        "initialRuntimeOpen": 1,
+        "businessInput": 1,
+        "refreshClicks": 1,
+        "retryClicks": 1,
+        "uiStops": 0,
+        "quit": 1
+      },
+      "quit": {
+        "attempted": true,
+        "endpoint": "ws://127.0.0.1:9222/devtools/browser/3cf65725-27cf-47f8-b997-74ddf90debcb",
+        "command": {
+          "at": 1794893487664,
+          "id": 1,
+          "method": "Browser.close"
+        },
+        "socketClosed": {
+          "at": 1794893488965,
+          "afterSend": true
+        },
+        "acknowledgement": "socket-closed"
+      },
+      "appExit": {
+        "code": 0,
+        "signal": null
+      },
+      "finalCensusSummary": {
+        "rows": 133,
+        "ownedRemaining": [],
+        "listenerPids": [],
+        "drained": true,
+        "retainedFamilyIdentities": 17,
+        "allRetainedFamilyAbsent": true
+      },
+      "cleanupFailure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 2\n\n    at Object.afterQuit (D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeWindowsAppFixture.ts:467:16)\n    at file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:598:56\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async within (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:141:20)\n    at async file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:598:29",
+      "peer": {
+        "provider": "codex",
+        "connected": 1,
+        "registrations": 1,
+        "serviceExitObservations": 0,
+        "failures": 0,
+        "metadata": {
+          "events": 0,
+          "claudeVersions": 0,
+          "codexVersions": 0,
+          "refused": 0
+        },
+        "modelRequests": 0,
+        "probes": 0,
+        "realVendorExecutions": 0
+      },
+      "originalRuntimeGenerations": null,
+      "packagedAndNativeInputsUnchanged": true
+    },
+    "sourceObservation": {
+      "sourceBefore": 1798,
+      "sourceAfter": 1798,
+      "allSourceRowsSchema": true,
+      "uniqueSourcePaths": 1798,
+      "fullSourceRowsEqual": true
+    },
+    "sourceVectorIdentity": {
+      "bytes": 272124,
+      "sha256": "a8243076ba46ace8dac88a7a827cf3271652e02da723251f8a2801a7ebb33744",
+      "gitBlob": "6d45d2496ca23e20e83fe80b6292a3a1d64c5d47"
+    },
+    "originalInputPins": [
+      {
+        "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe",
+        "sha256": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32"
+      },
+      {
+        "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\fixtures\\providerPeer.mjs",
+        "sha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc"
+      },
+      {
+        "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg3A13.tmp\\fixture\\TEST codex Я\\TEST codex.cmd",
+        "sha256": "808f1868f1cb9649df4edf133c1f7d8da7e888b513b380868de8659ef46b90ca"
+      },
+      {
+        "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\host\\packages\\0000\\dist\\cli.js",
+        "sha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add"
+      },
+      {
+        "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg3A13.tmp\\fixture\\TEST codex Я\\TEST-profile.json",
+        "sha256": "c8da3337413fc358e66501e92b4b488edac16043dc202a4ecdf39aacbb881b0d"
+      },
+      {
+        "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg3A13.tmp\\fixture\\TEST codex Я\\TEST-host.mjs",
+        "sha256": "760e21de8ccc92abe115cd9d665f0186d6ad72539ad55ae3f13a7507eecdd5d4"
+      },
+      {
+        "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\windows-retry-custody\\owned-process-broker.exe",
+        "sha256": "bd4bd23356cad3a8fb29e3f27900b66b5533ee7ecf9b437e011fe6ec74b13001"
+      },
+      {
+        "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\windows-retry-custody\\manifest.json",
+        "sha256": "0523edc0f0d33019258211dafc518c567690e4c9e04d5f8c9630401475e5467e"
+      },
+      {
+        "path": "D:\\a\\_temp\\TEST-Windows-UI-build-44008782844-X64\\Release\\owned-process-gate-controller.exe",
+        "sha256": "bbb15f79e51e9140e5186cf473791b23a300ce9083426d936198a653437f0330"
+      },
+      {
+        "path": "D:\\a\\_temp\\TEST-Windows-UI-build-44008782844-X64\\Release\\owned-process-fixture.exe",
+        "sha256": "76094552f1cf91fc2dffd51e69d8628703831cf4a54ac4156a7d66af5005d16a"
+      },
+      {
+        "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg3A13.tmp\\fixture\\TEST-desktop-descriptor.json",
+        "sha256": "85683cae5f7b52804abeec554ba7d1f0d4f7d5d490051a4f87146fb96e70e857"
+      },
+      {
+        "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg3A13.tmp\\fixture\\ui-seed-receipt.json",
+        "sha256": "563897d200f11b290b5b457cc231efe9b4a2ba159a8e1c4faf893ef8ef98efd5"
+      },
+      {
+        "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg3A13.tmp\\fixture\\TEST-codex-metadata.cjs",
+        "sha256": "f12ab717ee0d0c8012aed8eff71adb3327a67836a5f48e6317a6245f562700a2"
+      },
+      {
+        "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg3A13.tmp\\fixture\\TEST-codex-metadata.cmd",
+        "sha256": "47a9ba4301a1aca4eba42f5a5a85c14e6d9928637da3f8a072c9773017c74c8f"
+      },
+      {
+        "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg3A13.tmp\\fixture\\TEST-claude-metadata.cjs",
+        "sha256": "9bb1d7825e0f36aafd136088572376c559bde6d19f0d0e52d8c37b99160f5223"
+      },
+      {
+        "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg3A13.tmp\\fixture\\TEST-claude-metadata.cmd",
+        "sha256": "8f8fa656f4f39750ac4f4db2466b5e5115745beeb18fede8eba1bc65c0bdaa0f"
+      },
+      {
+        "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg3A13.tmp\\app-user-data\\data\\runtimes\\codex\\current.json",
+        "sha256": "64c12c3d742bb8d58eba48e8c53753d02308f70b068196f9ee5b9ee3a19447e0"
+      }
+    ],
+    "limits": "First row owner read success is an inference from sequential source and the two post-public-read census calls; it is not serialized individually. Last readiness sample is not atomic with failure. Whole149/43/85 or other qualification is outside this advisory."
+  },
+  "arm64": {
+    "trace": {
+      "kind": "TEST_WINDOWS_PACKAGED_UI_FAILURE",
+      "phase": "actual-Host-A-exit-and-metadata-Refresh",
+      "error": "AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: actual-Host-A-exit-and-metadata-Refresh\n    at remaining (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:123:10)\n    at validateCensus (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:179:3)\n    at Object.assertOwnedRenderer (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:207:20)\n    at Object.waitRead (C:\\a\\agent-teams-ai\\agent-teams-ai\\scripts\\legacy-agent-host\\desktop-ui-controls.ts:194:15)\n    at file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:451:30",
+      "errorTruncated": false,
+      "retryUiObservation": null
+    },
+    "phases": [
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "packaged-App-startup",
+        "atMs": 0.07660000000032596,
+        "budgetMs": 120000
+      },
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "one-initial-Runtime-Open",
+        "atMs": 14380.2146,
+        "budgetMs": 45000
+      },
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "one-original-business-input-and-UI",
+        "atMs": 20125.3243,
+        "budgetMs": 35000
+      },
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "atMs": 50546.206900000005,
+        "budgetMs": 10000
+      },
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "original-product-Quit",
+        "atMs": 61314.541,
+        "budgetMs": 30000
+      }
+    ],
+    "reachedFromSequentialSource": [
+      "gate439 phase admitted",
+      "original HostA positive absence poll returned",
+      "fixture.afterOriginalExit returned",
+      "recovery-surface read returned",
+      "one physical metadata Refresh click returned",
+      "gate451 entered and ownership census validation refused after phase expiry"
+    ],
+    "unreached": [
+      "successful genuine closed-Host marker readError assignment",
+      "retained-row outage validation",
+      "Retry phase",
+      "HostB proof",
+      "after-Retry public rows",
+      "both original UI Stops"
+    ],
+    "unknown": [
+      "detailed census durations/call counts",
+      "final DOM predicate value",
+      "Browser.close command/ack result",
+      "ordinary Main exit status",
+      "ordinary query-witness/native cleanup",
+      "final source/input preservation",
+      "exact final peer/model/vendor counters"
+    ],
+    "finalReceipt": null,
+    "controller": {
+      "gateController": "emergency-fail",
+      "rootExitCode": 99,
+      "activeProcesses": 0
+    },
+    "explanation": "The only terminal outer evidence is emergency-fail with zero final membership. No cleanup PASS, voluntary Node99, successor count or source preservation is inferred."
+  },
+  "diagnosis": {
+    "immediateX64": "A full ownership snapshot returned after the original phase deadline and validateCensus refused before DOM evaluation. 8.7546s was spent within the12fresh census calls of the10s Retry phase; first7snapshots consumed about5.17s before one physical Retry click returned at5.409s.",
+    "preservedAssertions": "Controller/driver/Main birth/parent checks, full census bounds, orphan ambiguity refusal, listener family ownership, renderer/preload/backend currentness, exact original process references, same public binding and both original Stops are all material obligations.",
+    "candidateConfidence": "High for the observed failure site and ownership-query cost; a cost/composition correction may help but sufficiency across both complete flows is unproven. ARM detailed attribution and the exact Windows API startup/module share are unavailable.",
+    "currentImplementation": "platform.mjs uses one fresh PowerShell invocation for process and listener queries. It is not an atomic OS snapshot and is not reusable historical authority.",
+    "clockBoundary": "Native gateController.cpp120s begins atNode resume; JS outer300s begins only after preparation. Original30sQuit and post-Quit rehash/receipt writes can encounter the hard external deadline. OnARM the original wall-time trace is consistent with this; the pending operation at termination is unknown.",
+    "missingEvidence": "ARM lacks the in-memory censusReads/full proof because only a final receipt is written after cleanup/hash work. Both PNGs precede the controlled Host crash.",
+    "exclusions": "No inference about earlier separate15sProcess or unrelated packaged readiness failures; no proof of stale renderer props, failed product Retry, real-vendor execution or CLIXML warning causality."
+  },
+  "prospectiveCorrectionAndProof": {
+    "status": "OPPORTUNITIES_ONLY_NO_SOURCE_AUTHORED_OR_APPROVED",
+    "target": "Windows fresh ownership-query cost and grouping of simultaneous read-only postconditions, preserving original10s phases and all authority.",
+    "possibleShapes": [
+      "Optimize each fresh full process/listener acquisition without TTL caching, PID-only authority, omitted orphan/census/listener checks, unbounded helpers or new time allowance. Existing batching is already onePowerShellcall; do not claim that merely combining subprocesses is the fix.",
+      "Co-observe both original row predicates in one guarded read, as the outage path already does. If grouping further current binding/recovery facts is selected, preserve both whole rows/refs, same selection and renderer/preload/backend currentness around async public reads. One fewer census alone is not demonstrated sufficient because finalMaincensus and screenshot still follow.",
+      "Retain bounded failure/census state before lengthy cleanup/rehashing, with unknown terminal fields null. Account for the original120scontroller lifetime without enlarging/resetting it. This repairs evidence retention/admission behavior, not an asserted product recovery defect."
+    ],
+    "regressionObligations": [
+      "With an explicit finite cost for each ownership observation, prove originalmonotonic expiry after a read rejects before CDP/input acceptance; no late sample or restarted budget.",
+      "Any changed query adapter must retain refusal for reused/wrong birth, wrong controller/driver parent, foreign listener, orphan ambiguity, malformed/truncated census, missing response and changed renderer/binding. Unrelated system rows may legitimately omit executable; required owned identity paths stay exact.",
+      "Any co-observation must require both distinct original rows and full expected values, and reject missing/duplicate/stale second rows and async currentness changes. No cache becomes authority.",
+      "A later separately authorized original full Windows flow must satisfy10s on both architectures and retain full ordinary app/witness/job drain, both exact UIStop receipts/absence facts, source/input preservation and no replay. Synthetic/unit timing predictions or a preceding V2PASS are insufficient.",
+      "Retain process-query, UIpredicate, Hostsuccessor and cleanup timing separately so failure attribution is discriminating. Do not retry the spent originals."
+    ],
+    "forbidden": [
+      "increase/restart deadline",
+      "move originalpostconditions outside phase",
+      "dropStop/identity/currentness assertions",
+      "reuse stale ownership",
+      "realClaude/Codexfallback",
+      "promote emergency/drainednonzero toPASS",
+      "replay originalattempt"
+    ]
+  },
+  "verification": {
+    "checks": 30,
+    "allPassed": true,
+    "memberIdentitiesAllExact": true,
+    "sourceRowsBefore": 1798,
+    "sourceRowsAfter": 1798,
+    "sourceRowsEqual": true,
+    "sourceRuntimeJoins": 11,
+    "extraFrozenBuildSource": 1,
+    "censusSchemaChecks": [
+      {
+        "count": 146,
+        "uniquePids": 146,
+        "allTyped": true,
+        "missingOptionalExecutable": 14
+      },
+      {
+        "count": 133,
+        "uniquePids": 133,
+        "allTyped": true,
+        "missingOptionalExecutable": 14
+      }
+    ],
+    "projectOrVendorExecutions": 0,
+    "sourceOrControlWrites": 0,
+    "liveCiReads": 0,
+    "refPrCiActions": 0
+  },
+  "limitations": [
+    "Both original Windows jobs remain FAILED; original Windows same-Main UI qualification remains open.",
+    "No exact postimage, new test execution or runtime authorization is granted.",
+    "No finalARMreceipt, detailedARMcensus trace, afterRetry/Stop screenshots or syscall timing exists in captured evidence.",
+    "Root remains sole source/control author, applier, stager and runtime/ref/PR/CI executor."
+  ],
+  "retention": "Bare Git blob only; exact pin sent immediately after creation, followed by fresh complete self-readback and separate confirmation."
+}

@@ -1,0 +1,93 @@
+[
+  {
+    "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+    "mode": "100644",
+    "bytes": 69194,
+    "sha256": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+    "gitBlob": "43ab487464098fed0425ffd51441a38abc206f3b"
+  },
+  {
+    "bytes": 24759,
+    "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+    "mode": "100644",
+    "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+    "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b"
+  },
+  {
+    "bytes": 45795,
+    "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+    "mode": "100644",
+    "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+    "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b"
+  },
+  {
+    "bytes": 36260,
+    "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+    "mode": "100644",
+    "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+    "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38"
+  },
+  {
+    "bytes": 8457,
+    "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+    "mode": "100644",
+    "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+    "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b"
+  },
+  {
+    "bytes": 33036,
+    "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+    "mode": "100644",
+    "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+    "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9"
+  },
+  {
+    "bytes": 165022,
+    "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+    "mode": "100644",
+    "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581"
+  },
+  {
+    "bytes": 7883,
+    "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+    "mode": "100644",
+    "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+    "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda"
+  },
+  {
+    "bytes": 29017,
+    "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+    "mode": "100644",
+    "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+    "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b"
+  },
+  {
+    "bytes": 74340,
+    "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+    "mode": "100644",
+    "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+    "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c"
+  },
+  {
+    "bytes": 32077,
+    "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+    "mode": "100644",
+    "path": "src/renderer/utils/teamModelAvailability.ts",
+    "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43"
+  },
+  {
+    "bytes": 187890,
+    "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+    "mode": "100644",
+    "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+    "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9"
+  },
+  {
+    "bytes": 56775,
+    "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+    "mode": "100644",
+    "path": "test/renderer/utils/teamModelAvailability.test.ts",
+    "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8"
+  }
+]
