@@ -1,16 +1,17 @@
 import { TeamProjectContextRegistry } from '@features/team-project-context/main';
+
+import { TeamConfigReader } from '../team/TeamConfigReader';
 import { TeamMetaStore } from '../team/TeamMetaStore';
 import { isControllerTaskNotFoundError } from '../team/taskCreationIdempotency';
-import { TeamConfigReader } from '../team/TeamConfigReader';
 
 import { JsonScheduleRepository } from './JsonScheduleRepository';
 import { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
 import { SchedulerService } from './SchedulerService';
 import { SmartScheduleDispatcher } from './SmartScheduleDispatcher';
 
-import type { TeamIpcHandlerApis } from '../team/contracts/TeamProvisioningApis';
 import type { TeamDataService } from '../team/TeamDataService';
 import type { TeamProvisioningService } from '../team/TeamProvisioningService';
+import type { TeamIpcHandlerApis } from '../team/contracts/TeamProvisioningApis';
 
 /** Composes the scheduler from existing main-process APIs; no new runtime owner. */
 export function createSchedulerService(

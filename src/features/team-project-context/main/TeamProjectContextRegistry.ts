@@ -1,14 +1,15 @@
-import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
+import { randomUUID } from 'node:crypto';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+
+import { withFileLock } from '@main/services/team/fileLock';
 import {
   readTeamOwnerProfileScope,
   resolveThisAppProfileScope,
 } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
-import { withFileLock } from '@main/services/team/fileLock';
 import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
-import { randomUUID } from 'node:crypto';
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
+import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 
 const INDEX_FILE = 'project-contexts.json';
 const MAX_INDEX_BYTES = 256 * 1024;
