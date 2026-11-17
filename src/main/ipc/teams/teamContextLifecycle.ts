@@ -97,7 +97,7 @@ export async function permanentlyDeleteLogicalTeam(
   ports: {
     stopNative(name: string): Promise<IpcResult<void>>;
     deleteNative(name: string, draft: boolean): Promise<void>;
-    deleteLogical(): Promise<IpcResult<void>>;
+    deleteLogical(draft: boolean): Promise<IpcResult<void>>;
     meta?: LifecycleReader;
     registry?: PermanentDeleteRegistry;
     isNativePresent?(name: string): Promise<boolean>;
@@ -105,7 +105,7 @@ export async function permanentlyDeleteLogicalTeam(
   }
 ): Promise<IpcResult<void>> {
   if (typeof logicalTeamName !== 'string' || !logicalTeamName.trim()) {
-    return ports.deleteLogical();
+    return ports.deleteLogical(true);
   }
   const meta = ports.meta ?? new TeamMetaStore();
   const registry = ports.registry ?? TeamProjectContextRegistry.fromCurrentApp();
@@ -113,7 +113,7 @@ export async function permanentlyDeleteLogicalTeam(
     const mode = await contextReader(
       meta, (registry as TeamProjectContextRegistry)
     ).getMode(logicalTeamName);
-    if (mode === 'shared') return ports.deleteLogical();
+    if (mode === 'shared') return ports.deleteLogical(false);
 
     // The logical team remains present until all physical contexts are fully
     // removed, enabling idempotent retries after an interrupted deletion.
@@ -145,7 +145,7 @@ export async function permanentlyDeleteLogicalTeam(
       );
       if (!forgotten) throw new Error('Context mapping changed during permanent deletion');
     }
-    return ports.deleteLogical();
+    return ports.deleteLogical(false);
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }

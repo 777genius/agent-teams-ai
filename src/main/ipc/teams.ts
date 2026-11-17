@@ -741,7 +741,10 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
       stopNative: (alias) => handleStopTeam(event, alias),
       deleteNative: (alias, draft) =>
         getPermanentDeletionCoordinator().permanentlyDelete(alias, { draft }),
-      deleteLogical: () => handlePermanentlyDeleteTeam(event, name),
+      deleteLogical: (draft) => draft
+        ? wrapTeamHandler('permanentlyDeleteTeam', () =>
+            getPermanentDeletionCoordinator().permanentlyDelete(String(name), { draft: true }))
+        : handlePermanentlyDeleteTeam(event, name),
     })
   );
   ipcMain.handle(TEAM_PROCESS_SEND, handleProcessSend);
@@ -3606,7 +3609,6 @@ function getTeamMemberLogsFinder(): TeamMemberLogsFinder {
   }
   return teamMemberLogsFinder;
 }
-
 async function handleGetMemberLogs(
   _event: IpcMainInvokeEvent,
   teamName: unknown,

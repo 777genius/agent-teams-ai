@@ -126,13 +126,15 @@ describe('project team lifecycle projection', () => {
         return { success: true as const, data: undefined };
       }),
       deleteNative: vi.fn(async () => { actions.push('delete:ptc-a'); }),
-      deleteLogical: vi.fn(async () => {
+      deleteLogical: vi.fn(async (_draft: boolean) => {
         actions.push('delete:builders');
         return { success: true as const, data: undefined };
       }),
     });
     expect(result.success).toBe(true);
     expect(actions).toEqual(['stop', 'delete:ptc-a', 'forget', 'delete:builders']);
+    // The logical definition never receives native config.json: delete as draft.
+    expect(result.success).toBe(true);
   });
 
   it('does not purge the logical team if a physical deletion fails mid-transaction', async () => {
@@ -170,7 +172,7 @@ describe('project team lifecycle projection', () => {
       hasAnySchedules: vi.fn(async () => false),
       stopNative: vi.fn(),
       deleteNative: del,
-      deleteLogical: vi.fn(async () => ({ success: true as const, data: undefined })),
+      deleteLogical: vi.fn(async (_draft: boolean) => ({ success: true as const, data: undefined })),
     });
     expect(result.success).toBe(true);
     expect(del).not.toHaveBeenCalled();
