@@ -508,6 +508,35 @@ describe('BoardTaskLogStreamService integration', () => {
           displayId: 'c414cd52',
         },
       }),
+      createAssistantEntry({
+        uuid: 'a-review-complete-historical',
+        timestamp: '2026-04-12T18:35:06.000Z',
+        requestId: 'req-review-complete-historical',
+        model: '<synthetic>',
+        content: [{
+          type: 'tool_use',
+          id: 'call-review-complete-historical',
+          name: 'mcp__agent-teams__review_complete',
+          input: {
+            teamName: TEAM_NAME, taskId: TASK_ID,
+            expectedReviewRequestId: 'request-1',
+          },
+        }],
+      }),
+      createUserEntry({
+        uuid: 'u-review-complete-historical',
+        timestamp: '2026-04-12T18:35:06.100Z',
+        sourceToolAssistantUUID: 'a-review-complete-historical',
+        content: [{
+          type: 'tool_result',
+          tool_use_id: 'call-review-complete-historical',
+          content: 'reviewed',
+        }],
+        toolUseResult: {
+          toolUseId: 'call-review-complete-historical',
+          taskId: TASK_ID, column: 'done', reviewState: 'reviewed',
+        },
+      }),
     ];
 
     await writeFile(
@@ -555,6 +584,7 @@ describe('BoardTaskLogStreamService integration', () => {
     expect(toolNames).toContain('mcp__agent-teams__task_start');
     expect(toolNames).toContain('mcp__agent-teams__task_add_comment');
     expect(toolNames).toContain('mcp__agent-teams__task_complete');
+    expect(toolNames).toContain('mcp__agent-teams__review_complete');
     await expect(service.getTaskLogStreamSummary(TEAM_NAME, task.id)).resolves.toEqual({
       segmentCount: 1,
     });

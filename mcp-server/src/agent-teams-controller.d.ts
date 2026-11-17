@@ -127,6 +127,10 @@ declare module 'agent-teams-controller' {
     addReviewer(reviewer: string): string[];
     removeReviewer(reviewer: string): string[];
     updateColumnOrder(columnId: string, orderedTaskIds: string[]): unknown;
+    setReviewFlowSettings(settings: {
+      reviewFlow?: 'agent_approval' | 'human_approval';
+      reviewFlowPrompt?: string;
+    }): unknown;
   }
 
   export interface ControllerTaskBoardKanbanApi
@@ -148,6 +152,9 @@ declare module 'agent-teams-controller' {
   export interface ControllerReviewWriteApi {
     requestReview(taskId: string, flags?: Record<string, unknown>): unknown;
     approveReview(taskId: string, flags?: Record<string, unknown>): unknown;
+    completeReview(taskId: string, flags?: Record<string, unknown>): unknown;
+    approveAsHuman(taskId: string): unknown;
+    requestChangesAsHuman(taskId: string, flags?: Record<string, unknown>): unknown;
     requestChanges(taskId: string, flags?: Record<string, unknown>): unknown;
     startReview(taskId: string, flags?: Record<string, unknown>): unknown;
   }
@@ -157,6 +164,7 @@ declare module 'agent-teams-controller' {
     requestReview(taskId: string, flags?: Record<string, unknown>): unknown;
     /** @deprecated Internal review lifecycle write. Use controller.taskBoard.approveReview. */
     approveReview(taskId: string, flags?: Record<string, unknown>): unknown;
+    completeReview(taskId: string, flags?: Record<string, unknown>): unknown;
     /** @deprecated Internal review lifecycle write. Use controller.taskBoard.requestChanges. */
     requestChanges(taskId: string, flags?: Record<string, unknown>): unknown;
     /** @deprecated Internal review lifecycle write. Use controller.taskBoard.startReview. */

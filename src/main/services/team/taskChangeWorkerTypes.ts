@@ -6,7 +6,7 @@ export interface TaskChangeTaskMeta {
   owner?: string;
   status?: string;
   intervals?: { startedAt: string; completedAt?: string }[];
-  reviewState?: 'review' | 'needsFix' | 'approved' | 'none';
+  reviewState?: 'review' | 'needsFix' | 'reviewed' | 'approved' | 'none';
   historyEvents?: unknown[];
   kanbanColumn?: 'review' | 'approved';
 }

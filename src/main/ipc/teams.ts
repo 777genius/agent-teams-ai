@@ -101,6 +101,7 @@ import {
   TEAM_SEND_MESSAGE,
   TEAM_SET_CHANGE_PRESENCE_TRACKING,
   TEAM_SET_PROJECT_BRANCH_TRACKING,
+  TEAM_SET_REVIEW_FLOW_SETTINGS,
   TEAM_SET_TASK_CLARIFICATION,
   TEAM_SET_TASK_LOG_STREAM_TRACKING,
   TEAM_SET_TOOL_ACTIVITY_TRACKING,
@@ -198,6 +199,7 @@ import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStor
 import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService';
 
 import { waitForOpenCodeRuntimeRelayForUi } from './teams/openCodeRuntimeDeliveryRelayUi';
+import { parseReviewFlowSettings } from './teams/reviewFlowSettings';
 import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
 import { createMessagesPageHandler } from './teams/teamMessagesPageHandler';
 import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
@@ -712,6 +714,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_GET_TASK, handleGetTask);
   ipcMain.handle(TEAM_REQUEST_REVIEW, handleRequestReview);
   ipcMain.handle(TEAM_UPDATE_KANBAN, handleUpdateKanban);
+  ipcMain.handle(TEAM_SET_REVIEW_FLOW_SETTINGS, handleSetReviewFlowSettings);
   ipcMain.handle(TEAM_UPDATE_KANBAN_COLUMN_ORDER, handleUpdateKanbanColumnOrder);
   ipcMain.handle(TEAM_UPDATE_TASK_STATUS, handleUpdateTaskStatus);
   ipcMain.handle(TEAM_UPDATE_TASK_OWNER, handleUpdateTaskOwner);
@@ -804,6 +807,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_GET_TASK);
   ipcMain.removeHandler(TEAM_REQUEST_REVIEW);
   ipcMain.removeHandler(TEAM_UPDATE_KANBAN);
+  ipcMain.removeHandler(TEAM_SET_REVIEW_FLOW_SETTINGS);
   ipcMain.removeHandler(TEAM_UPDATE_KANBAN_COLUMN_ORDER);
   ipcMain.removeHandler(TEAM_UPDATE_TASK_STATUS);
   ipcMain.removeHandler(TEAM_UPDATE_TASK_OWNER);
@@ -3308,6 +3312,23 @@ async function handleGetTask(
   );
 }
 
+async function handleSetReviewFlowSettings(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  settings: unknown
+): Promise<IpcResult<void>> {
+  const validatedTeam = validateTeamName(teamName);
+  if (!validatedTeam.valid) {
+    return { success: false, error: validatedTeam.error ?? 'Invalid teamName' };
+  }
+  const parsed = parseReviewFlowSettings(settings);
+  if (!parsed.ok) {
+    return { success: false, error: parsed.error };
+  }
+  return wrapTeamHandler('setReviewFlowSettings', () =>
+    getTeamDataService().setReviewFlowSettings(validatedTeam.value!, parsed.settings)
+  );
+}
 async function handleUpdateKanban(
   _event: IpcMainInvokeEvent,
   teamName: unknown,

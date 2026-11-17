@@ -36,6 +36,10 @@ function assertKanbanColumnAllowed(context, task, column, options = {}) {
   }
 
   if (column === 'approved') {
+    if (isHumanApprovalFlow(context) &&
+        (transition === 'manual_approve' || transition === 'approve_review')) {
+      throw new Error('Human approval required: use review_complete for AI review; only the app user may approve');
+    }
     if (transition === 'manual_approve') {
       if (reviewState !== 'none') {
         throw new Error(
@@ -88,7 +92,7 @@ function clearKanban(context, taskId, options) {
       return state;
     }
     const transition = options && typeof options.transition === 'string' ? options.transition : 'direct';
-    const allowedInternalTransitions = new Set(['request_changes', 'rollback', 'status_reset', 'delete', 'restore']);
+    const allowedInternalTransitions = new Set(['request_changes', 'review_complete', 'rollback', 'status_reset', 'delete', 'restore']);
     const reviewState = getEffectiveReviewState(context, task);
     if (transition === 'direct' && reviewState !== 'none') {
       throw new Error(
@@ -141,6 +145,41 @@ function removeReviewer(context, reviewer) {
   });
 }
 
+function isHumanApprovalFlow(context) {
+  return kanbanStore.isHumanApprovalFlow(getKanbanState(context));
+}
+
+/**
+ * Desktop user action only. `settings` may carry reviewFlow and/or reviewFlowPrompt;
+ * omitted keys keep their persisted value and an empty prompt clears it.
+ */
+function setReviewFlowSettings(context, settings) {
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+    throw new Error('review flow settings must be an object');
+  }
+  const hasFlow = settings.reviewFlow !== undefined;
+  const hasPrompt = settings.reviewFlowPrompt !== undefined;
+  if (!hasFlow && !hasPrompt) throw new Error('review flow settings are empty');
+  if (hasFlow && !kanbanStore.isReviewFlow(settings.reviewFlow)) {
+    throw new Error(`reviewFlow must be one of: ${kanbanStore.REVIEW_FLOWS.join(', ')}`);
+  }
+  const nextPrompt = hasPrompt ? kanbanStore.normalizeReviewFlowPrompt(settings.reviewFlowPrompt) : undefined;
+  return withTeamBoardLock(context.paths, () => {
+    const state = getKanbanState(context);
+    const next = { ...state };
+    if (hasFlow) next.reviewFlow = settings.reviewFlow;
+    if (hasPrompt) {
+      if (nextPrompt) next.reviewFlowPrompt = nextPrompt;
+      else delete next.reviewFlowPrompt;
+    }
+    if (next.reviewFlow === state.reviewFlow && next.reviewFlowPrompt === state.reviewFlowPrompt) {
+      return state;
+    }
+    kanbanStore.writeKanbanState(context.paths, context.teamName, next);
+    return getKanbanState(context);
+  });
+}
+
 function updateColumnOrder(context, columnId, orderedTaskIds) {
   return withTeamBoardLock(context.paths, () => {
     const canonicalIds = orderedTaskIds.map((taskId) => tasks.resolveTaskId(context, taskId));
@@ -151,6 +190,8 @@ function updateColumnOrder(context, columnId, orderedTaskIds) {
 module.exports = {
   getKanbanState,
   setKanbanColumn,
+  isHumanApprovalFlow,
+  setReviewFlowSettings,
   clearKanban,
   listReviewers,
   addReviewer,

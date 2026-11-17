@@ -72,6 +72,7 @@ describe('TeamKanbanManager', () => {
       teamName: 'my-team',
       reviewers: [],
       tasks: {},
+      reviewFlow: 'agent_approval',
     });
   });
 
@@ -82,7 +83,51 @@ describe('TeamKanbanManager', () => {
       teamName: 'my-team',
       reviewers: [],
       tasks: {},
+      reviewFlow: 'agent_approval',
     });
+  });
+
+  it('preserves opt-in approval policy through legacy board writes and strict reads', async () => {
+    hoisted.files.set(statePath, JSON.stringify({
+      teamName: 'my-team',
+      reviewers: [],
+      tasks: {},
+      reviewFlow: 'human_approval',
+      reviewFlowPrompt: '  Run the e2e suite first.  ',
+    }));
+
+    expect(await manager.getState('my-team', { strict: true })).toMatchObject({
+      reviewFlow: 'human_approval',
+      reviewFlowPrompt: 'Run the e2e suite first.',
+    });
+    await manager.updateTask('my-team', '1', { op: 'set_column', column: 'review' });
+    await manager.updateColumnOrder('my-team', 'review', ['1']);
+    const disk = JSON.parse(hoisted.files.get(statePath) ?? '{}');
+    expect(disk.reviewFlow).toBe('human_approval');
+    expect(disk.reviewFlowPrompt).toBe('Run the e2e suite first.');
+    expect(disk.columnOrder.review).toEqual(['1']);
+
+    hoisted.files.set(statePath, JSON.stringify({
+      teamName: 'my-team', reviewers: [], tasks: {}, reviewFlow: 'everyone',
+    }));
+    await expect(manager.getState('my-team', { strict: true })).rejects.toThrow('corrupt');
+  });
+
+  it('never downgrades a corrupt approval policy through Kanban mutations', async () => {
+    const corrupt = JSON.stringify({
+      teamName: 'my-team', reviewers: [], tasks: {}, reviewFlow: 'everyone',
+    });
+    const actions = [
+      () => manager.updateColumnOrder('my-team', 'review', ['1']),
+      () => manager.updateTask('my-team', '1', { op: 'set_column' as const, column: 'approved' as const }),
+      () => manager.garbageCollect('my-team', new Set(['1'])),
+    ];
+    for (const action of actions) {
+      hoisted.files.set(statePath, corrupt);
+      await expect(action()).rejects.toThrow('corrupt');
+      expect(hoisted.files.get(statePath)).toBe(corrupt);
+    }
+    expect(hoisted.atomicWrite).not.toHaveBeenCalled();
   });
 
   it('writes review state with movedAt on set_column', async () => {

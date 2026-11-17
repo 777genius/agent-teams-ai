@@ -996,6 +996,78 @@ describe('TeamTaskStallPolicy', () => {
     });
   });
 
+  it.each(['review_completed', 'human_approved'] as const)(
+    'does not reuse a previous review_start after %s when a new review is requested',
+    (terminalType) => {
+      const task: TeamTask = {
+        id: 'task-new-review',
+        displayId: 'c0de1209',
+        subject: 'Fresh review has not started',
+        status: 'completed',
+        reviewState: 'review',
+        historyEvents: [
+          {
+            id: 'review-request-old',
+            type: 'review_requested',
+            timestamp: '2026-11-16T10:00:00.000Z',
+            from: 'none',
+            to: 'review',
+            reviewer: 'bob',
+          },
+          {
+            id: 'review-start-old',
+            type: 'review_started',
+            timestamp: '2026-11-16T10:01:00.000Z',
+            from: 'review',
+            to: 'review',
+            actor: 'bob',
+          },
+          terminalType === 'review_completed'
+            ? {
+                id: 'review-terminal-old',
+                type: 'review_completed',
+                timestamp: '2026-11-16T10:02:00.000Z',
+                from: 'review',
+                to: 'reviewed',
+                reviewRequestId: 'review-request-old',
+                actor: 'bob',
+              }
+            : {
+                id: 'review-terminal-old',
+                type: 'human_approved',
+                timestamp: '2026-11-16T10:02:00.000Z',
+                from: 'review',
+                to: 'approved',
+                actor: 'user',
+              },
+          {
+            id: 'review-request-new',
+            type: 'review_requested',
+            timestamp: '2026-11-16T10:05:00.000Z',
+            from: terminalType === 'review_completed' ? 'reviewed' : 'approved',
+            to: 'review',
+            reviewer: 'bob',
+          },
+        ],
+      };
+      const result = policy.evaluateReview({
+        now: new Date('2026-11-16T10:25:00.000Z'),
+        task,
+        snapshot: createSnapshot({
+          activeTasks: [task],
+          allTasksById: new Map([[task.id, task]]),
+          reviewOpenTasks: [task],
+          resolvedReviewersByTaskId: new Map([
+            [task.id, { reviewer: 'bob', source: 'history_review_requested_reviewer' }],
+          ]),
+        }),
+      });
+      expect(result).toMatchObject({
+        status: 'skip', taskId: task.id, skipReason: 'no_open_review_window',
+      });
+    }
+  );
+
   it('fails closed on review branch when review has not started yet', () => {
     const task: TeamTask = {
       id: 'task-b',

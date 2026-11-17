@@ -4462,6 +4462,25 @@ export default interface Resources {
       "trashAvailable": "Reversible trash for draft/stopped teams is available."
     },
     "kanban": {
+      "approvalSettings": {
+        "cancel": "Cancel",
+        "flowLegend": "Who gives final approval",
+        "flows": {
+          "agent_approval": {
+            "description": "The reviewer approves and the task moves to Approved.",
+            "label": "Agents approve"
+          },
+          "human_approval": {
+            "description": "The reviewer finishes the review and the task stays in Done as reviewed. Only you move it to Approved.",
+            "label": "I give final approval"
+          }
+        },
+        "promptHint": "Sent to reviewers with each review request and visible to agents on the board. It does not change who may approve.",
+        "promptLabel": "Instructions for agents (optional)",
+        "promptPlaceholder": "For example: run the e2e tests before deciding.",
+        "save": "Save",
+        "title": "Review flow"
+      },
       "board": {
         "addTask": "Add task",
         "columnsView": "Columns view",
@@ -6694,7 +6713,8 @@ export default interface Resources {
       "reviewStates": {
         "approved": "Approved",
         "inReview": "In review",
-        "needsFix": "Needs fix"
+        "needsFix": "Needs fix",
+        "reviewed": "Reviewed"
       },
       "sections": {
         "attachments": "Attachments",
@@ -6717,9 +6737,11 @@ export default interface Resources {
         "createdAs": "Created as",
         "currentImplementationInterval": "Current implementation interval",
         "empty": "No workflow history recorded",
+        "humanApproved": "Approved by user",
         "implementationIntervalEnded": "Implementation interval ended at this transition",
         "ownerChanged": "Owner changed",
         "reassigned": "Reassigned",
+        "reviewCompleted": "AI review completed",
         "reviewRequested": "Review requested",
         "reviewStarted": "Review started",
         "runningPrefix": "running ",
