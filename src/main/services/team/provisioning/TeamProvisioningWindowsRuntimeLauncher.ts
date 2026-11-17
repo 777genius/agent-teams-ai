@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { spawnCli } from '@main/utils/childProcess';
+import { spawnCli, spawnCliDirectExecutable } from '@main/utils/childProcess';
 
 import type { ChildProcess, SpawnOptions } from 'node:child_process';
 
@@ -21,13 +21,15 @@ export function isOwnedWindowsTeamRuntimeWrapperProcess(child: ChildProcess): bo
 export function spawnWindowsTeamRuntimeCli(
   binaryPath: string,
   args: string[],
-  options: SpawnOptions = {}
+  options: SpawnOptions = {},
+  platform: NodeJS.Platform = process.platform
 ): ReturnType<typeof spawnCli> {
   const launch = resolveWindowsTeamRuntimeLauncher(binaryPath, {
+    platform,
     requireWrapper: process.env.AGENT_TEAMS_REQUIRE_TEAMMATE_WRAPPER === '1',
   });
   if (!launch.targetEnv) return spawnCli(launch.binaryPath, args, options);
-  const child = spawnCli(launch.binaryPath, args, {
+  const child = spawnCliDirectExecutable(launch.binaryPath, args, {
     ...options,
     env: { ...(options.env ?? process.env), ...launch.targetEnv },
   });

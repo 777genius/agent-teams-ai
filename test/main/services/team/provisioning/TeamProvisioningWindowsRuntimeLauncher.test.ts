@@ -2,13 +2,26 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { resolveWindowsTeamRuntimeLauncher } from '@main/services/team/provisioning/TeamProvisioningWindowsRuntimeLauncher';
+import {
+  isOwnedWindowsTeamRuntimeWrapperProcess,
+  resolveWindowsTeamRuntimeLauncher,
+  spawnWindowsTeamRuntimeCli,
+} from '@main/services/team/provisioning/TeamProvisioningWindowsRuntimeLauncher';
+import { spawnCli, spawnCliDirectExecutable } from '@main/utils/childProcess';
+
+import type { ChildProcess } from 'node:child_process';
+
+vi.mock('@main/utils/childProcess', () => ({
+  spawnCli: vi.fn(),
+  spawnCliDirectExecutable: vi.fn(),
+}));
 
 const roots: string[] = [];
 afterEach(() => {
   for (const root of roots.splice(0)) fs.rmSync(root, { recursive: true, force: true });
+  vi.clearAllMocks();
 });
 
 function sandbox() {
@@ -22,6 +35,36 @@ function sandbox() {
 }
 
 describe('Windows team runtime Job launcher', () => {
+  it('preserves the actual wrapper handle for a non-ASCII installation path', () => {
+    const { root } = sandbox();
+    const runtimeDir = path.join(root, 'José', 'runtime');
+    const binaryPath = path.join(runtimeDir, 'claude-multimodel.exe');
+    const wrapperPath = path.join(runtimeDir, 'teammate-console', 'teammate.exe');
+    fs.mkdirSync(path.dirname(wrapperPath), { recursive: true });
+    fs.writeFileSync(binaryPath, 'runtime');
+    fs.writeFileSync(wrapperPath, 'wrapper');
+
+    const child = { pid: 5012 } as ChildProcess;
+    vi.mocked(spawnCliDirectExecutable).mockReturnValue(child);
+    const launched = spawnWindowsTeamRuntimeCli(
+      binaryPath, ['--version'], { windowsHide: true }, 'win32'
+    );
+
+    expect(launched).toBe(child);
+    expect(isOwnedWindowsTeamRuntimeWrapperProcess(child)).toBe(true);
+    expect(spawnCliDirectExecutable).toHaveBeenCalledWith(
+      wrapperPath,
+      ['--version'],
+      expect.objectContaining({
+        windowsHide: true,
+        env: expect.objectContaining({
+          AGENT_TEAMS_TEAMMATE_WRAPPER_TARGET: binaryPath,
+        }),
+      })
+    );
+    expect(spawnCli).not.toHaveBeenCalled();
+  });
+
   it('selects separately staged wrapper and retains original binary', () => {
     const { root, binaryPath, wrapperPath } = sandbox();
     fs.mkdirSync(path.dirname(wrapperPath), { recursive: true });
