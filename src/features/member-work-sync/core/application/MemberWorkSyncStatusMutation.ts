@@ -14,9 +14,10 @@ export class MemberWorkSyncStatusMutationError extends Error {
   constructor(
     readonly reason: string,
     readonly mutationId?: string,
-    readonly retryExhausted = false
+    readonly retryExhausted = false,
+    readonly detail?: string
   ) {
-    super(`member work sync status mutation ${reason}`);
+    super(`member work sync status mutation ${reason}${detail ? ` (${detail})` : ''}`);
     this.name = 'MemberWorkSyncStatusMutationError';
   }
 }
@@ -40,7 +41,12 @@ export async function runMemberWorkSyncStatusMutation<T>(
       )
         throw error;
       if (attempt >= MEMBER_WORK_SYNC_STATUS_MUTATION_MAX_CONFLICT_ATTEMPTS)
-        throw new MemberWorkSyncStatusMutationError(error.reason, error.mutationId, true);
+        throw new MemberWorkSyncStatusMutationError(
+          error.reason,
+          error.mutationId,
+          true,
+          error.detail
+        );
       await new Promise((resolve) => setTimeout(resolve, 20 * (attempt + 1)));
     }
   }
@@ -52,7 +58,8 @@ export async function readMemberWorkSyncStatus(
 ): Promise<StatusRead> {
   if (!deps.statusMutations) return { status: await deps.statusStore.read(input) };
   const result = await deps.statusMutations.readSnapshot(input);
-  if (!result.ok) throw new MemberWorkSyncStatusMutationError(result.reason);
+  if (!result.ok)
+    throw new MemberWorkSyncStatusMutationError(result.reason, undefined, false, result.detail);
   return { status: result.snapshot.status, snapshot: result.snapshot };
 }
 
@@ -82,7 +89,12 @@ export async function commitMemberWorkSyncStatus(
     ...(replacedReceipt ? { replacedReceipt } : {}),
   });
   if (result.committed !== true)
-    throw new MemberWorkSyncStatusMutationError(result.reason, mutationId);
+    throw new MemberWorkSyncStatusMutationError(
+      result.reason,
+      mutationId,
+      false,
+      'detail' in result ? result.detail : undefined
+    );
   if (!result.snapshot.status)
     throw new MemberWorkSyncStatusMutationError('commit_unknown', mutationId);
   return { status: result.snapshot.status, canProject: result.projectionDegraded.length === 0 };
