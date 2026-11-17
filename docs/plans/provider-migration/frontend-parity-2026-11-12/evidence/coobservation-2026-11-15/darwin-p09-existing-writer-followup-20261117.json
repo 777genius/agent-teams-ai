@@ -1,0 +1,1023 @@
+{
+  "schemaVersion": 1,
+  "kind": "DARWIN_STRICT_P09_ADMITTED_TUPLE_FAILURE_AND_FIX_FEASIBILITY_ADVISORY",
+  "reviewer": "/root/producer_r2_semantic",
+  "recordedAt": "2026-11-17 07:51:20 UTC",
+  "status": "COMPLETE_BOUNDED_READ_ONLY_ADVISORY_STRICT_P09_UNRESOLVED",
+  "conclusion": {
+    "concreteFailure": "Both recorded product-admitted Darwin tuples reach strict P09 and fail. x64 additionally fails the compiler-default original-image witness; both architectures retain after-check and already-open-writer successful mutations followed by A markers and ordinary exit.",
+    "feasibility": "No defensible deployable continuous same-path/same-inode custody primitive or narrow implementation is established by these sources and artifacts. A matching future native observation venue is necessary to evaluate any concrete candidate, but matching/moving runners is not the missing fix: both counterexamples already occurred on admitted tuples.",
+    "selectedSourceRemains": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "sourceOrControlChangeSelected": false,
+    "replaySelected": false,
+    "nativeQualification": false,
+    "newGate": false,
+    "impossibilityClaim": false
+  },
+  "authority": {
+    "rootSoleAuthorApplierPublisherExecutor": true,
+    "allowed": "Immutable Git/source/retained evidence reads, pure in-memory identity/data analysis, and this bare advisory blob.",
+    "performed": "Re-read entire assigned report, complete decisive artifact bodies and current source; re-fetch/hash both retained logs and read only their decisive failure/admission context in this follow-up.",
+    "notPerformed": [
+      "No shell/filesystem/local/runtime/vendor probe.",
+      "No source/control/ref/PR/CI mutation.",
+      "No live CI reads or polling.",
+      "No execution of target source.",
+      "No source or executable-control postimage authorship."
+    ],
+    "boundary": "This advisory does not alter the fixed9d fresh-CI selection or introduce a separate approval/protocol gate."
+  },
+  "evidence": {
+    "assignedCompleteReport": {
+      "bytes": 167792,
+      "sha256": "41e2c54a72903d2ffa8a9aa71566613390a67de47cb4bf79769215db202ddb34",
+      "gitBlob": "62aee67d8c0e4135566ade54abeb1f747407387f"
+    },
+    "historicalSourceReport": {
+      "bytes": 125540,
+      "sha256": "59c3e362cc73580491633bb56f9fd8ebc853ec57be1f84b5bdcea43d09bdec79",
+      "gitBlob": "96c0cd4e7209a2df5ebb35c0634712581dd5cfc3"
+    },
+    "priorPrimitiveAdvisory": {
+      "bytes": 62374,
+      "sha256": "830aa1ee54fe76cb30939b729f6ca3b1169cc7041c481170efba1874f3396fcf",
+      "gitBlob": "397fefe2b52afdfe6c2a171f846e153e5dd66d88"
+    },
+    "assignedReportRead": "All167792 bytes read; all60 original review checks retained as evidence, not as a new runtime result.",
+    "originalSource": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "currentSource": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+    "currentCompleteSources": [
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+        "commit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "identity": {
+          "bytes": 21219,
+          "sha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+          "gitBlob": "19aca56c55a666654b04827b3c2446d2ad03ad8d"
+        },
+        "lines": 412,
+        "fullBodyRead": true,
+        "unchangedFromFrozenSource": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+        "commit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "identity": {
+          "bytes": 27709,
+          "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e",
+          "gitBlob": "f1e1d1145898e201723be343fa8768d73332fcb1"
+        },
+        "lines": 547,
+        "fullBodyRead": true,
+        "unchangedFromFrozenSource": true
+      },
+      {
+        "path": "packages/legacy-agent-host/native/registered-process-darwin.c",
+        "commit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "identity": {
+          "bytes": 15524,
+          "sha256": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5",
+          "gitBlob": "4f300228b8f28b870586794564ae63ccf1dee41f"
+        },
+        "lines": 309,
+        "fullBodyRead": true,
+        "unchangedFromFrozenSource": true
+      }
+    ],
+    "tupleAdmissionSource": {
+      "path": "packages/legacy-agent-host/src/process/qualifiedDarwinBuild.ts",
+      "commit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "identity": {
+        "bytes": 480,
+        "sha256": "8127557453bfbf2dad146bd4b1ba4cc17b99f81d3f2f907af9edcffde0b3927f",
+        "gitBlob": "ca10512904b6abc3f110d4ebb852a7a0baf62548"
+      },
+      "fullBodyRead": true,
+      "body": "/** Finite process-custody tuples; native Host, Desktop and packaged proofs remain separate. */\nexport type QualifiedDarwinBuild = '24G90' | '24G624' | '24H232' | '24G830';\nexport function isQualifiedDarwinBuild(\n  value: unknown,\n  architecture: string = process.arch\n): value is QualifiedDarwinBuild {\n  return (\n    value === '24G90' ||\n    value === '24G624' ||\n    (value === '24H232' && architecture === 'arm64') ||\n    (value === '24G830' && architecture === 'x64')\n  );\n}\n"
+    },
+    "artifacts": [
+      {
+        "arch": "x64",
+        "fullPosixReceipt": {
+          "bytes": 14545,
+          "sha256": "e86331603d3d0c9c7b21be4f671deaad6f37f2822c7cd356848c8a9bf48e2019",
+          "gitBlob": "055582761923b3d750d969a2cb0601886ea42498"
+        },
+        "fullInputs": {
+          "bytes": 2370,
+          "sha256": "6162adeeba261562735cbb0768b6021728cc41b2bc2b3843e7084c11d5f986cd",
+          "gitBlob": "cf89e5fec8261c1d8bcff131aff6f9a8f04b112c"
+        },
+        "fullCustody": {
+          "bytes": 1448,
+          "sha256": "b9fb9afdcec6ec4087ebb808ef61b83a84e91e4638552e5a480f601655b5e0bd",
+          "gitBlob": "cccd75ffc5c1f303dd0dca2e7d4d9fd595f70601"
+        },
+        "retainedCompleteLog": {
+          "bytes": 117524,
+          "sha256": "2b2ab0c2e4fc3457a0d80010cedeb0dfb23cd3ca07682a7759f734b62fdad498",
+          "gitBlob": "5d2f3241fbcb4c3ecf9c37bcbc8d1bce4d5109e0"
+        },
+        "fullParsedCopiesJoinAssignedReport": {
+          "posix": true,
+          "inputs": true,
+          "custody": true
+        },
+        "decisiveLogContextReRead": "1188-1268",
+        "allFailureDiagnosticsExactlyJoinAssignedReport": true
+      },
+      {
+        "arch": "arm64",
+        "fullPosixReceipt": {
+          "bytes": 14583,
+          "sha256": "1136bd06975ece3cf166bc66155433ef766f8fe8fc5ee9edc24192fa7b4d7ae9",
+          "gitBlob": "56be0f2808d577486c77743a62811d8277d8abb2"
+        },
+        "fullInputs": {
+          "bytes": 2374,
+          "sha256": "8de725dd263b2c30ed6eed7b14af9d8846a1f2e99fa0151a2aa9475b2141ae5f",
+          "gitBlob": "4e985b40bad062e6e4a5545e8d71de4c8837e951"
+        },
+        "fullCustody": {
+          "bytes": 1448,
+          "sha256": "0a084213d9ad47e2f0e479a641fc88dcf2a82f536a8ff738c9c98e5300a3e8ae",
+          "gitBlob": "68b927b143b790d90a8e7dc0de01d21f07a84dea"
+        },
+        "retainedCompleteLog": {
+          "bytes": 107841,
+          "sha256": "ebfa16d5c5e1040f22c096afb8121a0b7b7b87a5bcb91559aa37d32e166144eb",
+          "gitBlob": "b18682e0df06e1298b0266053a749a5910e9d936"
+        },
+        "fullParsedCopiesJoinAssignedReport": {
+          "posix": true,
+          "inputs": true,
+          "custody": true
+        },
+        "decisiveLogContextReRead": "1074-1154",
+        "allFailureDiagnosticsExactlyJoinAssignedReport": true
+      }
+    ],
+    "priorResearchReadLimit": "The complete two prior report blobs were fetched/hash-verified; this follow-up reads their decisive source-boundary, primitive, observation-gap and proof sections. It does not claim a fresh full read of all historical Apple source bodies or installed binary attestation.",
+    "archiveLimit": "Current complete artifact text bodies are directly joined. Original ZIP capture/CRC/archive provenance remains the complete assigned report's retained evidence; no new download or archive extraction occurred."
+  },
+  "exactOriginalOutcomes": {
+    "run": 44008782832,
+    "attempt": 1,
+    "pr": 1218,
+    "workflow": ".github/workflows/opencode-v2-stage1-preflight.yml",
+    "terminal": "failure",
+    "stage1Census": {
+      "success": 7,
+      "failure": 2,
+      "total": 9
+    },
+    "failedStep": "Observe POSIX original-path exec and explicit mutation counterexamples",
+    "failedStepNumber": 24,
+    "tuples": [
+      {
+        "arch": "x64",
+        "osBuild": "24G830",
+        "node": "v24.21.0",
+        "source": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "productTupleAdmitted": true,
+        "inputProductQualified": false,
+        "jobId": 133790458837,
+        "caseCounts": {
+          "PASS": 6,
+          "INCOMPLETE": 3,
+          "COUNTEREXAMPLE": 1
+        },
+        "posixStatus": "INCOMPLETE",
+        "nativeFixtureQualified": false,
+        "ordinaryCustodyStatus": "PASS",
+        "ordinaryCustodyProductQualified": false,
+        "sourceHashes": {
+          "c": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+          "product": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5"
+        },
+        "baseline": {
+          "label": "compiler-default:baseline",
+          "result": "INCOMPLETE",
+          "expectedSha256": "2f8774269bc3fdc8c7d44013bd150ec31106b910298b4c85d03212ecfd750960",
+          "replacementSha256": "a4f590d15b8128697aa54862b3361f3da824eeb78aa438c62612a070c1d0ee31",
+          "stage": "kernel-image-validity",
+          "errno": 13,
+          "execErrno": 0,
+          "codeSigningFlags": 0,
+          "codeSigningError": -67062,
+          "stoppedBeforeUser": true,
+          "payloadMarkersAbsentBeforeGate": true,
+          "kernelImageObserved": false,
+          "imageMatched": false,
+          "originalPid": 14770,
+          "originalBirth": "1116481615289",
+          "originalDev": "16777220",
+          "originalIno": "12888757172",
+          "kernelDev": "0",
+          "kernelIno": "0",
+          "originalSha256": "2f8774269bc3fdc8c7d44013bd150ec31106b910298b4c85d03212ecfd750960",
+          "kernelSha256": "",
+          "mutationAfterCheckErrno": -1,
+          "resumed": false,
+          "markerLines": [],
+          "exitCode": -1,
+          "exitSignal": 9,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        "signedMutationFailures": [
+          {
+            "label": "adhoc-test-only:after-check",
+            "result": "INCOMPLETE",
+            "expectedSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+            "replacementSha256": "9b86c008e495915f378389cc9215c9160cdd5b88f5084e5ef6de36b1c35cddf3",
+            "stage": "exit",
+            "errno": 0,
+            "execErrno": 0,
+            "codeSigningFlags": 570425345,
+            "codeSigningError": 0,
+            "stoppedBeforeUser": true,
+            "payloadMarkersAbsentBeforeGate": true,
+            "kernelImageObserved": true,
+            "imageMatched": true,
+            "originalPid": 14790,
+            "originalBirth": "1116856588154",
+            "originalDev": "16777220",
+            "originalIno": "12888757204",
+            "kernelDev": "16777220",
+            "kernelIno": "12888757204",
+            "originalSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+            "kernelSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+            "mutationAfterCheckErrno": 0,
+            "resumed": true,
+            "markerLines": [
+              "LIB",
+              "BIN:A",
+              "MAIN:A"
+            ],
+            "exitCode": 0,
+            "exitSignal": 0,
+            "originalReaped": true,
+            "originalGroupAbsent": true,
+            "cleanup": true,
+            "controllerInterrupted": false
+          },
+          {
+            "label": "adhoc-test-only:writer-open",
+            "result": "INCOMPLETE",
+            "expectedSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+            "replacementSha256": "9b86c008e495915f378389cc9215c9160cdd5b88f5084e5ef6de36b1c35cddf3",
+            "stage": "exit",
+            "errno": 0,
+            "execErrno": 0,
+            "codeSigningFlags": 570425345,
+            "codeSigningError": 0,
+            "stoppedBeforeUser": true,
+            "payloadMarkersAbsentBeforeGate": true,
+            "kernelImageObserved": true,
+            "imageMatched": true,
+            "originalPid": 14794,
+            "originalBirth": "1116940567183",
+            "originalDev": "16777220",
+            "originalIno": "12888757211",
+            "kernelDev": "16777220",
+            "kernelIno": "12888757211",
+            "originalSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+            "kernelSha256": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+            "mutationAfterCheckErrno": 0,
+            "resumed": true,
+            "markerLines": [
+              "LIB",
+              "BIN:A",
+              "MAIN:A"
+            ],
+            "exitCode": 0,
+            "exitSignal": 0,
+            "originalReaped": true,
+            "originalGroupAbsent": true,
+            "cleanup": true,
+            "controllerInterrupted": false
+          }
+        ]
+      },
+      {
+        "arch": "arm64",
+        "osBuild": "24H232",
+        "node": "v24.21.0",
+        "source": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "productTupleAdmitted": true,
+        "inputProductQualified": false,
+        "jobId": 133790458928,
+        "caseCounts": {
+          "PASS": 7,
+          "INCOMPLETE": 2,
+          "COUNTEREXAMPLE": 1
+        },
+        "posixStatus": "INCOMPLETE",
+        "nativeFixtureQualified": false,
+        "ordinaryCustodyStatus": "PASS",
+        "ordinaryCustodyProductQualified": false,
+        "sourceHashes": {
+          "c": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+          "product": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5"
+        },
+        "baseline": {
+          "label": "compiler-default:baseline",
+          "result": "PASS",
+          "expectedSha256": "5c17398ef659a177b7aea12d5ebf0bff9ba58c423b2714d1f1b06464608943ed",
+          "replacementSha256": "54792f013e9a44b319b355bd745c217e8641b098cd82e5794d4ebf84e760d08a",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningFlags": 570556417,
+          "codeSigningError": 0,
+          "stoppedBeforeUser": true,
+          "payloadMarkersAbsentBeforeGate": true,
+          "kernelImageObserved": true,
+          "imageMatched": true,
+          "originalPid": 12504,
+          "originalBirth": "12654139646",
+          "originalDev": "16777231",
+          "originalIno": "3929585",
+          "kernelDev": "16777231",
+          "kernelIno": "3929585",
+          "originalSha256": "5c17398ef659a177b7aea12d5ebf0bff9ba58c423b2714d1f1b06464608943ed",
+          "kernelSha256": "5c17398ef659a177b7aea12d5ebf0bff9ba58c423b2714d1f1b06464608943ed",
+          "mutationAfterCheckErrno": -1,
+          "resumed": true,
+          "markerLines": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "exitCode": 0,
+          "exitSignal": 0,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        "signedMutationFailures": [
+          {
+            "label": "adhoc-test-only:after-check",
+            "result": "INCOMPLETE",
+            "expectedSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+            "replacementSha256": "eaf3485b57fa0e9926937ef55d4d8701bb7d704eb59e461e1198b4f18068f158",
+            "stage": "exit",
+            "errno": 0,
+            "execErrno": 0,
+            "codeSigningFlags": 570425345,
+            "codeSigningError": 0,
+            "stoppedBeforeUser": true,
+            "payloadMarkersAbsentBeforeGate": true,
+            "kernelImageObserved": true,
+            "imageMatched": true,
+            "originalPid": 12524,
+            "originalBirth": "12663966731",
+            "originalDev": "16777231",
+            "originalIno": "3929624",
+            "kernelDev": "16777231",
+            "kernelIno": "3929624",
+            "originalSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+            "kernelSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+            "mutationAfterCheckErrno": 0,
+            "resumed": true,
+            "markerLines": [
+              "LIB",
+              "BIN:A",
+              "MAIN:A"
+            ],
+            "exitCode": 0,
+            "exitSignal": 0,
+            "originalReaped": true,
+            "originalGroupAbsent": true,
+            "cleanup": true,
+            "controllerInterrupted": false
+          },
+          {
+            "label": "adhoc-test-only:writer-open",
+            "result": "INCOMPLETE",
+            "expectedSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+            "replacementSha256": "eaf3485b57fa0e9926937ef55d4d8701bb7d704eb59e461e1198b4f18068f158",
+            "stage": "exit",
+            "errno": 0,
+            "execErrno": 0,
+            "codeSigningFlags": 570425345,
+            "codeSigningError": 0,
+            "stoppedBeforeUser": true,
+            "payloadMarkersAbsentBeforeGate": true,
+            "kernelImageObserved": true,
+            "imageMatched": true,
+            "originalPid": 12528,
+            "originalBirth": "12665785430",
+            "originalDev": "16777231",
+            "originalIno": "3929633",
+            "kernelDev": "16777231",
+            "kernelIno": "3929633",
+            "originalSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+            "kernelSha256": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+            "mutationAfterCheckErrno": 0,
+            "resumed": true,
+            "markerLines": [
+              "LIB",
+              "BIN:A",
+              "MAIN:A"
+            ],
+            "exitCode": 0,
+            "exitSignal": 0,
+            "originalReaped": true,
+            "originalGroupAbsent": true,
+            "cleanup": true,
+            "controllerInterrupted": false
+          }
+        ]
+      }
+    ],
+    "cases": [
+      {
+        "ordinal": 1,
+        "label": "compiler-default:plain",
+        "x64": "PASS",
+        "arm64": "PASS"
+      },
+      {
+        "ordinal": 2,
+        "label": "compiler-default:baseline",
+        "x64": "INCOMPLETE",
+        "arm64": "PASS"
+      },
+      {
+        "ordinal": 3,
+        "label": "adhoc-test-only:plain",
+        "x64": "PASS",
+        "arm64": "PASS"
+      },
+      {
+        "ordinal": 4,
+        "label": "adhoc-test-only:baseline",
+        "x64": "PASS",
+        "arm64": "PASS"
+      },
+      {
+        "ordinal": 5,
+        "label": "adhoc-test-only:rename",
+        "x64": "PASS",
+        "arm64": "PASS"
+      },
+      {
+        "ordinal": 6,
+        "label": "adhoc-test-only:inplace",
+        "x64": "PASS",
+        "arm64": "PASS"
+      },
+      {
+        "ordinal": 7,
+        "label": "adhoc-test-only:after-check",
+        "x64": "INCOMPLETE",
+        "arm64": "INCOMPLETE"
+      },
+      {
+        "ordinal": 8,
+        "label": "adhoc-test-only:writer-open",
+        "x64": "INCOMPLETE",
+        "arm64": "INCOMPLETE"
+      },
+      {
+        "ordinal": 9,
+        "label": "script:plain",
+        "x64": "PASS",
+        "arm64": "PASS"
+      },
+      {
+        "ordinal": 10,
+        "label": "script:script-negative",
+        "x64": "COUNTEREXAMPLE",
+        "arm64": "COUNTEREXAMPLE"
+      }
+    ],
+    "cleanup": "All20 original actors were reaped; their original groups are absent; cleanup=true and controllerInterrupted=false. Successful cleanup is independent of, and does not repair, failed custody assertions.",
+    "earlierPassScope": "Earlier bounded original/sibling identity-replacement checks and native Host tool/MCP/history/Stop/Resume steps remain their own passes. The complete assigned report retains their exact scope, trace limits and false vendorAuth/desktop/release qualification. They do not imply strict P09 or full native qualification."
+  },
+  "exactFailureOperations": {
+    "x64": {
+      "surfaced": "native.ts:476 asserts fact.errno===0; actual13. The C original_image function reaches SecCodeCheckValidity(guest,kSecCSNoNetworkAccess,NULL), receives codeSigningError=-67062 and returns its EACCES failure value.",
+      "notMutation": "This compiler-default baseline did not perform the mutation: mutationAfterCheckErrno=-1. It was suspended, produced no marker, was never resumed, and cleanup reaped it by signal9.",
+      "causeLimit": "The retained signing error explains the selected image-witness refusal. errno13 is not evidence that a file permission change would repair it. The plain compiler-default control still executes A.",
+      "futureRequirement": "Preserve the original compiler-default baseline and establish a valid original-image witness without silently signing, replacing, dropping or weakening the case."
+    },
+    "bothSignedCases": {
+      "afterCheck": "The controller hashes the retained original and audit-bound reported image, confirms same device/inode and A digest, then rewrite(selected,replacement) opens the same selected path with O_WRONLY|O_CLOEXEC|O_NOFOLLOW and delegates to rewrite_fd.",
+      "writerOpen": "The writer descriptor is opened before posix_spawn. After the same image gate, rewrite_fd(writer,replacement) uses that original already-open descriptor.",
+      "mutationMeaning": "mutationAfterCheckErrno=0 is the mutation routine's successful completion: replacement reads/writes and final ftruncate/fsync returned success. It is not a claim that a write syscall returned zero bytes. No separate post-write held-FD digest is retained.",
+      "failingOutcome": "Both cases on both architectures then issue the one original SIGCONT, emit LIB/BIN:A/MAIN:A, and exit0/signal0. No actual ETXTBSY was observed in these four cases.",
+      "surfacedArm": "native.ts:496 fails markers==='' with actual LIB\\nBIN:A\\nMAIN:A\\n. Even normal original A is forbidden after successful mutation under the strict oracle.",
+      "firstFailureRetention": "Assertions occur inside the per-case try/catch. failure??=error retains the earliest error while later bounded cases are still collected. The complete receipt is written after cleanup before the final throw. Thus x64's surfaced baseline error does not hide or erase its two later signed failures."
+    },
+    "sourceBoundary": {
+      "fixture": "posix-exec-native.c:205 original_image;249 rewrite_fd;307 pre-opened writer;317 suspended spawn;382 matched snapshot;384-385 mutation;386 deliberate no recheck;389 single SIGCONT.",
+      "oracle": "registered-process-executable.native.ts:476 baseline errno assertion;489-498 strict mutation alternatives;507 first-failure retention;543 receipt write;545 final throw.",
+      "product": "registered-process-darwin.c:133-186 read_root_executable samples audit identity/signature/path;297-309 exports identity/read/signal/observe operations. No native launch/acquire-byte-guard/release resource exists in this complete file."
+    }
+  },
+  "causalAssessment": {
+    "established": [
+      "The original child was stopped before selected user markers and the image matched the retained pre-write device/inode/A digest.",
+      "The already-open-writer case succeeded; merely refusing later opens cannot cover it.",
+      "Both successful mutations were followed by A library/constructor/main markers and ordinary exit. That directly violates the strict successful-mutation branch.",
+      "Pre-gate rename/in-place controls refuse replacement before resume, but prove only the sampled pre-gate distinction.",
+      "The two observed OS/architecture pairs are explicitly admitted by current qualifiedDarwinBuild.ts; the original logs show PRODUCT_ADMITTED=1 and empty EMBEDDED_DARWIN_CANDIDATE_BUILD."
+    ],
+    "unknown": [
+      "Whether the held original descriptor contains replacement B after the successful write/fsync; no distinct post-write digest is in the receipt.",
+      "The actual mapped-page/page-cache/fault behavior responsible for A execution. A markers neither prove B executed nor identify that mechanism.",
+      "Whether any supported deployable native guard can meet the current same-path/same-inode/already-open-writer contract on these exact installed tuples.",
+      "The effect of a proposed guard's acquisition/loss/ownership lifetime and any available native authority; no implementation or native observation exists here.",
+      "Whether a future available runner exactly matches all relevant OS/kernel/SDK/filesystem/policy inputs. This review does not query runner capacity or state."
+    ],
+    "flags": "All four failed signed cases report pre-write flags570425345 (0x22000001). Prior397f source research found no established continuous-custody fix in merely setting hard/kill/enforcement flags. Neither absence nor hypothetical presence supplies the required no-marker causal proof.",
+    "primaryResearchCarryForward": "The previously retained Apple source trace distinguishes dynamic signing validity and page-fault policy from atomic same-inode write custody, records privilege constraints on nonself flag setting, and finds asynchronous write notification insufficient for the required ordering. Those bounded findings are carried with exact397f identity; current XNU/Security source is not attested to the installed24G830/24H232 binaries."
+  },
+  "strictInvariantAndFixBoundary": {
+    "invariant": "Before any selected library/payload instruction, retain a real native protection tied to the same selected path/inode and original PID/audit token/birth/parent/group/session. It must remain effective against the actual descriptor opened before launch and through the one original release/resume and lifetime. If mutation succeeds, the independent protection must cause signal termination before every selected marker; if denied, the frozen alternative requires genuine ETXTBSY and exact normal A.",
+    "custodyNotObservation": "Retaining a read-only descriptor and sampling/hash-validating its bytes is not a demonstrated continuous guard. Another pre-resume comparison cannot fill the post-comparison interval or substitute for retained protection.",
+    "immutableCopyLimit": "Executing an immutable private copy or alternate inode could be a different design, but it changes the frozen original-path/same-inode/existing-writer adversary. It is not a valid narrow correction to this P09 contract and is not proposed here.",
+    "narrowFirstBoundary": [
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+        "identity": {
+          "bytes": 21219,
+          "sha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+          "gitBlob": "19aca56c55a666654b04827b3c2446d2ad03ad8d"
+        },
+        "condition": "Only after an exact real primitive is identified, its first bounded proof belongs at the original native launch/acquisition/release lifecycle in this TEST controller. Preserve the same adversary and markers. No candidate code is authored."
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+        "identity": {
+          "bytes": 27709,
+          "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e",
+          "gitBlob": "f1e1d1145898e201723be343fa8768d73332fcb1"
+        },
+        "condition": "Keep the existing literal ten cases, oracle, ownership and deadlines. A proposed receipt extension may retain discriminating facts but cannot change acceptance, add a test-mode-aware kill, or turn evidence collection into a substitute guard."
+      }
+    ],
+    "conditionalProductBoundary": [
+      {
+        "path": "packages/legacy-agent-host/native/registered-process-darwin.c",
+        "boundary": "Native original launch, retained byte guard, release/abort lifecycle, if demonstrated."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/process/DarwinRegisteredProcess.ts",
+        "boundary": "Opaque live custody resource rather than digest as lasting authority."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/process/registeredProcessContracts.ts",
+        "boundary": "Trusted launch/lifetime capability preserving original identity and stop ownership."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts",
+        "boundary": "Darwin delegates launch to resource; preserve original IO/exit/cleanup."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.ts",
+        "boundary": "Original launch facade and private input only after acquired native guard; ready/readback identity unchanged."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/processCustody.ts",
+        "boundary": "Select only separately qualified packaged implementation."
+      }
+    ],
+    "currentProductLimit": "The six product paths are the settled integration dependency boundary, not a newly selected file set or permission to implement. Current product capture/measurement works on an existing Node child; it is not proof of a pre-first-instruction byte guard. The native adapter's complete current source independently confirms the missing acquire/launch/release API.",
+    "noReadyPatch": "No source-only narrow patch can honestly be declared sufficient from these artifacts. The missing prerequisite is a concrete supported primitive and causal native evidence, with an independent compiler-default x64 witness solution; a runner move or tuple allowlist change is not that primitive."
+  },
+  "meaningfulProofRequirements": {
+    "status": "Conditions for assessing a future separately selected concrete candidate; no invocation, additional CI gate or executable-control plan is selected.",
+    "preserve": {
+      "sameTenCasesAndOrder": true,
+      "successfulMutationRequiredOutcome": {
+        "rawMutationErrno": 0,
+        "markerLines": [],
+        "exitCode": -1,
+        "exitSignal": "greater than zero"
+      },
+      "refusedMutationRequiredOutcome": {
+        "rawMutationErrno": "actual ETXTBSY",
+        "exitCode": 0,
+        "exactAOutput": true
+      },
+      "otherDenialsNotAccepted": [
+        "EPERM",
+        "EACCES",
+        "EBUSY",
+        "EAGAIN",
+        "EWOULDBLOCK"
+      ],
+      "forbiddenSubstitutes": [
+        "No auto-signing, compiler/signing/workflow change, case drop, skip, or A-output acceptance.",
+        "No raw-error remapping to ETXTBSY.",
+        "No last-moment path/hash/signature check advertised as continuous byte custody.",
+        "No mode-aware kill based on known test-adversary mutation result; that uses test knowledge rather than a product custody primitive.",
+        "No copy/alternate-inode execution, private path, changed writer privileges, or read-only mount presented as preserving the current original-path/writer adversary.",
+        "No increased deadline or original CI retry."
+      ],
+      "limits": {
+        "cControllerMs": 15000,
+        "enclosingMs": 100000,
+        "testTimeoutMs": 120000,
+        "controllerRecordBytes": 4096,
+        "actorOutputBytes": 8192,
+        "receiptBytes": 65536,
+        "cleanupReserveMs": 4000
+      },
+      "lifetime": [
+        "Original PID/birth/audit-token/parent/group/session bindings stay authoritative.",
+        "At most the original one resume; no replacement-process adoption.",
+        "Errors, cancellation, timeout and refusal retain and clean only original owned handles/groups.",
+        "Extra hashing uses the current subprocess mechanism and needs exact invocation/drain accounting within unchanged deadlines."
+      ]
+    },
+    "discriminatingEvidence": [
+      "State the exact native operation, authority, raw results, supported OS/arch/SDK/filesystem/policy and acquisition/loss/retirement contract; no assumed entitlement, root, signing, mount or permission change.",
+      "Acquire before user code against the same inode while the original writer descriptor already exists, binding original PID/audit token/birth/parent/group/session; no replacement-process adoption.",
+      "Retain a complete post-write held-FD digest and device/inode while the original is still stopped, alongside the original expected-A/replacement-B identities. Keep this observational; it must not decide kill/pass from test-mode or mutation-result knowledge.",
+      "Retain audit-bound dynamic status and acquisition errors separately from the mutation result, raw wait status, exact marker/output evidence, and whether the original was already terminated or still stopped before the one allowed release.",
+      "Prove the guard, independently of TEST branch knowledge, causes write0/zero-marker/signal behavior or genuine ETXTBSY/normal-A behavior; any A or B marker after write0 remains failure even if later killed.",
+      "Preserve the x64 compiler-default baseline without signing or dropping it, and all ten literal cases on both architectures with the existing original-child ownership, output/receipt bounds, cancellation and cleanup deadlines.",
+      "Collect only bounded non-substituting evidence; any extra hashing subprocess, API or mapping instrumentation needs its original ownership/drain/time cost accounted within the unchanged bounds. A timestamped observation alone does not establish continuous enforcement."
+    ],
+    "forbiddenFixClaims": [
+      "No EPERM/EACCES/EBUSY/EAGAIN/EWOULDBLOCK remapping or promotion to ETXTBSY.",
+      "No accepting unchanged A output after successful mutation.",
+      "No last-moment hash/path/signature check marketed as continuous custody.",
+      "No kill because the TEST controller knows its mutation succeeded.",
+      "No copy/alternate path/inode, changed writer authority, signing, privilege or mount policy presented as preserving the adversary.",
+      "No deadline increase, case removal, skip, native waiver, old CI replay, runner move or allowlist change as the fix."
+    ]
+  },
+  "checkCount": 24,
+  "checks": [
+    {
+      "id": 1,
+      "name": "Complete assigned 167792-byte report has been read and verified",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": {
+        "bytes": 167792,
+        "sha256": "41e2c54a72903d2ffa8a9aa71566613390a67de47cb4bf79769215db202ddb34",
+        "gitBlob": "62aee67d8c0e4135566ade54abeb1f747407387f"
+      }
+    },
+    {
+      "id": 2,
+      "name": "Both full current P09 receipts equal the complete copies in the assigned report",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": [
+        {
+          "arch": "x64",
+          "identity": {
+            "bytes": 14545,
+            "sha256": "e86331603d3d0c9c7b21be4f671deaad6f37f2822c7cd356848c8a9bf48e2019",
+            "gitBlob": "055582761923b3d750d969a2cb0601886ea42498"
+          }
+        },
+        {
+          "arch": "arm64",
+          "identity": {
+            "bytes": 14583,
+            "sha256": "1136bd06975ece3cf166bc66155433ef766f8fe8fc5ee9edc24192fa7b4d7ae9",
+            "gitBlob": "56be0f2808d577486c77743a62811d8277d8abb2"
+          }
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Both full input and custody receipts equal the assigned complete copies",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": [
+        {
+          "arch": "x64",
+          "inputs": {
+            "bytes": 2370,
+            "sha256": "6162adeeba261562735cbb0768b6021728cc41b2bc2b3843e7084c11d5f986cd",
+            "gitBlob": "cf89e5fec8261c1d8bcff131aff6f9a8f04b112c"
+          },
+          "custody": {
+            "bytes": 1448,
+            "sha256": "b9fb9afdcec6ec4087ebb808ef61b83a84e91e4638552e5a480f601655b5e0bd",
+            "gitBlob": "cccd75ffc5c1f303dd0dca2e7d4d9fd595f70601"
+          }
+        },
+        {
+          "arch": "arm64",
+          "inputs": {
+            "bytes": 2374,
+            "sha256": "8de725dd263b2c30ed6eed7b14af9d8846a1f2e99fa0151a2aa9475b2141ae5f",
+            "gitBlob": "4e985b40bad062e6e4a5545e8d71de4c8837e951"
+          },
+          "custody": {
+            "bytes": 1448,
+            "sha256": "0a084213d9ad47e2f0e479a641fc88dcf2a82f536a8ff738c9c98e5300a3e8ae",
+            "gitBlob": "68b927b143b790d90a8e7dc0de01d21f07a84dea"
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "All six directly re-read current artifact members bind frozen source9c9",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": {
+        "source": "9c9c73190840592963142d36562ea07d2b5d2d71"
+      }
+    },
+    {
+      "id": 5,
+      "name": "All three decisive current9d source bodies are fully read, hashed and unchanged",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": [
+        {
+          "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+          "bytes": 21219,
+          "sha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+          "gitBlob": "19aca56c55a666654b04827b3c2446d2ad03ad8d"
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+          "bytes": 27709,
+          "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e",
+          "gitBlob": "f1e1d1145898e201723be343fa8768d73332fcb1"
+        },
+        {
+          "path": "packages/legacy-agent-host/native/registered-process-darwin.c",
+          "bytes": 15524,
+          "sha256": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5",
+          "gitBlob": "4f300228b8f28b870586794564ae63ccf1dee41f"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Current tuple admission source is exact and includes the two observed architecture/build pairs",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": {
+        "bytes": 480,
+        "sha256": "8127557453bfbf2dad146bd4b1ba4cc17b99f81d3f2f907af9edcffde0b3927f",
+        "gitBlob": "ca10512904b6abc3f110d4ebb852a7a0baf62548"
+      }
+    },
+    {
+      "id": 7,
+      "name": "Both original inputs recorded product tuple admission without product qualification",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": [
+        {
+          "arch": "x64",
+          "osBuild": "24G830",
+          "productTupleAdmitted": true,
+          "inputProductQualified": false
+        },
+        {
+          "arch": "arm64",
+          "osBuild": "24H232",
+          "productTupleAdmitted": true,
+          "inputProductQualified": false
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "Current P09 C digest and packaged adapter source digest join the exact current sources",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": [
+        {
+          "arch": "x64",
+          "sourceHashes": {
+            "c": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+            "product": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5"
+          }
+        },
+        {
+          "arch": "arm64",
+          "sourceHashes": {
+            "c": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+            "product": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5"
+          }
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "Both complete retained logs were re-fetched and identity matched",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": [
+        {
+          "arch": "x64",
+          "identity": {
+            "bytes": 117524,
+            "sha256": "2b2ab0c2e4fc3457a0d80010cedeb0dfb23cd3ca07682a7759f734b62fdad498",
+            "gitBlob": "5d2f3241fbcb4c3ecf9c37bcbc8d1bce4d5109e0"
+          }
+        },
+        {
+          "arch": "arm64",
+          "identity": {
+            "bytes": 107841,
+            "sha256": "ebfa16d5c5e1040f22c096afb8121a0b7b7b87a5bcb91559aa37d32e166144eb",
+            "gitBlob": "b18682e0df06e1298b0266053a749a5910e9d936"
+          }
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "name": "All five failure diagnostic records and exact line positions join the assigned report",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": [
+        {
+          "arch": "x64",
+          "lines": [
+            1198,
+            1199,
+            1200
+          ]
+        },
+        {
+          "arch": "arm64",
+          "lines": [
+            1084,
+            1085
+          ]
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "name": "Both original ten-case inventories are complete and identically ordered",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": [
+        "compiler-default:plain",
+        "compiler-default:baseline",
+        "adhoc-test-only:plain",
+        "adhoc-test-only:baseline",
+        "adhoc-test-only:rename",
+        "adhoc-test-only:inplace",
+        "adhoc-test-only:after-check",
+        "adhoc-test-only:writer-open",
+        "script:plain",
+        "script:script-negative"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "x64 case census remains6PASS3INCOMPLETE1COUNTEREXAMPLE",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": {
+        "PASS": 6,
+        "INCOMPLETE": 3,
+        "COUNTEREXAMPLE": 1
+      }
+    },
+    {
+      "id": 13,
+      "name": "ARM64 case census remains7PASS2INCOMPLETE1COUNTEREXAMPLE",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": {
+        "PASS": 7,
+        "INCOMPLETE": 2,
+        "COUNTEREXAMPLE": 1
+      }
+    },
+    {
+      "id": 14,
+      "name": "All20 original actors retain reaped/group-absent/cleanup with no controller interruption",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": {
+        "actors": 20,
+        "qualificationUnchanged": true
+      }
+    },
+    {
+      "id": 15,
+      "name": "x64 first failure is pre-mutation signing-validity refusal",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": {
+        "stage": "kernel-image-validity",
+        "errno": 13,
+        "codeSigningError": -67062,
+        "mutationAfterCheckErrno": -1,
+        "surfacedAssertionLine": 476
+      }
+    },
+    {
+      "id": 16,
+      "name": "ARM compiler-default baseline is a distinct passing control",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": {
+        "flags": 570556417,
+        "result": "PASS"
+      }
+    },
+    {
+      "id": 17,
+      "name": "All four signed mutation cases show successful mutation and normal A execution",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": {
+        "cases": 4,
+        "strictFailure": true,
+        "noETXTBSYObserved": true
+      }
+    },
+    {
+      "id": 18,
+      "name": "All four signed failures had a matching pre-write image witness",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": {
+        "observationIsPreWrite": true,
+        "continuousByteCustodyProved": false
+      }
+    },
+    {
+      "id": 19,
+      "name": "The frozen strict oracle remains exact",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": {
+        "source": "f1e1d1145898e201723be343fa8768d73332fcb1",
+        "lines": "489-498",
+        "allowed": "ETXTBSY plus original normal A; or mutation0 plus no markers and signal termination"
+      }
+    },
+    {
+      "id": 20,
+      "name": "Per-case assertion failures are retained without dropping later cases",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": {
+        "source": "f1e1d1145898e201723be343fa8768d73332fcb1",
+        "lines": "460-528,535-545",
+        "meaning": "Inner catch preserves first failure, records INCOMPLETE and continues; receipt is written before final throw."
+      }
+    },
+    {
+      "id": 21,
+      "name": "The native fixture retains the same-path existing-writer adversary and one original resume",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": {
+        "source": "19aca56c55a666654b04827b3c2446d2ad03ad8d",
+        "lines": "303-307,317-331,365-393",
+        "writerOpenedBeforeSpawn": true,
+        "noPostMutationAcceptanceRecheck": true
+      }
+    },
+    {
+      "id": 22,
+      "name": "The current product adapter exports sampled measurement and identity operations, not a continuous launch guard",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": {
+        "source": "4f300228b8f28b870586794564ae63ccf1dee41f",
+        "lines": "133-186,297-309",
+        "fullFileRead": true
+      }
+    },
+    {
+      "id": 23,
+      "name": "Prior primitive research and historical boundaries are correctly attributed, without new binary attestation",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": {
+        "historicalSource": {
+          "bytes": 125540,
+          "sha256": "59c3e362cc73580491633bb56f9fd8ebc853ec57be1f84b5bdcea43d09bdec79",
+          "gitBlob": "96c0cd4e7209a2df5ebb35c0634712581dd5cfc3"
+        },
+        "priorPrimitive": {
+          "bytes": 62374,
+          "sha256": "830aa1ee54fe76cb30939b729f6ca3b1169cc7041c481170efba1874f3396fcf",
+          "gitBlob": "397fefe2b52afdfe6c2a171f846e153e5dd66d88"
+        },
+        "freshAppleSourceAudit": false
+      }
+    },
+    {
+      "id": 24,
+      "name": "Existing scope, ownership, deadlines, cleanup and proof qualification are preserved",
+      "result": "PASS_EVIDENCE_REVIEW",
+      "evidence": {
+        "newImplementationSelected": false,
+        "sourceOrControlAuthored": false,
+        "executionSelected": false,
+        "newGate": false
+      }
+    }
+  ],
+  "failedEvidenceChecks": [],
+  "limits": [
+    "All24 checks concern evidence integrity and static interpretation; they are not runtime passes.",
+    "Strict P09 remains INCOMPLETE on both architectures; nativeFixture/product/installed/custom/script qualification remains false.",
+    "This advisory performs no new Apple-source census, native operation, binary attestation, runner lookup or CI read.",
+    "No unproved impossibility claim is made. A valid primitive may exist, but no implementation is established or selected.",
+    "Existing fixed9d CI source, workflow surfaces, deadlines, R1/publication sequence and qualification boundaries remain unchanged."
+  ],
+  "selfReadback": "Pending immediately after bare retention and immediate pin delivery; confirmation will follow without editing this body."
+}

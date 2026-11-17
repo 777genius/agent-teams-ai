@@ -11987,5 +11987,551 @@
       "sha256": "905ca483abf73b19c2efb60180d8f6bbdefc1e8d8e744aa1377f66ecaf212456",
       "gitBlob": "ba917dc0650ef48acbaf5646059550accb42d237"
     }
+  ],
+  "windowsSelectedPortRetryPairR1Stage": {
+    "schemaVersion": 1,
+    "kind": "windows-selected-port-final-retry-pair-R1-publication-stage",
+    "at": "2026-11-17 08:17:00 UTC",
+    "status": "R1_STATIC_REVIEWS_CLOSED_ACTUAL_PUBLICATION_READBACKS_PENDING",
+    "subject": {
+      "bytes": 25565,
+      "sha256": "06c9e63f24c25dcbd6a39df9c6ac3d0c34cf6fc402791ff9e0a2e7a857128ff5",
+      "gitBlob": "77e02e33a6db38b6083316f96c65cd02177354cb"
+    },
+    "reviews": [
+      {
+        "role": "rootReview",
+        "pin": {
+          "bytes": 17709,
+          "sha256": "a532f223fdd5da0773483b618dc7116cca2d888c7584f74337493971fb36f960",
+          "gitBlob": "5b459d31e5f6d2bc4f5c203eb66c5752a39cec11"
+        },
+        "checks": 37,
+        "decision": "ACCEPT_EXACT_NARROW_WINDOWS_R1_STATIC_ONLY",
+        "completeRead": true,
+        "selfReadConfirmed": true
+      },
+      {
+        "role": "guardReview",
+        "pin": {
+          "bytes": 35639,
+          "sha256": "63d7cb8b87acbedd3d99e08c682e57e5430a30b1399585484e2474ea1add4580",
+          "gitBlob": "08793ef3e50620c5fbbb138b69f46823b55b5cff"
+        },
+        "checks": 34,
+        "decision": "ACCEPT_EXACT_WINDOWS_R1_GUARD_SCOPE_ONLY_NO_POSTIMAGE_OR_RUNTIME_ACCEPTANCE",
+        "completeRead": true,
+        "selfReadConfirmed": true
+      },
+      {
+        "role": "semanticReview",
+        "pin": {
+          "bytes": 35885,
+          "sha256": "0c96120b2225ce3ca1290b3c6da2e0fb8c739fee7f7c66af18e6d6dc970acfa7",
+          "gitBlob": "fc41c456218ebf1e9c528cb621d0f8c3a9fe6fa2"
+        },
+        "checks": 31,
+        "decision": "ACCEPT_EXACT_R1_PLAN_STATIC_ONLY",
+        "completeRead": true,
+        "selfReadConfirmed": true
+      },
+      {
+        "role": "bindingReview",
+        "pin": {
+          "bytes": 62498,
+          "sha256": "75f67ca17a2e7c6047c20857cffb84f6236b104ddd2db68a62328c1d7f2eb8b1",
+          "gitBlob": "25337ae574861505bed80251f3070d8e2ddbb1bb"
+        },
+        "checks": 42,
+        "decision": "ACCEPT_EXACT_NARROW_WINDOWS_R1_STATIC_ONLY",
+        "completeRead": true,
+        "selfReadConfirmed": true
+      }
+    ],
+    "reviewsClosedAt": "2026-11-17 08:17:00 UTC",
+    "staticChecks": 144,
+    "sourceAnchor": {
+      "commit": "65cd08dc15e3735cb579578d475938fd0a3fb135",
+      "root": "e2347fe433055be9f5c8ee109e7db087bf365c16",
+      "docs": "1e97d02232e95ba34238c340713571bb6e5b2a91",
+      "soleParent": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "actualGate": {
+        "bytes": 9510,
+        "sha256": "7709fd167750dac768b1a826ff81904077a1afe936bbd5865b4041e126ffb599",
+        "gitBlob": "e869a398b712541b17eef73ba5a44af49b00f70d"
+      },
+      "rootActual": {
+        "bytes": 76668,
+        "sha256": "8ef246ec40b9c443ddd13bad6b385e80fd60b1881b7eb2b342aba14bd74c56c3",
+        "gitBlob": "757184208b6b39432f5f957011c0a2d40d5b344d"
+      },
+      "independentActual": {
+        "bytes": 123197,
+        "sha256": "ecc5f229c0073fd48c218205e4feb0928e70f2a41a4ff53d60088e320ae0cef4",
+        "gitBlob": "cc54c9d831a28eadf9e411fd8d53134fbcd6f881"
+      },
+      "nonDocsEquivalentTo": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "sourceGate": {
+        "bytes": 7050,
+        "sha256": "4a55ae270a3549fd97c712db801cf2378102e7974597c8ed2c3fe3b240e937cb",
+        "gitBlob": "3aa070295059b9e1dd280ee36836712878b0b72c"
+      },
+      "scriptsTree": "c3f4fe5a62dd79a743b6ffc0d07341ac68a25f73",
+      "toolsTree": "9356c03e96405eb578158f06d6fdcbc89d105bd6"
+    },
+    "completePreimages": [
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "mode": "100644",
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "lines": 312
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "mode": "100644",
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+        "lines": 331
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "mode": "100644",
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "lines": 647
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+        "mode": "100644",
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e",
+        "lines": 620
+      }
+    ],
+    "selection": {
+      "sourceFiles": 4,
+      "B": "One shared selected-port local CIM listener query replacement; full process acquisition and authority unchanged.",
+      "A1": "One synchronous final Retry pair, followed by both full ordered process comparisons; all intervening reads and seven clickguards remain.",
+      "platformTests": "Only existing expected-query literal changes; all12cases preserved plus2append→14.",
+      "nativeUiTests": "Whole original7-case body is literal prefix;1actual-final-block regression appended→8, at most180lines,5000ms new test bound.",
+      "postimagesAuthored": false
+    },
+    "preservation": {
+      "all13CurrentParityVector": {
+        "bytes": 3481,
+        "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+        "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+      },
+      "unchangedCurrentControls": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b"
+      },
+      "unchangedOwnerSelector": {
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.ts",
+        "gitBlob": "12f4a7b122843acea95e8c37f876917331842a4a",
+        "bytes": 22604,
+        "sha256": "ebb52ab95cdbf0ddc86ce44b534a3c7255c7e8454e5cadb2cbb83278daa53a0f"
+      },
+      "otherSourceFiles": "All non-document source leaves other than selectedfour remain byte/mode identical. No source file is added, removed or renamed.",
+      "counts": {
+        "nonDocLeaves": 8799,
+        "production": 5020,
+        "exceptions": 141,
+        "sourceCap": 800,
+        "workflows": 42
+      },
+      "wholeTests": {
+        "node149": "Unchanged entire12c73, original139prefix plus10.",
+        "catalog43": "Unchanged6cf34.",
+        "renderer85": "Unchanged764951.",
+        "platform": "12original cases preserved;2appended→14, native Windows skip remains explicit.",
+        "nativeProcessUi": "7original cases literal prefix;1appended→8."
+      },
+      "deadlines": {
+        "phaseMs": 10000,
+        "controllerMs": 120000,
+        "javascriptOuterMs": 300000,
+        "powershellMs": 30000,
+        "genericWaitMs": 30000,
+        "pollMs": 100,
+        "change": false
+      },
+      "ordinaryCleanup": "Same Main, original two UI Kills, all exact native Stops/custody/source checks, ordinary Quit and full cleanup proofs remain. A primary failure/unreached step is not a PASS.",
+      "providers": "No real Claude/Codex even --version. No provider/runtime/control changes; finite TEST peer boundaries remain.",
+      "noChanges": [
+        "All7 original Retry clickguard boundaries",
+        "Full Win32_Process census and PID/birth/parent/currentness joins",
+        "Foreign/all-address listener visibility",
+        "Original ready wait and six-field validation",
+        "originalBinding / fixture.afterRetry once / public process read ordering",
+        "sameMain / screenshot / both original Stop phases",
+        "failure projection/receipt budgets and controller cleanup",
+        "workflow/dependency/filter/skip/cap/exception/deadline bytes",
+        "Darwin P09 / cold renderer / local standalone controls"
+      ]
+    },
+    "publicationContract": {
+      "workingBranch": "fix/frontend-parity-coobservation-c714-20261115",
+      "knownParent": "65cd08dc15e3735cb579578d475938fd0a3fb135",
+      "parentRoot": "e2347fe433055be9f5c8ee109e7db087bf365c16",
+      "parentDocs": "1e97d02232e95ba34238c340713571bb6e5b2a91",
+      "R1DocsOnly": true,
+      "all53NonDocRootEntriesUnchangedAtR1": true,
+      "parentCatalogFields": 87,
+      "newCatalogKeys": [
+        "windowsSelectedPortRetryPairR1Stage",
+        "windowsSelectedPortRetryPairR1EvidenceFiles"
+      ],
+      "all87ParentValuesAnd27BundlesAndTotalsPreserved": true,
+      "completePlanStatusPrefixesPreserved": true,
+      "manifestAndCompleteActualReadbacks": true,
+      "immediateExpectedParentForceFalsePush": true,
+      "postimageAuthorshipOnlyAfterActualR1Closed": true
+    },
+    "currentCi": {
+      "pr": 1219,
+      "fixedHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "fixedBase": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "merge": "c0e6845650002dfaabf6b1dcc727d13b2f0570f6",
+      "initialCapture": {
+        "bytes": 1678327,
+        "sha256": "db87c4862770dca1bb3432e08a304de8adc465e9b762f60cfa966a23d561f082",
+        "gitBlob": "45f21a0ccfd99cde885b92d04a6fcdd11d73b432"
+      },
+      "initialReview": {
+        "bytes": 89607,
+        "sha256": "3f339eb8a7926613e22dd4a290480f62922695bac6f978b4b78951b8a9856c7c",
+        "gitBlob": "d70eb8522cc6bbafaf5fea8e0ce354deb839d9f8"
+      },
+      "observationPacket": {
+        "bytes": 285909,
+        "sha256": "a549ea35a7d35d1141a67cc6a9df8c4e1c363c107e3165a5d88e5a866cdc3701",
+        "gitBlob": "e5c9ab2452e910510a13386fa9f91c002b2cbb81"
+      },
+      "snapshotAt": "2026-11-17 08:03:37 UTC",
+      "activeAtSnapshot": [
+        44042341149,
+        44042341284,
+        44042341120,
+        44042341241,
+        44042341273
+      ],
+      "terminalAtSnapshot": [
+        44042341370,
+        44042341121
+      ],
+      "sourceAndPrFreeze": "Both snapshot refs and all PR1219 metadata remain fixed while any selected run is active. Root observes only admitted active new runs; no terminal/frozen/old run polling. This new source plan is on the separate working evidence branch and cannot alter the running9d snapshot.",
+      "qualifiesFutureWindowsChanges": false
+    },
+    "observedWindowsStatic": {
+      "job": 133899667141,
+      "run": 44042341120,
+      "fullLog": {
+        "bytes": 119712,
+        "sha256": "e7f9799cc99b3f516f25da0039a7e30d542b37b7f8f23232d0aa80f66cb452d2",
+        "gitBlob": "a7d62b28d668446982415929aa47fbbf58d3ebd3"
+      },
+      "result": "success",
+      "existingSkippedCase": "V01 read-only measurement rejects a TEST-owned FIFO without blocking native preflight — POSIX FIFO only",
+      "scope": "Current9d static job only; not future14/8, GUI/native custody or full E2E."
+    },
+    "advisoryOnly": {
+      "windowsFeasibility": {
+        "bytes": 39388,
+        "sha256": "68e439d5fe2674f430b93ad4729a53adc6144ee01dd241357ed0ba0bc4ab568b",
+        "gitBlob": "33dc8b23aab16c1786c3484347da3382a6ab0ee5"
+      },
+      "darwinFollowup": {
+        "bytes": 46778,
+        "sha256": "f2d5afe40801a17e6b8ed5f16c3c62ed0062420422839eab27efee9091a50514",
+        "gitBlob": "694a22327a3ae7d0f91cd591cc95048d0d672e5a"
+      },
+      "coldReconsideration": {
+        "bytes": 13740,
+        "sha256": "ae288f8950b5b9daa9d5869ca4b16d44e4bb8552604517928588a2e783038a52",
+        "gitBlob": "aa697ba29de7175b9c1fb267bbfd77e6ebf07f9b"
+      }
+    },
+    "environment": {
+      "status": "rejected",
+      "reason": "No usable execution environment is available. Wait for an environment to become available before using this tool."
+    },
+    "sourcePostimagesAuthored": false,
+    "runtimeAdmitted": false,
+    "futureCiVenueSelected": false,
+    "qualification": "Prospective narrow source/test plan only. Static feasibility does not qualify native behavior, cost, whole14/8 tests, original10s recovery, GUI/native cleanup or fullE2E. Current fixed9d CI remains a different immutable source.",
+    "nextSteps": [
+      "Publish only R1/evidence documentation with immediate push; full root and independent actual publication readbacks.",
+      "Root may then author only the selected four source/test postimages, exact inverses, before/after vectors and meaningful tests. No runtime is selected by source authorship.",
+      "Exact R2 source/body reviews and publication with immediate push; full root and independent actual readbacks.",
+      "A matching actually available authorized execution venue is selected separately, with full provider/event/workflow/source review as necessary. No automatic current PR1219 mutation, dispatch, new branches, standalone replay or alternative runtime."
+    ],
+    "evidenceFiles": [
+      {
+        "role": "proposal",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-20261117.json",
+        "mode": "100644",
+        "bytes": 25565,
+        "sha256": "06c9e63f24c25dcbd6a39df9c6ac3d0c34cf6fc402791ff9e0a2e7a857128ff5",
+        "gitBlob": "77e02e33a6db38b6083316f96c65cd02177354cb"
+      },
+      {
+        "role": "rootR1",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-root-review-20261117.json",
+        "mode": "100644",
+        "bytes": 17709,
+        "sha256": "a532f223fdd5da0773483b618dc7116cca2d888c7584f74337493971fb36f960",
+        "gitBlob": "5b459d31e5f6d2bc4f5c203eb66c5752a39cec11"
+      },
+      {
+        "role": "guardR1",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-guard-review-20261117.json",
+        "mode": "100644",
+        "bytes": 35639,
+        "sha256": "63d7cb8b87acbedd3d99e08c682e57e5430a30b1399585484e2474ea1add4580",
+        "gitBlob": "08793ef3e50620c5fbbb138b69f46823b55b5cff"
+      },
+      {
+        "role": "semanticR1",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-semantic-review-20261117.json",
+        "mode": "100644",
+        "bytes": 35885,
+        "sha256": "0c96120b2225ce3ca1290b3c6da2e0fb8c739fee7f7c66af18e6d6dc970acfa7",
+        "gitBlob": "fc41c456218ebf1e9c528cb621d0f8c3a9fe6fa2"
+      },
+      {
+        "role": "bindingR1",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-binding-review-20261117.json",
+        "mode": "100644",
+        "bytes": 62498,
+        "sha256": "75f67ca17a2e7c6047c20857cffb84f6236b104ddd2db68a62328c1d7f2eb8b1",
+        "gitBlob": "25337ae574861505bed80251f3070d8e2ddbb1bb"
+      },
+      {
+        "role": "windowsFeasibility",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-and-final-retry-feasibility-20261117.json",
+        "mode": "100644",
+        "bytes": 39388,
+        "sha256": "68e439d5fe2674f430b93ad4729a53adc6144ee01dd241357ed0ba0bc4ab568b",
+        "gitBlob": "33dc8b23aab16c1786c3484347da3382a6ab0ee5"
+      },
+      {
+        "role": "darwinFollowup",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/darwin-p09-existing-writer-followup-20261117.json",
+        "mode": "100644",
+        "bytes": 46778,
+        "sha256": "f2d5afe40801a17e6b8ed5f16c3c62ed0062420422839eab27efee9091a50514",
+        "gitBlob": "694a22327a3ae7d0f91cd591cc95048d0d672e5a"
+      },
+      {
+        "role": "coldReconsideration",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-team-cold-renderer-reconsideration-20261117.json",
+        "mode": "100644",
+        "bytes": 13740,
+        "sha256": "ae288f8950b5b9daa9d5869ca4b16d44e4bb8552604517928588a2e783038a52",
+        "gitBlob": "aa697ba29de7175b9c1fb267bbfd77e6ebf07f9b"
+      },
+      {
+        "role": "ci2RootActual",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-r1-root-actual-20261117.json",
+        "mode": "100644",
+        "bytes": 76668,
+        "sha256": "8ef246ec40b9c443ddd13bad6b385e80fd60b1881b7eb2b342aba14bd74c56c3",
+        "gitBlob": "757184208b6b39432f5f957011c0a2d40d5b344d"
+      },
+      {
+        "role": "ci2IndependentActual",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-r1-independent-actual-20261117.json",
+        "mode": "100644",
+        "bytes": 123197,
+        "sha256": "ecc5f229c0073fd48c218205e4feb0928e70f2a41a4ff53d60088e320ae0cef4",
+        "gitBlob": "cc54c9d831a28eadf9e411fd8d53134fbcd6f881"
+      },
+      {
+        "role": "ci2ActualGate",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-r1-actual-gate-20261117.json",
+        "mode": "100644",
+        "bytes": 9510,
+        "sha256": "7709fd167750dac768b1a826ff81904077a1afe936bbd5865b4041e126ffb599",
+        "gitBlob": "e869a398b712541b17eef73ba5a44af49b00f70d"
+      },
+      {
+        "role": "ci2Admission",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-external-admission-20261117.json",
+        "mode": "100644",
+        "bytes": 34918,
+        "sha256": "4e54d76f0058e1024d6e9e9088962bfb167c491e2eb7a45b40d1607629a9c3d8",
+        "gitBlob": "df645b8eac669fbd71f243bfd64bd915a871583f"
+      },
+      {
+        "role": "pr1219InitialCapture",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-initial-event-capture-20261117.json",
+        "mode": "100644",
+        "bytes": 1678327,
+        "sha256": "db87c4862770dca1bb3432e08a304de8adc465e9b762f60cfa966a23d561f082",
+        "gitBlob": "45f21a0ccfd99cde885b92d04a6fcdd11d73b432"
+      },
+      {
+        "role": "pr1219InitialReview",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-initial-event-binding-review-20261117.json",
+        "mode": "100644",
+        "bytes": 89607,
+        "sha256": "3f339eb8a7926613e22dd4a290480f62922695bac6f978b4b78951b8a9856c7c",
+        "gitBlob": "d70eb8522cc6bbafaf5fea8e0ce354deb839d9f8"
+      },
+      {
+        "role": "pr1219Observation2",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-observations1-2-20261117.json",
+        "mode": "100644",
+        "bytes": 285909,
+        "sha256": "a549ea35a7d35d1141a67cc6a9df8c4e1c363c107e3165a5d88e5a866cdc3701",
+        "gitBlob": "e5c9ab2452e910510a13386fa9f91c002b2cbb81"
+      },
+      {
+        "role": "pr1219WindowsStaticLog",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-windows-static-full-job-20261117.log",
+        "mode": "100644",
+        "bytes": 119712,
+        "sha256": "e7f9799cc99b3f516f25da0039a7e30d542b37b7f8f23232d0aa80f66cb452d2",
+        "gitBlob": "a7d62b28d668446982415929aa47fbbf58d3ebd3"
+      }
+    ]
+  },
+  "windowsSelectedPortRetryPairR1EvidenceFiles": [
+    {
+      "role": "proposal",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-20261117.json",
+      "mode": "100644",
+      "bytes": 25565,
+      "sha256": "06c9e63f24c25dcbd6a39df9c6ac3d0c34cf6fc402791ff9e0a2e7a857128ff5",
+      "gitBlob": "77e02e33a6db38b6083316f96c65cd02177354cb"
+    },
+    {
+      "role": "rootR1",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-root-review-20261117.json",
+      "mode": "100644",
+      "bytes": 17709,
+      "sha256": "a532f223fdd5da0773483b618dc7116cca2d888c7584f74337493971fb36f960",
+      "gitBlob": "5b459d31e5f6d2bc4f5c203eb66c5752a39cec11"
+    },
+    {
+      "role": "guardR1",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-guard-review-20261117.json",
+      "mode": "100644",
+      "bytes": 35639,
+      "sha256": "63d7cb8b87acbedd3d99e08c682e57e5430a30b1399585484e2474ea1add4580",
+      "gitBlob": "08793ef3e50620c5fbbb138b69f46823b55b5cff"
+    },
+    {
+      "role": "semanticR1",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-semantic-review-20261117.json",
+      "mode": "100644",
+      "bytes": 35885,
+      "sha256": "0c96120b2225ce3ca1290b3c6da2e0fb8c739fee7f7c66af18e6d6dc970acfa7",
+      "gitBlob": "fc41c456218ebf1e9c528cb621d0f8c3a9fe6fa2"
+    },
+    {
+      "role": "bindingR1",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-binding-review-20261117.json",
+      "mode": "100644",
+      "bytes": 62498,
+      "sha256": "75f67ca17a2e7c6047c20857cffb84f6236b104ddd2db68a62328c1d7f2eb8b1",
+      "gitBlob": "25337ae574861505bed80251f3070d8e2ddbb1bb"
+    },
+    {
+      "role": "windowsFeasibility",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-and-final-retry-feasibility-20261117.json",
+      "mode": "100644",
+      "bytes": 39388,
+      "sha256": "68e439d5fe2674f430b93ad4729a53adc6144ee01dd241357ed0ba0bc4ab568b",
+      "gitBlob": "33dc8b23aab16c1786c3484347da3382a6ab0ee5"
+    },
+    {
+      "role": "darwinFollowup",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/darwin-p09-existing-writer-followup-20261117.json",
+      "mode": "100644",
+      "bytes": 46778,
+      "sha256": "f2d5afe40801a17e6b8ed5f16c3c62ed0062420422839eab27efee9091a50514",
+      "gitBlob": "694a22327a3ae7d0f91cd591cc95048d0d672e5a"
+    },
+    {
+      "role": "coldReconsideration",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-team-cold-renderer-reconsideration-20261117.json",
+      "mode": "100644",
+      "bytes": 13740,
+      "sha256": "ae288f8950b5b9daa9d5869ca4b16d44e4bb8552604517928588a2e783038a52",
+      "gitBlob": "aa697ba29de7175b9c1fb267bbfd77e6ebf07f9b"
+    },
+    {
+      "role": "ci2RootActual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-r1-root-actual-20261117.json",
+      "mode": "100644",
+      "bytes": 76668,
+      "sha256": "8ef246ec40b9c443ddd13bad6b385e80fd60b1881b7eb2b342aba14bd74c56c3",
+      "gitBlob": "757184208b6b39432f5f957011c0a2d40d5b344d"
+    },
+    {
+      "role": "ci2IndependentActual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-r1-independent-actual-20261117.json",
+      "mode": "100644",
+      "bytes": 123197,
+      "sha256": "ecc5f229c0073fd48c218205e4feb0928e70f2a41a4ff53d60088e320ae0cef4",
+      "gitBlob": "cc54c9d831a28eadf9e411fd8d53134fbcd6f881"
+    },
+    {
+      "role": "ci2ActualGate",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-r1-actual-gate-20261117.json",
+      "mode": "100644",
+      "bytes": 9510,
+      "sha256": "7709fd167750dac768b1a826ff81904077a1afe936bbd5865b4041e126ffb599",
+      "gitBlob": "e869a398b712541b17eef73ba5a44af49b00f70d"
+    },
+    {
+      "role": "ci2Admission",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-external-admission-20261117.json",
+      "mode": "100644",
+      "bytes": 34918,
+      "sha256": "4e54d76f0058e1024d6e9e9088962bfb167c491e2eb7a45b40d1607629a9c3d8",
+      "gitBlob": "df645b8eac669fbd71f243bfd64bd915a871583f"
+    },
+    {
+      "role": "pr1219InitialCapture",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-initial-event-capture-20261117.json",
+      "mode": "100644",
+      "bytes": 1678327,
+      "sha256": "db87c4862770dca1bb3432e08a304de8adc465e9b762f60cfa966a23d561f082",
+      "gitBlob": "45f21a0ccfd99cde885b92d04a6fcdd11d73b432"
+    },
+    {
+      "role": "pr1219InitialReview",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-initial-event-binding-review-20261117.json",
+      "mode": "100644",
+      "bytes": 89607,
+      "sha256": "3f339eb8a7926613e22dd4a290480f62922695bac6f978b4b78951b8a9856c7c",
+      "gitBlob": "d70eb8522cc6bbafaf5fea8e0ce354deb839d9f8"
+    },
+    {
+      "role": "pr1219Observation2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-observations1-2-20261117.json",
+      "mode": "100644",
+      "bytes": 285909,
+      "sha256": "a549ea35a7d35d1141a67cc6a9df8c4e1c363c107e3165a5d88e5a866cdc3701",
+      "gitBlob": "e5c9ab2452e910510a13386fa9f91c002b2cbb81"
+    },
+    {
+      "role": "pr1219WindowsStaticLog",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-windows-static-full-job-20261117.log",
+      "mode": "100644",
+      "bytes": 119712,
+      "sha256": "e7f9799cc99b3f516f25da0039a7e30d542b37b7f8f23232d0aa80f66cb452d2",
+      "gitBlob": "a7d62b28d668446982415929aa47fbbf58d3ebd3"
+    }
   ]
 }

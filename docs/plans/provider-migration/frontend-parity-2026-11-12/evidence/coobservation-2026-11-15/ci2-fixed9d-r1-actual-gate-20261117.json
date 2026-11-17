@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 1,
+  "kind": "fresh-fixed9d-ci-R1-actual-publication-gate",
+  "at": "2026-11-17 07:53:00 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "verdict": "EXACT_FRESH_CI_R1_ACTUAL_READBACKS_CLOSED_NO_ACTION_ADMISSION",
+  "subject": {
+    "bytes": 69751,
+    "sha256": "ded423903437131ea288b2d43a20391147f8e4cdb45357b6d92496d4763487bd",
+    "gitBlob": "1bb01907e9a3b9fba7cedb3d34d0d2773a57ca23"
+  },
+  "actualPublication": {
+    "commit": "65cd08dc15e3735cb579578d475938fd0a3fb135",
+    "soleParent": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "root": "e2347fe433055be9f5c8ee109e7db087bf365c16",
+    "docs": "1e97d02232e95ba34238c340713571bb6e5b2a91",
+    "manifest": {
+      "bytes": 11281,
+      "sha256": "160f8cdddde972cf49590e52c658503537e5c55dde546e4b7d8944524890eb65",
+      "gitBlob": "dadd79ede8cbc6605a832bfee8b5865af2e57505"
+    }
+  },
+  "root": {
+    "report": {
+      "bytes": 76668,
+      "sha256": "8ef246ec40b9c443ddd13bad6b385e80fd60b1881b7eb2b342aba14bd74c56c3",
+      "gitBlob": "757184208b6b39432f5f957011c0a2d40d5b344d"
+    },
+    "checks": 40,
+    "completeRead": true,
+    "selfReadConfirmed": true
+  },
+  "independent": {
+    "report": {
+      "bytes": 123197,
+      "sha256": "ecc5f229c0073fd48c218205e4feb0928e70f2a41a4ff53d60088e320ae0cef4",
+      "gitBlob": "cc54c9d831a28eadf9e411fd8d53134fbcd6f881"
+    },
+    "checks": 48,
+    "completeRead": true,
+    "selfReadConfirmed": true
+  },
+  "actualChecks": 88,
+  "staticChecks": 180,
+  "currentPublicationPointerJoins": [
+    {
+      "pin": {
+        "bytes": 69751,
+        "sha256": "ded423903437131ea288b2d43a20391147f8e4cdb45357b6d92496d4763487bd",
+        "gitBlob": "1bb01907e9a3b9fba7cedb3d34d0d2773a57ca23"
+      },
+      "method": "complete actual current body freshly fetched and hashed",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 7050,
+        "sha256": "4a55ae270a3549fd97c712db801cf2378102e7974597c8ed2c3fe3b240e937cb",
+        "gitBlob": "3aa070295059b9e1dd280ee36836712878b0b72c"
+      },
+      "method": "complete actual current body freshly fetched and hashed",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 51861,
+        "sha256": "b056b56f27eb586903c8a3c9c703bb5f0b8337bc628de9460b8de241914e6bfc",
+        "gitBlob": "0b830765cf0ad6e817101dd64ffc8ca6055af8a7"
+      },
+      "method": "complete actual current body freshly fetched and hashed",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 68932,
+        "sha256": "5d6d640bbacc7a5b881467f2854cab7bf7b79b2c9a2207d5d3da958c117668fc",
+        "gitBlob": "377658a09518838cc3acd20a93f2a8c20e758bfc"
+      },
+      "method": "complete actual current body freshly fetched and hashed",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 59184,
+        "sha256": "7ae4ecf110439a5bab8e1cf5f4fbf7429604f4ec83cb499b02067af19104df20",
+        "gitBlob": "e65ed2330f6038e58d0f760e41eede7befe535b1"
+      },
+      "method": "complete actual current body freshly fetched and hashed",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 210027,
+        "sha256": "1a1b1e81a621c2e8d29e12b16006cd2d9ebe6f9611ef93d82c67b20fd9d542b2",
+        "gitBlob": "19aeb82a85b885d45000a50f2fbeb9d06a3c9d5e"
+      },
+      "method": "complete actual current body freshly fetched and hashed",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 89037,
+        "sha256": "fdbf58a4cc6ee03693f5ffc1ab1d9ba2ad40cafcdd419c60f982530a07c9b734",
+        "gitBlob": "ec8af61a7613a4d4f55601f0755e5fd3858a809a"
+      },
+      "method": "complete actual current body freshly fetched and hashed",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 780732,
+        "sha256": "9a83bd5a7425d0674345c607e26b2a1df8bde3556549ac276bfbf860c5c4e3bb",
+        "gitBlob": "6d032754064d4f251a11e8572bb7b476ea5860a8"
+      },
+      "method": "complete actual current body freshly fetched and hashed",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 1316501,
+        "sha256": "b197f33f4fd07ad0afd3443214705152dfc2b6ec544eb6fc014b4d9c3d67137f",
+        "gitBlob": "b22f8e839e41161d124ea665134b2d254ebe8ed0"
+      },
+      "method": "complete actual current body freshly fetched and hashed",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 159127,
+        "sha256": "1133d67553be7b4b0085cbfbe698842d4839228956e43f9930c456ee50ce4beb",
+        "gitBlob": "64d074f6f878440222347058c0fbc3a559953908"
+      },
+      "method": "complete actual current body freshly fetched and hashed",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 432844,
+        "sha256": "995c58b5b1f0c2c765b934c2ee93fdce20940db5b12da9f5a97b2ab5ce747b37",
+        "gitBlob": "4f6feae04f1bc9fe1e6357876481fe14e7fb8cd3"
+      },
+      "method": "complete actual current body freshly fetched and hashed",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 57508,
+        "sha256": "905ca483abf73b19c2efb60180d8f6bbdefc1e8d8e744aa1377f66ecaf212456",
+        "gitBlob": "ba917dc0650ef48acbaf5646059550accb42d237"
+      },
+      "method": "complete actual current body freshly fetched and hashed",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 2592749,
+        "sha256": "a815fc06cfa560584169eb06e8b62d7a8a80fc00f0959529788f93bd6282630d",
+        "gitBlob": "3f4de41aa99ca3b6a5444b0c42d72b2f96161a98"
+      },
+      "method": "complete actual parent body freshly fetched and hashed",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 2596491,
+        "sha256": "6c34aade765ce8da00e364b067b26fa572f784d25aba9f06ad214bdadde49acf",
+        "gitBlob": "f92beaac04a935a029a66ba980f30ba548f026b6"
+      },
+      "method": "complete actual current body freshly fetched and hashed",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 3742,
+        "sha256": "1b0b4e22674430a6643b132c68effdfcfe4060709558c4b8e38fc67bdb6f33b5",
+        "gitBlob": "bafcd28f32487724f307d6c3a72a1412a282a92c"
+      },
+      "method": "derived from full identical actual document suffixes; not a separate blob",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 69458,
+        "sha256": "9827851fbf81ff903edfd3cbdb46b8c6d1017b538199c589bea9cff7b187ba78",
+        "gitBlob": "d549088ffcc2bbb7fbb9c666c6bc1ec5de632085"
+      },
+      "method": "complete actual parent body freshly fetched and hashed",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 73200,
+        "sha256": "913e4310cf465a94a56fb76e254a7e9047a28614d396b588b78b8614bd917a5e",
+        "gitBlob": "2894072ed49cbe582281a4e6ad48e1cc45767688"
+      },
+      "method": "complete actual current body freshly fetched and hashed",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 501783,
+        "sha256": "e1c79655be7450b1562ae7cf153743e860b6e1bdaa2f18d05ee10fb2a18450f0",
+        "gitBlob": "351526c197dcf58675a3b43d55bb14656421863d"
+      },
+      "method": "complete actual parent body freshly fetched and hashed",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 524540,
+        "sha256": "42466d768baf1d8eea69fb62e60d10a8ee464dc2932c536dbabae8cdc198bbfc",
+        "gitBlob": "956cf8e3b7cb328de0bdf43936146adb71444a5c"
+      },
+      "method": "complete actual current body freshly fetched and hashed",
+      "rootAndIndependentAgree": true
+    },
+    {
+      "pin": {
+        "bytes": 1195222,
+        "sha256": "ff2f04cff7a4fae7ae72d95dcc00a6fcb1a2c9336b86109c14369d1c8ec3eaab",
+        "gitBlob": "07bd7f1ffcca3b1f0c473c57519fd548f8103251"
+      },
+      "method": "derived complete original API string embedded in actual comparison packet; not a separate retained blob",
+      "rootAndIndependentAgree": true
+    }
+  ],
+  "directR1PointerJoins": 41,
+  "fixedCiHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+  "fixedCiBase": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+  "laterDocsNeverReplaceFixedSource": true,
+  "completeBodyCounts": {
+    "actualFiles": 16,
+    "actualBytes": 6508066,
+    "parentFiles": 3,
+    "parentBytes": 3163990
+  },
+  "preservation": {
+    "delta": {
+      "added": 13,
+      "modified": 3,
+      "deleted": 0
+    },
+    "unchangedNonDocRootEntries": 53,
+    "leaves": 12046,
+    "docs": 3247,
+    "nonDocs": 8799,
+    "catalogFields": 87,
+    "oldValuesPreserved": 85,
+    "bundles": 27,
+    "totalsPreserved": true,
+    "completePrefixesPreserved": true,
+    "workflows": 42,
+    "production": 5020,
+    "exceptions": 141,
+    "sourceCap": 800
+  },
+  "environment": {
+    "status": "rejected",
+    "reason": "No usable execution environment is available. Wait for an environment to become available before using this tool."
+  },
+  "newR2Required": false,
+  "externalAdmissionAuthored": false,
+  "newNamesObservedAbsent": false,
+  "newRefsCreated": false,
+  "newPrNumber": null,
+  "newRunIds": [],
+  "runtimeExecuted": false,
+  "qualification": "Actual docs publication accepted. Separate external immutable admission must precede exact new-name preflight and the already-reviewed one-shot structured GitHub mutations. No runtime or artifact result is inferred.",
+  "selfReadbackProtocol": "Full retained body literal/byte/SHA256/Git/readback before use."
+}

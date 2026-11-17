@@ -1,0 +1,2610 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-PR1219-initial-retained-capture-binding-review",
+  "reviewer": "/root/red_publication_recovery",
+  "at": "2026-11-17 08:04:51 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "bytes": 1678327,
+    "sha256": "db87c4862770dca1bb3432e08a304de8adc465e9b762f60cfa966a23d561f082",
+    "gitBlob": "45f21a0ccfd99cde885b92d04a6fcdd11d73b432"
+  },
+  "verdict": "ACCEPT_INITIAL_EVENT_BINDING_AND_TWO_EXPECTED_DRAFT_SKIPS_NO_NEW_GATE",
+  "accepted": true,
+  "observationAt": "2026-11-17 07:56:52 UTC",
+  "proposal": {
+    "bytes": 69751,
+    "sha256": "ded423903437131ea288b2d43a20391147f8e4cdb45357b6d92496d4763487bd",
+    "gitBlob": "1bb01907e9a3b9fba7cedb3d34d0d2773a57ca23"
+  },
+  "actualGate": {
+    "bytes": 9510,
+    "sha256": "7709fd167750dac768b1a826ff81904077a1afe936bbd5865b4041e126ffb599",
+    "gitBlob": "e869a398b712541b17eef73ba5a44af49b00f70d"
+  },
+  "externalAdmission": {
+    "bytes": 34918,
+    "sha256": "4e54d76f0058e1024d6e9e9088962bfb167c491e2eb7a45b40d1607629a9c3d8",
+    "gitBlob": "df645b8eac669fbd71f243bfd64bd915a871583f"
+  },
+  "acceptedActualPublication": {
+    "bytes": 123197,
+    "sha256": "ecc5f229c0073fd48c218205e4feb0928e70f2a41a4ff53d60088e320ae0cef4",
+    "gitBlob": "cc54c9d831a28eadf9e411fd8d53134fbcd6f881"
+  },
+  "source": {
+    "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "root": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+    "merge": "c0e6845650002dfaabf6b1dcc727d13b2f0570f6",
+    "mergeParents": [
+      "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+    ],
+    "mergeTree": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+    "docsAuthority": "65cd08dc15e3735cb579578d475938fd0a3fb135"
+  },
+  "preflight": {
+    "at": "2026-11-17 07:54:02 UTC",
+    "completeAt": "2026-11-17 07:54:04 UTC",
+    "admission": {
+      "bytes": 34918,
+      "sha256": "4e54d76f0058e1024d6e9e9088962bfb167c491e2eb7a45b40d1607629a9c3d8",
+      "gitBlob": "df645b8eac669fbd71f243bfd64bd915a871583f"
+    },
+    "exactBaseName": "ci/frontend-parity-c714-20261117-2-base",
+    "exactHeadName": "ci/frontend-parity-c714-20261117-2-head",
+    "baseAbsent": true,
+    "headAbsent": true,
+    "source": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "root": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+    "baseRoot": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+    "mergeBase": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "ahead": 10,
+    "behind": 0,
+    "allComparisonRows": 156,
+    "completeWorkflowBodies": 42,
+    "workflowBytes": 751430,
+    "all7SelectionUnchanged": true,
+    "workingEvidenceHead": "65cd08dc15e3735cb579578d475938fd0a3fb135",
+    "newMutationsIssued": 0,
+    "passed": true
+  },
+  "mutationLedger": [
+    {
+      "order": 2,
+      "operation": "github_create_branch",
+      "arguments": {
+        "repository_full_name": "777genius/agent-teams-ai",
+        "branch_name": "ci/frontend-parity-c714-20261117-2-base",
+        "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+      },
+      "maximumAttempts": 1,
+      "issuedAt": "2026-11-17 07:54:28 UTC",
+      "state": "EXACT_REF_READBACK_CONFIRMED",
+      "readbackAt": "2026-11-17 07:54:29 UTC",
+      "actualRef": {
+        "ref": "refs/heads/ci/frontend-parity-c714-20261117-2-base",
+        "node_id": "REF_kwDORVTEtNoAMnJlZnMvaGVhZHMvY2kvZnJvbnRlbmQtcGFyaXR5LWM3MTQtMjAyNjExMTctMi1iYXNl",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs/heads/ci/frontend-parity-c714-20261117-2-base",
+        "object": {
+          "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+          "type": "commit",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+        }
+      }
+    },
+    {
+      "order": 3,
+      "operation": "github_create_branch",
+      "arguments": {
+        "repository_full_name": "777genius/agent-teams-ai",
+        "branch_name": "ci/frontend-parity-c714-20261117-2-head",
+        "sha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+      },
+      "maximumAttempts": 1,
+      "issuedAt": "2026-11-17 07:54:29 UTC",
+      "state": "EXACT_REF_READBACK_CONFIRMED",
+      "readbackAt": "2026-11-17 07:54:31 UTC",
+      "actualRef": {
+        "ref": "refs/heads/ci/frontend-parity-c714-20261117-2-head",
+        "node_id": "REF_kwDORVTEtNoAMnJlZnMvaGVhZHMvY2kvZnJvbnRlbmQtcGFyaXR5LWM3MTQtMjAyNjExMTctMi1oZWFk",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs/heads/ci/frontend-parity-c714-20261117-2-head",
+        "object": {
+          "sha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "type": "commit",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+        }
+      }
+    },
+    {
+      "order": 4,
+      "operation": "github_create_pull_request",
+      "arguments": {
+        "repository_full_name": "777genius/agent-teams-ai",
+        "base": "ci/frontend-parity-c714-20261117-2-base",
+        "head": "ci/frontend-parity-c714-20261117-2-head",
+        "title": "test: validate frontend parity deadlines and member reveal",
+        "body": "## Purpose\n\nThe published deadline fix, three catalog regressions and member reveal step need complete execution on source 9d79abcf1f5c498687c2e5c443e3edf220070aa6. This Draft PR validates that fixed source against its unchanged ancestor 77993819c233737f1e2b4c11c8ca1a5d360bcbe3.\n\n## Changes and coverage\n\nThe snapshot contains the accepted frontend parity fixes, all 139 original Node cases plus ten deadline cases, the full 43-case model catalog file, the unchanged 85-case provider-management file, and one bounded scroll to Alice before the original guarded member click. The driver has 798 lines under the unchanged 800-line limit.\n\nExisting workflows select all 18 Host UI jobs, four frontend shards and their aggregate; the five packaged platform tuples; Stage 1 OpenCode checks; announcements; and CI fast feedback. Claude and Codex use the existing finite TEST peers. Actual OpenCode execution stays within the existing pinned localhost-model paths.\n\nWorkflow bytes, dependencies, filters, original deadlines and strict native assertions are preserved. Full qualification is expected to fail the existing Draft policy. CodeQL and OpenCode diagnostics retain their explicit Draft skips. Every other failure, skipped or unreached step and unavailable artifact remains visible.\n\nCI's ten imported deadline cases run within the whole 149-case module under its existing Node selection. The separately pinned local Node 24.22.1 RED/GREEN attempt remains unexecuted while its environment is unavailable.\n\nBoth snapshot refs and this PR's metadata stay fixed while selected runs are active. The original PR #1218 remains terminal. This evidence scope does not include Ready conversion, merge, release, Stage 2, or a native-custody waiver.\n",
+        "draft": true,
+        "maintainer_can_modify": false
+      },
+      "maximumAttempts": 1,
+      "issuedAt": "2026-11-17 07:54:36 UTC",
+      "state": "EXACT_DRAFT_PR_READBACK_CONFIRMED",
+      "returnedAt": "2026-11-17 07:54:38 UTC",
+      "actualPr": {
+        "number": 1219,
+        "url": "https://github.com/777genius/agent-teams-ai/pull/1219",
+        "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "draft": true,
+        "maintainerCanModify": false,
+        "repositoryId": 1163183284
+      }
+    }
+  ],
+  "pr": {
+    "number": 1219,
+    "id": 5352988316,
+    "url": "https://github.com/777genius/agent-teams-ai/pull/1219",
+    "createdAt": "2026-11-17T07:54:36Z",
+    "state": "open",
+    "draft": true,
+    "maintainerCanModify": false,
+    "headRef": "ci/frontend-parity-c714-20261117-2-head",
+    "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "baseRef": "ci/frontend-parity-c714-20261117-2-base",
+    "baseSha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "repositoryId": 1163183284,
+    "titleAndBodyEqualAdmitted": true
+  },
+  "rawResponseReadbacks": [
+    {
+      "key": "preflight:baseName",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": "array:0"
+    },
+    {
+      "key": "preflight:headName",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": "array:0"
+    },
+    {
+      "key": "preflight:headCommit",
+      "bytes": 1171,
+      "sha256": "6e745168c9be4e819ea52271512c820b0327a52a5dd15151e4bbaee6d9bb0d63",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "sha",
+        "node_id",
+        "url",
+        "html_url",
+        "author",
+        "committer",
+        "tree",
+        "message",
+        "parents",
+        "verification"
+      ],
+      "sha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+    },
+    {
+      "key": "preflight:baseCommit",
+      "bytes": 1162,
+      "sha256": "178be040d66f65a8d761edead358cb8a5a2d0c6fca746247ea60e3cb0a04056c",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "sha",
+        "node_id",
+        "url",
+        "html_url",
+        "author",
+        "committer",
+        "tree",
+        "message",
+        "parents",
+        "verification"
+      ],
+      "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+    },
+    {
+      "key": "preflight:headTree",
+      "bytes": 12410,
+      "sha256": "7bdb4588ec30ac16684100fb57e0ffa4591efaff783b92417ff145dd8d9f473e",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "sha",
+        "url",
+        "tree",
+        "truncated"
+      ],
+      "sha": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295"
+    },
+    {
+      "key": "preflight:baseTree",
+      "bytes": 12410,
+      "sha256": "a2a3693a45fe0c7c7dfb87b4652bdebb4d5f9f307a6e34f3cd877075b661605a",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "sha",
+        "url",
+        "tree",
+        "truncated"
+      ],
+      "sha": "ada3f27db78fabc17a91e3904d41b8bc547c6dca"
+    },
+    {
+      "key": "preflight:githubTree",
+      "bytes": 13802,
+      "sha256": "e772a1649a656d4e9f74848d8fbe67afe2d3f19b8edac8827eb2c22179fa106b",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "sha",
+        "url",
+        "tree",
+        "truncated"
+      ],
+      "sha": "d95091ab0edb488d6e418ffa789d0f07c447ecda"
+    },
+    {
+      "key": "preflight:comparison",
+      "bytes": 1195222,
+      "sha256": "ff2f04cff7a4fae7ae72d95dcc00a6fcb1a2c9336b86109c14369d1c8ec3eaab",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/compare/77993819c233737f1e2b4c11c8ca1a5d360bcbe3...9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "keys": [
+        "url",
+        "html_url",
+        "permalink_url",
+        "diff_url",
+        "patch_url",
+        "base_commit",
+        "merge_base_commit",
+        "status",
+        "ahead_by",
+        "behind_by",
+        "total_commits",
+        "commits",
+        "files"
+      ]
+    },
+    {
+      "key": "preflight:workingRef",
+      "bytes": 492,
+      "sha256": "2759e63984f0678bbea25125d200d059d6c20a026e2ddc52621135ed4a5f55ac",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "ref",
+        "node_id",
+        "url",
+        "object"
+      ],
+      "ref": "refs/heads/fix/frontend-parity-coobservation-c714-20261115"
+    },
+    {
+      "key": "newPr",
+      "bytes": 19442,
+      "sha256": "667d9af018f61d2982da05fa3107cbf10d86889ca90be96c04de22aa0a0eab24",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1219",
+      "keys": [
+        "url",
+        "id",
+        "node_id",
+        "html_url",
+        "diff_url",
+        "patch_url",
+        "issue_url",
+        "commits_url",
+        "review_comments_url",
+        "review_comment_url",
+        "comments_url",
+        "statuses_url",
+        "number",
+        "state",
+        "locked",
+        "title",
+        "user",
+        "body",
+        "labels",
+        "milestone",
+        "active_lock_reason",
+        "created_at",
+        "updated_at",
+        "closed_at",
+        "merged_at",
+        "merge_commit_sha",
+        "assignee",
+        "assignees",
+        "requested_reviewers",
+        "requested_teams",
+        "head",
+        "base",
+        "_links",
+        "author_association",
+        "auto_merge",
+        "draft",
+        "merged",
+        "mergeable",
+        "rebaseable",
+        "mergeable_state",
+        "merged_by",
+        "comments",
+        "review_comments",
+        "maintainer_can_modify",
+        "commits",
+        "additions",
+        "deletions",
+        "changed_files"
+      ],
+      "runId": 5352988316
+    },
+    {
+      "key": "newEventDiscoveryPage1",
+      "bytes": 93184,
+      "sha256": "2bb47e962ecdbac7125a50aa0b568da88a411ec0392b111a26accf3fa791c587",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs?event=pull_request&branch=ci%2Ffrontend-parity-c714-20261117-2-head&head_sha=9d79abcf1f5c498687c2e5c443e3edf220070aa6&created=2026-11-17T07%3A54%3A34.000Z..2026-11-17T07%3A56%3A38.000Z&exclude_pull_requests=false&per_page=100&page=1",
+      "keys": [
+        "total_count",
+        "workflow_runs"
+      ],
+      "totalCount": 7
+    },
+    {
+      "key": "initial:discoveryEnd",
+      "bytes": 36,
+      "sha256": "ff8c5f9d6451e98a7c109ea76c8ed38762da28c92b283dde56ee9931969a63e5",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "total_count",
+        "workflow_runs"
+      ],
+      "totalCount": 7
+    },
+    {
+      "key": "initial:mergeCommit",
+      "bytes": 2653,
+      "sha256": "960ec2cb82658409b4506282c8ac1cc28c1658da1206eafac5597d55f4d0cf7b",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "sha",
+        "node_id",
+        "url",
+        "html_url",
+        "author",
+        "committer",
+        "tree",
+        "message",
+        "parents",
+        "verification"
+      ],
+      "sha": "c0e6845650002dfaabf6b1dcc727d13b2f0570f6"
+    },
+    {
+      "key": "initial:exactPrCollection",
+      "bytes": 19218,
+      "sha256": "5fc91aea6fb1147a52762e3078e11d3da7584f2a04f4c5676cc92960c43907fa",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": "array:1"
+    },
+    {
+      "key": "initial:attempt:44042341370",
+      "bytes": 13799,
+      "sha256": "7e05407bb41ef0315404ad301759dc54d9bd65992f6c0ebedf33cd51ee4d6d1e",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "id",
+        "name",
+        "node_id",
+        "head_branch",
+        "head_sha",
+        "path",
+        "display_title",
+        "run_number",
+        "event",
+        "status",
+        "conclusion",
+        "workflow_id",
+        "check_suite_id",
+        "check_suite_node_id",
+        "url",
+        "html_url",
+        "pull_requests",
+        "created_at",
+        "updated_at",
+        "actor",
+        "run_attempt",
+        "referenced_workflows",
+        "run_started_at",
+        "triggering_actor",
+        "jobs_url",
+        "logs_url",
+        "check_suite_url",
+        "artifacts_url",
+        "cancel_url",
+        "rerun_url",
+        "previous_attempt_url",
+        "workflow_url",
+        "head_commit",
+        "repository",
+        "head_repository"
+      ],
+      "runId": 44042341370,
+      "runAttempt": 1
+    },
+    {
+      "key": "initial:jobs:44042341370",
+      "bytes": 947,
+      "sha256": "4039c2095ec842b9293ca46df5678672a10b412bfa8dc5f76fbf1175e9d7583a",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "total_count",
+        "jobs"
+      ],
+      "totalCount": 1
+    },
+    {
+      "key": "initial:attempt:44042341121",
+      "bytes": 13838,
+      "sha256": "256c0a2ba29fa49040cd381557bb16574dbdc63742df7b0d085c4bcc72abfd5f",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "id",
+        "name",
+        "node_id",
+        "head_branch",
+        "head_sha",
+        "path",
+        "display_title",
+        "run_number",
+        "event",
+        "status",
+        "conclusion",
+        "workflow_id",
+        "check_suite_id",
+        "check_suite_node_id",
+        "url",
+        "html_url",
+        "pull_requests",
+        "created_at",
+        "updated_at",
+        "actor",
+        "run_attempt",
+        "referenced_workflows",
+        "run_started_at",
+        "triggering_actor",
+        "jobs_url",
+        "logs_url",
+        "check_suite_url",
+        "artifacts_url",
+        "cancel_url",
+        "rerun_url",
+        "previous_attempt_url",
+        "workflow_url",
+        "head_commit",
+        "repository",
+        "head_repository"
+      ],
+      "runId": 44042341121,
+      "runAttempt": 1
+    },
+    {
+      "key": "initial:jobs:44042341121",
+      "bytes": 934,
+      "sha256": "cf1461edbb4dd5dfc213e38b78f878e31e7f80911adc9d0e6a067cc654bc7dc1",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "total_count",
+        "jobs"
+      ],
+      "totalCount": 1
+    },
+    {
+      "key": "initial:attempt:44042341149",
+      "bytes": 13821,
+      "sha256": "5fd8d18f1205b5615c3905ba88f0af176dcd0c6ecf6abcae1bab2a80b1a7316c",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "id",
+        "name",
+        "node_id",
+        "head_branch",
+        "head_sha",
+        "path",
+        "display_title",
+        "run_number",
+        "event",
+        "status",
+        "conclusion",
+        "workflow_id",
+        "check_suite_id",
+        "check_suite_node_id",
+        "url",
+        "html_url",
+        "pull_requests",
+        "created_at",
+        "updated_at",
+        "actor",
+        "run_attempt",
+        "referenced_workflows",
+        "run_started_at",
+        "triggering_actor",
+        "jobs_url",
+        "logs_url",
+        "check_suite_url",
+        "artifacts_url",
+        "cancel_url",
+        "rerun_url",
+        "previous_attempt_url",
+        "workflow_url",
+        "head_commit",
+        "repository",
+        "head_repository"
+      ],
+      "runId": 44042341149,
+      "runAttempt": 1
+    },
+    {
+      "key": "initial:jobs:44042341149",
+      "bytes": 931,
+      "sha256": "e79eddc6d0b156f76bd8ac27342435afb5f4c532be5defd7d591d3029905f714",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "total_count",
+        "jobs"
+      ],
+      "totalCount": 1
+    },
+    {
+      "key": "initial:attempt:44042341284",
+      "bytes": 13819,
+      "sha256": "f74cadd0cfa4d25769c17e1b937b94c24e250d958dedd3a6811f002675c9989d",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "id",
+        "name",
+        "node_id",
+        "head_branch",
+        "head_sha",
+        "path",
+        "display_title",
+        "run_number",
+        "event",
+        "status",
+        "conclusion",
+        "workflow_id",
+        "check_suite_id",
+        "check_suite_node_id",
+        "url",
+        "html_url",
+        "pull_requests",
+        "created_at",
+        "updated_at",
+        "actor",
+        "run_attempt",
+        "referenced_workflows",
+        "run_started_at",
+        "triggering_actor",
+        "jobs_url",
+        "logs_url",
+        "check_suite_url",
+        "artifacts_url",
+        "cancel_url",
+        "rerun_url",
+        "previous_attempt_url",
+        "workflow_url",
+        "head_commit",
+        "repository",
+        "head_repository"
+      ],
+      "runId": 44042341284,
+      "runAttempt": 1
+    },
+    {
+      "key": "initial:jobs:44042341284",
+      "bytes": 926,
+      "sha256": "69a89d2e5982484b569e29260a122efb935b9fdbafd255cef29a5f7db8785d7b",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "total_count",
+        "jobs"
+      ],
+      "totalCount": 1
+    },
+    {
+      "key": "initial:attempt:44042341120",
+      "bytes": 13853,
+      "sha256": "dfea5c1dddb1451a263cfe40e09ba2e19ec6f10b8d193795745e72492403f47a",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "id",
+        "name",
+        "node_id",
+        "head_branch",
+        "head_sha",
+        "path",
+        "display_title",
+        "run_number",
+        "event",
+        "status",
+        "conclusion",
+        "workflow_id",
+        "check_suite_id",
+        "check_suite_node_id",
+        "url",
+        "html_url",
+        "pull_requests",
+        "created_at",
+        "updated_at",
+        "actor",
+        "run_attempt",
+        "referenced_workflows",
+        "run_started_at",
+        "triggering_actor",
+        "jobs_url",
+        "logs_url",
+        "check_suite_url",
+        "artifacts_url",
+        "cancel_url",
+        "rerun_url",
+        "previous_attempt_url",
+        "workflow_url",
+        "head_commit",
+        "repository",
+        "head_repository"
+      ],
+      "runId": 44042341120,
+      "runAttempt": 1
+    },
+    {
+      "key": "initial:jobs:44042341120",
+      "bytes": 10978,
+      "sha256": "17a2d42d844e0ec7629ef28478f5d81d097309bec35ae7cb9fce9306ddc17a68",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "total_count",
+        "jobs"
+      ],
+      "totalCount": 9
+    },
+    {
+      "key": "initial:attempt:44042341241",
+      "bytes": 14106,
+      "sha256": "45496d0c4bccc8a123dae1e5a936b1e82422db66c5e9997a72aaa73a63a740ce",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "id",
+        "name",
+        "node_id",
+        "head_branch",
+        "head_sha",
+        "path",
+        "display_title",
+        "run_number",
+        "event",
+        "status",
+        "conclusion",
+        "workflow_id",
+        "check_suite_id",
+        "check_suite_node_id",
+        "url",
+        "html_url",
+        "pull_requests",
+        "created_at",
+        "updated_at",
+        "actor",
+        "run_attempt",
+        "referenced_workflows",
+        "run_started_at",
+        "triggering_actor",
+        "jobs_url",
+        "logs_url",
+        "check_suite_url",
+        "artifacts_url",
+        "cancel_url",
+        "rerun_url",
+        "previous_attempt_url",
+        "workflow_url",
+        "head_commit",
+        "repository",
+        "head_repository"
+      ],
+      "runId": 44042341241,
+      "runAttempt": 1
+    },
+    {
+      "key": "initial:jobs:44042341241",
+      "bytes": 4486,
+      "sha256": "89621be7f116efa92a90f230f6999b7e0133da4aee24a79b7f1f9d4ad6225313",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "total_count",
+        "jobs"
+      ],
+      "totalCount": 4
+    },
+    {
+      "key": "initial:attempt:44042341273",
+      "bytes": 13826,
+      "sha256": "ad2c32f65712b9584b6d7f1ab9f05e3cd8aed18f0e8fdb558738b75d8d4e8921",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "id",
+        "name",
+        "node_id",
+        "head_branch",
+        "head_sha",
+        "path",
+        "display_title",
+        "run_number",
+        "event",
+        "status",
+        "conclusion",
+        "workflow_id",
+        "check_suite_id",
+        "check_suite_node_id",
+        "url",
+        "html_url",
+        "pull_requests",
+        "created_at",
+        "updated_at",
+        "actor",
+        "run_attempt",
+        "referenced_workflows",
+        "run_started_at",
+        "triggering_actor",
+        "jobs_url",
+        "logs_url",
+        "check_suite_url",
+        "artifacts_url",
+        "cancel_url",
+        "rerun_url",
+        "previous_attempt_url",
+        "workflow_url",
+        "head_commit",
+        "repository",
+        "head_repository"
+      ],
+      "runId": 44042341273,
+      "runAttempt": 1
+    },
+    {
+      "key": "initial:jobs:44042341273",
+      "bytes": 20322,
+      "sha256": "fb8190fde5641cc61c65efaef92c8b55332fe119605eb9f0a0e6c11651383460",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "total_count",
+        "jobs"
+      ],
+      "totalCount": 22
+    },
+    {
+      "key": "initial:artifacts:44042341370",
+      "bytes": 32,
+      "sha256": "244563f989470892c537c9a4622920af0d228ee4528f7d00c64a06d6cd95856c",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "total_count",
+        "artifacts"
+      ],
+      "totalCount": 0
+    },
+    {
+      "key": "initial:artifacts:44042341121",
+      "bytes": 32,
+      "sha256": "244563f989470892c537c9a4622920af0d228ee4528f7d00c64a06d6cd95856c",
+      "identityKind": "complete original GitHub API UTF-8 response; not separate Git blob",
+      "url": null,
+      "keys": [
+        "total_count",
+        "artifacts"
+      ],
+      "totalCount": 0
+    }
+  ],
+  "runBindings": [
+    {
+      "id": 44042341370,
+      "name": "CodeQL",
+      "path": ".github/workflows/codeql.yml",
+      "event": "pull_request",
+      "headBranch": "ci/frontend-parity-c714-20261117-2-head",
+      "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "createdAt": "2026-11-17T07:54:41Z",
+      "attempt": 1,
+      "status": "completed",
+      "conclusion": "skipped",
+      "checkSuiteId": 119223311538,
+      "repository": {
+        "id": 1163183284,
+        "name": "777genius/agent-teams-ai"
+      },
+      "headRepository": {
+        "id": 1163183284,
+        "name": "777genius/agent-teams-ai"
+      },
+      "pullRequests": [
+        {
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1219",
+          "id": 5352988316,
+          "number": 1219,
+          "head": {
+            "ref": "ci/frontend-parity-c714-20261117-2-head",
+            "sha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          },
+          "base": {
+            "ref": "ci/frontend-parity-c714-20261117-2-base",
+            "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          }
+        }
+      ],
+      "collectionPullRequests": [],
+      "jobCount": 1,
+      "jobs": [
+        {
+          "id": 133899669325,
+          "runId": 44042341370,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Analyze (${{ matrix.language }})",
+          "status": "completed",
+          "conclusion": "skipped",
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341370"
+        }
+      ]
+    },
+    {
+      "id": 44042341121,
+      "name": "OpenCode diagnostics desktop E2E",
+      "path": ".github/workflows/opencode-desktop-e2e.yml",
+      "event": "pull_request",
+      "headBranch": "ci/frontend-parity-c714-20261117-2-head",
+      "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "createdAt": "2026-11-17T07:54:41Z",
+      "attempt": 1,
+      "status": "completed",
+      "conclusion": "skipped",
+      "checkSuiteId": 119223310863,
+      "repository": {
+        "id": 1163183284,
+        "name": "777genius/agent-teams-ai"
+      },
+      "headRepository": {
+        "id": 1163183284,
+        "name": "777genius/agent-teams-ai"
+      },
+      "pullRequests": [
+        {
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1219",
+          "id": 5352988316,
+          "number": 1219,
+          "head": {
+            "ref": "ci/frontend-parity-c714-20261117-2-head",
+            "sha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          },
+          "base": {
+            "ref": "ci/frontend-parity-c714-20261117-2-base",
+            "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          }
+        }
+      ],
+      "collectionPullRequests": [],
+      "jobCount": 1,
+      "jobs": [
+        {
+          "id": 133899669283,
+          "runId": 44042341121,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "desktop",
+          "status": "completed",
+          "conclusion": "skipped",
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341121"
+        }
+      ]
+    },
+    {
+      "id": 44042341149,
+      "name": "Announcements Content",
+      "path": ".github/workflows/announcements-content.yml",
+      "event": "pull_request",
+      "headBranch": "ci/frontend-parity-c714-20261117-2-head",
+      "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "createdAt": "2026-11-17T07:54:41Z",
+      "attempt": 1,
+      "status": "queued",
+      "conclusion": null,
+      "checkSuiteId": 119223310942,
+      "repository": {
+        "id": 1163183284,
+        "name": "777genius/agent-teams-ai"
+      },
+      "headRepository": {
+        "id": 1163183284,
+        "name": "777genius/agent-teams-ai"
+      },
+      "pullRequests": [
+        {
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1219",
+          "id": 5352988316,
+          "number": 1219,
+          "head": {
+            "ref": "ci/frontend-parity-c714-20261117-2-head",
+            "sha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          },
+          "base": {
+            "ref": "ci/frontend-parity-c714-20261117-2-base",
+            "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          }
+        }
+      ],
+      "collectionPullRequests": [],
+      "jobCount": 1,
+      "jobs": [
+        {
+          "id": 133899666853,
+          "runId": 44042341149,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "announcements-content-check",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341149"
+        }
+      ]
+    },
+    {
+      "id": 44042341284,
+      "name": "Electron packaged CI",
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "event": "pull_request",
+      "headBranch": "ci/frontend-parity-c714-20261117-2-head",
+      "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "createdAt": "2026-11-17T07:54:41Z",
+      "attempt": 1,
+      "status": "queued",
+      "conclusion": null,
+      "checkSuiteId": 119223311317,
+      "repository": {
+        "id": 1163183284,
+        "name": "777genius/agent-teams-ai"
+      },
+      "headRepository": {
+        "id": 1163183284,
+        "name": "777genius/agent-teams-ai"
+      },
+      "pullRequests": [
+        {
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1219",
+          "id": 5352988316,
+          "number": 1219,
+          "head": {
+            "ref": "ci/frontend-parity-c714-20261117-2-head",
+            "sha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          },
+          "base": {
+            "ref": "ci/frontend-parity-c714-20261117-2-base",
+            "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          }
+        }
+      ],
+      "collectionPullRequests": [],
+      "jobCount": 1,
+      "jobs": [
+        {
+          "id": 133899667160,
+          "runId": 44042341284,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "classify packaged smoke",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341284"
+        }
+      ]
+    },
+    {
+      "id": 44042341120,
+      "name": "OpenCode V2 Stage1 static preflight (TEST only)",
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "event": "pull_request",
+      "headBranch": "ci/frontend-parity-c714-20261117-2-head",
+      "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "createdAt": "2026-11-17T07:54:41Z",
+      "attempt": 1,
+      "status": "queued",
+      "conclusion": null,
+      "checkSuiteId": 119223310874,
+      "repository": {
+        "id": 1163183284,
+        "name": "777genius/agent-teams-ai"
+      },
+      "headRepository": {
+        "id": 1163183284,
+        "name": "777genius/agent-teams-ai"
+      },
+      "pullRequests": [
+        {
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1219",
+          "id": 5352988316,
+          "number": 1219,
+          "head": {
+            "ref": "ci/frontend-parity-c714-20261117-2-head",
+            "sha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          },
+          "base": {
+            "ref": "ci/frontend-parity-c714-20261117-2-base",
+            "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          }
+        }
+      ],
+      "collectionPullRequests": [],
+      "jobCount": 9,
+      "jobs": [
+        {
+          "id": 133899666975,
+          "runId": 44042341120,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Native V2.0.21 Host SPI instructions (Ubuntu TEST only)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341120"
+        },
+        {
+          "id": 133899667141,
+          "runId": 44042341120,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Static V01 source test (windows-2022)",
+          "status": "in_progress",
+          "conclusion": null,
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1,
+              "started_at": "2026-11-17T07:55:36Z",
+              "completed_at": "2026-11-17T07:55:38Z"
+            },
+            {
+              "name": "Run actions/checkout@v6",
+              "status": "in_progress",
+              "conclusion": null,
+              "number": 2,
+              "started_at": "2026-11-17T07:55:38Z",
+              "completed_at": null
+            },
+            {
+              "name": "Require immutable PR source HEAD",
+              "status": "pending",
+              "conclusion": null,
+              "number": 3,
+              "started_at": null,
+              "completed_at": null
+            },
+            {
+              "name": "Run actions/checkout@v6",
+              "status": "pending",
+              "conclusion": null,
+              "number": 4,
+              "started_at": null,
+              "completed_at": null
+            },
+            {
+              "name": "Record exact current product commit",
+              "status": "pending",
+              "conclusion": null,
+              "number": 5,
+              "started_at": null,
+              "completed_at": null
+            },
+            {
+              "name": "Run pnpm/action-setup@v6",
+              "status": "pending",
+              "conclusion": null,
+              "number": 6,
+              "started_at": null,
+              "completed_at": null
+            },
+            {
+              "name": "Run actions/setup-node@v6",
+              "status": "pending",
+              "conclusion": null,
+              "number": 7,
+              "started_at": null,
+              "completed_at": null
+            },
+            {
+              "name": "Prove retry classification on the exact source HEAD",
+              "status": "pending",
+              "conclusion": null,
+              "number": 8,
+              "started_at": null,
+              "completed_at": null
+            },
+            {
+              "name": "Install pinned workspace dependencies",
+              "status": "pending",
+              "conclusion": null,
+              "number": 9,
+              "started_at": null,
+              "completed_at": null
+            },
+            {
+              "name": "Build Stage1 Host without launching providers",
+              "status": "pending",
+              "conclusion": null,
+              "number": 10,
+              "started_at": null,
+              "completed_at": null
+            },
+            {
+              "name": "Typecheck Host TEST contracts",
+              "status": "pending",
+              "conclusion": null,
+              "number": 11,
+              "started_at": null,
+              "completed_at": null
+            },
+            {
+              "name": "Verify captured and native model variants through Host SPI",
+              "status": "pending",
+              "conclusion": null,
+              "number": 12,
+              "started_at": null,
+              "completed_at": null
+            },
+            {
+              "name": "Verify generation-preserving install and update policy",
+              "status": "pending",
+              "conclusion": null,
+              "number": 13,
+              "started_at": null,
+              "completed_at": null
+            },
+            {
+              "name": "Execute V2 static preflight, current-main lock and FIFO negatives",
+              "status": "pending",
+              "conclusion": null,
+              "number": 14,
+              "started_at": null,
+              "completed_at": null
+            },
+            {
+              "name": "Native V1 baseline and latest Host compatibility (Linux TEST)",
+              "status": "pending",
+              "conclusion": null,
+              "number": 15,
+              "started_at": null,
+              "completed_at": null
+            },
+            {
+              "name": "Preserve native V1 version evidence",
+              "status": "pending",
+              "conclusion": null,
+              "number": 16,
+              "started_at": null,
+              "completed_at": null
+            },
+            {
+              "name": "Post Run actions/checkout@v6",
+              "status": "pending",
+              "conclusion": null,
+              "number": 32,
+              "started_at": null,
+              "completed_at": null
+            }
+          ],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341120"
+        },
+        {
+          "id": 133899667207,
+          "runId": 44042341120,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Static V01 source test (ubuntu-24.04)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341120"
+        },
+        {
+          "id": 133899667272,
+          "runId": 44042341120,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Published V2.0.21 durable HTTP process (TEST discovery only)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341120"
+        },
+        {
+          "id": 133899667333,
+          "runId": 44042341120,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Embedded V2.1.4 original Host (darwin-x64)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341120"
+        },
+        {
+          "id": 133899667361,
+          "runId": 44042341120,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Embedded V2.1.4 original Host (linux-x64)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341120"
+        },
+        {
+          "id": 133899667371,
+          "runId": 44042341120,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Embedded V2.1.4 original Host (win32-x64)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341120"
+        },
+        {
+          "id": 133899667413,
+          "runId": 44042341120,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Embedded V2.1.4 original Host (win32-arm64)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341120"
+        },
+        {
+          "id": 133899667453,
+          "runId": 44042341120,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Embedded V2.1.4 original Host (darwin-arm64)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341120"
+        }
+      ]
+    },
+    {
+      "id": 44042341241,
+      "name": "CI proof: PR=1219 | head=9d79abcf1f5c498687c2e5c443e3edf220070aa6 | base=77993819c233737f1e2b4c11c8ca1a5d360bcbe3 | merge=c0e6845650002dfaabf6b1dcc727d13b2f0570f6 | action=opened | draft=true",
+      "path": ".github/workflows/ci.yml",
+      "event": "pull_request",
+      "headBranch": "ci/frontend-parity-c714-20261117-2-head",
+      "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "createdAt": "2026-11-17T07:54:41Z",
+      "attempt": 1,
+      "status": "queued",
+      "conclusion": null,
+      "checkSuiteId": 119223311197,
+      "repository": {
+        "id": 1163183284,
+        "name": "777genius/agent-teams-ai"
+      },
+      "headRepository": {
+        "id": 1163183284,
+        "name": "777genius/agent-teams-ai"
+      },
+      "pullRequests": [
+        {
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1219",
+          "id": 5352988316,
+          "number": 1219,
+          "head": {
+            "ref": "ci/frontend-parity-c714-20261117-2-head",
+            "sha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          },
+          "base": {
+            "ref": "ci/frontend-parity-c714-20261117-2-base",
+            "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          }
+        }
+      ],
+      "collectionPullRequests": [],
+      "jobCount": 4,
+      "jobs": [
+        {
+          "id": 133899669070,
+          "runId": 44042341241,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "plan",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341241"
+        },
+        {
+          "id": 133899670894,
+          "runId": 44042341241,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Stage 1 process tuple diagnostic (unqualified)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341241"
+        },
+        {
+          "id": 133899671120,
+          "runId": 44042341241,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Stage 1 source Desktop (${{ matrix.label }})",
+          "status": "completed",
+          "conclusion": "skipped",
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341241"
+        },
+        {
+          "id": 133899671492,
+          "runId": 44042341241,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Stage 1 current-tuple process and packed qualification",
+          "status": "completed",
+          "conclusion": "skipped",
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341241"
+        }
+      ]
+    },
+    {
+      "id": 44042341273,
+      "name": "Host Emulated Acceptance",
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "event": "pull_request",
+      "headBranch": "ci/frontend-parity-c714-20261117-2-head",
+      "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "createdAt": "2026-11-17T07:54:41Z",
+      "attempt": 1,
+      "status": "queued",
+      "conclusion": null,
+      "checkSuiteId": 119223311285,
+      "repository": {
+        "id": 1163183284,
+        "name": "777genius/agent-teams-ai"
+      },
+      "headRepository": {
+        "id": 1163183284,
+        "name": "777genius/agent-teams-ai"
+      },
+      "pullRequests": [
+        {
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1219",
+          "id": 5352988316,
+          "number": 1219,
+          "head": {
+            "ref": "ci/frontend-parity-c714-20261117-2-head",
+            "sha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          },
+          "base": {
+            "ref": "ci/frontend-parity-c714-20261117-2-base",
+            "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          }
+        }
+      ],
+      "collectionPullRequests": [],
+      "jobCount": 22,
+      "jobs": [
+        {
+          "id": 133899667641,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline frontend tests (4/4)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899667978,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline frontend tests (2/4)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899667982,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline Host Desktop (linux-x64, collaboration)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899667994,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline frontend tests (1/4)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899668112,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline frontend tests (3/4)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899668219,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline Host Desktop (linux-x64, codex)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899668310,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline Host Desktop (linux-x64, skills)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899668385,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline Host Desktop (linux-x64, management)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899668391,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline Host Desktop (linux-x64, codex-login)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899668413,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899668414,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline Host Desktop (linux-x64, claude)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899668428,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline Host Desktop (linux-x64, cross-team)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899668450,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline Host Desktop (linux-x64, import)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899668455,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline Host Desktop (darwin-arm64, installer)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899668467,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline Host Desktop (linux-x64, team)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899668470,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline Host Desktop (linux-x64, extensions)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899668492,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline Host Desktop (linux-x64, selection)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899668509,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline Host Desktop (linux-x64, processes)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899668512,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline Host Desktop (linux-x64, review)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899668630,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline Host Desktop (linux-x64, taskboard)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899668641,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline Host Desktop (linux-x64, opencode)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        },
+        {
+          "id": 133899668739,
+          "runId": 44042341273,
+          "runAttempt": 1,
+          "headSha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+          "status": "queued",
+          "conclusion": null,
+          "steps": [],
+          "runUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44042341273"
+        }
+      ]
+    }
+  ],
+  "discovery": {
+    "window": {
+      "from": "2026-11-17T07:54:34.000Z",
+      "to": "2026-11-17T07:56:38.000Z",
+      "basis": "Exact at-most-once PR action start/return with bounded two-second lead and two-minute event-creation tail",
+      "actualPrNumber": 1219
+    },
+    "total": 7,
+    "pages": 2,
+    "pageRows": [
+      7,
+      0
+    ],
+    "all7ExpectedFamilies": true,
+    "exactNewBranchPrCollectionCount": 1,
+    "allAttempts": 1,
+    "allAttemptPullRequestsExplicitlyBound": true,
+    "collectionEmptyPrArraysNotUsedAsProof": true
+  },
+  "checkSuiteLimit": {
+    "requested": 7,
+    "completeBodies": 0,
+    "status": "UNAVAILABLE_CONNECTOR_ENDPOINT",
+    "noRefetch": true,
+    "doesNotBlockRunBinding": "All seven complete attempt responses independently contain exact PR1219 head/base/ref/repository bindings and their check-suite IDs. The collection response's empty pull_requests field was not assumed to prove PR identity.",
+    "rawErrorsRetained": true
+  },
+  "checkSuiteErrors": [
+    {
+      "run": 44042341370,
+      "raw": {
+        "content": [
+          {
+            "type": "text",
+            "text": "HTTPError: 400: GitHub Fetch URL is not an allowed public GitHub repository or search endpoint. (Response: None)"
+          }
+        ],
+        "structuredContent": {
+          "error": "HTTPError: 400: GitHub Fetch URL is not an allowed public GitHub repository or search endpoint. (Response: None)",
+          "error_code": "INVALID_ARGUMENT"
+        },
+        "isError": true
+      }
+    },
+    {
+      "run": 44042341121,
+      "raw": {
+        "content": [
+          {
+            "type": "text",
+            "text": "HTTPError: 400: GitHub Fetch URL is not an allowed public GitHub repository or search endpoint. (Response: None)"
+          }
+        ],
+        "structuredContent": {
+          "error": "HTTPError: 400: GitHub Fetch URL is not an allowed public GitHub repository or search endpoint. (Response: None)",
+          "error_code": "INVALID_ARGUMENT"
+        },
+        "isError": true
+      }
+    },
+    {
+      "run": 44042341149,
+      "raw": {
+        "content": [
+          {
+            "type": "text",
+            "text": "HTTPError: 400: GitHub Fetch URL is not an allowed public GitHub repository or search endpoint. (Response: None)"
+          }
+        ],
+        "structuredContent": {
+          "error": "HTTPError: 400: GitHub Fetch URL is not an allowed public GitHub repository or search endpoint. (Response: None)",
+          "error_code": "INVALID_ARGUMENT"
+        },
+        "isError": true
+      }
+    },
+    {
+      "run": 44042341284,
+      "raw": {
+        "content": [
+          {
+            "type": "text",
+            "text": "HTTPError: 400: GitHub Fetch URL is not an allowed public GitHub repository or search endpoint. (Response: None)"
+          }
+        ],
+        "structuredContent": {
+          "error": "HTTPError: 400: GitHub Fetch URL is not an allowed public GitHub repository or search endpoint. (Response: None)",
+          "error_code": "INVALID_ARGUMENT"
+        },
+        "isError": true
+      }
+    },
+    {
+      "run": 44042341120,
+      "raw": {
+        "content": [
+          {
+            "type": "text",
+            "text": "HTTPError: 400: GitHub Fetch URL is not an allowed public GitHub repository or search endpoint. (Response: None)"
+          }
+        ],
+        "structuredContent": {
+          "error": "HTTPError: 400: GitHub Fetch URL is not an allowed public GitHub repository or search endpoint. (Response: None)",
+          "error_code": "INVALID_ARGUMENT"
+        },
+        "isError": true
+      }
+    },
+    {
+      "run": 44042341241,
+      "raw": {
+        "content": [
+          {
+            "type": "text",
+            "text": "HTTPError: 400: GitHub Fetch URL is not an allowed public GitHub repository or search endpoint. (Response: None)"
+          }
+        ],
+        "structuredContent": {
+          "error": "HTTPError: 400: GitHub Fetch URL is not an allowed public GitHub repository or search endpoint. (Response: None)",
+          "error_code": "INVALID_ARGUMENT"
+        },
+        "isError": true
+      }
+    },
+    {
+      "run": 44042341273,
+      "raw": {
+        "content": [
+          {
+            "type": "text",
+            "text": "HTTPError: 400: GitHub Fetch URL is not an allowed public GitHub repository or search endpoint. (Response: None)"
+          }
+        ],
+        "structuredContent": {
+          "error": "HTTPError: 400: GitHub Fetch URL is not an allowed public GitHub repository or search endpoint. (Response: None)",
+          "error_code": "INVALID_ARGUMENT"
+        },
+        "isError": true
+      }
+    }
+  ],
+  "completeTerminalDraftSkips": [
+    {
+      "run": 44042341370,
+      "conclusion": "EXPECTED_DRAFT_SKIP",
+      "artifactCount": 0,
+      "job": 133899669325,
+      "log": "No executed steps; no log success claim",
+      "terminalCaptureComplete": true
+    },
+    {
+      "run": 44042341121,
+      "conclusion": "EXPECTED_DRAFT_SKIP",
+      "artifactCount": 0,
+      "job": 133899669283,
+      "log": "No executed steps; no log success claim",
+      "terminalCaptureComplete": true
+    }
+  ],
+  "activeRunIdsAsOfPacket": [
+    44042341149,
+    44042341284,
+    44042341120,
+    44042341241,
+    44042341273
+  ],
+  "terminalRunIds": [
+    44042341370,
+    44042341121
+  ],
+  "excludedOriginalRunIds": [
+    44008782825,
+    44008782932,
+    44008782869,
+    44008782832,
+    44008782909,
+    44008782844,
+    44008782843
+  ],
+  "importantLimits": [
+    "The seven original attempt responses independently bind exact PR1219/head/base/ref/repository, so collection-level empty PR arrays and unsupported optional check-suite endpoint reads do not leave event association unresolved.",
+    "Initial39-job inventory is complete for its captured response bodies, not a final dependent-job census for five active workflows.",
+    "Run and job responses are not an atomic snapshot: a Stage1 Windows job had started setup/checkout while the earlier attempt response still said queued.",
+    "Neither the two explicit Draft skips nor setup progress qualifies any target test, GUI, packaged/native or E2E contract.",
+    "This review observes immutable retained evidence only. Root alone continues the already-admitted new runs, stops terminal polling and preserves all source/ref/PR freezes.",
+    "No local standalone RED/GREEN admission or execution is inferred."
+  ],
+  "checks": [
+    {
+      "id": "complete-packet-admission-gate-identities",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "packet": {
+          "bytes": 1678327,
+          "sha256": "db87c4862770dca1bb3432e08a304de8adc465e9b762f60cfa966a23d561f082",
+          "gitBlob": "45f21a0ccfd99cde885b92d04a6fcdd11d73b432"
+        },
+        "admission": {
+          "bytes": 34918,
+          "sha256": "4e54d76f0058e1024d6e9e9088962bfb167c491e2eb7a45b40d1607629a9c3d8",
+          "gitBlob": "df645b8eac669fbd71f243bfd64bd915a871583f"
+        },
+        "actualGate": {
+          "bytes": 9510,
+          "sha256": "7709fd167750dac768b1a826ff81904077a1afe936bbd5865b4041e126ffb599",
+          "gitBlob": "e869a398b712541b17eef73ba5a44af49b00f70d"
+        }
+      }
+    },
+    {
+      "id": "exact88-check-publication-gate",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "gate": {
+          "bytes": 9510,
+          "sha256": "7709fd167750dac768b1a826ff81904077a1afe936bbd5865b4041e126ffb599",
+          "gitBlob": "e869a398b712541b17eef73ba5a44af49b00f70d"
+        },
+        "root": {
+          "report": {
+            "bytes": 76668,
+            "sha256": "8ef246ec40b9c443ddd13bad6b385e80fd60b1881b7eb2b342aba14bd74c56c3",
+            "gitBlob": "757184208b6b39432f5f957011c0a2d40d5b344d"
+          },
+          "checks": 40,
+          "completeRead": true,
+          "selfReadConfirmed": true
+        },
+        "independent": {
+          "report": {
+            "bytes": 123197,
+            "sha256": "ecc5f229c0073fd48c218205e4feb0928e70f2a41a4ff53d60088e320ae0cef4",
+            "gitBlob": "cc54c9d831a28eadf9e411fd8d53134fbcd6f881"
+          },
+          "checks": 48,
+          "completeRead": true,
+          "selfReadConfirmed": true
+        }
+      }
+    },
+    {
+      "id": "admission-binds-actual65cd-and-fixed9d",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "actualDocs": {
+          "commit": "65cd08dc15e3735cb579578d475938fd0a3fb135",
+          "soleParent": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "root": "e2347fe433055be9f5c8ee109e7db087bf365c16",
+          "docs": "1e97d02232e95ba34238c340713571bb6e5b2a91",
+          "manifest": {
+            "bytes": 11281,
+            "sha256": "160f8cdddde972cf49590e52c658503537e5c55dde546e4b7d8944524890eb65",
+            "gitBlob": "dadd79ede8cbc6605a832bfee8b5865af2e57505"
+          }
+        },
+        "fixedHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "fixedBase": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+      }
+    },
+    {
+      "id": "same-proposal-and-three-structured-actions",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "proposal": {
+          "bytes": 69751,
+          "sha256": "ded423903437131ea288b2d43a20391147f8e4cdb45357b6d92496d4763487bd",
+          "gitBlob": "1bb01907e9a3b9fba7cedb3d34d0d2773a57ca23"
+        },
+        "source": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "actions": 3
+      }
+    },
+    {
+      "id": "packet-admission-and-gate-exact",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "admission": {
+          "bytes": 34918,
+          "sha256": "4e54d76f0058e1024d6e9e9088962bfb167c491e2eb7a45b40d1607629a9c3d8",
+          "gitBlob": "df645b8eac669fbd71f243bfd64bd915a871583f"
+        },
+        "actualGate": {
+          "bytes": 9510,
+          "sha256": "7709fd167750dac768b1a826ff81904077a1afe936bbd5865b4041e126ffb599",
+          "gitBlob": "e869a398b712541b17eef73ba5a44af49b00f70d"
+        },
+        "proposal": {
+          "bytes": 69751,
+          "sha256": "ded423903437131ea288b2d43a20391147f8e4cdb45357b6d92496d4763487bd",
+          "gitBlob": "1bb01907e9a3b9fba7cedb3d34d0d2773a57ca23"
+        }
+      }
+    },
+    {
+      "id": "gate-admission-preflight-action-chronology",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "gate": "2026-11-17 07:53:00 UTC",
+        "admission": "2026-11-17 07:53:28 UTC",
+        "preflight": {
+          "at": "2026-11-17 07:54:02 UTC",
+          "completeAt": "2026-11-17 07:54:04 UTC",
+          "admission": {
+            "bytes": 34918,
+            "sha256": "4e54d76f0058e1024d6e9e9088962bfb167c491e2eb7a45b40d1607629a9c3d8",
+            "gitBlob": "df645b8eac669fbd71f243bfd64bd915a871583f"
+          },
+          "exactBaseName": "ci/frontend-parity-c714-20261117-2-base",
+          "exactHeadName": "ci/frontend-parity-c714-20261117-2-head",
+          "baseAbsent": true,
+          "headAbsent": true,
+          "source": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+          "root": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+          "baseRoot": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+          "mergeBase": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+          "ahead": 10,
+          "behind": 0,
+          "allComparisonRows": 156,
+          "completeWorkflowBodies": 42,
+          "workflowBytes": 751430,
+          "all7SelectionUnchanged": true,
+          "workingEvidenceHead": "65cd08dc15e3735cb579578d475938fd0a3fb135",
+          "newMutationsIssued": 0,
+          "passed": true
+        },
+        "issued": [
+          {
+            "order": 2,
+            "issuedAt": "2026-11-17 07:54:28 UTC",
+            "readbackAt": "2026-11-17 07:54:29 UTC"
+          },
+          {
+            "order": 3,
+            "issuedAt": "2026-11-17 07:54:29 UTC",
+            "readbackAt": "2026-11-17 07:54:31 UTC"
+          },
+          {
+            "order": 4,
+            "issuedAt": "2026-11-17 07:54:36 UTC",
+            "readbackAt": "2026-11-17 07:54:38 UTC"
+          }
+        ]
+      }
+    },
+    {
+      "id": "30-complete-raw-api-response-identities",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "count": 30,
+        "bytes": 1507856,
+        "kind": "Original complete response strings embedded in the packet; byte/SHA identities are not separate retained Git blobs."
+      }
+    },
+    {
+      "id": "exact-alias-absence-readbacks",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "baseName": "ci/frontend-parity-c714-20261117-2-base",
+        "headName": "ci/frontend-parity-c714-20261117-2-head",
+        "retainedResponseKeys": [
+          "preflight:baseName",
+          "preflight:headName"
+        ],
+        "completeEmptyResponses": true
+      }
+    },
+    {
+      "id": "fixed-head-base-tree-preflight",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "root": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+        "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "baseRoot": "ada3f27db78fabc17a91e3904d41b8bc547c6dca"
+      }
+    },
+    {
+      "id": "immutable-compare-and-workflow-preflight-match",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "comparison": {
+          "bytes": 1316501,
+          "sha256": "b197f33f4fd07ad0afd3443214705152dfc2b6ec544eb6fc014b4d9c3d67137f",
+          "gitBlob": "b22f8e839e41161d124ea665134b2d254ebe8ed0"
+        },
+        "workflowCorpus": {
+          "corpus": {
+            "bytes": 780732,
+            "sha256": "9a83bd5a7425d0674345c607e26b2a1df8bde3556549ac276bfbf860c5c4e3bb",
+            "gitBlob": "6d032754064d4f251a11e8572bb7b476ea5860a8"
+          },
+          "bodyCount": 42,
+          "bytes": 751430,
+          "allLiteralBodiesMatch": true,
+          "tree": "d95091ab0edb488d6e418ffa789d0f07c447ecda"
+        },
+        "method": "Complete retained actual .github tree joins all accepted workflow bodies. The packet also records root's fresh literal42-body readback; no new execution inferred."
+      }
+    },
+    {
+      "id": "each-mutation-single-exact-payload",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "orders": [
+          2,
+          3,
+          4
+        ],
+        "maxAttempts": 1
+      }
+    },
+    {
+      "id": "both-created-refs-read-back-exactly",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": [
+        {
+          "order": 2,
+          "args": {
+            "repository_full_name": "777genius/agent-teams-ai",
+            "branch_name": "ci/frontend-parity-c714-20261117-2-base",
+            "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+          },
+          "actualRef": {
+            "ref": "refs/heads/ci/frontend-parity-c714-20261117-2-base",
+            "node_id": "REF_kwDORVTEtNoAMnJlZnMvaGVhZHMvY2kvZnJvbnRlbmQtcGFyaXR5LWM3MTQtMjAyNjExMTctMi1iYXNl",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs/heads/ci/frontend-parity-c714-20261117-2-base",
+            "object": {
+              "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+              "type": "commit",
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+            }
+          }
+        },
+        {
+          "order": 3,
+          "args": {
+            "repository_full_name": "777genius/agent-teams-ai",
+            "branch_name": "ci/frontend-parity-c714-20261117-2-head",
+            "sha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+          },
+          "actualRef": {
+            "ref": "refs/heads/ci/frontend-parity-c714-20261117-2-head",
+            "node_id": "REF_kwDORVTEtNoAMnJlZnMvaGVhZHMvY2kvZnJvbnRlbmQtcGFyaXR5LWM3MTQtMjAyNjExMTctMi1oZWFk",
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs/heads/ci/frontend-parity-c714-20261117-2-head",
+            "object": {
+              "sha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+              "type": "commit",
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "actual-draft-pr1219-exact-metadata",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "number": 1219,
+        "id": 5352988316,
+        "draft": true,
+        "maintainerCanModify": false,
+        "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "headRef": "ci/frontend-parity-c714-20261117-2-head",
+        "baseRef": "ci/frontend-parity-c714-20261117-2-base",
+        "title": "test: validate frontend parity deadlines and member reveal",
+        "bodyLiteralEqualsAdmitted": true
+      }
+    },
+    {
+      "id": "creation-return-and-unique-new-pr-query",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "singleReturnedPr": 1219,
+        "exactQueryCount": 1,
+        "createdAt": "2026-11-17T07:54:36Z"
+      }
+    },
+    {
+      "id": "same-repository-head-base-identity",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "repository": "777genius/agent-teams-ai",
+        "id": 1163183284
+      }
+    },
+    {
+      "id": "actual-synthetic-merge-parents-and-source-tree",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "sha": "c0e6845650002dfaabf6b1dcc727d13b2f0570f6",
+        "parents": [
+          "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+          "9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+        ],
+        "tree": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295"
+      }
+    },
+    {
+      "id": "complete-initial-discovery7-plus-empty-end",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "total": 7,
+        "pages": 2,
+        "pageRows": [
+          7,
+          0
+        ],
+        "window": {
+          "from": "2026-11-17T07:54:34.000Z",
+          "to": "2026-11-17T07:56:38.000Z",
+          "basis": "Exact at-most-once PR action start/return with bounded two-second lead and two-minute event-creation tail",
+          "actualPrNumber": 1219
+        },
+        "qualification": "Completeness of this bounded initial action-window enumeration; not a future run or job-finality claim."
+      }
+    },
+    {
+      "id": "exact-seven-eligible-workflow-families",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": [
+        {
+          "id": 44042341370,
+          "path": ".github/workflows/codeql.yml"
+        },
+        {
+          "id": 44042341121,
+          "path": ".github/workflows/opencode-desktop-e2e.yml"
+        },
+        {
+          "id": 44042341149,
+          "path": ".github/workflows/announcements-content.yml"
+        },
+        {
+          "id": 44042341284,
+          "path": ".github/workflows/electron-packaged-ci.yml"
+        },
+        {
+          "id": 44042341120,
+          "path": ".github/workflows/opencode-v2-stage1-preflight.yml"
+        },
+        {
+          "id": 44042341241,
+          "path": ".github/workflows/ci.yml"
+        },
+        {
+          "id": 44042341273,
+          "path": ".github/workflows/host-emulated-acceptance.yml"
+        }
+      ]
+    },
+    {
+      "id": "seven-original-attempt1-run-bindings",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "runs": [
+          {
+            "id": 44042341370,
+            "attempt": 1,
+            "event": "pull_request",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "repositoryId": 1163183284,
+            "checkSuiteId": 119223311538
+          },
+          {
+            "id": 44042341121,
+            "attempt": 1,
+            "event": "pull_request",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "repositoryId": 1163183284,
+            "checkSuiteId": 119223310863
+          },
+          {
+            "id": 44042341149,
+            "attempt": 1,
+            "event": "pull_request",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "repositoryId": 1163183284,
+            "checkSuiteId": 119223310942
+          },
+          {
+            "id": 44042341284,
+            "attempt": 1,
+            "event": "pull_request",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "repositoryId": 1163183284,
+            "checkSuiteId": 119223311317
+          },
+          {
+            "id": 44042341120,
+            "attempt": 1,
+            "event": "pull_request",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "repositoryId": 1163183284,
+            "checkSuiteId": 119223310874
+          },
+          {
+            "id": 44042341241,
+            "attempt": 1,
+            "event": "pull_request",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "repositoryId": 1163183284,
+            "checkSuiteId": 119223311197
+          },
+          {
+            "id": 44042341273,
+            "attempt": 1,
+            "event": "pull_request",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "repositoryId": 1163183284,
+            "checkSuiteId": 119223311285
+          }
+        ]
+      }
+    },
+    {
+      "id": "all-attempts-explicit-pr1219-head-base",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "strongPrimaryAssociation": true,
+        "collectionEmptyPullRequestArraysNotUsedAsProof": true
+      }
+    },
+    {
+      "id": "run-timestamps-within-original-action-window",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "prCreatedAt": "2026-11-17T07:54:36Z",
+        "runCreatedTimes": [
+          "2026-11-17T07:54:41Z"
+        ],
+        "window": {
+          "from": "2026-11-17T07:54:34.000Z",
+          "to": "2026-11-17T07:56:38.000Z",
+          "basis": "Exact at-most-once PR action start/return with bounded two-second lead and two-minute event-creation tail",
+          "actualPrNumber": 1219
+        }
+      }
+    },
+    {
+      "id": "ci-event-derived-title-supports-opened-draft-merge",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": "CI proof: PR=1219 | head=9d79abcf1f5c498687c2e5c443e3edf220070aa6 | base=77993819c233737f1e2b4c11c8ca1a5d360bcbe3 | merge=c0e6845650002dfaabf6b1dcc727d13b2f0570f6 | action=opened | draft=true"
+    },
+    {
+      "id": "all39-initial-jobs-bind-run-attempt-source",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "jobCounts": [
+          {
+            "run": 44042341370,
+            "count": 1
+          },
+          {
+            "run": 44042341121,
+            "count": 1
+          },
+          {
+            "run": 44042341149,
+            "count": 1
+          },
+          {
+            "run": 44042341284,
+            "count": 1
+          },
+          {
+            "run": 44042341120,
+            "count": 9
+          },
+          {
+            "run": 44042341241,
+            "count": 4
+          },
+          {
+            "run": 44042341273,
+            "count": 22
+          }
+        ],
+        "totalInitialJobs": 39,
+        "qualification": "Complete available job response bodies at their capture times, each below page size100. Active workflows can add dependent/matrix jobs; these are not terminal inventories."
+      }
+    },
+    {
+      "id": "two-explicit-draft-skips-fully-captured",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": [
+        {
+          "run": 44042341370,
+          "conclusion": "EXPECTED_DRAFT_SKIP",
+          "artifactCount": 0,
+          "job": 133899669325,
+          "log": "No executed steps; no log success claim",
+          "terminalCaptureComplete": true
+        },
+        {
+          "run": 44042341121,
+          "conclusion": "EXPECTED_DRAFT_SKIP",
+          "artifactCount": 0,
+          "job": 133899669283,
+          "log": "No executed steps; no log success claim",
+          "terminalCaptureComplete": true
+        }
+      ]
+    },
+    {
+      "id": "five-active-runs-remain-nonterminal",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "activeAsOfPacket": [
+          44042341149,
+          44042341284,
+          44042341120,
+          44042341241,
+          44042341273
+        ],
+        "noRuntimePassClaim": true
+      }
+    },
+    {
+      "id": "non-atomic-run-and-job-snapshots-not-promoted",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "qualification": "The earlier Stage1 run response says queued while a later jobs response already records a Windows job in progress. Retain both times/surfaces; no atomic snapshot or all-jobs-queued claim. Setup/checkout progress is not test or GUI success."
+      }
+    },
+    {
+      "id": "check-suite-http400-limit-honestly-retained",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "errors": 7,
+        "status": "UNAVAILABLE_CONNECTOR_ENDPOINT",
+        "doesNotBlockRunBinding": "All seven complete attempt responses independently contain exact PR1219 head/base/ref/repository bindings and their check-suite IDs. The collection response's empty pull_requests field was not assumed to prove PR identity.",
+        "noBypassOrNewGate": true
+      }
+    },
+    {
+      "id": "terminal-and-original-runs-excluded",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "stopTerminal": [
+          44042341370,
+          44042341121
+        ],
+        "excludedOriginals": [
+          44008782825,
+          44008782932,
+          44008782869,
+          44008782832,
+          44008782909,
+          44008782844,
+          44008782843
+        ]
+      }
+    },
+    {
+      "id": "source-docs-concurrency-and-local-limits-preserved",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "source": {
+          "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+          "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+          "root": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+          "merge": "c0e6845650002dfaabf6b1dcc727d13b2f0570f6",
+          "mergeParents": [
+            "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+            "9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+          ],
+          "mergeTree": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+          "docsAuthority": "65cd08dc15e3735cb579578d475938fd0a3fb135"
+        },
+        "freeze": "Keep both new refs and new PR metadata fixed while any selected new run is active; no push/force/rebase/base or label/title/body edit, Ready conversion, close/reopen, rerun, cancellation or dispatch. Required documentation pushes may continue only on the separate working evidence branch.",
+        "local": {
+          "local": {
+            "status": "rejected",
+            "reason": "No usable execution environment is available. Wait for an environment to become available before using this tool."
+          },
+          "remoteCi": "Existing reviewed GitHub workflows only; exact original source/runtime/provider selection applies.",
+          "localStandaloneAdmitted": false,
+          "localStageOrScopeCreated": false,
+          "localNodeOrVendorExecutionAllowed": false,
+          "realClaudeCodexAllowed": false,
+          "permittedOpenCode": "Existing pinned local-model CI paths only"
+        }
+      }
+    },
+    {
+      "id": "capture-only-not-new-runtime-gate-or-pass",
+      "result": "PASS_CAPTURE_BINDING",
+      "evidence": {
+        "qualification": "Initial event binding and expected Draft skip capture only. Five admitted new workflows remain nonterminal. No runtime/pass/whole-E2E claim. No original/frozen run was polled.",
+        "reviewAuthority": "Retained evidence review only; execution is already admitted and underway. This review adds no action or runtime gate."
+      }
+    }
+  ],
+  "checkCount": 30,
+  "passedChecks": [
+    "complete-packet-admission-gate-identities",
+    "exact88-check-publication-gate",
+    "admission-binds-actual65cd-and-fixed9d",
+    "same-proposal-and-three-structured-actions",
+    "packet-admission-and-gate-exact",
+    "gate-admission-preflight-action-chronology",
+    "30-complete-raw-api-response-identities",
+    "exact-alias-absence-readbacks",
+    "fixed-head-base-tree-preflight",
+    "immutable-compare-and-workflow-preflight-match",
+    "each-mutation-single-exact-payload",
+    "both-created-refs-read-back-exactly",
+    "actual-draft-pr1219-exact-metadata",
+    "creation-return-and-unique-new-pr-query",
+    "same-repository-head-base-identity",
+    "actual-synthetic-merge-parents-and-source-tree",
+    "complete-initial-discovery7-plus-empty-end",
+    "exact-seven-eligible-workflow-families",
+    "seven-original-attempt1-run-bindings",
+    "all-attempts-explicit-pr1219-head-base",
+    "run-timestamps-within-original-action-window",
+    "ci-event-derived-title-supports-opened-draft-merge",
+    "all39-initial-jobs-bind-run-attempt-source",
+    "two-explicit-draft-skips-fully-captured",
+    "five-active-runs-remain-nonterminal",
+    "non-atomic-run-and-job-snapshots-not-promoted",
+    "check-suite-http400-limit-honestly-retained",
+    "terminal-and-original-runs-excluded",
+    "source-docs-concurrency-and-local-limits-preserved",
+    "capture-only-not-new-runtime-gate-or-pass"
+  ],
+  "failedChecks": [],
+  "unresolvedBindingBlockers": [],
+  "unresolvedPointers": [],
+  "newRuntimeGate": false,
+  "newActionAdmission": false,
+  "newRuntimePassClaim": false,
+  "reviewerActions": {
+    "immutableBlobReadsOnly": true,
+    "pureIdentityAndDataAnalysis": true,
+    "bareReportOnlyWrite": true,
+    "livePrRefRunJobArtifactEndpointReads": false,
+    "oldCiPolling": false,
+    "shell": false,
+    "runtime": false,
+    "sourceOrControlMutation": false
+  },
+  "dataOnlyReviewerCorrection": "An initial display helper assumed the workflow readback summary was an array. The object shape was read and the display corrected; no evidence, source, action, identity or result changed.",
+  "selfReadbackProtocol": "Retain full report, send pin immediately, then read the full retained body and require literal and bytes/SHA256/Git identity equality."
+}
