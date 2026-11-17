@@ -510,7 +510,7 @@ describe('teamSlice actions', () => {
     expect(store.getState().setActiveTab).toHaveBeenCalledWith('history-tab');
     expect(store.getState().openTab).not.toHaveBeenCalled();
 
-    store.getState().openTeamTab('builders');
+    store.getState().openTeamTab('builders', '/TEST/current-project');
     expect(store.getState().openTab).toHaveBeenCalledWith(expect.objectContaining({
       teamName: 'builders', label: 'Builders',
     }));

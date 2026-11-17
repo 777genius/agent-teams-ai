@@ -119,7 +119,9 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
       if (!destination) return;
       closeGlobalTaskDetail();
       if (destination.state === 'redirect') {
-        openTeamTab(destination.logicalTeamName, destination.projectPath, identity.taskId);
+        // A verified native alias owns this project task. Do not mark its
+        // logical navigation as an old shared-history task.
+        openTeamTab(destination.logicalTeamName, destination.projectPath);
       } else {
         openTeamTab(identity.teamName, undefined, identity.taskId);
       }
