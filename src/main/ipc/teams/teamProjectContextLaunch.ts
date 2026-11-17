@@ -99,7 +99,10 @@ export async function withPreparedContextLaunch<T>(
 ): Promise<T | null> {
   // Validate explicit overrides BEFORE reserving native files. The original
   // IPC handler still validates effective persisted settings before spawn.
-  const effort = parseOptionalTeamEffort(request.effort, request.providerId);
+  // A missing provider override inherits the saved provider; Codex and
+  // Anthropic support levels beyond the legacy default set.
+  const saved = request.providerId ? null : await ports.data.getSavedRequest(request.teamName);
+  const effort = parseOptionalTeamEffort(request.effort, request.providerId ?? saved?.providerId);
   if (!effort.valid) throw new Error(effort.error);
   const fastMode = parseOptionalTeamFastMode(request.fastMode);
   if (!fastMode.valid) throw new Error(fastMode.error);

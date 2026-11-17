@@ -238,6 +238,25 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
     )).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
+  it('allows Codex xhigh when provider override is omitted and saved provider is Codex', async () => {
+    const f = await fixture();
+    await f.ports.data.createTeamConfig({
+      teamName: 'builders', cwd: f.projectPath,
+      members: [], projectContextMode: 'per_project',
+    });
+    const original = f.ports.data.getSavedRequest;
+    f.ports.data.getSavedRequest = async (name) => {
+      const saved = await original(name);
+      return saved ? { ...saved, providerId: 'codex' } : null;
+    };
+    const invoke = vi.fn(async () => ({ success: true as const }));
+    await expect(withPreparedContextLaunch({
+      teamName: 'builders', cwd: f.projectPath, effort: 'xhigh',
+    }, f.ports, invoke)).resolves.toMatchObject({ success: true });
+    expect(invoke).toHaveBeenCalledOnce();
+    expect(invoke.mock.calls[0]?.[0].teamName).not.toBe('builders');
+  });
+
   it('refuses project B while A is running and does not leave a dead reservation', async () => {
     const f = await fixture();
     await createTeamWithProjectContext({
