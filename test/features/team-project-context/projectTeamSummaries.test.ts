@@ -31,6 +31,8 @@ describe('projectTeamSummaries', () => {
     const visible = await projectTeamSummaries(teams, f.meta, f.registry);
     expect(visible.map((v) => v.teamName)).toEqual(['builders', 'ptc-foreign', 'old-team']);
     expect(visible[0]?.projectContextMode).toBe('per_project');
+    expect(visible[0]?.pendingCreate).toBe(false);
+    expect(visible[0]?.taskCount).toBe(3);
   });
 
   it('does not trust a pending reservation as authority to hide a physical team', async () => {

@@ -42,10 +42,31 @@ export async function projectTeamSummaries(
       projected[position] = { ...team, projectContextMode: 'per_project' };
       try {
         const contexts = await registry.list(team.teamName);
-        for (const context of contexts) {
-          // list() verifies ownership for ready aliases. Reservations alone
-          // must not suppress an unrelated/native team with a similar name.
-          if (context.state === 'ready') hidden.add(context.executionTeamName);
+        const ownedReady = contexts.filter((context) => context.state === 'ready');
+        for (const context of ownedReady) {
+          // list() proves ownership for ready aliases. A prefix or reserved
+          // record alone is never authority to hide an unrelated native team.
+          hidden.add(context.executionTeamName);
+        }
+        if (ownedReady.length > 0) {
+          const nativeSummaries = ownedReady.flatMap((context) => {
+            const native = teams.find((row) => row.teamName === context.executionTeamName);
+            return native ? [native] : [];
+          });
+          const activity = [team.lastActivity, ...nativeSummaries.map((row) => row.lastActivity)]
+            .filter((date): date is string => Boolean(date))
+            .sort((left, right) => Date.parse(right) - Date.parse(left))[0] ?? null;
+          projected[position] = {
+            ...team,
+            projectContextMode: 'per_project',
+            // A valid native context means this is no longer just an unlaunched
+            // metadata-only draft, even though the logical team has no config.json.
+            pendingCreate: false,
+            taskCount: team.taskCount + nativeSummaries.reduce(
+              (sum, row) => sum + row.taskCount, 0
+            ),
+            lastActivity: activity,
+          };
         }
       } catch {
         // A broken mapping is not proof of alias ownership.
