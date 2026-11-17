@@ -1,0 +1,516 @@
+{
+  "schemaVersion": 1,
+  "kind": "read-only-existing-readiness-failure-stdout-feasibility-advisory",
+  "repository": "777genius/agent-teams-ai",
+  "author": "/root/producer_r2_semantic",
+  "preparedAtUtc": "2026-11-17 09:37:00 UTC",
+  "decision": "FEASIBLE_BOUNDED_SOURCE_SCOPE_ONLY",
+  "scope": "Project already captured readiness evidence into the existing failure summary. No postimage, source correction, runtime, venue, protocol or additional gate is selected or approved.",
+  "authority": {
+    "rootSoleSourceControlAuthorApplierExecutor": true,
+    "actionsPerformed": [
+      "immutable Git/source reads",
+      "whole stored-body UTF-8/Git-blob/SHA256 identity verification",
+      "pure data parsing and source inspection",
+      "retention of this bare advisory blob"
+    ],
+    "actionsNotPerformed": [
+      "shell or local filesystem access",
+      "target source execution, import, compilation or tests",
+      "new DOM, Host, OS or provider observations",
+      "real Claude/Codex, including version probes",
+      "source/control/ref/PR/CI changes",
+      "live CI reads, polling or artifact downloads",
+      "browser/CUA"
+    ],
+    "noRuntimeOrQualificationClaim": true
+  },
+  "sourceBasis": {
+    "independentlyFetchedCommit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "latestRootIdentityJoin": "Root independently fetched proof-evidence 5a537bd3, backend-smoke 7f9bac54 and packaged-relaunch 6b37 at current actual source 1ca and reported exact byte identity to 9d. This report uses the exact complete blob identities below; it does not invent the unavailable full 1ca commit SHA or claim an independent 1ca tree read.",
+    "frozenThirteen": {
+      "bytes": 3481,
+      "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+      "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b",
+      "requirement": "All thirteen parity source/test blobs remain unchanged; the frozen whole149 readiness-summary case remains part of the regression contract."
+    },
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "bytes": 54778,
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+        "gitBlob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "contentLines": 791
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "bytes": 49613,
+        "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+        "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+        "contentLines": 787
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+        "contentLines": 394
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+        "contentLines": 182
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+        "bytes": 27829,
+        "sha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf",
+        "gitBlob": "9aa43a43d6186c62bc92dae60dab4fe57cc63fe6",
+        "contentLines": 477
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+        "bytes": 24968,
+        "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+        "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+        "contentLines": 333
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f",
+        "contentLines": 1191
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "bytes": 165022,
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+        "contentLines": 2702
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+        "bytes": 22845,
+        "sha256": "135cd81f2edde1f087b231d4dcbed83d8cc8beade5a0230a093e6cbfcb1923ee",
+        "gitBlob": "b33e5290e4ed86a48b902a24ffc80509f1c89236",
+        "contentLines": 253
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+        "bytes": 34086,
+        "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f",
+        "gitBlob": "aff6e19ec4cf492841aa667442c1b7d71541c7c5",
+        "contentLines": 377
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "bytes": 69370,
+        "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+        "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f",
+        "contentLines": 798
+      }
+    ],
+    "readScope": {
+      "desktop-proof-evidence.ts": "Complete file read, including imports, existing projector and final summary routing.",
+      "desktop-packaged-relaunch-smoke.ts": "Complete file read, including original flow, failure capture, cleanup, final summary and original-error rethrow.",
+      "desktop-captured-app.ts": "Whole file fetched and identity verified; complete captureDesktopRendererFailure function read. Unrelated restart/process graphs were not re-audited.",
+      "desktop-backend-smoke.ts": "Whole file fetched and identity verified; exact mode selection/dispatch plus complete relevant catch/finally/final summary read. This is not a new complete native-route audit.",
+      "desktop-team-ui-smoke.ts": "Whole file identity verified; complete readRendererFailureSnapshot function read.",
+      "desktop-emulated-lifecycle-ui.ts": "Whole file identity verified; actual original prelaunch action path through the readiness wait and subsequent click read.",
+      "desktop-emulated-collaboration-ui.ts": "Whole file identity verified; actual original prelaunch action path through the readiness wait and subsequent click read.",
+      "desktop-emulated-runtime-ui.ts": "Whole file identity verified; dispatch and actual original prelaunch action path through the readiness wait and subsequent click read. Existing full source R2 remains separate.",
+      "desktop-emulated-settings.test.ts": "Complete file read as an already existing pure-summary test seam; no change is recommended in addition to the preferred observations test.",
+      "desktop-backend-observations.test.ts": "Whole file fetched and hashed; imports, complete ending and all 34 registration expressions inspected for append feasibility. Root separately reported a complete file read. This advisory does not represent a new exhaustive semantic audit of its unrelated process tests.",
+      "desktop-team-ui-smoke.test.ts": "Previously fully read immutable whole149 body rehashed; exact existing readiness projection regression at lines770–806 freshly read."
+    }
+  },
+  "failureContext": {
+    "classification": "Four parent-reported lanes share the original enabled-Launch wait boundary; they do not yet have an established common readiness cause.",
+    "lanes": [
+      {
+        "lane": "Packaged Darwin ARM",
+        "driver": "b33e5290e4ed86a48b902a24ffc80509f1c89236",
+        "line": 88,
+        "label": "original lifecycle model readiness",
+        "budgetMs": 90000,
+        "subsequentSubmitLine": 90
+      },
+      {
+        "lane": "Packaged Darwin x64",
+        "driver": "b33e5290e4ed86a48b902a24ffc80509f1c89236",
+        "line": 88,
+        "label": "original lifecycle model readiness",
+        "budgetMs": 90000,
+        "subsequentSubmitLine": 90,
+        "parentRetainedLog": {
+          "gitBlob": "818ee7deffc49e971734cf98037a73498e48f7b1",
+          "bytes": 188446,
+          "sha256": "1baab15dd057968ad57539eb7fe537377603f335e39b4df74f63191fdf752785",
+          "job": "133910312555",
+          "readByThisAdvisory": false
+        }
+      },
+      {
+        "lane": "Linux collaboration",
+        "driver": "aff6e19ec4cf492841aa667442c1b7d71541c7c5",
+        "line": 109,
+        "label": "original mixed launch preflight",
+        "budgetMs": 90000,
+        "subsequentSubmitLine": 111
+      },
+      {
+        "lane": "Claude runtime",
+        "driver": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f",
+        "line": 91,
+        "label": "original preflight completes",
+        "budgetMs": 90000,
+        "subsequentSubmitLine": 93
+      }
+    ],
+    "commonLiteralPredicate": "[...document.querySelectorAll('[role=\"dialog\"] button')].some(e=>e.textContent.trim()==='Launch team'&&!e.disabled)",
+    "staticMeaning": "Each selected source path waits for an enabled exact-label Launch team button before its original submit click. The advisory does not alter this predicate, its 90,000 ms budget, preceding scroll/fill actions, subsequent zero-runtime-capture assertion, or click.",
+    "evidenceLimit": "The four failed receipt ZIP contents and actual captured dialog values were not newly read here. Failure-lane observations are attributed to root's retained-log reviews. The source proves where existing evidence is captured, not which disabled reason was present in any specific failed run."
+  },
+  "existingCapture": {
+    "owner": {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "lines": [
+        39,
+        61
+      ],
+      "function": "captureDesktopRendererFailure"
+    },
+    "sequence": [
+      "Original owned-CDP listener assertion.",
+      "Original bounded readRendererFailureSnapshot, 4,000 ms. A caught snapshot failure stores {unavailable:true}. If the outer ownership assertion fails before this read, the snapshot may be absent.",
+      "Original bounded Page.captureScreenshot, 5,000 ms, then retained PNG and digest; screenshot failure is separately retained.",
+      "Existing caller cleanup and final receipt/summary. No new sample is needed."
+    ],
+    "snapshot": {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "gitBlob": "9aa43a43d6186c62bc92dae60dab4fe57cc63fe6",
+      "function": "readRendererFailureSnapshot",
+      "lines": [
+        401,
+        477
+      ]
+    },
+    "dialogFields": [
+      {
+        "field": "dialogs",
+        "existingCapture": "First 3 [role=\"dialog\"] elements in document order.",
+        "limit": "No original total or truncation boolean. No visibility/eligibility filter."
+      },
+      {
+        "field": "dialogs[].text",
+        "existingCapture": "Last 8,000 characters of innerText.",
+        "limit": "Text may be incomplete and may contain private strings. It is not an authoritative model-readiness object."
+      },
+      {
+        "field": "dialogs[].buttons",
+        "existingCapture": "Last 24 descendant buttons.",
+        "limit": "No original total or truncation boolean; retained buttons are not a complete global census."
+      },
+      {
+        "field": "buttons[].text",
+        "existingCapture": "Trimmed textContent, first160 characters.",
+        "limit": "Exact Launch team can be recognized internally; arbitrary raw labels must not be emitted."
+      },
+      {
+        "field": "buttons[].disabled",
+        "existingCapture": "DOM disabled boolean.",
+        "limit": "A captured boolean describes that saved button after failure, not the last predicate evaluation or the causal reason it was disabled."
+      },
+      {
+        "field": "buttons[].x/y/width/height",
+        "existingCapture": "Existing bounding rectangle numbers.",
+        "limit": "Coordinates do not prove visibility, hit eligibility, authority or atomic currentness and are unnecessary for the minimum readiness projection."
+      }
+    ],
+    "otherAlreadyCapturedFields": "The store snapshot contains selectedTeamError and up to eight selected/pane-team provisioning records, including current-run presence, progress state/configReady/error/message. It does not capture a dedicated Launch dialog model-catalog status object. Before submit there may be no provisioning run at all.",
+    "timingAndCompleteness": "This is an existing post-failure sample, not an atomic copy of the failed wait's final evaluation. Missing data, capture failure, cap-sized arrays/text and malformed fields must remain unavailable/unknown/possibly incomplete. A later saved enabled button or readiness phrase cannot turn the original expired wait into success."
+  },
+  "existingProjectionAndRoutes": {
+    "projector": {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+      "function": "projectDesktopEmulatedReadinessFailure",
+      "lines": [
+        316,
+        371
+      ]
+    },
+    "currentBehavior": [
+      "Pure projection over retained data; it performs no renderer, Host, filesystem, clock or provider reads.",
+      "Uses own property descriptors and rejects accessors rather than reading getters. Unknown booleans/enums become null. Property-descriptor/proxy failures are caught by the existing projection-failed fallback; no universal arbitrary-proxy time bound is claimed.",
+      "textFacts accepts only strings of at most8,000 characters and emits fixed vocabulary terms and fixed phrase-presence booleans. It never emits the original string.",
+      "Provisioning output processes at most8 entries and retains a bounded count/overflow fact.",
+      "The current serialized result is capped at8,192 JavaScript string characters; exceeding it returns the fixed unavailable/overflow record. With only fixed ASCII strings and bounded numbers/booleans, byte size can also be checked in tests.",
+      "Current inputs are snapshot.store, stoppedImportUiProof.hydrationFailureDiagnostics and emulatedRuntimeCleanup. The captured dialogs are currently ignored."
+    ],
+    "genericSummary": {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "function": "projectDesktopProofReceiptSummary",
+      "lines": [
+        373,
+        394
+      ],
+      "currentReadinessModes": [
+        "emulated-import-ui",
+        "emulated-opencode-runtime-ui"
+      ],
+      "condition": "evidence.status !== 'PASS'"
+    },
+    "exactAdditionalModesSupportedByThisFeasibility": [
+      "emulated-claude-runtime-ui",
+      "emulated-claude-lifecycle-ui",
+      "emulated-collaboration-ui"
+    ],
+    "genericCaller": {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "captureLine": 654,
+      "finalReceiptLine": 768,
+      "finalSummaryLine": 769,
+      "changeNeeded": false
+    },
+    "packagedCaller": {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "mode": "emulated-claude-lifecycle-ui",
+      "captureLines": [
+        140,
+        145
+      ],
+      "finalReceiptLine": 175,
+      "finalSummaryLine": 176,
+      "originalRethrowLine": 178,
+      "existingFinalFields": [
+        "kind",
+        "status",
+        "receipt",
+        "root"
+      ],
+      "observation": "Already captures the same snapshot before its first relaunch attempt but currently prints only these four summary fields. Its existing proof-evidence import can reuse the same pure projector/summary owner."
+    },
+    "finalSummaryLimit": "The existing summaries occur after the original cleanup, input/source checks and receipt write. If an earlier existing finally operation itself throws, the final summary may not be reached. This bounded proposal does not promise output on every catastrophic exit or move/retry those operations."
+  },
+  "narrowCandidateBoundary": {
+    "status": "Recommendation for a later exact root-authored R1 only; no implementation is provided or approved.",
+    "production": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+        "currentLines": 394,
+        "role": "Extend the existing pure readiness projector to consume only retained dialog/button data, and route only the three identified additional non-PASS modes through the existing summary."
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "currentLines": 182,
+        "role": "Include the same sanitized readiness projection in the existing failure summary while preserving kind/status/receipt/root, final receipt and cleanup order, original rethrow and successful-summary behavior."
+      }
+    ],
+    "preferredExistingTest": {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f",
+      "bytes": 66098,
+      "currentLines": 1191,
+      "registrationExpressions": 34,
+      "role": "Append direct tests of the actual exported projector/summary, with imports scoped to the appended tests if needed so the entire existing byte prefix remains literal. No copied projector, CLI entrypoint import, source-string-only behavioral substitute, extra file, global clock/census mock or old-case rewrite is needed."
+    },
+    "alternateTestSeamNotAnAdditionalChange": {
+      "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+      "currentLines": 333,
+      "registrationExpressions": 7,
+      "expandedCases": 8,
+      "observation": "Already imports the actual receipt summary and tests pure privacy/unknown/immutability behavior. This shows an existing non-frozen seam exists; root's preferred observations file is sufficient and does not require changing both tests."
+    },
+    "fixedSourcesUnchanged": [
+      "desktop-backend-smoke.ts",
+      "desktop-captured-app.ts",
+      "desktop-team-ui-smoke.ts",
+      "desktop-emulated-lifecycle-ui.ts",
+      "desktop-emulated-collaboration-ui.ts",
+      "desktop-emulated-runtime-ui.ts",
+      "desktop-ui-controls.ts",
+      "all thirteen frozen parity sources/tests"
+    ],
+    "caps": "No added source file, so the existing non-document file inventory need not grow. The two candidate production files are394/182 content lines before editing and can stay under800. The preferred existing observations test is already1,191 lines; this report does not falsely describe that existing test as under800 or introduce a new cap waiver.",
+    "noBehaviorChange": "No predicate, input, submit, sampler, capture timing, retry, reload, model probe, cache action, provider selection, deadline, workflow/filter/dependency or cleanup authority change. Failure status and original exception remain failures."
+  },
+  "semanticRequirementsForAnyLaterCandidate": [
+    "Label the new facts as a retained post-failure partial DOM sample, not fresh readiness or a complete button census.",
+    "For exact allowlisted Launch team labels, report only bounded observed counts/state categories or tri-state booleans. Preserve distinct missing/malformed/ambiguous cases; do not select an arbitrary matching button or infer global absence from no retained match.",
+    "Recognize incomplete capture boundaries without inventing original totals: length3 dialogs, length24 buttons or8,000-character text may be at the producer cap but do not prove actual truncation. A shorter retained subset still is only this captured scope.",
+    "Feed retained dialog text into fixed allowlisted textFacts only. Phrase presence is a text observation, not an authentication/model/probe or readiness verdict. Do not print raw text, arbitrary button labels, prompt text, model/team/run identifiers, URLs, paths, profiles, credentials or entire receipts.",
+    "Retain own-data-property traversal for dialogs, entries and button fields. Do not invoke stored getters or coercion hooks, call methods from untrusted values, enumerate arbitrary nested object graphs, or echo thrown exceptions.",
+    "Bound dialog/button loops independently and preserve the total8,192-character fallback. Unknown/malformed/oversized data must yield explicit unknown or fixed unavailable output, not readiness success.",
+    "Keep existing provisioning, hydration and cleanup semantics and privacy properties. Detached output must not mutate or alias original evidence.",
+    "Add output only for the exact selected non-PASS modes and packaged failure path. Existing PASS summaries and unrelated team-ui/extensions modes remain unchanged.",
+    "Reuse the actual pure implementation for both entrypoints; do not import or execute the packaged/backend CLI main from tests. The packaged wire must use that same actual function and preserve existing summary fields/order and error propagation."
+  ],
+  "meaningfulVerificationShapes": [
+    {
+      "shape": "Captured button state",
+      "reason": "One saved exact-label Launch team button disabled true versus false, and duplicate matches with disagreeing values, must yield distinguishable captured facts without claiming eligibility or readiness."
+    },
+    {
+      "shape": "Readiness text without provisioning",
+      "reason": "A captured dialog containing existing fixed readiness/failure/loading phrases while snapshot.store is null or provisioning is absent must still produce useful sanitized phrase-presence facts. This is the concrete pre-submit information the old projector drops."
+    },
+    {
+      "shape": "Missing and malformed capture",
+      "reason": "Absent snapshot, {unavailable:true}, absent/non-array dialogs/buttons, invalid disabled types and missing text must stay unknown/unavailable rather than disabled=false or global no-button."
+    },
+    {
+      "shape": "Producer caps and output bound",
+      "reason": "First3/last24/text8,000 boundaries, oversized supplied arrays/strings and combined worst-case provisioning+dialog output must remain bounded. No fabricated completeness or original total is allowed."
+    },
+    {
+      "shape": "Privacy and nonmutation",
+      "reason": "Place private sentinels in dialog text, labels, IDs, paths, URLs and surrounding records; assert none appears in output, the original evidence is unchanged, and output does not alias private nested data."
+    },
+    {
+      "shape": "Accessors and failures",
+      "reason": "Actual getter traps on snapshot/dialogs/buttons/fields must not be invoked; throwing descriptor/proxy behavior must produce a fixed safe fallback, never expose exception text or replace the original runtime failure."
+    },
+    {
+      "shape": "Actual routing",
+      "reason": "Exercise actual exported receipt-summary code for the three new modes plus two existing readiness modes, PASS, team-ui and emulated-extensions-ui. Preserve existing frozen whole149 readiness regression expectations."
+    },
+    {
+      "shape": "Packaged composition",
+      "reason": "Review or exercise the actual minimal pure summary composition without importing its CLI entrypoint; confirm four original fields, failure-only readiness field and unchanged original rethrow. A copied miniature implementation is not meaningful proof."
+    }
+  ],
+  "existingTestAndWorkflowCompatibility": {
+    "frozenWhole149": {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 165022,
+      "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+      "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+      "contentLines": 2702,
+      "selectedExistingCaseLines": [
+        770,
+        806
+      ],
+      "existingContract": "Existing case checks privacy, nonmutation, getter avoidance, provisioning count9/overflow/items8, two current non-PASS routes, no field for PASS, team-ui or emulated-extensions-ui. It does not forbid readiness data for the three proposed new modes. Its entire body remains unchanged."
+    },
+    "preferredWholeTestPrefix": "Current observations body ends with a complete test. Appending test registrations can preserve every one of its66,098 original bytes and all34 original registration expressions. Parameterized registration expansion is not reduced or filtered.",
+    "workflow": {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+      "bytes": 96872,
+      "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+      "line": 103,
+      "command": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "coverage": "Both possible existing test files are already whole-file arguments in the unfiltered eight-file Host invocation; no workflow change is required."
+    },
+    "environmentLimit": "The existing test modules import existing Host/dist and fixture dependencies. This advisory does not assert a Node-only fresh environment, execute any test, select a new venue or make current fixed9d CI qualify a future candidate."
+  },
+  "checks": [
+    {
+      "id": "C01",
+      "status": "PASS_STATIC",
+      "finding": "All eleven stored complete source bodies independently rehashed to exact Git/SHA256/byte pins."
+    },
+    {
+      "id": "C02",
+      "status": "PASS_STATIC",
+      "finding": "Three unique original waits use the same exact enabled-Launch predicate with90,000 ms and occur before the original submit clicks."
+    },
+    {
+      "id": "C03",
+      "status": "PASS_STATIC",
+      "finding": "Existing failure capture uses original owned CDP,4,000 ms snapshot and5,000 ms screenshot; no new observation is necessary."
+    },
+    {
+      "id": "C04",
+      "status": "PASS_STATIC",
+      "finding": "Snapshot already retains first3 dialogs, last8,000 text characters and last24 buttons with bounded labels/disabled/rect."
+    },
+    {
+      "id": "C05",
+      "status": "PASS_STATIC",
+      "finding": "No original dialog/button totals or truncation flags exist; retained absence cannot establish global absence."
+    },
+    {
+      "id": "C06",
+      "status": "PASS_STATIC",
+      "finding": "Snapshot store lacks a dedicated authoritative Launch model-readiness object; pre-submit provisioning can be absent."
+    },
+    {
+      "id": "C07",
+      "status": "PASS_STATIC",
+      "finding": "Existing pure projector ignores dialogs and currently sanitizes only retained hydration/provisioning/cleanup."
+    },
+    {
+      "id": "C08",
+      "status": "PASS_STATIC",
+      "finding": "Existing descriptor traversal, fixed text vocabulary, nullable types and8,192-character fallback give a concrete reusable privacy/bounds seam."
+    },
+    {
+      "id": "C09",
+      "status": "PASS_STATIC",
+      "finding": "Current readiness summary routing includes only import and OpenCode runtime; exact three new modes are verified in backend selection/dispatch."
+    },
+    {
+      "id": "C10",
+      "status": "PASS_STATIC",
+      "finding": "Generic backend already calls existing capture and final pure summary; no backend/captured-app edit is needed."
+    },
+    {
+      "id": "C11",
+      "status": "PASS_STATIC",
+      "finding": "Packaged original failure path captures same snapshot, then prints onlykind/status/receipt/root and preserves original error; one existing summary seam suffices."
+    },
+    {
+      "id": "C12",
+      "status": "PASS_STATIC",
+      "finding": "Existing final-summary timing is conditional on reaching the existing finally tail; no universal output guarantee is claimed."
+    },
+    {
+      "id": "C13",
+      "status": "PASS_STATIC",
+      "finding": "Candidate production files are394/182 lines and outside the thirteen frozen parity vector."
+    },
+    {
+      "id": "C14",
+      "status": "PASS_STATIC",
+      "finding": "Preferred existing observations test has a complete end,34 registration expressions and an append-only actual-function test path."
+    },
+    {
+      "id": "C15",
+      "status": "PASS_STATIC",
+      "finding": "Existing settings test confirms a concrete pure-summary testing precedent without requiring a second test-file change."
+    },
+    {
+      "id": "C16",
+      "status": "PASS_STATIC",
+      "finding": "Frozen whole149 existing readiness regression is compatible with only the three selected non-PASS routing additions and remains byte-preserved."
+    },
+    {
+      "id": "C17",
+      "status": "PASS_STATIC",
+      "finding": "Whole-file Host eight-file command already includes both existing test seams; no source filtering/workflow change is needed."
+    },
+    {
+      "id": "C18",
+      "status": "PASS_STATIC",
+      "finding": "Privacy, unknown/ambiguity/cap and post-failure timing requirements prevent a diagnostic field from promoting a failed wait."
+    },
+    {
+      "id": "C19",
+      "status": "PASS_STATIC",
+      "finding": "Current fixed9d runtime evidence is not qualification of future diagnostic output or any future source candidate."
+    },
+    {
+      "id": "C20",
+      "status": "PASS_STATIC",
+      "finding": "No source/control postimage, runtime, CI, vendor or ref action was performed; only this bounded advisory is retained."
+    }
+  ],
+  "conclusion": "A narrow diagnostics-only R1 is supported by existing source: two existing production owners plus append-only tests in the existing observations file. It can expose saved disabled-button and fixed-vocabulary readiness evidence without another sample or predicate change. It cannot recover data absent from a failed capture, prove a common cause across four lanes, make any failed wait pass, or qualify future changes with old CI. Root may select an exact proposal; no new gate or execution venue is introduced here."
+}

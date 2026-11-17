@@ -1,0 +1,676 @@
+{
+  "schema": "c714.gui-native-diagnostics.platform-import.r1.guard-delta-review.v1",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_guard",
+  "reviewedAt": "2026-11-17 10:14:11 UTC",
+  "subject": {
+    "bytes": 31060,
+    "sha256": "188bd061a0aa0ed5afe3f8af4919c5ac111ae15d3deb5c92c19645eccab997bc",
+    "gitBlob": "d226951f5f24dd1a5a7d4742e25edcb3ef043213",
+    "completeBodyRead": true
+  },
+  "verdict": "ACCEPT_EXACT_REPLACEMENT_R1_FOR_EXISTING_DOCUMENTATION_PUBLICATION_AND_ACTUAL_READBACK_ONLY",
+  "blockers": [],
+  "checkCount": 30,
+  "authority": {
+    "readOnlyImmutableGitAndData": true,
+    "bareReportOnly": true,
+    "rootSoleSourceControlAuthorApplierPublisherExecutor": true,
+    "targetSourceAuthored": false,
+    "targetSourceEvaluated": false,
+    "targetImported": false,
+    "targetCompiled": false,
+    "targetExecuted": false,
+    "shellOrLocalProbe": false,
+    "liveCiReadOrPoll": false,
+    "sourceRefPrCiMutation": false
+  },
+  "initialEvidence": {
+    "proposal": {
+      "bytes": 23006,
+      "sha256": "ac0a112be1dd45b0c219fa09437beb2502e51722c4d058abe9b9570fafe64730",
+      "gitBlob": "5d44942ab4492596cbd6bbb328041a6713b79810",
+      "completeBodyPreviouslyRead": true
+    },
+    "guardReport": {
+      "bytes": 35247,
+      "sha256": "8ab72c6f82526bd9e54c7c6d70606be76583a6626b12e95bc20cb73f6e716b56",
+      "gitBlob": "5a00a119776aa9cd365f9af2d1649074219ddc4f",
+      "checks": 45,
+      "fullSelfReadConfirmedAt": "2026-11-17 10:01:06 UTC",
+      "unchanged": true
+    },
+    "sourceGate": {
+      "bytes": 7149,
+      "sha256": "2aeec2ecdbae9bdf27d8bd6a054655ea6850bc69a2d2544df8c1da245798f005",
+      "gitBlob": "a3ff72947884bc9e9993fa74db71491c3b9e4a61",
+      "completeBodyPreviouslyRead": true,
+      "closedAt": "2026-11-17 09:17:41 UTC"
+    },
+    "parent": {
+      "commit": "1ca9566d70bd624283227a644fa6969eb8bf8f34",
+      "root": "fd6a7a819adc8b68a4b3e1ec1ddfe9c57a48e03c",
+      "docs": "834eeb86f8ca3f94fec916e6044836bad8cbb348",
+      "scripts": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+      "packages": "3934729cd387940917b79992f2579bf6269d157c",
+      "tools": "b0ffcbc4be600e5edfbc0fbacf312e5b476af6aa",
+      "leaves": 12088,
+      "docsLeaves": 3289,
+      "nonDocLeaves": 8799
+    },
+    "reuseScope": "Exact initial six preimages, source gate, original GUI/native feasibility, frozen vector and earlier full semantic/guard source reads remain unchanged and reused. This report independently reads the entire replacement and newly reachable platform closure; no duplicate broad audit of initial unchanged bodies is claimed."
+  },
+  "delta": {
+    "changedLeafCount": 11,
+    "changedPaths": [
+      "kind",
+      "decision",
+      "evidence.wholePlatformImportFeasibility",
+      "selection.native.tests.wholePlatformImport",
+      "selection.native.tests.newTopLevelCasesMeaning",
+      "unchanged.actions",
+      "execution.existingWholeFileRoutes.native.importedPlatformCoverage",
+      "qualification.wholePlatform14ActuallyExecuted",
+      "at",
+      "selfReadbackProtocol",
+      "supersedesUnpublishedR1"
+    ],
+    "restoreInitialObjectEquality": true,
+    "sameSixPreimages": true,
+    "sameAcceptedSourceGate": true,
+    "sameFourWindowsRows": true,
+    "sameFrozenVector": true,
+    "sameCurrentCi": true,
+    "sameProcedure": true,
+    "sameGui": true,
+    "nativeCriteriaOnlyAddImport": true,
+    "meaning": "Only whole unchanged platform14 reachability through the already-selected native-receipt entry, plus its truthful registration/effects/skip/prerequisite/documentation scope and supersession metadata. Initial fiveGUI+threeNative diagnostic criteria and all6 selected paths are unchanged.",
+    "noHypotheticalPostimageAccepted": true
+  },
+  "sixSelectedPreimages": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "mode": "100644",
+      "bytes": 26258,
+      "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+      "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+      "lines": 394,
+      "completeRootBodyRead": true,
+      "current1caTreeJoined": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "mode": "100644",
+      "bytes": 13293,
+      "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+      "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+      "lines": 182,
+      "completeRootBodyRead": true,
+      "current1caTreeJoined": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "mode": "100644",
+      "bytes": 66098,
+      "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+      "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f",
+      "lines": 1191,
+      "completeRootBodyRead": true,
+      "current1caTreeJoined": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "mode": "100644",
+      "bytes": 22177,
+      "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+      "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05",
+      "lines": 500,
+      "completeRootBodyRead": true,
+      "current1caTreeJoined": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "mode": "100644",
+      "bytes": 37181,
+      "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+      "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068",
+      "lines": 565,
+      "completeRootBodyRead": true,
+      "current1caTreeJoined": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "mode": "100644",
+      "bytes": 19696,
+      "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+      "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+      "lines": 345,
+      "completeRootBodyRead": true,
+      "current1caTreeJoined": true
+    }
+  ],
+  "newCompleteSourceReads": [
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "bytes": 20830,
+      "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+      "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72",
+      "fullBodyRead": true,
+      "canonical1caRawLiteralJoin": true
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "bytes": 12389,
+      "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+      "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4",
+      "fullBodyRead": true,
+      "canonical1caRawLiteralJoin": true
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/fixture.cjs",
+      "bytes": 16768,
+      "sha256": "db43609e9394925e3b27f606d8a49ed443e1bcdabeee866dd4fec4b56ed800fb",
+      "gitBlob": "47a1e9cb0efa58479721d8815bfb8dae3f943fb6",
+      "fullBodyRead": true,
+      "canonical1caRawLiteralJoin": true
+    }
+  ],
+  "newCompleteSourceBytes": 49987,
+  "feasibilityJoin": {
+    "bytes": 17172,
+    "sha256": "512691aa634f2f9471ae1668226f41417826cb95221dcc78dca62d7448a519e4",
+    "gitBlob": "f6a50812b1e719d9bab8af56f93dabea313ce682",
+    "completeBodyRead": true,
+    "checks": 14,
+    "scope": "Independent advisory joined with this review's own complete platform closure reads; it did not select or approve replacementR1."
+  },
+  "frozenPreservation": {
+    "vector": {
+      "bytes": 3481,
+      "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+      "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b",
+      "completeBodyRead": true,
+      "rows": 13,
+      "wholeBodyBytes": 770681
+    },
+    "fourWindowsRows": [
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "bytes": 12389,
+        "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+        "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4",
+        "gateJoined": true
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72",
+        "gateJoined": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "bytes": 37970,
+        "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+        "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3",
+        "gateJoined": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+        "bytes": 50377,
+        "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+        "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd",
+        "gateJoined": true
+      }
+    ],
+    "seventeenUniqueDisjointSelectedPaths": true,
+    "whole149Catalog43Runtime85Unchanged": true,
+    "workflows": 42,
+    "nonDocLeaves": 8799,
+    "productionFiles": 5020,
+    "exceptions": 141,
+    "cap": 800,
+    "scope": "No new source file, workflow, dependency, exception or rule is selected. The unchanged platform test/helper are frozen bodies; only the existing selected importer receives future wiring. No new cap waiver is created."
+  },
+  "registration": {
+    "importer": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+    "wholePrefixBytes": 19696,
+    "wholePrefixLines": 345,
+    "originalNativeCases": 9,
+    "newLocalDiagnosticCases": 3,
+    "importSpecifier": "../../../scripts/e2e/opencode-diagnostics/platform.test.mjs",
+    "resolvedPath": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+    "wholePlatformCases": 14,
+    "prospectiveTotal": 26,
+    "actualPassCount": null,
+    "nativeOldAndPlatformTitlesDistinct": true,
+    "platformTitles": [
+      "OS process and listener output parsing fails closed",
+      "one fresh Windows interpreter retains ordered original process and listener observations",
+      "combined Windows observations reject malformed envelopes and preserve executor failure",
+      "ownership rejects stale launchers, reused child PIDs and unrelated listeners",
+      "native shims quote absolute paths with spaces and reject expansion syntax",
+      "isolated CDP port stays bound to the selected dev launcher",
+      "environment drops inherited provider/config and runtime overrides",
+      "real fixture permits diagnostic queries only, and Unix shim handles spaces",
+      "timeout fixture stays live until its owning test terminates it",
+      "Windows cleanup evidence retains current PID through independent read-only queries",
+      "Windows phase observations use the original phase clocks and cannot bypass admission",
+      "Windows census observations preserve original results, refusals and bounded diagnostics",
+      "selected Windows port query retains complete fresh process and owner observations",
+      "Windows listener executor failures never admit partial output or fall back"
+    ],
+    "unchangedSkip": "test('Windows cleanup evidence retains current PID through independent read-only queries', { skip: process.platform !== 'win32' }, () => {",
+    "expectedEligiblePlatformCases": {
+      "windows": 14,
+      "linux": 13
+    },
+    "existingLinuxSkip": 1,
+    "skipIsPass": false,
+    "position": "Unconditional top-level awaited whole-file import after the three planned diagnostic registrations.",
+    "evaluationVsCompletion": "Module evaluation/registration is awaited; earlier12 callbacks need not have completed. Same native entry process and root; other seven explicit entries retain their own process isolation.",
+    "futureR2": "Exact literal whole-prefix preservation, single awaited import, actual three diagnostic bodies and source count/identity remain the original future sourceR2 task. No source postimage exists or is accepted here."
+  },
+  "closureAndEffects": {
+    "valueImports": [
+      "node:assert/strict",
+      "node:test",
+      "node:fs",
+      "node:vm",
+      "node:fs/promises",
+      "node:child_process",
+      "node:os",
+      "node:path",
+      "./platform.mjs"
+    ],
+    "fixtureRequireModules": [
+      "node:fs",
+      "node:path",
+      "node:assert/strict"
+    ],
+    "eagerBehavior": "Platform module initializes only builtins/constants/functions; tests register top-level callbacks. The copied fixture is executed only by the existing fixture cases.",
+    "loopback": "Original test allocates/closes an exclusive127.0.0.1 ephemeral port, invokes the actual listener check, and attempts the original IPv4 and IPv6 bind availability checks. No application CDP connection or real provider request is added.",
+    "unix": "Original lsof listener command and /bin/sh shim are reachable. Existing lsof status1 with empty stdout/stderr means no listeners; missing executable or other error remains thrown.",
+    "windows": "Original PowerShell helper uses ErrorActionPreference=Stop and30s timeout. Selected-port CIM query remains unchanged. The Windows-only self-PID cleanup case additionally preserves its original Get-CimInstance/Get-Process/full Get-NetTCPConnection observation.",
+    "fixture": "Unique mkdtemp directories receive only copied fixture.cjs and original scenario files. process.execPath executes exactready/version-exit/version-timeout fixture commands. Unix shim execs that same Node+script. Fixture contains no child-process launcher, provider binary fallback or network call.",
+    "selectedFixtureScenarios": [
+      "ready",
+      "version-exit",
+      "version-timeout"
+    ],
+    "unselectedFixtureBranches": "Other complete fixture branches, including catalog-timeout and startup-cleanup, remain source-defined but are not requested by these14 tests; no authority is inferred from their presence.",
+    "noRealClaudeCodexOpenCode": true,
+    "noNewApplicationFlowObservation": true,
+    "componentSuiteIsPureData": false,
+    "globalState": "No parent process.cwd/environment mutation, global timer/Date mock or concurrency override in the complete platform test/helper. Existing caller requirements remain; future authored diagnostic tests are separately reviewed."
+  },
+  "guardAndFailureSemantics": {
+    "freshness": "No TTL, cache, PID-only identity, narrowed owner admission or query fallback is introduced. Actual existing parser/owner/clock/census tests are imported unchanged.",
+    "completeQueryObservation": "Existing fresh ordered process/listener observations retain their full process and selected-port owner universe; tests preserve original failure identity even when partialstdout is attached.",
+    "temporaryCleanup": "Original try/finally removes fixture trees. Timeout normal path owns its child handle, requests kill and awaits original exit; exceptional finally retains its existing kill/removal behavior. No universal cleanup guarantee is invented.",
+    "originalBounds": {
+      "portAvailabilityMs": 15000,
+      "portPollMs": 250,
+      "powershellPerCallMs": 30000,
+      "timeoutFixtureReadyMs": 5000,
+      "timeoutFixtureOwnTimerMs": 60000
+    },
+    "aggregateLimit": "These are the original component limits, not a new hard aggregate wall-clock bound. Original synchronous spawn/query work and some spawnSync/exit waits have no additional selected bound; default node:test timeout remains Infinity unless already supplied. No deadline increase or replacement is proposed.",
+    "prerequisites": {
+      "linux": "Existing lsof, Node, loopback and original filesystem availability.",
+      "windows": "Existing PowerShell/CIM/NetTCPConnection commands, Node, loopback and original filesystem availability.",
+      "rule": "Missing prerequisites, refusal, timeout or cleanup failure remain failure/unqualified. No install, retry, fallback, runner substitution, budget or workflow change selected."
+    },
+    "runnerEvidenceScope": "R1 records the exact historical manifest lookup as404. This review does not repeat that external lookup or claim current/actual lsof installation. Missing prerequisites continue to fail; no installation or workaround is authorized.",
+    "evidenceInterpretation": "Three diagnostic regressions remain bounded data/finite observer tests. Imported component tests have their disclosed real OS and finite Node effects. None becomes a new application readiness/custody observation."
+  },
+  "workflow": {
+    "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+    "bytes": 36013,
+    "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+    "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+    "relevantCompleteReadLines": [
+      1,
+      110
+    ],
+    "entryCommand": "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts",
+    "explicitEntryCount": 8,
+    "importerCommandOccurrences": 1,
+    "platformSeparatelyListed": false,
+    "matrix": [
+      "ubuntu-24.04",
+      "windows-2022"
+    ],
+    "node": "24.21.0",
+    "sourcePathAlreadyTriggered": true,
+    "draftSkipped": false,
+    "unchangedBuildAndTypecheckPrerequisite": true,
+    "noWorkflowOrFilterChange": true,
+    "noActionSelected": true,
+    "limit": "The full static job includes other existing steps, including a later Linux nativeV1 baseline. The absence of real vendors in the newly imported platform closure is not a claim that every existing job step is subprocess-free."
+  },
+  "primaryDocumentation": {
+    "repository": "nodejs/node",
+    "path": "doc/api/test.md",
+    "ref": "v24.21.0",
+    "bytes": 165722,
+    "sha256": "b2c98ae196d08f83752c9f3c6f595ade69abbd9fd2e6d7192d662c7206896e16",
+    "gitBlob": "02f9cc30ec5775f198ddbae58d80d7dfdc9b2110",
+    "fullBodyFetchedAndHashed": true,
+    "completeBodyRead": false,
+    "relevantReadLines": [
+      [
+        797,
+        841
+      ],
+      [
+        1907,
+        1919
+      ],
+      [
+        1936,
+        1944
+      ],
+      [
+        1955,
+        1969
+      ],
+      [
+        3569,
+        3576
+      ]
+    ],
+    "finding": "Versioned primary documentation describes default process isolation between explicit entries, a single application thread inside each entry, default individual concurrency false, default timeout Infinity, test registration promises, and entryFile differing from a test defined in an imported module. This supports the registration interpretation, without claiming a runtime result.",
+    "crossRepositoryScopeExplicit": true
+  },
+  "unchangedInitialRequirements": {
+    "guiFiveCasePlanIdentical": true,
+    "nativeThreeCasePlanIdentical": true,
+    "twoCodeVocabulary": [
+      "ABORT_ERR",
+      "ECONNRESET",
+      "ECONNREFUSED",
+      "EPIPE",
+      "ETIMEDOUT",
+      "UND_ERR_ABORTED",
+      "UND_ERR_SOCKET",
+      "UND_ERR_HEADERS_TIMEOUT",
+      "UND_ERR_BODY_TIMEOUT"
+    ],
+    "originalRejectionAndFirstCloseIdentity": true,
+    "legacyAbsentVersusExplicitNull": true,
+    "malformedOptionalDataMustPreserveValidCloseRow": true,
+    "originalDiagnosticBudgets": {
+      "maximumRows": 256,
+      "ordinaryRows": 253,
+      "retainedRowsConvention": 257,
+      "traceBytes": 65536,
+      "lineBytes": 512,
+      "reservedRecordBytes": 513,
+      "receiptEnvelopeBytes": 262144,
+      "diagnosticBackpressureMs": 2000
+    },
+    "dataOnlyBound": {
+      "r1ExplicitExample": {
+        "emittedLineIncludingNewlineBytes": 355,
+        "emittedLineWithoutNewlineBytes": 354,
+        "parentRecordIncludingNewlineBytes": 498,
+        "maximumTimestamp": 3600000,
+        "epoch": "-Number.MAX_VALUE",
+        "codeAndCause": "UND_ERR_HEADERS_TIMEOUT",
+        "allUnrelatedParentFields": null,
+        "scope": "Explicit extreme-epoch selected producer shape arithmetic; not a claim of arbitrary hostile-record admission or target execution. Final exact postimages require fresh serialized-bound verification.",
+        "largerFiniteEpochExample": {
+          "epoch": -0.0000010000000000000002,
+          "serializedEpochCharacters": 25,
+          "parentRecordIncludingNewlineBytes": 499
+        }
+      },
+      "independentAgreement": true,
+      "largerEpochParentBytes": 499,
+      "actualCredentialEpochs1Through4ParentBytes": 475,
+      "maxSafePositiveEpochParentBytes": 490,
+      "conservative32CharacterNumericTokenParentBytes": 506,
+      "broadNotStartedEnumWithSameConservativeTokenBytes": 512,
+      "limit": "Data-only serializer bounds, not execution or arbitrary hostile-field admission. R1 correctly labels498 as its explicit example."
+    },
+    "nativePassiveExactAdmission": "Actual passive observer is fixed by existing source to Node24.21.0 on its existing admitted platform/architecture tuples. Selected Stage1 static jobs use exactly Node24.21.0; any unsupported tuple must remain explicitly unexecuted/unqualified, never a PASS.",
+    "originalReadinessMs": 90000,
+    "originalCleanupAndCustody": true,
+    "scope": "These are inherited exact initialR1 requirements, not new demands. Initial report's prospective native12 count is superseded only by the replacement whole14 registration addition."
+  },
+  "protocol": {
+    "orderedContinuation": [
+      "Close this exact R1 root/guard/semantic/binding review.",
+      "Publish docs only with immediate expected-parent force:false push and complete root plus independent actual readback.",
+      "Root authors the exact selected source/test postimages; then source R2 review, publication with immediate push, and complete root plus independent actual readback.",
+      "Select a separately reviewed genuine execution venue against its exact new source. No extra executable R2 for a pure structured existing-workflow CI venue. Existing current CI remains independent.",
+      "Diagnose remaining failures from actual evidence; no UNKNOWN/UNREACHED/SKIP/CANCELLED promotion to PASS."
+    ],
+    "rootSoleAuthorApplierPublisherExecutor": true,
+    "newExecutableControlOrWorkflowPostimage": false,
+    "newVenueSelected": false,
+    "currentCi": {
+      "pr": 1219,
+      "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "attempt": 1,
+      "activeRunIds": [
+        44042341284,
+        44042341273
+      ],
+      "terminalRunIds": [
+        44042341370,
+        44042341121,
+        44042341149,
+        44042341120,
+        44042341241
+      ],
+      "snapshotRefsAndMetadataFrozen": true,
+      "noRerunCancelDispatchReplay": true,
+      "source1caNotExecuted": true,
+      "latestRetained": {
+        "bytes": 431287,
+        "sha256": "68e49fb044d66f72d741a0247376a54a3c85b898437cd6057f8406a5f51327d8",
+        "gitBlob": "dc274635550160f7ea4cae9daa1f951539747e18"
+      }
+    },
+    "currentCiReadScope": "Unchanged retained R1 historical cutoff only; no live CI reads/polls or new outcomes.",
+    "qualification": {
+      "completeE2E": false,
+      "rootCauseResolved": false,
+      "fixRuntimeProven": false,
+      "archiveQualified": false,
+      "newWindows14Or8CasesExecuted": false,
+      "nativeDarwinP09Resolved": false,
+      "coldRendererResolved": false,
+      "standaloneRedGreen24_22_1Executed": false,
+      "readyMergeReleaseDefaultActivationStage2": false,
+      "wholePlatform14ActuallyExecuted": false
+    },
+    "noNewOptionalGate": true,
+    "noSourceRuntimeAcceptance": true
+  },
+  "checks": [
+    {
+      "number": 1,
+      "id": "replacement-identity",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Complete replacement R1 d226951f is 31,060 bytes and matches both supplied SHA256 and Git blob; full body read."
+    },
+    {
+      "number": 2,
+      "id": "accepted-initial",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Exact initial R1 5d44942a and accepted45-check guard report5a00a119 are reused from their complete verified reads; the initial report remains immutable and scoped to9+3."
+    },
+    {
+      "number": 3,
+      "id": "complete-delta",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Recursive comparison finds exactly11 changed or added JSON leaves. Restoring those values/deleting additions produces literal JSON-object equality to the accepted initial R1; no hidden initial criterion changes."
+    },
+    {
+      "number": 4,
+      "id": "six-preimages",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "All six existing selected paths and all184703 preimage bytes/identities remain exactly equal to the initial plan and its complete current1ca joins."
+    },
+    {
+      "number": 5,
+      "id": "source-gate",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Accepted a3ff7294 gate,1ca commit/root/docs, root/independent actual pins and closure remain exactly unchanged. No new source has been authored or executed."
+    },
+    {
+      "number": 6,
+      "id": "diagnostic-criteria",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "GUI five cases, native three cases, own-data two-code grammar, legacy shape preservation, rejection identity, close classification and all original diagnostic budgets remain identical."
+    },
+    {
+      "number": 7,
+      "id": "frozen-bodies",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "The13-row parity vector plus four Windows postimages remain17 unique frozen bodies; the selected import modifies only the already-selected native-receipt entry. Whole149/catalog43/runtime85 and42 workflows remain unchanged."
+    },
+    {
+      "number": 8,
+      "id": "full-platform-closure",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "All20830 platform-test bytes,12389 helper bytes and16768 fixture bytes were freshly fetched, hashed and completely read; total49987 bytes."
+    },
+    {
+      "number": 9,
+      "id": "current-canonical-join",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Each of the three new closure bodies also literally equals its canonical raw source at immutable1ca and exact path. Fixture47a1e9cb is current source, not an inferred or remote vendor."
+    },
+    {
+      "number": 10,
+      "id": "relative-import",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "The prescribed relative specifier resolves from packages/legacy-agent-host/tests exactly to scripts/e2e/opencode-diagnostics/platform.test.mjs."
+    },
+    {
+      "number": 11,
+      "id": "whole-census",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Actual unchanged target has14 top-level test registrations. Original native9 plus planned3 plus whole14 gives prospective26 registrations, not26 runtime passes."
+    },
+    {
+      "number": 12,
+      "id": "skip-preserved",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "The sole platform skip remains Windows cleanup evidence on non-Windows. Windows has14 eligible platform callbacks; Linux13 plus one explicit SKIP. No skip is promoted to PASS."
+    },
+    {
+      "number": 13,
+      "id": "same-entry",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Imported cases share native-receipt's existing process and node:test root. Other seven explicit Stage1 command entries retain original default process isolation."
+    },
+    {
+      "number": 14,
+      "id": "registration-order",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "The unconditional awaited import follows all12 local registration calls. Await waits for module evaluation/registration, not completion of those12 callbacks."
+    },
+    {
+      "number": 15,
+      "id": "no-command-duplication",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "The unchanged Stage1 command includes native-receipt exactly once and does not separately list platform.test.mjs. No new command, name filter, wrapper selection or duplicate command-level entry is proposed."
+    },
+    {
+      "number": 16,
+      "id": "actual-import-closure",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "The new platform value-import closure consists of Node builtins plus actual platform.mjs; its module initialization defines functions/constants. No GUI entry, provider package or real vendor process is imported."
+    },
+    {
+      "number": 17,
+      "id": "actual-component-effects",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "R1 explicitly discloses loopback bind/listener checks, lsof or PowerShell, original Windows self-PID observations, temporary trees and finite Node fixture children. No-new-observation language is correctly restricted to the application failure flow."
+    },
+    {
+      "number": 18,
+      "id": "query-failures",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Existing lsof empty-success exception, PowerShell Stop behavior, executor failure identity and no fallback remain unchanged. Missing tools, malformed output, refusal and query errors are not converted into passing evidence."
+    },
+    {
+      "number": 19,
+      "id": "fresh-ownership",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Original full process/owner observations, PID+birth checks, orphan/foreign-owner refusal and current source-slice phase/census checks remain exact. Import adds reachability without altering authority predicates."
+    },
+    {
+      "number": 20,
+      "id": "finite-fixture",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Tests copy exact fixture.cjs and invoke process.execPath with ready/version-exit/version-timeout scenarios, plus its Unix Node shim. Complete fixture imports only fs/path/assert and has no subprocess/vendor fallback. Synthetic vendor/version labels are fixture data."
+    },
+    {
+      "number": 21,
+      "id": "cleanup-preserved",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Original owned-child kill/exit wait and temporary-tree finally removal remain literal. Exceptional cleanup is not strengthened or described as universally drained; an import does not prove cleanup."
+    },
+    {
+      "number": 22,
+      "id": "bounds-preserved",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Original15s port wait/250ms polls,30s PowerShell timeout,5s fixture-ready wait and60s fixture timer remain. No new aggregate hard deadline or bound on previously unbounded spawnSync/exit-wait paths is inferred."
+    },
+    {
+      "number": 23,
+      "id": "shared-global-state",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Complete platform source adds no parent chdir, process.env mutation, global clock/timer mock or concurrency override. Existing diagnostic regression requirements remain unchanged and exact implementation awaits sourceR2."
+    },
+    {
+      "number": 24,
+      "id": "prerequisite-limits",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Exact recorded runner-manifest404 is attributed retained evidence. This review makes no lsof availability claim. No install, retry, fallback, runner replacement, new conditional skip or budget change is selected."
+    },
+    {
+      "number": 25,
+      "id": "primary-documentation",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Node documentation was fetched from the explicitly named nodejs/node repository at exact blob02f9cc30 and hashed. Relevant versioned sections support default process isolation, nonconcurrent test callbacks, imported entry identity and no invented finite default timeout."
+    },
+    {
+      "number": 26,
+      "id": "existing-workflow",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Relevant actual Stage1 workflow includes native-receipt whole-file on Ubuntu24.04 and Windows2022 after build/typecheck with Node24.21.0. The path trigger already covers the changed selected native-receipt path; no Draft skip or workflow change is added."
+    },
+    {
+      "number": 27,
+      "id": "runtime-admission",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Existing passive observer platform/architecture/Node24.21.0 admission is unchanged. Unsupported tuples and failures remain unexecuted/unqualified, never substitute PASS; current review performs no target import or execution."
+    },
+    {
+      "number": 28,
+      "id": "publication-authority",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Root remains sole author/applier/publisher/executor. The existing R1 publication/full actual gate, exact sourceR2 and source publication/actual procedure remains unchanged, with no new gate."
+    },
+    {
+      "number": 29,
+      "id": "current-ci-independent",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "Current PR1219 fixed9d and retained historical active/terminal list are identical. No live CI was read, no terminal run polled, and no current run/reference is repurposed."
+    },
+    {
+      "number": 30,
+      "id": "qualification-bounds",
+      "status": "PASS_STATIC_R1_DELTA",
+      "finding": "A selected whole-file route is not actual platform14 execution, native Windows performance/integration qualification, GUI success, root-cause resolution or permission for Ready/merge/release/Stage2. All prior unresolved boundaries remain."
+    }
+  ],
+  "selfReadbackProtocol": "Send exact pin immediately after retention. Then fresh-fetch, hash, literal equality and complete untruncated self-read before final confirmation."
+}

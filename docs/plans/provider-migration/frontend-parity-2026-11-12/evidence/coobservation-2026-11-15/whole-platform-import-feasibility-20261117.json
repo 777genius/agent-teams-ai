@@ -1,0 +1,253 @@
+{
+  "schemaVersion": 1,
+  "kind": "bounded-platform-whole14-import-feasibility-advisory",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "producer_r2_semantic",
+  "at": "2026-11-17 10:02:22 UTC",
+  "decision": "SUPPORTED_SOURCE_FEASIBILITY_ONLY",
+  "blockers": [],
+  "authority": "Immutable Git and retained evidence reads plus pure-data identity/JSON analysis only. No target source execution, imports, shell, local files, CI polling, source/ref/PR mutation or postimage authorship. Only this bare report is retained.",
+  "parent": {
+    "commit": "1ca9566d70bd624283227a644fa6969eb8bf8f34",
+    "actualSourceGate": "a3ff72947884bc9e9993fa74db71491c3b9e4a61",
+    "sourceGatePreviouslyFullyRead": true
+  },
+  "priorR1": {
+    "blob": "5d44942ab4492596cbd6bbb328041a6713b79810",
+    "bytes": 23006,
+    "sha256": "ac0a112be1dd45b0c219fa09437beb2502e51722c4d058abe9b9570fafe64730",
+    "semanticReview": "06ee765fd3bb83e9400c02b162586af55fb20199",
+    "reviewBytes": 36493,
+    "reviewSha256": "b6b6f8ccbbd32400be72ff774bbb63bf3eb99e1487c47363b90873a772f6d623",
+    "reviewChecks": 36,
+    "fullSelfReadComplete": true,
+    "unchanged": true,
+    "scope": "Prior exact R1 remains nine original native cases plus three planned diagnostics. This separate note does not amend or approve a replacement R1."
+  },
+  "proposedBoundary": {
+    "importer": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+    "position": "After the three already planned appended diagnostic test registrations, at module top level",
+    "relativeTarget": "../../../scripts/e2e/opencode-diagnostics/platform.test.mjs",
+    "target": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+    "newFiles": 0,
+    "selectedFilesStillSix": true,
+    "allSeventeenFrozenBodiesRemainUnchanged": true,
+    "implementationAuthored": false
+  },
+  "completeSourceReads": [
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "bytes": 20830,
+      "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+      "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72",
+      "fullBodyRead": true
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "bytes": 12389,
+      "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+      "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4",
+      "fullBodyRead": true
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/fixture.cjs",
+      "bytes": 16768,
+      "sha256": "db43609e9394925e3b27f606d8a49ed443e1bcdabeee866dd4fec4b56ed800fb",
+      "gitBlob": "47a1e9cb0efa58479721d8815bfb8dae3f943fb6",
+      "fullBodyRead": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "bytes": 19696,
+      "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+      "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+      "fullBodyRead": true
+    }
+  ],
+  "currentSourceJoin": "The whole platform test was freshly fetched by blob and exact 1ca path and compared literally; platform.mjs and fixture.cjs were freshly fetched at exact1ca. Complete native prefix is reused from the just-closed exact R1 full read.",
+  "inventory": {
+    "nativeOriginal": 9,
+    "nativeAlreadyPlanned": 3,
+    "importedWholePlatform": 14,
+    "prospectiveNativeEntryTotal": 26,
+    "exactPostimageOrRuntimeClaim": false,
+    "platformTitles": [
+      "OS process and listener output parsing fails closed",
+      "one fresh Windows interpreter retains ordered original process and listener observations",
+      "combined Windows observations reject malformed envelopes and preserve executor failure",
+      "ownership rejects stale launchers, reused child PIDs and unrelated listeners",
+      "native shims quote absolute paths with spaces and reject expansion syntax",
+      "isolated CDP port stays bound to the selected dev launcher",
+      "environment drops inherited provider/config and runtime overrides",
+      "real fixture permits diagnostic queries only, and Unix shim handles spaces",
+      "timeout fixture stays live until its owning test terminates it",
+      "Windows cleanup evidence retains current PID through independent read-only queries",
+      "Windows phase observations use the original phase clocks and cannot bypass admission",
+      "Windows census observations preserve original results, refusals and bounded diagnostics",
+      "selected Windows port query retains complete fresh process and owner observations",
+      "Windows listener executor failures never admit partial output or fall back"
+    ],
+    "windows": "All14 platform cases are registered with no platform skip on Windows.",
+    "nonWindows": "All14 are registered; the original Windows cleanup-evidence case is skipped, leaving13 runnable platform cases. It must remain SKIP, not PASS.",
+    "futureAggregate": "26 is the source registration expectation for9+3+14. Native diagnostics may retain their independently specified tuple skips/failures; no blanket26-pass prediction is made."
+  },
+  "registration": {
+    "source": "A top-level awaited import loads the complete unchanged target and waits for its module evaluation. The target's14 test registrations are synchronous top-level calls; no wrapper test, name filter, selectivity or copied implementation is needed.",
+    "ordering": "Its registrations follow the importer's original9 and planned3 registration calls. Awaiting module import does not mean those12 test callbacks have already completed. This is the same registration-versus-completion distinction already preserved for whole149.",
+    "context": "Imported tests share the native-receipt entry process and node:test root; the module import does not create a separate test-file process. Default individual test concurrency is false, and neither current file sets concurrency, global hooks, global mocks or parent process environment/cwd mutation.",
+    "isolation": "The existing eight explicit entry files retain Node's default process isolation from one another. Tests within the native-receipt entry still share one application thread; other entry-file processes can run concurrently.",
+    "duplication": "platform.test.mjs is not another explicit argument in the existing Stage1 command, so this adds no command-level duplicate entry. ESM caching applies within one process; it would not deduplicate a different future command that independently listed both entry files. No such new command is selected.",
+    "sourceLocations": "Node24.21 test events distinguish the entryFile from the file containing imported test definitions, so evidence must retain both the native entry and the actual platform case titles.",
+    "prerequisites": "Top-level import failure fails the native entry. Existing native imports still require the Host build. No dependency or install alteration is proposed."
+  },
+  "primaryNodeDocumentation": {
+    "repository": "nodejs/node",
+    "ref": "v24.21.0",
+    "path": "doc/api/test.md",
+    "bytes": 165722,
+    "sha256": "b2c98ae196d08f83752c9f3c6f595ade69abbd9fd2e6d7192d662c7206896e16",
+    "gitBlob": "02f9cc30ec5775f198ddbae58d80d7dfdc9b2110",
+    "wholeBodyFetchedAndHashed": true,
+    "readScope": "Relevant primary sections only, not a claim to read all165,722 bytes",
+    "sections": [
+      {
+        "lines": "797–841",
+        "meaning": "Default process isolation, per-entry process and option inheritance"
+      },
+      {
+        "lines": "1912–1917",
+        "meaning": "Individual test concurrency default false"
+      },
+      {
+        "lines": "1940–1942",
+        "meaning": "No unspecified finite per-test timeout is invented"
+      },
+      {
+        "lines": "1955–1969",
+        "meaning": "test() registration and top-level promises"
+      },
+      {
+        "lines": "3569–3576",
+        "meaning": "entryFile can differ from an imported test's defining file"
+      }
+    ]
+  },
+  "actualComponentEffects": {
+    "eagerModule": "platform.test.mjs imports Node builtins plus actual platform.mjs; platform.mjs only defines constants/functions at module load. No provider package, compiled runtime, GUI entry or real vendor is imported by this new closure.",
+    "pureCases": "Parser, complete process/listener envelope, ownership, quoting, environment, original phase/census source slices and the two selected-port regressions use the actual helpers or actual uniquely anchored source slices. Injection replaces only the existing executor seam in those query-wiring cases.",
+    "loopback": "The existing isolated-port case binds an ephemeral127.0.0.1 port, closes it, checks listeners and binds IPv4/IPv6 availability. On Unix it calls lsof; on Windows it calls the original local PowerShell listener query.",
+    "windows": "The Windows-only cleanup case calls windowsCleanupEvidence([process.pid]): real local CIM/Get-Process and TCP observations, including its existing full Get-NetTCPConnection query. These are original read-only component-test observations, not GUI/Host sampling.",
+    "fixture": "The real-fixture and timeout cases create unique temporary directories, copy the pinned fixture.cjs, write original ready/version-exit/version-timeout controls, and invoke it with process.execPath. Unix additionally invokes its generated /bin/sh shim. Fixture code has no child-process import or subprocess launcher. The selected arguments never invoke a real OpenCode, Claude or Codex binary.",
+    "providerNames": "Fixture roles/provider names and --version arguments are finite TEST grammar sent to the copied Node script. Its synthetic provider capabilities remain false. The source includes other scenario branches, but these tests select only ready, version-exit and version-timeout.",
+    "cleanup": "Original temporary directories are removed in finally. Timeout case waits for its fixture-ready stderr, kills the child it spawned and awaits its original exit on the normal path; finally repeats the existing owned-child kill only if still live. This advisory does not strengthen or replace the original exceptional cleanup.",
+    "globalEffects": "No parent chdir, process.env mutation, Date/timer mocking, process hooks or prototype patch is added by the complete platform module. Async callbacks own their local variables and unique directories. Tests still share OS resources, so ordinary environmental contention can fail them.",
+    "noNewApplicationObservations": "Any amended R1 must restrict the no-new-observation statement to application/Host failure flows. The imported whole14 component file performs its original I/O and subprocess work and must not be described as pure data or subprocess-free."
+  },
+  "boundsAndPrerequisites": {
+    "originalReadyWaitMs": 5000,
+    "originalFixtureTimerMs": 60000,
+    "originalPortWaitMs": 15000,
+    "originalPortPollMs": 250,
+    "originalPowerShellPerCallMs": 30000,
+    "unchanged": true,
+    "limit": "No finite aggregate timeout is introduced. Some original fixture spawnSync/exit-wait paths have no new per-call bound; default node:test timeout is not silently replaced. The import cannot guarantee total wall time or future success.",
+    "linux": "Requires the existing runner's lsof and /bin/sh plus loopback socket access. This review does not claim a fresh runner-image manifest audit; root is checking the exact retained image separately. No install is selected.",
+    "windows": "Requires existing WindowsPowerShell path/module plumbing, local CIM/Get-Process/TCP access and loopback sockets. Missing tools/query errors continue to fail; no fallback or skip is added.",
+    "unchangedStaticEnvironment": "AGENT_TEAMS_INSTALL_PROFILE=node-ci and ELECTRON_SKIP_BINARY_DOWNLOAD=1 remain. Existing current-main lock environment input is still passed to the original command; the platform module does not read it.",
+    "qualification": "A source-supported route is not a runtime PASS, native Windows integration qualification, or evidence that Linux performed the Windows-only case."
+  },
+  "workflow": {
+    "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+    "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+    "bytes": 36013,
+    "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+    "completeBodyPreviouslyRead": true,
+    "name": "OpenCode V2 Stage1 static preflight (TEST only)",
+    "jobs": [
+      "Static V01 source test (ubuntu-24.04)",
+      "Static V01 source test (windows-2022)"
+    ],
+    "node": "24.21.0",
+    "triggers": "Existing pull_request opened/synchronize/reopened paths include packages/legacy-agent-host/tests/**. No blanket Draft skip on static-preflight.",
+    "commandLine": 106,
+    "wholeCommand": "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts",
+    "explicitEntryCount": 8,
+    "priorSteps": "Unchanged pinned dependency install, Host build/typecheck, model variant tests and installer tests remain prerequisites. The separate current-main product lock remains a recorded input.",
+    "actionSelected": false,
+    "workflowFilterBudgetOrDependencyChanges": 0
+  },
+  "checks": [
+    {
+      "id": "P01",
+      "status": "PASS_STATIC_FEASIBILITY",
+      "finding": "Whole14 body identity independently joins current1ca exact path; no target edits."
+    },
+    {
+      "id": "P02",
+      "status": "PASS_STATIC_FEASIBILITY",
+      "finding": "Full actual platform.mjs and fixture.cjs closure read; Node builtins only and no eager subprocess."
+    },
+    {
+      "id": "P03",
+      "status": "PASS_STATIC_FEASIBILITY",
+      "finding": "Exact14 top-level registration census and the sole Windows-only skip are preserved."
+    },
+    {
+      "id": "P04",
+      "status": "PASS_STATIC_FEASIBILITY",
+      "finding": "Relative import resolves from packages/legacy-agent-host/tests to the repository scripts target."
+    },
+    {
+      "id": "P05",
+      "status": "PASS_STATIC_FEASIBILITY",
+      "finding": "Native original9 prefix remains literal;3 planned diagnostics plus14 implies26 registration expectation only."
+    },
+    {
+      "id": "P06",
+      "status": "PASS_STATIC_FEASIBILITY",
+      "finding": "Primary Node24.21 semantics support awaited module registration, default individual concurrency false and existing per-entry process isolation."
+    },
+    {
+      "id": "P07",
+      "status": "PASS_STATIC_FEASIBILITY",
+      "finding": "Registration ordering does not claim completion of prior callbacks; imported file shares the native entry process."
+    },
+    {
+      "id": "P08",
+      "status": "PASS_STATIC_FEASIBILITY",
+      "finding": "Stage1 explicit8-file command includes native receipt once and does not separately list platform14; no new command-level duplication."
+    },
+    {
+      "id": "P09",
+      "status": "PASS_STATIC_FEASIBILITY",
+      "finding": "All original loopback, OS query, fixture subprocess and cleanup effects are disclosed, with no real vendor path."
+    },
+    {
+      "id": "P10",
+      "status": "PASS_STATIC_FEASIBILITY",
+      "finding": "Original5s/15s/30s component limits and existing missing stronger aggregate bounds remain; no budget increase."
+    },
+    {
+      "id": "P11",
+      "status": "PASS_STATIC_FEASIBILITY",
+      "finding": "No parent global/cwd/environment/clock mutation or concurrency override appears in complete current files."
+    },
+    {
+      "id": "P12",
+      "status": "PASS_STATIC_FEASIBILITY",
+      "finding": "Existing Linux/Windows static jobs and path triggers already reach the native entry; no workflow/installation/action selected."
+    },
+    {
+      "id": "P13",
+      "status": "PASS_STATIC_FEASIBILITY",
+      "finding": "Whole17 frozen source bodies and six-file edit boundary can remain unchanged by this importer-only test wiring."
+    },
+    {
+      "id": "P14",
+      "status": "PASS_STATIC_FEASIBILITY",
+      "finding": "Original06ee review is unchanged; replacement exact R1 is still root's selection/review task, not approved here."
+    }
+  ],
+  "conclusion": "Supported as an importer-only source plan amendment: the unchanged whole platform14 can be registered from the existing native-receipt entry after its planned diagnostics, preserving actual helper coverage and original skips. It supplies genuine component-test execution reachability through existing Stage1 commands, while preserving application-flow behavior and every original component effect/bound. No exact replacement R1, source postimage or execution is authorized by this note.",
+  "selfReadback": "Send pin immediately after retention, then fresh-fetch, verify complete identity/literal/parsed equality and read full retained note."
+}

@@ -1,0 +1,463 @@
+{
+  "schema": "c714.native-credential-original-error-seam.guard-advisory.v1",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_guard",
+  "preparedAt": "2026-11-17 09:34:27 UTC",
+  "scope": {
+    "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "parentLaterSource": "Parent identifies later 1ca as changing only four Windows sources; parent will perform full-tree unchanged-source join.",
+    "classification": "Read-only feasibility; no implementation selected or authored.",
+    "rootSoleAuthorExecutor": true,
+    "sourceFilesAdded": 0,
+    "dependenciesAdded": 0,
+    "execution": false,
+    "liveCiRead": false
+  },
+  "conclusion": {
+    "answer": "A safely bounded original-error classification can be carried through the existing Host close-failure channel and native credential receipt, but a fixture-only receipt change cannot recover it. The minimum identified direct-error option spans two existing files: OpenCodeV2ModelProbe.ts at the original run rejection, and passive-diagnostics.ts at both projections.",
+    "decisiveness": "This can distinguish currently discarded allowlisted exception/code/cause-code information if the original object contains it. It cannot guarantee a decisive low-level cause, because the provider may already have abstracted the error and the observed driver.close returned an unconfirmed cleanup result rather than throwing.",
+    "rawStderr": "No already-retained raw Host stderr buffer exists in the selected fixture. Retaining arbitrary stderr/message/stack text is not a supported credential-safe shortcut.",
+    "selection": "No candidate, field schema, code change, new source file, execution venue or approval gate is selected by this advisory."
+  },
+  "basis": {
+    "priorReport": {
+      "bytes": 49411,
+      "sha256": "cca72f4bf9fbbe4e0ae4fa8ce5aa24efe02a36e530c8e53f24aa7acf90f31a73",
+      "gitBlob": "f41a625fef5db581e0c9ff6c2392d6ff8a7dd87d",
+      "completeSelfRead": true
+    },
+    "primaryLog": {
+      "bytes": 310853,
+      "sha256": "8fba6214352cc45e2bfb43bdba105509abc8f446cce643656c22618b9bafac6e",
+      "gitBlob": "b7cb3efd51fcc31adf499899ae5c47217da1f686",
+      "completeBodyRead": true
+    },
+    "receipt": {
+      "bytes": 195977,
+      "sha256": "a7d3614e939200caee6601a19c1032c02bc350ff22d4bcafeb36008d3ae426f7",
+      "gitBlob": "289dd84a611a617f2b6bb02f6c2c56a779f402c1",
+      "separatelyRetained": false,
+      "diagnosticRows": 572,
+      "allRowsRead": true
+    },
+    "sources": [
+      {
+        "key": "nativeHost",
+        "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+        "bytes": 15303,
+        "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01",
+        "gitBlob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5",
+        "read": "Complete prior source read in f41a625f plus complete fresh in-memory reread in this advisory.",
+        "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "splitLines": 390,
+        "physicalLines": 389
+      },
+      {
+        "key": "credentials",
+        "path": "packages/legacy-agent-host/tests/opencode-v2-credentials.native.ts",
+        "bytes": 42225,
+        "sha256": "7a54ca7d164b8e96763bb680ba4fc4f551bf1477a2e6a92cfce351d6a17ece44",
+        "gitBlob": "cefca638fb6922122379f4614af0546c86e83ae5",
+        "read": "Complete prior source read in f41a625f; exact stored body reused with failure/collector/receipt ranges reread.",
+        "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "splitLines": 703,
+        "physicalLines": 702
+      },
+      {
+        "key": "passiveDiagnostics",
+        "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068",
+        "read": "Complete prior source read in f41a625f; same exact body reused with projection/emission/capture ranges reread. Truncated directory-output call is not counted as a fresh complete read.",
+        "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "splitLines": 566,
+        "physicalLines": 565
+      },
+      {
+        "key": "modelProbe",
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05",
+        "read": "Full immutable 9d directory mapping, complete blob fetch/hash and all 501 split lines read in two untruncated chunks.",
+        "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "splitLines": 501,
+        "physicalLines": 500
+      },
+      {
+        "key": "hostCli",
+        "path": "packages/legacy-agent-host/src/cli.ts",
+        "bytes": 2148,
+        "sha256": "48d05280ffb3f26027d6645ebbdf365335468194ddb36b98cf29d4726645980a",
+        "gitBlob": "255c0952a3a58e511c7bd790b1b34dd0d1330393",
+        "read": "Full immutable 9d directory mapping, complete blob fetch/hash and complete 59 split-line body read.",
+        "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "splitLines": 59,
+        "physicalLines": 58
+      },
+      {
+        "key": "hostPackage",
+        "path": "packages/legacy-agent-host/package.json",
+        "bytes": 12355,
+        "sha256": "4e567d64af0c5a0d85e155e90fd4eec9a6ca720e89edfe9923d7e4cc9a1b4f81",
+        "gitBlob": "42093f5cb1be431e383a2bbf97223a2bd8d54b49",
+        "read": "Complete raw immutable 9d body fetched, hashed and read; package selection only, no archive/driver contract re-audit.",
+        "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "splitLines": 305,
+        "physicalLines": 304
+      }
+    ],
+    "identityHelper": {
+      "blob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8",
+      "bytes": 3982,
+      "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7",
+      "onlyEvaluatedHelper": true
+    },
+    "providerBoundary": {
+      "selectedPackage": "file:../../vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz",
+      "archiveReaudited": false,
+      "driverCloseExtraFieldsKnown": false,
+      "limit": "The current Host's consumed cleanup field and original run catch are inspected. No extra field in the provider CloseResult is assumed."
+    }
+  },
+  "observedFailure": {
+    "hostEpoch": 3,
+    "hostPid": 3649,
+    "exitCode": 1,
+    "signalCode": null,
+    "runState": "threw",
+    "outcome": "unobserved",
+    "errorClass": "unknown",
+    "close": {
+      "stage": "driver-close",
+      "reason": "unconfirmed",
+      "source": "OpenCodeV2ModelProbe.ts:439–448",
+      "meaning": "The awaited close fulfilled and its cleanup was not confirmed; the catch path would have produced reason threw."
+    },
+    "precedingRead": {
+      "stage": "after-session",
+      "reason": "transport_failure",
+      "deadlineExpired": false,
+      "aborted": false
+    },
+    "causalLimit": "Ordered diagnostics do not prove the preceding read error caused the unknown cleanup. Do not merge the two into an invented exception."
+  },
+  "existingDataFlow": [
+    {
+      "boundary": "Child original run rejection",
+      "source": "OpenCodeV2ModelProbe.ts:396–412",
+      "available": "The exact error object, including any original own data fields.",
+      "retained": "runState=threw and ManagementCommandError code only if held/invalid/conflict/busy; otherwise errorClass=unknown.",
+      "lost": "Other names/codes/cause-code classifications."
+    },
+    {
+      "boundary": "Child close",
+      "source": "OpenCodeV2ModelProbe.ts:414–496",
+      "available": "Original request-drain outcome, owner-cleanup flag, driver.close cleanup result, server-stop result and first failure stage/reason.",
+      "retained": "Existing first close failure plus captured digest/runState/outcome/errorClass, published only for failed non-coordination close.",
+      "lost": "Any original run error fields not deliberately projected; caught close errors are not retained, but the observed branch was returned unconfirmed."
+    },
+    {
+      "boundary": "TEST subscriber",
+      "source": "passive-diagnostics.ts:75–91,427–474",
+      "available": "Existing fixed channel payload, not raw original exception.",
+      "retained": "Only the existing enumerated scalar projection, with first-close reserved slot after ordinary trace exhaustion.",
+      "lost": "Unknown additional producer fields unless this projection is updated."
+    },
+    {
+      "boundary": "Parent stderr delivery",
+      "source": "native-host.ts:182,205–208,348–355",
+      "available": "Each original stderr Buffer arrives once.",
+      "retained": "diagnosticBytes and callback forwarding only.",
+      "lost": "Full stderr is never buffered here."
+    },
+    {
+      "boundary": "Parent passive capture",
+      "source": "passive-diagnostics.ts:94–154",
+      "available": "Bounded serialized TEST diagnostic lines.",
+      "retained": "Reprojected per-epoch entries within original trace/line/record budgets.",
+      "lost": "Unknown fields and non-TEST diagnostic lines."
+    },
+    {
+      "boundary": "Credential receipt/envelope",
+      "source": "opencode-v2-credentials.native.ts:679–696; native-host.ts:359–388",
+      "available": "Already retained passive entries and parent error objects.",
+      "retained": "Full entries serialized once, exact bytes/SHA in the failure envelope, original omission/backpressure handling.",
+      "lost": "No raw error recovery occurs at this final sink."
+    }
+  ],
+  "candidateOption": {
+    "selected": false,
+    "authored": false,
+    "files": [
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+        "currentBlob": "195dabe664b14a2fe5c231e137690db6126c0e05",
+        "boundary": "Original non-coordination run rejection at 402–411 and existing failed-close channel payload at 490–492.",
+        "purpose": "Optionally retain a small safe classification of the same original error before it is rethrown; carry it as run-error data beside, not in place of, the already-observed close stage/reason."
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "currentBlob": "625c6ddd74357abbdf565bf386388274cebd4068",
+        "boundary": "Shared host-probe-close projection at 75–91, child subscriber at 469–473, parent entry projection at 112–127.",
+        "purpose": "Validate/copy the same selected scalar fields at both boundaries, leaving the single reserved close observation and all limits intact."
+      }
+    ],
+    "unchangedSinks": [
+      "packages/legacy-agent-host/tests/fixtures/native-host.ts can continue to forward chunks and publish the already serialized receipt.",
+      "packages/legacy-agent-host/tests/opencode-v2-credentials.native.ts can continue to flatten passive entries and call its original failure envelope.",
+      "The Host close assertion, failed receipt status, original error throw identity and all cleanup/source/native ownership checks remain authoritative."
+    ],
+    "scopeQualification": "This option includes a Host source change; it is not merely a fixture output patch. If only fixture edits were permitted, the exact child run error would remain unavailable at the current receipt boundary.",
+    "preservation": [
+      "No additional request, OS query, model input, native process, metadata read, retry, deadline or cancellation path.",
+      "No changes to selected keys, captured inputs, custody, driver.close invocation count, first-failure ordering, or held/unconfirmed interpretation.",
+      "No arbitrary raw error serialization and no new dependency/file.",
+      "No change to 13 frozen parity paths or the fixed CI snapshots; existing source-file count 8799 remains the parent baseline.",
+      "No field/whitelist spelling or executable postimage is chosen here."
+    ]
+  },
+  "safeProjectionRequirements": {
+    "positiveAllowlist": "Only fixed, explicitly enumerated name/code classifications. Arbitrary strings remain unknown or unobserved, even if short. Existing ManagementCommandError class must keep its original meaning.",
+    "originalObject": "Project only the error already caught by the original run rejection. A cause code, if included, is limited to one own-data cause object and one own-data code; no recursive serialization or scanning.",
+    "noAccessorExecution": "Follow the existing Object.getOwnPropertyDescriptor discipline and accept value descriptors only. Do not invoke getters, constructor/toString/toJSON helpers, message/stack formatting or arbitrary prototype traversal. A throwing reflection/proxy trap is an unavailable diagnostic and cannot replace the original error.",
+    "nameCaveat": "Built-in Error.name is often inherited. An own-data-only policy must represent an absent name as unobserved; it must not infer Error merely from its absence. A broader name classifier would need its own narrowly justified contract and is not selected.",
+    "excluded": [
+      "message, stack and arbitrary cause text",
+      "URLs, query strings, paths, authorization/header values",
+      "request/response bodies, prompts, keys, raw provider text",
+      "generic JSON.stringify(error), object spreading or arbitrary property enumeration",
+      "mapping a run rejection into a claimed thrown close exception"
+    ],
+    "preserveUnknown": "If the object is primitive, opaque, accessor-backed, malformed or already abstracted, retain unknown/unobserved rather than manufacture an error code or success.",
+    "failureIsolation": "The projection must be bounded and exception-safe; any failure leaves the exact original error rethrow and cleanup classification unchanged."
+  },
+  "budgetFeasibility": {
+    "current": {
+      "maximum": 256,
+      "ordinaryCeiling": 253,
+      "totalRowsConvention": 257,
+      "traceBytes": 65536,
+      "lineBytes": 512,
+      "reservedRecordBytes": 513,
+      "failureSlots": [
+        "read-cut",
+        "metadata-read",
+        "host-probe-close"
+      ],
+      "envelopeBytes": 262144,
+      "diagnosticBackpressureMs": 2000
+    },
+    "dataOnlyExample": {
+      "currentObservedCloseRecordBytes": 389,
+      "boundedExampleReceiptRecordBytes": 507,
+      "boundedExampleEmittedLineBytes": 387,
+      "currentMaximumLineBytes": 512,
+      "currentReservedLineBytes": 513,
+      "exampleOnly": true,
+      "noFieldNamesOrAllowlistSelected": true,
+      "notExecutableSource": true
+    },
+    "exampleLimit": "The arithmetic is a pure data feasibility example using fixed network-code strings. A selected schema must fit all of its longest admitted values, epoch/timestamp widths and both serializer shapes under the existing limits; no line/trace/receipt cap increase is implied.",
+    "envelopeLimit": "The historical receipt is 195,977 bytes. The envelope limit applies after JSON string escaping and header/details, so the receipt byte count alone is not a universal proof of headroom. Keep the original omission behavior and do not create a separate recovery output.",
+    "lineLimitRisk": "A newly enlarged field set can cause an entire diagnostic row to be silently dropped by existing guards. The full selected projection must therefore remain within the original record/line ceilings.",
+    "sourceCap": "Current ModelProbe is 500 physical lines (501 split entries including terminal empty entry) and passive-diagnostics 565 physical lines (566 split entries). No new file is needed; any selected exact postimages must remain within the existing 800-line cap."
+  },
+  "alternatives": [
+    {
+      "name": "Parent assertion/error projection",
+      "classification": "Safe bounded metadata may be possible but is insufficient for this unknown.",
+      "reason": "The available parent error is already the generic exitCode 1 != 0 assertion. It does not contain the original provider exception."
+    },
+    {
+      "name": "Already-buffered stderr",
+      "classification": "Unavailable in the current selected fixture.",
+      "reason": "Only bytes and selected sanitized projections are retained; nonmatching text and policy console arguments have already been dropped or replaced."
+    },
+    {
+      "name": "New generic stderr tail",
+      "classification": "Not supported as the minimum safe option.",
+      "reason": "It would introduce a new retention mechanism, requires credential-safe positive projection, and still cannot recover child error data never emitted. Length bounds or generic redaction alone do not prove credential safety."
+    },
+    {
+      "name": "Existing undici request-error callback",
+      "classification": "A separate limited transport observation, not a substitute for the original run error.",
+      "reason": "It sees original request/error objects at 547–555, but its emitted event is ordinary and can be suppressed after trace-limit. It is not automatically bound to the failed probe or proof of the driver-close cause. No request-error row survived in the historical receipt."
+    },
+    {
+      "name": "Additional driver.close result fields",
+      "classification": "Unestablished.",
+      "reason": "The inspected Host consumes only cleanup. This advisory does not invent extra error fields or re-audit the selected provider archive."
+    }
+  ],
+  "reviewablePropertiesIfRootSelects": [
+    "The same thrown object escapes the original run rejection for both ordinary and hostile/opaque error values.",
+    "Only positive allowlisted data reaches both child channel serialization and parent receipt projection; secret sentinels in message/stack/cause text/unknown codes never appear.",
+    "Absent/inherited names, accessor fields, throwing reflection, cyclic/nested causes and oversized unknown strings remain bounded and unavailable.",
+    "Existing first-close-stage/reason, run/outcome/errorClass, one-close observation and original error/cleanup result are unchanged.",
+    "Both original serialized line and parent entry fit worst admitted values, including after ordinary trace-limit, without increasing any limit.",
+    "Receipt/envelope bytes, hash and original omission/backpressure behavior remain tied to the same original evidence.",
+    "These are properties of a possible future concrete proposal, not newly authored tests, new acceptance gates or claims of execution."
+  ],
+  "limitations": [
+    "The current log cannot be retroactively enriched; unknown original fields stay unknown.",
+    "Even a correct bounded projection may show only Error/unknown if the selected provider has already abstracted the error.",
+    "No guarantee of an exact root cause or operational reproduction is made.",
+    "Parent owns source scope, any future concrete R1/R2 decision and any genuine execution; this advisory selects none."
+  ],
+  "checks": [
+    {
+      "number": 1,
+      "id": "authority",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Only immutable Git/source/retained evidence reads, in-memory data operations and bare report retention. No shell, source evaluation/import/compile, process/model/network probe, CI read/poll, or source/ref/PR mutation."
+    },
+    {
+      "number": 2,
+      "id": "scope-anchor",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Source analysis is pinned to complete fixed 9d bodies. Parent says the later 1ca change touches only four Windows files; no independent 1ca tree join is claimed here."
+    },
+    {
+      "number": 3,
+      "id": "original-evidence",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Reuses fully read/hash-bound report f41a625f and its 195,977-byte receipt/all 572 rows. Epoch 3 ended with runState threw, errorClass unknown and driver-close unconfirmed."
+    },
+    {
+      "number": 4,
+      "id": "no-raw-buffer",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "native-host.ts 205–208 counts stderr bytes and calls onDiagnostic. Neither facts() nor either selected credential collector retains complete raw stderr."
+    },
+    {
+      "number": 5,
+      "id": "metadata-discard",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "The credentials metadata parser at 185–200 only accepts its fixed metadata prefix, discards other lines, bounds the partial line and replaces parse/admission errors with a fixed error."
+    },
+    {
+      "number": 6,
+      "id": "passive-discard",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Passive capture accepts a fixed diagnostic prefix, bounded line length and fixed event/field sets; other Host diagnostics are deliberately discarded."
+    },
+    {
+      "number": 7,
+      "id": "cli-redaction",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Complete CLI source replaces console methods with a fixed policy-diagnostic string and bounds it at 8192 bytes. Buffering stderr cannot recover arguments already replaced there."
+    },
+    {
+      "number": 8,
+      "id": "parent-error-limit",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "The parent originalFailure/cleanupErrors hold the Host exit assertion observed in this run. Projecting those same errors more fully cannot recover the child's unreported provider exception."
+    },
+    {
+      "number": 9,
+      "id": "run-error-seam",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "OpenCodeV2ModelProbe 402–411 holds the original rejection object before rethrowing that identical object; it currently retains only four ManagementCommandError codes into errorClass."
+    },
+    {
+      "number": 10,
+      "id": "close-return-seam",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Observed driver-close/unconfirmed is the fulfilled driver.close result with cleanup not equal to confirmed at 441–443. It is distinct from the catch at 445–448, which would label threw."
+    },
+    {
+      "number": 11,
+      "id": "phase-attribution",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "The run rejection and close result are distinct observations. Any future diagnostic must retain this distinction and must not call a run error the driver.close exception or infer causation."
+    },
+    {
+      "number": 12,
+      "id": "existing-channel",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "The failed close already publishes a bounded scalar record through agent-teams:opencode-v2:host-probe-close-failed, including captured probe digest, run state, outcome and first close stage/reason."
+    },
+    {
+      "number": 13,
+      "id": "double-projection",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "The current passive subscriber projects the channel payload, then the parent receipt collector independently projects the serialized line. Both must preserve any selected added field; editing only a producer or receipt sink loses it."
+    },
+    {
+      "number": 14,
+      "id": "existing-envelope",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Credentials already flattens passive entries into its original receipt, then writeNativeFailureReceipt binds the exact serialized bytes/SHA and emits the failure-only envelope. No new receipt file or stdout mechanism is required for those rows."
+    },
+    {
+      "number": 15,
+      "id": "bounded-safe-fields",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Fixed allowlisted primitive name/code classifications and at most a bounded own-data cause-code observation can avoid raw credential text. Unknown/unobserved values must remain explicit; arbitrary strings, message, stack, bodies and recursive errors are excluded."
+    },
+    {
+      "number": 16,
+      "id": "getter-safety",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Use the existing own-data descriptor discipline; do not call error getters, toJSON, toString, constructor helpers, or perform an arbitrary prototype/cause walk. Built-in inherited names may remain unobserved rather than being guessed."
+    },
+    {
+      "number": 17,
+      "id": "same-error-semantics",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Any diagnostic failure must leave the original error object rethrown, original first-close-failure choice, cleanup boolean, run/outcome states and original terminal decision unchanged."
+    },
+    {
+      "number": 18,
+      "id": "current-budgets",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "The existing maximum constant 256, ordinary ceiling 253, 257-row total convention, 64 KiB per-capture budget, 512-byte line and 513-byte reserved record, reserved late failure slots, and 256 KiB envelope omission guard need no enlargement."
+    },
+    {
+      "number": 19,
+      "id": "size-feasibility",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "A data-only bounded example using the existing largest network-code strings fits: emitted line 387 bytes and parent close record 507 bytes. This proves feasibility for that example, not an unselected universal schema bound."
+    },
+    {
+      "number": 20,
+      "id": "no-stderr-guarantee",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "A raw or generically truncated/redacted stderr tail is not proven credential-safe and has no demonstrated path to the lost original error. No such capture is selected."
+    },
+    {
+      "number": 21,
+      "id": "undici-limit",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Existing undici:request:error receives original request/error data but emits an ordinary event subject to the exhausted trace cap. No request-error row survived in this receipt; absence is not proof no request error occurred."
+    },
+    {
+      "number": 22,
+      "id": "minimum-option",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "The identified original-run-error option uses two existing source files: ModelProbe and passive-diagnostics. Existing credentials and native-host propagation can remain unchanged. This is an advisory option, not an authored/selected patch."
+    },
+    {
+      "number": 23,
+      "id": "frozen-and-file-count",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "No change to any of the 13 frozen parity paths is needed by this option; no source file/dependency is added. Current ModelProbe 500 physical lines and passive-diagnostics 565 physical lines leave room under the 800 cap, subject to exact future postimage review."
+    },
+    {
+      "number": 24,
+      "id": "no-decisive-promise",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "The original provider error may already be abstracted or carry no allowlisted fields. The option can expose discarded classification if present; it cannot promise the exact driver-close cause."
+    },
+    {
+      "number": 25,
+      "id": "no-qualification",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "No new runtime PASS, fix, execution venue, gate, retry, deadline/case/filter/custody relaxation or provider qualification is issued."
+    }
+  ],
+  "checkCount": 25,
+  "selfReadbackProtocol": "Send retained pin immediately; fresh fetch, full identity/literal comparison and complete untruncated report self-read follow before final confirmation."
+}

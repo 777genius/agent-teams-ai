@@ -1,0 +1,894 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CLAUDE_FINITE_RUNTIME_READINESS_R1_INDEPENDENT_GUARD_REVIEW",
+  "reviewer": "/root/producer_r2_guard",
+  "at": "2026-11-17 11:52:33 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "bytes": 37389,
+    "sha256": "588f6ce9b006b458ce7a896dc4ab46985493c54911eec2beedcf0874b33163ca",
+    "gitBlob": "f44edc6cdfde700e570423176fc00d11b2275c43",
+    "kind": "C714_CLAUDE_FINITE_RUNTIME_READINESS_R1",
+    "parent": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+    "parentRoot": "f77c67b7996ec0d262d3f97769eeb943c4b87b43"
+  },
+  "decision": "ACCEPT_R1_SCOPE_ONLY",
+  "blockers": [],
+  "checksCount": 38,
+  "scope": "Complete exact R1 guard/custody/authority review against all five current full preimages, the accepted prior source publication gate, own collaboration source advisory and necessary original auth/catalog/provider contracts. No hypothetical postimage or executable-control/runtime acceptance.",
+  "authority": {
+    "rootSoleAuthorPublisherStagerExecutor": true,
+    "reviewerOnlyImmutableReadsPureDataAndThisBareReport": true,
+    "performedShell": false,
+    "performedTargetSourceEvaluationImportCompilation": false,
+    "performedRuntime": false,
+    "performedSourceControlOrRefMutation": false,
+    "performedLiveCiRead": false,
+    "newGateRequested": false,
+    "newVenueSelected": false
+  },
+  "fullReadEvidence": {
+    "proposal": {
+      "bytes": 37389,
+      "sha256": "588f6ce9b006b458ce7a896dc4ab46985493c54911eec2beedcf0874b33163ca",
+      "gitBlob": "f44edc6cdfde700e570423176fc00d11b2275c43",
+      "readRanges": [
+        [
+          0,
+          12000
+        ],
+        [
+          12000,
+          24500
+        ],
+        [
+          24500,
+          37389
+        ]
+      ],
+      "complete": true
+    },
+    "priorGate": {
+      "bytes": 3565,
+      "sha256": "73d1c980fe51340d4e8d17c262f05af689461407d6048934105f5cc83bf2a5ae",
+      "gitBlob": "47bad46713f0a091561dc059ca3b771bd1278bc7",
+      "complete": true,
+      "closedAt": "2026-11-17 11:32:42 UTC",
+      "actualChecks": 89,
+      "matched": [
+        "commit/parent",
+        "root",
+        "docs",
+        "scripts",
+        "rootActual identity",
+        "independentActual identity",
+        "89 actual checks",
+        "11:32:42 UTC close"
+      ],
+      "limit": "The two earlier actual reports are referenced through their accepted complete gate; this R1 guard review does not purport to repeat their entire publication audit."
+    },
+    "sourcePreimages": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "mode": "100644",
+        "pin": {
+          "bytes": 21981,
+          "sha256": "d0d00254e7e39ab8b5163e02cc93754775a8efe56ff28b8c87f07d02e0292c7e",
+          "gitBlob": "7b5edfbd4967debe454387c7a8b6246e67216dc8"
+        },
+        "repository": "777genius/agent-teams-ai",
+        "ref": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+        "completeBodyRead": true,
+        "currentPathCompleteBodyEqual": true,
+        "lines": 280,
+        "reusedPriorCompleteRead": false
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+        "mode": "100644",
+        "pin": {
+          "bytes": 16555,
+          "sha256": "8340911817fb4228e8d948425a1f85796fba16d244b6763b04e307ed6f290713",
+          "gitBlob": "97e14385a298a38a9b81b8805dc3f6d2da66545c"
+        },
+        "repository": "777genius/agent-teams-ai",
+        "ref": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+        "completeBodyRead": true,
+        "currentPathCompleteBodyEqual": true,
+        "lines": 199,
+        "reusedPriorCompleteRead": true
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+        "mode": "100644",
+        "pin": {
+          "bytes": 32221,
+          "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+          "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01"
+        },
+        "repository": "777genius/agent-teams-ai",
+        "ref": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+        "completeBodyRead": true,
+        "currentPathCompleteBodyEqual": true,
+        "lines": 463,
+        "reusedPriorCompleteRead": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+        "mode": "100644",
+        "pin": {
+          "bytes": 24968,
+          "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+          "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57"
+        },
+        "repository": "777genius/agent-teams-ai",
+        "ref": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+        "completeBodyRead": true,
+        "currentPathCompleteBodyEqual": true,
+        "lines": 333,
+        "reusedPriorCompleteRead": true
+      },
+      {
+        "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+        "mode": "100644",
+        "pin": {
+          "bytes": 8570,
+          "sha256": "37d0b61e60dd4f175c9c2d34e1f8aa399becac018e970655dd7f5595713f2fb6",
+          "gitBlob": "6e84953e1d1a08b705b4000f47d8d51177047ff3"
+        },
+        "repository": "777genius/agent-teams-ai",
+        "ref": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+        "completeBodyRead": true,
+        "currentPathCompleteBodyEqual": true,
+        "lines": 210,
+        "reusedPriorCompleteRead": false
+      }
+    ],
+    "sourcePreimageBytes": 104295,
+    "reusedAdvisory": {
+      "bytes": 45685,
+      "sha256": "96ccf136c095d262e59bc82b92e94e613ef8386d1365ebd9fbd1a0dbd473d7f6",
+      "gitBlob": "cb9d2c2f2c6b639ea0e65b9127281e5aa8925f13",
+      "fullReadback": {
+        "fullReadback": true,
+        "readRanges": [
+          [
+            0,
+            11500
+          ],
+          [
+            11500,
+            23000
+          ],
+          [
+            23000,
+            34500
+          ],
+          [
+            34500,
+            45685
+          ]
+        ],
+        "bytes": 45685,
+        "sha256": "96ccf136c095d262e59bc82b92e94e613ef8386d1365ebd9fbd1a0dbd473d7f6",
+        "gitBlob": "cb9d2c2f2c6b639ea0e65b9127281e5aa8925f13",
+        "checks": 20,
+        "allBounded": true,
+        "time": "2026-11-17 11:38:28 UTC"
+      },
+      "join": "Exact current model/auth/consumer source findings reused only by matching immutable identities."
+    },
+    "proofIdentityIndex": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "bytes": 21981,
+        "sha256": "d0d00254e7e39ab8b5163e02cc93754775a8efe56ff28b8c87f07d02e0292c7e",
+        "gitBlob": "7b5edfbd4967debe454387c7a8b6246e67216dc8",
+        "method": "freshly fetched for this R1",
+        "guardSemanticRead": "Complete body semantically read, fresh or reused at exact immutable identity"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+        "bytes": 32221,
+        "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+        "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+        "method": "freshly fetched for this R1",
+        "guardSemanticRead": "Complete body semantically read, fresh or reused at exact immutable identity"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeAuthConversation.ts",
+        "bytes": 10334,
+        "sha256": "709d66ffc366f0b83d9af0a49a1b9126bda1e33e72f796da0458356349b18880",
+        "gitBlob": "a4d47563cffaed2ea48381887e47820ed727422e",
+        "method": "complete previously retained current body",
+        "guardSemanticRead": "Complete body semantically read, fresh or reused at exact immutable identity"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "packages/legacy-agent-host/src/adapters/providers/claudeAuthStatus.ts",
+        "bytes": 2618,
+        "sha256": "588b932ed1427203a6ff27690787799cb43cb5f7aaee115f7aaab4d4cc1cd388",
+        "gitBlob": "3ce5814e42e72d0a46f229791dfec25668e22896",
+        "method": "freshly fetched for this R1",
+        "guardSemanticRead": "Complete body semantically read, fresh or reused at exact immutable identity"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "packages/legacy-agent-host/src/composition/ClaudeAuthenticationCoordinator.ts",
+        "bytes": 7797,
+        "sha256": "c5004da14dbf88f92a8a56984f7d0c6e31f4cff27e1f00f3b3f2a5e382f35a81",
+        "gitBlob": "5f129052b232eed045304284167bc9258141b720",
+        "method": "complete previously retained current body",
+        "guardSemanticRead": "Complete body semantically read, fresh or reused at exact immutable identity"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+        "bytes": 7477,
+        "sha256": "c4d8333cc5b562b7eb8de8398bde8275d579fdb7775c59c3d1ae5123e88cfdc8",
+        "gitBlob": "c0bd14811e8cd76dd34bcf42afac2785769e37ad",
+        "method": "complete previously retained current body",
+        "guardSemanticRead": "Complete body semantically read, fresh or reused at exact immutable identity"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/features/runtime-provider-management/main/adapters/output/capturedClaudeAuthentication.ts",
+        "bytes": 3092,
+        "sha256": "c4ca2ee17177e804122d551d55c80b91c8fbba59b9bbc87465819cad130cb4e7",
+        "gitBlob": "7ee86041e36d33033ede953ba05e76244f9586ca",
+        "method": "complete previously retained current body",
+        "guardSemanticRead": "Complete body semantically read, fresh or reused at exact immutable identity"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/features/agent-backend/main/infrastructure/CapturedProviderManagement.ts",
+        "bytes": 5433,
+        "sha256": "8ea983e9aec5c56ca5e2438a39e4272c0133ae6c2d4839bbcb6926afb605b760",
+        "gitBlob": "60b08011e5aa2df1a6d2215155d7dabf0b2b15af",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body semantically read, fresh or reused at exact immutable identity"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts",
+        "bytes": 15353,
+        "sha256": "606098a4895f1715ea58677cfff11337790d5bbcf1be3fcdf3efcdf171b59aab",
+        "gitBlob": "500b04c5a0b9e15bc8f4401d5f7bdc0d4267e2a6",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/renderer/store/slices/cliInstallerStatusReconciliation.ts",
+        "bytes": 9017,
+        "sha256": "363bd187bf5ac466c9e8e9bd5b535c7b9a7e52f62bbadd1d6db01ba8317f732e",
+        "gitBlob": "c3347aaded7d5705b775b8aa1ca29f6d37a58c8e",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/renderer/store/slices/cliInstallerSlice.ts",
+        "bytes": 59054,
+        "sha256": "c7194f07ac40c75f3a13bd09b0a2be71b9b4c0d0bde887ca5fccd083b24f5714",
+        "gitBlob": "38de9ccec33c7b9b1250a17173003e1e6fb96d9c",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/shared/utils/providerStatusAuthority.ts",
+        "bytes": 4567,
+        "sha256": "67241d584fdbef940ad2a0ef7eb459eb85af618bd907710d42c005821c2fa4fa",
+        "gitBlob": "56a1d52d3ba392ec00f60ccf6b7aedaffe6ba570",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body semantically read, fresh or reused at exact immutable identity"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/renderer/utils/providerReadiness.ts",
+        "bytes": 2022,
+        "sha256": "4c68a3835384f0358b884930965719286d40ded7cce4a0f47ba63ad50937d297",
+        "gitBlob": "b912faca5caef24aebf1ce4105556e2dc8b3bdaf",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/renderer/hooks/useEffectiveCliProviderStatus.ts",
+        "bytes": 9697,
+        "sha256": "d7db83f4787e51b205fae22b5399d6b19cfe478bda586efb86bfc39ed38be1f1",
+        "gitBlob": "4a4c5150cc13bc59a914d34f29033890a2541697",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/renderer/hooks/useProviderReadinessRevalidation.ts",
+        "bytes": 6495,
+        "sha256": "8aadcca8af81d9aaa2031aa4eeffa5db2c1f0bc01d82932487719c176c0d7c6b",
+        "gitBlob": "ba9aab03f3830fd865a606699100ea002329cd91",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "bytes": 32077,
+        "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+        "method": "complete previously retained current body",
+        "guardSemanticRead": "Relevant consumer/authority branches semantically read; complete body fetched and identity-joined"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/renderer/utils/teamProviderRuntimeStatusLoading.ts",
+        "bytes": 4395,
+        "sha256": "623fb0291c50dd43016d08b54635d5ec4b4cbb582fd1a7768efba904980d175c",
+        "gitBlob": "305aea0b97d3b2b59dd897e06e39cc2c82406ee9",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/renderer/components/team/dialogs/memberModelScope.ts",
+        "bytes": 12942,
+        "sha256": "0033354db6b28e7b69eaa8f10db35332883707b9a6576c80e55c78f997a670a8",
+        "gitBlob": "d24060b3c0440b4ed6cf62c87e83098529d951c4",
+        "method": "complete previously retained current body",
+        "guardSemanticRead": "Complete body semantically read, fresh or reused at exact immutable identity"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+        "bytes": 132317,
+        "sha256": "af7b6f9da352008ef014dad120b868090626e071cd5d94037fd03385e2234d40",
+        "gitBlob": "4bd95a0f2e5636a21d1f0d83dd45f228b054b048",
+        "method": "complete previously retained current body",
+        "guardSemanticRead": "Relevant consumer/authority branches semantically read; complete body fetched and identity-joined"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/renderer/components/team/dialogs/providerLaunchAuthority.ts",
+        "bytes": 8286,
+        "sha256": "7c122f43c764f438d9c9d78413f5e3912e83f29a3c30f72631333dc34d6e44d0",
+        "gitBlob": "a6dbcf114109c75f5a0dfad9ca20e71884956f31",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/renderer/components/team/dialogs/capturedTeamLaunchReadiness.ts",
+        "bytes": 1376,
+        "sha256": "5a3e24af0a051afe0e8736e4d79e21239ef23b3aeb7a972c59fe5e79655db09e",
+        "gitBlob": "7a78f0791a54d09bcdda9c466b4df9c8b3b569d1",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/renderer/components/team/dialogs/useCapturedTeamLaunchReadiness.ts",
+        "bytes": 5710,
+        "sha256": "7327fb6ed0504e412dcdafe4989c91625c2ef0712edf0705c767c5bfc52775af",
+        "gitBlob": "e8f5137ea0b7b69f4c098203d797780be99a5c01",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/renderer/components/team/dialogs/withCapturedTeamReadiness.ts",
+        "bytes": 1500,
+        "sha256": "9777cab955f2dbe26d2226a9848adc032d62d51d331ab63a3c319b6269198091",
+        "gitBlob": "9321399f64afdb461bdbfdb59b532b29523da96d",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/features/agent-backend/main/application/prepareCapturedTeamModels.ts",
+        "bytes": 20613,
+        "sha256": "c49452670a14256b257478f1f4a2532b3df19fb11175e51e11472c1921e9c8a6",
+        "gitBlob": "c1432a74804a9382d0137ed040e49b3ed51316fd",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "src/features/agent-backend/main/adapters/output/projectLaunchModelProbe.ts",
+        "bytes": 2538,
+        "sha256": "c20d555192061bb985bc3245a59b0277d289c8f69e08c7d4e4ff04f4c75c5a99",
+        "gitBlob": "b4d23d44696675a45f98bae19ed451354ad16be7",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+        "bytes": 22845,
+        "sha256": "135cd81f2edde1f087b231d4dcbed83d8cc8beade5a0230a093e6cbfcb1923ee",
+        "gitBlob": "b33e5290e4ed86a48b902a24ffc80509f1c89236",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-boundary.ts",
+        "bytes": 9825,
+        "sha256": "aa936c996a96c12c6728cbf1bca27f94e428b691e0fa2baabcd8fd74c449a499",
+        "gitBlob": "41d42274a468f086941eb4b9435fa4ff09adf2be",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-emulated-claude-settings-fixture.ts",
+        "bytes": 5663,
+        "sha256": "0370ef4c293ffc173d5952cc04671459022dfff2782b5c915209c6d93195c7b6",
+        "gitBlob": "5f18c861f297cbf62b9acaceba615079d0b77d0d",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "tools/owned-process-broker/fixtures/claudeSettingsAuthPeer.ts",
+        "bytes": 2154,
+        "sha256": "e21bfb7f4b548ad37d6f07d2cc8e9b61407822b11cb8c0e5051a68e34b1b382d",
+        "gitBlob": "329a0d3b3c35f5c6736bd214c3ed9717248c1d7d",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+        "bytes": 24968,
+        "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+        "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+        "method": "freshly fetched for this R1",
+        "guardSemanticRead": "Complete body semantically read, fresh or reused at exact immutable identity"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "packages/legacy-agent-host/tests/claude-management-host.test.ts",
+        "bytes": 13620,
+        "sha256": "0c90e1992310021a746897425e4440dff4116dcb8a7a19651def8a47563925be",
+        "gitBlob": "7f7ee01121e64f0ab55c127f62c796bf20b3fc70",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "bytes": 165022,
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+        "method": "fresh immutable blob fetch",
+        "guardSemanticRead": "Complete body identity-joined only in this bounded guard review; not newly claimed as a full semantic audit"
+      }
+    ],
+    "proofIdentityTotals": {
+      "count": 33,
+      "bytes": 719784,
+      "allExact": true,
+      "semanticReadModesExplicit": true
+    },
+    "providerSource": {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "ref": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/model-probe.ts",
+      "pin": {
+        "repository": "agent-teams-ai/old-provider-implementations",
+        "bytes": 9891,
+        "sha256": "f7fd3848b46ea66776dfeeec7307129ec86819c79a158cd8e52a61e36291a89d",
+        "gitBlob": "57fdf89754d1592511a9acf264859282e9745d4f"
+      },
+      "completeBodyEqual": true,
+      "completeBodyRead": true,
+      "sourceOnlyBoundary": "Options.model receives captured.model unchanged; one-million only adds beta. Full SDK options-to-argv and actual outcome remain unexecuted and unqualified."
+    }
+  },
+  "exactSelectedPlan": {
+    "count": 5,
+    "paths": [
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "test/features/runtime-provider-management/capturedClaudeStatus.test.ts"
+    ],
+    "runtimeFixtureModelSubstitution": 1,
+    "collaborationFixtureModelSubstitutions": 3,
+    "authBranch": {
+      "argv": [
+        "auth",
+        "status",
+        "--json"
+      ],
+      "role": "management",
+      "placement": "After original TEST environment/root/workspace/home/config/proof guards and argv bound, before SDK stream parser",
+      "response": {
+        "loggedIn": true,
+        "authMethod": "api_key",
+        "apiProvider": "firstParty",
+        "configDirectory": "EXACT_CAPTURED_PRIVATE_CONFIG"
+      },
+      "exit": 0,
+      "stdoutFlushRequired": true,
+      "journal": [
+        "launch",
+        "auth-status",
+        "exited"
+      ],
+      "pidParentRetained": true,
+      "noNativeCredentialOrHostMutation": true,
+      "negativeShapes": "Runtime-role auth, login, logout, version, malformed/extra argv and wrong namespace must remain refusal. Unknown commands are not routed to a real executable. Existing source hashing and CapturedProcess ownership remain decisive."
+    },
+    "settings": {
+      "originalPrefixBytes": 24968,
+      "originalCases": 8,
+      "appendedCases": 3,
+      "prospectiveCases": 11,
+      "newCaseTimeoutsMs": [
+        15000,
+        30000,
+        15000
+      ],
+      "directChildMax": 8,
+      "directChildTimeoutMs": 3000,
+      "directChildMaxBufferBytes": 65536,
+      "probeProfileMs": 5000,
+      "probeObservationMs": 7000,
+      "probePollMs": 20,
+      "actualSdkProbeModel": "TEST-claude-sonnet",
+      "effort": "low",
+      "context": "one-million"
+    },
+    "capturedStatus": {
+      "originalPrefixBytes": 8570,
+      "originalCases": 6,
+      "appendedCases": 1,
+      "prospectiveCases": 7,
+      "requestBoundary": "Controlled transport using existing fixture, real status client/metadata and real availability functions",
+      "noNewLaunchAuthority": true
+    },
+    "preservedHostSdkManagementTest": {
+      "path": "packages/legacy-agent-host/tests/claude-management-host.test.ts",
+      "pin": {
+        "bytes": 13620,
+        "sha256": "0c90e1992310021a746897425e4440dff4116dcb8a7a19651def8a47563925be",
+        "gitBlob": "7f7ee01121e64f0ab55c127f62c796bf20b3fc70"
+      }
+    }
+  },
+  "guardReasoning": {
+    "fixtureCompatibility": "Direct current source shows one runtime model variable and three collaboration values. The source-only substitution aligns exact fixture selections with the offered resolved value. Existing UI text includes sonnet and already matches TEST-claude-sonnet; no original GUI wait/action is replaced.",
+    "authNamespace": "The branch remains inside the same hash-selected TEST peer and selected management-role environment. Requiring exact HOME/config after existing root/workspace fences supports the original parser's exact config identity. api_key is a finite TEST status label and does not permit subscription login/logout or real credential reads.",
+    "originalCustody": "AuthConversation.read uses withClosedCustody: awaits work outcome, awaits close, fails cleanup refusal before returning, then preserves original work error. The default captured process constructor is not swapped in the selected positive test. Coordinator also retains its resource/namespace/currentness checks and original close result.",
+    "rawFailures": "The refusal matrix cannot treat spawnSync errors, signal termination, timeouts or buffer exhaustion as a successful protocol refusal. The proposal explicitly requires these classifications, finite child count/buffers and original teardown.",
+    "journalAndExit": "The future auth branch must flush its bounded response and retain one launch/auth-status/exited0 record for the same PID; original UI peer census relies on launch accounting. This is part of selected R1, and its eventual implementation must be inspected under existing R2.",
+    "originalModelProbe": "The provider awaits supportedModels, checks matching resolved model and low effort, gates its one no-tool input on original canSubmit, consumes matching assistant/usage and million-context evidence, and awaits confirmStopped in finally before SDK close. Proposed test keeps that path and its durable owner instead of a mocked probe.",
+    "authoritySeparation": "Captured provider management adds profile/config from the retained owner and checks currentness around requests. Captured metadata sets teamLaunch and oneShot false; providerStatusAuthority requires actual launch capability plus current authenticated authoritative catalog. The added composition test must retain that separation.",
+    "noAllRedClaim": "The current peer necessarily refuses auth before the selected branch exists. The unchanged peer can already accept the offered model/beta path at source level, and unchanged production utility already rejects stale aliases; those tests are preservation/composition obligations, with actual SDK behavior still to be observed."
+  },
+  "sourceRatchetAndFreeze": {
+    "frozenParityVector": {
+      "bytes": 3481,
+      "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+      "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+    },
+    "all13": true,
+    "fourWindowsPostimages": true,
+    "sixPublishedDiagnosticPostimages": true,
+    "productionFiles": 5020,
+    "cap": 800,
+    "exceptions": 141,
+    "nonDocLeaves": 8799,
+    "workflows": 42,
+    "noNewSourceFiles": true,
+    "noProductionSourceEdits": true,
+    "noDependencyOrWorkflowEdits": true,
+    "uiReadinessWaitMs": 90000,
+    "noMutationRetry": true,
+    "noExtraLaunchSubmit": true,
+    "noDefaultFallback": true,
+    "productionAuthCatalogCurrentnessExpiryAndCustodyUnchanged": true,
+    "originalCleanupUnchanged": true,
+    "frozenPrs": [
+      1206,
+      1207,
+      1208,
+      1211,
+      1212,
+      1213
+    ],
+    "allOldCohortsTerminal": true,
+    "pr1219AllSevenTerminal": true,
+    "terminalRunsNeverPoll": true,
+    "interpretation": "Requirements carried unchanged into future source R2. This R1 review does not claim an unauthored postimage census or a new runtime pass."
+  },
+  "publicationAndExecution": {
+    "sequence": [
+      "Four exact R1 reviews (root,guard,semantic,binding), documentation-only retention and immediate expected-parent force:false push.",
+      "Root and independent full actual R1 publication readbacks close before root authors any of the five source postimages.",
+      "Root authors only the exact five source/test postimages; source R2 plus four full reviews, then source/docs commit immediately pushed.",
+      "Root and independent full source publication actual readbacks precede separately selected execution venue and its existing admission.",
+      "Run the unchanged whole inventories and original relevant E2E only in an admitted venue; all finite refusals/timeouts/cleanup failures and unreached obligations remain failures or unqualified."
+    ],
+    "executionVenue": {
+      "selected": false,
+      "existingDraftVenueAdvisoryForEarlierTenPaths": {
+        "bytes": 194837,
+        "sha256": "77457698730105d26277bbccdd7d591dae9d466b1abf2771cf7492563c645105",
+        "gitBlob": "8f41c3cf94eaa0114c578c19fe13673bfbbcafbf"
+      },
+      "broaderFifteenPathAuditInProgress": true,
+      "requiresExactDraftWorkflowAndJobGuardCheck": true,
+      "realClaudeAndCodexIncludingVersionForbidden": true,
+      "environmentUnavailable": true,
+      "standaloneUninvokedAndUnrebound": true
+    },
+    "qualification": {
+      "sourcePostimagesAuthored": false,
+      "sourceCompiled": false,
+      "sourceExecuted": false,
+      "newTestsExecuted": false,
+      "newVenueSelected": false,
+      "runtimeAdmitted": false,
+      "completeE2E": false,
+      "rootCauseSolelyResolved": false,
+      "failuresWaived": false,
+      "readyMergeReleaseDefaultActivationStage2": false
+    },
+    "interpretation": "Only the existing root-owned sequence is approved at R1 plan level. No new review gate, execution route, replay or permission is added."
+  },
+  "limitations": [
+    "No source postimage exists as part of this reviewed subject. Full exact before/after inverse, emitted branch implementation, test code and postimage size checks belong to the already specified source R2.",
+    "Full SDK source/argv transformation was not read; resolved model plus low/one-million remains a runtime obligation. No new [1m] alias is admitted.",
+    "Historical lifecycle/collaboration observations are not treated as atomic readiness snapshots or proof that these two source defects are the sole cause. Other recorded unresolved boundaries remain open.",
+    "Old terminal CI evidence is retained and excluded from polling. No live CI status, new venue, local environment recovery, standalone rebinding or target run was attempted.",
+    "All test counts here are source-defined prospective inventories; actual pass counts remain null. The existing 149/43/85 bodies and all other frozen source remain outside scope.",
+    "Proof-index identity joins are complete; this bounded guard review semantically reads the necessary source contracts and all five selected preimages, without claiming a fresh semantic audit of every larger unchanged application module."
+  ],
+  "checks": [
+    {
+      "id": "G01",
+      "status": "PASS_STATIC_R1",
+      "subject": "Exact full R1",
+      "evidence": "All 37,389 bytes of f44edc6cdfde700e570423176fc00d11b2275c43 were fetched, identity-verified and read without omitted final sections; SHA256 588f6ce9b006b458ce7a896dc4ab46985493c54911eec2beedcf0874b33163ca."
+    },
+    {
+      "id": "G02",
+      "status": "PASS_STATIC_R1",
+      "subject": "Accepted current anchor",
+      "evidence": "The complete prior source actual gate 47bad467 matches ea1cc842 parent/root/docs/scripts, close 11:32:42 UTC and 89 actual checks. That is the prior source-publication gate, not an actual-publication gate for this new R1."
+    },
+    {
+      "id": "G03",
+      "status": "PASS_STATIC_R1",
+      "subject": "Five exact preimages",
+      "evidence": "All five complete selected preimages were fetched by immutable blob, rehashed and independently joined byte-for-byte to exact paths at ea1cc842. Total 104,295 bytes; no missing file or substituted path."
+    },
+    {
+      "id": "G04",
+      "status": "PASS_STATIC_R1",
+      "subject": "Bounded proof index",
+      "evidence": "All 33 declared proof-index bodies, 719,784 bytes, were fully fetched or reused by exact identity and rehashed. This review distinguishes full semantic reads from identity-only or relevant-range joins; no new whole-application audit is claimed."
+    },
+    {
+      "id": "G05",
+      "status": "PASS_STATIC_R1",
+      "subject": "Cross-repository provider binding",
+      "evidence": "Complete 9,891-byte provider source 57fdf897 was read and independently path-joined in agent-teams-ai/old-provider-implementations at c79b81bf002eaac95436da71c7049d7f309906a9."
+    },
+    {
+      "id": "G06",
+      "status": "PASS_STATIC_R1",
+      "subject": "Root-only authorship and action",
+      "evidence": "Root remains sole source/control author, publisher, stager and executor; children have only immutable reads, pure data work and bare reports. No review acceptance authorizes an already-unwritten source postimage or runtime action."
+    },
+    {
+      "id": "G07",
+      "status": "PASS_STATIC_R1",
+      "subject": "Existing publication sequence",
+      "evidence": "R1 review/publication and root-plus-independent full actual readbacks precede root source authorship; exact source R2/reviews and source publication/readbacks precede a separately selected execution venue. The existing sequence is explicit; no additional gate is requested here."
+    },
+    {
+      "id": "G08",
+      "status": "PASS_STATIC_R1",
+      "subject": "No unrelated delivery action",
+      "evidence": "Expected-parent, force:false immediate push is retained for each created commit. No main/default merge, Ready, release/default activation or Stage2 is selected."
+    },
+    {
+      "id": "G09",
+      "status": "PASS_STATIC_R1",
+      "subject": "Exact existing-file scope",
+      "evidence": "Selected changes name exactly five existing TEST source/test paths. No production file, dependency, workflow, executable-control file or new source file is selected."
+    },
+    {
+      "id": "G10",
+      "status": "PASS_STATIC_R1",
+      "subject": "Runtime model substitution",
+      "evidence": "Original runtime fixture has one local Claude model value at line 107, propagated into savedModel/settings/runtime member/template and legacy schedule. Changing only that branch preserves Codex/OpenCode selection and original fixture/custody logic."
+    },
+    {
+      "id": "G11",
+      "status": "PASS_STATIC_R1",
+      "subject": "Collaboration model substitutions",
+      "evidence": "Own complete collaboration source advisory cb9d2c2 is literally identity-joined. Its three exact model locations match R1; the shared expression feeds both runtime and provider template. No roster, delivery, generation, endpoint or UI action change is selected."
+    },
+    {
+      "id": "G12",
+      "status": "PASS_STATIC_R1",
+      "subject": "Original UI input and deadline",
+      "evidence": "TEST-claude-sonnet retains the original substring sonnet hydration check. Original 90,000 ms enabled-Launch waits and one submit remain, with original later GUI obligations unqualified."
+    },
+    {
+      "id": "G13",
+      "status": "PASS_STATIC_R1",
+      "subject": "TEST namespace entry",
+      "evidence": "Selected peer branch must come after existing TEST provider/scenario/role, root/workspace/HOME/config/proof guards and original argv byte/count bound. It cannot move real-vendor resolution ahead of those guards."
+    },
+    {
+      "id": "G14",
+      "status": "PASS_STATIC_R1",
+      "subject": "Exact command and role",
+      "evidence": "Only the exact three-element ['auth','status','--json'] argv in role management is selected. Runtime role, login/logout/version, malformed or extra arguments and wrong namespace remain refusal."
+    },
+    {
+      "id": "G15",
+      "status": "PASS_STATIC_R1",
+      "subject": "No fallback or credential authority",
+      "evidence": "The branch is within the existing selected finite TEST peer. No PATH vendor fallback, network/server request, credential write, Host receipt mutation or SDK business input is selected."
+    },
+    {
+      "id": "G16",
+      "status": "PASS_STATIC_R1",
+      "subject": "Native parser compatibility",
+      "evidence": "Current parseClaudeAuthStatus requires loggedIn Boolean, firstParty, an allowed authMethod, exact configDirectory and realpath, and matching exit status. The proposed bounded true/api_key/firstParty/exactConfig/exit0 shape matches that contract without editing it."
+    },
+    {
+      "id": "G17",
+      "status": "PASS_STATIC_R1",
+      "subject": "No login/logout grant",
+      "evidence": "Current ClaudeAuthenticationCoordinator treats api_key as outside its mutable subscription methods. Positive read therefore returns canLogin=false/canLogout=false even without dummy API-key environment variables."
+    },
+    {
+      "id": "G18",
+      "status": "PASS_STATIC_R1",
+      "subject": "Original captured process custody",
+      "evidence": "Current AuthConversation launches the original exact profile executable and inherits currentness/abort/custody. It waits the original child close and requires confirmStopped before returning; cleanup refusal remains an error."
+    },
+    {
+      "id": "G19",
+      "status": "PASS_STATIC_R1",
+      "subject": "Auth stdout and journal completion",
+      "evidence": "R1 explicitly requires bounded JSON, stdout flush, original PID/parent launch/auth-status/exited0 journal rows and owned cleanup. An early exit that drops output or skips original peer accounting would violate this R1 and is not preapproved."
+    },
+    {
+      "id": "G20",
+      "status": "PASS_STATIC_R1",
+      "subject": "Original SDK path preservation",
+      "evidence": "All existing stream parsing/options, allowed three model spellings, beta allowlist, metadata alias/resolved pair, business markers, MCP behavior, event limits and original SDK close path are preserved. The new auth branch exits before the stream parser."
+    },
+    {
+      "id": "G21",
+      "status": "PASS_STATIC_R1",
+      "subject": "Settings test prefix",
+      "evidence": "Complete 24,968-byte current settings test is frozen as a literal prefix. Seven test declarations include the two-element kind loop, yielding eight existing registrations; helper plus exactly three new cases produce prospective eleven."
+    },
+    {
+      "id": "G22",
+      "status": "PASS_STATIC_R1",
+      "subject": "Actual positive auth test",
+      "evidence": "The new positive case must use actual shared peer, actual AuthConversation/Coordinator and default CapturedProcess, exact source/wrapper hashes, one original auth child and successful original close. This case meaningfully distinguishes the current no-auth parser."
+    },
+    {
+      "id": "G23",
+      "status": "PASS_STATIC_R1",
+      "subject": "Refusal test failure classification",
+      "evidence": "The finite direct-child matrix is capped at eight, 3,000 ms per child and 65,536 output bytes inside a 30,000 ms test. Spawn errors, signals, timeout and maxBuffer exhaustion are failures, not accepted command refusals."
+    },
+    {
+      "id": "G24",
+      "status": "PASS_STATIC_R1",
+      "subject": "Current identity negative",
+      "evidence": "The plan retains a currentness/executable-or-namespace identity negative through the actual captured owner. It does not authorize a copied owner, fallback executable or credential namespace substitution."
+    },
+    {
+      "id": "G25",
+      "status": "PASS_STATIC_R1",
+      "subject": "Test-owned cleanup",
+      "evidence": "Appended helper uses selected Node, actual source and wrapper hashes, owned TEST temporary namespaces and original teardown/Host close. No assistant/global HOME or CODEX_HOME override is selected. Original eight cases and their deadlines stay untouched."
+    },
+    {
+      "id": "G26",
+      "status": "PASS_STATIC_R1",
+      "subject": "Actual SDK/probe ownership",
+      "evidence": "The third case uses actual management coordinator, runtime schema/teamModelProbeProfile, ModelProbeOwner, file store and resource fence; it must observe one completed/ok/resourceHeld=false receipt and one original finite probe input/terminal."
+    },
+    {
+      "id": "G27",
+      "status": "PASS_STATIC_R1",
+      "subject": "No mutation replay",
+      "evidence": "Same-command lookup/start must return the same durable receipt without another native input. The original model test’s cleanup must succeed; no replacement attempt can qualify an interrupted/held result."
+    },
+    {
+      "id": "G28",
+      "status": "PASS_STATIC_R1",
+      "subject": "Exact model/effort/context",
+      "evidence": "Probe selection remains TEST-claude-sonnet, low effort and one-million. Provider source passes model unchanged and only adds the declared beta for context; resolvedModel capability matching permits the requested low effort."
+    },
+    {
+      "id": "G29",
+      "status": "PASS_STATIC_R1",
+      "subject": "SDK argv remains open",
+      "evidence": "Full pinned sdk.mjs is not read or claimed by the R1. Its options-to-argv behavior and actual resolved-value/one-million tuple remain a genuine future finite runtime obligation. No TEST-claude-sonnet[1m] allowlist expansion is selected."
+    },
+    {
+      "id": "G30",
+      "status": "PASS_STATIC_R1",
+      "subject": "Captured-status test prefix and count",
+      "evidence": "Entire current 8,570-byte captured-status test is read. Four single cases plus it.each([true,false]) give six registrations; unchanged prefix plus one composition case gives prospective seven."
+    },
+    {
+      "id": "G31",
+      "status": "PASS_STATIC_R1",
+      "subject": "Actual projection composition",
+      "evidence": "The added Vitest case uses the existing controlled captured-request boundary and real captured status/metadata then real teamModelAvailability. It must preserve exact resolved acceptance and alias/unoffered rejection, rather than copy a new decoder or loosen production fallback."
+    },
+    {
+      "id": "G32",
+      "status": "PASS_STATIC_R1",
+      "subject": "Authentication is not launch proof",
+      "evidence": "Current captured metadata and providerStatusAuthority keep independent auth/catalog facts separate from model execution/teamLaunch. The selected test must preserve this for both metadata-only and successful finite auth responses."
+    },
+    {
+      "id": "G33",
+      "status": "PASS_STATIC_R1",
+      "subject": "Truthful expected coverage",
+      "evidence": "Only the positive shared-peer auth case is necessarily RED against the current parser. Refusal, resolved-model probe and status composition can strengthen/preserve current behavior. Neither R1 nor this review claims all four cases were failing or have run."
+    },
+    {
+      "id": "G34",
+      "status": "PASS_STATIC_R1",
+      "subject": "Frozen suites and source ratchet",
+      "evidence": "Whole149, catalog43, renderer85, frozen13, four Windows postimages and six diagnostic postimages remain outside selected edits. The 5,020/141/800 ratchet, 8,799 non-doc leaves and 42 workflows are preserved requirements, not newly observed postimage results."
+    },
+    {
+      "id": "G35",
+      "status": "PASS_STATIC_R1",
+      "subject": "Terminal CI and spent scopes",
+      "evidence": "All prior cohorts and PR1219 seven runs are terminal and excluded from further polling. Environment is unavailable; the standalone scope remains uninvoked/unrebound. This review did not poll or alter any run."
+    },
+    {
+      "id": "G36",
+      "status": "PASS_STATIC_R1",
+      "subject": "No venue or runtime admission",
+      "evidence": "Existing earlier-path venue advisory is only referenced; the broader venue audit and any admission remain separate. Source/tests are neither authored nor executed by this R1, and no real Claude/Codex even --version is permitted."
+    },
+    {
+      "id": "G37",
+      "status": "PASS_STATIC_R1",
+      "subject": "Causal limits",
+      "evidence": "R1 preserves unknown raw lifecycle auth outcome, non-atomic snapshot limits and the independently source-proved collaboration mismatch. It does not assert sole root cause, original GUI completion, native cleanup, Darwin P09 or OpenCode management resolution."
+    },
+    {
+      "id": "G38",
+      "status": "PASS_STATIC_R1",
+      "subject": "Guard review decision",
+      "evidence": "No concrete R1 guard/custody blocker remains within the five selected boundaries. ACCEPT_R1_SCOPE_ONLY; future concrete source/test bytes remain subject to the existing source R2 rather than hypothetical approval."
+    }
+  ],
+  "conclusion": "ACCEPT exact f44edc6cdfde700e570423176fc00d11b2275c43 at R1 scope level with no concrete guard/custody blocker. Proceed only through the existing root-owned publication/actual-readback/source-R2 sequence. No postimage, runtime, GUI or native qualification is inferred."
+}

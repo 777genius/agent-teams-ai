@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CLAUDE_FINITE_RUNTIME_READINESS_AUXILIARY_METADATA_LIMITS",
+  "at": "2026-11-17 11:48:23 UTC",
+  "r1": {
+    "bytes": 37389,
+    "sha256": "588f6ce9b006b458ce7a896dc4ab46985493c54911eec2beedcf0874b33163ca",
+    "gitBlob": "f44edc6cdfde700e570423176fc00d11b2275c43"
+  },
+  "laterTestDesign": {
+    "bytes": 33344,
+    "sha256": "d6747b3c01a2cbe518c589145f270ac6810492dbbd808c8c5b848ef6e91ebfbe",
+    "gitBlob": "1ff35b598508a0edc23907dd6b910cf4669d080f"
+  },
+  "sourcePlanAmended": false,
+  "archiveReference": {
+    "repository": "777genius/agent-teams-ai",
+    "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz",
+    "gitObjectId": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3",
+    "declaredBytes": 186398,
+    "declaredSha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+    "referenceLocation": "later test-design advisory providerTranslation.archive",
+    "repositoryClarification": "This vendor path and object belong to777genius/agent-teams-ai, not to the surrounding external provider source repository. The external repository applies to providerTranslation.commit/tree and the explicitly scoped providerSources rows.",
+    "evidenceClass": "unchanged binary archive identity from full manifest/source receipts; not a newly read text-source body or fresh archive byte claim",
+    "readAttempt": {
+      "count": 1,
+      "method": "GitHub Fetch GET of the exact main-repository Git blob",
+      "result": "HTTP400 INVALID_ARGUMENT: GitHub Fetch only accepts UTF-8 text.",
+      "repeated": false,
+      "bytesObtained": false,
+      "extracted": false,
+      "executed": false
+    },
+    "qualification": {
+      "rawArchiveIntegrityNewlyVerified": false,
+      "installedPackageInspected": false,
+      "archiveProvenanceNewlyQualified": false,
+      "affectsFiveSelectedTextPreimages": false
+    },
+    "currentClosureRule": "Keep this explicitly unread binary metadata reference outside the complete UTF-8 source/evidence-body count. Report it separately; do not fabricate bytes, assign it to the external provider repository, or promote source receipts into physical archive/installed-package verification."
+  },
+  "sourceEvidence": {
+    "selectedFivePreimagesFullRead": true,
+    "directR1Tuples": 53,
+    "directR1Bytes": 3302299,
+    "rootR1Review": {
+      "bytes": 70135,
+      "sha256": "568197dfd4ab74bf85539b05b837d75003895163d24c4fd37cf9aa07a2eaa2f9",
+      "gitBlob": "f046d946480557706b884280fdc171155d5f1909"
+    },
+    "externalProviderSource": "Complete immutable provider source and its tests can establish the source-level model/beta mapping; actual installed SDK and future component behavior remain runtime obligations."
+  },
+  "environment": {
+    "unavailable": true,
+    "noLocalReadOrTargetExecution": true
+  },
+  "currentQualification": {
+    "sourcePostimagesAuthored": false,
+    "sourceExecuted": false,
+    "newExecutionVenueSelected": false,
+    "completeE2E": false
+  },
+  "next": "Retain this clarification with the unchanged advisory, exact R1/reviews and subsequent publication actual record; no extra approval gate or source-plan amendment."
+}

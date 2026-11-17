@@ -1,0 +1,479 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_RETAINED_GUI_AND_NATIVE_FAILURE_DIAGNOSTICS_R1",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "decision": "SELECT_BOUNDED_EXISTING_CAPTURE_DIAGNOSTICS_SCOPE_FOR_REVIEW_AND_DOCUMENTATION_PUBLICATION_ONLY",
+  "parent": {
+    "commit": "1ca9566d70bd624283227a644fa6969eb8bf8f34",
+    "root": "fd6a7a819adc8b68a4b3e1ec1ddfe9c57a48e03c",
+    "docs": "834eeb86f8ca3f94fec916e6044836bad8cbb348",
+    "scripts": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+    "packages": "3934729cd387940917b79992f2579bf6269d157c",
+    "tools": "b0ffcbc4be600e5edfbc0fbacf312e5b476af6aa",
+    "leaves": 12088,
+    "docsLeaves": 3289,
+    "nonDocLeaves": 8799
+  },
+  "acceptedSourceActual": {
+    "gate": {
+      "bytes": 7149,
+      "sha256": "2aeec2ecdbae9bdf27d8bd6a054655ea6850bc69a2d2544df8c1da245798f005",
+      "gitBlob": "a3ff72947884bc9e9993fa74db71491c3b9e4a61"
+    },
+    "closedAt": "2026-11-17 09:17:41 UTC",
+    "root": {
+      "bytes": 182229,
+      "sha256": "e9edb08e4488798b6d6342d0bda652d91ef114a46ed913d86d36b92df28efe0d",
+      "gitBlob": "33e875dfe05645bea4181392ad07a0f0d2137044"
+    },
+    "independent": {
+      "bytes": 379230,
+      "sha256": "86eadc5cd45a6563466187d334dac6a7eb900dd972889b4b77667e7d8961a5be",
+      "gitBlob": "2061e30d23d1b2d703e52aeb568c905a158a5f98"
+    },
+    "checks": 98,
+    "fullRootReadAndIndependentSelfReadClosed": true,
+    "sourceOnly": true
+  },
+  "evidence": {
+    "guiFeasibility": {
+      "gitBlob": "3fcfd9908119ae67c21d00a8882bf27d55ea56fd",
+      "bytes": 30196,
+      "sha256": "9ba4b7a572a676a703414fa6f41db02729e85a5c2e21cb4ff65c231e4d2d5462"
+    },
+    "nativeFeasibility": {
+      "bytes": 27466,
+      "sha256": "ac5921539071bade6c642696d50eb4fbaf047cbaf83359c00cef37a7e51f4ff2",
+      "gitBlob": "ce2cdcb5524bb248260919c6a2db4c4e248a15b2"
+    },
+    "boundedFailureClassification": {
+      "bytes": 49411,
+      "sha256": "cca72f4bf9fbbe4e0ae4fa8ce5aa24efe02a36e530c8e53f24aa7acf90f31a73",
+      "gitBlob": "f41a625fef5db581e0c9ff6c2392d6ff8a7dd87d"
+    },
+    "boundedCompletedProgress": {
+      "bytes": 166772,
+      "sha256": "6947d3ee3cd4657ba06763a2967877041da23d27884d246418df6400ebe2ee30",
+      "gitBlob": "45e6e700c5a12db1c86ae4cad4558a81226d4ee5"
+    },
+    "ciObservations79": {
+      "bytes": 786022,
+      "sha256": "54a156cdb2f3d58d5bfc6a8a3894d5b1b01dad582f323b9ea38e2a0038167afa",
+      "gitBlob": "e37311346018c41fc8f622efdd4a576f030af4d7"
+    },
+    "ciObservations1011": {
+      "bytes": 431287,
+      "sha256": "68e49fb044d66f72d741a0247376a54a3c85b898437cd6057f8406a5f51327d8",
+      "gitBlob": "dc274635550160f7ea4cae9daa1f951539747e18"
+    },
+    "futureDraftVenueAdvisory": {
+      "bytes": 40070,
+      "sha256": "8e4733e6f5cb1cb252ea222bcbcba7a99124ad5c7136388d833326287bb46236",
+      "gitBlob": "72d1c31fa760449d472d58307da11dde30eba32f"
+    },
+    "venueAdvisorySelected": false
+  },
+  "sourcePreimages": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "mode": "100644",
+      "bytes": 26258,
+      "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+      "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+      "lines": 394,
+      "completeRootBodyRead": true,
+      "current1caTreeJoined": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "mode": "100644",
+      "bytes": 13293,
+      "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+      "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+      "lines": 182,
+      "completeRootBodyRead": true,
+      "current1caTreeJoined": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "mode": "100644",
+      "bytes": 66098,
+      "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+      "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f",
+      "lines": 1191,
+      "completeRootBodyRead": true,
+      "current1caTreeJoined": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "mode": "100644",
+      "bytes": 22177,
+      "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+      "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05",
+      "lines": 500,
+      "completeRootBodyRead": true,
+      "current1caTreeJoined": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "mode": "100644",
+      "bytes": 37181,
+      "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+      "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068",
+      "lines": 565,
+      "completeRootBodyRead": true,
+      "current1caTreeJoined": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "mode": "100644",
+      "bytes": 19696,
+      "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+      "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+      "lines": 345,
+      "completeRootBodyRead": true,
+      "current1caTreeJoined": true
+    }
+  ],
+  "sourcePreimageBytes": 184703,
+  "problem": {
+    "gui": "Four fixed-9d failures stop at the original 90000ms enabled Launch team wait before submit. The existing post-failure snapshot already retains a partial dialog/button sample, but the readiness stdout projection drops dialogs and omits the affected modes; packaged summary emits only four generic fields.",
+    "guiScope": "Same predicate boundary does not establish a shared cause. No provisioning row may exist before submission. Saved later enabled state cannot overturn the expired wait. The member-reveal code is unreached in the Claude failure.",
+    "native": "The third embedded credential Host epoch records runState=threw, outcome=unobserved, errorClass=unknown and driver-close/unconfirmed before normal exit1. The original run rejection is available at the existing catch but its transport code/cause code are discarded. driver.close fulfilled with unconfirmed cleanup; no thrown-close exception is inferred.",
+    "nativeLimit": "A safe code projection may remain null if the selected provider has already abstracted the error. It cannot retroactively reconstruct old logs or guarantee the causal reason for cleanup failure.",
+    "constraints": "No local execution environment is available. Current artifact transports have no independently read ZIP bytes, CRC, extracted receipt or screenshot. Existing complete logs are the retained observed evidence."
+  },
+  "selection": {
+    "exactExistingFileCount": 6,
+    "newSourceFiles": 0,
+    "newDependencies": 0,
+    "newWorkflows": 0,
+    "newExecutableControlFiles": 0,
+    "gui": {
+      "productionPaths": [
+        "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+        "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts"
+      ],
+      "testPath": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "projector": "Extend projectDesktopEmulatedReadinessFailure using only rendererFailureSnapshot.dialogs already present in evidence. Keep own-data-descriptor traversal, bounded primitive selection and the existing8192-character final fallback.",
+      "retainedScope": {
+        "source": "retained-post-failure-partial-dialog-sample",
+        "atomicWithFailedWait": false,
+        "completeDom": false,
+        "actualTruncationKnown": false,
+        "producerDialogLimit": 3,
+        "producerButtonLimit": 24,
+        "producerTextTailLimit": 8000,
+        "producerButtonTextPrefixLimit": 160
+      },
+      "dialogShape": "Bound to first3 retained dialog entries. Report record presence, existing textFacts only, and bounded button-sample structure. No raw text/labels, coordinates, identifiers, paths, URLs or arbitrary object values.",
+      "buttonShape": "Within at most24 retained button entries, recognize only exact own-data text === Launch team. Keep matching count and separate disabled/enabled/unknown-disabled counts, with duplicate matches distinguishable. Missing/malformed arrays or fields remain unknown; zero retained matches is never a global absence or readiness verdict. Label cap-sized arrays as at-cap only, not proven truncated; oversized supplied arrays have explicit overflow and bounded traversal.",
+      "textShape": "Reuse existing fixed-vocabulary textFacts. Phrase presence is a saved text observation, not an authentication/model/provider/permission verdict. Existing provisioning/hydration/cleanup meanings stay intact.",
+      "routes": {
+        "existing": [
+          "emulated-import-ui",
+          "emulated-opencode-runtime-ui"
+        ],
+        "add": [
+          "emulated-claude-runtime-ui",
+          "emulated-claude-lifecycle-ui",
+          "emulated-collaboration-ui"
+        ],
+        "condition": "evidence.status !== PASS",
+        "unchangedUnrelated": [
+          "team-ui",
+          "emulated-extensions-ui"
+        ],
+        "passSummariesUnchanged": true
+      },
+      "packaged": "Import the same existing projector into desktop-packaged-relaunch-smoke.ts and add its output only to the existing final non-PASS console summary. Preserve kind/status/receipt/root, receipt write, cleanup order, source freeze, original exception rethrow, and success assertion.",
+      "tests": {
+        "appendOnly": true,
+        "wholeExistingPrefixBytes": 66098,
+        "originalRegistrationExpressions": 34,
+        "newTopLevelCases": 5,
+        "cases": [
+          "Saved disabled/enabled/duplicate Launch button facts and dialog-only readiness terms without provisioning; no readiness inference.",
+          "Missing, unavailable, malformed, at-cap and oversized dialog/button/text inputs; independent traversal bounds and unchanged8192 fallback.",
+          "Private sentinels, no alias/mutation, getter avoidance, throwing descriptor traps and fixed safe failure output.",
+          "Actual exported receipt-summary routing for all five readiness modes, PASS and unrelated existing modes.",
+          "Actual packaged final pure composition from its unique source fragment with real exported projector, preserving original fields and failure-only addition; never import or execute CLI main."
+        ],
+        "actualImplementationOnly": true,
+        "noCopiedProjection": true,
+        "noFrozen149Edits": true,
+        "noGlobalClockCensusOrUiMock": true
+      }
+    },
+    "native": {
+      "productionPath": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "passiveFixturePath": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "testPath": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "fields": [
+        "runErrorCode",
+        "runCauseCode"
+      ],
+      "values": {
+        "knownCodes": [
+          "ABORT_ERR",
+          "ECONNRESET",
+          "ECONNREFUSED",
+          "EPIPE",
+          "ETIMEDOUT",
+          "UND_ERR_ABORTED",
+          "UND_ERR_SOCKET",
+          "UND_ERR_HEADERS_TIMEOUT",
+          "UND_ERR_BODY_TIMEOUT"
+        ],
+        "unknownOrAbsent": null,
+        "rawNamesMessagesStacksExcluded": true
+      },
+      "producer": "At the existing non-coordination run rejection, retain only positive own-data code and one own-data cause.code through guarded descriptor reads. Do not traverse prototypes, invoke getters/coercion, enumerate objects or recurse. Preserve original ManagementCommandError errorClass logic and rethrow the exact original error. Add the two nullable fields only for runState=threw to the existing failed-close payload; no new publication or channel lookup path.",
+      "passive": "Extend the existing projectHostProbeCloseFailure and parent entry construction to carry the same bounded nullable code fields. Preserve legacy payload shape when the new fields are absent, and preserve the original close fields when optional error metadata is malformed. New fields never replace stage/reason/errorClass/outcome.",
+      "failures": "Projection/reflection failure keeps the exact original rejection and close result. A missing/opaque/unrecognized field is null. No earlier read failure is asserted to cause the close result.",
+      "unchangedBudgets": {
+        "maximumRows": 256,
+        "ordinaryRows": 253,
+        "retainedRowsConvention": 257,
+        "traceBytes": 65536,
+        "lineBytes": 512,
+        "reservedRecordBytes": 513,
+        "receiptEnvelopeBytes": 262144,
+        "diagnosticBackpressureMs": 2000
+      },
+      "candidateDataOnlyBound": {
+        "emittedLineIncludingNewlineBytes": 355,
+        "emittedLineWithoutNewlineBytes": 354,
+        "parentRecordIncludingNewlineBytes": 498,
+        "maximumTimestamp": 3600000,
+        "epoch": "-Number.MAX_VALUE",
+        "codeAndCause": "UND_ERR_HEADERS_TIMEOUT",
+        "allUnrelatedParentFields": null,
+        "scope": "Explicit extreme-epoch selected producer shape arithmetic; not a claim of arbitrary hostile-record admission or target execution. Final exact postimages require fresh serialized-bound verification.",
+        "largerFiniteEpochExample": {
+          "epoch": -0.0000010000000000000002,
+          "serializedEpochCharacters": 25,
+          "parentRecordIncludingNewlineBytes": 499
+        }
+      },
+      "tests": {
+        "appendOnly": true,
+        "wholeExistingPrefixBytes": 19696,
+        "originalCases": 9,
+        "newTopLevelCases": 3,
+        "cases": [
+          "Actual original run-catch/failed-close-publisher code fragments preserve rejection identity and close stage/reason for recognized, absent, arbitrary, getter-backed and throwing-proxy inputs; counterfactual old source loses newly selected codes.",
+          "Actual existing finite TEST Node --import passive observer plus exported parent capture carry only sanitized codes through both boundaries, including the existing reserved close slot after ordinary trace exhaustion.",
+          "Actual parent projection retains legacy rows, null/unknown and malformed optional fields without overriding close classification; checks exact maximum selected row/line sizes, original truncation rules and one retained close observation."
+        ],
+        "noPublicApiExport": true,
+        "noNewDependency": true,
+        "noNativeVendorExecution": true,
+        "noCopiedProducerProjection": true,
+        "actualSourceFragmentsMustBeUniquelyAnchored": true,
+        "finiteTestOnlyChild": true,
+        "runtime": "Actual passive observer is fixed by existing source to Node24.21.0 on its existing admitted platform/architecture tuples. Selected Stage1 static jobs use exactly Node24.21.0; any unsupported tuple must remain explicitly unexecuted/unqualified, never a PASS.",
+        "existingPattern": {
+          "path": "packages/legacy-agent-host/tests/native-host-close.test.ts",
+          "bytes": 36526,
+          "sha256": "42a39d5cfe0a1f0681f3978e2073c1f2ba57e4f47f81a5b9345ea6927a991cce",
+          "gitBlob": "8b045297766cc5a352be923e3d477426411f1f5b"
+        },
+        "existingPatternScope": "Read-only pattern evidence. This existing native-host-close test file is not selected for editing or added to a workflow. The new append uses finite TEST Node only and the actual retained catch/publisher and passive observer/capture.",
+        "feasibilityClosedByRoot": true,
+        "feasibilityBasis": "Complete native-receipt prefix and native-host-close pattern read, immutable Stage1 workflow whole-file inclusion, actual existing producer/observer/capture boundaries, and independent guard feasibility response. No new executable body has been authored."
+      }
+    }
+  },
+  "unchanged": {
+    "fourWindowsPostimages": [
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "mode": "100644",
+        "before": {
+          "bytes": 12335,
+          "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+          "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e"
+        },
+        "after": {
+          "bytes": 12389,
+          "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+          "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+        },
+        "lineCount": 312,
+        "addedLines": null,
+        "cases": null,
+        "fullInverse": true,
+        "kind": "one literal query substitution"
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "mode": "100644",
+        "before": {
+          "bytes": 16835,
+          "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+          "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+        },
+        "after": {
+          "bytes": 20830,
+          "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+          "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+        },
+        "lineCount": 391,
+        "addedLines": 60,
+        "cases": 14,
+        "fullInverse": true,
+        "kind": "one existing expected literal and two appended cases"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "mode": "100644",
+        "before": {
+          "bytes": 37692,
+          "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+          "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+        },
+        "after": {
+          "bytes": 37970,
+          "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+          "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3"
+        },
+        "lineCount": 653,
+        "addedLines": null,
+        "cases": null,
+        "fullInverse": true,
+        "kind": "only final Retry loop"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+        "mode": "100644",
+        "before": {
+          "bytes": 41888,
+          "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+          "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e"
+        },
+        "after": {
+          "bytes": 50377,
+          "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+          "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+        },
+        "lineCount": 745,
+        "addedLines": 125,
+        "cases": 8,
+        "fullInverse": true,
+        "kind": "literal whole prefix and one appended case"
+      }
+    ],
+    "frozenParityVector": {
+      "bytes": 3481,
+      "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+      "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+    },
+    "all13BodiesBytes": 770681,
+    "whole149Catalog43Runtime85": true,
+    "productionFiles": 5020,
+    "cap": 800,
+    "exceptions": 141,
+    "nonDocLeaves": 8799,
+    "workflows": 42,
+    "captureProducer": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+    "captureOwner": "scripts/legacy-agent-host/desktop-captured-app.ts",
+    "backendEntrypoint": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+    "originalReadinessWaitsMs": 90000,
+    "actions": "No new DOM/Host/OS/network observation, request, input, probe, mutation, reload, retry, replay, deadline, cleanup decision, custody/owner relaxation, provider/engine selection, CI filter or workflow change.",
+    "nativeSinks": [
+      "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "packages/legacy-agent-host/tests/opencode-v2-credentials.native.ts"
+    ],
+    "frozenPrs": [
+      1206,
+      1207,
+      1208,
+      1211,
+      1212,
+      1213
+    ],
+    "original9RunsTerminal": true,
+    "pr1218All7RunsTerminal": true,
+    "doNotPollTerminalRuns": true
+  },
+  "currentCi": {
+    "pr": 1219,
+    "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "attempt": 1,
+    "activeRunIds": [
+      44042341284,
+      44042341273
+    ],
+    "terminalRunIds": [
+      44042341370,
+      44042341121,
+      44042341149,
+      44042341120,
+      44042341241
+    ],
+    "snapshotRefsAndMetadataFrozen": true,
+    "noRerunCancelDispatchReplay": true,
+    "source1caNotExecuted": true,
+    "latestRetained": {
+      "bytes": 431287,
+      "sha256": "68e49fb044d66f72d741a0247376a54a3c85b898437cd6057f8406a5f51327d8",
+      "gitBlob": "dc274635550160f7ea4cae9daa1f951539747e18"
+    }
+  },
+  "execution": {
+    "rootSoleAuthorApplierPublisherExecutor": true,
+    "childrenReadOnlyImmutableReview": true,
+    "sourcePostimagesAuthored": false,
+    "sourceTestsAuthored": false,
+    "sourceCompiled": false,
+    "sourceExecuted": false,
+    "localStandaloneInvoked": false,
+    "newCiVenueSelected": false,
+    "realClaudeOrCodexAllowed": false,
+    "pinnedOpenCodeLocalModelOnly": true,
+    "existingWholeFileRoutes": {
+      "gui": {
+        "workflow": ".github/workflows/host-emulated-acceptance.yml",
+        "line": 103,
+        "wholeFileIncluded": true,
+        "command": "existing eight-file Node command",
+        "newWorkflowEdit": false
+      },
+      "native": {
+        "workflow": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "line": 106,
+        "wholeFileIncluded": true,
+        "jobs": [
+          "Static V01 source test (ubuntu-24.04)",
+          "Static V01 source test (windows-2022)"
+        ],
+        "node": "24.21.0",
+        "after": "existing Host build and typecheck",
+        "draftSkipped": false,
+        "newWorkflowEdit": false
+      }
+    }
+  },
+  "orderedContinuation": [
+    "Close this exact R1 root/guard/semantic/binding review.",
+    "Publish docs only with immediate expected-parent force:false push and complete root plus independent actual readback.",
+    "Root authors the exact selected source/test postimages; then source R2 review, publication with immediate push, and complete root plus independent actual readback.",
+    "Select a separately reviewed genuine execution venue against its exact new source. No extra executable R2 for a pure structured existing-workflow CI venue. Existing current CI remains independent.",
+    "Diagnose remaining failures from actual evidence; no UNKNOWN/UNREACHED/SKIP/CANCELLED promotion to PASS."
+  ],
+  "qualification": {
+    "completeE2E": false,
+    "rootCauseResolved": false,
+    "fixRuntimeProven": false,
+    "archiveQualified": false,
+    "newWindows14Or8CasesExecuted": false,
+    "nativeDarwinP09Resolved": false,
+    "coldRendererResolved": false,
+    "standaloneRedGreen24_22_1Executed": false,
+    "readyMergeReleaseDefaultActivationStage2": false
+  },
+  "at": "2026-11-17 09:47:07 UTC",
+  "selfReadbackProtocol": "Complete immutable UTF-8 proposal body is fetched and rehashed. Reviewers must join complete selected preimages and accepted actual source gate, preserve all17 fixed source paths, and distinguish static plan acceptance from source/runtime acceptance."
+}

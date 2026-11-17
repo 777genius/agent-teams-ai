@@ -1,0 +1,209 @@
+[WARN] Your node_modules are out of sync with your lockfile. The value of the enableGlobalVirtualStore setting has changed
+$ node ./scripts/dev-with-runtime.mjs --remoteDebuggingPort 9222 --remoteDebuggingPort 9222 --noSandbox
+Using runtime from explicit runtime override /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/bin/claude-multimodel
+Runtime version: 2.777.777 (teams orchestrator)
+Using terminal-platform runtime from CLAUDE_TERMINAL_DAEMON_BINARY
+vite v6.4.4 building SSR bundle for development...
+transforming...
+node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js (400:0): A comment
+
+"// Wrapped in a `@__PURE__` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle."
+
+in "node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js (74:0): A comment
+
+"/** Anchors a pattern source. The interpolation lives here rather than at the call site because
+ * esbuild will not drop a `@__PURE__` call whose own argument interpolates a variable, but it
+ * will drop `anchor(dateSource)`. Keeping it inline pinned `date` into every bundle. */"
+
+in "node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+"fchmodSync", "ftruncateSync", "renameSync" and "unlinkSync" are imported from external module "fs" but never used in "node_modules/.pnpm/@anthropic-ai+claude-agent-sdk@0.3.305_@anthropic-ai+sdk@0.122.0_zod@4.6.7__@modelconte_62c9a77da74e02db303bb50cb88ff403/node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs".
+✓ 4018 modules transformed.
+rendering chunks...
+dist-electron/main/sentry-artifact-inventory.json                       0.22 kB
+dist-electron/main/task-change-worker.cjs                               2.35 kB │ map:      2.29 kB
+dist-electron/main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs       4.25 kB │ map:      7.76 kB
+dist-electron/main/chunks/index-yaJFGvjB.cjs                            4.30 kB │ map:      6.10 kB
+dist-electron/main/team-data-worker.cjs                                 6.59 kB │ map:     10.78 kB
+dist-electron/main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs       9.72 kB │ map:     19.61 kB
+dist-electron/main/chunks/index-D9GX0Q6a.cjs                           28.61 kB │ map:     38.45 kB
+dist-electron/main/team-fs-worker.cjs                                  56.73 kB │ map:    108.01 kB
+dist-electron/main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs              68.95 kB │ map:    135.17 kB
+dist-electron/main/internal-storage-worker.cjs                        212.54 kB │ map:    417.54 kB
+dist-electron/main/chunks/taskChangeState-rZolvpL6.cjs                561.88 kB │ map:    792.47 kB
+dist-electron/main/chunks/TeamDataService-DySh5-O-.cjs                800.65 kB │ map:  1,744.24 kB
+dist-electron/main/chunks/taskHistory-2kbwfqIg.cjs                  1,646.70 kB │ map:  3,906.19 kB
+dist-electron/main/index.cjs                                       11,738.11 kB │ map: 24,511.89 kB
+✓ built in 17.62s
+
+electron main process built successfully
+
+-----
+
+vite v6.4.4 building SSR bundle for development...
+transforming...
+✓ 109 modules transformed.
+rendering chunks...
+dist-electron/preload/index.js  96.17 kB
+✓ built in 114ms
+
+electron preload scripts built successfully
+
+-----
+
+[file-viewer:vite-plugin] Copied 18/18 renderer assets to /home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.cache/document-preview-public/file-viewer
+dev server running for the electron renderer process at:
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+
+starting electron app...
+
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"trace-active","limit":256,"childLimit":64,"coverage":"node-async-and-unix-process-table-only"}
+[App] Electron dev path overrides enabled {
+  userDataDir: '/home/runner/work/_temp/TEST-desktop-backend-g9FwgL/userData',
+  claudeRoot: '/home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude'
+}
+[3993:1117/103546.934172:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+
+DevTools listening on ws://127.0.0.1:9222/devtools/browser/d2b7b16f-0213-4699-98d2-92dd9d2b2b9b
+[3993:1117/103547.031421:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[App] [dev] loading renderer from http://localhost:5173
+[3993:1117/103547.096567:ERROR:dbus/object_proxy.cc:589] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[3993:1117/103547.096620:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[Feature:Announcements] State transition { reason: 'writer_busy' }
+[3993:1117/103547.107625:ERROR:dbus/object_proxy.cc:589] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-spawn","pid":4102,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"ps","versionOnly":false,"observedBirth":{"startTicks":"24918","parentPid":3993,"processGroupId":3871},"atomic":false,"observedAtMs":1794911747220}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-exit","pid":4102,"status":0,"signal":null,"observedAtMs":1794911747244}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"sync-result","requestedCommand":"unix-process-table","pid":4106,"status":0,"signal":null,"observedBirth":null,"atomic":false,"observedAtMs":1794911747324}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-spawn","pid":4105,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"node","versionOnly":false,"observedBirth":{"startTicks":"24927","parentPid":3993,"processGroupId":3871},"atomic":false,"observedAtMs":1794911747330}
+[Feature:Announcements] State transition { reason: 'disabled' }
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-exit","pid":4105,"status":0,"signal":null,"observedAtMs":1794911747377}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"sync-result","requestedCommand":"unix-process-table","pid":4128,"status":0,"signal":null,"observedBirth":null,"atomic":false,"observedAtMs":1794911747541}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-spawn","pid":4127,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"node","versionOnly":false,"observedBirth":{"startTicks":"24948","parentPid":3993,"processGroupId":3871},"atomic":false,"observedAtMs":1794911747551}
+[App] [startup] renderer dom-ready
+[App] [startup] renderer did-finish-load
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-exit","pid":4127,"status":0,"signal":null,"observedAtMs":1794911749204}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-spawn","pid":4235,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"node","versionOnly":false,"observedBirth":{"startTicks":"25175","parentPid":3993,"processGroupId":3871},"atomic":false,"observedAtMs":1794911749786}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-exit","pid":4235,"status":0,"signal":null,"observedAtMs":1794911749792}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-spawn","pid":4238,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"node","versionOnly":false,"observedBirth":{"startTicks":"25177","parentPid":3993,"processGroupId":3871},"atomic":false,"observedAtMs":1794911749807}
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-spawn","pid":4591,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"ps","versionOnly":false,"observedBirth":{"startTicks":"26309","parentPid":3993,"processGroupId":3871},"atomic":false,"observedAtMs":1794911761125}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-exit","pid":4591,"status":0,"signal":null,"observedAtMs":1794911761137}
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Discovery:ProjectScanner] Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[IPC:openCodeRuntime] Error in openCodeRuntime:getStatus: Backend routing: unavailable
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-spawn","pid":5232,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"other","versionOnly":false,"observedBirth":{"startTicks":"28665","parentPid":3993,"processGroupId":3871},"atomic":false,"observedAtMs":1794911784684}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-exit","pid":5232,"status":0,"signal":null,"observedAtMs":1794911784688}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-spawn","pid":5233,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"other","versionOnly":false,"observedBirth":{"startTicks":"28667","parentPid":3993,"processGroupId":3871},"atomic":false,"observedAtMs":1794911784696}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-exit","pid":5233,"status":0,"signal":null,"observedAtMs":1794911784703}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-spawn","pid":5237,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"other","versionOnly":false,"observedBirth":{"startTicks":"28668","parentPid":3993,"processGroupId":3871},"atomic":false,"observedAtMs":1794911784712}
+Error occurred in handler for 'codexAccount:getSnapshot': BackendRoutingError: Backend routing: unavailable
+    at DesktopBackendFeature.captureSourceTarget (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59473:13)
+    at DesktopBackendFeature.captureCurrentManagementTarget (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59462:32)
+    at DesktopBackendFeature.captureProviderManagement (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59358:17)
+    at async /home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:138668:22
+    at async Object.getSnapshot (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:76660:22)
+    at async Session.<anonymous> (node:electron/js2c/browser_init:1:119027) {
+  code: 'unavailable',
+  outcome: 'not-dispatched'
+}
+Error occurred in handler for 'codexAccount:getSnapshot': BackendRoutingError: Backend routing: unavailable
+    at DesktopBackendFeature.captureSourceTarget (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59473:13)
+    at DesktopBackendFeature.captureCurrentManagementTarget (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59462:32)
+    at DesktopBackendFeature.captureProviderManagement (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59358:17)
+    at async /home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:138668:22
+    at async Object.getSnapshot (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:76660:22)
+    at async Session.<anonymous> (node:electron/js2c/browser_init:1:119027) {
+  code: 'unavailable',
+  outcome: 'not-dispatched'
+}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-exit","pid":5237,"status":0,"signal":null,"observedAtMs":1794911784852}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-spawn","pid":5238,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"other","versionOnly":false,"observedBirth":{"startTicks":"28683","parentPid":3993,"processGroupId":3871},"atomic":false,"observedAtMs":1794911784862}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-exit","pid":5238,"status":0,"signal":null,"observedAtMs":1794911784864}
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+Error occurred in handler for 'codexAccount:refreshSnapshot': BackendRoutingError: Backend routing: unavailable
+    at DesktopBackendFeature.captureSourceTarget (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59473:13)
+    at DesktopBackendFeature.captureCurrentManagementTarget (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59462:32)
+    at DesktopBackendFeature.captureProviderManagement (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59358:17)
+    at async /home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:138668:22
+    at async Object.refreshSnapshot (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:76679:26)
+    at async Session.<anonymous> (node:electron/js2c/browser_init:1:119027) {
+  code: 'unavailable',
+  outcome: 'not-dispatched'
+}
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-g9FwgL/claude/projects
+[3993:1117/103758.937060:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[3993:1117/103758.937193:ERROR:dbus/object_proxy.cc:589] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[3993:1117/103758.937228:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[3993:1117/103758.937249:ERROR:dbus/object_proxy.cc:589] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-exit","pid":4238,"status":0,"signal":null,"observedAtMs":1794911879080}
+[Feature:Announcements] State transition { reason: 'writer_busy' }
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-spawn","pid":8153,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"ps","versionOnly":false,"observedBirth":{"startTicks":"38107","parentPid":3993,"processGroupId":3871},"atomic":false,"observedAtMs":1794911879098}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-exit","pid":8153,"status":0,"signal":null,"observedAtMs":1794911879102}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-spawn","pid":8154,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"ps","versionOnly":false,"observedBirth":{"startTicks":"38108","parentPid":3993,"processGroupId":3871},"atomic":false,"observedAtMs":1794911879109}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"async-exit","pid":8154,"status":0,"signal":null,"observedAtMs":1794911879114}
+Error occurred in handler for 'agentBackend:connections': Error: No handler registered for 'agentBackend:connections'
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119140)
+    at Session.emit (node:events:514:28)
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":3993,"event":"trace-summary","rows":26,"droppedObservations":0,"observedChildren":12,"unobservedChildren":0,"observationFailures":0,"limited":false,"coverage":"node-async-and-unix-process-table-only"}

@@ -91,6 +91,12 @@ export function createOpenCodeV2ModelProbe(
   let runState: 'not-started' | 'pending' | 'true' | 'false' | 'threw' = 'not-started';
   let outcome: 'unobserved' | 'succeeded' | 'failed' | 'cancelled' | 'unknown' = 'unobserved';
   let errorClass: 'none' | 'held' | 'invalid' | 'conflict' | 'busy' | 'unknown' = 'none';
+  const runErrorCodes = ['ABORT_ERR', 'ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT',
+    'UND_ERR_ABORTED', 'UND_ERR_SOCKET', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT'] as const;
+  type RunErrorCode = typeof runErrorCodes[number];
+  let runErrorCode: RunErrorCode | null = null, runCauseCode: RunErrorCode | null = null;
+  const projectRunCode = (value: unknown): RunErrorCode | null =>
+    typeof value === 'string' && runErrorCodes.includes(value as RunErrorCode) ? value as RunErrorCode : null;
   type CloseStage = 'request-drain' | 'owner-client' | 'driver-close' | 'server-stop' | 'namespace' | 'close-result';
   let firstCloseFailure: { stage: CloseStage; reason: 'unconfirmed' | 'threw' | 'identity' } | undefined;
   const noteCloseFailure = (stage: CloseStage, reason: NonNullable<typeof firstCloseFailure>['reason']) => {
@@ -406,6 +412,13 @@ export function createOpenCodeV2ModelProbe(
             const field = Object.getOwnPropertyDescriptor(error, 'code');
             const code: unknown = field && 'value' in field ? field.value : undefined;
             if (code === 'held' || code === 'invalid' || code === 'conflict' || code === 'busy') errorClass = code;
+            runErrorCode = projectRunCode(code);
+            const causeField = Object.getOwnPropertyDescriptor(error, 'cause');
+            const cause: unknown = causeField && 'value' in causeField ? causeField.value : undefined;
+            if (cause && (typeof cause === 'object' || typeof cause === 'function')) {
+              const causeCodeField = Object.getOwnPropertyDescriptor(cause, 'code');
+              runCauseCode = projectRunCode(causeCodeField && 'value' in causeCodeField ? causeCodeField.value : undefined);
+            }
           }
         } catch { /* An opaque diagnostic cannot replace the original exception. */ }
         throw error;
@@ -489,7 +502,8 @@ export function createOpenCodeV2ModelProbe(
             try {
               const diagnostic = channel('agent-teams:opencode-v2:host-probe-close-failed');
               if (diagnostic.hasSubscribers) diagnostic.publish({ probeDigest: captured, runState, outcome,
-                errorClass, ...firstCloseFailure });
+                errorClass, ...firstCloseFailure,
+                ...(runState === 'threw' ? { runErrorCode, runCauseCode } : {}) });
             } catch { /* Failure-only observation cannot change the original cleanup result. */ }
           }
           return clean;

@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "binding": {
+    "backendId": "TEST-desktop-owner-TEST-desktop-backend-g9FwgL",
+    "teamId": "TEST-desktop-team",
+    "teamName": "test-desktop-backend"
+  },
+  "commandId": "TEST-ui-offline-seed",
+  "principalId": "TEST-human",
+  "fingerprint": "301caf9c72fa12237b72dcefdbb83a3d6ed97912188143ff15792476feafc027",
+  "command": {
+    "commandId": "TEST-ui-offline-seed",
+    "operation": "task.create",
+    "payload": {
+      "subject": "TEST persisted Host sidebar seed"
+    }
+  },
+  "effects": {
+    "taskId": "7bd125ff-5383-5e8f-a644-ba9a49f15e4d",
+    "commentId": "0bae710b-0ff9-5248-8fc2-2b2ad78fed36",
+    "messageId": "0dbc9cbb-3522-5030-9190-800c0067ff68",
+    "deliveryId": "d7a708d5-d02d-5a1c-b435-81954f8cd134"
+  },
+  "createdAt": "2026-11-17T10:35:24.404Z",
+  "phase": "completed",
+  "authorityRevision": 1,
+  "taskPlanVersion": 1,
+  "taskPreimage": "ba809d6f3fd914cdbacee5d8a27af2d1fe60626e5beb4b3fa18b1cdadc3d6243",
+  "taskRecipients": [
+    {
+      "name": "alice",
+      "delivery": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-g9FwgL",
+        "teamId": "TEST-desktop-team",
+        "teamName": "test-desktop-backend",
+        "runId": "TEST-run-TEST-desktop-backend-g9FwgL",
+        "memberId": "alice-id",
+        "generation": "1"
+      }
+    }
+  ],
+  "result": {
+    "id": "7bd125ff-5383-5e8f-a644-ba9a49f15e4d",
+    "displayId": "7bd125ff",
+    "subject": "TEST persisted Host sidebar seed",
+    "description": "TEST persisted Host sidebar seed",
+    "createdBy": "user",
+    "status": "pending",
+    "createdAt": "2026-11-17T10:35:24.404Z",
+    "updatedAt": "2026-11-17T10:35:24.404Z",
+    "historyEvents": [
+      {
+        "id": "22831063-7760-4c94-80c4-99a883d5a324",
+        "timestamp": "2026-11-17T10:35:24.404Z",
+        "type": "task_created",
+        "status": "pending",
+        "actor": "user"
+      }
+    ],
+    "blocks": [],
+    "blockedBy": [],
+    "reviewState": "none",
+    "creationCommand": {
+      "namespace": "legacy-agent-host",
+      "scopeKey": "test-desktop-backend",
+      "operation": "task.create",
+      "commandId": "7bd125ff-5383-5e8f-a644-ba9a49f15e4d",
+      "payloadHash": "301caf9c72fa12237b72dcefdbb83a3d6ed97912188143ff15792476feafc027"
+    }
+  },
+  "taskHash": "d1205b05581532d5cb262f6011003dadff95cd23e78dbbc4c4986663c3cfd009"
+}

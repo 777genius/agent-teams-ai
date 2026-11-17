@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_RETAINED_FAILURE_DIAGNOSTICS_SOURCE_R2_METADATA_CLARIFICATIONS",
+  "at": "2026-11-17 11:01:25 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "bytes": 48600,
+    "sha256": "ea41197152f40525912ca3bf8d41b84451f1c306bdb88a5ee051d83e8842891e",
+    "gitBlob": "c356b7f7c7dd7d9ab6e869ad9d3655c74ea8dbea"
+  },
+  "rootReview": {
+    "bytes": 67412,
+    "sha256": "8814087c74f5e80af639a3ec24e97a4ae7cc2404ecf0a61d4380ffeaceac726c",
+    "gitBlob": "36b20d73f574cca6b76fa40dd5e46413338caafd"
+  },
+  "sourcePostimagesUnchanged": true,
+  "changes": [
+    {
+      "field": "gui.testAppend.coverage[1]",
+      "original": "missing/malformed/sparse samples, at-cap versus overflow,3/24 traversal,8000 text bound and8192fallback",
+      "clarified": "The authored five cases explicitly exercise missing, null and malformed entries and capped accessor slots. There is no separate sparse-array-hole fixture or sparse-specific runtime result.",
+      "sourceChange": false
+    },
+    {
+      "field": "native.testAppend.oldCounterfactual.runSource/publisherSource",
+      "clarified": "The gitBlob values identify complete literal source slices derived from the fully read original ModelProbe. Those slices are embedded in the final native test source and have exact asserted SHA256 identities. They are not separately retained Git objects and must not be fetched as repository blobs.",
+      "derivedIds": [
+        "1409b65f9bdad2fd8bf15841e36d4460acce8204",
+        "ded3bd876233b0fb238559d210d76c7edced8eed"
+      ],
+      "sourceChange": false
+    }
+  ],
+  "authorizationChanged": false,
+  "additionalGateCreated": false,
+  "newTestRequirement": false,
+  "sourceEvaluated": false,
+  "sourceCompiled": false,
+  "sourceExecuted": false
+}

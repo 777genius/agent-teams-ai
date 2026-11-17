@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "kind": "windows-selected-port-retry-pair-source-r2-actual-gate",
+  "at": "2026-11-17 09:17:41 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "verdict": "ACCEPT_EXACT_SOURCE_R2_ACTUAL_PUBLICATION_FOR_SEPARATE_AVAILABLE_VENUE_SELECTION_ONLY",
+  "commit": "1ca9566d70bd624283227a644fa6969eb8bf8f34",
+  "parent": "d693c62d59c2bc6a6866dcc0293c111380ed88c5",
+  "tree": "fd6a7a819adc8b68a4b3e1ec1ddfe9c57a48e03c",
+  "docsTree": "834eeb86f8ca3f94fec916e6044836bad8cbb348",
+  "scriptsTree": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+  "toolsTree": "b0ffcbc4be600e5edfbc0fbacf312e5b476af6aa",
+  "manifest": {
+    "bytes": 18251,
+    "sha256": "81fd9c07e222bf03a1b931ed451cbffed1bafd4618fb44153aa2780997a2fb78",
+    "gitBlob": "a77bb57b0bc194ae832418813f48109f19d02310"
+  },
+  "sourceR2": {
+    "bytes": 42133,
+    "sha256": "d4cd670c434e83a6b9cf215f031c1ad5b587f66a0eba7a04a37c3d41da887f1b",
+    "gitBlob": "b5538bd991246d7ac099db3403f13c2118546bb3"
+  },
+  "r1ActualGate": {
+    "bytes": 32056,
+    "sha256": "5575685a2e92770fa70a999ff9e34f8de8b25f2fce9d524b108c2e956da78b2f",
+    "gitBlob": "27a1cd9204ccf9019a606c7835ddab4caf4797aa"
+  },
+  "sourceChanges": [
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "mode": "100644",
+      "before": {
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e"
+      },
+      "after": {
+        "bytes": 12389,
+        "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+        "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+      },
+      "lineCount": 312,
+      "addedLines": null,
+      "cases": null,
+      "fullInverse": true,
+      "kind": "one literal query substitution"
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "mode": "100644",
+      "before": {
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+      },
+      "after": {
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+      },
+      "lineCount": 391,
+      "addedLines": 60,
+      "cases": 14,
+      "fullInverse": true,
+      "kind": "one existing expected literal and two appended cases"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "mode": "100644",
+      "before": {
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+      },
+      "after": {
+        "bytes": 37970,
+        "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+        "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3"
+      },
+      "lineCount": 653,
+      "addedLines": null,
+      "cases": null,
+      "fullInverse": true,
+      "kind": "only final Retry loop"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e"
+      },
+      "after": {
+        "bytes": 50377,
+        "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+        "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+      },
+      "lineCount": 745,
+      "addedLines": 125,
+      "cases": 8,
+      "fullInverse": true,
+      "kind": "literal whole prefix and one appended case"
+    }
+  ],
+  "rootActual": {
+    "bytes": 182229,
+    "sha256": "e9edb08e4488798b6d6342d0bda652d91ef114a46ed913d86d36b92df28efe0d",
+    "gitBlob": "33e875dfe05645bea4181392ad07a0f0d2137044"
+  },
+  "independentActual": {
+    "bytes": 379230,
+    "sha256": "86eadc5cd45a6563466187d334dac6a7eb900dd972889b4b77667e7d8961a5be",
+    "gitBlob": "2061e30d23d1b2d703e52aeb568c905a158a5f98"
+  },
+  "fullRootReadback": true,
+  "fullIndependentReadback": true,
+  "independentFullSelfReadback": true,
+  "sourceStaticChecks": 181,
+  "actualChecks": {
+    "root": 49,
+    "independent": 49,
+    "total": 98
+  },
+  "currentPointerClosure": {
+    "count": 116,
+    "bytes": 18210612,
+    "allCompleteReadAndRehashedByBoth": true,
+    "recordsInRootAndIndependentReports": true,
+    "allRowsCrossJoined": true,
+    "missing": []
+  },
+  "completeBodyCounts": {
+    "current": 32,
+    "currentBytes": 6693655,
+    "parent": 7,
+    "parentBytes": 3339550
+  },
+  "actualDelta": {
+    "docsAdded": 25,
+    "docsModified": 3,
+    "sourceModified": 4,
+    "deleted": 0,
+    "renamed": 0,
+    "modeChanges": 0,
+    "unchangedOtherRootEntries": 51
+  },
+  "preservation": {
+    "allFourCompleteInverses": true,
+    "originalNativeUiWhole620LinePrefix": true,
+    "platformCases": 14,
+    "nativeUiCases": 8,
+    "wholeNewCasesExecuted": false,
+    "all13ParityVectorEntriesUnchanged": true,
+    "catalogOldFields": 89,
+    "catalogFields": 91,
+    "all27BundlesAndTotals": true,
+    "planStatusPrefixes": true,
+    "commonAppendBytes": 7698,
+    "leaves": 12088,
+    "docs": 3289,
+    "nonDocs": 8799,
+    "production": 5020,
+    "workflows": 42,
+    "exceptions": 141,
+    "cap": 800,
+    "deadlinesUnchanged": true
+  },
+  "currentPr1219": {
+    "fixedHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "snapshotRefsAndMetadataUntouched": true,
+    "publishedEvidenceHistoricalCutoff": 6
+  },
+  "environment": {
+    "available": false,
+    "newNotice": false,
+    "localStageCreated": false,
+    "localScopeCreated": false,
+    "targetExecuted": false,
+    "targetCompiled": false,
+    "standaloneInvoked": false
+  },
+  "runtimeAuthorized": false,
+  "executionVenueSelected": false,
+  "qualification": "Actual source publication and identity preservation only. Whole platform14/nativeUI8, native Windows phase/performance, standalone RED/GREEN, complete ZIP/receipt/screenshot validation and all-provider E2E remain unqualified.",
+  "next": "Root may now select a genuine available exact execution venue through the existing prospective CI R1/reviews/docs-actual/admission sequence. No new executable runner/workflow is authored, so no extra source/control R2 is required merely for reviewed structured external operations.",
+  "authority": "This closes the existing source R2 actual-publication requirement; it adds no new gate or runtime permission.",
+  "dataOnlyAssemblyCorrection": {
+    "error": "Root initially compared independent rootActualJoin.pointerBytes, a boolean proof result, to a numeric byte total. No gate was created and no external action occurred.",
+    "correction": "Use the actual full pointer rows and root byte total, plus the independent true proof fields.",
+    "externalEffect": false
+  },
+  "selfReadbackProtocol": "Fetch complete retained blob and compare all bytes/SHA256/Git identity."
+}

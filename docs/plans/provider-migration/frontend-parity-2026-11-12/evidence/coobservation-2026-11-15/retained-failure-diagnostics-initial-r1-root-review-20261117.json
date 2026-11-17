@@ -1,0 +1,1568 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_RETAINED_FAILURE_DIAGNOSTICS_R1_ROOT_REVIEW",
+  "at": "2026-11-17 09:50:33 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root",
+  "subject": {
+    "bytes": 23006,
+    "sha256": "ac0a112be1dd45b0c219fa09437beb2502e51722c4d058abe9b9570fafe64730",
+    "gitBlob": "5d44942ab4492596cbd6bbb328041a6713b79810"
+  },
+  "decision": "ACCEPT_EXACT_SIX_EXISTING_FILE_DIAGNOSTICS_R1_FOR_DOCS_PUBLICATION_AFTER_INDEPENDENT_REVIEWS",
+  "accepted": true,
+  "sourceCommit": "1ca9566d70bd624283227a644fa6969eb8bf8f34",
+  "sourceRoot": "fd6a7a819adc8b68a4b3e1ec1ddfe9c57a48e03c",
+  "selectedCompletePreimageJoins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "expected": {
+        "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+        "mode": "100644",
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+        "lines": 394,
+        "completeRootBodyRead": true,
+        "current1caTreeJoined": true
+      },
+      "tree": {
+        "path": "legacy-agent-host/desktop-proof-evidence.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+        "size": 26258,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+      },
+      "actual": {
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+      },
+      "complete": true,
+      "passed": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "expected": {
+        "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "mode": "100644",
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+        "lines": 182,
+        "completeRootBodyRead": true,
+        "current1caTreeJoined": true
+      },
+      "tree": {
+        "path": "legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+        "size": 13293,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+      },
+      "actual": {
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+      },
+      "complete": true,
+      "passed": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "expected": {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "mode": "100644",
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f",
+        "lines": 1191,
+        "completeRootBodyRead": true,
+        "current1caTreeJoined": true
+      },
+      "tree": {
+        "path": "legacy-agent-host/desktop-backend-observations.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f",
+        "size": 66098,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6a147cbf241b98a8bc6cea0e2d7ac45962ed987f"
+      },
+      "actual": {
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f"
+      },
+      "complete": true,
+      "passed": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "expected": {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+        "mode": "100644",
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05",
+        "lines": 500,
+        "completeRootBodyRead": true,
+        "current1caTreeJoined": true
+      },
+      "tree": {
+        "path": "legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "195dabe664b14a2fe5c231e137690db6126c0e05",
+        "size": 22177,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/195dabe664b14a2fe5c231e137690db6126c0e05"
+      },
+      "actual": {
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05"
+      },
+      "complete": true,
+      "passed": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "expected": {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "mode": "100644",
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068",
+        "lines": 565,
+        "completeRootBodyRead": true,
+        "current1caTreeJoined": true
+      },
+      "tree": {
+        "path": "legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "625c6ddd74357abbdf565bf386388274cebd4068",
+        "size": 37181,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/625c6ddd74357abbdf565bf386388274cebd4068"
+      },
+      "actual": {
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068"
+      },
+      "complete": true,
+      "passed": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "expected": {
+        "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "mode": "100644",
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+        "lines": 345,
+        "completeRootBodyRead": true,
+        "current1caTreeJoined": true
+      },
+      "tree": {
+        "path": "legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+        "size": 19696,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f274129ad8a77bed3094e48e31cc50f37ba4d478"
+      },
+      "actual": {
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478"
+      },
+      "complete": true,
+      "passed": true
+    }
+  ],
+  "fullDirectPointerJoins": [
+    {
+      "pin": {
+        "bytes": 7149,
+        "sha256": "2aeec2ecdbae9bdf27d8bd6a054655ea6850bc69a2d2544df8c1da245798f005",
+        "gitBlob": "a3ff72947884bc9e9993fa74db71491c3b9e4a61"
+      },
+      "locations": [
+        "/acceptedSourceActual/gate"
+      ],
+      "actual": {
+        "bytes": 7149,
+        "sha256": "2aeec2ecdbae9bdf27d8bd6a054655ea6850bc69a2d2544df8c1da245798f005",
+        "gitBlob": "a3ff72947884bc9e9993fa74db71491c3b9e4a61"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 182229,
+        "sha256": "e9edb08e4488798b6d6342d0bda652d91ef114a46ed913d86d36b92df28efe0d",
+        "gitBlob": "33e875dfe05645bea4181392ad07a0f0d2137044"
+      },
+      "locations": [
+        "/acceptedSourceActual/root"
+      ],
+      "actual": {
+        "bytes": 182229,
+        "sha256": "e9edb08e4488798b6d6342d0bda652d91ef114a46ed913d86d36b92df28efe0d",
+        "gitBlob": "33e875dfe05645bea4181392ad07a0f0d2137044"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 379230,
+        "sha256": "86eadc5cd45a6563466187d334dac6a7eb900dd972889b4b77667e7d8961a5be",
+        "gitBlob": "2061e30d23d1b2d703e52aeb568c905a158a5f98"
+      },
+      "locations": [
+        "/acceptedSourceActual/independent"
+      ],
+      "actual": {
+        "bytes": 379230,
+        "sha256": "86eadc5cd45a6563466187d334dac6a7eb900dd972889b4b77667e7d8961a5be",
+        "gitBlob": "2061e30d23d1b2d703e52aeb568c905a158a5f98"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 30196,
+        "sha256": "9ba4b7a572a676a703414fa6f41db02729e85a5c2e21cb4ff65c231e4d2d5462",
+        "gitBlob": "3fcfd9908119ae67c21d00a8882bf27d55ea56fd"
+      },
+      "locations": [
+        "/evidence/guiFeasibility"
+      ],
+      "actual": {
+        "bytes": 30196,
+        "sha256": "9ba4b7a572a676a703414fa6f41db02729e85a5c2e21cb4ff65c231e4d2d5462",
+        "gitBlob": "3fcfd9908119ae67c21d00a8882bf27d55ea56fd"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 27466,
+        "sha256": "ac5921539071bade6c642696d50eb4fbaf047cbaf83359c00cef37a7e51f4ff2",
+        "gitBlob": "ce2cdcb5524bb248260919c6a2db4c4e248a15b2"
+      },
+      "locations": [
+        "/evidence/nativeFeasibility"
+      ],
+      "actual": {
+        "bytes": 27466,
+        "sha256": "ac5921539071bade6c642696d50eb4fbaf047cbaf83359c00cef37a7e51f4ff2",
+        "gitBlob": "ce2cdcb5524bb248260919c6a2db4c4e248a15b2"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 49411,
+        "sha256": "cca72f4bf9fbbe4e0ae4fa8ce5aa24efe02a36e530c8e53f24aa7acf90f31a73",
+        "gitBlob": "f41a625fef5db581e0c9ff6c2392d6ff8a7dd87d"
+      },
+      "locations": [
+        "/evidence/boundedFailureClassification"
+      ],
+      "actual": {
+        "bytes": 49411,
+        "sha256": "cca72f4bf9fbbe4e0ae4fa8ce5aa24efe02a36e530c8e53f24aa7acf90f31a73",
+        "gitBlob": "f41a625fef5db581e0c9ff6c2392d6ff8a7dd87d"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 166772,
+        "sha256": "6947d3ee3cd4657ba06763a2967877041da23d27884d246418df6400ebe2ee30",
+        "gitBlob": "45e6e700c5a12db1c86ae4cad4558a81226d4ee5"
+      },
+      "locations": [
+        "/evidence/boundedCompletedProgress"
+      ],
+      "actual": {
+        "bytes": 166772,
+        "sha256": "6947d3ee3cd4657ba06763a2967877041da23d27884d246418df6400ebe2ee30",
+        "gitBlob": "45e6e700c5a12db1c86ae4cad4558a81226d4ee5"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 786022,
+        "sha256": "54a156cdb2f3d58d5bfc6a8a3894d5b1b01dad582f323b9ea38e2a0038167afa",
+        "gitBlob": "e37311346018c41fc8f622efdd4a576f030af4d7"
+      },
+      "locations": [
+        "/evidence/ciObservations79"
+      ],
+      "actual": {
+        "bytes": 786022,
+        "sha256": "54a156cdb2f3d58d5bfc6a8a3894d5b1b01dad582f323b9ea38e2a0038167afa",
+        "gitBlob": "e37311346018c41fc8f622efdd4a576f030af4d7"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 431287,
+        "sha256": "68e49fb044d66f72d741a0247376a54a3c85b898437cd6057f8406a5f51327d8",
+        "gitBlob": "dc274635550160f7ea4cae9daa1f951539747e18"
+      },
+      "locations": [
+        "/evidence/ciObservations1011",
+        "/currentCi/latestRetained"
+      ],
+      "actual": {
+        "bytes": 431287,
+        "sha256": "68e49fb044d66f72d741a0247376a54a3c85b898437cd6057f8406a5f51327d8",
+        "gitBlob": "dc274635550160f7ea4cae9daa1f951539747e18"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 40070,
+        "sha256": "8e4733e6f5cb1cb252ea222bcbcba7a99124ad5c7136388d833326287bb46236",
+        "gitBlob": "72d1c31fa760449d472d58307da11dde30eba32f"
+      },
+      "locations": [
+        "/evidence/futureDraftVenueAdvisory"
+      ],
+      "actual": {
+        "bytes": 40070,
+        "sha256": "8e4733e6f5cb1cb252ea222bcbcba7a99124ad5c7136388d833326287bb46236",
+        "gitBlob": "72d1c31fa760449d472d58307da11dde30eba32f"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+      },
+      "locations": [
+        "/sourcePreimages/0"
+      ],
+      "actual": {
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+      },
+      "locations": [
+        "/sourcePreimages/1"
+      ],
+      "actual": {
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f"
+      },
+      "locations": [
+        "/sourcePreimages/2"
+      ],
+      "actual": {
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05"
+      },
+      "locations": [
+        "/sourcePreimages/3"
+      ],
+      "actual": {
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068"
+      },
+      "locations": [
+        "/sourcePreimages/4"
+      ],
+      "actual": {
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478"
+      },
+      "locations": [
+        "/sourcePreimages/5"
+      ],
+      "actual": {
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 36526,
+        "sha256": "42a39d5cfe0a1f0681f3978e2073c1f2ba57e4f47f81a5b9345ea6927a991cce",
+        "gitBlob": "8b045297766cc5a352be923e3d477426411f1f5b"
+      },
+      "locations": [
+        "/selection/native/tests/existingPattern"
+      ],
+      "actual": {
+        "bytes": 36526,
+        "sha256": "42a39d5cfe0a1f0681f3978e2073c1f2ba57e4f47f81a5b9345ea6927a991cce",
+        "gitBlob": "8b045297766cc5a352be923e3d477426411f1f5b"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e"
+      },
+      "locations": [
+        "/unchanged/fourWindowsPostimages/0/before"
+      ],
+      "actual": {
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 12389,
+        "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+        "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+      },
+      "locations": [
+        "/unchanged/fourWindowsPostimages/0/after"
+      ],
+      "actual": {
+        "bytes": 12389,
+        "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+        "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+      },
+      "locations": [
+        "/unchanged/fourWindowsPostimages/1/before"
+      ],
+      "actual": {
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+      },
+      "locations": [
+        "/unchanged/fourWindowsPostimages/1/after"
+      ],
+      "actual": {
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+      },
+      "locations": [
+        "/unchanged/fourWindowsPostimages/2/before"
+      ],
+      "actual": {
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 37970,
+        "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+        "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3"
+      },
+      "locations": [
+        "/unchanged/fourWindowsPostimages/2/after"
+      ],
+      "actual": {
+        "bytes": 37970,
+        "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+        "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e"
+      },
+      "locations": [
+        "/unchanged/fourWindowsPostimages/3/before"
+      ],
+      "actual": {
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 50377,
+        "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+        "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+      },
+      "locations": [
+        "/unchanged/fourWindowsPostimages/3/after"
+      ],
+      "actual": {
+        "bytes": 50377,
+        "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+        "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+      },
+      "completeRead": true
+    },
+    {
+      "pin": {
+        "bytes": 3481,
+        "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+        "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+      },
+      "locations": [
+        "/unchanged/frozenParityVector"
+      ],
+      "actual": {
+        "bytes": 3481,
+        "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+        "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+      },
+      "completeRead": true
+    }
+  ],
+  "currentPointerCount": 26,
+  "currentPointerBytes": 2554858,
+  "acceptedSourceGate": {
+    "gate": {
+      "bytes": 7149,
+      "sha256": "2aeec2ecdbae9bdf27d8bd6a054655ea6850bc69a2d2544df8c1da245798f005",
+      "gitBlob": "a3ff72947884bc9e9993fa74db71491c3b9e4a61"
+    },
+    "closedAt": "2026-11-17 09:17:41 UTC",
+    "root": {
+      "bytes": 182229,
+      "sha256": "e9edb08e4488798b6d6342d0bda652d91ef114a46ed913d86d36b92df28efe0d",
+      "gitBlob": "33e875dfe05645bea4181392ad07a0f0d2137044"
+    },
+    "independent": {
+      "bytes": 379230,
+      "sha256": "86eadc5cd45a6563466187d334dac6a7eb900dd972889b4b77667e7d8961a5be",
+      "gitBlob": "2061e30d23d1b2d703e52aeb568c905a158a5f98"
+    },
+    "checks": 98,
+    "fullRootReadAndIndependentSelfReadClosed": true,
+    "sourceOnly": true
+  },
+  "checks": [
+    {
+      "id": "R01",
+      "name": "Exact immutable proposal complete body identity",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "bytes": 23006,
+        "sha256": "ac0a112be1dd45b0c219fa09437beb2502e51722c4d058abe9b9570fafe64730",
+        "gitBlob": "5d44942ab4492596cbd6bbb328041a6713b79810"
+      }
+    },
+    {
+      "id": "R02",
+      "name": "Accepted source actual gate binds exact parent/root",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "gate": {
+          "bytes": 7149,
+          "sha256": "2aeec2ecdbae9bdf27d8bd6a054655ea6850bc69a2d2544df8c1da245798f005",
+          "gitBlob": "a3ff72947884bc9e9993fa74db71491c3b9e4a61"
+        },
+        "commit": "1ca9566d70bd624283227a644fa6969eb8bf8f34",
+        "tree": "fd6a7a819adc8b68a4b3e1ec1ddfe9c57a48e03c"
+      }
+    },
+    {
+      "id": "R03",
+      "name": "Both current source actual reports independently accepted",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "root": 49,
+        "independent": 49
+      }
+    },
+    {
+      "id": "R04",
+      "name": "All six complete source preimages join current trees",
+      "result": "PASS_STATIC",
+      "evidence": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+          "expected": {
+            "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+            "mode": "100644",
+            "bytes": 26258,
+            "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+            "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+            "lines": 394,
+            "completeRootBodyRead": true,
+            "current1caTreeJoined": true
+          },
+          "tree": {
+            "path": "legacy-agent-host/desktop-proof-evidence.ts",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+            "size": 26258,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+          },
+          "actual": {
+            "bytes": 26258,
+            "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+            "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+          },
+          "complete": true,
+          "passed": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+          "expected": {
+            "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+            "mode": "100644",
+            "bytes": 13293,
+            "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+            "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+            "lines": 182,
+            "completeRootBodyRead": true,
+            "current1caTreeJoined": true
+          },
+          "tree": {
+            "path": "legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+            "size": 13293,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+          },
+          "actual": {
+            "bytes": 13293,
+            "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+            "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+          },
+          "complete": true,
+          "passed": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "expected": {
+            "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+            "mode": "100644",
+            "bytes": 66098,
+            "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+            "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f",
+            "lines": 1191,
+            "completeRootBodyRead": true,
+            "current1caTreeJoined": true
+          },
+          "tree": {
+            "path": "legacy-agent-host/desktop-backend-observations.test.ts",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f",
+            "size": 66098,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6a147cbf241b98a8bc6cea0e2d7ac45962ed987f"
+          },
+          "actual": {
+            "bytes": 66098,
+            "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+            "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f"
+          },
+          "complete": true,
+          "passed": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+          "expected": {
+            "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+            "mode": "100644",
+            "bytes": 22177,
+            "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+            "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05",
+            "lines": 500,
+            "completeRootBodyRead": true,
+            "current1caTreeJoined": true
+          },
+          "tree": {
+            "path": "legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "195dabe664b14a2fe5c231e137690db6126c0e05",
+            "size": 22177,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/195dabe664b14a2fe5c231e137690db6126c0e05"
+          },
+          "actual": {
+            "bytes": 22177,
+            "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+            "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05"
+          },
+          "complete": true,
+          "passed": true
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+          "expected": {
+            "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+            "mode": "100644",
+            "bytes": 37181,
+            "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+            "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068",
+            "lines": 565,
+            "completeRootBodyRead": true,
+            "current1caTreeJoined": true
+          },
+          "tree": {
+            "path": "legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "625c6ddd74357abbdf565bf386388274cebd4068",
+            "size": 37181,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/625c6ddd74357abbdf565bf386388274cebd4068"
+          },
+          "actual": {
+            "bytes": 37181,
+            "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+            "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068"
+          },
+          "complete": true,
+          "passed": true
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+          "expected": {
+            "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+            "mode": "100644",
+            "bytes": 19696,
+            "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+            "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+            "lines": 345,
+            "completeRootBodyRead": true,
+            "current1caTreeJoined": true
+          },
+          "tree": {
+            "path": "legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+            "size": 19696,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f274129ad8a77bed3094e48e31cc50f37ba4d478"
+          },
+          "actual": {
+            "bytes": 19696,
+            "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+            "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478"
+          },
+          "complete": true,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "R05",
+      "name": "Complete preimage byte census",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "bytes": 184703,
+        "paths": 6
+      }
+    },
+    {
+      "id": "R06",
+      "name": "All26 direct current identity tuples fully read and rehashed",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "tuples": 26,
+        "bytes": 2554858
+      }
+    },
+    {
+      "id": "R07",
+      "name": "Six selected paths are disjoint from13 frozen parity and4 Windows paths",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "frozen13": {
+          "bytes": 3481,
+          "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+          "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+        },
+        "windowsPaths": [
+          "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+          "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+          "scripts/legacy-agent-host/desktop-native-process-ui.test.ts"
+        ]
+      }
+    },
+    {
+      "id": "R08",
+      "name": "All13 accepted frozen bodies fully rehashed unchanged",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "rows": [
+          {
+            "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+            "pin": {
+              "bytes": 69370,
+              "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+              "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+            },
+            "actual": {
+              "bytes": 69370,
+              "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+              "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+            },
+            "fullRehash": true,
+            "passed": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+            "pin": {
+              "bytes": 24759,
+              "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+              "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+            },
+            "actual": {
+              "bytes": 24759,
+              "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+              "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+            },
+            "fullRehash": true,
+            "passed": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+            "pin": {
+              "bytes": 45795,
+              "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+              "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+            },
+            "actual": {
+              "bytes": 45795,
+              "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+              "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+            },
+            "fullRehash": true,
+            "passed": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+            "pin": {
+              "bytes": 36260,
+              "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+              "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+            },
+            "actual": {
+              "bytes": 36260,
+              "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+              "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+            },
+            "fullRehash": true,
+            "passed": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+            "pin": {
+              "bytes": 8457,
+              "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+              "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+            },
+            "actual": {
+              "bytes": 8457,
+              "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+              "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+            },
+            "fullRehash": true,
+            "passed": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+            "pin": {
+              "bytes": 33036,
+              "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+              "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+            },
+            "actual": {
+              "bytes": 33036,
+              "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+              "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+            },
+            "fullRehash": true,
+            "passed": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+            "pin": {
+              "bytes": 165022,
+              "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+              "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+            },
+            "actual": {
+              "bytes": 165022,
+              "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+              "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+            },
+            "fullRehash": true,
+            "passed": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+            "pin": {
+              "bytes": 7883,
+              "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+              "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+            },
+            "actual": {
+              "bytes": 7883,
+              "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+              "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+            },
+            "fullRehash": true,
+            "passed": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+            "pin": {
+              "bytes": 29017,
+              "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+              "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+            },
+            "actual": {
+              "bytes": 29017,
+              "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+              "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+            },
+            "fullRehash": true,
+            "passed": true
+          },
+          {
+            "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+            "pin": {
+              "bytes": 74340,
+              "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+              "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+            },
+            "actual": {
+              "bytes": 74340,
+              "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+              "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+            },
+            "fullRehash": true,
+            "passed": true
+          },
+          {
+            "path": "src/renderer/utils/teamModelAvailability.ts",
+            "pin": {
+              "bytes": 32077,
+              "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+              "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+            },
+            "actual": {
+              "bytes": 32077,
+              "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+              "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+            },
+            "fullRehash": true,
+            "passed": true
+          },
+          {
+            "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+            "pin": {
+              "bytes": 187890,
+              "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+              "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+            },
+            "actual": {
+              "bytes": 187890,
+              "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+              "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+            },
+            "fullRehash": true,
+            "passed": true
+          },
+          {
+            "path": "test/renderer/utils/teamModelAvailability.test.ts",
+            "pin": {
+              "bytes": 56775,
+              "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+              "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+            },
+            "actual": {
+              "bytes": 56775,
+              "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+              "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+            },
+            "fullRehash": true,
+            "passed": true
+          }
+        ],
+        "bytes": 770681,
+        "scope": "Complete bodies from accepted current1ca actual gate, not runtime evidence."
+      }
+    },
+    {
+      "id": "R09",
+      "name": "Four published Windows sources remain selected as unchanged",
+      "result": "PASS_STATIC",
+      "evidence": [
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "mode": "100644",
+          "before": {
+            "bytes": 12335,
+            "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+            "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e"
+          },
+          "after": {
+            "bytes": 12389,
+            "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+            "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+          },
+          "lineCount": 312,
+          "addedLines": null,
+          "cases": null,
+          "fullInverse": true,
+          "kind": "one literal query substitution"
+        },
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+          "mode": "100644",
+          "before": {
+            "bytes": 16835,
+            "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+            "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+          },
+          "after": {
+            "bytes": 20830,
+            "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+            "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+          },
+          "lineCount": 391,
+          "addedLines": 60,
+          "cases": 14,
+          "fullInverse": true,
+          "kind": "one existing expected literal and two appended cases"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+          "mode": "100644",
+          "before": {
+            "bytes": 37692,
+            "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+            "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+          },
+          "after": {
+            "bytes": 37970,
+            "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+            "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3"
+          },
+          "lineCount": 653,
+          "addedLines": null,
+          "cases": null,
+          "fullInverse": true,
+          "kind": "only final Retry loop"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+          "mode": "100644",
+          "before": {
+            "bytes": 41888,
+            "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+            "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e"
+          },
+          "after": {
+            "bytes": 50377,
+            "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+            "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+          },
+          "lineCount": 745,
+          "addedLines": 125,
+          "cases": 8,
+          "fullInverse": true,
+          "kind": "literal whole prefix and one appended case"
+        }
+      ]
+    },
+    {
+      "id": "R10",
+      "name": "No file/workflow/dependency inventory expansion is selected",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "files": 6,
+        "newFiles": 0,
+        "newDependencies": 0,
+        "newWorkflows": 0
+      }
+    },
+    {
+      "id": "R11",
+      "name": "Original production,cap,exception,nonDoc census retained",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "production": 5020,
+        "cap": 800,
+        "exceptions": 141,
+        "nonDoc": 8799,
+        "workflows": 42
+      }
+    },
+    {
+      "id": "R12",
+      "name": "All42 immutable workflow bodies fully rehash",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "workflows": 42,
+        "bytes": 751430,
+        "scope": "Current1ca unchanged .github subtree joins accepted source gate."
+      }
+    },
+    {
+      "id": "R13",
+      "name": "Existing whole GUI test route is present",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "workflow": ".github/workflows/host-emulated-acceptance.yml",
+        "line": 103,
+        "wholeFileIncluded": true,
+        "command": "existing eight-file Node command",
+        "newWorkflowEdit": false
+      }
+    },
+    {
+      "id": "R14",
+      "name": "Existing whole native test route is present",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "workflow": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "line": 106,
+        "wholeFileIncluded": true,
+        "jobs": [
+          "Static V01 source test (ubuntu-24.04)",
+          "Static V01 source test (windows-2022)"
+        ],
+        "node": "24.21.0",
+        "after": "existing Host build and typecheck",
+        "draftSkipped": false,
+        "newWorkflowEdit": false
+      }
+    },
+    {
+      "id": "R15",
+      "name": "GUI and native test prefixes are exact original bodies",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "guiPrefixBytes": 66098,
+        "guiRegistrationExpressions": 34,
+        "nativePrefixBytes": 19696,
+        "nativeCases": 9,
+        "newGuiCases": 5,
+        "newNativeCases": 3
+      }
+    },
+    {
+      "id": "R16",
+      "name": "GUI projector uses existing saved data only",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "source": "retained-post-failure-partial-dialog-sample",
+        "atomicWithFailedWait": false,
+        "completeDom": false,
+        "actualTruncationKnown": false,
+        "producerDialogLimit": 3,
+        "producerButtonLimit": 24,
+        "producerTextTailLimit": 8000,
+        "producerButtonTextPrefixLimit": 160
+      }
+    },
+    {
+      "id": "R17",
+      "name": "GUI capture limits and unknown/truncation distinction explicit",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "dialog": "Bound to first3 retained dialog entries. Report record presence, existing textFacts only, and bounded button-sample structure. No raw text/labels, coordinates, identifiers, paths, URLs or arbitrary object values.",
+        "buttons": "Within at most24 retained button entries, recognize only exact own-data text === Launch team. Keep matching count and separate disabled/enabled/unknown-disabled counts, with duplicate matches distinguishable. Missing/malformed arrays or fields remain unknown; zero retained matches is never a global absence or readiness verdict. Label cap-sized arrays as at-cap only, not proven truncated; oversized supplied arrays have explicit overflow and bounded traversal."
+      }
+    },
+    {
+      "id": "R18",
+      "name": "Privacy, own-data traversal and existing output fallback retained",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "projector": "Extend projectDesktopEmulatedReadinessFailure using only rendererFailureSnapshot.dialogs already present in evidence. Keep own-data-descriptor traversal, bounded primitive selection and the existing8192-character final fallback.",
+        "text": "Reuse existing fixed-vocabulary textFacts. Phrase presence is a saved text observation, not an authentication/model/provider/permission verdict. Existing provisioning/hydration/cleanup meanings stay intact."
+      }
+    },
+    {
+      "id": "R19",
+      "name": "Exactly three additional GUI failure modes selected",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "existing": [
+          "emulated-import-ui",
+          "emulated-opencode-runtime-ui"
+        ],
+        "add": [
+          "emulated-claude-runtime-ui",
+          "emulated-claude-lifecycle-ui",
+          "emulated-collaboration-ui"
+        ],
+        "condition": "evidence.status !== PASS",
+        "unchangedUnrelated": [
+          "team-ui",
+          "emulated-extensions-ui"
+        ],
+        "passSummariesUnchanged": true
+      }
+    },
+    {
+      "id": "R20",
+      "name": "Packaged composition preserves original summary and rethrow",
+      "result": "PASS_STATIC",
+      "evidence": "Import the same existing projector into desktop-packaged-relaunch-smoke.ts and add its output only to the existing final non-PASS console summary. Preserve kind/status/receipt/root, receipt write, cleanup order, source freeze, original exception rethrow, and success assertion."
+    },
+    {
+      "id": "R21",
+      "name": "GUI tests target actual exported implementation and selected composition",
+      "result": "PASS_STATIC",
+      "evidence": [
+        "Saved disabled/enabled/duplicate Launch button facts and dialog-only readiness terms without provisioning; no readiness inference.",
+        "Missing, unavailable, malformed, at-cap and oversized dialog/button/text inputs; independent traversal bounds and unchanged8192 fallback.",
+        "Private sentinels, no alias/mutation, getter avoidance, throwing descriptor traps and fixed safe failure output.",
+        "Actual exported receipt-summary routing for all five readiness modes, PASS and unrelated existing modes.",
+        "Actual packaged final pure composition from its unique source fragment with real exported projector, preserving original fields and failure-only addition; never import or execute CLI main."
+      ]
+    },
+    {
+      "id": "R22",
+      "name": "Native scope is exactly two nullable allowlisted codes",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "knownCodes": [
+          "ABORT_ERR",
+          "ECONNRESET",
+          "ECONNREFUSED",
+          "EPIPE",
+          "ETIMEDOUT",
+          "UND_ERR_ABORTED",
+          "UND_ERR_SOCKET",
+          "UND_ERR_HEADERS_TIMEOUT",
+          "UND_ERR_BODY_TIMEOUT"
+        ],
+        "unknownOrAbsent": null,
+        "rawNamesMessagesStacksExcluded": true
+      }
+    },
+    {
+      "id": "R23",
+      "name": "Native original rejection identity and errorClass preserved",
+      "result": "PASS_STATIC",
+      "evidence": "At the existing non-coordination run rejection, retain only positive own-data code and one own-data cause.code through guarded descriptor reads. Do not traverse prototypes, invoke getters/coercion, enumerate objects or recurse. Preserve original ManagementCommandError errorClass logic and rethrow the exact original error. Add the two nullable fields only for runState=threw to the existing failed-close payload; no new publication or channel lookup path."
+    },
+    {
+      "id": "R24",
+      "name": "Original close result remains distinct from earlier run error",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "observed": "The third embedded credential Host epoch records runState=threw, outcome=unobserved, errorClass=unknown and driver-close/unconfirmed before normal exit1. The original run rejection is available at the existing catch but its transport code/cause code are discarded. driver.close fulfilled with unconfirmed cleanup; no thrown-close exception is inferred.",
+        "limits": "Projection/reflection failure keeps the exact original rejection and close result. A missing/opaque/unrecognized field is null. No earlier read failure is asserted to cause the close result."
+      }
+    },
+    {
+      "id": "R25",
+      "name": "Legacy absent optional fields preserve old shape",
+      "result": "PASS_STATIC",
+      "evidence": "Extend the existing projectHostProbeCloseFailure and parent entry construction to carry the same bounded nullable code fields. Preserve legacy payload shape when the new fields are absent, and preserve the original close fields when optional error metadata is malformed. New fields never replace stage/reason/errorClass/outcome."
+    },
+    {
+      "id": "R26",
+      "name": "No new native observer or source sink selected",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "unchangedSinks": [
+          "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+          "packages/legacy-agent-host/tests/opencode-v2-credentials.native.ts"
+        ],
+        "producer": "At the existing non-coordination run rejection, retain only positive own-data code and one own-data cause.code through guarded descriptor reads. Do not traverse prototypes, invoke getters/coercion, enumerate objects or recurse. Preserve original ManagementCommandError errorClass logic and rethrow the exact original error. Add the two nullable fields only for runState=threw to the existing failed-close payload; no new publication or channel lookup path."
+      }
+    },
+    {
+      "id": "R27",
+      "name": "Native original trace,row,line,envelope budgets exact",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "maximumRows": 256,
+        "ordinaryRows": 253,
+        "retainedRowsConvention": 257,
+        "traceBytes": 65536,
+        "lineBytes": 512,
+        "reservedRecordBytes": 513,
+        "receiptEnvelopeBytes": 262144,
+        "diagnosticBackpressureMs": 2000
+      }
+    },
+    {
+      "id": "R28",
+      "name": "Selected code-field data examples fit existing byte guards",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "lineWithNewline": 355,
+        "lineWithoutNewline": 354,
+        "recordExtreme1": 498,
+        "recordLongerFiniteEpoch": 499,
+        "limit": 513,
+        "scope": "Data arithmetic, not source execution or universal hostile input acceptance."
+      }
+    },
+    {
+      "id": "R29",
+      "name": "Native tests use actual fragments and actual two-boundary observer path",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "appendOnly": true,
+        "wholeExistingPrefixBytes": 19696,
+        "originalCases": 9,
+        "newTopLevelCases": 3,
+        "cases": [
+          "Actual original run-catch/failed-close-publisher code fragments preserve rejection identity and close stage/reason for recognized, absent, arbitrary, getter-backed and throwing-proxy inputs; counterfactual old source loses newly selected codes.",
+          "Actual existing finite TEST Node --import passive observer plus exported parent capture carry only sanitized codes through both boundaries, including the existing reserved close slot after ordinary trace exhaustion.",
+          "Actual parent projection retains legacy rows, null/unknown and malformed optional fields without overriding close classification; checks exact maximum selected row/line sizes, original truncation rules and one retained close observation."
+        ],
+        "noPublicApiExport": true,
+        "noNewDependency": true,
+        "noNativeVendorExecution": true,
+        "noCopiedProducerProjection": true,
+        "actualSourceFragmentsMustBeUniquelyAnchored": true,
+        "finiteTestOnlyChild": true,
+        "runtime": "Actual passive observer is fixed by existing source to Node24.21.0 on its existing admitted platform/architecture tuples. Selected Stage1 static jobs use exactly Node24.21.0; any unsupported tuple must remain explicitly unexecuted/unqualified, never a PASS.",
+        "existingPattern": {
+          "path": "packages/legacy-agent-host/tests/native-host-close.test.ts",
+          "bytes": 36526,
+          "sha256": "42a39d5cfe0a1f0681f3978e2073c1f2ba57e4f47f81a5b9345ea6927a991cce",
+          "gitBlob": "8b045297766cc5a352be923e3d477426411f1f5b"
+        },
+        "existingPatternScope": "Read-only pattern evidence. This existing native-host-close test file is not selected for editing or added to a workflow. The new append uses finite TEST Node only and the actual retained catch/publisher and passive observer/capture.",
+        "feasibilityClosedByRoot": true,
+        "feasibilityBasis": "Complete native-receipt prefix and native-host-close pattern read, immutable Stage1 workflow whole-file inclusion, actual existing producer/observer/capture boundaries, and independent guard feasibility response. No new executable body has been authored."
+      }
+    },
+    {
+      "id": "R30",
+      "name": "Original90second waits, cleanup and authority remain unchanged",
+      "result": "PASS_STATIC",
+      "evidence": "No new DOM/Host/OS/network observation, request, input, probe, mutation, reload, retry, replay, deadline, cleanup decision, custody/owner relaxation, provider/engine selection, CI filter or workflow change."
+    },
+    {
+      "id": "R31",
+      "name": "Current CI at9d cannot qualify current1ca or futurediagnostics",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "pr": 1219,
+        "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "attempt": 1,
+        "activeRunIds": [
+          44042341284,
+          44042341273
+        ],
+        "terminalRunIds": [
+          44042341370,
+          44042341121,
+          44042341149,
+          44042341120,
+          44042341241
+        ],
+        "snapshotRefsAndMetadataFrozen": true,
+        "noRerunCancelDispatchReplay": true,
+        "source1caNotExecuted": true,
+        "latestRetained": {
+          "bytes": 431287,
+          "sha256": "68e49fb044d66f72d741a0247376a54a3c85b898437cd6057f8406a5f51327d8",
+          "gitBlob": "dc274635550160f7ea4cae9daa1f951539747e18"
+        }
+      }
+    },
+    {
+      "id": "R32",
+      "name": "Current snapshot refs/metadata and terminal run nonpolling preserved",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "frozenPrs": [
+          1206,
+          1207,
+          1208,
+          1211,
+          1212,
+          1213
+        ],
+        "terminal": [
+          44042341370,
+          44042341121,
+          44042341149,
+          44042341120,
+          44042341241
+        ]
+      }
+    },
+    {
+      "id": "R33",
+      "name": "No new source/runtime/venue authored or admitted",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "rootSoleAuthorApplierPublisherExecutor": true,
+        "childrenReadOnlyImmutableReview": true,
+        "sourcePostimagesAuthored": false,
+        "sourceTestsAuthored": false,
+        "sourceCompiled": false,
+        "sourceExecuted": false,
+        "localStandaloneInvoked": false,
+        "newCiVenueSelected": false,
+        "realClaudeOrCodexAllowed": false,
+        "pinnedOpenCodeLocalModelOnly": true,
+        "existingWholeFileRoutes": {
+          "gui": {
+            "workflow": ".github/workflows/host-emulated-acceptance.yml",
+            "line": 103,
+            "wholeFileIncluded": true,
+            "command": "existing eight-file Node command",
+            "newWorkflowEdit": false
+          },
+          "native": {
+            "workflow": ".github/workflows/opencode-v2-stage1-preflight.yml",
+            "line": 106,
+            "wholeFileIncluded": true,
+            "jobs": [
+              "Static V01 source test (ubuntu-24.04)",
+              "Static V01 source test (windows-2022)"
+            ],
+            "node": "24.21.0",
+            "after": "existing Host build and typecheck",
+            "draftSkipped": false,
+            "newWorkflowEdit": false
+          }
+        }
+      }
+    },
+    {
+      "id": "R34",
+      "name": "No prohibited real vendor action or qualification promotion",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "completeE2E": false,
+        "rootCauseResolved": false,
+        "fixRuntimeProven": false,
+        "archiveQualified": false,
+        "newWindows14Or8CasesExecuted": false,
+        "nativeDarwinP09Resolved": false,
+        "coldRendererResolved": false,
+        "standaloneRedGreen24_22_1Executed": false,
+        "readyMergeReleaseDefaultActivationStage2": false
+      }
+    },
+    {
+      "id": "R35",
+      "name": "Existing ordered reviews/publication/actual/sourceR2/venue sequence retained",
+      "result": "PASS_STATIC",
+      "evidence": [
+        "Close this exact R1 root/guard/semantic/binding review.",
+        "Publish docs only with immediate expected-parent force:false push and complete root plus independent actual readback.",
+        "Root authors the exact selected source/test postimages; then source R2 review, publication with immediate push, and complete root plus independent actual readback.",
+        "Select a separately reviewed genuine execution venue against its exact new source. No extra executable R2 for a pure structured existing-workflow CI venue. Existing current CI remains independent.",
+        "Diagnose remaining failures from actual evidence; no UNKNOWN/UNREACHED/SKIP/CANCELLED promotion to PASS."
+      ]
+    }
+  ],
+  "checkCount": 35,
+  "failedChecks": [],
+  "unresolvedBlockers": [],
+  "sourcePostimagesAuthored": false,
+  "runtimeAdmitted": false,
+  "testsExecuted": false,
+  "venueSelected": false,
+  "limits": {
+    "completeE2E": false,
+    "rootCauseResolved": false,
+    "fixRuntimeProven": false,
+    "archiveQualified": false,
+    "newWindows14Or8CasesExecuted": false,
+    "nativeDarwinP09Resolved": false,
+    "coldRendererResolved": false,
+    "standaloneRedGreen24_22_1Executed": false,
+    "readyMergeReleaseDefaultActivationStage2": false
+  },
+  "selfReadbackProtocol": "Complete immutable review-body fetch, literal equality and full identity recomputation."
+}

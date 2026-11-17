@@ -1,0 +1,4743 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_RETAINED_FAILURE_DIAGNOSTICS_SOURCE_R2_INDEPENDENT_BINDING_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "reviewer": "/root/red_publication_recovery",
+  "at": "2026-11-17 11:06:57 UTC",
+  "subject": {
+    "bytes": 48600,
+    "sha256": "ea41197152f40525912ca3bf8d41b84451f1c306bdb88a5ee051d83e8842891e",
+    "gitBlob": "c356b7f7c7dd7d9ab6e869ad9d3655c74ea8dbea"
+  },
+  "decision": "ACCEPT_EXACT_SIX_SOURCE_R2_FOR_EXISTING_PUBLICATION_AND_ACTUAL_READBACK_SEQUENCE",
+  "accepted": true,
+  "parent": "c88b4fe2632f2644bf734293db713fe8288b5139",
+  "parentRoot": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+  "parentDocs": "1aeddc4cacfc5288f3d6bb03c7bfcf52e24bf9bb",
+  "authorityJoins": {
+    "subject": {
+      "bytes": 48600,
+      "sha256": "ea41197152f40525912ca3bf8d41b84451f1c306bdb88a5ee051d83e8842891e",
+      "gitBlob": "c356b7f7c7dd7d9ab6e869ad9d3655c74ea8dbea"
+    },
+    "r1Subject": {
+      "bytes": 31060,
+      "sha256": "188bd061a0aa0ed5afe3f8af4919c5ac111ae15d3deb5c92c19645eccab997bc",
+      "gitBlob": "d226951f5f24dd1a5a7d4742e25edcb3ef043213"
+    },
+    "r1SelectionLiteralGui": true,
+    "r1SelectionLiteralNative": true,
+    "r1BeforeRows": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+        "passed": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "passed": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "passed": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+        "passed": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "passed": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "passed": true
+      }
+    ],
+    "actualGate": {
+      "bytes": 3366,
+      "sha256": "2ab0cc4d487580e777d7a967ab202e02f84705ab4ff1ca6ada91486a5745af7b",
+      "gitBlob": "7e3c941384be39de462ea32baecf5f2ecc868d4e"
+    },
+    "gateAccepted": true,
+    "gateSubjectMatches": true,
+    "gateCommit": "c88b4fe2632f2644bf734293db713fe8288b5139",
+    "currentParent": "c88b4fe2632f2644bf734293db713fe8288b5139",
+    "gateMatchesParent": true,
+    "rootActualMatches": true,
+    "independentActualMatches": true,
+    "gateClosedAt": "2026-11-17 10:42:30 UTC",
+    "authorshipStartedAt": "2026-11-17 10:43:11 UTC",
+    "chronology": true,
+    "actualChecks": 82,
+    "staticChecks": 126,
+    "noncircularPublicationParent": true
+  },
+  "scope": {
+    "sixExistingSourceFiles": 6,
+    "reviewKind": "Complete immutable source binding and preservation; not compilation or runtime qualification",
+    "newGate": false,
+    "rootSoleAuthorPublisherStagerExecutor": true,
+    "recursiveHistoricalAudit": false,
+    "existingAcceptedActualProofReused": {
+      "bytes": 626538,
+      "sha256": "264313dda69d9918a80d2e9edda76e9ce134ef3401b6e7db8645324c3fa69bd7",
+      "gitBlob": "4d9e68e8ec72b694892f5bda9ffcf3d42c120add"
+    },
+    "noAdditionalExecutionVenueSelected": true
+  },
+  "sourceChanges": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+      },
+      "after": {
+        "bytes": 28804,
+        "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4",
+        "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28"
+      },
+      "lines": 431,
+      "editKinds": [
+        "unique literal replacement with exact inverse",
+        "unique literal replacement with exact inverse",
+        "unique literal replacement with exact inverse"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+      },
+      "after": {
+        "bytes": 13466,
+        "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056",
+        "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c"
+      },
+      "lines": 184,
+      "editKinds": [
+        "unique literal replacement with exact inverse",
+        "unique literal replacement with exact inverse"
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05"
+      },
+      "after": {
+        "bytes": 23312,
+        "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+        "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+      },
+      "lines": 514,
+      "editKinds": [
+        "unique literal replacement with exact inverse",
+        "unique literal replacement with exact inverse",
+        "unique literal replacement with exact inverse"
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068"
+      },
+      "after": {
+        "bytes": 37953,
+        "sha256": "a553197e108b574e9ff1c0e082014d4224baffeba21cec65a1b16f0fa17edbb6",
+        "gitBlob": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa"
+      },
+      "lines": 578,
+      "editKinds": [
+        "unique literal replacement with exact inverse",
+        "unique literal replacement with exact inverse"
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f"
+      },
+      "after": {
+        "bytes": 77457,
+        "sha256": "af9de97ec8da68ef394c5ce5b08ca7bfbfd4b099178bd6ae3c9c8c20831cbc3b",
+        "gitBlob": "cd74eecf610858412022bbd2c69f62c910465bad"
+      },
+      "lines": 1352,
+      "editKinds": [
+        "literal append after entire unchanged original body"
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "mode": "100644",
+      "before": {
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478"
+      },
+      "after": {
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      },
+      "lines": 647,
+      "editKinds": [
+        "literal append after entire unchanged original body"
+      ]
+    }
+  ],
+  "sourceTreeJoins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "currentCommit": "c88b4fe2632f2644bf734293db713fe8288b5139",
+      "currentRoot": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+      "rootEntry": {
+        "path": "scripts",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/0fdc55ba22f48cd82c25117fd185aa23ce895d6e"
+      },
+      "subtree": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+      "leaf": {
+        "path": "legacy-agent-host/desktop-proof-evidence.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+        "size": 26258,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+      },
+      "passed": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "currentCommit": "c88b4fe2632f2644bf734293db713fe8288b5139",
+      "currentRoot": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+      "rootEntry": {
+        "path": "scripts",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/0fdc55ba22f48cd82c25117fd185aa23ce895d6e"
+      },
+      "subtree": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+      "leaf": {
+        "path": "legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+        "size": 13293,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+      },
+      "passed": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "currentCommit": "c88b4fe2632f2644bf734293db713fe8288b5139",
+      "currentRoot": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+      "rootEntry": {
+        "path": "packages",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "3934729cd387940917b79992f2579bf6269d157c",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/3934729cd387940917b79992f2579bf6269d157c"
+      },
+      "subtree": "3934729cd387940917b79992f2579bf6269d157c",
+      "leaf": {
+        "path": "legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "195dabe664b14a2fe5c231e137690db6126c0e05",
+        "size": 22177,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/195dabe664b14a2fe5c231e137690db6126c0e05"
+      },
+      "passed": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "currentCommit": "c88b4fe2632f2644bf734293db713fe8288b5139",
+      "currentRoot": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+      "rootEntry": {
+        "path": "packages",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "3934729cd387940917b79992f2579bf6269d157c",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/3934729cd387940917b79992f2579bf6269d157c"
+      },
+      "subtree": "3934729cd387940917b79992f2579bf6269d157c",
+      "leaf": {
+        "path": "legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "625c6ddd74357abbdf565bf386388274cebd4068",
+        "size": 37181,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/625c6ddd74357abbdf565bf386388274cebd4068"
+      },
+      "passed": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "currentCommit": "c88b4fe2632f2644bf734293db713fe8288b5139",
+      "currentRoot": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+      "rootEntry": {
+        "path": "scripts",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/0fdc55ba22f48cd82c25117fd185aa23ce895d6e"
+      },
+      "subtree": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+      "leaf": {
+        "path": "legacy-agent-host/desktop-backend-observations.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f",
+        "size": 66098,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6a147cbf241b98a8bc6cea0e2d7ac45962ed987f"
+      },
+      "passed": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "currentCommit": "c88b4fe2632f2644bf734293db713fe8288b5139",
+      "currentRoot": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+      "rootEntry": {
+        "path": "packages",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "3934729cd387940917b79992f2579bf6269d157c",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/3934729cd387940917b79992f2579bf6269d157c"
+      },
+      "subtree": "3934729cd387940917b79992f2579bf6269d157c",
+      "leaf": {
+        "path": "legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+        "size": 19696,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f274129ad8a77bed3094e48e31cc50f37ba4d478"
+      },
+      "passed": true
+    }
+  ],
+  "completeInverses": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+      },
+      "after": {
+        "bytes": 28804,
+        "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4",
+        "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28"
+      },
+      "lines": 431,
+      "fullBeforeAndAfterRead": true,
+      "forwardLiteral": true,
+      "inverseLiteral": true,
+      "inverseIdentity": {
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+      },
+      "method": "Every selected original replacement and every reverse replacement occurs exactly once; full literal result compares equal"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+      },
+      "after": {
+        "bytes": 13466,
+        "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056",
+        "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c"
+      },
+      "lines": 184,
+      "fullBeforeAndAfterRead": true,
+      "forwardLiteral": true,
+      "inverseLiteral": true,
+      "inverseIdentity": {
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+      },
+      "method": "Every selected original replacement and every reverse replacement occurs exactly once; full literal result compares equal"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05"
+      },
+      "after": {
+        "bytes": 23312,
+        "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+        "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+      },
+      "lines": 514,
+      "fullBeforeAndAfterRead": true,
+      "forwardLiteral": true,
+      "inverseLiteral": true,
+      "inverseIdentity": {
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05"
+      },
+      "method": "Every selected original replacement and every reverse replacement occurs exactly once; full literal result compares equal"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068"
+      },
+      "after": {
+        "bytes": 37953,
+        "sha256": "a553197e108b574e9ff1c0e082014d4224baffeba21cec65a1b16f0fa17edbb6",
+        "gitBlob": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa"
+      },
+      "lines": 578,
+      "fullBeforeAndAfterRead": true,
+      "forwardLiteral": true,
+      "inverseLiteral": true,
+      "inverseIdentity": {
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068"
+      },
+      "method": "Every selected original replacement and every reverse replacement occurs exactly once; full literal result compares equal"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f"
+      },
+      "after": {
+        "bytes": 77457,
+        "sha256": "af9de97ec8da68ef394c5ce5b08ca7bfbfd4b099178bd6ae3c9c8c20831cbc3b",
+        "gitBlob": "cd74eecf610858412022bbd2c69f62c910465bad"
+      },
+      "lines": 1352,
+      "fullBeforeAndAfterRead": true,
+      "forwardLiteral": true,
+      "inverseLiteral": true,
+      "inverseIdentity": {
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f"
+      },
+      "method": "Entire original prefix plus exact append; stripping complete suffix restores complete original body"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "mode": "100644",
+      "before": {
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478"
+      },
+      "after": {
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      },
+      "lines": 647,
+      "fullBeforeAndAfterRead": true,
+      "forwardLiteral": true,
+      "inverseLiteral": true,
+      "inverseIdentity": {
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478"
+      },
+      "method": "Entire original prefix plus exact append; stripping complete suffix restores complete original body"
+    }
+  ],
+  "completeBodies": {
+    "beforeBytes": 184703,
+    "afterBytes": 222551,
+    "sixBeforeAndSixAfter": true
+  },
+  "directPointerJoins": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "d226951f5f24dd1a5a7d4742e25edcb3ef043213",
+      "bytes": 31060,
+      "sha256": "188bd061a0aa0ed5afe3f8af4919c5ac111ae15d3deb5c92c19645eccab997bc",
+      "locations": [
+        "$.r1.subject"
+      ],
+      "actual": {
+        "bytes": 31060,
+        "sha256": "188bd061a0aa0ed5afe3f8af4919c5ac111ae15d3deb5c92c19645eccab997bc",
+        "gitBlob": "d226951f5f24dd1a5a7d4742e25edcb3ef043213"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "9f0dd1dc45e7929035b7b43839fb85d09418d575",
+      "bytes": 47507,
+      "sha256": "341b8aec958638ac542f02f42822b4b60e859303dd590f79585d8ccda2c93736",
+      "locations": [
+        "$.r1.reviews.0.pin"
+      ],
+      "actual": {
+        "bytes": 47507,
+        "sha256": "341b8aec958638ac542f02f42822b4b60e859303dd590f79585d8ccda2c93736",
+        "gitBlob": "9f0dd1dc45e7929035b7b43839fb85d09418d575"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "d7d959f1e87af31520fd83fc09202b099a3d5e68",
+      "bytes": 33634,
+      "sha256": "9713b542aa9a6dcfca99a196f3e56fe91d568f9c3b50cb320527ca1b0fecbaaf",
+      "locations": [
+        "$.r1.reviews.1.pin"
+      ],
+      "actual": {
+        "bytes": 33634,
+        "sha256": "9713b542aa9a6dcfca99a196f3e56fe91d568f9c3b50cb320527ca1b0fecbaaf",
+        "gitBlob": "d7d959f1e87af31520fd83fc09202b099a3d5e68"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "f5bc9112925cf2dbabbb5829491f40ae014763a5",
+      "bytes": 34292,
+      "sha256": "407344734ca2a82cbf10c5ad70586a89e8510d3cadc8dfd23bba61e41e8d68b3",
+      "locations": [
+        "$.r1.reviews.2.pin"
+      ],
+      "actual": {
+        "bytes": 34292,
+        "sha256": "407344734ca2a82cbf10c5ad70586a89e8510d3cadc8dfd23bba61e41e8d68b3",
+        "gitBlob": "f5bc9112925cf2dbabbb5829491f40ae014763a5"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "dac57dc0a957d6f2a8de42f8f9ca7c1c7ece87ec",
+      "bytes": 117948,
+      "sha256": "5120e730aabb5e0aed43d88808ec66061838e49b7a5b4e4ee076b977904e7dc0",
+      "locations": [
+        "$.r1.reviews.3.pin"
+      ],
+      "actual": {
+        "bytes": 117948,
+        "sha256": "5120e730aabb5e0aed43d88808ec66061838e49b7a5b4e4ee076b977904e7dc0",
+        "gitBlob": "dac57dc0a957d6f2a8de42f8f9ca7c1c7ece87ec"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "7e3c941384be39de462ea32baecf5f2ecc868d4e",
+      "bytes": 3366,
+      "sha256": "2ab0cc4d487580e777d7a967ab202e02f84705ab4ff1ca6ada91486a5745af7b",
+      "locations": [
+        "$.r1.actualGate"
+      ],
+      "actual": {
+        "bytes": 3366,
+        "sha256": "2ab0cc4d487580e777d7a967ab202e02f84705ab4ff1ca6ada91486a5745af7b",
+        "gitBlob": "7e3c941384be39de462ea32baecf5f2ecc868d4e"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "9fc44701c3aa4e03ee1459b1468455776ecddfb8",
+      "bytes": 438180,
+      "sha256": "f42c930100217775083c3c40465d92cebb52b8335ce695bc9f30cc2a1439da24",
+      "locations": [
+        "$.r1.rootActual"
+      ],
+      "actual": {
+        "bytes": 438180,
+        "sha256": "f42c930100217775083c3c40465d92cebb52b8335ce695bc9f30cc2a1439da24",
+        "gitBlob": "9fc44701c3aa4e03ee1459b1468455776ecddfb8"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "4d9e68e8ec72b694892f5bda9ffcf3d42c120add",
+      "bytes": 626538,
+      "sha256": "264313dda69d9918a80d2e9edda76e9ce134ef3401b6e7db8645324c3fa69bd7",
+      "locations": [
+        "$.r1.independentActual"
+      ],
+      "actual": {
+        "bytes": 626538,
+        "sha256": "264313dda69d9918a80d2e9edda76e9ce134ef3401b6e7db8645324c3fa69bd7",
+        "gitBlob": "4d9e68e8ec72b694892f5bda9ffcf3d42c120add"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+      "bytes": 26258,
+      "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+      "locations": [
+        "$.sourceChanges.0.before"
+      ],
+      "actual": {
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28",
+      "bytes": 28804,
+      "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4",
+      "locations": [
+        "$.sourceChanges.0.after"
+      ],
+      "actual": {
+        "bytes": 28804,
+        "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4",
+        "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+      "bytes": 13293,
+      "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+      "locations": [
+        "$.sourceChanges.1.before"
+      ],
+      "actual": {
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c",
+      "bytes": 13466,
+      "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056",
+      "locations": [
+        "$.sourceChanges.1.after"
+      ],
+      "actual": {
+        "bytes": 13466,
+        "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056",
+        "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05",
+      "bytes": 22177,
+      "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+      "locations": [
+        "$.sourceChanges.2.before"
+      ],
+      "actual": {
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab",
+      "bytes": 23312,
+      "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+      "locations": [
+        "$.sourceChanges.2.after"
+      ],
+      "actual": {
+        "bytes": 23312,
+        "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+        "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068",
+      "bytes": 37181,
+      "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+      "locations": [
+        "$.sourceChanges.3.before"
+      ],
+      "actual": {
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa",
+      "bytes": 37953,
+      "sha256": "a553197e108b574e9ff1c0e082014d4224baffeba21cec65a1b16f0fa17edbb6",
+      "locations": [
+        "$.sourceChanges.3.after"
+      ],
+      "actual": {
+        "bytes": 37953,
+        "sha256": "a553197e108b574e9ff1c0e082014d4224baffeba21cec65a1b16f0fa17edbb6",
+        "gitBlob": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f",
+      "bytes": 66098,
+      "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+      "locations": [
+        "$.sourceChanges.4.before"
+      ],
+      "actual": {
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "cd74eecf610858412022bbd2c69f62c910465bad",
+      "bytes": 77457,
+      "sha256": "af9de97ec8da68ef394c5ce5b08ca7bfbfd4b099178bd6ae3c9c8c20831cbc3b",
+      "locations": [
+        "$.sourceChanges.4.after"
+      ],
+      "actual": {
+        "bytes": 77457,
+        "sha256": "af9de97ec8da68ef394c5ce5b08ca7bfbfd4b099178bd6ae3c9c8c20831cbc3b",
+        "gitBlob": "cd74eecf610858412022bbd2c69f62c910465bad"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+      "bytes": 19696,
+      "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+      "locations": [
+        "$.sourceChanges.5.before"
+      ],
+      "actual": {
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b",
+      "bytes": 41559,
+      "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+      "locations": [
+        "$.sourceChanges.5.after"
+      ],
+      "actual": {
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "8b045297766cc5a352be923e3d477426411f1f5b",
+      "bytes": 36526,
+      "sha256": "42a39d5cfe0a1f0681f3978e2073c1f2ba57e4f47f81a5b9345ea6927a991cce",
+      "locations": [
+        "$.native.selection.tests.existingPattern"
+      ],
+      "actual": {
+        "bytes": 36526,
+        "sha256": "42a39d5cfe0a1f0681f3978e2073c1f2ba57e4f47f81a5b9345ea6927a991cce",
+        "gitBlob": "8b045297766cc5a352be923e3d477426411f1f5b"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72",
+      "bytes": 20830,
+      "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+      "locations": [
+        "$.native.selection.tests.wholePlatformImport.target",
+        "$.native.testAppend.wholePlatformImport.target",
+        "$.preservation.fourWindowsPostimages.1.after"
+      ],
+      "actual": {
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4",
+      "bytes": 12389,
+      "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+      "locations": [
+        "$.native.selection.tests.wholePlatformImport.helper",
+        "$.native.testAppend.wholePlatformImport.helper",
+        "$.preservation.fourWindowsPostimages.0.after"
+      ],
+      "actual": {
+        "bytes": 12389,
+        "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+        "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "47a1e9cb0efa58479721d8815bfb8dae3f943fb6",
+      "bytes": 16768,
+      "sha256": "db43609e9394925e3b27f606d8a49ed443e1bcdabeee866dd4fec4b56ed800fb",
+      "locations": [
+        "$.native.selection.tests.wholePlatformImport.fixture",
+        "$.native.testAppend.wholePlatformImport.fixture"
+      ],
+      "actual": {
+        "bytes": 16768,
+        "sha256": "db43609e9394925e3b27f606d8a49ed443e1bcdabeee866dd4fec4b56ed800fb",
+        "gitBlob": "47a1e9cb0efa58479721d8815bfb8dae3f943fb6"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "e9e601a6b1f5521b7412c5df67435aa275486699",
+      "bytes": 101494,
+      "sha256": "25772eeb869f29a27411edc156503efe54e710d0a7560c69bf2772624fb6c182",
+      "locations": [
+        "$.native.selection.tests.wholePlatformImport.actualRunnerEvidence.sourceLog",
+        "$.native.testAppend.wholePlatformImport.actualRunnerEvidence.sourceLog"
+      ],
+      "actual": {
+        "bytes": 101494,
+        "sha256": "25772eeb869f29a27411edc156503efe54e710d0a7560c69bf2772624fb6c182",
+        "gitBlob": "e9e601a6b1f5521b7412c5df67435aa275486699"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "nodejs/node",
+      "gitBlob": "02f9cc30ec5775f198ddbae58d80d7dfdc9b2110",
+      "bytes": 165722,
+      "sha256": "b2c98ae196d08f83752c9f3c6f595ade69abbd9fd2e6d7192d662c7206896e16",
+      "locations": [
+        "$.native.selection.tests.wholePlatformImport.primaryNodeDocumentation",
+        "$.native.testAppend.wholePlatformImport.primaryNodeDocumentation"
+      ],
+      "actual": {
+        "bytes": 165722,
+        "sha256": "b2c98ae196d08f83752c9f3c6f595ade69abbd9fd2e6d7192d662c7206896e16",
+        "gitBlob": "02f9cc30ec5775f198ddbae58d80d7dfdc9b2110"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "1409b65f9bdad2fd8bf15841e36d4460acce8204",
+      "bytes": 906,
+      "sha256": "c225fad7432f205e57fb1a086c1d84213f30ba900705e11e15c6a5ca0763b13e",
+      "locations": [
+        "$.native.testAppend.oldCounterfactual.runSource"
+      ],
+      "actual": {
+        "bytes": 906,
+        "sha256": "c225fad7432f205e57fb1a086c1d84213f30ba900705e11e15c6a5ca0763b13e",
+        "gitBlob": "1409b65f9bdad2fd8bf15841e36d4460acce8204"
+      },
+      "passed": true,
+      "method": "accepted complete source-derived literal, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "ded3bd876233b0fb238559d210d76c7edced8eed",
+      "bytes": 677,
+      "sha256": "339d052a0a4d205dd1f7c57130386635bf5d04d61c9cd542703f125650dfcc91",
+      "locations": [
+        "$.native.testAppend.oldCounterfactual.publisherSource"
+      ],
+      "actual": {
+        "bytes": 677,
+        "sha256": "339d052a0a4d205dd1f7c57130386635bf5d04d61c9cd542703f125650dfcc91",
+        "gitBlob": "ded3bd876233b0fb238559d210d76c7edced8eed"
+      },
+      "passed": true,
+      "method": "accepted complete source-derived literal, rehashed"
+    },
+    {
+      "repository": "nodejs/node",
+      "gitBlob": "91b3631883021274ab6c7e1eb947ebd776c7c97e",
+      "bytes": 77941,
+      "sha256": "94647ba08114b86f1b8845f00542ef697b715a16be8bd971ed0bb4504639f3e1",
+      "locations": [
+        "$.native.testAppend.nodeTypeStrippingPrimarySource"
+      ],
+      "actual": {
+        "bytes": 77941,
+        "sha256": "94647ba08114b86f1b8845f00542ef697b715a16be8bd971ed0bb4504639f3e1",
+        "gitBlob": "91b3631883021274ab6c7e1eb947ebd776c7c97e"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+      "bytes": 12335,
+      "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+      "locations": [
+        "$.preservation.fourWindowsPostimages.0.before"
+      ],
+      "actual": {
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+      "bytes": 16835,
+      "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+      "locations": [
+        "$.preservation.fourWindowsPostimages.1.before"
+      ],
+      "actual": {
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+      "bytes": 37692,
+      "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+      "locations": [
+        "$.preservation.fourWindowsPostimages.2.before"
+      ],
+      "actual": {
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3",
+      "bytes": 37970,
+      "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+      "locations": [
+        "$.preservation.fourWindowsPostimages.2.after"
+      ],
+      "actual": {
+        "bytes": 37970,
+        "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+        "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e",
+      "bytes": 41888,
+      "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+      "locations": [
+        "$.preservation.fourWindowsPostimages.3.before"
+      ],
+      "actual": {
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd",
+      "bytes": 50377,
+      "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+      "locations": [
+        "$.preservation.fourWindowsPostimages.3.after"
+      ],
+      "actual": {
+        "bytes": 50377,
+        "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+        "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b",
+      "bytes": 3481,
+      "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+      "locations": [
+        "$.preservation.frozenParityVector"
+      ],
+      "actual": {
+        "bytes": 3481,
+        "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+        "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "da40c605d2f0d3af0a6a5c666be763d88b69a079",
+      "bytes": 40988,
+      "sha256": "0810f565d4245279c7e912471b011d1548112d3aa49abf94febc2e9450e58c8c",
+      "locations": [
+        "$.unpublishedPreparationCorrection.initialNativeTestPostimage"
+      ],
+      "actual": {
+        "bytes": 40988,
+        "sha256": "0810f565d4245279c7e912471b011d1548112d3aa49abf94febc2e9450e58c8c",
+        "gitBlob": "da40c605d2f0d3af0a6a5c666be763d88b69a079"
+      },
+      "passed": true,
+      "method": "complete retained UTF-8 body, rehashed"
+    }
+  ],
+  "directPointerCount": 37,
+  "directPointerBytes": 2414598,
+  "directScope": "Every complete identity tuple directly present in the exact proposal, scoped to its explicit repository. Existing accepted full bodies are rehashed; no transitive historical graph audit. The two old counterfactual source IDs are exact derived literals, not retained Git blobs.",
+  "counterfactualDerivedJoins": [
+    {
+      "name": "originalRunWrapperSource",
+      "expected": {
+        "bytes": 906,
+        "sha256": "c225fad7432f205e57fb1a086c1d84213f30ba900705e11e15c6a5ca0763b13e",
+        "gitBlob": "1409b65f9bdad2fd8bf15841e36d4460acce8204"
+      },
+      "actual": {
+        "bytes": 906,
+        "sha256": "c225fad7432f205e57fb1a086c1d84213f30ba900705e11e15c6a5ca0763b13e",
+        "gitBlob": "1409b65f9bdad2fd8bf15841e36d4460acce8204"
+      },
+      "beforeSourceOccurrences": 1,
+      "literalAcceptedBody": true,
+      "passed": true,
+      "method": "JSON-decode the actual string literal; exact unique full substring in the complete original ModelProbe preimage; derived identity, no Git fetch/target evaluation"
+    },
+    {
+      "name": "originalFailedClosePublisher",
+      "expected": {
+        "bytes": 677,
+        "sha256": "339d052a0a4d205dd1f7c57130386635bf5d04d61c9cd542703f125650dfcc91",
+        "gitBlob": "ded3bd876233b0fb238559d210d76c7edced8eed"
+      },
+      "actual": {
+        "bytes": 677,
+        "sha256": "339d052a0a4d205dd1f7c57130386635bf5d04d61c9cd542703f125650dfcc91",
+        "gitBlob": "ded3bd876233b0fb238559d210d76c7edced8eed"
+      },
+      "beforeSourceOccurrences": 1,
+      "literalAcceptedBody": true,
+      "passed": true,
+      "method": "JSON-decode the actual string literal; exact unique full substring in the complete original ModelProbe preimage; derived identity, no Git fetch/target evaluation"
+    }
+  ],
+  "testPrefixes": {
+    "gui": {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "originalBytes": 66098,
+      "originalRegistrationExpressions": 34,
+      "newCases": [
+        {
+          "expressionLiteralPrefix": "retained dialog readiness distinguishes saved Launch states and duplicate matches without a readiness verdict",
+          "line": 1207
+        },
+        {
+          "expressionLiteralPrefix": "retained dialog projection bounds malformed samples independently and preserves the original final overflow fallback",
+          "line": 1234
+        },
+        {
+          "expressionLiteralPrefix": "retained dialog projection avoids getters, aliases, mutations and private values with fixed opaque failure output",
+          "line": 1275
+        },
+        {
+          "expressionLiteralPrefix": "actual receipt summary routes all five non-PASS readiness modes and preserves PASS and unrelated summaries",
+          "line": 1310
+        },
+        {
+          "expressionLiteralPrefix": "actual packaged final summary composes the same failure projection without executing its CLI main",
+          "line": 1328
+        }
+      ],
+      "newCount": 5,
+      "wholePrefixLiteral": true,
+      "expandedRuntimeCaseCount": null
+    },
+    "native": {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "originalBytes": 19696,
+      "originalRegistrations": 9,
+      "newCases": [
+        {
+          "title": "actual ModelProbe run rejection keeps original identity and close classification with bounded own error codes",
+          "line": 415
+        },
+        {
+          "title": "actual finite Node observer and parent retain producer error codes in the reserved close slot after trace exhaustion",
+          "line": 504
+        },
+        {
+          "title": "actual close projection preserves legacy rows and opaque optional fields within original reservation and byte limits",
+          "line": 564
+        }
+      ],
+      "newCount": 3,
+      "wholePrefixLiteral": true
+    },
+    "appendIdentities": {
+      "gui": {
+        "bytes": 11359,
+        "sha256": "5c3945f29b07d9716fb9565b12b410cc7a5a4965bab84bb569c880d0f7e794b2",
+        "gitBlob": "1a8de5154b09eb96dcf7c308e8b973325bccd8d9",
+        "derived": true
+      },
+      "native": {
+        "bytes": 21863,
+        "sha256": "70f43a0339c761976bcfc2e97461949031b5013a2aedd55d7348664e193253a8",
+        "gitBlob": "4da1831ac40fc13f997757719bb7a03fc5c820fe",
+        "derived": true
+      }
+    }
+  },
+  "gui": {
+    "actual": {
+      "projectionProperty": "retainedDialogs",
+      "sourceLabel": "retained-post-failure-partial-dialog-sample",
+      "arrayTraversal": {
+        "dialogs": 3,
+        "buttonsPerDialog": 24
+      },
+      "boundedCountSentinels": {
+        "dialogs": 4,
+        "buttons": 25
+      },
+      "nullForUnrecordedArrays": true,
+      "malformedLabelCounter": "unknownEntries",
+      "launchCounts": [
+        "matches",
+        "enabled",
+        "disabled",
+        "unknown"
+      ],
+      "atCapDistinctFromInputOverflow": true,
+      "completeDom": false,
+      "atomicWithFailedWait": false,
+      "actualProducerTruncationKnown": false,
+      "onlyExactOwnTextLaunchTeam": true,
+      "rawTextRetained": false,
+      "existingTextFactsReused": true,
+      "original8192FallbackUnchanged": true,
+      "exactThreeNewFailureRoutes": true,
+      "passAndUnrelatedSummariesUnchanged": true,
+      "packagedOriginalFlowPreserved": true
+    },
+    "sourceScope": "Saved rendererFailureSnapshot.dialogs only. Original fixed vocabulary, 8192-character fallback and own-data descriptor reads remain. Cap-sized input is not proven producer truncation; no saved match/phrase becomes an authentication, provider or readiness verdict.",
+    "routing": {
+      "existing": [
+        "emulated-import-ui",
+        "emulated-opencode-runtime-ui"
+      ],
+      "add": [
+        "emulated-claude-runtime-ui",
+        "emulated-claude-lifecycle-ui",
+        "emulated-collaboration-ui"
+      ],
+      "condition": "evidence.status !== PASS",
+      "unchangedUnrelated": [
+        "team-ui",
+        "emulated-extensions-ui"
+      ],
+      "passSummariesUnchanged": true
+    },
+    "packagedFlow": "Only the existing import and final non-PASS console summary changed. Receipt write, cleanup, source freeze, original exception rethrow and success assertion remain literal outside those two edits.",
+    "tests": "All five new cases use actual exports or a uniquely delimited actual packaged pure composition. No packaged CLI main is imported. All remain unexecuted.",
+    "coverageClarification": "The proposal's GUI coverage list uses 'sparse'. Explicit authored fixtures cover missing/null/malformed samples and capped-accessor inputs; no explicit sparse-array-hole case or runtime coverage is claimed."
+  },
+  "native": {
+    "actual": {
+      "newFields": [
+        "runErrorCode",
+        "runCauseCode"
+      ],
+      "exactPositiveCodes": [
+        "ABORT_ERR",
+        "ECONNRESET",
+        "ECONNREFUSED",
+        "EPIPE",
+        "ETIMEDOUT",
+        "UND_ERR_ABORTED",
+        "UND_ERR_SOCKET",
+        "UND_ERR_HEADERS_TIMEOUT",
+        "UND_ERR_BODY_TIMEOUT"
+      ],
+      "unknownAbsentOpaque": null,
+      "producerReads": "Original own code plus one own cause.code in the existing non-coordination run rejection; no prototype/coercion/enumeration or recursive cause graph.",
+      "sameOriginalRejectedObject": true,
+      "originalManagementErrorClasses": true,
+      "originalFirstCloseStageReasonOutcome": true,
+      "failedClosePublicationOnly": true,
+      "newFieldsOnlyWhenRunStateThrew": true,
+      "passiveMandatoryLegacyFieldsValidatedFirst": true,
+      "optionalReflectionErrorsCaughtPerField": true,
+      "legacyAbsentFieldsRemainAbsent": true,
+      "childAndParentShareActualProjection": true,
+      "ordinaryAndReservedBudgetsUnchanged": true
+    },
+    "producer": "Two nullable positive codes added only to the original non-coordination threw/failed-close observation. One own-data code and one own-data cause.code; no recursive cause graph, coercion, object enumeration, raw name/message/stack or new channel/publication.",
+    "passive": "Original mandatory close validation precedes optional per-field descriptor reads. Missing legacy optional properties stay absent; malformed optional properties become null without discarding a valid close row or overriding its original classification.",
+    "originalBudgets": {
+      "maximumRows": 256,
+      "ordinaryRows": 253,
+      "retainedRowsConvention": 257,
+      "traceBytes": 65536,
+      "lineBytes": 512,
+      "reservedRecordBytes": 513,
+      "receiptEnvelopeBytes": 262144,
+      "diagnosticBackpressureMs": 2000
+    },
+    "tests": {
+      "actualCompiledFragments": true,
+      "compiledFragmentMatchNotYetExecuted": true,
+      "actualPassiveObserverAndParent": true,
+      "actualSharedProjectorExtracted": true,
+      "finiteTestNode": "process.execPath",
+      "noVendorCli": true
+    },
+    "finitePeer": {
+      "runtime": "exact v24.21.0 plus existing admitted platform/arch tuples asserted before fixture allocation",
+      "executable": "process.execPath",
+      "arguments": [
+        "--import",
+        "actual passive-diagnostics.ts URL",
+        "new finite TEST module"
+      ],
+      "networkOrRealProviderCalls": 0,
+      "syntheticDiagnosticsOnly": true,
+      "originalRequestEvents": 300,
+      "actualProducerClosePublication": true,
+      "parentCapture": "actual exported createPassiveNativeDiagnosticCapture",
+      "timeoutMs": 10000,
+      "maxBufferBytes": 262144,
+      "ownedTemporaryRootRemovedInFinally": true,
+      "unsupportedTupleFailsRatherThanFalsePass": true
+    },
+    "testHarnessLimits": "Inject only a finite rejecting/resolving run stub and fulfilled-false cleanup work around the actual fragments. No ModelProbe constructor, provider, HTTP, server, native-host entry or real cleanup call.",
+    "nodeDocumentation": {
+      "module": {
+        "repository": "nodejs/node",
+        "ref": "v24.21.0",
+        "path": "doc/api/module.md",
+        "bytes": 77941,
+        "sha256": "94647ba08114b86f1b8845f00542ef697b715a16be8bd971ed0bb4504639f3e1",
+        "gitBlob": "91b3631883021274ab6c7e1eb947ebd776c7c97e",
+        "url": "https://github.com/nodejs/node/blob/v24.21.0/doc/api/module.md",
+        "fullBodyRead": true,
+        "scope": "strip mode removes type annotations; output is version-dependent, so no cross-version output hash or compatibility claim."
+      },
+      "test": {
+        "repository": "nodejs/node",
+        "path": "doc/api/test.md",
+        "ref": "v24.21.0",
+        "url": "https://github.com/nodejs/node/blob/v24.21.0/doc/api/test.md",
+        "bytes": 165722,
+        "sha256": "b2c98ae196d08f83752c9f3c6f595ade69abbd9fd2e6d7192d662c7206896e16",
+        "gitBlob": "02f9cc30ec5775f198ddbae58d80d7dfdc9b2110",
+        "fullBodyRead": true,
+        "scope": "Versioned documentation on default process isolation, default nonconcurrent top-level test registration and imported test entry identity; not a runtime execution claim."
+      },
+      "bothFullHashJoined": true,
+      "stripDefaultDocumented": true,
+      "outputVersionDependent": true,
+      "targetCompilationPerformed": false
+    }
+  },
+  "selectedDataBounds": {
+    "method": "Pure JSON data-shape serialization based on the read source, without importing/evaluating/compiling target code",
+    "combinations": 100,
+    "maxLineBytes": 355,
+    "maxRecordBytes": 499,
+    "allWithinOriginalGuards": true,
+    "samples": [
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 327,
+        "recordBytes": 471
+      },
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 328,
+        "recordBytes": 472
+      },
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 330,
+        "recordBytes": 474
+      },
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": "EPIPE",
+        "lineBytes": 323,
+        "recordBytes": 467
+      },
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 327,
+        "recordBytes": 471
+      },
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 333,
+        "recordBytes": 477
+      },
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 332,
+        "recordBytes": 476
+      },
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 341,
+        "recordBytes": 485
+      },
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 338,
+        "recordBytes": 482
+      },
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": null,
+        "lineBytes": 320,
+        "recordBytes": 464
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 328,
+        "recordBytes": 472
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 329,
+        "recordBytes": 473
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 331,
+        "recordBytes": 475
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": "EPIPE",
+        "lineBytes": 324,
+        "recordBytes": 468
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 328,
+        "recordBytes": 472
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 334,
+        "recordBytes": 478
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 333,
+        "recordBytes": 477
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 342,
+        "recordBytes": 486
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 339,
+        "recordBytes": 483
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": null,
+        "lineBytes": 321,
+        "recordBytes": 465
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 330,
+        "recordBytes": 474
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 331,
+        "recordBytes": 475
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 333,
+        "recordBytes": 477
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": "EPIPE",
+        "lineBytes": 326,
+        "recordBytes": 470
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 330,
+        "recordBytes": 474
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 336,
+        "recordBytes": 480
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 335,
+        "recordBytes": 479
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 344,
+        "recordBytes": 488
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 341,
+        "recordBytes": 485
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": null,
+        "lineBytes": 323,
+        "recordBytes": 467
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 323,
+        "recordBytes": 467
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 324,
+        "recordBytes": 468
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 326,
+        "recordBytes": 470
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": "EPIPE",
+        "lineBytes": 319,
+        "recordBytes": 463
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 323,
+        "recordBytes": 467
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 329,
+        "recordBytes": 473
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 328,
+        "recordBytes": 472
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 337,
+        "recordBytes": 481
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 334,
+        "recordBytes": 478
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": null,
+        "lineBytes": 316,
+        "recordBytes": 460
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 327,
+        "recordBytes": 471
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 328,
+        "recordBytes": 472
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 330,
+        "recordBytes": 474
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": "EPIPE",
+        "lineBytes": 323,
+        "recordBytes": 467
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 327,
+        "recordBytes": 471
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 333,
+        "recordBytes": 477
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 332,
+        "recordBytes": 476
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 341,
+        "recordBytes": 485
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 338,
+        "recordBytes": 482
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": null,
+        "lineBytes": 320,
+        "recordBytes": 464
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 333,
+        "recordBytes": 477
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 334,
+        "recordBytes": 478
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 336,
+        "recordBytes": 480
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": "EPIPE",
+        "lineBytes": 329,
+        "recordBytes": 473
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 333,
+        "recordBytes": 477
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 339,
+        "recordBytes": 483
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 338,
+        "recordBytes": 482
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 347,
+        "recordBytes": 491
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 344,
+        "recordBytes": 488
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": null,
+        "lineBytes": 326,
+        "recordBytes": 470
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 332,
+        "recordBytes": 476
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 333,
+        "recordBytes": 477
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 335,
+        "recordBytes": 479
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": "EPIPE",
+        "lineBytes": 328,
+        "recordBytes": 472
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 332,
+        "recordBytes": 476
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 338,
+        "recordBytes": 482
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 337,
+        "recordBytes": 481
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 346,
+        "recordBytes": 490
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 343,
+        "recordBytes": 487
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": null,
+        "lineBytes": 325,
+        "recordBytes": 469
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 341,
+        "recordBytes": 485
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 342,
+        "recordBytes": 486
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 344,
+        "recordBytes": 488
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "EPIPE",
+        "lineBytes": 337,
+        "recordBytes": 481
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 341,
+        "recordBytes": 485
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 347,
+        "recordBytes": 491
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 346,
+        "recordBytes": 490
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 355,
+        "recordBytes": 499
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 352,
+        "recordBytes": 496
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": null,
+        "lineBytes": 334,
+        "recordBytes": 478
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 338,
+        "recordBytes": 482
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 339,
+        "recordBytes": 483
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 341,
+        "recordBytes": 485
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": "EPIPE",
+        "lineBytes": 334,
+        "recordBytes": 478
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 338,
+        "recordBytes": 482
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 344,
+        "recordBytes": 488
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 343,
+        "recordBytes": 487
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 352,
+        "recordBytes": 496
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 349,
+        "recordBytes": 493
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": null,
+        "lineBytes": 331,
+        "recordBytes": 475
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 320,
+        "recordBytes": 464
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 321,
+        "recordBytes": 465
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 323,
+        "recordBytes": 467
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": "EPIPE",
+        "lineBytes": 316,
+        "recordBytes": 460
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 320,
+        "recordBytes": 464
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 326,
+        "recordBytes": 470
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 325,
+        "recordBytes": 469
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 334,
+        "recordBytes": 478
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 331,
+        "recordBytes": 475
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": null,
+        "lineBytes": 313,
+        "recordBytes": 457
+      }
+    ],
+    "rootExactRowsMatch": true,
+    "arbitraryRecordAdmissionNotClaimed": true
+  },
+  "wholePlatformImport": {
+    "target": {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "mode": "100644",
+      "bytes": 20830,
+      "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+      "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+    },
+    "helper": {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "mode": "100644",
+      "bytes": 12389,
+      "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+      "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+    },
+    "fixture": {
+      "path": "scripts/e2e/opencode-diagnostics/fixture.cjs",
+      "bytes": 16768,
+      "sha256": "db43609e9394925e3b27f606d8a49ed443e1bcdabeee866dd4fec4b56ed800fb",
+      "gitBlob": "47a1e9cb0efa58479721d8815bfb8dae3f943fb6"
+    },
+    "method": "One unconditional top-level awaited whole-file import at the end of the existing native-receipt test entry after its three new local diagnostic test registrations.",
+    "relativeSpecifier": "../../../scripts/e2e/opencode-diagnostics/platform.test.mjs",
+    "targetPostimageUnchanged": true,
+    "helperPostimageUnchanged": true,
+    "fixtureUnchanged": true,
+    "importSelection": "Entire exact file; no extraction, copied cases, name filter, new conditional skip or shortened census.",
+    "registration": {
+      "existingNativeCases": 9,
+      "newLocalDiagnosticCases": 3,
+      "wholeUnchangedPlatformCases": 14,
+      "prospectiveTotal": 26,
+      "expectedEligiblePlatformCases": {
+        "windows": 14,
+        "linux": 13
+      },
+      "existingLinuxSkip": 1,
+      "skipTitle": "Windows cleanup evidence retains current PID through independent read-only queries",
+      "skipIsPass": false,
+      "actualPassCount": null,
+      "awaitMeans": "Module evaluation and registration, not completion of the preceding12 callbacks.",
+      "fileIsolation": "Same native-receipt entry process; other seven original Stage1 command entries retain existing process isolation."
+    },
+    "originalEffects": [
+      "Allocate and close an exclusive ephemeral loopback port; query listener ownership through original lsof or PowerShell and original IPv4/IPv6 bind checks.",
+      "Create/remove existing temporary TEST fixture trees; execute only the copied fixture.cjs using process.execPath, plus the existing Unix shim invoking that same Node fixture.",
+      "Observe and terminate only the original finite timeout Node fixture through its existing owned child handle; no real Claude/Codex/OpenCode executable.",
+      "On Windows, retain the original self-PID cleanup evidence queries. On non-Windows, retain the original explicit skip."
+    ],
+    "unchangedBounds": {
+      "portAvailabilityMs": 15000,
+      "portPollMs": 250,
+      "powershellPerCallMs": 30000,
+      "timeoutFixtureReadyMs": 5000,
+      "timeoutFixtureOwnTimerMs": 60000
+    },
+    "prerequisites": {
+      "linux": "Existing lsof, Node, loopback and original filesystem availability.",
+      "windows": "Existing PowerShell/CIM/NetTCPConnection commands, Node, loopback and original filesystem availability.",
+      "rule": "Missing prerequisites, refusal, timeout or cleanup failure remain failure/unqualified. No install, retry, fallback, runner substitution, budget or workflow change selected."
+    },
+    "actualRunnerEvidence": {
+      "lastRetainedLinuxImage": "ubuntu-24.04 / 20261111.127.1",
+      "manifestUrl": "https://github.com/actions/runner-images/blob/ubuntu24/20261111.127/images/ubuntu/Ubuntu2404-Readme.md",
+      "manifestRead": "The exact recorded tag returned404 no-commit through the public contents endpoint; actual lsof availability is not claimed from an unread manifest.",
+      "sourceLog": {
+        "bytes": 101494,
+        "sha256": "25772eeb869f29a27411edc156503efe54e710d0a7560c69bf2772624fb6c182",
+        "gitBlob": "e9e601a6b1f5521b7412c5df67435aa275486699"
+      }
+    },
+    "primaryNodeDocumentation": {
+      "repository": "nodejs/node",
+      "path": "doc/api/test.md",
+      "ref": "v24.21.0",
+      "url": "https://github.com/nodejs/node/blob/v24.21.0/doc/api/test.md",
+      "bytes": 165722,
+      "sha256": "b2c98ae196d08f83752c9f3c6f595ade69abbd9fd2e6d7192d662c7206896e16",
+      "gitBlob": "02f9cc30ec5775f198ddbae58d80d7dfdc9b2110",
+      "fullBodyRead": true,
+      "scope": "Versioned documentation on default process isolation, default nonconcurrent top-level test registration and imported test entry identity; not a runtime execution claim."
+    },
+    "authored": true,
+    "importAtEnd": true,
+    "localNewDiagnosticDeclarations": 3,
+    "unconditionalAwaitedImportOccurrences": 1,
+    "newFilterOrConditionalSkip": false,
+    "exactActualLine": "await import('../../../scripts/e2e/opencode-diagnostics/platform.test.mjs');",
+    "occurrences": 1,
+    "atEof": true,
+    "complete14Inventory": [
+      {
+        "line": 25,
+        "title": "OS process and listener output parsing fails closed",
+        "skip": false
+      },
+      {
+        "line": 40,
+        "title": "one fresh Windows interpreter retains ordered original process and listener observations",
+        "skip": false
+      },
+      {
+        "line": 70,
+        "title": "combined Windows observations reject malformed envelopes and preserve executor failure",
+        "skip": false
+      },
+      {
+        "line": 95,
+        "title": "ownership rejects stale launchers, reused child PIDs and unrelated listeners",
+        "skip": false
+      },
+      {
+        "line": 119,
+        "title": "native shims quote absolute paths with spaces and reject expansion syntax",
+        "skip": false
+      },
+      {
+        "line": 134,
+        "title": "isolated CDP port stays bound to the selected dev launcher",
+        "skip": false
+      },
+      {
+        "line": 144,
+        "title": "environment drops inherited provider/config and runtime overrides",
+        "skip": false
+      },
+      {
+        "line": 174,
+        "title": "real fixture permits diagnostic queries only, and Unix shim handles spaces",
+        "skip": false
+      },
+      {
+        "line": 204,
+        "title": "timeout fixture stays live until its owning test terminates it",
+        "skip": false
+      },
+      {
+        "line": 236,
+        "title": "Windows cleanup evidence retains current PID through independent read-only queries",
+        "skip": true
+      },
+      {
+        "line": 243,
+        "title": "Windows phase observations use the original phase clocks and cannot bypass admission",
+        "skip": false
+      },
+      {
+        "line": 301,
+        "title": "Windows census observations preserve original results, refusals and bounded diagnostics",
+        "skip": false
+      },
+      {
+        "line": 333,
+        "title": "selected Windows port query retains complete fresh process and owner observations",
+        "skip": false
+      },
+      {
+        "line": 369,
+        "title": "Windows listener executor failures never admit partial output or fall back",
+        "skip": false
+      }
+    ],
+    "observedRuntimePasses": null,
+    "reviewerDidNotExecuteImport": true
+  },
+  "preservation": {
+    "full17Joins": [
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "expected": {
+          "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "mode": "100644",
+          "bytes": 12389,
+          "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+          "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+        },
+        "actual": {
+          "bytes": 12389,
+          "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+          "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+        },
+        "rootTree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "rootEntry": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "subtree": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "leaf": "c58df0899e23711e4367c0c1f9bf46570f794fb4",
+        "mode": "100644",
+        "fullBodyRead": true,
+        "passed": true
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "expected": {
+          "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+          "mode": "100644",
+          "bytes": 20830,
+          "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+          "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+        },
+        "actual": {
+          "bytes": 20830,
+          "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+          "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+        },
+        "rootTree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "rootEntry": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "subtree": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "leaf": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72",
+        "mode": "100644",
+        "fullBodyRead": true,
+        "passed": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "expected": {
+          "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+          "mode": "100644",
+          "bytes": 37970,
+          "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+          "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3"
+        },
+        "actual": {
+          "bytes": 37970,
+          "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+          "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3"
+        },
+        "rootTree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "rootEntry": "b0ffcbc4be600e5edfbc0fbacf312e5b476af6aa",
+        "subtree": "b0ffcbc4be600e5edfbc0fbacf312e5b476af6aa",
+        "leaf": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3",
+        "mode": "100644",
+        "fullBodyRead": true,
+        "passed": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+        "expected": {
+          "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+          "mode": "100644",
+          "bytes": 50377,
+          "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+          "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+        },
+        "actual": {
+          "bytes": 50377,
+          "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+          "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+        },
+        "rootTree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "rootEntry": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "subtree": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "leaf": "b4bbd33777a065e21eed91d6997e36c1570003cd",
+        "mode": "100644",
+        "fullBodyRead": true,
+        "passed": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "expected": {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+          "mode": "100644",
+          "bytes": 69370,
+          "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+          "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+        },
+        "actual": {
+          "bytes": 69370,
+          "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+          "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+        },
+        "rootTree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "rootEntry": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "subtree": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "leaf": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f",
+        "mode": "100644",
+        "fullBodyRead": true,
+        "passed": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "expected": {
+          "bytes": 24759,
+          "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b"
+        },
+        "actual": {
+          "bytes": 24759,
+          "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+          "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+        },
+        "rootTree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "rootEntry": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "subtree": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "leaf": "cf93da72a198dac636658e512093eef7828b5927",
+        "mode": "100644",
+        "fullBodyRead": true,
+        "passed": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "expected": {
+          "bytes": 45795,
+          "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+          "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b"
+        },
+        "actual": {
+          "bytes": 45795,
+          "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+          "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+        },
+        "rootTree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "rootEntry": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "subtree": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "leaf": "5026f0ec6165bb092717ddc989043848a25081dc",
+        "mode": "100644",
+        "fullBodyRead": true,
+        "passed": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "expected": {
+          "bytes": 36260,
+          "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38"
+        },
+        "actual": {
+          "bytes": 36260,
+          "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+          "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+        },
+        "rootTree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "rootEntry": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "subtree": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "leaf": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+        "mode": "100644",
+        "fullBodyRead": true,
+        "passed": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "expected": {
+          "bytes": 8457,
+          "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b"
+        },
+        "actual": {
+          "bytes": 8457,
+          "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+          "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+        },
+        "rootTree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "rootEntry": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "subtree": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "leaf": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+        "mode": "100644",
+        "fullBodyRead": true,
+        "passed": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "expected": {
+          "bytes": 33036,
+          "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+          "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9"
+        },
+        "actual": {
+          "bytes": 33036,
+          "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+          "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+        },
+        "rootTree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "rootEntry": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "subtree": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "leaf": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+        "mode": "100644",
+        "fullBodyRead": true,
+        "passed": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "expected": {
+          "bytes": 165022,
+          "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581"
+        },
+        "actual": {
+          "bytes": 165022,
+          "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+          "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+        },
+        "rootTree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "rootEntry": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "subtree": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "leaf": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+        "mode": "100644",
+        "fullBodyRead": true,
+        "passed": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "expected": {
+          "bytes": 7883,
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda"
+        },
+        "actual": {
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        },
+        "rootTree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "rootEntry": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "subtree": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "leaf": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+        "mode": "100644",
+        "fullBodyRead": true,
+        "passed": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "expected": {
+          "bytes": 29017,
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b"
+        },
+        "actual": {
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        "rootTree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "rootEntry": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "subtree": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "leaf": "5286c036a63a14e98925711a224df202c9a7caa7",
+        "mode": "100644",
+        "fullBodyRead": true,
+        "passed": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "expected": {
+          "bytes": 74340,
+          "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+          "mode": "100644",
+          "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+          "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c"
+        },
+        "actual": {
+          "bytes": 74340,
+          "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+          "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+        },
+        "rootTree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "rootEntry": "9ed817aaf1b2959381ea7d9262ed04f538247750",
+        "subtree": "9ed817aaf1b2959381ea7d9262ed04f538247750",
+        "leaf": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+        "mode": "100644",
+        "fullBodyRead": true,
+        "passed": true
+      },
+      {
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "expected": {
+          "bytes": 32077,
+          "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+          "mode": "100644",
+          "path": "src/renderer/utils/teamModelAvailability.ts",
+          "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43"
+        },
+        "actual": {
+          "bytes": 32077,
+          "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+          "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+        },
+        "rootTree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "rootEntry": "9ed817aaf1b2959381ea7d9262ed04f538247750",
+        "subtree": "9ed817aaf1b2959381ea7d9262ed04f538247750",
+        "leaf": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+        "mode": "100644",
+        "fullBodyRead": true,
+        "passed": true
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "expected": {
+          "bytes": 187890,
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+          "mode": "100644",
+          "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9"
+        },
+        "actual": {
+          "bytes": 187890,
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+        },
+        "rootTree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "rootEntry": "69d3a76e739605a29aa7a0d04981d24f3918d856",
+        "subtree": "69d3a76e739605a29aa7a0d04981d24f3918d856",
+        "leaf": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+        "mode": "100644",
+        "fullBodyRead": true,
+        "passed": true
+      },
+      {
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "expected": {
+          "bytes": 56775,
+          "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+          "mode": "100644",
+          "path": "test/renderer/utils/teamModelAvailability.test.ts",
+          "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8"
+        },
+        "actual": {
+          "bytes": 56775,
+          "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+          "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+        },
+        "rootTree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "rootEntry": "69d3a76e739605a29aa7a0d04981d24f3918d856",
+        "subtree": "69d3a76e739605a29aa7a0d04981d24f3918d856",
+        "leaf": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+        "mode": "100644",
+        "fullBodyRead": true,
+        "passed": true
+      }
+    ],
+    "full17Bytes": 892247,
+    "frozen13Vector": {
+      "bytes": 3481,
+      "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+      "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+    },
+    "full13Bytes": 770681,
+    "full42WorkflowJoins": [
+      {
+        "path": ".github/workflows/announcements-content.yml",
+        "expected": {
+          "bytes": 2301,
+          "sha256": "4380473bf81c1e8762e11d1803bb023e60308c5525c6c409531d9749ec7661d8",
+          "gitBlob": "d7d1c6fde200971f29defe95c2c0436a0318b499"
+        },
+        "actual": {
+          "bytes": 2301,
+          "sha256": "4380473bf81c1e8762e11d1803bb023e60308c5525c6c409531d9749ec7661d8",
+          "gitBlob": "d7d1c6fde200971f29defe95c2c0436a0318b499"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/anthropic-compatible-status-e2e.yml",
+        "expected": {
+          "bytes": 8602,
+          "sha256": "037e94e79d2b13136a2209f2a1dac2c65ee5bee117c8dcfcf11e71c106b2e8a0",
+          "gitBlob": "6ec8f76ef4036fde31daab73db1205cf9f7dfdd2"
+        },
+        "actual": {
+          "bytes": 8602,
+          "sha256": "037e94e79d2b13136a2209f2a1dac2c65ee5bee117c8dcfcf11e71c106b2e8a0",
+          "gitBlob": "6ec8f76ef4036fde31daab73db1205cf9f7dfdd2"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/anthropic-env-portability.yml",
+        "expected": {
+          "bytes": 4713,
+          "sha256": "fee75fc9544498e419c45ddb3acdf6df20a387dc29c04009e8d450bea2fb5359",
+          "gitBlob": "d3fa7512b79b79dc64c1580dfdc42d63361ae68a"
+        },
+        "actual": {
+          "bytes": 4713,
+          "sha256": "fee75fc9544498e419c45ddb3acdf6df20a387dc29c04009e8d450bea2fb5359",
+          "gitBlob": "d3fa7512b79b79dc64c1580dfdc42d63361ae68a"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/build-linux-windows-draft.yml",
+        "expected": {
+          "bytes": 17033,
+          "sha256": "4968e05cf86cb6252494c6a0778dd2bb43a6439b995f0fd769504ac0633ce501",
+          "gitBlob": "919dc9d816a5f7441783af22a286da9b1e4f6f8a"
+        },
+        "actual": {
+          "bytes": 17033,
+          "sha256": "4968e05cf86cb6252494c6a0778dd2bb43a6439b995f0fd769504ac0633ce501",
+          "gitBlob": "919dc9d816a5f7441783af22a286da9b1e4f6f8a"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "expected": {
+          "bytes": 175238,
+          "sha256": "8cac831e00dd87f656a971c6496b8278c7cfddc261f1eb48573a7e2acf83c2d1",
+          "gitBlob": "a93ff6ba1e5656523668694bca24910a468aebc7"
+        },
+        "actual": {
+          "bytes": 175238,
+          "sha256": "8cac831e00dd87f656a971c6496b8278c7cfddc261f1eb48573a7e2acf83c2d1",
+          "gitBlob": "a93ff6ba1e5656523668694bca24910a468aebc7"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/codeql.yml",
+        "expected": {
+          "bytes": 2479,
+          "sha256": "d35b6d96c6d3582415b4feaf3144575f5d3a520c6e058c673ec15f95ddae5a7b",
+          "gitBlob": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1"
+        },
+        "actual": {
+          "bytes": 2479,
+          "sha256": "d35b6d96c6d3582415b4feaf3144575f5d3a520c6e058c673ec15f95ddae5a7b",
+          "gitBlob": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/codex-runtime-smoke.yml",
+        "expected": {
+          "bytes": 3229,
+          "sha256": "2d9b2fb19cb3d1e2797611254104bf5ab433b588427350747f0c0c6196f4490d",
+          "gitBlob": "cef44447c47e39a7da678f37e2518952e218da08"
+        },
+        "actual": {
+          "bytes": 3229,
+          "sha256": "2d9b2fb19cb3d1e2797611254104bf5ab433b588427350747f0c0c6196f4490d",
+          "gitBlob": "cef44447c47e39a7da678f37e2518952e218da08"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/dependency-review.yml",
+        "expected": {
+          "bytes": 1527,
+          "sha256": "52570674031aecbba23cf8725e5aa09b58495421c8c9b21cef0e14a791ce27d0",
+          "gitBlob": "4a5f2ab17b3daf4ffdf6992ee85d159adf2c46c6"
+        },
+        "actual": {
+          "bytes": 1527,
+          "sha256": "52570674031aecbba23cf8725e5aa09b58495421c8c9b21cef0e14a791ce27d0",
+          "gitBlob": "4a5f2ab17b3daf4ffdf6992ee85d159adf2c46c6"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+        "expected": {
+          "bytes": 3218,
+          "sha256": "c85dd3daa63c0d31b8c87e5fe4b935456f6c47dbf9a0be1f06b6b8fbfaf84d25",
+          "gitBlob": "490c2048dfbd9f275f784d7a0f1a6eeba0a9f361"
+        },
+        "actual": {
+          "bytes": 3218,
+          "sha256": "c85dd3daa63c0d31b8c87e5fe4b935456f6c47dbf9a0be1f06b6b8fbfaf84d25",
+          "gitBlob": "490c2048dfbd9f275f784d7a0f1a6eeba0a9f361"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "expected": {
+          "bytes": 19532,
+          "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f",
+          "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69"
+        },
+        "actual": {
+          "bytes": 19532,
+          "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f",
+          "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "expected": {
+          "bytes": 96872,
+          "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+          "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+        },
+        "actual": {
+          "bytes": 96872,
+          "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+          "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "expected": {
+          "bytes": 34313,
+          "sha256": "71b16b1b1fd1f0c88d3cb15a18cdfcce08b2b18908d3a5ce755330b4b2aeedf1",
+          "gitBlob": "70202d22a5840401a00025cd60b797c514f3e455"
+        },
+        "actual": {
+          "bytes": 34313,
+          "sha256": "71b16b1b1fd1f0c88d3cb15a18cdfcce08b2b18908d3a5ce755330b4b2aeedf1",
+          "gitBlob": "70202d22a5840401a00025cd60b797c514f3e455"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+        "expected": {
+          "bytes": 3335,
+          "sha256": "572df7cb9de920ed0685febc94f6ddd08f18d7d96312e8ed946933a63ccbcdb3",
+          "gitBlob": "95d681fe04abd838dd11799d7791fa59444c6e32"
+        },
+        "actual": {
+          "bytes": 3335,
+          "sha256": "572df7cb9de920ed0685febc94f6ddd08f18d7d96312e8ed946933a63ccbcdb3",
+          "gitBlob": "95d681fe04abd838dd11799d7791fa59444c6e32"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/landing-hetzner-release.yml",
+        "expected": {
+          "bytes": 7306,
+          "sha256": "ad5337b9e4a36797703c0e340a9539f0c12f2739eed6805851fcfa8cb00d1290",
+          "gitBlob": "4b54f229156f9d347e1a33da0d83b3374acc4078"
+        },
+        "actual": {
+          "bytes": 7306,
+          "sha256": "ad5337b9e4a36797703c0e340a9539f0c12f2739eed6805851fcfa8cb00d1290",
+          "gitBlob": "4b54f229156f9d347e1a33da0d83b3374acc4078"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/landing.yml",
+        "expected": {
+          "bytes": 5592,
+          "sha256": "1bda852e705b3b744b5b001e0fe3cb2d8fd80eaa3108d17787c076ad3b753b32",
+          "gitBlob": "4a1ad9ae59ff2e338930a195d54fdff62da1ebc5"
+        },
+        "actual": {
+          "bytes": 5592,
+          "sha256": "1bda852e705b3b744b5b001e0fe3cb2d8fd80eaa3108d17787c076ad3b753b32",
+          "gitBlob": "4a1ad9ae59ff2e338930a195d54fdff62da1ebc5"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/macos-signing-qualification.yml",
+        "expected": {
+          "bytes": 9635,
+          "sha256": "409769be92f1d49ed74ffca6e4affe25f365d5bf4bc4f5a18a1deebea11c3a0d",
+          "gitBlob": "d63bddd51302a5c0380762bf22171f43c38a39b0"
+        },
+        "actual": {
+          "bytes": 9635,
+          "sha256": "409769be92f1d49ed74ffca6e4affe25f365d5bf4bc4f5a18a1deebea11c3a0d",
+          "gitBlob": "d63bddd51302a5c0380762bf22171f43c38a39b0"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/opencode-desktop-e2e.yml",
+        "expected": {
+          "bytes": 6719,
+          "sha256": "ea78e9c6002db433bb57087c3d4eac3d652412746b3a3d5d2aad0cb02e76d17e",
+          "gitBlob": "3d2a90a0e335155d435bd4eae4f2bd2842425983"
+        },
+        "actual": {
+          "bytes": 6719,
+          "sha256": "ea78e9c6002db433bb57087c3d4eac3d652412746b3a3d5d2aad0cb02e76d17e",
+          "gitBlob": "3d2a90a0e335155d435bd4eae4f2bd2842425983"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/opencode-native-windows-e2e.yml",
+        "expected": {
+          "bytes": 29178,
+          "sha256": "3f6ea47d1aac384382cca261686972222433330e9563a87b941d23ac345b8f80",
+          "gitBlob": "f5a2a472b752acf37399fc9e11f63f6d45bdb297"
+        },
+        "actual": {
+          "bytes": 29178,
+          "sha256": "3f6ea47d1aac384382cca261686972222433330e9563a87b941d23ac345b8f80",
+          "gitBlob": "f5a2a472b752acf37399fc9e11f63f6d45bdb297"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/opencode-packaged-e2e.yml",
+        "expected": {
+          "bytes": 19616,
+          "sha256": "80a7c110468f22670a541dcf8cd452c6de754376f4ff970bbdf2888bd91fc2fe",
+          "gitBlob": "458e165ef020a1f8b05806b9ae7edc839134e1b4"
+        },
+        "actual": {
+          "bytes": 19616,
+          "sha256": "80a7c110468f22670a541dcf8cd452c6de754376f4ff970bbdf2888bd91fc2fe",
+          "gitBlob": "458e165ef020a1f8b05806b9ae7edc839134e1b4"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+        "expected": {
+          "bytes": 2756,
+          "sha256": "2bd119e64866ae18519f01be6e7bffc138d0ce7b1e32ce2329a35e59de5a87a3",
+          "gitBlob": "be6a9ae5a88efadca344773ed4aa962d42823d28"
+        },
+        "actual": {
+          "bytes": 2756,
+          "sha256": "2bd119e64866ae18519f01be6e7bffc138d0ce7b1e32ce2329a35e59de5a87a3",
+          "gitBlob": "be6a9ae5a88efadca344773ed4aa962d42823d28"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "expected": {
+          "bytes": 36013,
+          "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+          "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+        },
+        "actual": {
+          "bytes": 36013,
+          "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+          "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/prepare-updater-native-inputs.yml",
+        "expected": {
+          "bytes": 8825,
+          "sha256": "6f69a0083fd03597029533db66f2f44fda629b2b3a127c62978809eb990db229",
+          "gitBlob": "51beb92ade4931fe04336c7d3908bacfc932269e"
+        },
+        "actual": {
+          "bytes": 8825,
+          "sha256": "6f69a0083fd03597029533db66f2f44fda629b2b3a127c62978809eb990db229",
+          "gitBlob": "51beb92ade4931fe04336c7d3908bacfc932269e"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/provider-real-runtime-e2e.yml",
+        "expected": {
+          "bytes": 8958,
+          "sha256": "9903545813f74656b4e78e53641449a7c4c09b6b3564263f83aa7f2f2f8f0737",
+          "gitBlob": "4ee30807aa18f043fe53d090bfb6211bb5458ce0"
+        },
+        "actual": {
+          "bytes": 8958,
+          "sha256": "9903545813f74656b4e78e53641449a7c4c09b6b3564263f83aa7f2f2f8f0737",
+          "gitBlob": "4ee30807aa18f043fe53d090bfb6211bb5458ce0"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/publish-carried-release.yml",
+        "expected": {
+          "bytes": 3908,
+          "sha256": "b360d26ec6945d7e6d53090860f6ffb4001827db8df8cffcc29007222cfb0546",
+          "gitBlob": "371ed6d3b2cf4e41c012da287a295783c39c426e"
+        },
+        "actual": {
+          "bytes": 3908,
+          "sha256": "b360d26ec6945d7e6d53090860f6ffb4001827db8df8cffcc29007222cfb0546",
+          "gitBlob": "371ed6d3b2cf4e41c012da287a295783c39c426e"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/recover-existing-draft-payloads.yml",
+        "expected": {
+          "bytes": 1905,
+          "sha256": "b1c53692156cd7a56178dca761a942fc9471d5ca7fd182699b918d3165aeb2db",
+          "gitBlob": "eadeedf4381cbf1d7e32cd31105dd88cd2c8eb65"
+        },
+        "actual": {
+          "bytes": 1905,
+          "sha256": "b1c53692156cd7a56178dca761a942fc9471d5ca7fd182699b918d3165aeb2db",
+          "gitBlob": "eadeedf4381cbf1d7e32cd31105dd88cd2c8eb65"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/release-publication-guard.yml",
+        "expected": {
+          "bytes": 2706,
+          "sha256": "3e59073acae4e5a536a6c3e8a5ddadbd78e095cff4a87eb84a317173fe22dcac",
+          "gitBlob": "10b7abd2992cc740084a5c51ace7f3fe025220f9"
+        },
+        "actual": {
+          "bytes": 2706,
+          "sha256": "3e59073acae4e5a536a6c3e8a5ddadbd78e095cff4a87eb84a317173fe22dcac",
+          "gitBlob": "10b7abd2992cc740084a5c51ace7f3fe025220f9"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/release.yml",
+        "expected": {
+          "bytes": 46671,
+          "sha256": "22803b1c55d071932b59b66cd2802e31a3a528fc60db94f9b22a94b699048051",
+          "gitBlob": "d28bee6dea87ec191f0d40670f3e68c48251d049"
+        },
+        "actual": {
+          "bytes": 46671,
+          "sha256": "22803b1c55d071932b59b66cd2802e31a3a528fc60db94f9b22a94b699048051",
+          "gitBlob": "d28bee6dea87ec191f0d40670f3e68c48251d049"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/reviewrouter-interaction.yml",
+        "expected": {
+          "bytes": 4238,
+          "sha256": "72904ac011de713511f51cd05d7f6d8e145ef537e3ae871e5b872f204de1b339",
+          "gitBlob": "edb68c51f54ad4a792eb29f1f557aad48e3a6218"
+        },
+        "actual": {
+          "bytes": 4238,
+          "sha256": "72904ac011de713511f51cd05d7f6d8e145ef537e3ae871e5b872f204de1b339",
+          "gitBlob": "edb68c51f54ad4a792eb29f1f557aad48e3a6218"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/reviewrouter-review.yml",
+        "expected": {
+          "bytes": 912,
+          "sha256": "d30c359c172a2d2e6ad8af7b5557894ae8d601f5f4957a87153aa93810966cc4",
+          "gitBlob": "04964f8ac7beadb3277fb28ec9cc0d61b86ca84b"
+        },
+        "actual": {
+          "bytes": 912,
+          "sha256": "d30c359c172a2d2e6ad8af7b5557894ae8d601f5f4957a87153aa93810966cc4",
+          "gitBlob": "04964f8ac7beadb3277fb28ec9cc0d61b86ca84b"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+        "expected": {
+          "bytes": 5079,
+          "sha256": "65e296bb4946582ca3745930f1ecf0b16df481d38fb591a06c26f80529881f15",
+          "gitBlob": "4020f668ab2a9a7b16fcb0aa7fd2d79a061f1d44"
+        },
+        "actual": {
+          "bytes": 5079,
+          "sha256": "65e296bb4946582ca3745930f1ecf0b16df481d38fb591a06c26f80529881f15",
+          "gitBlob": "4020f668ab2a9a7b16fcb0aa7fd2d79a061f1d44"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/sentry-owned-process-native.yml",
+        "expected": {
+          "bytes": 39878,
+          "sha256": "2d84faae57ad758575935dc760df6561d219f16ee8c0bd615006ca3d88837357",
+          "gitBlob": "1188fa5b89d59b739d927082d1b6954a57181819"
+        },
+        "actual": {
+          "bytes": 39878,
+          "sha256": "2d84faae57ad758575935dc760df6561d219f16ee8c0bd615006ca3d88837357",
+          "gitBlob": "1188fa5b89d59b739d927082d1b6954a57181819"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/stage-existing-partial-draft.yml",
+        "expected": {
+          "bytes": 5418,
+          "sha256": "1644a7dd73642776d00077ab00d6f862679eb890cb5b154042f51dae30b6c37c",
+          "gitBlob": "295dbf212e13b15505696d997ec7c45b4ee3cfa9"
+        },
+        "actual": {
+          "bytes": 5418,
+          "sha256": "1644a7dd73642776d00077ab00d6f862679eb890cb5b154042f51dae30b6c37c",
+          "gitBlob": "295dbf212e13b15505696d997ec7c45b4ee3cfa9"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "expected": {
+          "bytes": 6522,
+          "sha256": "f57bf21347769c79b9c8c21f6f35b40b772fbfe9cb5f8155d7daabb54499d15f",
+          "gitBlob": "ef939f224a1642cb596906324c8d61441780ccc7"
+        },
+        "actual": {
+          "bytes": 6522,
+          "sha256": "f57bf21347769c79b9c8c21f6f35b40b772fbfe9cb5f8155d7daabb54499d15f",
+          "gitBlob": "ef939f224a1642cb596906324c8d61441780ccc7"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/updater-linux-packages.yml",
+        "expected": {
+          "bytes": 21602,
+          "sha256": "37710e0293dcb00b31df74062b52a52a77f1c22f2e37d8ce2150c668baa98074",
+          "gitBlob": "60d214756c640b7925cfe11ba45ed4009f27ca3c"
+        },
+        "actual": {
+          "bytes": 21602,
+          "sha256": "37710e0293dcb00b31df74062b52a52a77f1c22f2e37d8ce2150c668baa98074",
+          "gitBlob": "60d214756c640b7925cfe11ba45ed4009f27ca3c"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/updater-mac-manual-migration.yml",
+        "expected": {
+          "bytes": 5900,
+          "sha256": "40898d8173495bcbe67effb3912294c355aafd42e020e1d099040b184c127d4f",
+          "gitBlob": "4aa3a4181259514c5a43fbc7dd4ad98811a3588e"
+        },
+        "actual": {
+          "bytes": 5900,
+          "sha256": "40898d8173495bcbe67effb3912294c355aafd42e020e1d099040b184c127d4f",
+          "gitBlob": "4aa3a4181259514c5a43fbc7dd4ad98811a3588e"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/updater-mac-old-updater.yml",
+        "expected": {
+          "bytes": 12460,
+          "sha256": "dfb731e1620c1bfe47b51cd2af5e9c90c7c46eaa3841b39c7993d7938224b71f",
+          "gitBlob": "067a25687f36caefe156b0446c5056d230d27c62"
+        },
+        "actual": {
+          "bytes": 12460,
+          "sha256": "dfb731e1620c1bfe47b51cd2af5e9c90c7c46eaa3841b39c7993d7938224b71f",
+          "gitBlob": "067a25687f36caefe156b0446c5056d230d27c62"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/updater-mac-source.yml",
+        "expected": {
+          "bytes": 7512,
+          "sha256": "216b64cf04a7b5bebf527ffb21bfe3df0c12bcd828450a377bb67dc59540e025",
+          "gitBlob": "1196e40faa99e0ab64e329d91f3fea7c6ed47f94"
+        },
+        "actual": {
+          "bytes": 7512,
+          "sha256": "216b64cf04a7b5bebf527ffb21bfe3df0c12bcd828450a377bb67dc59540e025",
+          "gitBlob": "1196e40faa99e0ab64e329d91f3fea7c6ed47f94"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/updater-mac-updater.yml",
+        "expected": {
+          "bytes": 12323,
+          "sha256": "c71f29ef00ea623a30d11e3fa40ebc1d0fadd8a77f4552687c54b0527f4768db",
+          "gitBlob": "950f95892277ae303772ac699915250f0f4f66af"
+        },
+        "actual": {
+          "bytes": 12323,
+          "sha256": "c71f29ef00ea623a30d11e3fa40ebc1d0fadd8a77f4552687c54b0527f4768db",
+          "gitBlob": "950f95892277ae303772ac699915250f0f4f66af"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/updater-native-feasibility.yml",
+        "expected": {
+          "bytes": 13476,
+          "sha256": "8fe371aab977f9ce0d54086c11e508ed7b370780db344b93efd3592d3b4a09ce",
+          "gitBlob": "b55e6cbcb4de61e2e8688e1ff4b4529b043a4ada"
+        },
+        "actual": {
+          "bytes": 13476,
+          "sha256": "8fe371aab977f9ce0d54086c11e508ed7b370780db344b93efd3592d3b4a09ce",
+          "gitBlob": "b55e6cbcb4de61e2e8688e1ff4b4529b043a4ada"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/updater-windows-ota.yml",
+        "expected": {
+          "bytes": 27610,
+          "sha256": "3dcf1d333467391acd418869d6676c18d1193bb81d36040da358bd7e0f62743f",
+          "gitBlob": "10ffcd79e48a71346df7545af638208ce039ad83"
+        },
+        "actual": {
+          "bytes": 27610,
+          "sha256": "3dcf1d333467391acd418869d6676c18d1193bb81d36040da358bd7e0f62743f",
+          "gitBlob": "10ffcd79e48a71346df7545af638208ce039ad83"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/updater-windows.yml",
+        "expected": {
+          "bytes": 11849,
+          "sha256": "1be54468be42e72674c01f5b94c58789fbf75a3e4d7ac6deff312738f2b1f5e2",
+          "gitBlob": "a4e9375cb95c4129c503f1d7be82de1e3926ea62"
+        },
+        "actual": {
+          "bytes": 11849,
+          "sha256": "1be54468be42e72674c01f5b94c58789fbf75a3e4d7ac6deff312738f2b1f5e2",
+          "gitBlob": "a4e9375cb95c4129c503f1d7be82de1e3926ea62"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      },
+      {
+        "path": ".github/workflows/windows-backfill-diagnostic.yml",
+        "expected": {
+          "bytes": 14471,
+          "sha256": "adfdc03d5de437d308916da76774a1e4ca31aa5786f4ea2fe2fae4e1a2127c2c",
+          "gitBlob": "44bec5d82998468d48ac539f3624d0c2de1c6648"
+        },
+        "actual": {
+          "bytes": 14471,
+          "sha256": "adfdc03d5de437d308916da76774a1e4ca31aa5786f4ea2fe2fae4e1a2127c2c",
+          "gitBlob": "44bec5d82998468d48ac539f3624d0c2de1c6648"
+        },
+        "rootEntry": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "expectedRoot": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "passed": true
+      }
+    ],
+    "full42Bytes": 751430,
+    "unchangedOtherNonDocRootEntries": [
+      {
+        "path": ".coderabbit.yaml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "cfdf47bf5d5759599f5383222ebfb8a385f09668",
+        "size": 669,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cfdf47bf5d5759599f5383222ebfb8a385f09668"
+      },
+      {
+        "path": ".dockerignore",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c2d844c25fc61f06640f362de761e3f8d310c3b5",
+        "size": 694,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c2d844c25fc61f06640f362de761e3f8d310c3b5"
+      },
+      {
+        "path": ".gitattributes",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "924c7377f9ae4c068d106e74e17e964297d61e6e",
+        "size": 180,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/924c7377f9ae4c068d106e74e17e964297d61e6e"
+      },
+      {
+        "path": ".github",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/d95091ab0edb488d6e418ffa789d0f07c447ecda"
+      },
+      {
+        "path": ".gitignore",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "777569b186effad3a2bcbcb09cd770180c8c5e2c",
+        "size": 2867,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/777569b186effad3a2bcbcb09cd770180c8c5e2c"
+      },
+      {
+        "path": ".husky",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "665211222b358904b557bd356a129f1ff938ca7e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/665211222b358904b557bd356a129f1ff938ca7e"
+      },
+      {
+        "path": ".mcp.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "da61a538a43375404483bd1f810b6377da5cc72f",
+        "size": 296,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/da61a538a43375404483bd1f810b6377da5cc72f"
+      },
+      {
+        "path": ".node-version",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+        "size": 8,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+      },
+      {
+        "path": ".npmrc",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad",
+        "size": 19,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad"
+      },
+      {
+        "path": ".nvmrc",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+        "size": 8,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+      },
+      {
+        "path": ".oxfmtrc.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b003c531d6e548a5939ceb0694f15296c92e5060",
+        "size": 847,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b003c531d6e548a5939ceb0694f15296c92e5060"
+      },
+      {
+        "path": ".oxlintrc.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "cc0d2441ebfedc93354e081b0cf61b6a2109dcc9",
+        "size": 596,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cc0d2441ebfedc93354e081b0cf61b6a2109dcc9"
+      },
+      {
+        "path": ".prettierignore",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2",
+        "size": 297,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2"
+      },
+      {
+        "path": ".prettierrc.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c96ec48e897a4ec478beb34716723e13d29068ed",
+        "size": 563,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c96ec48e897a4ec478beb34716723e13d29068ed"
+      },
+      {
+        "path": "AGENTS.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0c8a4a63abf24c1510c934990a025ebc99c9e435",
+        "size": 8999,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0c8a4a63abf24c1510c934990a025ebc99c9e435"
+      },
+      {
+        "path": "AGENT_CRITICAL_GUARDRAILS.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a9a087fa5216ede29c5900b3a10638fc1ec3e2f3",
+        "size": 2236,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a9a087fa5216ede29c5900b3a10638fc1ec3e2f3"
+      },
+      {
+        "path": "CLAUDE.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "88df8ee5ef8d951139b2a8eb9b518996babbcb3e",
+        "size": 16756,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/88df8ee5ef8d951139b2a8eb9b518996babbcb3e"
+      },
+      {
+        "path": "LICENSE",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "929839bc0872222df278f9e53f15e1268ff4e0ec",
+        "size": 32433,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/929839bc0872222df278f9e53f15e1268ff4e0ec"
+      },
+      {
+        "path": "README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "dbf976c3418f0dee7ef84e4458e49af39110bdd5",
+        "size": 48099,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/dbf976c3418f0dee7ef84e4458e49af39110bdd5"
+      },
+      {
+        "path": "agent-teams-controller",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "1ef9482608cbaa5b7f28dc42812820cba96b953e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/1ef9482608cbaa5b7f28dc42812820cba96b953e"
+      },
+      {
+        "path": "bin",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "e6b29ba2f2fda222d5831b3c672e88b72f5f7383",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e6b29ba2f2fda222d5831b3c672e88b72f5f7383"
+      },
+      {
+        "path": "docker",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "7e4007a72bc3fdba8d94e8f5eebc3586f110c16e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/7e4007a72bc3fdba8d94e8f5eebc3586f110c16e"
+      },
+      {
+        "path": "electron.vite.config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9045260aab02891055e324607b83e1bb39c7110a",
+        "size": 13238,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9045260aab02891055e324607b83e1bb39c7110a"
+      },
+      {
+        "path": "eslint.config.js",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+        "size": 37840,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/7ca4b71fe3a357c00c110c9b75d3034e06e4b22c"
+      },
+      {
+        "path": "eslint.fast.config.js",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+        "size": 7268,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb"
+      },
+      {
+        "path": "eslint.feature-overrides.mts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9c6450d54b87ce33f7d799f900226c316e367937",
+        "size": 657,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9c6450d54b87ce33f7d799f900226c316e367937"
+      },
+      {
+        "path": "eslint.gateway-boundaries.mts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4975b20df1353a9687fd479ab043beb025e967ba",
+        "size": 3786,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/4975b20df1353a9687fd479ab043beb025e967ba"
+      },
+      {
+        "path": "i18next.config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5",
+        "size": 1051,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5"
+      },
+      {
+        "path": "landing",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "193513230f45a135704f1b34dbfa0792e6823e26",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/193513230f45a135704f1b34dbfa0792e6823e26"
+      },
+      {
+        "path": "legacy-host.lock.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6916f66ea9e4a7e8299c3ffd328e226d009ebd79",
+        "size": 947,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6916f66ea9e4a7e8299c3ffd328e226d009ebd79"
+      },
+      {
+        "path": "managed-git.lock.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2099dfe6b1e1c0ff0d64f45d6c8565b498af4333",
+        "size": 1026,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2099dfe6b1e1c0ff0d64f45d6c8565b498af4333"
+      },
+      {
+        "path": "mcp-server",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5"
+      },
+      {
+        "path": "package.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "size": 26839,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+      },
+      {
+        "path": "patches",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "8eb2e6aaa216638cbe6c072d79802733d43f500d",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/8eb2e6aaa216638cbe6c072d79802733d43f500d"
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+        "size": 956788,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9d2ce04a1bbf743e49403d2520873134b08b68de"
+      },
+      {
+        "path": "pnpm-workspace.yaml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a049a862742a85ba77faafea329fc221b3e500e4",
+        "size": 6946,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a049a862742a85ba77faafea329fc221b3e500e4"
+      },
+      {
+        "path": "postcss.config.cjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "85f717cc09ecb1153d6a4c0962284e09e4b8d6a9",
+        "size": 80,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/85f717cc09ecb1153d6a4c0962284e09e4b8d6a9"
+      },
+      {
+        "path": "resources",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "69acacf60db94f62dbe4a99ed308aab59310e905",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/69acacf60db94f62dbe4a99ed308aab59310e905"
+      },
+      {
+        "path": "runtime.lock.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+        "size": 6127,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1757d79786da78e739a322e8bba81cd3dc88dcaa"
+      },
+      {
+        "path": "src",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "9ed817aaf1b2959381ea7d9262ed04f538247750",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/9ed817aaf1b2959381ea7d9262ed04f538247750"
+      },
+      {
+        "path": "tailwind.config.js",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a52ebb338468d8fcef92837aa27aebd48c7206d7",
+        "size": 2941,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a52ebb338468d8fcef92837aa27aebd48c7206d7"
+      },
+      {
+        "path": "terminal-platform.lock.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "039a8a2a7b959b44bf3d483e37335fdc6774e8cb",
+        "size": 1914,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/039a8a2a7b959b44bf3d483e37335fdc6774e8cb"
+      },
+      {
+        "path": "test",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "69d3a76e739605a29aa7a0d04981d24f3918d856",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/69d3a76e739605a29aa7a0d04981d24f3918d856"
+      },
+      {
+        "path": "tools",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "b0ffcbc4be600e5edfbc0fbacf312e5b476af6aa",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/b0ffcbc4be600e5edfbc0fbacf312e5b476af6aa"
+      },
+      {
+        "path": "tsconfig.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "568952f5025a88c16b0568c7279d8e85a4288b43",
+        "size": 1235,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/568952f5025a88c16b0568c7279d8e85a4288b43"
+      },
+      {
+        "path": "tsconfig.legacy-agent-host-scripts.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+        "size": 646,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/538fdfe23d7aa6bac6f18a483d5d364aef644a39"
+      },
+      {
+        "path": "tsconfig.node.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c94c942012bef62695dc3b22b1a2b7229d047f59",
+        "size": 824,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c94c942012bef62695dc3b22b1a2b7229d047f59"
+      },
+      {
+        "path": "vendor",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f"
+      },
+      {
+        "path": "vitest.config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+        "size": 1187,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c57faa53a1bb869b4379bf888194806ef7e228e3"
+      },
+      {
+        "path": "vitest.critical.config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c32070bf9e1724892aa8cb695152e8f49f1293f0",
+        "size": 852,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c32070bf9e1724892aa8cb695152e8f49f1293f0"
+      },
+      {
+        "path": "vitest.opencode-proof.config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "274de1c0955ad4f98d220857a94576ce6a50864b",
+        "size": 601,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/274de1c0955ad4f98d220857a94576ce6a50864b"
+      }
+    ],
+    "scopePreservesOtherNonDocRootEntries": 51,
+    "currentNonDocLeaves": 8799,
+    "productionFiles": 5020,
+    "cap": 800,
+    "exceptions": 141,
+    "policyCommandsUnexecuted": true,
+    "newFiles": 0,
+    "deletions": 0,
+    "modeChanges": 0,
+    "newDependencies": 0,
+    "newWorkflows": 0,
+    "newExecutableControlFiles": 0,
+    "publicationStillRequiresExactActualReadback": true
+  },
+  "preparationCorrection": {
+    "initialPin": {
+      "bytes": 40988,
+      "sha256": "0810f565d4245279c7e912471b011d1548112d3aa49abf94febc2e9450e58c8c",
+      "gitBlob": "da40c605d2f0d3af0a6a5c666be763d88b69a079"
+    },
+    "finalPin": {
+      "bytes": 41559,
+      "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+      "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+    },
+    "bothWholeOriginalPrefix": true,
+    "byteDifference": 571,
+    "secondTestThroughWholeImportLiteralEqual": true,
+    "finalExplicitExpectedArgument": true,
+    "metadataNeverPublishedOrExecuted": true,
+    "sourceCandidateOnly": true,
+    "originalComputedExpectationPresent": true,
+    "computedExpectationRemovedFromFinal": true,
+    "finalExpectedClassComesFromFixture": true
+  },
+  "rootReviewJoin": {
+    "pin": {
+      "bytes": 67412,
+      "sha256": "8814087c74f5e80af639a3ec24e97a4ae7cc2404ecf0a61d4380ffeaceac726c",
+      "gitBlob": "36b20d73f574cca6b76fa40dd5e46413338caafd"
+    },
+    "fullBodyRead": true,
+    "subjectMatch": true,
+    "parentMatch": true,
+    "allChecksPass": true,
+    "all37CurrentPointersMatch": true,
+    "sourceEvaluated": false,
+    "sourceCompiled": false,
+    "sourceExecuted": false
+  },
+  "rootPointerCrossJoins": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "d226951f5f24dd1a5a7d4742e25edcb3ef043213",
+        "bytes": 31060,
+        "sha256": "188bd061a0aa0ed5afe3f8af4919c5ac111ae15d3deb5c92c19645eccab997bc"
+      },
+      "rootPin": {
+        "gitBlob": "d226951f5f24dd1a5a7d4742e25edcb3ef043213",
+        "bytes": 31060,
+        "sha256": "188bd061a0aa0ed5afe3f8af4919c5ac111ae15d3deb5c92c19645eccab997bc"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "9f0dd1dc45e7929035b7b43839fb85d09418d575",
+        "bytes": 47507,
+        "sha256": "341b8aec958638ac542f02f42822b4b60e859303dd590f79585d8ccda2c93736"
+      },
+      "rootPin": {
+        "gitBlob": "9f0dd1dc45e7929035b7b43839fb85d09418d575",
+        "bytes": 47507,
+        "sha256": "341b8aec958638ac542f02f42822b4b60e859303dd590f79585d8ccda2c93736"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "d7d959f1e87af31520fd83fc09202b099a3d5e68",
+        "bytes": 33634,
+        "sha256": "9713b542aa9a6dcfca99a196f3e56fe91d568f9c3b50cb320527ca1b0fecbaaf"
+      },
+      "rootPin": {
+        "gitBlob": "d7d959f1e87af31520fd83fc09202b099a3d5e68",
+        "bytes": 33634,
+        "sha256": "9713b542aa9a6dcfca99a196f3e56fe91d568f9c3b50cb320527ca1b0fecbaaf"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "f5bc9112925cf2dbabbb5829491f40ae014763a5",
+        "bytes": 34292,
+        "sha256": "407344734ca2a82cbf10c5ad70586a89e8510d3cadc8dfd23bba61e41e8d68b3"
+      },
+      "rootPin": {
+        "gitBlob": "f5bc9112925cf2dbabbb5829491f40ae014763a5",
+        "bytes": 34292,
+        "sha256": "407344734ca2a82cbf10c5ad70586a89e8510d3cadc8dfd23bba61e41e8d68b3"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "dac57dc0a957d6f2a8de42f8f9ca7c1c7ece87ec",
+        "bytes": 117948,
+        "sha256": "5120e730aabb5e0aed43d88808ec66061838e49b7a5b4e4ee076b977904e7dc0"
+      },
+      "rootPin": {
+        "gitBlob": "dac57dc0a957d6f2a8de42f8f9ca7c1c7ece87ec",
+        "bytes": 117948,
+        "sha256": "5120e730aabb5e0aed43d88808ec66061838e49b7a5b4e4ee076b977904e7dc0"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "7e3c941384be39de462ea32baecf5f2ecc868d4e",
+        "bytes": 3366,
+        "sha256": "2ab0cc4d487580e777d7a967ab202e02f84705ab4ff1ca6ada91486a5745af7b"
+      },
+      "rootPin": {
+        "gitBlob": "7e3c941384be39de462ea32baecf5f2ecc868d4e",
+        "bytes": 3366,
+        "sha256": "2ab0cc4d487580e777d7a967ab202e02f84705ab4ff1ca6ada91486a5745af7b"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "9fc44701c3aa4e03ee1459b1468455776ecddfb8",
+        "bytes": 438180,
+        "sha256": "f42c930100217775083c3c40465d92cebb52b8335ce695bc9f30cc2a1439da24"
+      },
+      "rootPin": {
+        "gitBlob": "9fc44701c3aa4e03ee1459b1468455776ecddfb8",
+        "bytes": 438180,
+        "sha256": "f42c930100217775083c3c40465d92cebb52b8335ce695bc9f30cc2a1439da24"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "4d9e68e8ec72b694892f5bda9ffcf3d42c120add",
+        "bytes": 626538,
+        "sha256": "264313dda69d9918a80d2e9edda76e9ce134ef3401b6e7db8645324c3fa69bd7"
+      },
+      "rootPin": {
+        "gitBlob": "4d9e68e8ec72b694892f5bda9ffcf3d42c120add",
+        "bytes": 626538,
+        "sha256": "264313dda69d9918a80d2e9edda76e9ce134ef3401b6e7db8645324c3fa69bd7"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8"
+      },
+      "rootPin": {
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28",
+        "bytes": 28804,
+        "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4"
+      },
+      "rootPin": {
+        "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28",
+        "bytes": 28804,
+        "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b"
+      },
+      "rootPin": {
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c",
+        "bytes": 13466,
+        "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056"
+      },
+      "rootPin": {
+        "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c",
+        "bytes": 13466,
+        "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05",
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a"
+      },
+      "rootPin": {
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05",
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab",
+        "bytes": 23312,
+        "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2"
+      },
+      "rootPin": {
+        "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab",
+        "bytes": 23312,
+        "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068",
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b"
+      },
+      "rootPin": {
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068",
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa",
+        "bytes": 37953,
+        "sha256": "a553197e108b574e9ff1c0e082014d4224baffeba21cec65a1b16f0fa17edbb6"
+      },
+      "rootPin": {
+        "gitBlob": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa",
+        "bytes": 37953,
+        "sha256": "a553197e108b574e9ff1c0e082014d4224baffeba21cec65a1b16f0fa17edbb6"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f",
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b"
+      },
+      "rootPin": {
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f",
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "cd74eecf610858412022bbd2c69f62c910465bad",
+        "bytes": 77457,
+        "sha256": "af9de97ec8da68ef394c5ce5b08ca7bfbfd4b099178bd6ae3c9c8c20831cbc3b"
+      },
+      "rootPin": {
+        "gitBlob": "cd74eecf610858412022bbd2c69f62c910465bad",
+        "bytes": 77457,
+        "sha256": "af9de97ec8da68ef394c5ce5b08ca7bfbfd4b099178bd6ae3c9c8c20831cbc3b"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09"
+      },
+      "rootPin": {
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b",
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0"
+      },
+      "rootPin": {
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b",
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "8b045297766cc5a352be923e3d477426411f1f5b",
+        "bytes": 36526,
+        "sha256": "42a39d5cfe0a1f0681f3978e2073c1f2ba57e4f47f81a5b9345ea6927a991cce"
+      },
+      "rootPin": {
+        "gitBlob": "8b045297766cc5a352be923e3d477426411f1f5b",
+        "bytes": 36526,
+        "sha256": "42a39d5cfe0a1f0681f3978e2073c1f2ba57e4f47f81a5b9345ea6927a991cce"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72",
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26"
+      },
+      "rootPin": {
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72",
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4",
+        "bytes": 12389,
+        "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34"
+      },
+      "rootPin": {
+        "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4",
+        "bytes": 12389,
+        "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "47a1e9cb0efa58479721d8815bfb8dae3f943fb6",
+        "bytes": 16768,
+        "sha256": "db43609e9394925e3b27f606d8a49ed443e1bcdabeee866dd4fec4b56ed800fb"
+      },
+      "rootPin": {
+        "gitBlob": "47a1e9cb0efa58479721d8815bfb8dae3f943fb6",
+        "bytes": 16768,
+        "sha256": "db43609e9394925e3b27f606d8a49ed443e1bcdabeee866dd4fec4b56ed800fb"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "e9e601a6b1f5521b7412c5df67435aa275486699",
+        "bytes": 101494,
+        "sha256": "25772eeb869f29a27411edc156503efe54e710d0a7560c69bf2772624fb6c182"
+      },
+      "rootPin": {
+        "gitBlob": "e9e601a6b1f5521b7412c5df67435aa275486699",
+        "bytes": 101494,
+        "sha256": "25772eeb869f29a27411edc156503efe54e710d0a7560c69bf2772624fb6c182"
+      },
+      "passed": true
+    },
+    {
+      "repository": "nodejs/node",
+      "pin": {
+        "gitBlob": "02f9cc30ec5775f198ddbae58d80d7dfdc9b2110",
+        "bytes": 165722,
+        "sha256": "b2c98ae196d08f83752c9f3c6f595ade69abbd9fd2e6d7192d662c7206896e16"
+      },
+      "rootPin": {
+        "gitBlob": "02f9cc30ec5775f198ddbae58d80d7dfdc9b2110",
+        "bytes": 165722,
+        "sha256": "b2c98ae196d08f83752c9f3c6f595ade69abbd9fd2e6d7192d662c7206896e16"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "1409b65f9bdad2fd8bf15841e36d4460acce8204",
+        "bytes": 906,
+        "sha256": "c225fad7432f205e57fb1a086c1d84213f30ba900705e11e15c6a5ca0763b13e"
+      },
+      "rootPin": {
+        "gitBlob": "1409b65f9bdad2fd8bf15841e36d4460acce8204",
+        "bytes": 906,
+        "sha256": "c225fad7432f205e57fb1a086c1d84213f30ba900705e11e15c6a5ca0763b13e"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "ded3bd876233b0fb238559d210d76c7edced8eed",
+        "bytes": 677,
+        "sha256": "339d052a0a4d205dd1f7c57130386635bf5d04d61c9cd542703f125650dfcc91"
+      },
+      "rootPin": {
+        "gitBlob": "ded3bd876233b0fb238559d210d76c7edced8eed",
+        "bytes": 677,
+        "sha256": "339d052a0a4d205dd1f7c57130386635bf5d04d61c9cd542703f125650dfcc91"
+      },
+      "passed": true
+    },
+    {
+      "repository": "nodejs/node",
+      "pin": {
+        "gitBlob": "91b3631883021274ab6c7e1eb947ebd776c7c97e",
+        "bytes": 77941,
+        "sha256": "94647ba08114b86f1b8845f00542ef697b715a16be8bd971ed0bb4504639f3e1"
+      },
+      "rootPin": {
+        "gitBlob": "91b3631883021274ab6c7e1eb947ebd776c7c97e",
+        "bytes": 77941,
+        "sha256": "94647ba08114b86f1b8845f00542ef697b715a16be8bd971ed0bb4504639f3e1"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e"
+      },
+      "rootPin": {
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697"
+      },
+      "rootPin": {
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa"
+      },
+      "rootPin": {
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3",
+        "bytes": 37970,
+        "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb"
+      },
+      "rootPin": {
+        "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3",
+        "bytes": 37970,
+        "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e",
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5"
+      },
+      "rootPin": {
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e",
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd",
+        "bytes": 50377,
+        "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac"
+      },
+      "rootPin": {
+        "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd",
+        "bytes": 50377,
+        "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b",
+        "bytes": 3481,
+        "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2"
+      },
+      "rootPin": {
+        "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b",
+        "bytes": 3481,
+        "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "da40c605d2f0d3af0a6a5c666be763d88b69a079",
+        "bytes": 40988,
+        "sha256": "0810f565d4245279c7e912471b011d1548112d3aa49abf94febc2e9450e58c8c"
+      },
+      "rootPin": {
+        "gitBlob": "da40c605d2f0d3af0a6a5c666be763d88b69a079",
+        "bytes": 40988,
+        "sha256": "0810f565d4245279c7e912471b011d1548112d3aa49abf94febc2e9450e58c8c"
+      },
+      "passed": true
+    }
+  ],
+  "currentCiAtProposal": {
+    "pr": 1219,
+    "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "retainedObservation": 13,
+    "noClaimForThisSource": true,
+    "terminalRunIds": [
+      44042341370,
+      44042341121,
+      44042341149,
+      44042341120,
+      44042341241
+    ],
+    "activeRunIds": [
+      44042341284,
+      44042341273
+    ],
+    "refsAndMetadataUntouched": true
+  },
+  "environmentAtProposal": {
+    "readOnlyShellAvailableAgain": true,
+    "oldCwdAbsent": true,
+    "correctedStandaloneScopeAbsent": true,
+    "newPinnedNodeInodeObserved": "9223372036854818268",
+    "priorStandaloneBindingInode": "9223372036854818252",
+    "noPhysicalSourceStage": true,
+    "noRuntimeAdmitted": true,
+    "noSourceCompiled": true,
+    "noSourceExecuted": true,
+    "standaloneUninvoked": true,
+    "archiveBytesNotYetRead": true
+  },
+  "laterEvidenceBoundary": "Root reported observation14 and six byte/SHA256/CRC-verified archives for old fixed9d after proposal. Those later archives are not reviewed here, do not qualify these source postimages, and do not change the proposal's historical environment snapshot.",
+  "qualification": {
+    "completeE2E": false,
+    "rootCauseResolved": false,
+    "fixRuntimeProven": false,
+    "archiveQualified": false,
+    "newWindows14Or8CasesExecuted": false,
+    "nativeDarwinP09Resolved": false,
+    "coldRendererResolved": false,
+    "standaloneRedGreen24_22_1Executed": false,
+    "readyMergeReleaseDefaultActivationStage2": false,
+    "wholePlatform14ActuallyExecuted": false,
+    "newDiagnosticsExecuted": false,
+    "wholePlatformImportExecuted": false,
+    "sourceCompiled": false
+  },
+  "checks": [
+    {
+      "name": "Exact full R2 subject identity",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 48600,
+        "sha256": "ea41197152f40525912ca3bf8d41b84451f1c306bdb88a5ee051d83e8842891e",
+        "gitBlob": "c356b7f7c7dd7d9ab6e869ad9d3655c74ea8dbea"
+      }
+    },
+    {
+      "name": "37 repository-scoped complete direct identities",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "count": 37,
+        "bytes": 2414598,
+        "derivedOldLiteralSlices": 2,
+        "nodeRepository": "nodejs/node"
+      }
+    },
+    {
+      "name": "Exact accepted R1 selections and all six preimages",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 31060,
+        "sha256": "188bd061a0aa0ed5afe3f8af4919c5ac111ae15d3deb5c92c19645eccab997bc",
+        "gitBlob": "d226951f5f24dd1a5a7d4742e25edcb3ef043213"
+      }
+    },
+    {
+      "name": "Closed actual R1 gate joins both complete actual reports",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "gate": {
+          "bytes": 3366,
+          "sha256": "2ab0cc4d487580e777d7a967ab202e02f84705ab4ff1ca6ada91486a5745af7b",
+          "gitBlob": "7e3c941384be39de462ea32baecf5f2ecc868d4e"
+        },
+        "actualChecks": 82,
+        "staticChecks": 126
+      }
+    },
+    {
+      "name": "Authorship follows gate closure",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "closedAt": "2026-11-17 10:42:30 UTC",
+        "authoredAt": "2026-11-17 10:43:11 UTC",
+        "proposalAt": "2026-11-17 10:52:40 UTC"
+      }
+    },
+    {
+      "name": "Current parent, root and docs with noncircular continuation",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "parent": "c88b4fe2632f2644bf734293db713fe8288b5139",
+        "root": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "docs": "1aeddc4cacfc5288f3d6bb03c7bfcf52e24bf9bb"
+      }
+    },
+    {
+      "name": "Six existing source paths and modes join current root subtrees",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "newFiles": 0,
+        "renames": 0,
+        "deletions": 0,
+        "modeChanges": 0
+      }
+    },
+    {
+      "name": "Full six before and after body census",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "beforeBytes": 184703,
+        "afterBytes": 222551
+      }
+    },
+    {
+      "name": "Six complete forward reconstructions and inverse restores",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+          "before": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+          "after": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+          "before": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+          "after": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+          "before": "195dabe664b14a2fe5c231e137690db6126c0e05",
+          "after": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+          "before": "625c6ddd74357abbdf565bf386388274cebd4068",
+          "after": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "before": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f",
+          "after": "cd74eecf610858412022bbd2c69f62c910465bad"
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+          "before": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+          "after": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+        }
+      ]
+    },
+    {
+      "name": "Declared line counts match complete bodies",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+          "lines": 431
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+          "lines": 184
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+          "lines": 514
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+          "lines": 578
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "lines": 1352
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+          "lines": 647
+        }
+      ]
+    },
+    {
+      "name": "Both original whole test prefixes remain literal",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "guiPrefixBytes": 66098,
+        "nativePrefixBytes": 19696
+      }
+    },
+    {
+      "name": "Five GUI and three native diagnostic additions",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "guiRegistrationExpressions": 39,
+        "nativeLocalRegistrations": 12,
+        "expandedGuiRuntimeCaseCountNotClaimed": true
+      }
+    },
+    {
+      "name": "No appended case filter or conditional skip",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": "Original imported Windows-only skip remains unchanged."
+    },
+    {
+      "name": "GUI reads bounded own-data saved dialog sample",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "dialogs": 3,
+        "buttonsPerDialog": 24
+      }
+    },
+    {
+      "name": "GUI sample remains partial and non-atomic",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": "retained-post-failure-partial-dialog-sample"
+    },
+    {
+      "name": "Exact Launch labels preserve duplicates and unknown states",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "states": [
+          "enabled",
+          "disabled",
+          "unknown"
+        ],
+        "globalReadinessInference": false
+      }
+    },
+    {
+      "name": "At-cap is distinct from observed oversized input",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "boundedCountSentinels": [
+          4,
+          25
+        ]
+      }
+    },
+    {
+      "name": "Original fixed vocabulary, privacy and fallback remain",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "textCharacters": 8000,
+        "finalCharacters": 8192,
+        "rawTextOrIdentifiersAdded": false
+      }
+    },
+    {
+      "name": "Exactly three new non-PASS readiness summary routes",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "oldModes": 2,
+        "newModes": 3,
+        "passAndUnrelatedRoutesUnchanged": true
+      }
+    },
+    {
+      "name": "Packaged import and final summary are the only two edits",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": "Receipt write, cleanup, source freeze, original rethrow and success assertion remain literal."
+    },
+    {
+      "name": "GUI tests use actual exports and unique actual packaged fragment",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": "No copied projector or CLI main execution by reviewer."
+    },
+    {
+      "name": "GUI privacy, getter and overflow fixtures exist with bounded wording",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": "Missing/null/malformed/capped-accessor cases are present; no explicit sparse-array-hole fixture is asserted."
+    },
+    {
+      "name": "Native producer changes only three selected diagnostic sites",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": "Declarations, original rejection catch, existing failed-close publisher."
+    },
+    {
+      "name": "Native metadata uses own code and one own cause.code",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "allowlist": [
+          "ABORT_ERR",
+          "ECONNRESET",
+          "ECONNREFUSED",
+          "EPIPE",
+          "ETIMEDOUT",
+          "UND_ERR_ABORTED",
+          "UND_ERR_SOCKET",
+          "UND_ERR_HEADERS_TIMEOUT",
+          "UND_ERR_BODY_TIMEOUT"
+        ],
+        "recursiveCause": false,
+        "rawMessages": false
+      }
+    },
+    {
+      "name": "Original rejection identity and errorClass logic preserved",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": "No new cleanup, request, authority or deadline decision."
+    },
+    {
+      "name": "Only original threw failed-close publication gains fields",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": "First-close stage/reason and original close outcome remain unchanged."
+    },
+    {
+      "name": "Passive mandatory close validation precedes optional metadata",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": "No optional field overrides stage, reason, errorClass or outcome."
+    },
+    {
+      "name": "Malformed optional metadata preserves valid legacy close rows",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": "Per-field guarded descriptors; absent legacy keys remain absent."
+    },
+    {
+      "name": "Original passive byte and reservation algorithms unchanged",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "ordinaryRows": 253,
+        "retainedRows": 257,
+        "traceBytes": 65536,
+        "lineBytes": 512,
+        "reservedRecordBytes": 513
+      }
+    },
+    {
+      "name": "Native tests select actual dist fragments by unique anchors",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": "Canonical build and actual emitted-JS matching remain unexecuted."
+    },
+    {
+      "name": "Old counterfactual literal identities derive from complete preimage",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "derivedGitIdentities": [
+          "1409b65f9bdad2fd8bf15841e36d4460acce8204",
+          "ded3bd876233b0fb238559d210d76c7edced8eed"
+        ],
+        "notBareGitFetches": true
+      }
+    },
+    {
+      "name": "Finite Node test uses the actual observer and parent capture",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "timeoutMs": 10000,
+        "maxBuffer": 262144,
+        "realProviderOrNetworkCalls": 0
+      }
+    },
+    {
+      "name": "Observer exact version and platform tuple precede fixture allocation",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": "Unsupported tuple is a failure/unqualified, not a PASS or new skip."
+    },
+    {
+      "name": "Finite root and subscriptions have original cleanup paths",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": "Only static source verification; no observed process cleanup."
+    },
+    {
+      "name": "Actual passive projector and helpers are extracted without a substitute",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": "Reviewer did not evaluate or compile these fragments."
+    },
+    {
+      "name": "Versioned Node primary documentation fully joins",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": "nodejs/node v24.21.0 module/test docs; strip output is not stable across versions."
+    },
+    {
+      "name": "All 100 selected JSON data-shape pairs fit original guards",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "pureDataOnly": true,
+        "lineIncludingLF": 355,
+        "parentIncludingLF": 499,
+        "arbitraryHostileRecordAdmission": false
+      }
+    },
+    {
+      "name": "Whole platform import occurs exactly once at EOF",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": "await import('../../../scripts/e2e/opencode-diagnostics/platform.test.mjs');"
+    },
+    {
+      "name": "Imported platform target, helper and fixture are exact unchanged bodies",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "mode": "100644",
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+      }
+    },
+    {
+      "name": "Whole import preserves 26 prospective registrations and original skip",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "nativeOriginal": 9,
+        "newDiagnostics": 3,
+        "platform": 14,
+        "total": 26,
+        "linuxEligiblePlatform": 13,
+        "windowsEligiblePlatform": 14,
+        "awaitIsRegistrationNotPriorCallbackCompletion": true
+      }
+    },
+    {
+      "name": "Whole component suite retains its original effects and prerequisites",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": "No lsof availability, finite aggregate deadline, runtime success or physical Windows integration inferred."
+    },
+    {
+      "name": "All 17 protected full source bodies preserve exact rooted identities",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "count": 17,
+        "bytes": 892247,
+        "frozenVector": {
+          "bytes": 3481,
+          "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+          "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+        }
+      }
+    },
+    {
+      "name": "All 42 workflows rehash against unchanged current GitHub root",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "count": 42,
+        "bytes": 751430,
+        "root": "d95091ab0edb488d6e418ffa789d0f07c447ecda"
+      }
+    },
+    {
+      "name": "Scope preserves source census, dependency inventory and source-size policy",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "production": 5020,
+        "cap": 800,
+        "exceptions": 141,
+        "nonDoc": 8799,
+        "otherNonDocRoots": 51,
+        "policyCommandUnexecuted": true
+      }
+    },
+    {
+      "name": "Unpublished native test correction retains old prefix and later tests",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "initialPin": {
+          "bytes": 40988,
+          "sha256": "0810f565d4245279c7e912471b011d1548112d3aa49abf94febc2e9450e58c8c",
+          "gitBlob": "da40c605d2f0d3af0a6a5c666be763d88b69a079"
+        },
+        "finalPin": {
+          "bytes": 41559,
+          "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+          "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+        },
+        "bothWholeOriginalPrefix": true,
+        "byteDifference": 571,
+        "secondTestThroughWholeImportLiteralEqual": true,
+        "finalExplicitExpectedArgument": true,
+        "metadataNeverPublishedOrExecuted": true,
+        "sourceCandidateOnly": true,
+        "originalComputedExpectationPresent": true,
+        "computedExpectationRemovedFromFinal": true,
+        "finalExpectedClassComesFromFixture": true
+      }
+    },
+    {
+      "name": "Full root R2 report joins exact subject, parent and all 37 identities",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "pin": {
+          "bytes": 67412,
+          "sha256": "8814087c74f5e80af639a3ec24e97a4ae7cc2404ecf0a61d4380ffeaceac726c",
+          "gitBlob": "36b20d73f574cca6b76fa40dd5e46413338caafd"
+        },
+        "fullBodyRead": true,
+        "subjectMatch": true,
+        "parentMatch": true,
+        "allChecksPass": true,
+        "all37CurrentPointersMatch": true,
+        "sourceEvaluated": false,
+        "sourceCompiled": false,
+        "sourceExecuted": false
+      }
+    },
+    {
+      "name": "Current fixed9d CI and later archives are separate from this source",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": "Proposal observation13 is historical; root observation14/archive work outside this review."
+    },
+    {
+      "name": "Source review claims no execution, admission, extra gate or broad qualification",
+      "passed": true,
+      "status": "PASS_STATIC",
+      "evidence": {
+        "reviewerLocalTools": false,
+        "reviewerTargetEvaluation": false,
+        "reviewerLiveCi": false,
+        "newGate": false
+      }
+    }
+  ],
+  "checkCount": 48,
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "unresolvedBlockers": [],
+  "reviewerActions": {
+    "immutableGitReads": true,
+    "acceptedBodyRehash": true,
+    "pureJsonTextAndHash": true,
+    "bareReportRetention": true,
+    "localTools": false,
+    "targetSourceEvaluation": false,
+    "targetSourceCompilation": false,
+    "targetSourceImport": false,
+    "runtime": false,
+    "liveCiRead": false,
+    "refOrPrActions": false,
+    "sourceOrControlWrites": false
+  },
+  "reviewerDataCorrections": [
+    "An unretained report-assembly expression referenced an omitted local alias ('basis') and threw before any report blob creation. The alias was defined for the complete assembly; no proposal, source body, identity, gate, or tool state was changed.",
+    "A scratch metadata matcher looked for a variable named expectedClass in the superseded native test. Full helper read showed an inline ternary instead; the retained correction proof compares that exact literal and the final explicit fixture argument.",
+    "A second unretained report-assembly placeholder referenced unavailable orchestration global process and threw before report creation. It was removed; reviewer did not inspect or invoke a local process and no source/proposal identity changed."
+  ],
+  "next": "Existing root/guard/semantic/binding static acceptance, exact source/docs publication with immediate expected-parent force:false push, and complete root plus independent actual readbacks. A genuine execution venue may be selected only afterward. This review adds no gate.",
+  "selfReadbackProtocol": "Retain this exact bare report and send its pin immediately; then fetch its complete body and require literal identity, byte/SHA256/Git identity and all48 passing checks."
+}

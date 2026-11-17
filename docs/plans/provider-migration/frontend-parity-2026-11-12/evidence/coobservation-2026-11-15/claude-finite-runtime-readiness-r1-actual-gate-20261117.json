@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CLAUDE_FINITE_RUNTIME_READINESS_R1_PUBLICATION_ACTUAL_GATE",
+  "closedAt": "2026-11-17 12:08:55 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "commit": "01ed56f756b385b91afcffcb31dafe7750bb4162",
+  "parent": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+  "root": "181ac1545f21983dfe9b754ef23ae79b0e2caac2",
+  "docs": "08ba85ad8af15cad38cdb62173f7b25a17aa9fb8",
+  "manifest": {
+    "bytes": 24051,
+    "sha256": "447555b50383952aeed41740bbc37c6a20c600d40ffb9053909818f709db0df9",
+    "gitBlob": "90d74837f1e0ca4b412b10d198cdca6947234eaf"
+  },
+  "subject": {
+    "bytes": 37389,
+    "sha256": "588f6ce9b006b458ce7a896dc4ab46985493c54911eec2beedcf0874b33163ca",
+    "gitBlob": "f44edc6cdfde700e570423176fc00d11b2275c43"
+  },
+  "staticChecks": 164,
+  "rootActual": {
+    "bytes": 542644,
+    "sha256": "3b2025ced142e6ec1cf9e70a193442074a8a078c9139ee3b1d4d4923cf81db8c",
+    "gitBlob": "801451c05537dd6316f2a1ceb700c6fc3b6e3184"
+  },
+  "independentActual": {
+    "bytes": 670881,
+    "sha256": "5f73f5c9fb4ee38f393c3adb5e6d13a64d5dcb545929b49005752ccb86cf07fa",
+    "gitBlob": "484596c69ecf9b470d81226e31da897fe0743a2f"
+  },
+  "actualChecks": 81,
+  "rootChecks": 37,
+  "independentChecks": 44,
+  "allFullBodiesRead": true,
+  "allReviewerSelfReadsConfirmed": true,
+  "currentBodies": {
+    "count": 26,
+    "bytes": 5585546
+  },
+  "parentBodies": {
+    "count": 3,
+    "bytes": 3412121
+  },
+  "completeRepositoryScopedUtf8Pointers": {
+    "count": 419,
+    "bytes": 54051123,
+    "unresolved": 0
+  },
+  "unreadBinaryMetadataReferences": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "declaredPin": {
+        "gitBlob": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3",
+        "bytes": 186398,
+        "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+      },
+      "locations": [
+        "evidence.testDesignAdvisory.providerTranslation.archive"
+      ],
+      "class": "unchanged unread binary metadata, explicitly excluded from complete UTF-8 body claims",
+      "clarification": {
+        "bytes": 3213,
+        "sha256": "45c32bb3b2512f3dfe09ae6a3de751e147f363dbd3d07d6024db8ff9383201e2",
+        "gitBlob": "7829b248e38d441a1b95d263f628ae611b2889c7"
+      },
+      "bytesRead": false,
+      "extracted": false,
+      "qualified": false
+    }
+  ],
+  "exactDelta": {
+    "docsAdded": 23,
+    "docsModified": 3,
+    "sourceModified": 0,
+    "total": 26,
+    "deleted": 0,
+    "modesChanged": 0
+  },
+  "census": {
+    "total": 12184,
+    "docs": 3385,
+    "nonDoc": 8799,
+    "rootEntries": 54,
+    "otherRootUnchanged": 53
+  },
+  "preserved": {
+    "priorCatalogValues": 95,
+    "newCatalogKeys": 2,
+    "originalBundles": 27,
+    "commonAppendBytes": 8860,
+    "fiveSelectedSourcePreimages": true,
+    "protectedSourceBodies": 23,
+    "fourWindowsPostimages": true,
+    "sixDiagnosticPostimages": true,
+    "frozen13": true,
+    "whole149": true,
+    "catalog43": true,
+    "runtime85": true,
+    "productionFiles": 5020,
+    "cap": 800,
+    "exceptions": 141,
+    "workflows": 42
+  },
+  "historicalCI": {
+    "pr": 1219,
+    "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "allSevenTerminal": true,
+    "active": [],
+    "noFurtherPolling": true
+  },
+  "environment": {
+    "status": "unavailable",
+    "noFreshProbeOrExecution": true,
+    "standaloneUninvokedAndUnrebound": true
+  },
+  "qualification": {
+    "sourcePostimagesAuthored": false,
+    "sourceCompiled": false,
+    "sourceExecuted": false,
+    "newExecutionVenueSelected": false,
+    "runtimeAdmitted": false,
+    "completeE2E": false,
+    "readyMergeReleaseDefaultStage2": false
+  },
+  "decision": "CLOSE_EXACT_R1_DOCUMENTATION_PUBLICATION_ACTUAL_GATE_ONLY",
+  "next": "Root may author only the five selected existing source/test postimages under f44edc6c, then source R2 and four full reviews. Runtime and a new execution venue remain unselected."
+}

@@ -1,0 +1,2158 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_RETAINED_FAILURE_DIAGNOSTICS_SOURCE_R2_ROOT_STATIC",
+  "at": "2026-11-17 10:58:04 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "root",
+  "subject": {
+    "bytes": 48600,
+    "sha256": "ea41197152f40525912ca3bf8d41b84451f1c306bdb88a5ee051d83e8842891e",
+    "gitBlob": "c356b7f7c7dd7d9ab6e869ad9d3655c74ea8dbea"
+  },
+  "decision": "ACCEPT_EXACT_SIX_SOURCE_R2_PENDING_INDEPENDENT_REVIEWS",
+  "accepted": true,
+  "parent": "c88b4fe2632f2644bf734293db713fe8288b5139",
+  "parentRoot": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+  "parentDocs": "1aeddc4cacfc5288f3d6bb03c7bfcf52e24bf9bb",
+  "r1ActualGate": {
+    "bytes": 3366,
+    "sha256": "2ab0cc4d487580e777d7a967ab202e02f84705ab4ff1ca6ada91486a5745af7b",
+    "gitBlob": "7e3c941384be39de462ea32baecf5f2ecc868d4e"
+  },
+  "authorshipStartedAt": "2026-11-17 10:43:11 UTC",
+  "sourceChanges": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "before": {
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+      },
+      "after": {
+        "bytes": 28804,
+        "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4",
+        "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28"
+      },
+      "lines": 431,
+      "inverseExact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "before": {
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+      },
+      "after": {
+        "bytes": 13466,
+        "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056",
+        "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c"
+      },
+      "lines": 184,
+      "inverseExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "before": {
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05"
+      },
+      "after": {
+        "bytes": 23312,
+        "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+        "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+      },
+      "lines": 514,
+      "inverseExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "before": {
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068"
+      },
+      "after": {
+        "bytes": 37953,
+        "sha256": "a553197e108b574e9ff1c0e082014d4224baffeba21cec65a1b16f0fa17edbb6",
+        "gitBlob": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa"
+      },
+      "lines": 578,
+      "inverseExact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "before": {
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f"
+      },
+      "after": {
+        "bytes": 77457,
+        "sha256": "af9de97ec8da68ef394c5ce5b08ca7bfbfd4b099178bd6ae3c9c8c20831cbc3b",
+        "gitBlob": "cd74eecf610858412022bbd2c69f62c910465bad"
+      },
+      "lines": 1352,
+      "inverseExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "before": {
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478"
+      },
+      "after": {
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      },
+      "lines": 647,
+      "inverseExact": true
+    }
+  ],
+  "fullInverses": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "before": {
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+      },
+      "after": {
+        "bytes": 28804,
+        "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4",
+        "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28"
+      },
+      "restored": {
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+      },
+      "literalEqual": true,
+      "fullRead": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "before": {
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+      },
+      "after": {
+        "bytes": 13466,
+        "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056",
+        "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c"
+      },
+      "restored": {
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+      },
+      "literalEqual": true,
+      "fullRead": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "before": {
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05"
+      },
+      "after": {
+        "bytes": 23312,
+        "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+        "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+      },
+      "restored": {
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05"
+      },
+      "literalEqual": true,
+      "fullRead": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "before": {
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068"
+      },
+      "after": {
+        "bytes": 37953,
+        "sha256": "a553197e108b574e9ff1c0e082014d4224baffeba21cec65a1b16f0fa17edbb6",
+        "gitBlob": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa"
+      },
+      "restored": {
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068"
+      },
+      "literalEqual": true,
+      "fullRead": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "before": {
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f"
+      },
+      "after": {
+        "bytes": 77457,
+        "sha256": "af9de97ec8da68ef394c5ce5b08ca7bfbfd4b099178bd6ae3c9c8c20831cbc3b",
+        "gitBlob": "cd74eecf610858412022bbd2c69f62c910465bad"
+      },
+      "restored": {
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f"
+      },
+      "literalEqual": true,
+      "fullRead": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "before": {
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478"
+      },
+      "after": {
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      },
+      "restored": {
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478"
+      },
+      "literalEqual": true,
+      "fullRead": true
+    }
+  ],
+  "fullSourceReadbacks": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "pin": {
+        "bytes": 28804,
+        "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4",
+        "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28"
+      },
+      "fullRead": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "pin": {
+        "bytes": 13466,
+        "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056",
+        "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c"
+      },
+      "fullRead": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "pin": {
+        "bytes": 23312,
+        "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+        "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+      },
+      "fullRead": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "pin": {
+        "bytes": 37953,
+        "sha256": "a553197e108b574e9ff1c0e082014d4224baffeba21cec65a1b16f0fa17edbb6",
+        "gitBlob": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa"
+      },
+      "fullRead": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "pin": {
+        "bytes": 77457,
+        "sha256": "af9de97ec8da68ef394c5ce5b08ca7bfbfd4b099178bd6ae3c9c8c20831cbc3b",
+        "gitBlob": "cd74eecf610858412022bbd2c69f62c910465bad"
+      },
+      "fullRead": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "pin": {
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      },
+      "fullRead": true
+    }
+  ],
+  "directPointerJoins": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "d226951f5f24dd1a5a7d4742e25edcb3ef043213",
+        "bytes": 31060,
+        "sha256": "188bd061a0aa0ed5afe3f8af4919c5ac111ae15d3deb5c92c19645eccab997bc"
+      },
+      "locations": [
+        "proposal.r1.subject"
+      ],
+      "actual": {
+        "bytes": 31060,
+        "sha256": "188bd061a0aa0ed5afe3f8af4919c5ac111ae15d3deb5c92c19645eccab997bc",
+        "gitBlob": "d226951f5f24dd1a5a7d4742e25edcb3ef043213"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "9f0dd1dc45e7929035b7b43839fb85d09418d575",
+        "bytes": 47507,
+        "sha256": "341b8aec958638ac542f02f42822b4b60e859303dd590f79585d8ccda2c93736"
+      },
+      "locations": [
+        "proposal.r1.reviews.0.pin"
+      ],
+      "actual": {
+        "bytes": 47507,
+        "sha256": "341b8aec958638ac542f02f42822b4b60e859303dd590f79585d8ccda2c93736",
+        "gitBlob": "9f0dd1dc45e7929035b7b43839fb85d09418d575"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "d7d959f1e87af31520fd83fc09202b099a3d5e68",
+        "bytes": 33634,
+        "sha256": "9713b542aa9a6dcfca99a196f3e56fe91d568f9c3b50cb320527ca1b0fecbaaf"
+      },
+      "locations": [
+        "proposal.r1.reviews.1.pin"
+      ],
+      "actual": {
+        "bytes": 33634,
+        "sha256": "9713b542aa9a6dcfca99a196f3e56fe91d568f9c3b50cb320527ca1b0fecbaaf",
+        "gitBlob": "d7d959f1e87af31520fd83fc09202b099a3d5e68"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "f5bc9112925cf2dbabbb5829491f40ae014763a5",
+        "bytes": 34292,
+        "sha256": "407344734ca2a82cbf10c5ad70586a89e8510d3cadc8dfd23bba61e41e8d68b3"
+      },
+      "locations": [
+        "proposal.r1.reviews.2.pin"
+      ],
+      "actual": {
+        "bytes": 34292,
+        "sha256": "407344734ca2a82cbf10c5ad70586a89e8510d3cadc8dfd23bba61e41e8d68b3",
+        "gitBlob": "f5bc9112925cf2dbabbb5829491f40ae014763a5"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "dac57dc0a957d6f2a8de42f8f9ca7c1c7ece87ec",
+        "bytes": 117948,
+        "sha256": "5120e730aabb5e0aed43d88808ec66061838e49b7a5b4e4ee076b977904e7dc0"
+      },
+      "locations": [
+        "proposal.r1.reviews.3.pin"
+      ],
+      "actual": {
+        "bytes": 117948,
+        "sha256": "5120e730aabb5e0aed43d88808ec66061838e49b7a5b4e4ee076b977904e7dc0",
+        "gitBlob": "dac57dc0a957d6f2a8de42f8f9ca7c1c7ece87ec"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "7e3c941384be39de462ea32baecf5f2ecc868d4e",
+        "bytes": 3366,
+        "sha256": "2ab0cc4d487580e777d7a967ab202e02f84705ab4ff1ca6ada91486a5745af7b"
+      },
+      "locations": [
+        "proposal.r1.actualGate"
+      ],
+      "actual": {
+        "bytes": 3366,
+        "sha256": "2ab0cc4d487580e777d7a967ab202e02f84705ab4ff1ca6ada91486a5745af7b",
+        "gitBlob": "7e3c941384be39de462ea32baecf5f2ecc868d4e"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "9fc44701c3aa4e03ee1459b1468455776ecddfb8",
+        "bytes": 438180,
+        "sha256": "f42c930100217775083c3c40465d92cebb52b8335ce695bc9f30cc2a1439da24"
+      },
+      "locations": [
+        "proposal.r1.rootActual"
+      ],
+      "actual": {
+        "bytes": 438180,
+        "sha256": "f42c930100217775083c3c40465d92cebb52b8335ce695bc9f30cc2a1439da24",
+        "gitBlob": "9fc44701c3aa4e03ee1459b1468455776ecddfb8"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "4d9e68e8ec72b694892f5bda9ffcf3d42c120add",
+        "bytes": 626538,
+        "sha256": "264313dda69d9918a80d2e9edda76e9ce134ef3401b6e7db8645324c3fa69bd7"
+      },
+      "locations": [
+        "proposal.r1.independentActual"
+      ],
+      "actual": {
+        "bytes": 626538,
+        "sha256": "264313dda69d9918a80d2e9edda76e9ce134ef3401b6e7db8645324c3fa69bd7",
+        "gitBlob": "4d9e68e8ec72b694892f5bda9ffcf3d42c120add"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8"
+      },
+      "locations": [
+        "proposal.sourceChanges.0.before"
+      ],
+      "actual": {
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28",
+        "bytes": 28804,
+        "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4"
+      },
+      "locations": [
+        "proposal.sourceChanges.0.after"
+      ],
+      "actual": {
+        "bytes": 28804,
+        "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4",
+        "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b"
+      },
+      "locations": [
+        "proposal.sourceChanges.1.before"
+      ],
+      "actual": {
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c",
+        "bytes": 13466,
+        "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056"
+      },
+      "locations": [
+        "proposal.sourceChanges.1.after"
+      ],
+      "actual": {
+        "bytes": 13466,
+        "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056",
+        "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05",
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a"
+      },
+      "locations": [
+        "proposal.sourceChanges.2.before"
+      ],
+      "actual": {
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab",
+        "bytes": 23312,
+        "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2"
+      },
+      "locations": [
+        "proposal.sourceChanges.2.after"
+      ],
+      "actual": {
+        "bytes": 23312,
+        "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+        "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068",
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b"
+      },
+      "locations": [
+        "proposal.sourceChanges.3.before"
+      ],
+      "actual": {
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa",
+        "bytes": 37953,
+        "sha256": "a553197e108b574e9ff1c0e082014d4224baffeba21cec65a1b16f0fa17edbb6"
+      },
+      "locations": [
+        "proposal.sourceChanges.3.after"
+      ],
+      "actual": {
+        "bytes": 37953,
+        "sha256": "a553197e108b574e9ff1c0e082014d4224baffeba21cec65a1b16f0fa17edbb6",
+        "gitBlob": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f",
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b"
+      },
+      "locations": [
+        "proposal.sourceChanges.4.before"
+      ],
+      "actual": {
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "cd74eecf610858412022bbd2c69f62c910465bad",
+        "bytes": 77457,
+        "sha256": "af9de97ec8da68ef394c5ce5b08ca7bfbfd4b099178bd6ae3c9c8c20831cbc3b"
+      },
+      "locations": [
+        "proposal.sourceChanges.4.after"
+      ],
+      "actual": {
+        "bytes": 77457,
+        "sha256": "af9de97ec8da68ef394c5ce5b08ca7bfbfd4b099178bd6ae3c9c8c20831cbc3b",
+        "gitBlob": "cd74eecf610858412022bbd2c69f62c910465bad"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09"
+      },
+      "locations": [
+        "proposal.sourceChanges.5.before"
+      ],
+      "actual": {
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b",
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0"
+      },
+      "locations": [
+        "proposal.sourceChanges.5.after"
+      ],
+      "actual": {
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "8b045297766cc5a352be923e3d477426411f1f5b",
+        "bytes": 36526,
+        "sha256": "42a39d5cfe0a1f0681f3978e2073c1f2ba57e4f47f81a5b9345ea6927a991cce"
+      },
+      "locations": [
+        "proposal.native.selection.tests.existingPattern"
+      ],
+      "actual": {
+        "bytes": 36526,
+        "sha256": "42a39d5cfe0a1f0681f3978e2073c1f2ba57e4f47f81a5b9345ea6927a991cce",
+        "gitBlob": "8b045297766cc5a352be923e3d477426411f1f5b"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72",
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26"
+      },
+      "locations": [
+        "proposal.native.selection.tests.wholePlatformImport.target",
+        "proposal.native.testAppend.wholePlatformImport.target",
+        "proposal.preservation.fourWindowsPostimages.1.after"
+      ],
+      "actual": {
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4",
+        "bytes": 12389,
+        "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34"
+      },
+      "locations": [
+        "proposal.native.selection.tests.wholePlatformImport.helper",
+        "proposal.native.testAppend.wholePlatformImport.helper",
+        "proposal.preservation.fourWindowsPostimages.0.after"
+      ],
+      "actual": {
+        "bytes": 12389,
+        "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+        "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "47a1e9cb0efa58479721d8815bfb8dae3f943fb6",
+        "bytes": 16768,
+        "sha256": "db43609e9394925e3b27f606d8a49ed443e1bcdabeee866dd4fec4b56ed800fb"
+      },
+      "locations": [
+        "proposal.native.selection.tests.wholePlatformImport.fixture",
+        "proposal.native.testAppend.wholePlatformImport.fixture"
+      ],
+      "actual": {
+        "bytes": 16768,
+        "sha256": "db43609e9394925e3b27f606d8a49ed443e1bcdabeee866dd4fec4b56ed800fb",
+        "gitBlob": "47a1e9cb0efa58479721d8815bfb8dae3f943fb6"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "e9e601a6b1f5521b7412c5df67435aa275486699",
+        "bytes": 101494,
+        "sha256": "25772eeb869f29a27411edc156503efe54e710d0a7560c69bf2772624fb6c182"
+      },
+      "locations": [
+        "proposal.native.selection.tests.wholePlatformImport.actualRunnerEvidence.sourceLog",
+        "proposal.native.testAppend.wholePlatformImport.actualRunnerEvidence.sourceLog"
+      ],
+      "actual": {
+        "bytes": 101494,
+        "sha256": "25772eeb869f29a27411edc156503efe54e710d0a7560c69bf2772624fb6c182",
+        "gitBlob": "e9e601a6b1f5521b7412c5df67435aa275486699"
+      },
+      "passed": true
+    },
+    {
+      "repository": "nodejs/node",
+      "pin": {
+        "gitBlob": "02f9cc30ec5775f198ddbae58d80d7dfdc9b2110",
+        "bytes": 165722,
+        "sha256": "b2c98ae196d08f83752c9f3c6f595ade69abbd9fd2e6d7192d662c7206896e16"
+      },
+      "locations": [
+        "proposal.native.selection.tests.wholePlatformImport.primaryNodeDocumentation",
+        "proposal.native.testAppend.wholePlatformImport.primaryNodeDocumentation"
+      ],
+      "actual": {
+        "bytes": 165722,
+        "sha256": "b2c98ae196d08f83752c9f3c6f595ade69abbd9fd2e6d7192d662c7206896e16",
+        "gitBlob": "02f9cc30ec5775f198ddbae58d80d7dfdc9b2110"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "1409b65f9bdad2fd8bf15841e36d4460acce8204",
+        "bytes": 906,
+        "sha256": "c225fad7432f205e57fb1a086c1d84213f30ba900705e11e15c6a5ca0763b13e"
+      },
+      "locations": [
+        "proposal.native.testAppend.oldCounterfactual.runSource"
+      ],
+      "actual": {
+        "bytes": 906,
+        "sha256": "c225fad7432f205e57fb1a086c1d84213f30ba900705e11e15c6a5ca0763b13e",
+        "gitBlob": "1409b65f9bdad2fd8bf15841e36d4460acce8204"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "ded3bd876233b0fb238559d210d76c7edced8eed",
+        "bytes": 677,
+        "sha256": "339d052a0a4d205dd1f7c57130386635bf5d04d61c9cd542703f125650dfcc91"
+      },
+      "locations": [
+        "proposal.native.testAppend.oldCounterfactual.publisherSource"
+      ],
+      "actual": {
+        "bytes": 677,
+        "sha256": "339d052a0a4d205dd1f7c57130386635bf5d04d61c9cd542703f125650dfcc91",
+        "gitBlob": "ded3bd876233b0fb238559d210d76c7edced8eed"
+      },
+      "passed": true
+    },
+    {
+      "repository": "nodejs/node",
+      "pin": {
+        "gitBlob": "91b3631883021274ab6c7e1eb947ebd776c7c97e",
+        "bytes": 77941,
+        "sha256": "94647ba08114b86f1b8845f00542ef697b715a16be8bd971ed0bb4504639f3e1"
+      },
+      "locations": [
+        "proposal.native.testAppend.nodeTypeStrippingPrimarySource"
+      ],
+      "actual": {
+        "bytes": 77941,
+        "sha256": "94647ba08114b86f1b8845f00542ef697b715a16be8bd971ed0bb4504639f3e1",
+        "gitBlob": "91b3631883021274ab6c7e1eb947ebd776c7c97e"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e"
+      },
+      "locations": [
+        "proposal.preservation.fourWindowsPostimages.0.before"
+      ],
+      "actual": {
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697"
+      },
+      "locations": [
+        "proposal.preservation.fourWindowsPostimages.1.before"
+      ],
+      "actual": {
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa"
+      },
+      "locations": [
+        "proposal.preservation.fourWindowsPostimages.2.before"
+      ],
+      "actual": {
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3",
+        "bytes": 37970,
+        "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb"
+      },
+      "locations": [
+        "proposal.preservation.fourWindowsPostimages.2.after"
+      ],
+      "actual": {
+        "bytes": 37970,
+        "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+        "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e",
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5"
+      },
+      "locations": [
+        "proposal.preservation.fourWindowsPostimages.3.before"
+      ],
+      "actual": {
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd",
+        "bytes": 50377,
+        "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac"
+      },
+      "locations": [
+        "proposal.preservation.fourWindowsPostimages.3.after"
+      ],
+      "actual": {
+        "bytes": 50377,
+        "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+        "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b",
+        "bytes": 3481,
+        "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2"
+      },
+      "locations": [
+        "proposal.preservation.frozenParityVector"
+      ],
+      "actual": {
+        "bytes": 3481,
+        "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+        "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+      },
+      "passed": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "da40c605d2f0d3af0a6a5c666be763d88b69a079",
+        "bytes": 40988,
+        "sha256": "0810f565d4245279c7e912471b011d1548112d3aa49abf94febc2e9450e58c8c"
+      },
+      "locations": [
+        "proposal.unpublishedPreparationCorrection.initialNativeTestPostimage"
+      ],
+      "actual": {
+        "bytes": 40988,
+        "sha256": "0810f565d4245279c7e912471b011d1548112d3aa49abf94febc2e9450e58c8c",
+        "gitBlob": "da40c605d2f0d3af0a6a5c666be763d88b69a079"
+      },
+      "passed": true
+    }
+  ],
+  "directPointerCount": 37,
+  "directPointerBytes": 2414598,
+  "selectedDataBounds": {
+    "scope": "Pure data serialization only; target source not evaluated",
+    "combinations": 100,
+    "maxLineBytes": 355,
+    "maxRecordBytes": 499,
+    "samples": [
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 327,
+        "recordBytes": 471
+      },
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 328,
+        "recordBytes": 472
+      },
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 330,
+        "recordBytes": 474
+      },
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": "EPIPE",
+        "lineBytes": 323,
+        "recordBytes": 467
+      },
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 327,
+        "recordBytes": 471
+      },
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 333,
+        "recordBytes": 477
+      },
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 332,
+        "recordBytes": 476
+      },
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 341,
+        "recordBytes": 485
+      },
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 338,
+        "recordBytes": 482
+      },
+      {
+        "runErrorCode": "ABORT_ERR",
+        "runCauseCode": null,
+        "lineBytes": 320,
+        "recordBytes": 464
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 328,
+        "recordBytes": 472
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 329,
+        "recordBytes": 473
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 331,
+        "recordBytes": 475
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": "EPIPE",
+        "lineBytes": 324,
+        "recordBytes": 468
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 328,
+        "recordBytes": 472
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 334,
+        "recordBytes": 478
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 333,
+        "recordBytes": 477
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 342,
+        "recordBytes": 486
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 339,
+        "recordBytes": 483
+      },
+      {
+        "runErrorCode": "ECONNRESET",
+        "runCauseCode": null,
+        "lineBytes": 321,
+        "recordBytes": 465
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 330,
+        "recordBytes": 474
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 331,
+        "recordBytes": 475
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 333,
+        "recordBytes": 477
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": "EPIPE",
+        "lineBytes": 326,
+        "recordBytes": 470
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 330,
+        "recordBytes": 474
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 336,
+        "recordBytes": 480
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 335,
+        "recordBytes": 479
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 344,
+        "recordBytes": 488
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 341,
+        "recordBytes": 485
+      },
+      {
+        "runErrorCode": "ECONNREFUSED",
+        "runCauseCode": null,
+        "lineBytes": 323,
+        "recordBytes": 467
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 323,
+        "recordBytes": 467
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 324,
+        "recordBytes": 468
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 326,
+        "recordBytes": 470
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": "EPIPE",
+        "lineBytes": 319,
+        "recordBytes": 463
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 323,
+        "recordBytes": 467
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 329,
+        "recordBytes": 473
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 328,
+        "recordBytes": 472
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 337,
+        "recordBytes": 481
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 334,
+        "recordBytes": 478
+      },
+      {
+        "runErrorCode": "EPIPE",
+        "runCauseCode": null,
+        "lineBytes": 316,
+        "recordBytes": 460
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 327,
+        "recordBytes": 471
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 328,
+        "recordBytes": 472
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 330,
+        "recordBytes": 474
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": "EPIPE",
+        "lineBytes": 323,
+        "recordBytes": 467
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 327,
+        "recordBytes": 471
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 333,
+        "recordBytes": 477
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 332,
+        "recordBytes": 476
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 341,
+        "recordBytes": 485
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 338,
+        "recordBytes": 482
+      },
+      {
+        "runErrorCode": "ETIMEDOUT",
+        "runCauseCode": null,
+        "lineBytes": 320,
+        "recordBytes": 464
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 333,
+        "recordBytes": 477
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 334,
+        "recordBytes": 478
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 336,
+        "recordBytes": 480
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": "EPIPE",
+        "lineBytes": 329,
+        "recordBytes": 473
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 333,
+        "recordBytes": 477
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 339,
+        "recordBytes": 483
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 338,
+        "recordBytes": 482
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 347,
+        "recordBytes": 491
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 344,
+        "recordBytes": 488
+      },
+      {
+        "runErrorCode": "UND_ERR_ABORTED",
+        "runCauseCode": null,
+        "lineBytes": 326,
+        "recordBytes": 470
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 332,
+        "recordBytes": 476
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 333,
+        "recordBytes": 477
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 335,
+        "recordBytes": 479
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": "EPIPE",
+        "lineBytes": 328,
+        "recordBytes": 472
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 332,
+        "recordBytes": 476
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 338,
+        "recordBytes": 482
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 337,
+        "recordBytes": 481
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 346,
+        "recordBytes": 490
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 343,
+        "recordBytes": 487
+      },
+      {
+        "runErrorCode": "UND_ERR_SOCKET",
+        "runCauseCode": null,
+        "lineBytes": 325,
+        "recordBytes": 469
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 341,
+        "recordBytes": 485
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 342,
+        "recordBytes": 486
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 344,
+        "recordBytes": 488
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "EPIPE",
+        "lineBytes": 337,
+        "recordBytes": 481
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 341,
+        "recordBytes": 485
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 347,
+        "recordBytes": 491
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 346,
+        "recordBytes": 490
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 355,
+        "recordBytes": 499
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 352,
+        "recordBytes": 496
+      },
+      {
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": null,
+        "lineBytes": 334,
+        "recordBytes": 478
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 338,
+        "recordBytes": 482
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 339,
+        "recordBytes": 483
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 341,
+        "recordBytes": 485
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": "EPIPE",
+        "lineBytes": 334,
+        "recordBytes": 478
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 338,
+        "recordBytes": 482
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 344,
+        "recordBytes": 488
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 343,
+        "recordBytes": 487
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 352,
+        "recordBytes": 496
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 349,
+        "recordBytes": 493
+      },
+      {
+        "runErrorCode": "UND_ERR_BODY_TIMEOUT",
+        "runCauseCode": null,
+        "lineBytes": 331,
+        "recordBytes": 475
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": "ABORT_ERR",
+        "lineBytes": 320,
+        "recordBytes": 464
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": "ECONNRESET",
+        "lineBytes": 321,
+        "recordBytes": 465
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": "ECONNREFUSED",
+        "lineBytes": 323,
+        "recordBytes": 467
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": "EPIPE",
+        "lineBytes": 316,
+        "recordBytes": 460
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": "ETIMEDOUT",
+        "lineBytes": 320,
+        "recordBytes": 464
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": "UND_ERR_ABORTED",
+        "lineBytes": 326,
+        "recordBytes": 470
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": "UND_ERR_SOCKET",
+        "lineBytes": 325,
+        "recordBytes": 469
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT",
+        "lineBytes": 334,
+        "recordBytes": 478
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": "UND_ERR_BODY_TIMEOUT",
+        "lineBytes": 331,
+        "recordBytes": 475
+      },
+      {
+        "runErrorCode": null,
+        "runCauseCode": null,
+        "lineBytes": 313,
+        "recordBytes": 457
+      }
+    ]
+  },
+  "checks": [
+    {
+      "name": "exact source subject fully self-read",
+      "passed": true,
+      "evidence": {
+        "bytes": 48600,
+        "sha256": "ea41197152f40525912ca3bf8d41b84451f1c306bdb88a5ee051d83e8842891e",
+        "gitBlob": "c356b7f7c7dd7d9ab6e869ad9d3655c74ea8dbea"
+      }
+    },
+    {
+      "name": "authorship after exact R1 actual gate",
+      "passed": true,
+      "evidence": {
+        "gate": {
+          "bytes": 3366,
+          "sha256": "2ab0cc4d487580e777d7a967ab202e02f84705ab4ff1ca6ada91486a5745af7b",
+          "gitBlob": "7e3c941384be39de462ea32baecf5f2ecc868d4e"
+        },
+        "closedAt": "2026-11-17 10:42:30 UTC",
+        "authoredAt": "2026-11-17 10:43:11 UTC"
+      }
+    },
+    {
+      "name": "current expected parent and trees",
+      "passed": true,
+      "evidence": {
+        "parent": "c88b4fe2632f2644bf734293db713fe8288b5139",
+        "tree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+        "docs": "1aeddc4cacfc5288f3d6bb03c7bfcf52e24bf9bb"
+      }
+    },
+    {
+      "name": "exact six selected existing paths",
+      "passed": true,
+      "evidence": [
+        "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+        "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+        "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs"
+      ]
+    },
+    {
+      "name": "full preimage and postimage identity",
+      "passed": true,
+      "evidence": {
+        "beforeBytes": 184703,
+        "afterBytes": 222551
+      }
+    },
+    {
+      "name": "all six complete inverses",
+      "passed": true,
+      "evidence": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+          "before": {
+            "bytes": 26258,
+            "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+            "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+          },
+          "after": {
+            "bytes": 28804,
+            "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4",
+            "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28"
+          },
+          "restored": {
+            "bytes": 26258,
+            "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+            "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+          },
+          "literalEqual": true,
+          "fullRead": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+          "before": {
+            "bytes": 13293,
+            "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+            "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+          },
+          "after": {
+            "bytes": 13466,
+            "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056",
+            "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c"
+          },
+          "restored": {
+            "bytes": 13293,
+            "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+            "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+          },
+          "literalEqual": true,
+          "fullRead": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+          "before": {
+            "bytes": 22177,
+            "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+            "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05"
+          },
+          "after": {
+            "bytes": 23312,
+            "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+            "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+          },
+          "restored": {
+            "bytes": 22177,
+            "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+            "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05"
+          },
+          "literalEqual": true,
+          "fullRead": true
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+          "before": {
+            "bytes": 37181,
+            "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+            "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068"
+          },
+          "after": {
+            "bytes": 37953,
+            "sha256": "a553197e108b574e9ff1c0e082014d4224baffeba21cec65a1b16f0fa17edbb6",
+            "gitBlob": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa"
+          },
+          "restored": {
+            "bytes": 37181,
+            "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+            "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068"
+          },
+          "literalEqual": true,
+          "fullRead": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "before": {
+            "bytes": 66098,
+            "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+            "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f"
+          },
+          "after": {
+            "bytes": 77457,
+            "sha256": "af9de97ec8da68ef394c5ce5b08ca7bfbfd4b099178bd6ae3c9c8c20831cbc3b",
+            "gitBlob": "cd74eecf610858412022bbd2c69f62c910465bad"
+          },
+          "restored": {
+            "bytes": 66098,
+            "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+            "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f"
+          },
+          "literalEqual": true,
+          "fullRead": true
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+          "before": {
+            "bytes": 19696,
+            "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+            "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478"
+          },
+          "after": {
+            "bytes": 41559,
+            "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+            "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+          },
+          "restored": {
+            "bytes": 19696,
+            "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+            "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478"
+          },
+          "literalEqual": true,
+          "fullRead": true
+        }
+      ]
+    },
+    {
+      "name": "no file or mode/dependency/workflow additions",
+      "passed": true,
+      "evidence": {
+        "rootSoleAuthor": true,
+        "startedAt": "2026-11-17 10:43:11 UTC",
+        "afterR1ActualGate": true,
+        "sourceFiles": 6,
+        "newSourceFiles": 0,
+        "deletedSourceFiles": 0,
+        "renames": 0,
+        "modeChanges": 0,
+        "newDependencies": 0,
+        "newWorkflows": 0,
+        "newExecutableControlFiles": 0,
+        "compiled": false,
+        "executed": false
+      }
+    },
+    {
+      "name": "GUI retained sample explicitly partial",
+      "passed": true,
+      "evidence": "Saved facts only; no assertion about expired readiness wait"
+    },
+    {
+      "name": "own descriptors and bounded dialog traversal",
+      "passed": true,
+      "evidence": {
+        "dialogs": 3,
+        "buttons": 24
+      }
+    },
+    {
+      "name": "exact launch match with separate states",
+      "passed": true,
+      "evidence": [
+        "matches",
+        "enabled",
+        "disabled",
+        "unknown"
+      ]
+    },
+    {
+      "name": "missing arrays unknown and duplicate counts retained",
+      "passed": true,
+      "evidence": "No retained match is not global absence; duplicate matches are counted"
+    },
+    {
+      "name": "cap size and overflow distinguished",
+      "passed": true,
+      "evidence": {
+        "sentinels": [
+          4,
+          25
+        ],
+        "actualTruncationKnown": false
+      }
+    },
+    {
+      "name": "text facts and privacy unchanged",
+      "passed": true,
+      "evidence": "Exact existing fixed vocabulary; no raw text, labels, IDs, rectangles or causes"
+    },
+    {
+      "name": "8192 overflow and opaque fallback unchanged",
+      "passed": true,
+      "evidence": 8192
+    },
+    {
+      "name": "exact three new failure routes",
+      "passed": true,
+      "evidence": {
+        "existing": [
+          "emulated-import-ui",
+          "emulated-opencode-runtime-ui"
+        ],
+        "add": [
+          "emulated-claude-runtime-ui",
+          "emulated-claude-lifecycle-ui",
+          "emulated-collaboration-ui"
+        ],
+        "condition": "evidence.status !== PASS",
+        "unchangedUnrelated": [
+          "team-ui",
+          "emulated-extensions-ui"
+        ],
+        "passSummariesUnchanged": true
+      }
+    },
+    {
+      "name": "packaged exactly import and summary",
+      "passed": true,
+      "evidence": "Receipt/cleanup/source-freeze/rethrow and success assertion literal outside two edits"
+    },
+    {
+      "name": "packaged receipt and failure ordering",
+      "passed": true,
+      "evidence": "No new CLI execution in tests"
+    },
+    {
+      "name": "GUI entire old prefix preserved",
+      "passed": true,
+      "evidence": {
+        "prefixBytes": 66098
+      }
+    },
+    {
+      "name": "GUI original and new registration counts",
+      "passed": true,
+      "evidence": {
+        "originalExpressions": 34,
+        "newCases": 5
+      }
+    },
+    {
+      "name": "GUI tests call actual exports",
+      "passed": true,
+      "evidence": "Real projector and summary exports; actual unique packaged pure fragment"
+    },
+    {
+      "name": "GUI malformed cap privacy failure coverage",
+      "passed": true,
+      "evidence": "At-cap/overflow, frozen input, getters, proxy traps, 8192 fallback and saved-only semantics"
+    },
+    {
+      "name": "native producer exact only selected three edits",
+      "passed": true,
+      "evidence": [
+        "declarations",
+        "original catch",
+        "existing publisher"
+      ]
+    },
+    {
+      "name": "original classifier and throw literal",
+      "passed": true,
+      "evidence": "Exact original object/value rethrown"
+    },
+    {
+      "name": "one own cause and bounded allowlist",
+      "passed": true,
+      "evidence": [
+        "ABORT_ERR",
+        "ECONNRESET",
+        "ECONNREFUSED",
+        "EPIPE",
+        "ETIMEDOUT",
+        "UND_ERR_ABORTED",
+        "UND_ERR_SOCKET",
+        "UND_ERR_HEADERS_TIMEOUT",
+        "UND_ERR_BODY_TIMEOUT"
+      ]
+    },
+    {
+      "name": "new producer fields only original threw close path",
+      "passed": true,
+      "evidence": "No new channel, catch, close result or first failure decision"
+    },
+    {
+      "name": "passive mandatory fields preserved before optional reads",
+      "passed": true,
+      "evidence": {
+        "newFields": [
+          "runErrorCode",
+          "runCauseCode"
+        ],
+        "exactPositiveCodes": [
+          "ABORT_ERR",
+          "ECONNRESET",
+          "ECONNREFUSED",
+          "EPIPE",
+          "ETIMEDOUT",
+          "UND_ERR_ABORTED",
+          "UND_ERR_SOCKET",
+          "UND_ERR_HEADERS_TIMEOUT",
+          "UND_ERR_BODY_TIMEOUT"
+        ],
+        "unknownAbsentOpaque": null,
+        "producerReads": "Original own code plus one own cause.code in the existing non-coordination run rejection; no prototype/coercion/enumeration or recursive cause graph.",
+        "sameOriginalRejectedObject": true,
+        "originalManagementErrorClasses": true,
+        "originalFirstCloseStageReasonOutcome": true,
+        "failedClosePublicationOnly": true,
+        "newFieldsOnlyWhenRunStateThrew": true,
+        "passiveMandatoryLegacyFieldsValidatedFirst": true,
+        "optionalReflectionErrorsCaughtPerField": true,
+        "legacyAbsentFieldsRemainAbsent": true,
+        "childAndParentShareActualProjection": true,
+        "ordinaryAndReservedBudgetsUnchanged": true
+      }
+    },
+    {
+      "name": "optional failure cannot discard legacy row",
+      "passed": true,
+      "evidence": "Each optional descriptor failure isolated after mandatory validation"
+    },
+    {
+      "name": "legacy absent optional shape",
+      "passed": true,
+      "evidence": "No new keys when absent in legacy payload"
+    },
+    {
+      "name": "original budgets and reservation algorithm unchanged",
+      "passed": true,
+      "evidence": {
+        "maximumRows": 256,
+        "ordinaryRows": 253,
+        "retainedRowsConvention": 257,
+        "traceBytes": 65536,
+        "lineBytes": 512,
+        "reservedRecordBytes": 513,
+        "receiptEnvelopeBytes": 262144,
+        "diagnosticBackpressureMs": 2000
+      }
+    },
+    {
+      "name": "native whole original nine-case prefix preserved",
+      "passed": true,
+      "evidence": {
+        "prefixBytes": 19696,
+        "originalCases": 9
+      }
+    },
+    {
+      "name": "native exactly three new diagnostic declarations",
+      "passed": true,
+      "evidence": 3
+    },
+    {
+      "name": "actual compiled model fragments uniquely located",
+      "passed": true,
+      "evidence": [
+        "actual runState through noteCloseFailure declarations",
+        "actual original run wrapper and catch",
+        "actual failed-close closing continuation"
+      ]
+    },
+    {
+      "name": "finite harness preserves original rejection and failed close",
+      "passed": true,
+      "evidence": "No Host, server, provider constructor or real cleanup invoked"
+    },
+    {
+      "name": "exact old-source counterfactual",
+      "passed": true,
+      "evidence": "Full original run/publisher source literals; not a copied new classifier"
+    },
+    {
+      "name": "Node finite peer uses actual observer and parent",
+      "passed": true,
+      "evidence": "Actual existing child observer and actual exported parent boundary"
+    },
+    {
+      "name": "exact observer tuple before allocation",
+      "passed": true,
+      "evidence": "Unsupported tuple fails, never observer PASS"
+    },
+    {
+      "name": "bounded owned finite fixture",
+      "passed": true,
+      "evidence": {
+        "timeoutMs": 10000,
+        "maxBuffer": 262144
+      }
+    },
+    {
+      "name": "actual shared passive projector extraction",
+      "passed": true,
+      "evidence": {
+        "repository": "nodejs/node",
+        "ref": "v24.21.0",
+        "path": "doc/api/module.md",
+        "bytes": 77941,
+        "sha256": "94647ba08114b86f1b8845f00542ef697b715a16be8bd971ed0bb4504639f3e1",
+        "gitBlob": "91b3631883021274ab6c7e1eb947ebd776c7c97e",
+        "url": "https://github.com/nodejs/node/blob/v24.21.0/doc/api/module.md",
+        "fullBodyRead": true,
+        "scope": "strip mode removes type annotations; output is version-dependent, so no cross-version output hash or compatibility claim."
+      }
+    },
+    {
+      "name": "100 selected nullable code bounds recomputed",
+      "passed": true,
+      "evidence": {
+        "pureDataOnly": true,
+        "line": 355,
+        "parent": 499,
+        "originalGuards": [
+          512,
+          513
+        ]
+      }
+    },
+    {
+      "name": "first reserved close remains observable after saturation",
+      "passed": true,
+      "evidence": "New regression cases, not yet executed"
+    },
+    {
+      "name": "whole platform import exact and unconditional",
+      "passed": true,
+      "evidence": "All14 imported once, no filter or new skip"
+    },
+    {
+      "name": "registration census explicit",
+      "passed": true,
+      "evidence": {
+        "original": 9,
+        "newDiagnostics": 3,
+        "wholePlatform": 14,
+        "windowsEligiblePlatform": 14,
+        "linuxEligiblePlatform": 13,
+        "originalLinuxSkip": 1
+      }
+    },
+    {
+      "name": "no imported platform/helper/fixture edit",
+      "passed": true,
+      "evidence": {
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "mode": "100644",
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+      }
+    },
+    {
+      "name": "whole platform existing I/O and bounds retained",
+      "passed": true,
+      "evidence": {
+        "portAvailabilityMs": 15000,
+        "portPollMs": 250,
+        "powershellPerCallMs": 30000,
+        "timeoutFixtureReadyMs": 5000,
+        "timeoutFixtureOwnTimerMs": 60000
+      }
+    },
+    {
+      "name": "all37 direct repository scoped pointers closed",
+      "passed": true,
+      "evidence": {
+        "count": 37,
+        "bytes": 2414598
+      }
+    },
+    {
+      "name": "source vector workflows and policy preserved by selected scope",
+      "passed": true,
+      "evidence": {
+        "frozenParityVector": {
+          "bytes": 3481,
+          "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+          "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+        },
+        "production": 5020,
+        "cap": 800,
+        "exceptions": 141,
+        "nonDoc": 8799,
+        "workflows": 42
+      }
+    },
+    {
+      "name": "current PR and old CI remain separate",
+      "passed": true,
+      "evidence": "Source proposal and current fixed9d runs distinct"
+    },
+    {
+      "name": "no runtime or broad qualification claimed",
+      "passed": true,
+      "evidence": {
+        "completeE2E": false,
+        "rootCauseResolved": false,
+        "fixRuntimeProven": false,
+        "archiveQualified": false,
+        "newWindows14Or8CasesExecuted": false,
+        "nativeDarwinP09Resolved": false,
+        "coldRendererResolved": false,
+        "standaloneRedGreen24_22_1Executed": false,
+        "readyMergeReleaseDefaultActivationStage2": false,
+        "wholePlatform14ActuallyExecuted": false,
+        "newDiagnosticsExecuted": false,
+        "wholePlatformImportExecuted": false,
+        "sourceCompiled": false
+      }
+    }
+  ],
+  "checkCount": 48,
+  "failedChecks": [],
+  "unresolvedBlockers": [],
+  "sourceEvaluated": false,
+  "sourceCompiled": false,
+  "sourceExecuted": false,
+  "newExecutionVenueSelected": false,
+  "standaloneInvoked": false,
+  "qualification": {
+    "completeE2E": false,
+    "rootCauseResolved": false,
+    "fixRuntimeProven": false,
+    "archiveQualified": false,
+    "newWindows14Or8CasesExecuted": false,
+    "nativeDarwinP09Resolved": false,
+    "coldRendererResolved": false,
+    "standaloneRedGreen24_22_1Executed": false,
+    "readyMergeReleaseDefaultActivationStage2": false,
+    "wholePlatform14ActuallyExecuted": false,
+    "newDiagnosticsExecuted": false,
+    "wholePlatformImportExecuted": false,
+    "sourceCompiled": false
+  },
+  "environmentAtProposal": {
+    "readOnlyShellAvailableAgain": true,
+    "oldCwdAbsent": true,
+    "correctedStandaloneScopeAbsent": true,
+    "newPinnedNodeInodeObserved": "9223372036854818268",
+    "priorStandaloneBindingInode": "9223372036854818252",
+    "noPhysicalSourceStage": true,
+    "noRuntimeAdmitted": true,
+    "noSourceCompiled": true,
+    "noSourceExecuted": true,
+    "standaloneUninvoked": true,
+    "archiveBytesNotYetRead": true
+  },
+  "laterEvidence": {
+    "observation14At": "2026-11-17 10:55:11 UTC",
+    "oldCiSource": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "newCompletedJobs": 7,
+    "newArtifactZipBodiesRead": 6,
+    "archiveByteVerificationSeparateFromSourceReview": true
+  },
+  "preparationCorrection": {
+    "initialNativeTestPostimage": {
+      "bytes": 40988,
+      "sha256": "0810f565d4245279c7e912471b011d1548112d3aa49abf94febc2e9450e58c8c",
+      "gitBlob": "da40c605d2f0d3af0a6a5c666be763d88b69a079"
+    },
+    "why": "Test fixture now supplies expected original errorClass explicitly instead of recomputing any classifier. Added remaining legacy held/invalid/busy classes, function error/cause and nonrecursive cause fixture; no original prefix or core source changed.",
+    "initialCandidateNeverPublishedOrExecuted": true
+  },
+  "selfReadbackProtocol": "Retain immutable report, fetch full text and verify literal/parsed/SHA256/Git/byte identity."
+}

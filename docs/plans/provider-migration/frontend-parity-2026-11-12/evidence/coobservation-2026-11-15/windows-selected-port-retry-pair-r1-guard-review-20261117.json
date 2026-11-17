@@ -1,0 +1,616 @@
+{
+  "schemaVersion": 1,
+  "kind": "windows-selected-port-final-retry-pair-independent-guard-R1-review",
+  "reviewer": "/root/producer_r2_guard",
+  "at": "2026-11-17 08:12:03 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "bytes": 25565,
+    "sha256": "06c9e63f24c25dcbd6a39df9c6ac3d0c34cf6fc402791ff9e0a2e7a857128ff5",
+    "gitBlob": "77e02e33a6db38b6083316f96c65cd02177354cb"
+  },
+  "verdict": "ACCEPT_EXACT_WINDOWS_R1_GUARD_SCOPE_ONLY_NO_POSTIMAGE_OR_RUNTIME_ACCEPTANCE",
+  "checksPassed": 34,
+  "blockers": [],
+  "conclusion": "The exact four-path B+A1 source/test plan preserves the required ownership, deadlines, all seven click guards, full ordered row assertions and ordinary cleanup. The planned tests meaningfully discriminate the selected behavior within their stated limits. No concrete guard blocker was found. This accepts only this R1; no hypothetical source/control postimage, native result, current CI outcome, new execution venue or action admission is accepted.",
+  "scope": {
+    "selectedPaths": [
+      "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "scripts/legacy-agent-host/desktop-native-process-ui.test.ts"
+    ],
+    "onlyModifications": 4,
+    "noAddsDeletesRenames": true,
+    "rootSoleAuthorPublisherExecutor": true,
+    "reviewerReadOnlyExceptBareReport": true,
+    "noNewGate": "The existing R1 publication/actual readback → root authorship/source R2 → actual publication sequence is retained. No additional review, native or execution gate is introduced.",
+    "deferred": "Actual postimages and inverses are unauthored. Their exact correctness, new case bodies and total physical line counts belong to the later source R2."
+  },
+  "evidence": {
+    "exactPlan": {
+      "bytes": 25565,
+      "sha256": "06c9e63f24c25dcbd6a39df9c6ac3d0c34cf6fc402791ff9e0a2e7a857128ff5",
+      "gitBlob": "77e02e33a6db38b6083316f96c65cd02177354cb"
+    },
+    "closedAnchorGate": {
+      "bytes": 9510,
+      "sha256": "7709fd167750dac768b1a826ff81904077a1afe936bbd5865b4041e126ffb599",
+      "gitBlob": "e869a398b712541b17eef73ba5a44af49b00f70d"
+    },
+    "completeRootR1Review": {
+      "bytes": 17709,
+      "sha256": "a532f223fdd5da0773483b618dc7116cca2d888c7584f74337493971fb36f960",
+      "gitBlob": "5b459d31e5f6d2bc4f5c203eb66c5752a39cec11",
+      "checks": 37,
+      "fullBodyReadAndSubjectJoined": true
+    },
+    "priorFullGuardAdvisory": {
+      "bytes": 39388,
+      "sha256": "68e439d5fe2674f430b93ad4729a53adc6144ee01dd241357ed0ba0bc4ab568b",
+      "gitBlob": "33dc8b23aab16c1786c3484347da3382a6ab0ee5",
+      "fullSelfRead": "2026-11-17 07:58:32 UTC"
+    },
+    "priorOptimization": {
+      "bytes": 57508,
+      "sha256": "905ca483abf73b19c2efb60180d8f6bbdefc1e8d8e744aa1377f66ecaf212456",
+      "gitBlob": "ba917dc0650ef48acbaf5646059550accb42d237"
+    },
+    "priorFailure": {
+      "bytes": 82021,
+      "sha256": "7a6dfd9d48f634d1e5434456ff4e787d0795baa01eecd092b2c6877025f352d3",
+      "gitBlob": "4a8ee1f31e1ce056b06515e842ed0d68fb5ea917"
+    },
+    "originalReceipt": {
+      "bytes": 750631,
+      "sha256": "cf9c74713f42fbad360375ff883711a9b8baf8a434b8b39fd4beb412d6b635c9",
+      "gitBlob": "a5032a87abfe9c9a7a91227e31408993d6ee073a"
+    },
+    "fullCurrentParityVector": {
+      "bytes": 3481,
+      "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+      "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+    },
+    "immutableApiResponses": {
+      "commit": {
+        "bytes": 1161,
+        "sha256": "b02cd7f9310d1a77c0dd7051d91721bc0e99d7038974fbbbd95a16d65baa70b6",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/65cd08dc15e3735cb579578d475938fd0a3fb135"
+      },
+      "root": {
+        "bytes": 12410,
+        "sha256": "adfdd710a354b1a8bc25f28effe26314f89a856c5abaf898d89f28273ddc3142",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e2347fe433055be9f5c8ee109e7db087bf365c16"
+      },
+      "docs": {
+        "bytes": 7542,
+        "sha256": "1499458866192d0ac2f68832ecce28fea2fb5785fa9822fefa58af535d970cca",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/1e97d02232e95ba34238c340713571bb6e5b2a91"
+      },
+      "meaning": "These bytes/SHA identities describe complete retrieved JSON responses at the exact immutable API URLs. They are not separately retained Git blob references."
+    },
+    "readMethod": "Entire exact25,565B R1,9,510B preceding gate,17,709B root review and3,481B current13-row vector were freshly fetched, hashed and read. Complete fresh immutable commit/root/docs API bodies were parsed/read and the53 non-doc root rows compared with the previously complete9d root. All four complete source bodies were rehashed from exact retained full reads for33dc/ba917, and their canonical path/mode/size/blob/physical-line identities rejoined to the unchanged complete scripts/tools trees. Relevant full query, gate, current controls/selector and actual-source test seams retain the full prior review; no source was evaluated.",
+    "previousActualReports": "The preceding gate records accepted full root757184 and independentcc54 actual publication reads. This review reads/joins that closed gate and fresh immutable roots, not a new full re-audit of those two large actual reports or all historical CI artifacts.",
+    "currentCiEvidence": "Only the exact R1's retained PR1219 identity/freeze fields are assessed. No live CI, run, job or PR endpoint was read. The plan's lastRootObservation is explicitly a timestamped historical observation, not a present status claim."
+  },
+  "sourceAnchor": {
+    "commit": "65cd08dc15e3735cb579578d475938fd0a3fb135",
+    "root": "e2347fe433055be9f5c8ee109e7db087bf365c16",
+    "docs": "1e97d02232e95ba34238c340713571bb6e5b2a91",
+    "soleParent": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "actualGate": {
+      "bytes": 9510,
+      "sha256": "7709fd167750dac768b1a826ff81904077a1afe936bbd5865b4041e126ffb599",
+      "gitBlob": "e869a398b712541b17eef73ba5a44af49b00f70d"
+    },
+    "rootActual": {
+      "bytes": 76668,
+      "sha256": "8ef246ec40b9c443ddd13bad6b385e80fd60b1881b7eb2b342aba14bd74c56c3",
+      "gitBlob": "757184208b6b39432f5f957011c0a2d40d5b344d"
+    },
+    "independentActual": {
+      "bytes": 123197,
+      "sha256": "ecc5f229c0073fd48c218205e4feb0928e70f2a41a4ff53d60088e320ae0cef4",
+      "gitBlob": "cc54c9d831a28eadf9e411fd8d53134fbcd6f881"
+    },
+    "nonDocsEquivalentTo": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "sourceGate": {
+      "bytes": 7050,
+      "sha256": "4a55ae270a3549fd97c712db801cf2378102e7974597c8ed2c3fe3b240e937cb",
+      "gitBlob": "3aa070295059b9e1dd280ee36836712878b0b72c"
+    },
+    "scriptsTree": "c3f4fe5a62dd79a743b6ffc0d07341ac68a25f73",
+    "toolsTree": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+    "precedingGateClosed": "2026-11-17 07:53:00 UTC",
+    "planAuthored": "2026-11-17 08:02:36 UTC",
+    "actualCommitParentJoined": true,
+    "actualRootAndDocsJoined": true,
+    "all53NonDocRootEntriesLiteralEqual9d": true,
+    "unchangedGithubTree": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+    "importantGateDistinction": "e869 closes the earlier fresh-CI documentation publication at65cd. It provides the current source/docs anchor. It does not replace the forthcoming Windows R1 publication's own actual gate; Windows postimage authorship is still forbidden before that later gate closes."
+  },
+  "completePreimages": [
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "mode": "100644",
+      "bytes": 12335,
+      "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+      "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+      "lines": 312,
+      "wholeBodyRetained": true,
+      "currentTreeJoined": true
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "mode": "100644",
+      "bytes": 16835,
+      "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+      "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+      "lines": 331,
+      "wholeBodyRetained": true,
+      "currentTreeJoined": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "mode": "100644",
+      "bytes": 37692,
+      "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+      "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+      "lines": 647,
+      "wholeBodyRetained": true,
+      "currentTreeJoined": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "mode": "100644",
+      "bytes": 41888,
+      "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+      "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e",
+      "lines": 620,
+      "wholeBodyRetained": true,
+      "currentTreeJoined": true
+    }
+  ],
+  "preimageBytes": 108750,
+  "canonicalPathCorrection": {
+    "accepted": true,
+    "actualPath": "scripts/e2e/opencode-diagnostics/platform.mjs",
+    "explanation": "The R1 explicitly corrects an earlier scratch-data label. Complete actual tree row and full blob identity agree on the scripts path; there is no source move, rename or alternate tools-path preimage."
+  },
+  "advisoryLiteralJoins": {
+    "bQuery": true,
+    "bOldQuery": true,
+    "bPreserve": true,
+    "bErrorContract": true,
+    "aPreserve": true
+  },
+  "B": {
+    "originalBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+    "onlyBoundary": "windowsListenerQuery single template string",
+    "exactOldQuery": "Get-NetTCPConnection -State Listen | Where-Object LocalPort -eq ${port} | Select-Object -ExpandProperty OwningProcess",
+    "exactSelectedSpecification": "Get-CimInstance -Namespace 'Root\\StandardCimv2' -ClassName MSFT_NetTCPConnection -Filter \"LocalPort = ${port} AND State = 2\" | Select-Object -ExpandProperty OwningProcess",
+    "sourceEquivalence": "The existing integer-valid supplied port is unchanged. LocalPort=that port and State=2 preserves the Listen selection, while no address/family/owner filter hides other listeners. Same OwningProcess projection and downstream duplicate-PID normalization remain. The live gate's default is9222; other existing supplied ports remain supported.",
+    "primaryBasis": "The exact specification equals33dc's already freshly researched primary Microsoft namespace/class/state/local-WQL/empty-query contract. R1 carries the same primary URLs and the schema-versus-native-execution limitation. No additional runtime claim is introduced by reusing those facts.",
+    "preservedLiteralBoundaries": [
+      "Entire Win32_Process query including ProcessId,ParentProcessId,CreationDate,ExecutablePath and UTC birth serialization.",
+      "Every existing helper/import/caller/config byte, including both listeners and windowsProcessListenerSnapshot.",
+      "One fresh interpreter per observation; full process query precedes listener query; neither result creates cached authority.",
+      "Strict envelope keys/types and process/listener parsing, port-before-executor validation and all original refusal paths.",
+      "ErrorActionPreference Stop and unchanged execFileSync failure propagation; partial stdout from a failed execution is not parsed or admitted."
+    ],
+    "absenceVsFailure": "Successful complete zero-match enumeration remains empty listener evidence. Active ownership refuses it; availability/drain retain their existing semantics. Provider/access/query/class/namespace/interpreter errors and malformed successful payloads remain failures. No SilentlyContinue, catch-to-empty, fallback or partial process-side acceptance is allowed.",
+    "universeLimit": "This is a source/schema selection argument for all addresses and families of the queried provider universe. No new native x64/ARM64 enumeration, error behavior or timing has been observed.",
+    "separateDiagnostic": "windowsCleanupEvidence's all-state9222 diagnostic query is outside the selected string and remains unchanged."
+  },
+  "guardAndCustody": {
+    "fullCensus": "validateCensus retains the complete bounded original process census, original controller/driver/Main PID and birth, driver/controller parent, Main-family lineage and unexplained-orphan refusal.",
+    "listenerIdentity": "Every returned selected-port PID must be present in the fresh process census with a birth matching retained original Main lineage. A foreign, missing or reused-birth owner still refuses.",
+    "allSevenClickGuards": "The Retry target read, pre-pointer ownership, post-pointer read, two stability samples, pre-final-target ownership and pre-physical-click ownership stay literal. Neither B nor A1 may collapse these distinct boundaries or reuse a previous successful observation.",
+    "originalCurrentness": "Current controls5286 retain the ownership check on every read and the accepted post-await expiry gate. Port evaluation still checks original renderer URL, preload and backend around awaits; originalBinding and public process reads retain their whole-binding/currentness fences.",
+    "originalDeadlines": {
+      "phaseMs": 10000,
+      "controllerMs": 120000,
+      "javascriptOuterMs": 300000,
+      "powershellMs": 30000,
+      "genericWaitMs": 30000,
+      "pollMs": 100,
+      "change": false
+    },
+    "synchronousLimit": "The existing synchronous PowerShell acquisition may itself return after the phase deadline. Post-acquisition remaining() must still refuse before renderer/input admission. This plan does not introduce an active10s process cancellation or enlarge any budget.",
+    "cleanup": "Same-Main verification, protected screenshot, both original UI Kill phases, native witness receipts, one ordinary product Quit, full cleanup, source/input freeze and bounded raw diagnostic records remain. Emergency drain/app exit alone cannot satisfy original PASS.",
+    "providerBoundary": "No provider selection, executable/control, environment or native custody API is changed. Real Claude/Codex including version/login/status surfaces remain prohibited; existing finite TEST authority remains unchanged."
+  },
+  "A1": {
+    "originalBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+    "exactBoundary": "Only original final row loop after proof.afterRetryPublic and before proof.sameMainAfterRetry; both surrounding statements and their ordering remain exact.",
+    "composition": "Existing outage synchronous ordered array of processOwner(row) expressions; return the array only when every member is truthy, otherwise null. One original ui.waitRead receives remaining() and the original final-row label.",
+    "comparisons": "Require array and original row count, then object-check each indexed owner and perform the two original complete owner.process deep-equality assertions in original.rows order, including observation=same-live and canTerminate=true. No PID/ref-only shortcut.",
+    "selector": {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.ts",
+      "gitBlob": "12f4a7b122843acea95e8c37f876917331842a4a",
+      "bytes": 22604,
+      "sha256": "ebb52ab95cdbf0ddc86ce44b534a3c7255c7e8454e5cadb2cbb83278daa53a0f"
+    },
+    "controls": {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+      "bytes": 29017,
+      "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b"
+    },
+    "proofMeaning": "Both original owner observations must coexist in one synchronous renderer evaluation. Existing React fiber/alternate search is unchanged; this does not prove the same committed fiber or an atomic OS/Host/React snapshot. Pairing can change which missing-row/cutoff error is first, as the R1 expressly states.",
+    "orderingPreserved": "Earlier six-field ready wait/diagnostic meanings, originalBinding, one fixture.afterRetry and final public read stay in their original order. No early-only co-observation and no replay of the native witness.",
+    "costAndArm": "One guard/read can be removed when both rows are immediately available, but polling count/latency are unknown. A1 is downstream of ARM's earlier Host-exit/Refresh failure and is not claimed to repair that boundary."
+  },
+  "testPlan": {
+    "originalInventories": [
+      {
+        "id": "B-tests",
+        "currentCases": 12,
+        "targetCases": 14,
+        "appended": 2,
+        "originalTitles": [
+          "test('OS process and listener output parsing fails closed', () => {",
+          "test('one fresh Windows interpreter retains ordered original process and listener observations', () => {",
+          "test('combined Windows observations reject malformed envelopes and preserve executor failure', () => {",
+          "test('ownership rejects stale launchers, reused child PIDs and unrelated listeners', () => {",
+          "test('native shims quote absolute paths with spaces and reject expansion syntax', () => {",
+          "test('isolated CDP port stays bound to the selected dev launcher', async () => {",
+          "test('environment drops inherited provider/config and runtime overrides', () => {",
+          "test('real fixture permits diagnostic queries only, and Unix shim handles spaces', async () => {",
+          "test('timeout fixture stays live until its owning test terminates it', async () => {",
+          "test('Windows cleanup evidence retains current PID through independent read-only queries', { skip: process.platform !== 'win32' }, () => {",
+          "test('Windows phase observations use the original phase clocks and cannot bypass admission', () => {",
+          "test('Windows census observations preserve original results, refusals and bounded diagnostics', () => {"
+        ],
+        "exact": true
+      },
+      {
+        "id": "A1-test",
+        "currentCases": 7,
+        "targetCases": 8,
+        "appended": 1,
+        "originalTitles": [
+          "test('post-Stop observer continues past stale original and pending alternate to fresh stopped props', () => {",
+          "test('initial original-ref observation remains exact and cannot select a replacement ref', () => {",
+          "test('background acceptance waits for atomic service publication without masking corrupt readiness', async () => {",
+          "test('captured no-provider Processes fixture rejects mixed inputs before allocating and seeds no Runtime', {",
+          "test('Windows outage membership requires both original process owners in one renderer sample', async () => {",
+          "test('Windows Retry retains same-evaluation operands without changing the original wait', async () => {",
+          "test('Windows primary failure is emitted once before cleanup without replacing the original error', async () => {"
+        ],
+        "exact": true
+      }
+    ],
+    "platform": {
+      "baselineBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+      "allowedOldEdit": "Exactly the expected listener-query literal in the existing ordered-snapshot case; every other original byte and all12 cases remain.",
+      "appendedCases": 2,
+      "intendedWholeCases": 14,
+      "discrimination": "Actual exported snapshot/parser/ownership functions receive complete changing observations and a nondefault/default port; original full process query/order/freshness remain. Mixed foreign owner/PID and duplicate handling remain observable. A thrown executor error with partial stdout/stderr/status must propagate by identity once, proving no partial-result fallback.",
+      "zeroMalformedAndError": "Original empty-success, invalid-port-before-execution, strict envelope/extra-key/type/JSON and invalid-PID cases remain; nothing is dropped merely because the expected query string changes.",
+      "limit": "Exact query text is wiring proof; injected executor results do not prove native CIM enumeration, dual-family output or cost."
+    },
+    "nativeUi": {
+      "baselineBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e",
+      "oldPrefixLiteral": true,
+      "appendedCases": 1,
+      "intendedWholeCases": 8,
+      "physicalLines": {
+        "before": 620,
+        "maxAppend": 180,
+        "maxTotal": 800
+      },
+      "onlyNewCaseTimeoutMs": 5000,
+      "actualCodeRequirement": "Extract the actual final Retry source between the two original boundary statements and use the actual unchanged wrapper/selector and current controls to the existing source-slice seam's extent. Do not copy a proposed implementation into the test.",
+      "discriminatingBeforeAfter": "Old sequential waits can accept primary from one frame and neighbor from the next. The new test must expose that acceptance, require new pair refusal of split frames, and accept both together or later joint availability. A string or call-count assertion alone is insufficient.",
+      "fullComparisonRequirement": "Keep both comparisons in order and mutate second-row nonidentity fields despite matching id/ref to prove that full owner.process data, not only identity, controls success.",
+      "guardRequirement": "Wrong selection/ref, selected-props duplicates/missing rows, malformed pair/owner, guard, budget and evaluation failures must refuse; no business input/OS query/vendor probe is introduced by this appended source-slice case.",
+      "existingCoverage": "The seven original tests, including actual-control readiness and primary-error-before-cleanup, remain an exact prefix. The existing outage test alone does not validate the newly selected final Retry wiring."
+    },
+    "runtimeState": "These are prospective obligations for unauthored test bodies. No tests were executed; no14/8 PASS is asserted. The full file may include pre-existing native fixtures/port/child work outside the new pure seams; this review grants no execution permission."
+  },
+  "preservation": {
+    "exact13Vector": {
+      "bytes": 3481,
+      "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+      "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+    },
+    "selectedPathsDisjointFrom13": true,
+    "whole14943And85": {
+      "node149": "Unchanged entire12c73, original139prefix plus10.",
+      "catalog43": "Unchanged6cf34.",
+      "renderer85": "Unchanged764951.",
+      "platform": "12original cases preserved;2appended→14, native Windows skip remains explicit.",
+      "nativeProcessUi": "7original cases literal prefix;1appended→8."
+    },
+    "counts": {
+      "nonDocLeaves": 8799,
+      "production": 5020,
+      "exceptions": 141,
+      "sourceCap": 800,
+      "workflows": 42
+    },
+    "noFileAddedRemovedRenamed": true,
+    "noHelperWorkflowDependencyFilterSkipOrExceptionChange": true,
+    "driverAndTestCaps": "The plan binds platform312 unchanged physical lines, original driver647 with a confined short replacement, platform test331 plus two cases under800, and native UI test620 plus at most180. No unrelated code compression or cap/exception change is selected; actual counts/inverses remain R2 work.",
+    "rejectedScope": [
+      "A2 same-Main/screenshot consolidation",
+      "A3 moving final row proofs before intervening native/async reads",
+      "ARM early failure checkpoint/controller deadline redesign",
+      "any fresh cache/TTL/reused ownership snapshot",
+      "PID/address/owner filtering",
+      "SilentlyContinue/error-to-empty/fallback",
+      "retry/reload/timeout increase",
+      "new test filter/skip or case omission",
+      "source postimages before closedR1actual",
+      "real vendors",
+      "Ready/merge/default/release/Stage2/native waiver"
+    ]
+  },
+  "ciAndExecutionBoundary": {
+    "currentPr": 1219,
+    "currentHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "currentBase": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "currentMerge": "c0e6845650002dfaabf6b1dcc727d13b2f0570f6",
+    "initialRunIds": [
+      44042341370,
+      44042341121,
+      44042341149,
+      44042341284,
+      44042341120,
+      44042341241,
+      44042341273
+    ],
+    "fixedSnapshotFreeze": "Both snapshot refs and all PR1219 metadata remain fixed while any selected run is active. Root observes only admitted active new runs; no terminal/frozen/old run polling. This new source plan is on the separate working evidence branch and cannot alter the running9d snapshot.",
+    "noCurrentResultsForFutureCandidate": true,
+    "platformSuiteGap": "Current selected Draft jobs lint platform.test.mjs but do not execute it. Root and broker Vitest include lists exclude it. Direct optional workflow suites are skipped/unselected. The original packaged Windows gate does exercise the production helper if reached, but cannot replace isolated14-case results.",
+    "nativeUiReachability": "The unchanged Host processes lane explicitly invokes the complete native-process UI file if earlier steps succeed. Current9d contains the old7 cases; the future8-case body requires its own selected actual source/venue.",
+    "currentEnvironment": {
+      "status": "rejected",
+      "reason": "No usable execution environment is available. Wait for an environment to become available before using this tool."
+    },
+    "noNewVenue": true,
+    "noReplayOrAlternateRuntime": true,
+    "unresolved": "Darwin strictP09, cold-renderer cause, ARM failure/retention and standalone Node24.22.1 qualification remain separate and unresolved. This R1 does not waive or close them."
+  },
+  "publicationAndAuthority": {
+    "contract": {
+      "workingBranch": "fix/frontend-parity-coobservation-c714-20261115",
+      "knownParent": "65cd08dc15e3735cb579578d475938fd0a3fb135",
+      "parentRoot": "e2347fe433055be9f5c8ee109e7db087bf365c16",
+      "parentDocs": "1e97d02232e95ba34238c340713571bb6e5b2a91",
+      "R1DocsOnly": true,
+      "all53NonDocRootEntriesUnchangedAtR1": true,
+      "parentCatalogFields": 87,
+      "newCatalogKeys": [
+        "windowsSelectedPortRetryPairR1Stage",
+        "windowsSelectedPortRetryPairR1EvidenceFiles"
+      ],
+      "all87ParentValuesAnd27BundlesAndTotalsPreserved": true,
+      "completePlanStatusPrefixesPreserved": true,
+      "manifestAndCompleteActualReadbacks": true,
+      "immediateExpectedParentForceFalsePush": true,
+      "postimageAuthorshipOnlyAfterActualR1Closed": true
+    },
+    "catalogTransition": {
+      "parentFields": 87,
+      "addedFields": [
+        "windowsSelectedPortRetryPairR1Stage",
+        "windowsSelectedPortRetryPairR1EvidenceFiles"
+      ],
+      "plannedFields": 89,
+      "parentBundles": 27,
+      "oldValuesTotalsAndPrefixesPreserved": true
+    },
+    "meaning": "These are constraints on the forthcoming docs publication, not a claim it already exists. Fresh actual roots and the preceding closed gate support the parent binding; exact prospective manifest/prefix/catalog preservation will be checked by the existing actual publication procedure.",
+    "sequence": [
+      "Root and independent guard/semantic/binding reviews of this exact narrow R1, complete readbacks.",
+      "Publish only R1/evidence documentation with immediate push; full root and independent actual publication readbacks.",
+      "Root may then author only the selected four source/test postimages, exact inverses, before/after vectors and meaningful tests. No runtime is selected by source authorship.",
+      "Exact R2 source/body reviews and publication with immediate push; full root and independent actual readbacks.",
+      "A matching actually available authorized execution venue is selected separately, with full provider/event/workflow/source review as necessary. No automatic current PR1219 mutation, dispatch, new branches, standalone replay or alternative runtime."
+    ],
+    "rootOnly": true,
+    "sourceAuthoringGate": "The new Windows R1's own publication must be pushed and fully read back before root authors its four postimages. The current preceding gate is not enough. Exact source R2 and later actual publication follow; runtime is separately selected only when available.",
+    "noAdditionalRequirement": "No executable runner/control or source postimage is requested by this review, and no optional test, CI route or native prequalification gate is added."
+  },
+  "rootReviewJoin": {
+    "report": {
+      "bytes": 17709,
+      "sha256": "a532f223fdd5da0773483b618dc7116cca2d888c7584f74337493971fb36f960",
+      "gitBlob": "5b459d31e5f6d2bc4f5c203eb66c5752a39cec11"
+    },
+    "completeRead": true,
+    "exactSubject": true,
+    "exactFourPreimages": true,
+    "checks": 37,
+    "agreesNoBlocker": true,
+    "independentGuardConclusion": "This report's34 guard findings derive from its own full plan/gate/immutable-root/source/advisory joins; the root report is supporting agreement, not substituted test or native evidence."
+  },
+  "checks": [
+    {
+      "id": "G01",
+      "result": "PASS_STATIC",
+      "finding": "Complete exact R1 77e02 was read and whole-byte hashed."
+    },
+    {
+      "id": "G02",
+      "result": "PASS_STATIC",
+      "finding": "Closed actual source/docs anchor gate predates plan authorship and names actual65cd/e234/1e97."
+    },
+    {
+      "id": "G03",
+      "result": "PASS_STATIC",
+      "finding": "Fresh immutable commit read confirms65cd sole parent9d and actual root."
+    },
+    {
+      "id": "G04",
+      "result": "PASS_STATIC",
+      "finding": "Complete fresh root comparison confirms all53 non-doc entries equal fixed9d, including scripts/tools/workflows/dependencies."
+    },
+    {
+      "id": "G05",
+      "result": "PASS_STATIC",
+      "finding": "Four full preimage identities total108750B and join actual canonical paths, modes and current trees."
+    },
+    {
+      "id": "G06",
+      "result": "PASS_STATIC",
+      "finding": "Corrected platform path is the actual scripts/e2e/opencode-diagnostics path; no mislabeled tools path is selected."
+    },
+    {
+      "id": "G07",
+      "result": "PASS_STATIC",
+      "finding": "B is one query-string substitution only; original process query, helpers/imports/callers/config stay literal."
+    },
+    {
+      "id": "G08",
+      "result": "PASS_STATIC",
+      "finding": "Exact B query, preservation and error contract equal the primary-source-backed33dc advisory."
+    },
+    {
+      "id": "G09",
+      "result": "PASS_STATIC",
+      "finding": "Selected port remains validated; class/namespace/state specify the same all-owner/address-neutral universe."
+    },
+    {
+      "id": "G10",
+      "result": "PASS_STATIC",
+      "finding": "Successful empty query, malformed data, partial stdout and genuine error paths remain distinct without fallback/suppression."
+    },
+    {
+      "id": "G11",
+      "result": "PASS_STATIC",
+      "finding": "Fresh full process census and PID/birth/parent/lineage/orphan checks are preserved; no cache or partial process filter."
+    },
+    {
+      "id": "G12",
+      "result": "PASS_STATIC",
+      "finding": "All original phase/controller/outer/interpreter/generic/poll budgets remain unchanged; no hard10s cancellation claim."
+    },
+    {
+      "id": "G13",
+      "result": "PASS_STATIC",
+      "finding": "All seven original clickguard boundaries are frozen; final-row co-observation grants no input authority."
+    },
+    {
+      "id": "G14",
+      "result": "PASS_STATIC",
+      "finding": "A1 is final-only between afterRetryPublic and sameMainAfterRetry, after all original asynchronous/native reads."
+    },
+    {
+      "id": "G15",
+      "result": "PASS_STATIC",
+      "finding": "A1 retains exact selection/original refs and both ordered complete process comparisons, not reduced PID/ref assertions."
+    },
+    {
+      "id": "G16",
+      "result": "PASS_STATIC",
+      "finding": "Current controls5286 and selector12f4 remain exact, including post-await expiry and fiber/alternate semantics."
+    },
+    {
+      "id": "G17",
+      "result": "PASS_STATIC",
+      "finding": "A1 same renderer evaluation is not an atomic OS/Host/fiber claim; error timing and ARM limits are acknowledged."
+    },
+    {
+      "id": "G18",
+      "result": "PASS_STATIC",
+      "finding": "Same-Main/screenshot, both UI Kills, ordinary Quit/custody/source/input evidence remain original."
+    },
+    {
+      "id": "G19",
+      "result": "PASS_STATIC",
+      "finding": "Platform12 inventory is exact; only one existing expected-query literal and two appended cases are allowed."
+    },
+    {
+      "id": "G20",
+      "result": "PASS_STATIC",
+      "finding": "Platform tests require fresh changing observations, nondefault port, real exported helpers and unchanged thrown error identity."
+    },
+    {
+      "id": "G21",
+      "result": "PASS_STATIC",
+      "finding": "Native UI7 inventory/prefix stays literal; exactly one bounded test is appended to reach8."
+    },
+    {
+      "id": "G22",
+      "result": "PASS_STATIC",
+      "finding": "A1 regression must execute actual final driver block and detect old split-frame acceptance, including full neighbor nonidentity values."
+    },
+    {
+      "id": "G23",
+      "result": "PASS_STATIC",
+      "finding": "Guard/budget/evaluation/malformed-payload failures remain test obligations; no input/vendor work is selected."
+    },
+    {
+      "id": "G24",
+      "result": "PASS_STATIC",
+      "finding": "New native case has5000ms bound and at most180 appended lines;620+180 preserves cap800."
+    },
+    {
+      "id": "G25",
+      "result": "PASS_STATIC",
+      "finding": "Four modifications only, no add/remove/rename; existing8799/5020/141/800/42 constraints remain."
+    },
+    {
+      "id": "G26",
+      "result": "PASS_STATIC",
+      "finding": "The complete13-row prior parity vector is retained; selected Windows paths are disjoint."
+    },
+    {
+      "id": "G27",
+      "result": "PASS_STATIC",
+      "finding": "Whole149/43/85 and standalone controls are unchanged and unqualified future Windows tests are not relabeled as results."
+    },
+    {
+      "id": "G28",
+      "result": "PASS_STATIC",
+      "finding": "Actual current platform-suite execution gap remains explicit; no workflow/route or native gate is invented."
+    },
+    {
+      "id": "G29",
+      "result": "PASS_STATIC",
+      "finding": "PR1219 snapshots/source9d and metadata remain frozen; this prospective source cannot be qualified by those runs."
+    },
+    {
+      "id": "G30",
+      "result": "PASS_STATIC",
+      "finding": "R1 docs preserve87 existing fields and27 bundles, adding only the named2 fields; all53 non-doc roots remain unchanged."
+    },
+    {
+      "id": "G31",
+      "result": "PASS_STATIC",
+      "finding": "Windows postimages await this R1's actual publication gate; e869 is preceding anchor evidence, not the new authorship gate."
+    },
+    {
+      "id": "G32",
+      "result": "PASS_STATIC",
+      "finding": "Root remains sole author/executor; source R2 and later actual available runtime remain separate existing steps."
+    },
+    {
+      "id": "G33",
+      "result": "PASS_STATIC",
+      "finding": "No real Claude/Codex/version, timeout increase, old replay, local recovery or native waiver is selected."
+    },
+    {
+      "id": "G34",
+      "result": "PASS_STATIC",
+      "finding": "Full root37-check report joins the same exact subject/preimages; no runtime conclusion is borrowed."
+    }
+  ],
+  "reviewerActions": {
+    "immutableGitReads": true,
+    "retainedEvidenceAndPureIdentityOnly": true,
+    "bareReviewBlobOnlyWrite": true,
+    "targetSourceEvaluated": false,
+    "shell": false,
+    "localRuntime": false,
+    "realVendorProbes": false,
+    "sourceOrControlPostimages": false,
+    "worktreeStaging": false,
+    "refOrPrMutation": false,
+    "liveCiReadOrPolling": false,
+    "newCiAction": false
+  }
+}

@@ -543,8 +543,14 @@ try {
   await originalBinding();
   await within(() => fixture.afterRetry(activeDeadline));
   proof.afterRetryPublic = await readProcesses();
-  for (const row of original.rows) {
-    const owner = object(await ui.waitRead(processOwner(row), 'same original process refs after Retry', remaining()));
+  const retryRows = await ui.waitRead('(() => { const rows=[' +
+    original.rows.map(row => processOwner(row)).join(',') +
+    ']; return rows.every(Boolean) ? rows : null; })()',
+  'same original process refs after Retry', remaining());
+  assert.ok(Array.isArray(retryRows));
+  assert.equal(retryRows.length, original.rows.length);
+  for (const [index, row] of original.rows.entries()) {
+    const owner = object(retryRows[index]);
     assert.deepEqual(owner.process, { ...row, observation: 'same-live', canTerminate: true });
   }
   proof.sameMainAfterRetry = captureCensus().find(row => row.pid === main.pid);

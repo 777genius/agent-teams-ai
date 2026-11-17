@@ -65,6 +65,24 @@ const values = new Set(['output-format', 'input-format', 'model', 'effort', 'too
   'setting-sources', 'permission-mode', 'permission-prompt-tool', 'session-id', 'resume', 'max-turns', 'max-budget-usd', 'betas', 'mcp-config', 'settings']);
 const argv = process.argv.slice(2);
 assert.ok(argv.length <= 64 && Buffer.byteLength(JSON.stringify(argv)) <= 128 * 1024, 'argv');
+// The selected runtime peer also serves the original Host's finite auth-status read.
+if (argv[0] === 'auth') {
+  assert.deepEqual(argv, ['auth', 'status', '--json'], 'argv');
+  assert.equal(role, 'management', 'argv');
+  assert.equal(process.env.HOME, join(root, 'home'), 'environment');
+  assert.equal(configRoot, join(root, 'config'), 'environment');
+  assert.ok(lstatSync(process.env.HOME).isDirectory() && lstatSync(configRoot).isDirectory(), 'environment');
+  const output = JSON.stringify({ loggedIn: true, authMethod: 'api_key',
+    apiProvider: 'firstParty', configDirectory: configRoot }) + '\n';
+  assert.ok(Buffer.byteLength(output) <= 64 * 1024, 'limit');
+  effect({ event: 'launch', parentPid: process.ppid, command: argv });
+  effect({ event: 'auth-status', command: argv });
+  process.once('exit', code => effect({ event: 'exited', code }));
+  await new Promise((resolve, reject) => {
+    process.stdout.write(output, error => error ? reject(error) : resolve());
+  });
+  process.exit(0);
+}
 for (let index = 0; index < argv.length; index++) {
   const match = /^--([a-zA-Z-]+)(?:=([\s\S]*))?$/u.exec(argv[index]);
   assert.ok(match && !Object.hasOwn(options, match[1]), 'argv');

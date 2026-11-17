@@ -1,0 +1,643 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_REPLACEMENT_DIAGNOSTICS_WHOLE_PLATFORM_R1_INDEPENDENT_SEMANTIC_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "producer_r2_semantic",
+  "at": "2026-11-17 10:13:15 UTC",
+  "subject": {
+    "bytes": 31060,
+    "sha256": "188bd061a0aa0ed5afe3f8af4919c5ac111ae15d3deb5c92c19645eccab997bc",
+    "gitBlob": "d226951f5f24dd1a5a7d4742e25edcb3ef043213"
+  },
+  "decision": "ACCEPT_EXACT_REPLACEMENT_R1_PLAN_ONLY",
+  "blockers": [],
+  "checksCount": 32,
+  "authority": "Root remains sole source/control author, applier, publisher and executor. This review used immutable Git/source/retained reads and pure in-memory data/hash analysis only. No shell/local access, target compilation/import/execution, source/ref/PR/CI action or polling. Only this bare review is retained.",
+  "fullReadScope": {
+    "replacementBody": {
+      "bytes": 31060,
+      "sha256": "188bd061a0aa0ed5afe3f8af4919c5ac111ae15d3deb5c92c19645eccab997bc",
+      "gitBlob": "d226951f5f24dd1a5a7d4742e25edcb3ef043213",
+      "fullBodyRead": true
+    },
+    "initialBody": {
+      "bytes": 23006,
+      "sha256": "ac0a112be1dd45b0c219fa09437beb2502e51722c4d058abe9b9570fafe64730",
+      "gitBlob": "5d44942ab4492596cbd6bbb328041a6713b79810",
+      "fullBodyPreviouslyRead": true,
+      "rehashed": true
+    },
+    "priorSemanticReport": {
+      "bytes": 36493,
+      "sha256": "b6b6f8ccbbd32400be72ff774bbb63bf3eb99e1487c47363b90873a772f6d623",
+      "gitBlob": "06ee765fd3bb83e9400c02b162586af55fb20199",
+      "checks": 36,
+      "fullSelfReadComplete": true,
+      "rehashed": true,
+      "notModified": true
+    },
+    "wholeImportFeasibility": {
+      "bytes": 17172,
+      "sha256": "512691aa634f2f9471ae1668226f41417826cb95221dcc78dca62d7448a519e4",
+      "gitBlob": "f6a50812b1e719d9bab8af56f93dabea313ce682",
+      "checks": 14,
+      "fullSelfReadComplete": true,
+      "rehashed": true
+    },
+    "sixSourcePreimages": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+        "completeReadReused": true,
+        "current1caJoin": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+        "completeReadReused": true,
+        "current1caJoin": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f",
+        "completeReadReused": true,
+        "current1caJoin": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05",
+        "completeReadReused": true,
+        "current1caJoin": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068",
+        "completeReadReused": true,
+        "current1caJoin": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+        "completeReadReused": true,
+        "current1caJoin": true
+      }
+    ],
+    "sourceBytes": 184703,
+    "importedClosure": [
+      {
+        "field": "target",
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72",
+        "fullBodyReadReused": true
+      },
+      {
+        "field": "helper",
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "bytes": 12389,
+        "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+        "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4",
+        "fullBodyReadReused": true
+      },
+      {
+        "field": "fixture",
+        "path": "scripts/e2e/opencode-diagnostics/fixture.cjs",
+        "bytes": 16768,
+        "sha256": "db43609e9394925e3b27f606d8a49ed443e1bcdabeee866dd4fec4b56ed800fb",
+        "gitBlob": "47a1e9cb0efa58479721d8815bfb8dae3f943fb6",
+        "fullBodyReadReused": true
+      }
+    ],
+    "importedClosureBytes": 49987,
+    "reuse": "Complete immutable source bodies and reports read in the just-completed initial review and feasibility task are reused by exact identity; no settled native/GUI/provider audit is reopened.",
+    "originalEvidence": "The original GUI/native failure, actual source-gate and complete prior workflow findings remain attributed to their fully read retained reviews. This replacement review does not newly claim a full CI log/ZIP audit or a fresh runner-manifest response."
+  },
+  "acceptedSource": {
+    "parent": {
+      "commit": "1ca9566d70bd624283227a644fa6969eb8bf8f34",
+      "root": "fd6a7a819adc8b68a4b3e1ec1ddfe9c57a48e03c",
+      "docs": "834eeb86f8ca3f94fec916e6044836bad8cbb348",
+      "scripts": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+      "packages": "3934729cd387940917b79992f2579bf6269d157c",
+      "tools": "b0ffcbc4be600e5edfbc0fbacf312e5b476af6aa",
+      "leaves": 12088,
+      "docsLeaves": 3289,
+      "nonDocLeaves": 8799
+    },
+    "gate": {
+      "bytes": 7149,
+      "sha256": "2aeec2ecdbae9bdf27d8bd6a054655ea6850bc69a2d2544df8c1da245798f005",
+      "gitBlob": "a3ff72947884bc9e9993fa74db71491c3b9e4a61"
+    },
+    "closedAt": "2026-11-17 09:17:41 UTC",
+    "checks": 98,
+    "currentSixSourceBodiesIndependentlyJoined": true,
+    "sourceOnly": true,
+    "acceptedGateUnchanged": true
+  },
+  "delta": {
+    "method": "Recursive complete parsed-JSON comparison; whole strings and arrays compare literally. Added objects are recorded as one boundary with their complete content independently read.",
+    "changes": [
+      {
+        "path": "kind",
+        "before": "C714_RETAINED_GUI_AND_NATIVE_FAILURE_DIAGNOSTICS_R1",
+        "after": "C714_RETAINED_FAILURE_DIAGNOSTICS_AND_WHOLE_PLATFORM_IMPORT_R1"
+      },
+      {
+        "path": "decision",
+        "before": "SELECT_BOUNDED_EXISTING_CAPTURE_DIAGNOSTICS_SCOPE_FOR_REVIEW_AND_DOCUMENTATION_PUBLICATION_ONLY",
+        "after": "SELECT_EXACT_SIX_EXISTING_FILE_DIAGNOSTICS_AND_WHOLE_PLATFORM_TEST_WIRING_FOR_R1_REVIEW_ONLY"
+      },
+      {
+        "path": "unchanged.actions",
+        "before": "No new DOM/Host/OS/network observation, request, input, probe, mutation, reload, retry, replay, deadline, cleanup decision, custody/owner relaxation, provider/engine selection, CI filter or workflow change.",
+        "after": "No new DOM/Host/OS/network observation, request, input, probe, mutation, reload, retry, replay, deadline, cleanup decision, custody/owner relaxation, provider/engine selection, CI filter or workflow change in the application failure flow. The selected whole-file component-test import performs only its explicitly retained existing loopback/OS/temp-file/finite-Node fixture effects under original bounds; it is not a pure-data-only suite."
+      },
+      {
+        "path": "at",
+        "before": "2026-11-17 09:47:07 UTC",
+        "after": "2026-11-17 10:06:22 UTC"
+      },
+      {
+        "path": "selfReadbackProtocol",
+        "before": "Complete immutable UTF-8 proposal body is fetched and rehashed. Reviewers must join complete selected preimages and accepted actual source gate, preserve all17 fixed source paths, and distinguish static plan acceptance from source/runtime acceptance.",
+        "after": "Complete exact replacement body, accepted initial plan/reviews and full selected preimages are read and rehashed. The precise delta is whole14 test wiring and its truthful I/O/skip/census/documentation scope; no initial diagnostic criterion is weakened. Cross-repository primary documentation must be read from its explicitly named repository."
+      }
+    ],
+    "additions": [
+      {
+        "path": "evidence.wholePlatformImportFeasibility"
+      },
+      {
+        "path": "selection.native.tests.wholePlatformImport"
+      },
+      {
+        "path": "selection.native.tests.newTopLevelCasesMeaning"
+      },
+      {
+        "path": "execution.existingWholeFileRoutes.native.importedPlatformCoverage"
+      },
+      {
+        "path": "qualification.wholePlatform14ActuallyExecuted"
+      },
+      {
+        "path": "supersedesUnpublishedR1"
+      }
+    ],
+    "changedCount": 5,
+    "addedCount": 6,
+    "removedCount": 0,
+    "totalBoundaries": 11,
+    "exactUnchangedInvariants": {
+      "guiExactUnchanged": true,
+      "nativeDiagnosticExactUnchanged": true,
+      "sourcePreimagesExactUnchanged": true,
+      "gateExactUnchanged": true,
+      "fixedFourExactUnchanged": true,
+      "frozenVectorExactUnchanged": true,
+      "orderedContinuationExactUnchanged": true,
+      "currentCiExactUnchanged": true,
+      "priorReviewFullySelfRead": true,
+      "feasibilityFullySelfRead": true
+    },
+    "conclusion": "The entire original GUI selection is unchanged. The native selection differs only by wholePlatformImport and newTopLevelCasesMeaning. Every original diagnostic criterion, test plan, source preimage, accepted gate, frozen-source vector, existing CI context and ordered continuation survives exactly."
+  },
+  "preservedDiagnostics": {
+    "gui": {
+      "sameCapturedSample": true,
+      "postFailurePartial": true,
+      "atomicWithFailedWait": false,
+      "completeDom": false,
+      "actualTruncationKnown": false,
+      "limits": {
+        "dialogs": 3,
+        "buttonsPerDialog": 24,
+        "textTail": 8000,
+        "producerLabelPrefix": 160,
+        "finalSerialization": 8192
+      },
+      "semantics": "Exact own-data Launch team labels and separate enabled/disabled/unknown counts retain duplicates. Missing/malformed or absent sample means unknown; at-cap is not proven truncation; zero retained matches is not global absence. Fixed textFacts are observations, never readiness/auth/model verdicts.",
+      "privacy": "No raw dialog text/labels/coordinates/IDs/paths/URLs, getters/coercion, arbitrary object alias or new sampler. Descriptor failure remains safe fallback.",
+      "routes": {
+        "existing": [
+          "emulated-import-ui",
+          "emulated-opencode-runtime-ui"
+        ],
+        "add": [
+          "emulated-claude-runtime-ui",
+          "emulated-claude-lifecycle-ui",
+          "emulated-collaboration-ui"
+        ],
+        "condition": "evidence.status !== PASS",
+        "unchangedUnrelated": [
+          "team-ui",
+          "emulated-extensions-ui"
+        ],
+        "passSummariesUnchanged": true
+      },
+      "packaged": "Same actual pure projector in existing final non-PASS summary; preserve kind/status/receipt/root, receipt writing, source freeze, cleanup order, original exception and final success assertion. No universal guarantee if earlier finally work prevents summary.",
+      "tests": {
+        "originalPrefixBytes": 66098,
+        "originalRegistrationExpressions": 34,
+        "newTopLevelCases": 5,
+        "plannedRegistrationExpressions": 39,
+        "actualCasesExecuted": false
+      },
+      "originalFailureBoundary": "All original90,000ms enabled-Launch waits and predicates remain unchanged; no shared cause or recovery claim."
+    },
+    "native": {
+      "fields": [
+        "runErrorCode",
+        "runCauseCode"
+      ],
+      "knownCodes": [
+        "ABORT_ERR",
+        "ECONNRESET",
+        "ECONNREFUSED",
+        "EPIPE",
+        "ETIMEDOUT",
+        "UND_ERR_ABORTED",
+        "UND_ERR_SOCKET",
+        "UND_ERR_HEADERS_TIMEOUT",
+        "UND_ERR_BODY_TIMEOUT"
+      ],
+      "unknown": null,
+      "producer": "Only the existing non-coordination run rejection and failed-close payload for runState=threw. Preserve exact original error and actual own-code errorClass logic; one positive own code plus one own cause.code. No prototype/name/message/stack/getter/coercion/recursive inspection.",
+      "close": "Run code facts do not replace or establish the cause of original first close stage/reason/outcome/errorClass. Fulfilled driver.close with unconfirmed cleanup remains driver-close/unconfirmed.",
+      "passive": "Both child projection/emission and parent capture/entry preserve sanitized fields. Legacy missing keys preserve old shape. A throwing optional descriptor must not discard otherwise valid base close fields through the existing outer catch.",
+      "unchangedBudgets": {
+        "maximumRows": 256,
+        "ordinaryRows": 253,
+        "retainedRowsConvention": 257,
+        "traceBytes": 65536,
+        "lineBytes": 512,
+        "reservedRecordBytes": 513,
+        "receiptEnvelopeBytes": 262144,
+        "diagnosticBackpressureMs": 2000
+      },
+      "preservedArithmetic": "Initial independently verified selected data shape remains355 emitted/354 without newline,498 extreme-epoch parent/499 longer finite epoch; broader parser state505. No arbitrary hostile-record or runtime admission claim. Existing source R2 will check exact authored serialization.",
+      "threeLocalCases": "Actual uniquely anchored catch/publisher and state declarations; same-error/close identity; actual finite TEST --import observer plus parent capture/reserved-slot; legacy/malformed/serialization bounds. Old counterfactual failure must concern missing selected fields, not accidental ReferenceError.",
+      "sourcePrefixBytes": 19696,
+      "sourcePrefixCases": 9,
+      "newLocalCases": 3,
+      "noNewPublicApiDependencyOrVendorExecution": true
+    }
+  },
+  "wholePlatformImport": {
+    "target": {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "mode": "100644",
+      "bytes": 20830,
+      "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+      "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+    },
+    "helper": {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "mode": "100644",
+      "bytes": 12389,
+      "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+      "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+    },
+    "fixture": {
+      "path": "scripts/e2e/opencode-diagnostics/fixture.cjs",
+      "bytes": 16768,
+      "sha256": "db43609e9394925e3b27f606d8a49ed443e1bcdabeee866dd4fec4b56ed800fb",
+      "gitBlob": "47a1e9cb0efa58479721d8815bfb8dae3f943fb6"
+    },
+    "method": "One unconditional top-level awaited whole-file import at the end of the existing native-receipt test entry after its three new local diagnostic test registrations.",
+    "relativeSpecifier": "../../../scripts/e2e/opencode-diagnostics/platform.test.mjs",
+    "sourceBodiesUnchanged": true,
+    "all14OriginalTitles": [
+      "OS process and listener output parsing fails closed",
+      "one fresh Windows interpreter retains ordered original process and listener observations",
+      "combined Windows observations reject malformed envelopes and preserve executor failure",
+      "ownership rejects stale launchers, reused child PIDs and unrelated listeners",
+      "native shims quote absolute paths with spaces and reject expansion syntax",
+      "isolated CDP port stays bound to the selected dev launcher",
+      "environment drops inherited provider/config and runtime overrides",
+      "real fixture permits diagnostic queries only, and Unix shim handles spaces",
+      "timeout fixture stays live until its owning test terminates it",
+      "Windows cleanup evidence retains current PID through independent read-only queries",
+      "Windows phase observations use the original phase clocks and cannot bypass admission",
+      "Windows census observations preserve original results, refusals and bounded diagnostics",
+      "selected Windows port query retains complete fresh process and owner observations",
+      "Windows listener executor failures never admit partial output or fall back"
+    ],
+    "registration": {
+      "existingNativeCases": 9,
+      "newLocalDiagnosticCases": 3,
+      "wholeUnchangedPlatformCases": 14,
+      "prospectiveTotal": 26,
+      "expectedEligiblePlatformCases": {
+        "windows": 14,
+        "linux": 13
+      },
+      "existingLinuxSkip": 1,
+      "skipTitle": "Windows cleanup evidence retains current PID through independent read-only queries",
+      "skipIsPass": false,
+      "actualPassCount": null,
+      "awaitMeans": "Module evaluation and registration, not completion of the preceding12 callbacks.",
+      "fileIsolation": "Same native-receipt entry process; other seven original Stage1 command entries retain existing process isolation."
+    },
+    "nodeSemantics": {
+      "documentation": {
+        "repository": "nodejs/node",
+        "ref": "v24.21.0",
+        "path": "doc/api/test.md",
+        "bytes": 165722,
+        "sha256": "b2c98ae196d08f83752c9f3c6f595ade69abbd9fd2e6d7192d662c7206896e16",
+        "gitBlob": "02f9cc30ec5775f198ddbae58d80d7dfdc9b2110",
+        "relevantSectionsRead": true
+      },
+      "independentReadScope": "Complete body fetched/hashed; primary execution-model797–841, concurrency1912–1917, timeout1940–1942, top-level registration1955–1969 and imported entry identity3569ff sections read. The proposal's fullBodyRead describes root's separate read; this review does not claim reading all165,722 documentation bytes.",
+      "defaultConcurrency": "Individual node:test concurrency defaults false. Current selected files set no contrary concurrency/hooks/global state. Other original entry files retain separate processes under the unchanged command.",
+      "importMeaning": "Top-level await establishes target module evaluation and14 registrations after12 local registrations, not prior test callback completion. No wrapper/suite or selected subset is introduced.",
+      "commandDuplication": "Existing command has native-receipt exactly once and no platform.test.mjs explicit entry. Per-process ESM caching does not promise deduplication for some different future command that explicitly listed both; none is selected."
+    },
+    "actualEffects": {
+      "eager": "New target/helper closure imports only Node builtins; module evaluation defines constants/functions and registers tests. No eager provider or GUI launch.",
+      "socketsAndOs": "Original ephemeral127.0.0.1 allocation/close, listener query and IPv4/IPv6 bind availability checks remain. Unix uses lsof; Windows uses original PowerShell. Windows cleanup case retains original self-PID CIM/Get-Process/TCP query, including its preexisting full Get-NetTCPConnection.",
+      "fixture": "Original temp directories and copied fixture.cjs are exercised through process.execPath; Unix shim executes that same Node fixture. Tests choose ready,version-exit,version-timeout. Whole fixture source has no subprocess launcher. Provider strings/--version do not invoke real vendors.",
+      "cleanup": "Original child handle and original finally removal are preserved. The normal timeout case kills and awaits its spawned child; exceptional cleanup is not strengthened or newly proved.",
+      "globalState": "Complete current files do not mutate parent cwd/environment, install process hooks, mock clocks or patch prototypes. Each fixture uses local state and unique temp paths. Existing OS contention remains a possible failure.",
+      "scopeCorrection": "No-new-observation wording now correctly applies to application failure flow; the imported component file is expressly not pure-data-only."
+    },
+    "bounds": {
+      "portAvailabilityMs": 15000,
+      "portPollMs": 250,
+      "powershellPerCallMs": 30000,
+      "timeoutFixtureReadyMs": 5000,
+      "timeoutFixtureOwnTimerMs": 60000
+    },
+    "boundsLimit": "Original code does not create a new finite aggregate test timeout; unchanged spawnSync/exit waits and synchronous PowerShell work retain their actual limits. This wiring cannot guarantee wall time or successful cleanup.",
+    "prerequisites": {
+      "linux": "Existing lsof, Node, loopback and original filesystem availability.",
+      "windows": "Existing PowerShell/CIM/NetTCPConnection commands, Node, loopback and original filesystem availability.",
+      "rule": "Missing prerequisites, refusal, timeout or cleanup failure remain failure/unqualified. No install, retry, fallback, runner substitution, budget or workflow change selected."
+    },
+    "runnerEvidence": {
+      "recorded": {
+        "lastRetainedLinuxImage": "ubuntu-24.04 / 20261111.127.1",
+        "manifestUrl": "https://github.com/actions/runner-images/blob/ubuntu24/20261111.127/images/ubuntu/Ubuntu2404-Readme.md",
+        "manifestRead": "The exact recorded tag returned404 no-commit through the public contents endpoint; actual lsof availability is not claimed from an unread manifest.",
+        "sourceLog": {
+          "bytes": 101494,
+          "sha256": "25772eeb869f29a27411edc156503efe54e710d0a7560c69bf2772624fb6c182",
+          "gitBlob": "e9e601a6b1f5521b7412c5df67435aa275486699"
+        }
+      },
+      "independentQualification": "Root's exact image/tag404 is retained as attributed evidence. I do not independently repeat that historical response or claim lsof is installed. The plan is not contingent on an invented available-tool fact; missing prerequisites remain genuine test failure.",
+      "noSubstitutionInstallFallback": true
+    }
+  },
+  "routes": {
+    "workflow": {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "bytes": 36013,
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+      "completeReadReused": true
+    },
+    "staticJobs": [
+      "Static V01 source test (ubuntu-24.04)",
+      "Static V01 source test (windows-2022)"
+    ],
+    "node": "24.21.0",
+    "existingExplicitEntryCount": 8,
+    "wholeCommand": "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts",
+    "triggers": "Current native test path matches existing packages/legacy-agent-host/tests/** PR paths; static-preflight has no blanket Draft skip. No workflow/filter modification or event is selected.",
+    "prerequisites": "Original pinned install, Host build/typecheck, earlier test commands and separately recorded moving-main product lock remain. A source argument is reachability, not proof of execution.",
+    "gui": "Existing Host whole8-file command retains complete observations test; no frozen149 or original command changes."
+  },
+  "fixedScope": {
+    "selectedSixPathsUnchanged": true,
+    "newFiles": 0,
+    "newDependencies": 0,
+    "newWorkflows": 0,
+    "newControls": 0,
+    "frozen13Vector": {
+      "bytes": 3481,
+      "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+      "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+    },
+    "fourWindowsRowsExactlyUnchanged": true,
+    "unchangedCounts": {
+      "nonDocLeaves": 8799,
+      "productionFiles": 5020,
+      "cap": 800,
+      "existingExceptions": 141,
+      "workflows": 42
+    },
+    "unchangedInventories": [
+      "whole149",
+      "catalog43",
+      "runtime85",
+      "platform14",
+      "nativeUI8"
+    ],
+    "limits": "Imported platform14 is still an unchanged source body. Its new execution reachability does not qualify nativeUI8, packaged Windows integration, strict Darwin P09, cold renderer or exactNode24.22.1 standaloneRED/GREEN."
+  },
+  "continuation": {
+    "unchanged": true,
+    "steps": [
+      "Close this exact R1 root/guard/semantic/binding review.",
+      "Publish docs only with immediate expected-parent force:false push and complete root plus independent actual readback.",
+      "Root authors the exact selected source/test postimages; then source R2 review, publication with immediate push, and complete root plus independent actual readback.",
+      "Select a separately reviewed genuine execution venue against its exact new source. No extra executable R2 for a pure structured existing-workflow CI venue. Existing current CI remains independent.",
+      "Diagnose remaining failures from actual evidence; no UNKNOWN/UNREACHED/SKIP/CANCELLED promotion to PASS."
+    ],
+    "noExtraGate": true,
+    "currentCiExactUnchanged": true,
+    "currentCiSource": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "futureRuntimeClaim": false
+  },
+  "qualification": {
+    "completeE2E": false,
+    "rootCauseResolved": false,
+    "fixRuntimeProven": false,
+    "archiveQualified": false,
+    "newWindows14Or8CasesExecuted": false,
+    "nativeDarwinP09Resolved": false,
+    "coldRendererResolved": false,
+    "standaloneRedGreen24_22_1Executed": false,
+    "readyMergeReleaseDefaultActivationStage2": false,
+    "wholePlatform14ActuallyExecuted": false
+  },
+  "checks": [
+    {
+      "id": "D01",
+      "status": "PASS_STATIC_R1",
+      "finding": "The complete replacement31,060-byte body was read and independently rehashed to exactd226951f/188bd061; acceptance is confined to that immutable R1."
+    },
+    {
+      "id": "D02",
+      "status": "PASS_STATIC_R1",
+      "finding": "The initial23,006-byte R1 and fully self-read36-check semantic report06ee were rehashed and joined without amendment."
+    },
+    {
+      "id": "D03",
+      "status": "PASS_STATIC_R1",
+      "finding": "Recursive whole-JSON comparison found exactly11 changed or added leaf boundaries: five changes and six additions; no removed field."
+    },
+    {
+      "id": "D04",
+      "status": "PASS_STATIC_R1",
+      "finding": "Six preimage rows and all184,703 source bytes remain exact; each full body is reused from the completed current1ca read and independently rehashed."
+    },
+    {
+      "id": "D05",
+      "status": "PASS_STATIC_R1",
+      "finding": "Accepted source gatea3ff, immutable parent1ca and current source tree joins are unchanged and predate both plans."
+    },
+    {
+      "id": "D06",
+      "status": "PASS_STATIC_R1",
+      "finding": "The entire GUI selection object is byte-equivalent as JSON, including5 appended cases, partial saved sample and exact added3 modes."
+    },
+    {
+      "id": "D07",
+      "status": "PASS_STATIC_R1",
+      "finding": "Removing only the two new import-description properties restores the entire prior native selection object exactly, preserving3 diagnostic cases and all guards."
+    },
+    {
+      "id": "D08",
+      "status": "PASS_STATIC_R1",
+      "finding": "GUI own-data traversal, primitive text facts, privacy, getter/alias refusal, caps/unknowns and failure-only routing remain requirements; no raw dialog text or readiness verdict is selected."
+    },
+    {
+      "id": "D09",
+      "status": "PASS_STATIC_R1",
+      "finding": "Native original rejection identity, positive code allowlist, one own cause, both passive projections and original close stage/reason remain unchanged."
+    },
+    {
+      "id": "D10",
+      "status": "PASS_STATIC_R1",
+      "finding": "Optional malformed descriptor metadata must preserve valid legacy close fields; absent fields retain old payload shape, and the original single failed-close/reserved-slot rules remain."
+    },
+    {
+      "id": "D11",
+      "status": "PASS_STATIC_R1",
+      "finding": "Whole existing observations and native-receipt prefixes remain literal;5 GUI and3 local native declarations are still the only newly authored diagnostic cases."
+    },
+    {
+      "id": "D12",
+      "status": "PASS_STATIC_R1",
+      "finding": "Exact imported platform14/helper/fixture pins join complete freshly read1ca bodies,49,987 bytes in total."
+    },
+    {
+      "id": "D13",
+      "status": "PASS_STATIC_R1",
+      "finding": "The import is one unconditional top-level whole-file import at the end after3 local diagnostics, with the correct relative target; no selection/filter/wrapper/copy."
+    },
+    {
+      "id": "D14",
+      "status": "PASS_STATIC_R1",
+      "finding": "Current whole platform file has14 unique top-level test registrations and exactly one existing platform skip."
+    },
+    {
+      "id": "D15",
+      "status": "PASS_STATIC_R1",
+      "finding": "Prospective entry registration is9+3+14=26; Linux retains13 eligible platform cases plus1 SKIP,Windows14; no actual pass count is asserted."
+    },
+    {
+      "id": "D16",
+      "status": "PASS_STATIC_R1",
+      "finding": "Awaiting import establishes module evaluation/registration, not completion of preceding12 callbacks; imported cases share the native entry process."
+    },
+    {
+      "id": "D17",
+      "status": "PASS_STATIC_R1",
+      "finding": "Primary nodejs/node@v24.21.0 documentation is correctly cross-repository pinned and supports default process isolation and nonconcurrent individual tests; relevant sections were independently read."
+    },
+    {
+      "id": "D18",
+      "status": "PASS_STATIC_R1",
+      "finding": "Current parent and platform files add no global hooks, cwd/environment mutation, clock mocking or concurrency overrides; future appended diagnostics remain subject to the unchanged plan."
+    },
+    {
+      "id": "D19",
+      "status": "PASS_STATIC_R1",
+      "finding": "Stage1's exact eight-entry command lists native-receipt once and does not separately list platform.test.mjs, so no command-level duplicate entry is introduced."
+    },
+    {
+      "id": "D20",
+      "status": "PASS_STATIC_R1",
+      "finding": "Both original Stage1 static jobs remain Node24.21.0 on Ubuntu24.04/Windows2022 after existing build/typecheck; changed native test path already matches existing PR filters."
+    },
+    {
+      "id": "D21",
+      "status": "PASS_STATIC_R1",
+      "finding": "All original loopback, lsof/PowerShell, self-PID OS evidence, temp-file and finite Node fixture effects are disclosed; application-flow no-new-observation language is correctly scoped."
+    },
+    {
+      "id": "D22",
+      "status": "PASS_STATIC_R1",
+      "finding": "Complete fixture47a and platform closure expose no real Claude/Codex/OpenCode executable launch in selected tests; --version is sent only to copied TEST Node fixture."
+    },
+    {
+      "id": "D23",
+      "status": "PASS_STATIC_R1",
+      "finding": "Original5,000ms readiness,15,000ms port wait,250ms polling,30,000ms PowerShell and60,000ms fixture timer remain; no new aggregate timeout or cleanup guarantee is inferred."
+    },
+    {
+      "id": "D24",
+      "status": "PASS_STATIC_R1",
+      "finding": "Recorded exact Ubuntu image-manifest404 is disclosed as root evidence, lsof availability is not claimed, and missing prerequisites remain failure without install/fallback/runner substitution."
+    },
+    {
+      "id": "D25",
+      "status": "PASS_STATIC_R1",
+      "finding": "All four Windows postimage rows and frozen13 vector remain unchanged; selected six edits are disjoint from all17 frozen paths and preserve149/43/85 and nativeUI8."
+    },
+    {
+      "id": "D26",
+      "status": "PASS_STATIC_R1",
+      "finding": "No new source file, dependency, workflow, executable control, case filter, deadline or provider route is selected."
+    },
+    {
+      "id": "D27",
+      "status": "PASS_STATIC_R1",
+      "finding": "Existing current-main product-lock input and prerequisite/skip/failure limits remain; test reachability is not future execution or qualification."
+    },
+    {
+      "id": "D28",
+      "status": "PASS_STATIC_R1",
+      "finding": "Current CI metadata and frozen9d scope are exactly unchanged; no current or prior run is promoted to proof of1ca or future diagnostics/import."
+    },
+    {
+      "id": "D29",
+      "status": "PASS_STATIC_R1",
+      "finding": "Initial review provenance is retained and the unpublished initial R1 is explicitly superseded before source authorship; this report is a new exact-subject decision."
+    },
+    {
+      "id": "D30",
+      "status": "PASS_STATIC_R1",
+      "finding": "The existing R1 publication/actual and source R2/publication/actual continuation is exactly unchanged; no extra gate or executable-control review is invented."
+    },
+    {
+      "id": "D31",
+      "status": "PASS_STATIC_R1",
+      "finding": "Qualification explicitly records wholePlatform14ActuallyExecuted=false and retains all other unresolved native/E2E/standalone limits."
+    },
+    {
+      "id": "D32",
+      "status": "PASS_STATIC_R1",
+      "finding": "Review authority remained immutable reads and pure data only, with bare report retention, immediate pin delivery and full readback; no target execution or postimage authorship."
+    }
+  ],
+  "conclusion": "Accept exactd226951f as the replacement R1 plan only, with no semantic blockers. It preserves all initial GUI/native diagnostics constraints and adds one unconditional whole-file test import that makes the unchanged14 platform cases reachable through the already existing Stage1 native entry. Original effects, prerequisites, skips, bounds, source identities and unresolved qualifications are explicit. No source postimage, execution venue, test result or product/native qualification is approved.",
+  "selfReadbackProtocol": "Immediately deliver retained pin, then fresh-fetch whole report, verify bytes/SHA/Git/literal/parsed identity and read every retained byte before final confirmation."
+}

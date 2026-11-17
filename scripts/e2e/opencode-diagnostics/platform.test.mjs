@@ -41,7 +41,7 @@ test('one fresh Windows interpreter retains ordered original process and listene
   const launcher = { pid: 42, parent: 1, birth: '2026-09-10T01:00:00.0000000Z', executable: 'C:\\TEST\\app.exe' };
   const child = { pid: 43, parent: 42, birth: '2026-09-10T01:00:00.0000001Z' };
   const processQuery = "@(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,CreationDate,ExecutablePath | Where-Object CreationDate | ForEach-Object { [pscustomobject]@{pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; birth=$_.CreationDate.ToUniversalTime().ToString('o'); executable=$_.ExecutablePath} }) | ConvertTo-Json -Compress";
-  const listenerQuery = 'Get-NetTCPConnection -State Listen | Where-Object LocalPort -eq 9222 | Select-Object -ExpandProperty OwningProcess';
+  const listenerQuery = "Get-CimInstance -Namespace 'Root\\StandardCimv2' -ClassName MSFT_NetTCPConnection -Filter \"LocalPort = 9222 AND State = 2\" | Select-Object -ExpandProperty OwningProcess";
   let calls = 0;
   const execute = script => {
     calls++;
@@ -328,4 +328,64 @@ test('Windows census observations preserve original results, refusals and bounde
   proof.censusReads = Array(512).fill(null);
   assert.equal(observe('process-census', () => original), original);
   assert.equal(proof.censusReads.length, 512); assert.equal(proof.censusReadsTruncated, true);
+});
+
+test('selected Windows port query retains complete fresh process and owner observations', () => {
+  const launcher = { pid: 42, parent: 1, birth: '2026-09-10T01:00:00.0000000Z' };
+  const child = { pid: 43, parent: 42, birth: '2026-09-10T01:00:00.0000001Z' };
+  const foreign = { pid: 99, parent: 1, birth: '2026-09-10T01:00:00.0000002Z' };
+  const reused = { ...child, birth: '2026-09-10T01:00:00.0000003Z' };
+  const processQuery = "@(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,CreationDate,ExecutablePath | Where-Object CreationDate | ForEach-Object { [pscustomobject]@{pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; birth=$_.CreationDate.ToUniversalTime().ToString('o'); executable=$_.ExecutablePath} }) | ConvertTo-Json -Compress";
+  const expectedScript = port => '$TESTProcessOutput = ' + processQuery + ';\n' +
+    "$TESTListenerOutput = Get-CimInstance -Namespace 'Root\\StandardCimv2' -ClassName MSFT_NetTCPConnection -Filter \"LocalPort = " +
+    port + ' AND State = 2" | Select-Object -ExpandProperty OwningProcess;\n' +
+    '[pscustomobject]@{ processes = [string]$TESTProcessOutput; ' +
+    'listeners = [string]($TESTListenerOutput -join [Environment]::NewLine) } | ConvertTo-Json -Compress';
+  const observations = [
+    { processes: [launcher, child, foreign], listeners: '43\r\n43\r\n', owners: [43] },
+    { processes: [launcher, child, foreign], listeners: '43\r\n99\r\n43\r\n99\r\n', owners: [43, 99] },
+    { processes: [launcher, reused, foreign], listeners: '43\r\n', owners: [43] },
+    { processes: [launcher, foreign], listeners: '99\r\n99\r\n', owners: [99] },
+  ];
+  const ports = [undefined, 43127, undefined, 43127];
+  let calls = 0;
+  const samples = observations.map((observation, index) => {
+    const result = windowsProcessListenerSnapshot(ports[index], script => {
+      calls++;
+      // Exact wiring only: native provider filtering and address-family coverage require Windows.
+      assert.equal(script, expectedScript(ports[index] ?? 9222));
+      return JSON.stringify({ processes: JSON.stringify(observation.processes), listeners: observation.listeners });
+    });
+    assert.equal(calls, index + 1, 'every observation uses one fresh executor call');
+    assert.deepEqual(result, { processes: observation.processes, listeners: observation.owners });
+    return result;
+  });
+  assertListenerOwnership(samples[0].listeners, ownedTree(samples[0].processes, launcher));
+  assert.throws(() => assertListenerOwnership(samples[1].listeners, ownedTree(samples[1].processes, launcher)));
+  assert.throws(() => sameIdentity(child, samples[2].processes.find(row => row.pid === child.pid)));
+  assert.throws(() => assertListenerOwnership(samples[3].listeners, ownedTree(samples[3].processes, launcher)));
+  assert.equal(calls, observations.length);
+});
+test('Windows listener executor failures never admit partial output or fall back', () => {
+  const complete = JSON.stringify({ processes: '[{"pid":42,"parent":1,"birth":"TEST"}]', listeners: '43\r\n' });
+  const failures = [
+    Object.assign(new Error('TEST listener provider failed after output'), {
+      stdout: complete, stderr: 'TEST provider failure', status: 1,
+    }),
+    Object.assign(new Error('TEST listener namespace unavailable'), {
+      stdout: '{"processes":"[]","listeners":"43', stderr: 'TEST missing namespace', status: 1,
+    }),
+    Object.assign(new Error('TEST listener interpreter timed out'), {
+      stdout: complete, stderr: 'TEST timeout after output', status: null, signal: 'SIGTERM', code: 'ETIMEDOUT',
+    }),
+  ];
+  for (const failure of failures) {
+    const fields = { ...failure };
+    let calls = 0;
+    assert.throws(() => windowsProcessListenerSnapshot(43127, () => {
+      calls++; throw failure;
+    }), error => error === failure);
+    assert.equal(calls, 1, 'partial stdout never creates an accepted observation or retry');
+    assert.deepEqual({ ...failure }, fields);
+  }
 });

@@ -1,0 +1,569 @@
+{
+  "schemaVersion": 1,
+  "kind": "BOUNDED_WINDOWS_SELECTED_PORT_CIM_AND_RETRY_PAIR_FEASIBILITY_ADVISORY",
+  "reviewer": "/root/producer_r2_guard",
+  "at": "2026-11-17 07:54:44 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "status": "FEASIBLE_SOURCE_SHAPES_ONLY_NO_FIX_SELECTED_OR_AUTHORED",
+  "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+  "sourceRoot": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+  "scriptsTree": "c3f4fe5a62dd79a743b6ffc0d07341ac68a25f73",
+  "toolsTree": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+  "scope": "Only minimal shared Windows listener query candidate B and optional final post-Retry paired-row observation A1. No A2/screenshot rewrite, A3 readiness reordering, ARM retention redesign, workflow change or new execution route is selected.",
+  "concreteFeasibilityBlockers": [],
+  "conclusion": [
+    "B has a concrete one-string production boundary: preserve the existing full Win32_Process query and every consumer, and replace only the shared listener query's cmdlet/pipeline selection with an address-neutral local CIM filter for the same port and Listen state.",
+    "Microsoft's documented namespace, numeric State mapping, local query/filter and zero-result semantics support that specification. All-owner selection is preserved by omitting owner/address/family filters. Actual provider behavior on the selected Windows architectures and any speed improvement remain unexecuted.",
+    "The existing injected platform tests provide meaningful freshness, envelope, failure and ownership seams, but selected fixed9d Draft jobs do not execute that file. The original packaged Windows Retry does exercise the production query when reached.",
+    "Optional A1 can use the existing outage pair expression at the final Retry row boundary, preserving both complete ordered deep-equality assertions and all click guards. It requires a regression on the actual changed Retry source block; the existing outage test alone would not prove that wiring.",
+    "No speedup or original10s success is predicted. Source review cannot convert the old failed x64/ARM attempts or the current fixed9d CI attempt into a result for a future candidate."
+  ],
+  "evidence": {
+    "priorOptimization": {
+      "bytes": 57508,
+      "sha256": "905ca483abf73b19c2efb60180d8f6bbdefc1e8d8e744aa1377f66ecaf212456",
+      "gitBlob": "ba917dc0650ef48acbaf5646059550accb42d237",
+      "previousFullSelfRead": "2026-11-17 07:17:51 UTC"
+    },
+    "priorFailure": {
+      "bytes": 82021,
+      "sha256": "7a6dfd9d48f634d1e5434456ff4e787d0795baa01eecd092b2c6877025f352d3",
+      "gitBlob": "4a8ee1f31e1ce056b06515e842ed0d68fb5ea917"
+    },
+    "originalCapture": {
+      "bytes": 43216,
+      "sha256": "baf4a9f2de58d967366c652bf7cba5d28e7b4d3c3f576f3d359f04516f31c972",
+      "gitBlob": "33e472d38720bda64a2483041af43405c2eec085"
+    },
+    "originalX64Receipt": {
+      "bytes": 750631,
+      "sha256": "cf9c74713f42fbad360375ff883711a9b8baf8a434b8b39fd4beb412d6b635c9",
+      "gitBlob": "a5032a87abfe9c9a7a91227e31408993d6ee073a"
+    },
+    "wholeWorkflowCorpus": {
+      "bytes": 780732,
+      "sha256": "9a83bd5a7425d0674345c607e26b2a1df8bde3556549ac276bfbf860c5c4e3bb",
+      "gitBlob": "6d032754064d4f251a11e8572bb7b476ea5860a8",
+      "files": 42,
+      "fullBodyBytes": 751430
+    },
+    "currentSourcePins": [
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "mode": "100644",
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e"
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "mode": "100644",
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "mode": "100644",
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.ts",
+        "mode": "100644",
+        "bytes": 22604,
+        "sha256": "ebb52ab95cdbf0ddc86ce44b534a3c7255c7e8454e5cadb2cbb83278daa53a0f",
+        "gitBlob": "12f4a7b122843acea95e8c37f876917331842a4a"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+        "mode": "100644",
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      },
+      {
+        "path": "package.json",
+        "mode": "100644",
+        "bytes": 26839,
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+      },
+      {
+        "path": "vitest.config.ts",
+        "mode": "100644",
+        "bytes": 1187,
+        "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+        "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3"
+      },
+      {
+        "path": "tools/owned-process-broker/vitest.config.ts",
+        "mode": "100644",
+        "bytes": 342,
+        "sha256": "d7af296db40661045f6402af15eeb6072781919fd8c8145e554dada03e0de88e",
+        "gitBlob": "cd03a73404a7b2548c15234743c24c1093b554af"
+      }
+    ],
+    "relevantWorkflowPins": [
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      },
+      {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "bytes": 19532,
+        "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f",
+        "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69"
+      },
+      {
+        "path": ".github/workflows/opencode-desktop-e2e.yml",
+        "bytes": 6719,
+        "sha256": "ea78e9c6002db433bb57087c3d4eac3d652412746b3a3d5d2aad0cb02e76d17e",
+        "gitBlob": "3d2a90a0e335155d435bd4eae4f2bd2842425983"
+      },
+      {
+        "path": ".github/workflows/opencode-packaged-e2e.yml",
+        "bytes": 19616,
+        "sha256": "80a7c110468f22670a541dcf8cd452c6de754376f4ff970bbdf2888bd91fc2fe",
+        "gitBlob": "458e165ef020a1f8b05806b9ae7edc839134e1b4"
+      },
+      {
+        "path": ".github/workflows/provider-real-runtime-e2e.yml",
+        "bytes": 8958,
+        "sha256": "9903545813f74656b4e78e53641449a7c4c09b6b3564263f83aa7f2f2f8f0737",
+        "gitBlob": "4ee30807aa18f043fe53d090bfb6211bb5458ce0"
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "bytes": 175238,
+        "sha256": "8cac831e00dd87f656a971c6496b8278c7cfddc261f1eb48573a7e2acf83c2d1",
+        "gitBlob": "a93ff6ba1e5656523668694bca24910a468aebc7"
+      }
+    ],
+    "readMethod": "All nine complete source/config bodies were fetched and rehashed, and exact path/mode/size/blob rows joined to current9d root and complete scripts/tools trees. platform.mjs, platform.test.mjs, nativeWindowsAppGate.mjs and both Vitest configs were freshly read completely. The exact previously full-reviewed native UI/test and current controls bodies were reused by identity, with the full decisive selector/public-read, outage test, Retry test entry and waitRead functions reread. Root package script fields and complete42-workflow source corpus were reused/rehashed; precise actual test commands, job guards and selected config includes were reread. Prior full retained failure/optimization reports supply original timings and custody; no old run or live CI endpoint was read.",
+    "sourceEvaluation": "None. Only the approved pure UTF8 identity helper was evaluated. Source fragments below are advisory data, not executable postimages or invocation authorization."
+  },
+  "primaryMicrosoftSources": [
+    {
+      "id": "MS_CLASS",
+      "url": "https://learn.microsoft.com/en-us/windows/win32/fwp/wmi/nettcpipprov/msft-nettcpconnection",
+      "refs": [
+        "turn141view1",
+        "turn142view1",
+        "turn144view3"
+      ],
+      "facts": "The NetTCPIP class is MSFT_NetTCPConnection in Root\\StandardCimv2. LocalPort is uint16, State uint8, OwningProcess uint32. Listen maps to2. LocalAddress is a separate property. No address predicate is needed for port/state selection.",
+      "limits": "Class documentation establishes schema/selection semantics, not measured provider cost or native output on this runner."
+    },
+    {
+      "id": "MS_GET_CIM_51",
+      "url": "https://learn.microsoft.com/en-us/powershell/module/cimcmdlets/get-ciminstance?view=powershell-5.1",
+      "ref": "turn144view0",
+      "facts": "The Windows PowerShell5.1 cmdlet supports explicit Namespace/ClassName and WQL Filter. With neither ComputerName nor CimSession supplied it uses local WMI through COM. Filter is a WHERE expression without the WHERE keyword.",
+      "limits": "This is the matching PowerShell generation's command contract, not a fresh execution."
+    },
+    {
+      "id": "MS_GET_TCP",
+      "url": "https://learn.microsoft.com/en-us/powershell/module/nettcpip/get-nettcpconnection?view=windowsserver2025-ps",
+      "refs": [
+        "turn141view0",
+        "turn143search1"
+      ],
+      "facts": "Get-NetTCPConnection describes all current TCP connections and optional LocalPort, State, LocalAddress and OwningProcess selection. Existing source requests Listen then client-filters the port.",
+      "limits": "The page does not document every no-match error identifier or guarantee performance of a parameterized form."
+    },
+    {
+      "id": "MS_QUERY_EMPTY",
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/wbemcli/nf-wbemcli-iwbemservices-execquery",
+      "ref": "turn144view1",
+      "facts": "WMI query completion may return an enumerator with zero instances without error; this is distinguished from failed query execution.",
+      "limits": "Used with the local Get-CimInstance query contract to support empty-success; actual command composition still needs native observation."
+    },
+    {
+      "id": "MS_ENUM",
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/wbemcli/nf-wbemcli-ienumwbemclassobject-next",
+      "ref": "turn144view2",
+      "facts": "End of enumeration, incomplete/time-limited enumeration and actual errors are distinct outcomes. An absence claim must come from successful complete query output, not a timeout or failed provider.",
+      "limits": "No lower-level enum API is proposed or executed."
+    },
+    {
+      "id": "MS_ERRORS",
+      "url": "https://learn.microsoft.com/en-us/windows/win32/wmisdk/wmi-error-constants",
+      "refs": [
+        "turn145view2",
+        "turn146view1"
+      ],
+      "facts": "WMI distinguishes access denial, provider failure, invalid namespace/class and invalid query. These are failures, not empty result sets.",
+      "limits": "No permission manipulation or failure-producing query was executed."
+    },
+    {
+      "id": "MS_STOP",
+      "url": "https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables?view=powershell-5.1",
+      "refs": [
+        "turn145view0",
+        "turn146view0"
+      ],
+      "facts": "ErrorActionPreference Stop halts execution on errors that would otherwise continue. The existing wrapper already sets it before the script, with no per-command suppression.",
+      "limits": "No new error handler or retry is required."
+    }
+  ],
+  "candidateB": {
+    "selected": false,
+    "authored": false,
+    "preimages": [
+      "71d5629149e8f499a45b54a99922145ee3cae09e",
+      "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+    ],
+    "boundary": "scripts/e2e/opencode-diagnostics/platform.mjs:10-11, windowsListenerQuery only. Its two consumers are listeners at118-125 and windowsProcessListenerSnapshot at136-149.",
+    "exactQuerySpecification": {
+      "old": "Get-NetTCPConnection -State Listen | Where-Object LocalPort -eq ${port} | Select-Object -ExpandProperty OwningProcess",
+      "candidate": "Get-CimInstance -Namespace 'Root\\StandardCimv2' -ClassName MSFT_NetTCPConnection -Filter \"LocalPort = ${port} AND State = 2\" | Select-Object -ExpandProperty OwningProcess",
+      "meaning": "Advisory replacement specification only, not an authored executable source/control postimage."
+    },
+    "specificationNote": "The literal ${port} denotes the same existing validated template interpolation. This specifies a possible query replacement for root's decision; no source file, control, test postimage or runnable proposal was authored. Keep the existing trailing OwningProcess projection; no new property projection or helper is necessary.",
+    "namespaceReason": "Win32_Process continues using its existing namespace/default. The network query explicitly selects Root\\StandardCimv2; silently using the process query's default namespace would be wrong.",
+    "universe": {
+      "required": "Every listening TCP owner on the selected local CDP port, across addresses and IPv4/IPv6, including owners outside the expected Main family.",
+      "actualGatePort": 9222,
+      "generalizedHelper": "Keep the existing validated supplied port for other callers; do not hard-code9222 in the shared helper.",
+      "setArgument": "For any class instance, inclusion is exactly LocalPort=selectedPort AND State=2. There is no LocalAddress, RemoteAddress, address-family, OwningProcess, Main PID or lineage restriction. Thus any IPv4 or IPv6 record in the same provider's connection universe is included iff it satisfies the original port/Listen predicates. The endpoint being127.0.0.1 does not authorize filtering out another address or foreign owner.",
+      "evidenceLimit": "This is schema-backed selection equivalence, not a fresh proof that a particular Windows provider binary enumerates both families correctly. Native positive coverage for both supported families and a foreign owner is still operational evidence, not an extra review gate.",
+      "normalization": "Retain parseListeners exactly: positive integer validation, existing duplicate-PID elimination and no fallback. Enumeration order is not used as ownership authority; all returned owners must satisfy the existing predicates.",
+      "distinctDiagnostic": "windowsCleanupEvidence has a separate all-state query on9222 and is not imported by this gate. B does not change that query or silently narrow diagnostic states."
+    },
+    "preservation": [
+      "The complete fresh Win32_Process acquisition remains literal: ProcessId,ParentProcessId,CreationDate,ExecutablePath; current nonempty CreationDate rule; exact UTC birth string; no process PID or ownership filter.",
+      "One fresh PowerShell interpreter per combined call remains. Process observation precedes listener observation. This is ordered, not atomic, and creates no lease or reusable authority.",
+      "Every assertOwnedRenderer still performs a new combined observation. validateCensus still checks original controller/driver/Main PID and birth, parent, complete lineage/orphan census, bounds and original remaining() admission.",
+      "Every listener PID still joins fresh process birth to retained Main lineage. Unknown, foreign or reused-birth owners refuse.",
+      "No cache, TTL, remembered successful snapshot, persistent CIM session, PID-only check, fallback, retry or alternate API is introduced.",
+      "No client/phase/controller budget changes. Existing PowerShell execFileSync timeout30000, original Refresh/Retry phases10000, JavaScript outer300000 and controller120000 remain separate unchanged limits.",
+      "Synchronous PowerShell can still return after a phase cutoff; original remaining() must reject afterward before renderer/input admission. The candidate is not active cancellation or a hard10s subprocess timeout.",
+      "All ordinary Quit, native custody, source/input freeze, raw census timing/receipts, peer limits and original PASS conditions remain."
+    ],
+    "emptyAndErrorCases": [
+      {
+        "case": "Successful complete query has zero matching port/Listen instances",
+        "required": "No owner output; existing standalone parser returns[]. In the combined envelope, empty listener text remains a string and parses to[]. An active ownership guard rejects empty; availability/drain uses its original empty semantics.",
+        "basis": [
+          "MS_GET_CIM_51",
+          "MS_QUERY_EMPTY"
+        ]
+      },
+      {
+        "case": "One/multiple owners and duplicate address records",
+        "required": "Return every OwningProcess value, preserve all foreign owners, then existing parseListeners deduplicates only duplicate PIDs. No owner-specific filtering."
+      },
+      {
+        "case": "Missing namespace/class, malformed WQL, provider failure, access denial, unavailable CIM plumbing or interpreter timeout",
+        "required": "Keep Stop and original execFileSync thrown failure. Do not catch into[], suppress stderr, use SilentlyContinue or fall back to another query.",
+        "basis": [
+          "MS_ERRORS",
+          "MS_STOP"
+        ]
+      },
+      {
+        "case": "Partial owner output followed by native failure",
+        "required": "A failed execFileSync must throw before parsing/using stdout. No partially successful owner list may authorize a click or absence claim."
+      },
+      {
+        "case": "Successful process acquisition followed by listener error",
+        "required": "No valid combined envelope is produced/admitted; complete original interpreter failure propagates. Never reuse the already acquired process side alone as CDP authority."
+      },
+      {
+        "case": "Malformed successful envelope/PID payload",
+        "required": "Keep strict keys/types, invalid JSON and invalid/nonpositive PID refusals. Empty successful output is not permission to accept a malformed envelope."
+      }
+    ],
+    "parameterizedGetNetNote": "A direct Get-NetTCPConnection -LocalPort replacement is not treated as an equivalent no-match solution by this advisory. Its wrapper can distinguish not-found from ordinary empty enumeration, and blanket error suppression would hide real failures. B instead uses documented raw CIM query completion and keeps the existing Stop propagation. No Q&A/third-party report is used as normative proof of a specific no-match error ID.",
+    "performance": "The source change removes the explicit high-level NetTCPIP cmdlet plus client-side LocalPort filter from each query. It does not prove that the provider avoids scanning all TCP records, that module load dominates, or that latency improves. Keep exact whole-phase timing/evidence; no expected saving or10s PASS is asserted."
+  },
+  "platformTestSeams": {
+    "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+    "completeCurrentCases": 12,
+    "commandDescription": "The existing whole-file Node test command would be node --test scripts/e2e/opencode-diagnostics/platform.test.mjs. It is not selected or executed by this advisory.",
+    "cases": [
+      {
+        "lines": "25-39",
+        "title": "OS process and listener output parsing fails closed",
+        "existing": "BOM/singleton process decoding, empty process list, Unix birth, duplicate owner PIDs and malformed data.",
+        "candidateRequirement": "Retain existing cases; include explicit empty listener output and positive owner-list variants without loosening PID validation."
+      },
+      {
+        "lines": "40-69",
+        "title": "one fresh Windows interpreter retains ordered original process and listener observations",
+        "existing": "Injected executor sees complete original process query before listener query, exactly once per call; consecutive calls return different snapshots; real parser and ownership functions inspect both.",
+        "candidateRequirement": "Change only the expected listener query to the specified namespace/class/port/state shape. Keep exact full process query, one interpreter, ordered acquisitions and changed second result. Include a nondefault valid port and verify no owner/address/family filter. Query text matching is wiring evidence, not native filtering proof."
+      },
+      {
+        "lines": "70-94",
+        "title": "combined Windows observations reject malformed envelopes and preserve executor failure",
+        "existing": "Invalid ports refuse before calls; zero results succeed as empty structured observation; malformed/extra-key envelopes and invalid data refuse; injected error identity preserved once without fallback.",
+        "candidateRequirement": "Keep zero-success distinct from thrown provider/access/query-like errors, including an error object carrying stdout/stderr/status; verify no partial stdout is parsed, one attempt only and unchanged error identity. Retain every malformed-envelope branch."
+      },
+      {
+        "lines": "40-117",
+        "title": "ownership rejects stale launchers, reused child PIDs and unrelated listeners",
+        "existing": "Real ownedTree/sameIdentity/assertListenerOwnership reject foreign/empty/launcher owner, mixed owned+foreign owners and reused births.",
+        "candidateRequirement": "Supply every returned foreign owner in the simulated full listener text; mixed valid+foreign must refuse. Keep complete process rows so an unrelated owner is not hidden. This tests downstream authority, not native enumerator family coverage."
+      },
+      {
+        "lines": "134-143",
+        "title": "isolated CDP port stays bound to the selected dev launcher",
+        "existing": "Allocates/releases a real local port and calls actual assertPortAvailable. On Windows this reaches the real listener query, including its empty-success path; on other platforms it uses that platform's listener implementation.",
+        "candidateRequirement": "Preserve. Its port allocation and available-port check alone do not establish two distinct IPv4/IPv6 owner enumeration or native error cases."
+      },
+      {
+        "lines": "236-241",
+        "title": "Windows cleanup evidence retains current PID through independent read-only queries",
+        "existing": "Windows-only actual CIM/native/NetTCP diagnostic test.",
+        "candidateRequirement": "Preserve, but it invokes windowsCleanupEvidence's separate query; it is not proof of B's selected query."
+      },
+      {
+        "lines": "243-331",
+        "title": "Windows phase and census observation regressions",
+        "existing": "Actual source slices preserve original phase clocks/admission, exact results/failures and bounded passive census records.",
+        "candidateRequirement": "Retain unchanged; logging or new query timing must not grant admission or reset budgets."
+      }
+    ],
+    "meaningfulNativeQualification": "If a later authorized Windows execution is selected, record the actual changed query through the existing helper on native x64/ARM64, successful empty output, multiple controlled owners across available IPv4/IPv6 addresses, another port/state excluded, and foreign-owner rejection. Report unsupported family rather than claiming a both-family pass. Invalid query/namespace or injected executor errors may distinguish absence from failure without mutating permissions. Do not create an ACL-denial scenario or new runtime route merely for this advisory.",
+    "testScopeCaution": "This whole file is not purely in-memory: existing tests bind ports and spawn finite Node fixtures, and Windows-only cases call OS queries. No part of it was run in this review."
+  },
+  "candidateA1": {
+    "selected": false,
+    "authored": false,
+    "preimages": [
+      "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+      "076fbd26bac85c4195312a83c1ae78067a8d742e"
+    ],
+    "boundary": "nativeWindowsAppGate.mjs:546-549 only, after the unchanged originalBinding, one fixture.afterRetry and public process read, before unchanged same-Main capture and screenshot.",
+    "pairExpression": "Use the existing outage composition at457-460: synchronously evaluate the ordered original.rows.map(row=>processOwner(row)) expressions, and return that ordered array only if rows.every(Boolean); otherwise return null. Keep exactly one original ui.waitRead with the remaining original phase allowance.",
+    "assertions": "After the pair returns, require an array with original.rows.length. Iterate original.rows.entries() in its unchanged order; object-check the corresponding owner and retain assert.deepEqual(owner.process,{...row,observation:'same-live',canTerminate:true}) for each row. Primary and neighbor remain separate complete deep-equality assertions, not mere PID/ref equality or a Boolean summary.",
+    "selector": "The same processOwner wrapper still passes exact selection/id/original processRef to desktopProcessOwnerExpression. Its existing React fiber/alternate search remains; no invented global fiber uniqueness, broader selector or changed reference acceptance.",
+    "timingSemantics": "This intentionally requires both owners in one synchronous renderer evaluation. It is stronger than accepting the two records in different frames, but is not an atomic OS/Host/React snapshot. The full row comparisons remain ordered after admission. Pair availability may change which missing-row/cutoff error is reached first; no identical old per-row error timing is claimed.",
+    "preserved": [
+      "All seven original Retry click ownership boundaries and every input call remain literal; no caching, combined clickguard or extra Retry.",
+      "Earlier ready wait and its six-field validator/diagnostic meanings stay unchanged. All intervening public/native reads remain once and in order. Do not move the row proof earlier.",
+      "Current9d actual generic controls5286 retain one fresh ownership guard per poll and the accepted post-await expiry check, with unchanged100ms cadence and original caller budget.",
+      "Same-Main check, screenshot, both original UI Kill phases and all ordinary cleanup remain. A1 does not solve ARM's earlier Refresh boundary."
+    ],
+    "existingRegressionSeam": {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "outageLines": "169-256",
+      "actualSourceBoundaries": "The existing outage test extracts the literal driver block after 'genuine closed Host read marker with separate controls' and before the Retry begin, and also extracts the actual processOwner wrapper.",
+      "proves": "Actual production expression with controlled renderer frames refuses primary-only then neighbor-only, accepts both in the same frame, and permits later joint availability; wrong team/id/ref, duplicates, guard/cutoff/evaluation errors are covered.",
+      "missing": "It currently tests the outage block, not the final Retry loop. A prospective A1 regression must extract the actual final Retry source between proof.afterRetryPublic and proof.sameMainAfterRetry, preserving original surrounding fences.",
+      "requiredCases": [
+        "Alternating primary-only and neighbor-only frames never satisfy the new pair; both together and later both together do.",
+        "Wrong or changed second full process value must fail its ordered deep-equality assertion even when both id/ref lookups succeed. Change nonidentity fields too, so the test cannot pass with a reduced assertion.",
+        "Assert both full comparisons occur in original order and every guard/evaluation remains read-only; no send/input/Retry is added.",
+        "Foreign selection, original-ref replacement, selected-props duplicate/missing rows, original guard error, remaining-budget refusal and evaluation error stay refusing.",
+        "Use the actual controls for the admission path or retain the existing source-slice guard accounting plus the already actual controls deadline regression. The old sequential two-wait implementation must be caught by split-frame acceptance, not solely by a source-text spelling check."
+      ],
+      "unchangedReadinessTest": "The distinct current test at259-547 exercises actual controls and original readiness operands. Keep it; its success would not substitute for a new final-pair wiring regression."
+    },
+    "performance": "With both rows immediately available, two ownership/read operations become one. Number of polls and total phase latency remain unknown; this is not a quantified saving or a proof the original10s phase succeeds."
+  },
+  "unchangedCiCoverage": {
+    "fixedHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "noLiveObservation": true,
+    "platformFileExecutedBySelectedDraftJobs": false,
+    "mapping": [
+      {
+        "workflow": "host-emulated-acceptance.yml",
+        "where": "119/121 lint and385 processes lane",
+        "fact": "platform.test.mjs is passed to lint:fast:files only. The explicit eight-file shared Node command excludes it. The processes lane does execute the complete desktop-native-process-ui.test.ts, so an A1 regression appended there is source-reachable under the unchanged lane if preceding steps succeed."
+      },
+      {
+        "workflow": "electron-packaged-ci.yml",
+        "where": "160-177 and Windows original Retry step",
+        "fact": "Runs candidate-closure/packaged-input/stage-node tests, broker Vitest, driver syntax check and the actual Windows gate. Broker config includes only protocol.test.ts, nativeGateEvents.test.ts and nativeGateContext.test.ts. No platform.test.mjs command exists. Actual Retry reaches the production platform helper with native process/listener ownership on each read/clickguard when prior steps succeed."
+      },
+      {
+        "workflow": "opencode-desktop-e2e.yml",
+        "where": "desktop job guard and72",
+        "fact": "Contains the explicit platform.test.mjs harness-safety command, but its job guard skips Draft PRs. It cannot supply those unit-case results for the selected fixed9d Draft attempt."
+      },
+      {
+        "workflow": "opencode-packaged-e2e.yml",
+        "where": "136 and172",
+        "fact": "Contains the whole platform test command but is not event-selected by the current9d diff, and its packaged job also rejects Draft PRs. It has PR/call/dispatch routes; it is not universally dispatch-only."
+      },
+      {
+        "workflow": "provider-real-runtime-e2e.yml",
+        "where": "real-runtime guard and105",
+        "fact": "Another direct whole-platform-suite command exists. Its PR paths do not select fixed9d and the job rejects Drafts. No alternate workflow invocation is selected."
+      },
+      {
+        "workflow": "root Vitest / broker Vitest",
+        "where": "exact configs",
+        "fact": "Root include globs only select test/**/*.test.ts(x) and src/**/*.test.ts(x); neither scripts/**/*.mjs nor this file is discovered. The custom broker include list is also closed. Canonical package tests do not silently fill this specific file coverage."
+      }
+    ],
+    "futureDiffLimit": "Changing platform.mjs would alter path-trigger eligibility of existing optional workflows. This advisory does not choose a future base/head, change a workflow, convert Draft, dispatch, or assert a future event/run inventory. The fixed9d CI attempt remains a different immutable source.",
+    "gapHandling": "Keep the absence of isolated platform-test execution explicit. The production Windows gate exercises actual helper success/ownership/cleanup paths but does not replace targeted zero/malformed/error/foreign-owner test results. No new CI route or approval gate is invented."
+  },
+  "retainedFailureContext": {
+    "source": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "attempt": 1,
+    "x64": {
+      "calls": 12,
+      "combinedCalls": 11,
+      "processOnlyCalls": 1,
+      "queryIntervalsMs": 8754.622500000005,
+      "readyAtMs": 7948,
+      "lastQueryReturnedAtMs": 10465.460700000003,
+      "originalPhaseMs": 10000,
+      "meaning": "The final census crossed the cutoff before the second final-row DOM read. Later same-Main/screenshot/stops were unreached. This is not a product-row-value failure or a component benchmark."
+    },
+    "arm64": "Original failure occurred earlier in Host-exit/Refresh. A1 is downstream and cannot repair that reached boundary by itself; B changes a shared query used by guards but no native improvement is observed. Independent120s controller retention limits from ba917 remain, with no redesign selected here.",
+    "noSpeedInference": "No native subcost partition, synthetic subtraction or guaranteed savings. The measured process-only and combined calls are different invocations; their difference is not a listener benchmark."
+  },
+  "requirementsAndLimits": {
+    "implementation": "If root selects a narrow R1, bind these exact preimages and only selected B/A1 source/test changes; no postimage is accepted by this advisory. Existing review/publication/execution procedure applies without an added gate.",
+    "noGuarantee": [
+      "Native empty/filter/error behavior on each selected Windows architecture has not been executed.",
+      "All-owner IPv4/IPv6 result completeness is a query-contract argument until native evidence is captured.",
+      "No elapsed-time improvement,10s phase completion, ordinary cleanup or GUI PASS is established.",
+      "Selected Draft jobs omit the isolated platform unit suite; this is a coverage limitation, not permission to invent a new execution route."
+    ],
+    "sourceCaps": "No cap/deadline/expected-source pin is changed. Exact future line/byte deltas require the actual authored proposal, not this advisory.",
+    "forbiddenChanges": [
+      "PID-filtered or partial process census",
+      "owner-only/address-only listener filtering",
+      "SilentlyContinue/error-to-empty conversion",
+      "cache/TTL/reused ownership",
+      "timeout increase or replay",
+      "clickguard removal or reordered input",
+      "moving final rows before intervening async/native reads",
+      "dropping a full row assertion",
+      "workflow/source/ref/PR/CI mutation by reviewer"
+    ]
+  },
+  "checks": [
+    {
+      "id": "S01",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "All nine exact complete source/config bodies hash and join the current9d root/scripts/tools trees."
+    },
+    {
+      "id": "S02",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Current source and tools trees are complete immutable trees; no physical checkout or source observation is claimed."
+    },
+    {
+      "id": "S03",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Current listener query is exactly the selected-port client-filtered original, shared by standalone and combined observations."
+    },
+    {
+      "id": "S04",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Full Win32_Process fields, original UTC birth serialization and process-before-listener ordering remain explicit preimages."
+    },
+    {
+      "id": "S05",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Original PowerShell wrapper is fresh execFileSync with Stop errors, private encoded script and unchanged30000ms timeout."
+    },
+    {
+      "id": "S06",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Port validation occurs before executor admission; complete envelope and parser checks remain available."
+    },
+    {
+      "id": "S07",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Gate consumes all selected-port owners and matches every owner against fresh PID/birth and retained lineage."
+    },
+    {
+      "id": "S08",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Original controller/driver/Main/orphan and cutoff checks remain outside the prospective query-string boundary."
+    },
+    {
+      "id": "S09",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Default CDP port9222 and dual-loopback availability checks are explicit; cleanup diagnostic's separate all-state query is distinct."
+    },
+    {
+      "id": "S10",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Current platform tests have changing-result/freshness, exact no-match/malformed/error and foreign-owner seams."
+    },
+    {
+      "id": "S11",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Existing tests do not prove proposed native CIM filtering; their combined-query backend is injected."
+    },
+    {
+      "id": "S12",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Original ten-second Retry final row loop and ordered complete row assertions are the only optional A1 production boundary."
+    },
+    {
+      "id": "S13",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Existing outage block provides one guarded same-evaluation pair without changing row selector semantics."
+    },
+    {
+      "id": "S14",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Current9d controls retain per-read ownership and the accepted post-await expiry gate; no generic helper change is needed."
+    },
+    {
+      "id": "S15",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Actual-source outage regression proves split-frame refusal and complete pair acceptance; current Retry readiness seam remains separate."
+    },
+    {
+      "id": "S16",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Selected Host workflow lints platform.test but explicitly executes native-process-ui.test only in processes lane."
+    },
+    {
+      "id": "S17",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Default root Vitest and packaged broker Vitest include lists exclude the platform.mjs test suite."
+    },
+    {
+      "id": "S18",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Direct OpenCode desktop safety suite is Draft-skipped; other direct workflow consumers are unselected for fixed9d."
+    },
+    {
+      "id": "S19",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Packaged Windows current flow directly invokes nativeWindowsAppGate; syntax/type/broker tests do not substitute for platform.test."
+    },
+    {
+      "id": "S20",
+      "result": "SUPPORTED_STATIC_OR_RETAINED_EVIDENCE",
+      "finding": "Retained timing context is the same failed original attempt and is not a native cost prediction."
+    }
+  ],
+  "reviewerActions": {
+    "immutableGitAndRetainedEvidenceReads": true,
+    "primaryMicrosoftDocumentationReads": true,
+    "pureDataIdentity": true,
+    "bareAdvisoryBlobOnlyWrite": true,
+    "sourceOrControlPostimageAuthored": false,
+    "targetSourceEvaluated": false,
+    "shell": false,
+    "localRuntime": false,
+    "liveCIReadOrPolling": false,
+    "refOrPrMutation": false,
+    "newCiAction": false,
+    "realVendorInvocation": false
+  }
+}

@@ -1,0 +1,2063 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CLAUDE_FINITE_RUNTIME_READINESS_SOURCE_R2_ROOT_REVIEW",
+  "at": "2026-11-17 12:19:08 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "root",
+  "subject": {
+    "bytes": 56517,
+    "sha256": "59133615a781c82b97a5e2ed132ff5d5a9795b6d1b400d4d520761b31ca5b561",
+    "gitBlob": "682377734948765268a3cd07b4b966a97abac1e4"
+  },
+  "decision": "ACCEPT_EXACT_FIVE_SOURCE_POSTIMAGES_STATIC_ONLY",
+  "accepted": true,
+  "parent": "01ed56f756b385b91afcffcb31dafe7750bb4162",
+  "parentRoot": "181ac1545f21983dfe9b754ef23ae79b0e2caac2",
+  "parentDocs": "08ba85ad8af15cad38cdb62173f7b25a17aa9fb8",
+  "r1ActualGate": {
+    "bytes": 3974,
+    "sha256": "efa9f2091d7f776e1370fe7b0220b98dc03f8ca56dcf3a9e17cbecdfae9d781b",
+    "gitBlob": "613145275d09f78b0da7c7aa4c6ce231212d765d"
+  },
+  "authorshipStartedAt": "2026-11-17 12:11:49 UTC",
+  "sourceChanges": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 21981,
+        "sha256": "d0d00254e7e39ab8b5163e02cc93754775a8efe56ff28b8c87f07d02e0292c7e",
+        "gitBlob": "7b5edfbd4967debe454387c7a8b6246e67216dc8"
+      },
+      "after": {
+        "bytes": 21993,
+        "sha256": "2f929c1f5cfd1a9a3c9ec16d35f7197856c79a61adf166d30eebb8a1bd086f67",
+        "gitBlob": "adf5b4c418195e0fc4ab38ba7fde2b3436a6b835"
+      },
+      "changes": [
+        {
+          "kind": "replace",
+          "before": "  const model = provider === 'claude' ? 'sonnet' : 'TEST-model';",
+          "after": "  const model = provider === 'claude' ? 'TEST-claude-sonnet' : 'TEST-model';",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 16555,
+        "sha256": "8340911817fb4228e8d948425a1f85796fba16d244b6763b04e307ed6f290713",
+        "gitBlob": "97e14385a298a38a9b81b8805dc3f6d2da66545c"
+      },
+      "after": {
+        "bytes": 16591,
+        "sha256": "bd4b8bec56e93cd7c17ec04d5c09b93a8115097af57224d28e954c3f06cdb0c8",
+        "gitBlob": "6d267c1531fd741c4abee8b27ef501f28098d782"
+      },
+      "changes": [
+        {
+          "kind": "replace",
+          "before": "providerId: 'anthropic', model: 'sonnet', effort: 'low'",
+          "after": "providerId: 'anthropic', model: 'TEST-claude-sonnet', effort: 'low'",
+          "count": 1
+        },
+        {
+          "kind": "replace",
+          "before": "model: provider === 'claude' ? 'sonnet' : 'TEST-model'",
+          "after": "model: provider === 'claude' ? 'TEST-claude-sonnet' : 'TEST-model'",
+          "count": 1
+        },
+        {
+          "kind": "replace",
+          "before": "savedModel: 'sonnet', installer: undefined",
+          "after": "savedModel: 'TEST-claude-sonnet', installer: undefined",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "mode": "100644",
+      "before": {
+        "bytes": 32221,
+        "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+        "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01"
+      },
+      "after": {
+        "bytes": 33227,
+        "sha256": "dc9ba0c735ea763a24bb06d93590373cf1072d5737c7fba67a31df1356c44dd5",
+        "gitBlob": "1430de1a6666a22a7582d38a21273d61d2f745b7"
+      },
+      "changes": [
+        {
+          "kind": "replace",
+          "before": "assert.ok(argv.length <= 64 && Buffer.byteLength(JSON.stringify(argv)) <= 128 * 1024, 'argv');\n",
+          "after": "assert.ok(argv.length <= 64 && Buffer.byteLength(JSON.stringify(argv)) <= 128 * 1024, 'argv');\n// The selected runtime peer also serves the original Host's finite auth-status read.\nif (argv[0] === 'auth') {\n  assert.deepEqual(argv, ['auth', 'status', '--json'], 'argv');\n  assert.equal(role, 'management', 'argv');\n  assert.equal(process.env.HOME, join(root, 'home'), 'environment');\n  assert.equal(configRoot, join(root, 'config'), 'environment');\n  assert.ok(lstatSync(process.env.HOME).isDirectory() && lstatSync(configRoot).isDirectory(), 'environment');\n  const output = JSON.stringify({ loggedIn: true, authMethod: 'api_key',\n    apiProvider: 'firstParty', configDirectory: configRoot }) + '\\n';\n  assert.ok(Buffer.byteLength(output) <= 64 * 1024, 'limit');\n  effect({ event: 'launch', parentPid: process.ppid, command: argv });\n  effect({ event: 'auth-status', command: argv });\n  process.once('exit', code => effect({ event: 'exited', code }));\n  await new Promise((resolve, reject) => {\n    process.stdout.write(output, error => error ? reject(error) : resolve());\n  });\n  process.exit(0);\n}\n",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 24968,
+        "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+        "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57"
+      },
+      "after": {
+        "bytes": 40000,
+        "sha256": "58978cb43fac34697163fa9c30c6d3b14e26cf91e051a05085eab3d476260d61",
+        "gitBlob": "c1a42df62de987b1632365400f7359f65510dff3"
+      },
+      "changes": [
+        {
+          "kind": "append",
+          "prefix": {
+            "bytes": 24968,
+            "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+            "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57"
+          },
+          "append": {
+            "bytes": 15032,
+            "sha256": "5e24b59666e7864c1fab98c6d121dbea406eae882f73a350d956c4bdd45ac88e",
+            "gitBlob": "ca891a53111c5a22059228bbb1e180f71d03dc7b"
+          },
+          "newTests": 3
+        }
+      ]
+    },
+    {
+      "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 8570,
+        "sha256": "37d0b61e60dd4f175c9c2d34e1f8aa399becac018e970655dd7f5595713f2fb6",
+        "gitBlob": "6e84953e1d1a08b705b4000f47d8d51177047ff3"
+      },
+      "after": {
+        "bytes": 11410,
+        "sha256": "e781760fcaf1aeb3a04694ab8d5c213017add94853a8835b096b4f9f79f81279",
+        "gitBlob": "bf0a54d585ef1dcd94a2649cebd75cb20da43339"
+      },
+      "changes": [
+        {
+          "kind": "append",
+          "prefix": {
+            "bytes": 8570,
+            "sha256": "37d0b61e60dd4f175c9c2d34e1f8aa399becac018e970655dd7f5595713f2fb6",
+            "gitBlob": "6e84953e1d1a08b705b4000f47d8d51177047ff3"
+          },
+          "append": {
+            "bytes": 2840,
+            "sha256": "f9d2f5a18b59ceaf1c54c6798c5b0fc11705abbac63f9db410d98169ab77cc31",
+            "gitBlob": "324f333dce19b83f514ceaff417449904c37783d"
+          },
+          "newTests": 1
+        }
+      ]
+    }
+  ],
+  "fullInverses": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "pin": {
+        "bytes": 21981,
+        "sha256": "d0d00254e7e39ab8b5163e02cc93754775a8efe56ff28b8c87f07d02e0292c7e",
+        "gitBlob": "7b5edfbd4967debe454387c7a8b6246e67216dc8"
+      },
+      "equalsEntireBefore": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "pin": {
+        "bytes": 16555,
+        "sha256": "8340911817fb4228e8d948425a1f85796fba16d244b6763b04e307ed6f290713",
+        "gitBlob": "97e14385a298a38a9b81b8805dc3f6d2da66545c"
+      },
+      "equalsEntireBefore": true
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "pin": {
+        "bytes": 32221,
+        "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+        "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01"
+      },
+      "equalsEntireBefore": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "pin": {
+        "bytes": 24968,
+        "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+        "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57"
+      },
+      "equalsEntireBefore": true
+    },
+    {
+      "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+      "pin": {
+        "bytes": 8570,
+        "sha256": "37d0b61e60dd4f175c9c2d34e1f8aa399becac018e970655dd7f5595713f2fb6",
+        "gitBlob": "6e84953e1d1a08b705b4000f47d8d51177047ff3"
+      },
+      "equalsEntireBefore": true
+    }
+  ],
+  "fullSourceReadbacks": {
+    "beforeBytes": 104295,
+    "afterBytes": 123221,
+    "allFivePreimages": true,
+    "allFiveRetainedPostimagesFreshlySelfRead": true
+  },
+  "directPointerJoins": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 37389,
+        "sha256": "588f6ce9b006b458ce7a896dc4ab46985493c54911eec2beedcf0874b33163ca",
+        "gitBlob": "f44edc6cdfde700e570423176fc00d11b2275c43"
+      },
+      "locations": [
+        "r1.proposal"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 24051,
+        "sha256": "447555b50383952aeed41740bbc37c6a20c600d40ffb9053909818f709db0df9",
+        "gitBlob": "90d74837f1e0ca4b412b10d198cdca6947234eaf"
+      },
+      "locations": [
+        "r1.publicationManifest"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 70135,
+        "sha256": "568197dfd4ab74bf85539b05b837d75003895163d24c4fd37cf9aa07a2eaa2f9",
+        "gitBlob": "f046d946480557706b884280fdc171155d5f1909"
+      },
+      "locations": [
+        "r1.reviews.0.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 47483,
+        "sha256": "5b5d8cce1d05370e7263fc8e744156d8ab827c1e4154a1454fa9598e9e66d22a",
+        "gitBlob": "c81a08163936b50ddafb5a6711eccc63849a011e"
+      },
+      "locations": [
+        "r1.reviews.1.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 54419,
+        "sha256": "b2a28f1bce6f4f30415a395f536a4bedf16be211a0346c2162a3ed67dde0b263",
+        "gitBlob": "abbf255c350c30959a5d97f51eda4329e02d8281"
+      },
+      "locations": [
+        "r1.reviews.2.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 142190,
+        "sha256": "b952be67487d5e9c0a6f8197e6cc078e244a01add2a91b3155a5f1529e61f28a",
+        "gitBlob": "89d96582bcf07df9a6c3f510d9f9b9fd3f41e1b2"
+      },
+      "locations": [
+        "r1.reviews.3.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 3974,
+        "sha256": "efa9f2091d7f776e1370fe7b0220b98dc03f8ca56dcf3a9e17cbecdfae9d781b",
+        "gitBlob": "613145275d09f78b0da7c7aa4c6ce231212d765d"
+      },
+      "locations": [
+        "r1.actualGate"
+      ],
+      "method": "accepted complete R1 publication proof",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 542644,
+        "sha256": "3b2025ced142e6ec1cf9e70a193442074a8a078c9139ee3b1d4d4923cf81db8c",
+        "gitBlob": "801451c05537dd6316f2a1ceb700c6fc3b6e3184"
+      },
+      "locations": [
+        "r1.rootActual"
+      ],
+      "method": "accepted complete R1 publication proof",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 670881,
+        "sha256": "5f73f5c9fb4ee38f393c3adb5e6d13a64d5dcb545929b49005752ccb86cf07fa",
+        "gitBlob": "484596c69ecf9b470d81226e31da897fe0743a2f"
+      },
+      "locations": [
+        "r1.independentActual"
+      ],
+      "method": "accepted complete R1 publication proof",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 21981,
+        "sha256": "d0d00254e7e39ab8b5163e02cc93754775a8efe56ff28b8c87f07d02e0292c7e",
+        "gitBlob": "7b5edfbd4967debe454387c7a8b6246e67216dc8"
+      },
+      "locations": [
+        "sourceChanges.0.before",
+        "sourceProofIndex.0.pin",
+        "testDesignSourceIndex.3.pin"
+      ],
+      "method": "complete selected preimage",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 21993,
+        "sha256": "2f929c1f5cfd1a9a3c9ec16d35f7197856c79a61adf166d30eebb8a1bd086f67",
+        "gitBlob": "adf5b4c418195e0fc4ab38ba7fde2b3436a6b835"
+      },
+      "locations": [
+        "sourceChanges.0.after"
+      ],
+      "method": "retained and self-read exact postimage",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 16555,
+        "sha256": "8340911817fb4228e8d948425a1f85796fba16d244b6763b04e307ed6f290713",
+        "gitBlob": "97e14385a298a38a9b81b8805dc3f6d2da66545c"
+      },
+      "locations": [
+        "sourceChanges.1.before"
+      ],
+      "method": "complete selected preimage",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 16591,
+        "sha256": "bd4b8bec56e93cd7c17ec04d5c09b93a8115097af57224d28e954c3f06cdb0c8",
+        "gitBlob": "6d267c1531fd741c4abee8b27ef501f28098d782"
+      },
+      "locations": [
+        "sourceChanges.1.after"
+      ],
+      "method": "retained and self-read exact postimage",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 32221,
+        "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+        "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01"
+      },
+      "locations": [
+        "sourceChanges.2.before",
+        "sourceProofIndex.1.pin",
+        "testDesignSourceIndex.4.pin"
+      ],
+      "method": "complete selected preimage",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 33227,
+        "sha256": "dc9ba0c735ea763a24bb06d93590373cf1072d5737c7fba67a31df1356c44dd5",
+        "gitBlob": "1430de1a6666a22a7582d38a21273d61d2f745b7"
+      },
+      "locations": [
+        "sourceChanges.2.after"
+      ],
+      "method": "retained and self-read exact postimage",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 24968,
+        "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+        "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57"
+      },
+      "locations": [
+        "sourceChanges.3.before",
+        "sourceChanges.3.changes.0.prefix",
+        "sourceProofIndex.30.pin",
+        "testDesignSourceIndex.0.pin"
+      ],
+      "method": "complete selected preimage",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 40000,
+        "sha256": "58978cb43fac34697163fa9c30c6d3b14e26cf91e051a05085eab3d476260d61",
+        "gitBlob": "c1a42df62de987b1632365400f7359f65510dff3"
+      },
+      "locations": [
+        "sourceChanges.3.after"
+      ],
+      "method": "retained and self-read exact postimage",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 15032,
+        "sha256": "5e24b59666e7864c1fab98c6d121dbea406eae882f73a350d956c4bdd45ac88e",
+        "gitBlob": "ca891a53111c5a22059228bbb1e180f71d03dc7b"
+      },
+      "locations": [
+        "sourceChanges.3.changes.0.append",
+        "completeBodies.appendIdentities.settings"
+      ],
+      "method": "derived whole literal suffix",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 8570,
+        "sha256": "37d0b61e60dd4f175c9c2d34e1f8aa399becac018e970655dd7f5595713f2fb6",
+        "gitBlob": "6e84953e1d1a08b705b4000f47d8d51177047ff3"
+      },
+      "locations": [
+        "sourceChanges.4.before",
+        "sourceChanges.4.changes.0.prefix",
+        "testDesignSourceIndex.2.pin"
+      ],
+      "method": "complete selected preimage",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 11410,
+        "sha256": "e781760fcaf1aeb3a04694ab8d5c213017add94853a8835b096b4f9f79f81279",
+        "gitBlob": "bf0a54d585ef1dcd94a2649cebd75cb20da43339"
+      },
+      "locations": [
+        "sourceChanges.4.after"
+      ],
+      "method": "retained and self-read exact postimage",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 2840,
+        "sha256": "f9d2f5a18b59ceaf1c54c6798c5b0fc11705abbac63f9db410d98169ab77cc31",
+        "gitBlob": "324f333dce19b83f514ceaff417449904c37783d"
+      },
+      "locations": [
+        "sourceChanges.4.changes.0.append",
+        "completeBodies.appendIdentities.capturedStatus"
+      ],
+      "method": "derived whole literal suffix",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 10334,
+        "sha256": "709d66ffc366f0b83d9af0a49a1b9126bda1e33e72f796da0458356349b18880",
+        "gitBlob": "a4d47563cffaed2ea48381887e47820ed727422e"
+      },
+      "locations": [
+        "sourceProofIndex.2.pin",
+        "testDesignSourceIndex.5.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 2618,
+        "sha256": "588b932ed1427203a6ff27690787799cb43cb5f7aaee115f7aaab4d4cc1cd388",
+        "gitBlob": "3ce5814e42e72d0a46f229791dfec25668e22896"
+      },
+      "locations": [
+        "sourceProofIndex.3.pin",
+        "testDesignSourceIndex.7.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 7797,
+        "sha256": "c5004da14dbf88f92a8a56984f7d0c6e31f4cff27e1f00f3b3f2a5e382f35a81",
+        "gitBlob": "5f129052b232eed045304284167bc9258141b720"
+      },
+      "locations": [
+        "sourceProofIndex.4.pin",
+        "testDesignSourceIndex.6.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 7477,
+        "sha256": "c4d8333cc5b562b7eb8de8398bde8275d579fdb7775c59c3d1ae5123e88cfdc8",
+        "gitBlob": "c0bd14811e8cd76dd34bcf42afac2785769e37ad"
+      },
+      "locations": [
+        "sourceProofIndex.5.pin",
+        "testDesignSourceIndex.12.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 3092,
+        "sha256": "c4ca2ee17177e804122d551d55c80b91c8fbba59b9bbc87465819cad130cb4e7",
+        "gitBlob": "7ee86041e36d33033ede953ba05e76244f9586ca"
+      },
+      "locations": [
+        "sourceProofIndex.6.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 5433,
+        "sha256": "8ea983e9aec5c56ca5e2438a39e4272c0133ae6c2d4839bbcb6926afb605b760",
+        "gitBlob": "60b08011e5aa2df1a6d2215155d7dabf0b2b15af"
+      },
+      "locations": [
+        "sourceProofIndex.7.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 15353,
+        "sha256": "606098a4895f1715ea58677cfff11337790d5bbcf1be3fcdf3efcdf171b59aab",
+        "gitBlob": "500b04c5a0b9e15bc8f4401d5f7bdc0d4267e2a6"
+      },
+      "locations": [
+        "sourceProofIndex.8.pin",
+        "testDesignSourceIndex.13.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 9017,
+        "sha256": "363bd187bf5ac466c9e8e9bd5b535c7b9a7e52f62bbadd1d6db01ba8317f732e",
+        "gitBlob": "c3347aaded7d5705b775b8aa1ca29f6d37a58c8e"
+      },
+      "locations": [
+        "sourceProofIndex.9.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 59054,
+        "sha256": "c7194f07ac40c75f3a13bd09b0a2be71b9b4c0d0bde887ca5fccd083b24f5714",
+        "gitBlob": "38de9ccec33c7b9b1250a17173003e1e6fb96d9c"
+      },
+      "locations": [
+        "sourceProofIndex.10.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 4567,
+        "sha256": "67241d584fdbef940ad2a0ef7eb459eb85af618bd907710d42c005821c2fa4fa",
+        "gitBlob": "56a1d52d3ba392ec00f60ccf6b7aedaffe6ba570"
+      },
+      "locations": [
+        "sourceProofIndex.11.pin",
+        "testDesignSourceIndex.16.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 2022,
+        "sha256": "4c68a3835384f0358b884930965719286d40ded7cce4a0f47ba63ad50937d297",
+        "gitBlob": "b912faca5caef24aebf1ce4105556e2dc8b3bdaf"
+      },
+      "locations": [
+        "sourceProofIndex.12.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 9697,
+        "sha256": "d7db83f4787e51b205fae22b5399d6b19cfe478bda586efb86bfc39ed38be1f1",
+        "gitBlob": "4a4c5150cc13bc59a914d34f29033890a2541697"
+      },
+      "locations": [
+        "sourceProofIndex.13.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 6495,
+        "sha256": "8aadcca8af81d9aaa2031aa4eeffa5db2c1f0bc01d82932487719c176c0d7c6b",
+        "gitBlob": "ba9aab03f3830fd865a606699100ea002329cd91"
+      },
+      "locations": [
+        "sourceProofIndex.14.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 32077,
+        "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+      },
+      "locations": [
+        "sourceProofIndex.15.pin",
+        "testDesignSourceIndex.14.pin",
+        "sourceProtection.frozen13.10"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+      },
+      "locations": [
+        "sourceProofIndex.16.pin",
+        "testDesignSourceIndex.15.pin",
+        "sourceProtection.frozen13.12"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 4395,
+        "sha256": "623fb0291c50dd43016d08b54635d5ec4b4cbb582fd1a7768efba904980d175c",
+        "gitBlob": "305aea0b97d3b2b59dd897e06e39cc2c82406ee9"
+      },
+      "locations": [
+        "sourceProofIndex.17.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 12942,
+        "sha256": "0033354db6b28e7b69eaa8f10db35332883707b9a6576c80e55c78f997a670a8",
+        "gitBlob": "d24060b3c0440b4ed6cf62c87e83098529d951c4"
+      },
+      "locations": [
+        "sourceProofIndex.18.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 132317,
+        "sha256": "af7b6f9da352008ef014dad120b868090626e071cd5d94037fd03385e2234d40",
+        "gitBlob": "4bd95a0f2e5636a21d1f0d83dd45f228b054b048"
+      },
+      "locations": [
+        "sourceProofIndex.19.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 8286,
+        "sha256": "7c122f43c764f438d9c9d78413f5e3912e83f29a3c30f72631333dc34d6e44d0",
+        "gitBlob": "a6dbcf114109c75f5a0dfad9ca20e71884956f31"
+      },
+      "locations": [
+        "sourceProofIndex.20.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 1376,
+        "sha256": "5a3e24af0a051afe0e8736e4d79e21239ef23b3aeb7a972c59fe5e79655db09e",
+        "gitBlob": "7a78f0791a54d09bcdda9c466b4df9c8b3b569d1"
+      },
+      "locations": [
+        "sourceProofIndex.21.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 5710,
+        "sha256": "7327fb6ed0504e412dcdafe4989c91625c2ef0712edf0705c767c5bfc52775af",
+        "gitBlob": "e8f5137ea0b7b69f4c098203d797780be99a5c01"
+      },
+      "locations": [
+        "sourceProofIndex.22.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 1500,
+        "sha256": "9777cab955f2dbe26d2226a9848adc032d62d51d331ab63a3c319b6269198091",
+        "gitBlob": "9321399f64afdb461bdbfdb59b532b29523da96d"
+      },
+      "locations": [
+        "sourceProofIndex.23.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 20613,
+        "sha256": "c49452670a14256b257478f1f4a2532b3df19fb11175e51e11472c1921e9c8a6",
+        "gitBlob": "c1432a74804a9382d0137ed040e49b3ed51316fd"
+      },
+      "locations": [
+        "sourceProofIndex.24.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 2538,
+        "sha256": "c20d555192061bb985bc3245a59b0277d289c8f69e08c7d4e4ff04f4c75c5a99",
+        "gitBlob": "b4d23d44696675a45f98bae19ed451354ad16be7"
+      },
+      "locations": [
+        "sourceProofIndex.25.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 22845,
+        "sha256": "135cd81f2edde1f087b231d4dcbed83d8cc8beade5a0230a093e6cbfcb1923ee",
+        "gitBlob": "b33e5290e4ed86a48b902a24ffc80509f1c89236"
+      },
+      "locations": [
+        "sourceProofIndex.26.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 9825,
+        "sha256": "aa936c996a96c12c6728cbf1bca27f94e428b691e0fa2baabcd8fd74c449a499",
+        "gitBlob": "41d42274a468f086941eb4b9435fa4ff09adf2be"
+      },
+      "locations": [
+        "sourceProofIndex.27.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 5663,
+        "sha256": "0370ef4c293ffc173d5952cc04671459022dfff2782b5c915209c6d93195c7b6",
+        "gitBlob": "5f18c861f297cbf62b9acaceba615079d0b77d0d"
+      },
+      "locations": [
+        "sourceProofIndex.28.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 2154,
+        "sha256": "e21bfb7f4b548ad37d6f07d2cc8e9b61407822b11cb8c0e5051a68e34b1b382d",
+        "gitBlob": "329a0d3b3c35f5c6736bd214c3ed9717248c1d7d"
+      },
+      "locations": [
+        "sourceProofIndex.29.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 13620,
+        "sha256": "0c90e1992310021a746897425e4440dff4116dcb8a7a19651def8a47563925be",
+        "gitBlob": "7f7ee01121e64f0ab55c127f62c796bf20b3fc70"
+      },
+      "locations": [
+        "sourceProofIndex.31.pin",
+        "testDesignSourceIndex.1.pin",
+        "tests.existingSdkManagement5Unchanged.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 165022,
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+      },
+      "locations": [
+        "sourceProofIndex.32.pin",
+        "sourceProtection.frozen13.6"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 11502,
+        "sha256": "ccf4bd25cb828b6ea08b437337552f7a8d662dd49fb6aeabb2d7af4d9c29897f",
+        "gitBlob": "c3670e3828e2b9470a2997d29d6cad225107d8fc"
+      },
+      "locations": [
+        "testDesignSourceIndex.8.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 1288,
+        "sha256": "f0479cc89a9cfc9ab144e50382c41b3146caececb01a8489be3fb9417d49dee3",
+        "gitBlob": "6eed54e3253a8e714cdc984835c74474d7edb054"
+      },
+      "locations": [
+        "testDesignSourceIndex.9.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 6977,
+        "sha256": "62e74e6cbdf1bdb94d828b84b31eff58e9a36a5b2290c6578a3b266dd19da568",
+        "gitBlob": "12d3ce0c8b8423cc86abbe1f39feb0cdd46562d2"
+      },
+      "locations": [
+        "testDesignSourceIndex.10.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 8939,
+        "sha256": "63612e0762f67f1631795547fb57e35eb72007352d52369181a57f1461b3482d",
+        "gitBlob": "40e4b8297dfcddeea4685b6f0187d598e1071c4c"
+      },
+      "locations": [
+        "testDesignSourceIndex.11.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 33737,
+        "sha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+        "gitBlob": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587"
+      },
+      "locations": [
+        "testDesignSourceIndex.17.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 1187,
+        "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+        "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3"
+      },
+      "locations": [
+        "testDesignSourceIndex.18.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 5297,
+        "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b",
+        "gitBlob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c"
+      },
+      "locations": [
+        "testDesignSourceIndex.19.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 12355,
+        "sha256": "4e567d64af0c5a0d85e155e90fd4eec9a6ca720e89edfe9923d7e4cc9a1b4f81",
+        "gitBlob": "42093f5cb1be431e383a2bbf97223a2bd8d54b49"
+      },
+      "locations": [
+        "testDesignSourceIndex.20.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 5740,
+        "sha256": "93ef58e01044287252668396c2bd7cd8da4f628c7265f73185d89893fd65ba34",
+        "gitBlob": "a78d8a6619a358c79f88fc66886754eb2b6de9b2"
+      },
+      "locations": [
+        "testDesignSourceIndex.21.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 597,
+        "sha256": "7a0fa91e187e337e315820cade9790b089c2c001f197594345aa6b11ac12575b",
+        "gitBlob": "2136bb2a37863e4182ff264bf012220a8ae1bc13"
+      },
+      "locations": [
+        "testDesignSourceIndex.22.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "pin": {
+        "bytes": 1393,
+        "sha256": "e7b1913a4a5b01721be30daa86d875e5fcc28f6e00ab92e6ead2039be5d70564",
+        "gitBlob": "4f4074de9b5546eefc9318d61a83e35b8bd142cb"
+      },
+      "locations": [
+        "testDesignSourceIndex.23.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "pin": {
+        "bytes": 8772,
+        "sha256": "998e371706d91c5656ebf89008da12f0391de76a67f77016961704b05096a0ed",
+        "gitBlob": "ebe2086008ca32692438da4d79c5172fd443da9d"
+      },
+      "locations": [
+        "testDesignSourceIndex.24.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "pin": {
+        "bytes": 9891,
+        "sha256": "f7fd3848b46ea66776dfeeec7307129ec86819c79a158cd8e52a61e36291a89d",
+        "gitBlob": "57fdf89754d1592511a9acf264859282e9745d4f"
+      },
+      "locations": [
+        "testDesignSourceIndex.25.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "pin": {
+        "bytes": 2019,
+        "sha256": "f7f7d3cde90e3e7e5f307a27f3ef3da813e044806cbdb8f0e81c503997af727c",
+        "gitBlob": "44970a080d96dafbe3b88d5e7a29412e99034875"
+      },
+      "locations": [
+        "testDesignSourceIndex.26.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "pin": {
+        "bytes": 11684,
+        "sha256": "0bdc24660bae89a423361522305b435ae9ee0ab0a6c57a2d5d35726aab648a0a",
+        "gitBlob": "a6b47329f25cbac3e3033706e72309d2de4bc4db"
+      },
+      "locations": [
+        "testDesignSourceIndex.27.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "pin": {
+        "bytes": 2457,
+        "sha256": "6de207907fe0a49376b7533c166b579214ea3b173772bbd477e4d4882ec923f4",
+        "gitBlob": "4628124ce991ab036fbb2923297b179bdb107d25"
+      },
+      "locations": [
+        "testDesignSourceIndex.28.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "pin": {
+        "bytes": 341,
+        "sha256": "6643d45ed7c8e4ed725932178dde24dfe8a5d5b581e426ca06b5b056a4aafbb3",
+        "gitBlob": "9c266920737055006a13d5aa767cc61c73ed3f05"
+      },
+      "locations": [
+        "testDesignSourceIndex.29.pin"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 30721,
+        "sha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+        "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e"
+      },
+      "locations": [
+        "additionalSourceReads.0.pin"
+      ],
+      "method": "fresh complete source read at parent",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 17385,
+        "sha256": "4e8f91bf7231f41a9cdc80ec40fc36d75bf41ef2573ec432967f039e05c5f2c7",
+        "gitBlob": "7e377e0b51ea453e90f4f2dde5c9bb782c983c99"
+      },
+      "locations": [
+        "additionalSourceReads.1.pin"
+      ],
+      "method": "fresh complete source read at parent",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 10369,
+        "sha256": "8d01aa3189e83512c25b1b5f2a5fc3f0a427da7be979291127179914489b9cc8",
+        "gitBlob": "7dcaecc2d76bf568347082b5f82f0d738e0bfaa1"
+      },
+      "locations": [
+        "additionalSourceReads.2.pin"
+      ],
+      "method": "fresh complete source read at parent",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 3481,
+        "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+        "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+      },
+      "locations": [
+        "preservation.frozenParityVector",
+        "sourceProtection.frozenVector"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 69370,
+        "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+        "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+      },
+      "locations": [
+        "sourceProtection.frozen13.0"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      "locations": [
+        "sourceProtection.frozen13.1"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      "locations": [
+        "sourceProtection.frozen13.2"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      "locations": [
+        "sourceProtection.frozen13.3"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      "locations": [
+        "sourceProtection.frozen13.4"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      "locations": [
+        "sourceProtection.frozen13.5"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+      },
+      "locations": [
+        "sourceProtection.frozen13.7"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      },
+      "locations": [
+        "sourceProtection.frozen13.8"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      "locations": [
+        "sourceProtection.frozen13.9"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      },
+      "locations": [
+        "sourceProtection.frozen13.11"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 12389,
+        "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+        "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+      },
+      "locations": [
+        "sourceProtection.fourWindows.0.after"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+      },
+      "locations": [
+        "sourceProtection.fourWindows.1.after"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 37970,
+        "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+        "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3"
+      },
+      "locations": [
+        "sourceProtection.fourWindows.2.after"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 50377,
+        "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+        "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+      },
+      "locations": [
+        "sourceProtection.fourWindows.3.after"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 28804,
+        "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4",
+        "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28"
+      },
+      "locations": [
+        "sourceProtection.sixDiagnostic.0.after"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 13466,
+        "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056",
+        "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c"
+      },
+      "locations": [
+        "sourceProtection.sixDiagnostic.1.after"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 23312,
+        "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+        "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+      },
+      "locations": [
+        "sourceProtection.sixDiagnostic.2.after"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 37953,
+        "sha256": "a553197e108b574e9ff1c0e082014d4224baffeba21cec65a1b16f0fa17edbb6",
+        "gitBlob": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa"
+      },
+      "locations": [
+        "sourceProtection.sixDiagnostic.3.after"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 77457,
+        "sha256": "af9de97ec8da68ef394c5ce5b08ca7bfbfd4b099178bd6ae3c9c8c20831cbc3b",
+        "gitBlob": "cd74eecf610858412022bbd2c69f62c910465bad"
+      },
+      "locations": [
+        "sourceProtection.sixDiagnostic.4.after"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      },
+      "locations": [
+        "sourceProtection.sixDiagnostic.5.after"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 214577,
+        "sha256": "1fd9ca0681ef00d5ddea2372130fec9d4bd16e8205751ec1e07f2ce0473b5018",
+        "gitBlob": "f1a13ab23806afb9d006f1647f6624a5eb784165"
+      },
+      "locations": [
+        "currentCI.packet"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 159554,
+        "sha256": "4ec3156d3dfc2848a3006e220a95781f91215cc4f9196f37f6f24c3a65ca5cda",
+        "gitBlob": "baf38aac0044afa5efc1aa5aff648ec831fb3f6b"
+      },
+      "locations": [
+        "newVenue.advisory"
+      ],
+      "method": "accepted full immutable body cache, freshly hashed",
+      "fullBody": true
+    }
+  ],
+  "directPointerCount": 94,
+  "directPointerBytes": 3900355,
+  "protectedSourceJoins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "pin": {
+        "bytes": 69370,
+        "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+        "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "pin": {
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "pin": {
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "pin": {
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "pin": {
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "pin": {
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "pin": {
+        "bytes": 165022,
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "pin": {
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "pin": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      }
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "pin": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      }
+    },
+    {
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "pin": {
+        "bytes": 32077,
+        "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+      }
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "pin": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    },
+    {
+      "path": "test/renderer/utils/teamModelAvailability.test.ts",
+      "pin": {
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+      }
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "pin": {
+        "bytes": 12389,
+        "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+        "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+      }
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "pin": {
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "pin": {
+        "bytes": 37970,
+        "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+        "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "pin": {
+        "bytes": 50377,
+        "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+        "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "pin": {
+        "bytes": 28804,
+        "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4",
+        "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "pin": {
+        "bytes": 13466,
+        "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056",
+        "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "pin": {
+        "bytes": 23312,
+        "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+        "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "pin": {
+        "bytes": 37953,
+        "sha256": "a553197e108b574e9ff1c0e082014d4224baffeba21cec65a1b16f0fa17edbb6",
+        "gitBlob": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "pin": {
+        "bytes": 77457,
+        "sha256": "af9de97ec8da68ef394c5ce5b08ca7bfbfd4b099178bd6ae3c9c8c20831cbc3b",
+        "gitBlob": "cd74eecf610858412022bbd2c69f62c910465bad"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "pin": {
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "exactProposalFullSelfRead",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 56517,
+        "sha256": "59133615a781c82b97a5e2ed132ff5d5a9795b6d1b400d4d520761b31ca5b561",
+        "gitBlob": "682377734948765268a3cd07b4b966a97abac1e4"
+      }
+    },
+    {
+      "id": "priorR1ActualClosedBeforeSource",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "gate": {
+          "bytes": 3974,
+          "sha256": "efa9f2091d7f776e1370fe7b0220b98dc03f8ca56dcf3a9e17cbecdfae9d781b",
+          "gitBlob": "613145275d09f78b0da7c7aa4c6ce231212d765d"
+        },
+        "closedAt": "2026-11-17 12:08:55 UTC",
+        "authoredAt": "2026-11-17 12:11:49 UTC",
+        "checks": 81
+      }
+    },
+    {
+      "id": "exactParentAndFivePaths",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "parent": "01ed56f756b385b91afcffcb31dafe7750bb4162",
+        "paths": [
+          "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+          "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+          "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "test/features/runtime-provider-management/capturedClaudeStatus.test.ts"
+        ]
+      }
+    },
+    {
+      "id": "exactFiveR1Preimages",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "count": 5,
+        "bytes": 104295
+      }
+    },
+    {
+      "id": "fullPostimagesRetainedAndSelfRead",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "count": 5,
+        "bytes": 123221
+      }
+    },
+    {
+      "id": "fiveCompleteInverses",
+      "status": "PASS_STATIC",
+      "evidence": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+          "pin": {
+            "bytes": 21981,
+            "sha256": "d0d00254e7e39ab8b5163e02cc93754775a8efe56ff28b8c87f07d02e0292c7e",
+            "gitBlob": "7b5edfbd4967debe454387c7a8b6246e67216dc8"
+          },
+          "equalsEntireBefore": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+          "pin": {
+            "bytes": 16555,
+            "sha256": "8340911817fb4228e8d948425a1f85796fba16d244b6763b04e307ed6f290713",
+            "gitBlob": "97e14385a298a38a9b81b8805dc3f6d2da66545c"
+          },
+          "equalsEntireBefore": true
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "pin": {
+            "bytes": 32221,
+            "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+            "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01"
+          },
+          "equalsEntireBefore": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "pin": {
+            "bytes": 24968,
+            "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+            "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57"
+          },
+          "equalsEntireBefore": true
+        },
+        {
+          "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+          "pin": {
+            "bytes": 8570,
+            "sha256": "37d0b61e60dd4f175c9c2d34e1f8aa399becac018e970655dd7f5595713f2fb6",
+            "gitBlob": "6e84953e1d1a08b705b4000f47d8d51177047ff3"
+          },
+          "equalsEntireBefore": true
+        }
+      ]
+    },
+    {
+      "id": "runtimeOneValueSubstitution",
+      "status": "PASS_STATIC",
+      "evidence": [
+        {
+          "kind": "replace",
+          "before": "  const model = provider === 'claude' ? 'sonnet' : 'TEST-model';",
+          "after": "  const model = provider === 'claude' ? 'TEST-claude-sonnet' : 'TEST-model';",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "collaborationThreeValueSubstitutions",
+      "status": "PASS_STATIC",
+      "evidence": [
+        {
+          "kind": "replace",
+          "before": "providerId: 'anthropic', model: 'sonnet', effort: 'low'",
+          "after": "providerId: 'anthropic', model: 'TEST-claude-sonnet', effort: 'low'",
+          "count": 1
+        },
+        {
+          "kind": "replace",
+          "before": "model: provider === 'claude' ? 'sonnet' : 'TEST-model'",
+          "after": "model: provider === 'claude' ? 'TEST-claude-sonnet' : 'TEST-model'",
+          "count": 1
+        },
+        {
+          "kind": "replace",
+          "before": "savedModel: 'sonnet', installer: undefined",
+          "after": "savedModel: 'TEST-claude-sonnet', installer: undefined",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "allOriginalSdkPeerBytesRecovered",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "insertBytes": 1006,
+        "modelAndBetaAllowlistsUnchanged": true
+      }
+    },
+    {
+      "id": "peerAuthAfterOriginalGuardsAndArgvBound",
+      "status": "PASS_STATIC",
+      "evidence": "Original TEST env/root/workspace/home/config/proof and argv bounds precede the finite auth branch."
+    },
+    {
+      "id": "exactAuthArgvAndManagementRole",
+      "status": "PASS_STATIC",
+      "evidence": "Login/logout/missing or extra args/runtime role cannot reach success."
+    },
+    {
+      "id": "exactCanonicalOwnedAuthDirectories",
+      "status": "PASS_STATIC",
+      "evidence": "Preexisting inside()/realpath guards plus exact owned directory equality."
+    },
+    {
+      "id": "boundedFiniteAuthOutputAndFlush",
+      "status": "PASS_STATIC",
+      "evidence": "Bounded api_key/firstParty JSON; write callback settles before finite exit0."
+    },
+    {
+      "id": "originalAuthChildJournal",
+      "status": "PASS_STATIC",
+      "evidence": "Existing effect() supplies original PID/provider/role and unchanged 512-event bound."
+    },
+    {
+      "id": "authNoSdkInputOrMutation",
+      "status": "PASS_STATIC",
+      "evidence": "Only original owned evidence appends and stdout; no credentials, Host receipts, network or SDK input."
+    },
+    {
+      "id": "settingsEntireOldPrefixPreserved",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "oldBytes": 24968,
+        "append": {
+          "bytes": 15032,
+          "sha256": "5e24b59666e7864c1fab98c6d121dbea406eae882f73a350d956c4bdd45ac88e",
+          "gitBlob": "ca891a53111c5a22059228bbb1e180f71d03dc7b"
+        }
+      }
+    },
+    {
+      "id": "capturedStatusEntireOldPrefixPreserved",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "oldBytes": 8570,
+        "append": {
+          "bytes": 2840,
+          "sha256": "f9d2f5a18b59ceaf1c54c6798c5b0fc11705abbac63f9db410d98169ab77cc31",
+          "gitBlob": "324f333dce19b83f514ceaff417449904c37783d"
+        }
+      }
+    },
+    {
+      "id": "exactThreePlusOneNewCases",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "settings": "8 existing +3 =11 prospective",
+        "captured": "6 existing +1 =7 prospective",
+        "allUnexecuted": true
+      }
+    },
+    {
+      "id": "isolatedActualSharedPeerHelper",
+      "status": "PASS_STATIC",
+      "evidence": "Existing node header, realpath/source hash/generated wrapper hash, owned TEST root; no settings auth shim or API-key environment."
+    },
+    {
+      "id": "strictOwnedTeardown",
+      "status": "PASS_STATIC",
+      "evidence": "All original owners attempted; any close refusal is failure and prevents deleting owned root."
+    },
+    {
+      "id": "positiveAuthUsesDefaultRealCustody",
+      "status": "PASS_STATIC",
+      "evidence": "Actual ClaudeAuthenticationCoordinator creates actual ClaudeAuthConversation/default CapturedProcess; no injected factory in auth case."
+    },
+    {
+      "id": "authOriginalChildAndNoMutationAssertions",
+      "status": "PASS_STATIC",
+      "evidence": "One same-PID original child, exit0 and empty Host store; owned credentials/settings unchanged."
+    },
+    {
+      "id": "eightDirectRefusalsRemainFinite",
+      "status": "PASS_STATIC",
+      "evidence": [
+        "auth login --claudeai",
+        "auth logout",
+        "auth status without --json",
+        "auth status --json --extra",
+        "--version of the finite TEST wrapper only",
+        "exact auth with runtime role",
+        "exact auth with wrong owned canonical config",
+        "exact auth with wrong owned canonical HOME"
+      ]
+    },
+    {
+      "id": "timeoutSignalSpawnBufferAreNotRefusalPass",
+      "status": "PASS_STATIC",
+      "evidence": "Each direct refusal requires intended assertion exit; killed/unknown/error outcomes fail."
+    },
+    {
+      "id": "actualCapturedExecutableIdentityNegative",
+      "status": "PASS_STATIC",
+      "evidence": "Original captured owner refuses changed owned wrapper before child allocation; restoration in finally."
+    },
+    {
+      "id": "realCapturedSdkObserver",
+      "status": "PASS_STATIC",
+      "evidence": "Typed observer delegates actual request/signal and original custody; no synthetic native process/result."
+    },
+    {
+      "id": "boundedActualSdkLaunchObservation",
+      "status": "PASS_STATIC",
+      "evidence": "At most metadata+probe launch argv snapshots; original methods unchanged."
+    },
+    {
+      "id": "metadataDoesNotAdmitModel",
+      "status": "PASS_STATIC",
+      "evidence": "Actual original SDK metadata row, zero user inputs/Host receipts before explicit probe."
+    },
+    {
+      "id": "originalSchemasBuilderAndFiniteNewProfile",
+      "status": "PASS_STATIC",
+      "evidence": "The original teamModelProbeProfile derives a 90000ms model-probe timeout. Only this new test's derived profile is parsed with modelProbeTimeoutMs5000 before admission; no production derivation or old deadline is changed."
+    },
+    {
+      "id": "originalProbeOwnerStoreFenceComposition",
+      "status": "PASS_STATIC",
+      "evidence": "Actual durable owner and original captured management target/prepare boundary."
+    },
+    {
+      "id": "exactResolvedEffortContextTuple",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "model": "TEST-claude-sonnet",
+        "effort": "low",
+        "modelContext": "one-million"
+      }
+    },
+    {
+      "id": "probeDeadlineUnchangedExistingCases",
+      "status": "PASS_STATIC",
+      "evidence": "New profile5s/observation7s/test15s only; existing deadlines literal-preserved."
+    },
+    {
+      "id": "durableCompletedOriginalReceipt",
+      "status": "PASS_STATIC",
+      "evidence": "Actual persisted receipt and fresh store reread; no snapshot-only resourceHeld assumption."
+    },
+    {
+      "id": "sameCommandNeverSpendsAgain",
+      "status": "PASS_STATIC",
+      "evidence": "Same-command lookup/start, followed by original closes; one native probe input/terminal."
+    },
+    {
+      "id": "actualSdkTupleAndOriginalStopAssertions",
+      "status": "PASS_STATIC",
+      "evidence": "SDK options-to-argv remains an execution obligation, directly observed in the new test."
+    },
+    {
+      "id": "statusUsesRealConsumerComposition",
+      "status": "PASS_STATIC",
+      "evidence": "Controlled transport fixture, actual status/metadata projection and consumer functions; no copied production algorithm."
+    },
+    {
+      "id": "resolvedOfferAndAliasesRefused",
+      "status": "PASS_STATIC",
+      "evidence": "Production offered-value validator unchanged."
+    },
+    {
+      "id": "authAndCatalogDoNotGrantLaunch",
+      "status": "PASS_STATIC",
+      "evidence": "Separate auth authority remains insufficient for model execution/Team launch."
+    },
+    {
+      "id": "all23ProtectedSourcesDisjoint",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "count": 23,
+        "bytes": 1114798,
+        "basis": "Complete accepted current R1 actual419 closure"
+      }
+    },
+    {
+      "id": "wholeInventoriesAndProductionLimitsPreserved",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "whole149": true,
+        "catalog43": true,
+        "runtime85": true,
+        "sdkManagement5": true,
+        "productionFiles": 5020,
+        "cap": 800,
+        "exceptions": 141,
+        "nonDocLeaves": 8799,
+        "workflows": 42
+      }
+    },
+    {
+      "id": "noOldCaseFilterOrSkip",
+      "status": "PASS_STATIC",
+      "evidence": "Only five existing source files; no workflow/dependency/test selection edits."
+    },
+    {
+      "id": "boundedCounterfactualAndQualification",
+      "status": "PASS_STATIC",
+      "evidence": "Only positive auth has necessary old-parser failure; other cases are coverage without claimed red/pass."
+    },
+    {
+      "id": "oldCIAllTerminalNoReplay",
+      "status": "PASS_STATIC",
+      "evidence": "PR1219 remains fixed old9d evidence; never repolled."
+    },
+    {
+      "id": "environmentAndVenueUnselected",
+      "status": "PASS_STATIC",
+      "evidence": "No local probe, source compile/evaluation/execution or new venue action."
+    },
+    {
+      "id": "complete94DirectPointerClosure",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "count": 94,
+        "bytes": 3900355,
+        "derivedSuffixesExplicit": true
+      }
+    }
+  ],
+  "checkCount": 45,
+  "failedChecks": [],
+  "unresolvedBlockers": [],
+  "sourceEvaluated": false,
+  "sourceCompiled": false,
+  "sourceExecuted": false,
+  "newExecutionVenueSelected": false,
+  "standaloneInvoked": false,
+  "qualification": {
+    "sourceCompiled": false,
+    "sourceExecuted": false,
+    "newTestsExecuted": false,
+    "runtimeAdmitted": false,
+    "newVenueSelected": false,
+    "completeE2E": false,
+    "soleCauseResolved": false,
+    "failuresWaived": false,
+    "readyMergeReleaseDefaultActivationStage2": false
+  },
+  "environment": {
+    "status": "unavailable",
+    "noProbeReplay": true,
+    "noLocalShellExecution": true,
+    "standaloneUninvokedAndUnrebound": true
+  },
+  "limits": [
+    "Full pinned sdk.mjs source is unclaimed; actual new SDK argv tuple and all runtime outcomes remain unexecuted.",
+    "A successful fixture repair does not resolve other old9d GUI/native/cold-renderer failures or waive their original cases.",
+    "One exact positive auth test has a necessary old-parser failure; no all-four red claim."
+  ],
+  "selfReadbackProtocol": "Retain and announce exact pin, then full literal/hash self-read; static source review only."
+}

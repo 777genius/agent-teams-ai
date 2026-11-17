@@ -1,0 +1,1147 @@
+{
+  "schema": "c714.pr1219.attempt1.failure-classification.guard.v1",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_guard",
+  "preparedAt": "2026-11-17 09:15:46 UTC",
+  "scope": {
+    "pullRequest": 1219,
+    "attempt": 1,
+    "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "attemptAndJobAssignmentProvenance": "Parent supplied the retained immutable job/log bindings; no live job metadata was read.",
+    "rootSoleAuthorApplierExecutor": true,
+    "classificationOnly": true,
+    "newGate": false,
+    "fixSelected": false,
+    "targetExecution": false,
+    "zipRead": false
+  },
+  "conclusion": {
+    "embedded": "The third original Host fails its normal close with exit code 1 after the deliberately noncompleting fourth credential-verification request has produced a held intent. Sanitized late diagnostics report an after-session transport failure and an unconfirmed probe driver close. The exact underlying exception/cause is not retained in this log.",
+    "collaboration": "The original 90-second preflight never accepts an enabled Launch team button. The test's launch submit is unreached, so the original collaboration journey is incomplete. The log does not record the reason for the unavailable/disabled control.",
+    "comparison": "Darwin packaged lifecycle uses the same predicate and deadline and also fails before launch. This common failure boundary does not establish a shared model-readiness cause; the Linux native-credential shutdown failure is a separate boundary.",
+    "runtimeQualification": "No runtime PASS or new qualification is issued by this advisory.",
+    "claudeEmulator": "The additionally assigned Claude emulator also fails the byte-identical 90-second pre-submit Launch team predicate at runtime driver line 91. Its launch click at line 93 and the later member reveal at lines 453–460 are unreached; this log does not assess the later scroll correction."
+  },
+  "evidence": {
+    "primaryLogs": [
+      {
+        "role": "Linux embedded Stage1",
+        "jobId": 133899667361,
+        "runId": 44042341120,
+        "bytes": 310853,
+        "sha256": "8fba6214352cc45e2bfb43bdba105509abc8f446cce643656c22618b9bafac6e",
+        "gitBlob": "b7cb3efd51fcc31adf499899ae5c47217da1f686",
+        "completeBodyFetched": true,
+        "completeBodyRead": true,
+        "readRanges": [
+          [
+            1,
+            300
+          ],
+          [
+            301,
+            620
+          ],
+          [
+            621,
+            860
+          ],
+          [
+            862,
+            1009
+          ]
+        ],
+        "specialLine861": "Complete JSON envelope and receipt decoded; all 572 diagnostics read in a structurally lossless compact display, whose reconstruction was checked. The earlier truncated raw display is excluded."
+      },
+      {
+        "role": "Linux collaboration GUI",
+        "jobId": 133899667982,
+        "runId": 44042341273,
+        "bytes": 185908,
+        "sha256": "9b2f850d1e8d5f0e2f2ae718f3cdf648d8344166739e3f6853c1cc5a30897bac",
+        "gitBlob": "a6f3b9e0e2c45d12af2a9bd8b7231e5e01bc956e",
+        "completeBodyFetched": true,
+        "completeBodyRead": true,
+        "readRanges": [
+          [
+            1,
+            300
+          ],
+          [
+            301,
+            613
+          ],
+          [
+            614,
+            909
+          ],
+          [
+            910,
+            1180
+          ],
+          [
+            1181,
+            1420
+          ],
+          [
+            1421,
+            1660
+          ],
+          [
+            1661,
+            1877
+          ]
+        ]
+      }
+    ],
+    "comparisonLog": {
+      "bytes": 168421,
+      "sha256": "07f8843428c5de719fb4d6ee40de53b61dcdc3137e2d8d56061f9191683e7718",
+      "gitBlob": "0cfb8f940b2574cee58463240b6f1d9208c43497",
+      "completeBodyFetched": true,
+      "completeBodyHashed": true,
+      "completeBodyRead": false,
+      "readRanges": [
+        [
+          1333,
+          1504
+        ]
+      ],
+      "scope": "The final project-path/packaged-native/lifecycle failure and upload section only. No earlier build or complete native artifact review is claimed."
+    },
+    "sources": [
+      {
+        "key": "credentials",
+        "path": "packages/legacy-agent-host/tests/opencode-v2-credentials.native.ts",
+        "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "bytes": 42225,
+        "sha256": "7a54ca7d164b8e96763bb680ba4fc4f551bf1477a2e6a92cfce351d6a17ece44",
+        "gitBlob": "cefca638fb6922122379f4614af0546c86e83ae5",
+        "lines": 702,
+        "completeBodyRead": true,
+        "readMethod": "Full immutable-9d UTF8 body fetched, hashed and read as data."
+      },
+      {
+        "key": "nativeHost",
+        "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+        "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "bytes": 15303,
+        "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01",
+        "gitBlob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5",
+        "lines": 389,
+        "completeBodyRead": true,
+        "readMethod": "Full immutable-9d UTF8 body fetched, hashed and read as data."
+      },
+      {
+        "key": "passiveDiagnostics",
+        "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068",
+        "lines": 565,
+        "completeBodyRead": true,
+        "readMethod": "Full immutable-9d UTF8 body fetched, hashed and read as data."
+      },
+      {
+        "key": "collaborationUi",
+        "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+        "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "bytes": 34086,
+        "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f",
+        "gitBlob": "aff6e19ec4cf492841aa667442c1b7d71541c7c5",
+        "lines": 377,
+        "completeBodyRead": true,
+        "readMethod": "Full immutable-9d UTF8 body fetched, hashed and read as data."
+      },
+      {
+        "key": "controls",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+        "lines": 495,
+        "completeBodyRead": true,
+        "readMethod": "Prior complete source read, fresh immutable-9d full fetch and literal equality; critical waitRead reread."
+      },
+      {
+        "key": "lifecycle",
+        "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+        "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "bytes": 22845,
+        "sha256": "135cd81f2edde1f087b231d4dcbed83d8cc8beade5a0230a093e6cbfcb1923ee",
+        "gitBlob": "b33e5290e4ed86a48b902a24ffc80509f1c89236",
+        "lines": 253,
+        "completeBodyRead": true,
+        "readMethod": "Full immutable-9d UTF8 body fetched, hashed and read as data."
+      },
+      {
+        "key": "runtimeUi",
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "bytes": 69370,
+        "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+        "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f",
+        "lines": 798,
+        "completeBodyFetched": true,
+        "exactRawAt9dLiteralJoin": true,
+        "completeBodyReadPreviously": true,
+        "completeBodyRereadThisTask": false,
+        "rereadRanges": [
+          [
+            1,
+            111
+          ],
+          [
+            447,
+            468
+          ]
+        ],
+        "readMethod": "Reuse accepted complete ff991 source review, fresh full blob and raw immutable-9d equality; bounded re-read of the failing initial preflight and later member reveal."
+      }
+    ],
+    "identityMethod": {
+      "helperBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8",
+      "helperBytes": 3982,
+      "helperSha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7",
+      "targetCodeEvaluated": false
+    },
+    "embeddedReceipt": {
+      "locatedAt": {
+        "blob": "b7cb3efd51fcc31adf499899ae5c47217da1f686",
+        "line": 861
+      },
+      "envelope": {
+        "kind": "TEST_NATIVE_V2_CREDENTIAL_FAILURE_RECEIPT",
+        "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "platform": "linux-x64",
+        "diagnosticOnly": true,
+        "serializedBytes": 195977,
+        "serializedSha256": "a7d3614e939200caee6601a19c1032c02bc350ff22d4bcafeb36008d3ae426f7",
+        "details": {
+          "receiptWritten": true,
+          "frames": [
+            {
+              "id": 347,
+              "method": "management.probe.read",
+              "ok": true
+            },
+            {
+              "id": 348,
+              "method": "management.probe.read",
+              "ok": true
+            },
+            {
+              "id": 349,
+              "method": "management.probe.read",
+              "ok": true
+            },
+            {
+              "id": 350,
+              "method": "management.probe.read",
+              "ok": true
+            },
+            {
+              "id": 351,
+              "method": "management.probe.read",
+              "ok": true
+            },
+            {
+              "id": 352,
+              "method": "management.probe.read",
+              "ok": true
+            },
+            {
+              "id": 353,
+              "method": "management.probe.read",
+              "ok": true
+            },
+            {
+              "id": 354,
+              "method": "management.probe.read",
+              "ok": true
+            },
+            {
+              "id": 355,
+              "method": "management.probe.read",
+              "ok": true
+            },
+            {
+              "id": 356,
+              "method": "management.probe.read",
+              "ok": true
+            },
+            {
+              "id": 357,
+              "method": "management.probe.read",
+              "ok": true
+            },
+            {
+              "id": 358,
+              "method": "management.probe.read",
+              "ok": true
+            },
+            {
+              "id": 359,
+              "method": "management.probe.read",
+              "ok": true
+            },
+            {
+              "id": 360,
+              "method": "management.probe.read",
+              "ok": true
+            },
+            {
+              "id": 361,
+              "method": "management.probe.read",
+              "ok": true
+            },
+            {
+              "id": 362,
+              "method": "management.credential",
+              "ok": true
+            }
+          ]
+        }
+      },
+      "contentIdentity": {
+        "bytes": 195977,
+        "sha256": "a7d3614e939200caee6601a19c1032c02bc350ff22d4bcafeb36008d3ae426f7",
+        "gitBlob": "289dd84a611a617f2b6bb02f6c2c56a779f402c1",
+        "gitBlobStatus": "Computed content identity only; the receipt was not separately retained as a bare blob by this reviewer."
+      },
+      "allNonDiagnosticFields": {
+        "kind": "TEST_NATIVE_V2_CREDENTIAL",
+        "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "status": "INCOMPLETE",
+        "cleanup": false,
+        "version": "2.1.4",
+        "digests": {
+          "node": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+          "bun": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+          "manifest": "30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce",
+          "hostSource": "946ea4ce309c487de3baea794b4da78b05a928e062a1e4057d5ce255c8706096",
+          "hostDist": "791b3cb3437464a6d1857b7712694b34274af24d22989dfa5e91c3f845dfa2b3",
+          "provider": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+        },
+        "steps": [
+          "passive_all_provider_directory_without_import_or_inference",
+          "native_key_one_verification_original_receipt_after_lost_ack",
+          "native_401_saved_unverified_then_cold_explicit_corrected_key_succeeds",
+          "runtime_source_revision_preserves_original_rejected_key_replacement_authority",
+          "cold_directory_and_explicit_check_reuse_saved_selected_key"
+        ],
+        "requests": [
+          {
+            "authorizationMatched": true,
+            "tools": 0,
+            "promptMatched": true,
+            "outcome": "refused"
+          },
+          {
+            "authorizationMatched": true,
+            "tools": 0,
+            "promptMatched": true,
+            "outcome": "OK"
+          },
+          {
+            "authorizationMatched": true,
+            "tools": 0,
+            "promptMatched": true,
+            "outcome": "OK"
+          },
+          {
+            "authorizationMatched": true,
+            "tools": 0,
+            "promptMatched": true,
+            "outcome": "timeout"
+          }
+        ],
+        "nativeCredentialCount": 0,
+        "nativeProcessCount": 8,
+        "hosts": [
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true,
+            "diagnosticBytes": 26781
+          },
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true,
+            "diagnosticBytes": 16264
+          },
+          {
+            "exitCode": 1,
+            "signalCode": null,
+            "stdoutValid": true,
+            "diagnosticBytes": 34837
+          }
+        ],
+        "closeFailure": {
+          "epoch": 3,
+          "pid": 3649,
+          "exitCode": 1,
+          "signalCode": null,
+          "stdoutValid": true,
+          "diagnosticBytes": 34837
+        },
+        "timeoutJournal": {
+          "status": "observed",
+          "phase": "held",
+          "resourceHeld": true,
+          "nativePhase": "probe-intent",
+          "verificationPresent": true,
+          "verificationOk": null
+        },
+        "vendorAuthQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      },
+      "diagnosticRows": 572,
+      "losslessDisplayVerified": true,
+      "epochCounts": [
+        {
+          "epoch": 1,
+          "rows": 194,
+          "events": {
+            "child-spawn": 5,
+            "child-ready": 5,
+            "request": 71,
+            "response": 71,
+            "request-send-headers": 14,
+            "request-body-sent": 14,
+            "child-input-ended": 5,
+            "child-exit": 5,
+            "response-end": 3,
+            "host-input-ended": 1
+          }
+        },
+        {
+          "epoch": 2,
+          "rows": 122,
+          "events": {
+            "child-spawn": 2,
+            "child-ready": 2,
+            "request": 47,
+            "response": 47,
+            "request-send-headers": 8,
+            "request-body-sent": 8,
+            "child-input-ended": 2,
+            "child-exit": 2,
+            "response-end": 3,
+            "host-input-ended": 1
+          }
+        },
+        {
+          "epoch": 3,
+          "rows": 256,
+          "events": {
+            "child-spawn": 4,
+            "child-ready": 4,
+            "request": 100,
+            "response": 100,
+            "request-send-headers": 15,
+            "request-body-sent": 15,
+            "response-end": 9,
+            "child-input-ended": 3,
+            "child-exit": 3,
+            "trace-limit": 1,
+            "read-cut-failed": 1,
+            "host-probe-close-failed": 1
+          }
+        }
+      ],
+      "finalDiagnosticRows": [
+        {
+          "epoch": 3,
+          "event": "trace-limit",
+          "atMs": 39017,
+          "child": null,
+          "request": null,
+          "route": null,
+          "method": null,
+          "durationMs": null,
+          "status": null,
+          "contentEncoding": null,
+          "stage": null,
+          "code": null,
+          "exitCode": null,
+          "signal": null
+        },
+        {
+          "epoch": 3,
+          "event": "read-cut-failed",
+          "atMs": 57356,
+          "child": null,
+          "request": null,
+          "route": null,
+          "method": null,
+          "durationMs": 798,
+          "status": null,
+          "contentEncoding": null,
+          "stage": "after-session",
+          "code": "transport_failure",
+          "exitCode": null,
+          "signal": null,
+          "deadlineExpired": false,
+          "aborted": false
+        },
+        {
+          "epoch": 3,
+          "event": "host-probe-close-failed",
+          "atMs": 57458,
+          "child": null,
+          "request": null,
+          "route": null,
+          "method": null,
+          "durationMs": null,
+          "status": null,
+          "contentEncoding": null,
+          "stage": "driver-close",
+          "code": "unconfirmed",
+          "exitCode": null,
+          "signal": null,
+          "probeDigest": "e55c9620117b399fabe6ed6e050f862b53d33cbf42cbac8d2d7ffd12492e6548",
+          "runState": "threw",
+          "outcome": "unobserved",
+          "errorClass": "unknown"
+        }
+      ]
+    },
+    "additionalComparisonLog": {
+      "role": "Linux Claude emulator GUI",
+      "jobId": 133899668414,
+      "runId": 44042341273,
+      "bytes": 186239,
+      "sha256": "497eadca9bee37e82171ed7e472a70bb2f9b775ef67e142cd5c12addafb1bb89",
+      "gitBlob": "52413a57cd2dbc7ad699410b7e8680005eb53feb",
+      "completeBodyFetched": true,
+      "completeBodyHashed": true,
+      "completeBodyRead": false,
+      "readRanges": [
+        [
+          1,
+          58
+        ],
+        [
+          215,
+          230
+        ],
+        [
+          994,
+          1053
+        ],
+        [
+          1743,
+          1884
+        ]
+      ],
+      "fullEchoedValidatorJoin": {
+        "equal": true,
+        "lines": 683,
+        "timestampOnlyNormalization": true,
+        "bodyIdentity": {
+          "bytes": 59905,
+          "sha256": "aca84a76f3aea330b9a85766e0a1f58b717fa97b25d1b9ce3256d91b5b73c86c",
+          "gitBlob": "125bc13346ea7629f225e075d96dc240665660ac"
+        },
+        "collaborationRange": [
+          1040,
+          1722
+        ],
+        "claudeRange": [
+          1047,
+          1729
+        ]
+      },
+      "scope": "Parent reports its full independent log read. This reviewer makes a bounded independent comparison of the header/checkout, invocation/failure, complete timestamp-normalized validator joined to collaboration, and final upload sections, not a complete new review of every build/test line."
+    }
+  },
+  "embedded": {
+    "command": "node --test packages/legacy-agent-host/tests/opencode-v2-credentials.native.ts",
+    "platform": "linux-x64",
+    "node": "v24.21.0",
+    "runnerImage": "ubuntu-24.04 / 20261111.370.1",
+    "observedTestResult": {
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "testDurationMs": 125522.204314,
+      "totalDurationMs": 125734.635097
+    },
+    "errorChain": [
+      {
+        "kind": "AssertionError",
+        "message": "Host exit zero confirms Runtime/provider cleanup completed",
+        "actual": 1,
+        "expected": 0,
+        "frames": [
+          "packages/legacy-agent-host/tests/fixtures/native-host.ts:344",
+          "packages/legacy-agent-host/tests/opencode-v2-credentials.native.ts:464",
+          "packages/legacy-agent-host/tests/opencode-v2-credentials.native.ts:606"
+        ],
+        "classification": "Primary original stop failure."
+      },
+      {
+        "kind": "AssertionError",
+        "message": "Host exit zero confirms Runtime/provider cleanup completed",
+        "actual": 1,
+        "expected": 0,
+        "frames": [
+          "packages/legacy-agent-host/tests/fixtures/native-host.ts:344",
+          "packages/legacy-agent-host/tests/opencode-v2-credentials.native.ts:659"
+        ],
+        "classification": "Same retained Host checked again during finally after failed stop left host set; not a new process execution."
+      },
+      {
+        "kind": "AggregateError",
+        "message": "TEST credential and cleanup failed",
+        "frame": "packages/legacy-agent-host/tests/opencode-v2-credentials.native.ts:699",
+        "classification": "Preserves original failure and cleanup failure."
+      }
+    ],
+    "sourceFlow": [
+      {
+        "lines": "350–389",
+        "fact": "Finite localhost model oracle admits at most four requests; request 1 returns 401, requests 2 and 3 return finite OK, request 4 deliberately waits for response closure without a terminal completion."
+      },
+      {
+        "lines": "445–469",
+        "fact": "start captures one Host epoch; stop awaits host.close before recording/unsetting the Host and qualifying remaining groups/metadata."
+      },
+      {
+        "lines": "594–606",
+        "fact": "Fourth explicit credential intent is captured, held and not relabeled rejected; request count is four, direct children and observed native set are empty; original stop then fails."
+      },
+      {
+        "lines": "607–623",
+        "fact": "Fourth Host start and cold pending/resume/conflict/no-replay checks are unreached."
+      },
+      {
+        "lines": "624–655",
+        "fact": "Native database count, secret-free durable receipt checks, final lineage and final input/build revalidation are unreached."
+      },
+      {
+        "lines": "657–702",
+        "fact": "Finally retains failed Host facts, closes model connections, attempts recorded group absence checks and serializes INCOMPLETE evidence; a second same-Host exit assertion yields the AggregateError."
+      }
+    ],
+    "diagnosticInterpretation": {
+      "afterSession": {
+        "atMs": 57356,
+        "durationMs": 798,
+        "reason": "transport_failure",
+        "deadlineExpired": false,
+        "aborted": false,
+        "meaning": "The selected original read cut reports an after-session transport failure. These flags describe this read cut, not every timer, caller signal or prior intentional model timeout."
+      },
+      "close": {
+        "atMs": 57458,
+        "stage": "driver-close",
+        "reason": "unconfirmed",
+        "runState": "threw",
+        "outcome": "unobserved",
+        "errorClass": "unknown",
+        "meaning": "The Host-side bounded observer reports unconfirmed probe driver close. No raw native exception or final successful outcome is available."
+      },
+      "traceLimit": {
+        "atMs": 39017,
+        "meaning": "Ordinary diagnostic emission is capped. The exact diagnostic source reserves a single read-cut/metadata/close failure observation beyond ordinary-cap exhaustion; absence of later child/input/response rows cannot establish no such events occurred."
+      },
+      "rawStderr": "native-host.ts counts stderr bytes and passes them to selected observers; the receipt retains sanitized projections, not full raw Host stderr. Fetching the already advertised JSON ZIP may repeat this receipt and does not guarantee recovery of an unrecorded raw exception."
+    },
+    "cleanup": {
+      "receiptStatus": "INCOMPLETE",
+      "receiptCleanup": false,
+      "hostNormalExitQualified": false,
+      "orphanPresence": "UNKNOWN from this bounded receipt alone; failure is not proof of a live leak.",
+      "receiptWritten": true,
+      "rootRemoval": "Source does not run rm(root) once cleanupErrors contains the failed Host close.",
+      "rawProcessCensusAndArtifactJoin": "Not read here."
+    },
+    "separateLogResults": [
+      {
+        "step": "Six original Node source test files",
+        "reportedPass": 58,
+        "reportedFail": 0
+      },
+      {
+        "step": "desktop-opencode-v2-fixture.test.ts",
+        "reportedPass": 1,
+        "reportedFail": 0
+      },
+      {
+        "step": "opencode-v2-embedded-host.native.ts",
+        "reportedPass": 1,
+        "reportedFail": 0
+      },
+      {
+        "step": "opencode-v2-model-probe.native.ts",
+        "reportedPass": 1,
+        "reportedFail": 0
+      },
+      {
+        "step": "Later ^POSIX original-path selected native test",
+        "reportedPass": 1,
+        "reportedFail": 0,
+        "limit": "This later separate result does not repair credentials, qualify the entire job, or establish strict Darwin custody."
+      }
+    ],
+    "unknowns": [
+      "Exact low-level transport error, failing endpoint/response body, and driver-close exception are not in the closed diagnostic projection.",
+      "Whether the after-session failure directly caused the unconfirmed close or both reflect another condition is not proven solely by their ordered diagnostic timestamps.",
+      "No fourth Host/cold held-intent/no-replay result or native credential database count is available because those source branches were not reached.",
+      "Artifact receipt custody, complete input/source-after bytes and final raw census are unjoined in this task."
+    ]
+  },
+  "collaboration": {
+    "command": "xvfb-run ... bash -euo pipefail -c '... exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' 2>&1 | tee host-emulated-emulated-collaboration-ui.log",
+    "platform": "linux-x64",
+    "node": "v24.21.0",
+    "runnerImage": "ubuntu-26.04 / 20261111.196.1",
+    "mode": "emulated-collaboration-ui",
+    "preparedAt": "2026-11-17T08:48:20.5666918Z",
+    "incompleteAt": "2026-11-17T08:50:51.0371257Z",
+    "receiptPath": "/home/runner/work/_temp/TEST-desktop-backend-POzfo5/desktop-backend-receipt.json",
+    "primaryFailureFrames": [
+      "scripts/legacy-agent-host/desktop-ui-controls.ts:209:11",
+      "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts:109:3",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:421:12",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+    ],
+    "exactReadExpression": "[...document.querySelectorAll('[role=\"dialog\"] button')].some(e=>e.textContent.trim()==='Launch team'&&!e.disabled)",
+    "label": "original mixed launch preflight",
+    "originalBudgetMs": 90000,
+    "reachedBySourceOrder": [
+      "Original input observation/sidebar navigation",
+      "Original saved Team Launch dialog",
+      "Saved Optional launch settings with sonnet identity",
+      "Expanded settings geometry/animation settled",
+      "Prompt TEST_UI_BOOT inserted and read back",
+      "Skip-permissions state asserted unchecked",
+      "Original Launch team scroll completed",
+      "Pre-submit readiness wait entered and expired without accepting a timely ready observation"
+    ],
+    "unreached": [
+      "The next zero-runtimeCaptures assertion at line 110",
+      "Launch team submit at line 111",
+      "Initial allocated/owned/ready sessions and boot reply",
+      "Carol live Add with captured readiness",
+      "Bob-to-Carol direct message/reply",
+      "Image/text attachment delivery/readback",
+      "Directed group Send/ACK/reply",
+      "Selected-member log routing",
+      "Carol Remove and fresh Restore generation",
+      "Whole Team Stop and original process absence",
+      "Read-only history reload and no-effects comparison",
+      "Final PASS and fixture-pin/effect qualification"
+    ],
+    "waitSemantics": "An ordinary waitRead timeout means no value satisfied the predicate before the original deadline. Recognized context loss can be retried as a read, and a value returned at/after cutoff is rejected. The log has no per-read samples; therefore disabled, absent, changed text, navigated context or late fulfilled value cannot be distinguished.",
+    "validators": {
+      "finalSmokeAssertion": "provider-emulation UI proof incomplete; original receipt retained",
+      "postStepFailure": "original UI flow and cleanup must pass",
+      "firstFailingPostStepLine": 1105,
+      "downstreamEchoedCodeStatus": "UNREACHED: source/dirty/source hashes, no-native-peer census, cleanup, fixture pins, all journey obligations and screenshot verification appear as echoed code; the actual validator fails before reading and checking the receipt.",
+      "cleanupAndNoVendorStatus": "The selected mode/configuration says finite peers and forbids native providers. Actual final peer/sentinel/census/source-after/cleanup qualification remains unread without the original artifact."
+    },
+    "prerequisiteReports": {
+      "eightNodeFiles": {
+        "pass": 239,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "installerHarness": {
+        "pass": 7,
+        "fail": 0
+      },
+      "limit": "Read as reported prerequisites only. This task does not independently map all 239 titles to a new acceptance inventory."
+    },
+    "unknowns": [
+      "Why the launch control did not become timely eligible; exact model/status/authorization/currentness reason is unavailable in the log.",
+      "Whether a model probe ran, completed, failed or remained pending, and which provider affected readiness.",
+      "Failure screenshot/DOM state, receipt steps/input trace, management commands and finite peer effects.",
+      "Ordinary cleanup/source-freeze/final sentinel results; outer INCOMPLETE alone is not a cleanup success or a proven leak."
+    ]
+  },
+  "comparison": {
+    "darwinFailure": {
+      "logBlob": "0cfb8f940b2574cee58463240b6f1d9208c43497",
+      "platform": "darwin-arm64",
+      "mode": "emulated-claude-lifecycle-ui",
+      "status": "INCOMPLETE",
+      "label": "original lifecycle model readiness",
+      "source": "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts:88",
+      "budgetMs": 90000,
+      "launchSubmitLine": 90
+    },
+    "exactPredicateEqual": true,
+    "supported": "The collaboration, Darwin lifecycle and additional Claude emulator paths all wait on the same read-only enabled-button expression with the same 90-second budget before their original Launch submit. No shared cause is established by that common boundary.",
+    "notSupported": "The name model readiness is a caller label, not an observed provider diagnosis. These logs do not show the blocker values; no common cause, platform cause, new cutoff regression, or provider failure is established.",
+    "priorDarwinNativeResult": {
+      "kind": "TEST_PACKAGED_V2_QUALIFICATION",
+      "status": "PASS",
+      "nativeExit": {
+        "code": 0,
+        "signal": null
+      },
+      "desktopJourneyQualified": false,
+      "limit": "Reported by the earlier separate step; this report does not read its original ZIP or issue an independent native acceptance."
+    },
+    "linuxCredentialsContrast": "The embedded credential test already completed several model/credential interactions and fails during normal Host shutdown after an intentional fourth timeout. That differs from the two GUI pre-submit readiness boundaries."
+  },
+  "artifactLimits": [
+    {
+      "role": "Embedded Linux",
+      "artifactId": 14313331807,
+      "runId": 44042341120,
+      "reportedFiles": 5,
+      "reportedZipBytes": 21158,
+      "reportedZipSha256": "a528ee661ae8ae1e1307e1715c1c39399ed90f90f93682c8723cfa35e613e9ce",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44042341120/artifacts/14313331807",
+      "zipRead": false,
+      "memberCensusRead": false
+    },
+    {
+      "role": "Collaboration Linux",
+      "artifactId": 14313531189,
+      "runId": 44042341273,
+      "reportedFiles": 17,
+      "reportedZipBytes": 712039,
+      "reportedZipSha256": "3429472090241e9d38909aa18506e4eb87a70fdd64f3b4f767eb7ac5936433b6",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44042341273/artifacts/14313531189",
+      "zipRead": false,
+      "memberCensusRead": false
+    },
+    {
+      "role": "Darwin comparison",
+      "artifactId": 14312081420,
+      "runId": 44042341284,
+      "reportedFiles": 7,
+      "reportedZipBytes": 753304,
+      "reportedZipSha256": "887cffb15ea71445e5c59dc6ddd9519b4e1052d14183280b88f9ce85d14d1faf",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44042341284/artifacts/14312081420",
+      "zipRead": false,
+      "memberCensusRead": false
+    },
+    {
+      "role": "Additional Claude emulator Linux",
+      "artifactId": 14313703744,
+      "runId": 44042341273,
+      "reportedFiles": 14,
+      "reportedZipBytes": 698422,
+      "reportedZipSha256": "4b989c6b0cb0941cf53bbc48d45d5e8e94cb3af5c2f5239dd608a362b0042897",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44042341273/artifacts/14313703744",
+      "zipRead": false,
+      "memberCensusRead": false
+    }
+  ],
+  "boundaries": {
+    "rootCauseProven": false,
+    "failingBoundariesProven": true,
+    "allNamedJobsPassed": false,
+    "approvalOrNewGate": false,
+    "postimageOrFixAuthored": false,
+    "timeoutIncrease": false,
+    "caseOrFilterChange": false,
+    "rerunOrRetry": false,
+    "sourceRefCiPrMutation": false,
+    "shellOrLocalRuntime": false,
+    "targetSourceEvaluated": false,
+    "realVendorProbe": false,
+    "selectedWindowsWork": "Separate already reviewed source proposal; not present in these fixed-9d CI snapshots and not evaluated by these failures.",
+    "reportRetentionOnly": true,
+    "neededEvidenceIsNotANewGate": "The listed ZIP/DOM/raw-error gaps bound the conclusions. This report neither creates a new approval gate nor selects a new execution."
+  },
+  "checks": [
+    {
+      "number": 1,
+      "id": "primary-log-identities",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Both complete assigned logs rehash to their exact supplied bytes, SHA256 and Git blob IDs."
+    },
+    {
+      "number": 2,
+      "id": "embedded-complete-read",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "All 1,009 split log lines accounted for: outer ranges 1–860 and 862–1009; giant line 861 decoded in full without counting its earlier truncated display as a read."
+    },
+    {
+      "number": 3,
+      "id": "receipt-envelope-integrity",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "The full receiptJson is 195,977 bytes and hashes to a7d3614e939200caee6601a19c1032c02bc350ff22d4bcafeb36008d3ae426f7, exactly the envelope's own bytes and SHA256."
+    },
+    {
+      "number": 4,
+      "id": "receipt-complete-values",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Every receipt top-level field and every one of 572 diagnostic rows was read. The compact diagnostic display with explicit null defaults reconstructs all original row keys and values exactly."
+    },
+    {
+      "number": 5,
+      "id": "collaboration-complete-read",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "All 1,877 split lines of the collaboration job log were read in untruncated consecutive chunks, including the entire echoed validator and its actual failure."
+    },
+    {
+      "number": 6,
+      "id": "fixed-source-checkouts",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Both logs show checkout and git log HEAD at fixed 9d79abcf1f5c498687c2e5c443e3edf220070aa6; subsequent commands use that same source-head environment."
+    },
+    {
+      "number": 7,
+      "id": "immutable-source-joins",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Seven relevant complete source bodies are pinned at fixed 9d. Six have complete reads in this task or exact reuse of a prior complete read; the seventh ff991 driver reuses the prior full accepted source review with fresh exact-9d full-body hash/literal join and bounded failure/member-reveal rereads."
+    },
+    {
+      "number": 8,
+      "id": "embedded-host-third-epoch",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Receipt records Host exit codes 0, 0, 1; closeFailure identifies epoch 3 and PID 3649 with null signal and valid stdout."
+    },
+    {
+      "number": 9,
+      "id": "embedded-primary-error",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "The first nested error is native-host.ts:344 exitCode 1 != 0, called by stop at credentials.ts:464 and the test at credentials.ts:606."
+    },
+    {
+      "number": 10,
+      "id": "embedded-secondary-error",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "The second nested error is the same close assertion from credentials.ts:659 in finally; source confirms the failed stop left the same host variable set. This is not a second test invocation or a fourth Host epoch."
+    },
+    {
+      "number": 11,
+      "id": "embedded-timeout-scenario-reached",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Before line 606, source assertions require a held fourth credential result, undefined rejection reason, four finite-model requests, empty direct children and an empty observed native set. The receipt independently records the fourth timeout request and held probe-intent journal."
+    },
+    {
+      "number": 12,
+      "id": "embedded-five-completed-steps",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Receipt preserves five completed semantic step labels before the failed stop; later cold unknown-intent and SQLite/final checks are not appended."
+    },
+    {
+      "number": 13,
+      "id": "embedded-finite-model-semantics",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Exact source supplies a local finite model endpoint and TEST keys; the fourth expected request deliberately withholds terminal response. The timeout outcome is part of the selected test scenario, not evidence that a real vendor credential was used."
+    },
+    {
+      "number": 14,
+      "id": "embedded-no-rejection-relabel",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "The selected source explicitly asserts timeout has no confirmed credential-rejection reason; held/unverified is not relabeled as rejected or completed."
+    },
+    {
+      "number": 15,
+      "id": "embedded-last-diagnostics",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "The final retained events are trace-limit, after-session read-cut-failed/transport_failure, and host-probe-close-failed/driver-close/unconfirmed with runState threw and outcome unobserved."
+    },
+    {
+      "number": 16,
+      "id": "embedded-diagnostic-limits",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Diagnostic source preserves bounded late failure slots even after ordinary trace-limit, drops other raw Host diagnostics and carries no raw exception text. No inference is made from missing ordinary events after the cap."
+    },
+    {
+      "number": 17,
+      "id": "embedded-deadline-distinction",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "The read-cut event reports deadlineExpired=false and aborted=false for that observed read. The selected credential test has a 240,000 ms timeout and failed around 125,522 ms; no outer Node test timeout is shown."
+    },
+    {
+      "number": 18,
+      "id": "embedded-unreached-fourth-start",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "The failed line 606 stop precedes line 607 start, so fourth-epoch pending/resume/conflict/no-replay verification is not reached."
+    },
+    {
+      "number": 19,
+      "id": "embedded-unreached-final-oracles",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "SQLite credential counts, native secret-free receipt checks, four-epoch/ten-metadata/five-catalog/four-probe final oracles and final build revalidation are not reached."
+    },
+    {
+      "number": 20,
+      "id": "embedded-counter-caution",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "nativeCredentialCount=0 is the initial counter whose increment occurs only in the unreached SQLite loop; nativeProcessCount=8 counts observed native PID-set entries, not all diagnostic spawn events."
+    },
+    {
+      "number": 21,
+      "id": "embedded-cleanup-classification",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Receipt status INCOMPLETE and cleanup=false are preserved. A nonzero Host exit prevents original cleanup qualification; it does not by itself prove a live leaked process. The logged AggregateError contains the two exit assertions, not an invented native error."
+    },
+    {
+      "number": 22,
+      "id": "embedded-other-step-separation",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Earlier six-file 58/58, fixture 1/1, Host 1/1 and model-probe 1/1 reports, and subsequent POSIX 1/1 report, remain separate log outcomes and do not turn credentials or the whole job into PASS."
+    },
+    {
+      "number": 23,
+      "id": "collaboration-primary-boundary",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Source line 109 is the exact enabled Launch team predicate with an original 90,000 ms budget. The saved Launch dialog has been entered, but the launch submit at line 111 is not reached."
+    },
+    {
+      "number": 24,
+      "id": "collaboration-wait-read-semantics",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Controls 186–209 preserve renderer ownership, post-await expiry rejection, 100 ms read cadence and the narrow context-loss exception handling. Timeout establishes no accepted timely ready value; it does not prove every sample was false or that one specific blocker was present."
+    },
+    {
+      "number": 25,
+      "id": "collaboration-prior-steps",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Reaching line 109 statically implies prior awaited navigation/settings/prompt/unchecked-permissions/scroll steps returned. Detailed input and DOM observations are not claimed without their receipt."
+    },
+    {
+      "number": 26,
+      "id": "collaboration-unreached-obligations",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "The zero-runtimeCaptures assertion at line 110, launch click, initial sessions, Add/Remove/Restore, DM, attachments, group delivery, selected-member logs, Stop and reload obligations are not reached by this flow."
+    },
+    {
+      "number": 27,
+      "id": "collaboration-validator-caution",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "The post-step validator actually fails at its first requirement that last.status be PASS. Hundreds of subsequent echoed assertions are code, not actual successful checks; receipt source/cleanup/provider/screenshot joins are not claimed."
+    },
+    {
+      "number": 28,
+      "id": "collaboration-prerequisite-separation",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "The preceding eight-file command reports 239 passes and the install harness reports seven passes. These are separate from the failed GUI flow; no new whole-suite qualification is assigned."
+    },
+    {
+      "number": 29,
+      "id": "artifact-upload-not-custody",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Log-upload metadata is preserved for all named ZIPs, but no ZIP members, CRCs, bytes, screenshots or artifact-to-receipt custody have been read in this task."
+    },
+    {
+      "number": 30,
+      "id": "darwin-comparison-pinned",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "The exact optional Darwin retained log is fetched and rehashed; only its decisive final section 1333–1504 is independently read here, explicitly not a claim of complete-log review."
+    },
+    {
+      "number": 31,
+      "id": "darwin-same-predicate",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Full lifecycle source at b33e5290 line 88 uses the byte-identical enabled Launch team DOM expression and 90,000 ms budget as collaboration line 109."
+    },
+    {
+      "number": 32,
+      "id": "darwin-no-common-cause-claim",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Both GUI flows fail before their launch submit. This is a common observation boundary; distinct lane/provider/platform state and absent DOM/probe artifacts prevent any shared-root-cause conclusion."
+    },
+    {
+      "number": 33,
+      "id": "darwin-separate-native-result",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "The earlier TEST_PACKAGED_V2_QUALIFICATION PASS with nativeExit 0 and desktopJourneyQualified=false is separate from the later packaged app relaunch INCOMPLETE."
+    },
+    {
+      "number": 34,
+      "id": "root-cause-bounds",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "No exact transport failure origin, driver-close exception, disabled-button reason, model-status cause, cleanup census or source-after/input-after artifact result is invented."
+    },
+    {
+      "number": 35,
+      "id": "authority",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Reviewer performed only immutable Git/evidence reads, in-memory parsing/identity calculations and report retention. No shell, target code evaluation, runtime, CI read/poll, retry, source/ref/PR mutation or vendor probe occurred."
+    },
+    {
+      "number": 36,
+      "id": "scope",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "This is bounded failure classification, not a new gate, fix selection, postimage, deadline/case/filter change, test execution or runtime acceptance."
+    },
+    {
+      "number": 37,
+      "id": "claude-log-identity",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Additional complete 52413a57 body matches 186,239 bytes and supplied SHA256; bounded read coverage is explicitly distinguished from the two full primary log reads."
+    },
+    {
+      "number": 38,
+      "id": "claude-source-boundary",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Fresh ff991 body and raw source at fixed 9d are equal. Its line 91 is the same 90,000 ms enabled Launch predicate; launch input at 93 is unreached."
+    },
+    {
+      "number": 39,
+      "id": "claude-member-reveal-unreached",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Selected scrollTo at 453–456 and the unchanged click authority at 457–460 occur later in the source and are unreached. This failure is not a test of that correction."
+    },
+    {
+      "number": 40,
+      "id": "claude-validator-join",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "The complete 683-line validator equals the already fully read collaboration validator after only timestamp normalization; actual first PASS-status refusal is retained separately from echoed code."
+    },
+    {
+      "number": 41,
+      "id": "terminal-run-boundary",
+      "status": "PASS_BOUNDED_CLASSIFICATION",
+      "finding": "Parent's terminal Stage1 and CI run notifications require no new reads. This reviewer did not poll terminal, frozen, original or live CI."
+    }
+  ],
+  "checkCount": 41,
+  "selfReadbackProtocol": "The bare report pin is sent immediately after retention. A fresh full blob fetch, exact bytes/SHA/Git identity equality and full untruncated self-read will follow; no artifact changes are implied.",
+  "claudeComparison": {
+    "scope": "Bounded additional comparison; complete independent log coverage is not claimed.",
+    "jobId": 133899668414,
+    "runId": 44042341273,
+    "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "mode": "emulated-claude-runtime-ui",
+    "preparedAt": "2026-11-17T09:03:12.6509192Z",
+    "incompleteAt": "2026-11-17T09:06:10.2925169Z",
+    "failureFrames": [
+      "scripts/legacy-agent-host/desktop-ui-controls.ts:209:11",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts:91:3",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:421:12",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+    ],
+    "label": "original preflight completes",
+    "originalBudgetMs": 90000,
+    "exactReadExpression": "[...document.querySelectorAll('[role=\"dialog\"] button')].some(e=>e.textContent.trim()==='Launch team'&&!e.disabled)",
+    "equalToCollaborationAndLifecycle": true,
+    "unreached": [
+      "Zero-runtimeCaptures assertion at line 92",
+      "Launch team submit at line 93",
+      "Original session/boot, conversation and subsequent UI obligations",
+      "Selected member reveal/click at lines 453–460",
+      "Original final cleanup/source/peer/screenshot validation"
+    ],
+    "memberRevealConclusion": "This execution never reaches the selected member-reveal correction. Its failure neither proves nor disproves that later wiring fix.",
+    "validator": "The complete 683-line echoed validator is identical to collaboration after removing only per-line timestamps. Actual failure is again the first status-PASS requirement, so no subsequent echoed assertions are counted as observed successes.",
+    "unknowns": [
+      "Actual reason the launch control was not timely eligible",
+      "Which readiness/probe/status condition blocked it, if any",
+      "Whether readiness was absent, disabled, late or interrupted by a permitted context loss",
+      "Receipt, input history, finite peer effects, screenshot and ordinary cleanup/census results"
+    ],
+    "otherLanes": "Parent separately reports Codex emulator and management PASS. This reviewer did not read their logs in this bounded classification and does not use them to infer the Claude or collaboration cause."
+  }
+}

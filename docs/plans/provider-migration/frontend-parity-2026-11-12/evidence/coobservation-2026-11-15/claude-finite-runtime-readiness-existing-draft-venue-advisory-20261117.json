@@ -1,0 +1,4118 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CLAUDE_FIXTURE_FIVE_PATH_DRAFT_VENUE_EXTENSION_ADVISORY",
+  "reviewer": "/root/red_publication_recovery",
+  "at": "2026-11-17 11:45:06 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "decision": "ADVISORY_ONLY_NO_VENUE_SELECTED",
+  "basis": {
+    "currentSource": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+    "currentRoot": "f77c67b7996ec0d262d3f97769eeb943c4b87b43",
+    "currentActualGate": {
+      "bytes": 3565,
+      "sha256": "73d1c980fe51340d4e8d17c262f05af689461407d6048934105f5cc83bf2a5ae",
+      "gitBlob": "47bad46713f0a091561dc059ca3b771bd1278bc7"
+    },
+    "rootActual": {
+      "bytes": 452491,
+      "sha256": "a79ab5a1523a81fe02b470ef8a31d2dffe3a3fc178f1d1d767f1607f933eab09",
+      "gitBlob": "bd5dccc5cbff574fa5365ccfda199ed133381449"
+    },
+    "independentActual": {
+      "bytes": 694722,
+      "sha256": "ad1e33931eccf395793317fc9258831ed6f8a7fc55bcf5a8f3f2e09fe490e76a",
+      "gitBlob": "71d404166be8f19dad1c0adc890acc63300afcbe"
+    },
+    "priorVenueAdvisory": {
+      "bytes": 194837,
+      "sha256": "77457698730105d26277bbccdd7d591dae9d466b1abf2771cf7492563c645105",
+      "gitBlob": "8f41c3cf94eaa0114c578c19fe13673bfbbcafbf"
+    },
+    "workflowCorpus": {
+      "gitBlob": "6d032754064d4f251a11e8572bb7b476ea5860a8",
+      "bytes": 780732,
+      "sha256": "9a83bd5a7425d0674345c607e26b2a1df8bde3556549ac276bfbf860c5c4e3bb"
+    },
+    "workflowRoot": {
+      "path": ".github",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/d95091ab0edb488d6e418ffa789d0f07c447ecda"
+    },
+    "potentialComparisonBase": "9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+  },
+  "scope": {
+    "prospectivePaths": [
+      "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "test/features/runtime-provider-management/capturedClaudeStatus.test.ts"
+    ],
+    "newFivePaths": [
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "test/features/runtime-provider-management/capturedClaudeStatus.test.ts"
+    ],
+    "docsWitnessPaths": [
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/future-unselected-proposal.json"
+    ],
+    "sourcePreimages": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "mode": "100644",
+        "pin": {
+          "bytes": 21981,
+          "sha256": "d0d00254e7e39ab8b5163e02cc93754775a8efe56ff28b8c87f07d02e0292c7e",
+          "gitBlob": "7b5edfbd4967debe454387c7a8b6246e67216dc8"
+        },
+        "method": "fresh complete Git body"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+        "mode": "100644",
+        "pin": {
+          "bytes": 16555,
+          "sha256": "8340911817fb4228e8d948425a1f85796fba16d244b6763b04e307ed6f290713",
+          "gitBlob": "97e14385a298a38a9b81b8805dc3f6d2da66545c"
+        },
+        "method": "fresh complete Git body"
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+        "mode": "100644",
+        "pin": {
+          "bytes": 32221,
+          "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+          "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01"
+        },
+        "method": "fresh complete Git body"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+        "mode": "100644",
+        "pin": {
+          "bytes": 24968,
+          "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+          "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57"
+        },
+        "method": "accepted complete immutable cache, rehashed"
+      },
+      {
+        "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+        "mode": "100644",
+        "pin": {
+          "bytes": 8570,
+          "sha256": "37d0b61e60dd4f175c9c2d34e1f8aa399becac018e970655dd7f5595713f2fb6",
+          "gitBlob": "6e84953e1d1a08b705b4000f47d8d51177047ff3"
+        },
+        "method": "fresh complete Git body"
+      },
+      {
+        "path": "vitest.config.ts",
+        "mode": "100644",
+        "pin": {
+          "bytes": 1187,
+          "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+          "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3"
+        },
+        "method": "accepted complete immutable cache, rehashed"
+      },
+      {
+        "path": "package.json",
+        "mode": "100644",
+        "pin": {
+          "bytes": 26839,
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+          "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        "method": "accepted complete immutable cache, rehashed"
+      },
+      {
+        "path": "actualGate",
+        "pin": {
+          "bytes": 3565,
+          "sha256": "73d1c980fe51340d4e8d17c262f05af689461407d6048934105f5cc83bf2a5ae",
+          "gitBlob": "47bad46713f0a091561dc059ca3b771bd1278bc7"
+        },
+        "method": "fresh complete Git body"
+      }
+    ],
+    "sourceFiveBytes": 104295,
+    "postimagesAuthored": false,
+    "noBaseHeadAliasChosen": true,
+    "noGateAdded": true
+  },
+  "completeWorkflowJoins": [
+    {
+      "path": ".github/workflows/announcements-content.yml",
+      "pin": {
+        "bytes": 2301,
+        "sha256": "4380473bf81c1e8762e11d1803bb023e60308c5525c6c409531d9749ec7661d8",
+        "gitBlob": "d7d1c6fde200971f29defe95c2c0436a0318b499"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/anthropic-compatible-status-e2e.yml",
+      "pin": {
+        "bytes": 8602,
+        "sha256": "037e94e79d2b13136a2209f2a1dac2c65ee5bee117c8dcfcf11e71c106b2e8a0",
+        "gitBlob": "6ec8f76ef4036fde31daab73db1205cf9f7dfdd2"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/anthropic-env-portability.yml",
+      "pin": {
+        "bytes": 4713,
+        "sha256": "fee75fc9544498e419c45ddb3acdf6df20a387dc29c04009e8d450bea2fb5359",
+        "gitBlob": "d3fa7512b79b79dc64c1580dfdc42d63361ae68a"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/build-linux-windows-draft.yml",
+      "pin": {
+        "bytes": 17033,
+        "sha256": "4968e05cf86cb6252494c6a0778dd2bb43a6439b995f0fd769504ac0633ce501",
+        "gitBlob": "919dc9d816a5f7441783af22a286da9b1e4f6f8a"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "pin": {
+        "bytes": 175238,
+        "sha256": "8cac831e00dd87f656a971c6496b8278c7cfddc261f1eb48573a7e2acf83c2d1",
+        "gitBlob": "a93ff6ba1e5656523668694bca24910a468aebc7"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "pin": {
+        "bytes": 2479,
+        "sha256": "d35b6d96c6d3582415b4feaf3144575f5d3a520c6e058c673ec15f95ddae5a7b",
+        "gitBlob": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/codex-runtime-smoke.yml",
+      "pin": {
+        "bytes": 3229,
+        "sha256": "2d9b2fb19cb3d1e2797611254104bf5ab433b588427350747f0c0c6196f4490d",
+        "gitBlob": "cef44447c47e39a7da678f37e2518952e218da08"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/dependency-review.yml",
+      "pin": {
+        "bytes": 1527,
+        "sha256": "52570674031aecbba23cf8725e5aa09b58495421c8c9b21cef0e14a791ce27d0",
+        "gitBlob": "4a5f2ab17b3daf4ffdf6992ee85d159adf2c46c6"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+      "pin": {
+        "bytes": 3218,
+        "sha256": "c85dd3daa63c0d31b8c87e5fe4b935456f6c47dbf9a0be1f06b6b8fbfaf84d25",
+        "gitBlob": "490c2048dfbd9f275f784d7a0f1a6eeba0a9f361"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "pin": {
+        "bytes": 19532,
+        "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f",
+        "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "pin": {
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "pin": {
+        "bytes": 34313,
+        "sha256": "71b16b1b1fd1f0c88d3cb15a18cdfcce08b2b18908d3a5ce755330b4b2aeedf1",
+        "gitBlob": "70202d22a5840401a00025cd60b797c514f3e455"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+      "pin": {
+        "bytes": 3335,
+        "sha256": "572df7cb9de920ed0685febc94f6ddd08f18d7d96312e8ed946933a63ccbcdb3",
+        "gitBlob": "95d681fe04abd838dd11799d7791fa59444c6e32"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/landing-hetzner-release.yml",
+      "pin": {
+        "bytes": 7306,
+        "sha256": "ad5337b9e4a36797703c0e340a9539f0c12f2739eed6805851fcfa8cb00d1290",
+        "gitBlob": "4b54f229156f9d347e1a33da0d83b3374acc4078"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/landing.yml",
+      "pin": {
+        "bytes": 5592,
+        "sha256": "1bda852e705b3b744b5b001e0fe3cb2d8fd80eaa3108d17787c076ad3b753b32",
+        "gitBlob": "4a1ad9ae59ff2e338930a195d54fdff62da1ebc5"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/macos-signing-qualification.yml",
+      "pin": {
+        "bytes": 9635,
+        "sha256": "409769be92f1d49ed74ffca6e4affe25f365d5bf4bc4f5a18a1deebea11c3a0d",
+        "gitBlob": "d63bddd51302a5c0380762bf22171f43c38a39b0"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/opencode-desktop-e2e.yml",
+      "pin": {
+        "bytes": 6719,
+        "sha256": "ea78e9c6002db433bb57087c3d4eac3d652412746b3a3d5d2aad0cb02e76d17e",
+        "gitBlob": "3d2a90a0e335155d435bd4eae4f2bd2842425983"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/opencode-native-windows-e2e.yml",
+      "pin": {
+        "bytes": 29178,
+        "sha256": "3f6ea47d1aac384382cca261686972222433330e9563a87b941d23ac345b8f80",
+        "gitBlob": "f5a2a472b752acf37399fc9e11f63f6d45bdb297"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/opencode-packaged-e2e.yml",
+      "pin": {
+        "bytes": 19616,
+        "sha256": "80a7c110468f22670a541dcf8cd452c6de754376f4ff970bbdf2888bd91fc2fe",
+        "gitBlob": "458e165ef020a1f8b05806b9ae7edc839134e1b4"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+      "pin": {
+        "bytes": 2756,
+        "sha256": "2bd119e64866ae18519f01be6e7bffc138d0ce7b1e32ce2329a35e59de5a87a3",
+        "gitBlob": "be6a9ae5a88efadca344773ed4aa962d42823d28"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "pin": {
+        "bytes": 36013,
+        "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+        "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/prepare-updater-native-inputs.yml",
+      "pin": {
+        "bytes": 8825,
+        "sha256": "6f69a0083fd03597029533db66f2f44fda629b2b3a127c62978809eb990db229",
+        "gitBlob": "51beb92ade4931fe04336c7d3908bacfc932269e"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/provider-real-runtime-e2e.yml",
+      "pin": {
+        "bytes": 8958,
+        "sha256": "9903545813f74656b4e78e53641449a7c4c09b6b3564263f83aa7f2f2f8f0737",
+        "gitBlob": "4ee30807aa18f043fe53d090bfb6211bb5458ce0"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/publish-carried-release.yml",
+      "pin": {
+        "bytes": 3908,
+        "sha256": "b360d26ec6945d7e6d53090860f6ffb4001827db8df8cffcc29007222cfb0546",
+        "gitBlob": "371ed6d3b2cf4e41c012da287a295783c39c426e"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/recover-existing-draft-payloads.yml",
+      "pin": {
+        "bytes": 1905,
+        "sha256": "b1c53692156cd7a56178dca761a942fc9471d5ca7fd182699b918d3165aeb2db",
+        "gitBlob": "eadeedf4381cbf1d7e32cd31105dd88cd2c8eb65"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/release-publication-guard.yml",
+      "pin": {
+        "bytes": 2706,
+        "sha256": "3e59073acae4e5a536a6c3e8a5ddadbd78e095cff4a87eb84a317173fe22dcac",
+        "gitBlob": "10b7abd2992cc740084a5c51ace7f3fe025220f9"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "pin": {
+        "bytes": 46671,
+        "sha256": "22803b1c55d071932b59b66cd2802e31a3a528fc60db94f9b22a94b699048051",
+        "gitBlob": "d28bee6dea87ec191f0d40670f3e68c48251d049"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/reviewrouter-interaction.yml",
+      "pin": {
+        "bytes": 4238,
+        "sha256": "72904ac011de713511f51cd05d7f6d8e145ef537e3ae871e5b872f204de1b339",
+        "gitBlob": "edb68c51f54ad4a792eb29f1f557aad48e3a6218"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/reviewrouter-review.yml",
+      "pin": {
+        "bytes": 912,
+        "sha256": "d30c359c172a2d2e6ad8af7b5557894ae8d601f5f4957a87153aa93810966cc4",
+        "gitBlob": "04964f8ac7beadb3277fb28ec9cc0d61b86ca84b"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+      "pin": {
+        "bytes": 5079,
+        "sha256": "65e296bb4946582ca3745930f1ecf0b16df481d38fb591a06c26f80529881f15",
+        "gitBlob": "4020f668ab2a9a7b16fcb0aa7fd2d79a061f1d44"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/sentry-owned-process-native.yml",
+      "pin": {
+        "bytes": 39878,
+        "sha256": "2d84faae57ad758575935dc760df6561d219f16ee8c0bd615006ca3d88837357",
+        "gitBlob": "1188fa5b89d59b739d927082d1b6954a57181819"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/stage-existing-partial-draft.yml",
+      "pin": {
+        "bytes": 5418,
+        "sha256": "1644a7dd73642776d00077ab00d6f862679eb890cb5b154042f51dae30b6c37c",
+        "gitBlob": "295dbf212e13b15505696d997ec7c45b4ee3cfa9"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "pin": {
+        "bytes": 6522,
+        "sha256": "f57bf21347769c79b9c8c21f6f35b40b772fbfe9cb5f8155d7daabb54499d15f",
+        "gitBlob": "ef939f224a1642cb596906324c8d61441780ccc7"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/updater-linux-packages.yml",
+      "pin": {
+        "bytes": 21602,
+        "sha256": "37710e0293dcb00b31df74062b52a52a77f1c22f2e37d8ce2150c668baa98074",
+        "gitBlob": "60d214756c640b7925cfe11ba45ed4009f27ca3c"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/updater-mac-manual-migration.yml",
+      "pin": {
+        "bytes": 5900,
+        "sha256": "40898d8173495bcbe67effb3912294c355aafd42e020e1d099040b184c127d4f",
+        "gitBlob": "4aa3a4181259514c5a43fbc7dd4ad98811a3588e"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/updater-mac-old-updater.yml",
+      "pin": {
+        "bytes": 12460,
+        "sha256": "dfb731e1620c1bfe47b51cd2af5e9c90c7c46eaa3841b39c7993d7938224b71f",
+        "gitBlob": "067a25687f36caefe156b0446c5056d230d27c62"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/updater-mac-source.yml",
+      "pin": {
+        "bytes": 7512,
+        "sha256": "216b64cf04a7b5bebf527ffb21bfe3df0c12bcd828450a377bb67dc59540e025",
+        "gitBlob": "1196e40faa99e0ab64e329d91f3fea7c6ed47f94"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/updater-mac-updater.yml",
+      "pin": {
+        "bytes": 12323,
+        "sha256": "c71f29ef00ea623a30d11e3fa40ebc1d0fadd8a77f4552687c54b0527f4768db",
+        "gitBlob": "950f95892277ae303772ac699915250f0f4f66af"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/updater-native-feasibility.yml",
+      "pin": {
+        "bytes": 13476,
+        "sha256": "8fe371aab977f9ce0d54086c11e508ed7b370780db344b93efd3592d3b4a09ce",
+        "gitBlob": "b55e6cbcb4de61e2e8688e1ff4b4529b043a4ada"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/updater-windows-ota.yml",
+      "pin": {
+        "bytes": 27610,
+        "sha256": "3dcf1d333467391acd418869d6676c18d1193bb81d36040da358bd7e0f62743f",
+        "gitBlob": "10ffcd79e48a71346df7545af638208ce039ad83"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/updater-windows.yml",
+      "pin": {
+        "bytes": 11849,
+        "sha256": "1be54468be42e72674c01f5b94c58789fbf75a3e4d7ac6deff312738f2b1f5e2",
+        "gitBlob": "a4e9375cb95c4129c503f1d7be82de1e3926ea62"
+      },
+      "wholeBodyRead": true
+    },
+    {
+      "path": ".github/workflows/windows-backfill-diagnostic.yml",
+      "pin": {
+        "bytes": 14471,
+        "sha256": "adfdc03d5de437d308916da76774a1e4ca31aa5786f4ea2fe2fae4e1a2127c2c",
+        "gitBlob": "44bec5d82998468d48ac539f3624d0c2de1c6648"
+      },
+      "wholeBodyRead": true
+    }
+  ],
+  "workflowMap": [
+    {
+      "path": ".github/workflows/announcements-content.yml",
+      "pin": {
+        "bytes": 2301,
+        "sha256": "4380473bf81c1e8762e11d1803bb023e60308c5525c6c409531d9749ec7661d8",
+        "gitBlob": "d7d1c6fde200971f29defe95c2c0436a0318b499"
+      },
+      "events": [
+        "pull_request",
+        "push",
+        "workflow_dispatch"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": null,
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        }
+      ],
+      "addedMatches": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        }
+      ],
+      "docsMatches": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/future-unselected-proposal.json"
+      ],
+      "eligible": true
+    },
+    {
+      "path": ".github/workflows/anthropic-compatible-status-e2e.yml",
+      "pin": {
+        "bytes": 8602,
+        "sha256": "037e94e79d2b13136a2209f2a1dac2c65ee5bee117c8dcfcf11e71c106b2e8a0",
+        "gitBlob": "6ec8f76ef4036fde31daab73db1205cf9f7dfdd2"
+      },
+      "events": [
+        "workflow_dispatch",
+        "pull_request"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review",
+        "converted_to_draft"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        ".github/workflows/anthropic-compatible-status-e2e.yml",
+        "scripts/e2e/anthropic-compatible-status/**",
+        "scripts/e2e/opencode-diagnostics/**",
+        "scripts/electron-builder/afterPack.cjs",
+        "scripts/lib/runtime-payload-cache.mjs",
+        "scripts/stage-opencode-console-wrapper.mjs",
+        "tools/opencode-console-wrapper/**",
+        "src/main/services/runtime/ClaudeMultimodelBridgeService.ts",
+        "src/main/services/runtime/ProviderConnectionService.ts",
+        "src/main/services/runtime/anthropicCompatibleEndpoint.ts",
+        "src/main/services/runtime/buildRuntimeBaseEnv.ts",
+        "src/main/services/runtime/providerRuntimeEnv.ts",
+        "src/main/utils/shellEnv.ts",
+        "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
+        "src/renderer/store/slices/cliInstallerSlice.ts",
+        "src/renderer/store/index.ts",
+        "src/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.tsx",
+        "src/main/services/team/provisioning/TeamProvisioningAnthropicDiagnosticModel.ts",
+        "src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts",
+        "src/renderer/components/runtime/ConnectionMethodCards.tsx",
+        "src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx",
+        "src/renderer/components/runtime/providerAuthModeUiState.ts",
+        "src/renderer/components/runtime/providerConnectionCards.ts",
+        "src/renderer/components/runtime/providerConnectionUi.ts",
+        "src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
+        "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+        "src/renderer/utils/anthropicCompatibleCatalogChecking.ts",
+        "src/renderer/utils/teamProviderRuntimeStatusLoading.ts",
+        "runtime.lock.json"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "patterns": [
+            "scripts/e2e/opencode-diagnostics/**"
+          ]
+        },
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+          "patterns": [
+            "scripts/e2e/opencode-diagnostics/**"
+          ]
+        }
+      ],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": true
+    },
+    {
+      "path": ".github/workflows/anthropic-env-portability.yml",
+      "pin": {
+        "bytes": 4713,
+        "sha256": "fee75fc9544498e419c45ddb3acdf6df20a387dc29c04009e8d450bea2fb5359",
+        "gitBlob": "d3fa7512b79b79dc64c1580dfdc42d63361ae68a"
+      },
+      "events": [
+        "workflow_dispatch",
+        "pull_request"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review",
+        "converted_to_draft"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        ".github/workflows/anthropic-env-portability.yml",
+        "src/main/utils/shellEnv.ts",
+        "src/main/utils/cliEnv.ts",
+        "src/main/utils/cliPathMerge.ts",
+        "src/main/utils/cliProcessDefaults.ts",
+        "src/main/utils/childProcess.ts",
+        "src/main/utils/pathDecoder.ts",
+        "src/main/services/infrastructure/ConfigManager.ts",
+        "src/main/services/runtime/agentChildProcessPreflight.ts",
+        "src/main/services/runtime/buildRuntimeBaseEnv.ts",
+        "src/main/services/runtime/providerAwareCliEnv.ts",
+        "src/main/services/runtime/providerRuntimeEnv.ts",
+        "src/main/services/runtime/ProviderConnectionService.ts",
+        "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
+        "src/main/services/team/provisioning/__tests__/TeamProvisioningEnvBuilder.test.ts",
+        "src/renderer/store/slices/cliInstallerSlice.ts",
+        "src/renderer/store/slices/__tests__/cliInstallerSlice.test.ts",
+        "src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx",
+        "src/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.tsx",
+        "test/main/utils/shellEnv*.test.ts",
+        "test/main/services/runtime/AnthropicEnvPortability.integration.test.ts",
+        "test/main/services/runtime/providerRuntimeEnv.test.ts",
+        "src/main/services/runtime/providerRuntimeEnv.test.ts",
+        "test/renderer/components/runtime/ProviderRuntimeSettingsDialog.test.ts",
+        "test/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.test.ts",
+        "vitest.config.ts",
+        "test/setup.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        ".node-version"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/build-linux-windows-draft.yml",
+      "pin": {
+        "bytes": 17033,
+        "sha256": "4968e05cf86cb6252494c6a0778dd2bb43a6439b995f0fd769504ac0633ce501",
+        "gitBlob": "919dc9d816a5f7441783af22a286da9b1e4f6f8a"
+      },
+      "events": [
+        "workflow_dispatch"
+      ],
+      "pr": false,
+      "opened": false,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": null,
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "pin": {
+        "bytes": 175238,
+        "sha256": "8cac831e00dd87f656a971c6496b8278c7cfddc261f1eb48573a7e2acf83c2d1",
+        "gitBlob": "a93ff6ba1e5656523668694bca24910a468aebc7"
+      },
+      "events": [
+        "push",
+        "pull_request",
+        "merge_group",
+        "workflow_dispatch"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review",
+        "converted_to_draft",
+        "edited",
+        "labeled",
+        "unlabeled"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": null,
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        }
+      ],
+      "addedMatches": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        }
+      ],
+      "docsMatches": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/future-unselected-proposal.json"
+      ],
+      "eligible": true
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "pin": {
+        "bytes": 2479,
+        "sha256": "d35b6d96c6d3582415b4feaf3144575f5d3a520c6e058c673ec15f95ddae5a7b",
+        "gitBlob": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1"
+      },
+      "events": [
+        "workflow_dispatch",
+        "push",
+        "pull_request",
+        "schedule"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review",
+        "converted_to_draft"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        "src/**",
+        "packages/**",
+        "agent-teams-controller/**",
+        "mcp-server/**",
+        "scripts/**",
+        ".github/workflows/**",
+        ".github/codeql/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "tsconfig*.json"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "patterns": [
+            "scripts/**"
+          ]
+        },
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+          "patterns": [
+            "scripts/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+          "patterns": [
+            "scripts/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+          "patterns": [
+            "scripts/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+          "patterns": [
+            "scripts/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "patterns": [
+            "scripts/**"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+          "patterns": [
+            "packages/**"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+          "patterns": [
+            "packages/**"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+          "patterns": [
+            "packages/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+          "patterns": [
+            "scripts/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+          "patterns": [
+            "scripts/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "patterns": [
+            "scripts/**"
+          ]
+        }
+      ],
+      "addedMatches": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+          "patterns": [
+            "scripts/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+          "patterns": [
+            "scripts/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "patterns": [
+            "scripts/**"
+          ]
+        }
+      ],
+      "docsMatches": [],
+      "eligible": true
+    },
+    {
+      "path": ".github/workflows/codex-runtime-smoke.yml",
+      "pin": {
+        "bytes": 3229,
+        "sha256": "2d9b2fb19cb3d1e2797611254104bf5ab433b588427350747f0c0c6196f4490d",
+        "gitBlob": "cef44447c47e39a7da678f37e2518952e218da08"
+      },
+      "events": [
+        "workflow_dispatch",
+        "pull_request",
+        "push"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review",
+        "converted_to_draft"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        ".github/workflows/codex-runtime-smoke.yml",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "scripts/smoke/codex-runtime-install.ts",
+        "src/features/codex-runtime-installer/**",
+        "src/main/services/infrastructure/codexAppServer/**",
+        "src/main/services/runtime/providerAwareCliEnv.ts",
+        "src/main/utils/childProcess.ts",
+        "src/main/utils/pathDecoder.ts",
+        "tsconfig*.json",
+        "scripts/tsconfig/**"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/dependency-review.yml",
+      "pin": {
+        "bytes": 1527,
+        "sha256": "52570674031aecbba23cf8725e5aa09b58495421c8c9b21cef0e14a791ce27d0",
+        "gitBlob": "4a5f2ab17b3daf4ffdf6992ee85d159adf2c46c6"
+      },
+      "events": [
+        "pull_request"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        "**/package.json",
+        "**/package-lock.json",
+        "**/pnpm-lock.yaml",
+        "pnpm-workspace.yaml"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+      "pin": {
+        "bytes": 3218,
+        "sha256": "c85dd3daa63c0d31b8c87e5fe4b935456f6c47dbf9a0be1f06b6b8fbfaf84d25",
+        "gitBlob": "490c2048dfbd9f275f784d7a0f1a6eeba0a9f361"
+      },
+      "events": [
+        "pull_request",
+        "push"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        "src/main/utils/electronDevPathOverrides.ts",
+        "src/main/utils/electronDevPathOverrides.test.ts",
+        "src/main/utils/electronUserDataMigration.ts",
+        "test/main/utils/electronUserDataMigration.test.ts",
+        "test/main/bootstrapConfigIsolation.test.ts",
+        "src/main/bootstrapUserDataMigration.ts",
+        "src/main/index.ts",
+        ".github/workflows/electron-dev-profile-cross-platform.yml"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "pin": {
+        "bytes": 19532,
+        "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f",
+        "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69"
+      },
+      "events": [
+        "pull_request"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review",
+        "labeled",
+        "unlabeled",
+        "edited"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": null,
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        }
+      ],
+      "addedMatches": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        },
+        {
+          "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+          "patterns": [
+            "unfiltered pull_request"
+          ]
+        }
+      ],
+      "docsMatches": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/future-unselected-proposal.json"
+      ],
+      "eligible": true
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "pin": {
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      },
+      "events": [
+        "workflow_dispatch",
+        "pull_request"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review",
+        "converted_to_draft"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        ".github/workflows/host-emulated-acceptance.yml",
+        "packages/legacy-agent-host/**",
+        "packages/task-change-ledger/**",
+        "scripts/legacy-agent-host/**",
+        "tools/owned-process-broker/fixtures/**",
+        "tools/linux-node-exec/**",
+        "scripts/build/buildLinuxNodeExec.mjs",
+        "scripts/dev-with-runtime.mjs",
+        "scripts/build/linuxNodeExec.native.test.mjs",
+        "scripts/electron-builder/afterPack.cjs",
+        "scripts/electron-builder/dist.mjs",
+        "scripts/electron-builder/verifyLinuxNodeExec.cjs",
+        "src/features/agent-backend/**",
+        "src/features/runtime-provider-management/**",
+        "src/features/codex-runtime-installer/**",
+        "src/features/opencode-runtime-installer/**",
+        "src/main/**",
+        "src/preload/**",
+        "src/renderer/**",
+        "src/shared/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+          "patterns": [
+            "packages/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+          "patterns": [
+            "packages/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+          "patterns": [
+            "packages/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "patterns": [
+            "tools/owned-process-broker/fixtures/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        }
+      ],
+      "addedMatches": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "patterns": [
+            "tools/owned-process-broker/fixtures/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        }
+      ],
+      "docsMatches": [],
+      "eligible": true
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "pin": {
+        "bytes": 34313,
+        "sha256": "71b16b1b1fd1f0c88d3cb15a18cdfcce08b2b18908d3a5ce755330b4b2aeedf1",
+        "gitBlob": "70202d22a5840401a00025cd60b797c514f3e455"
+      },
+      "events": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review",
+        "converted_to_draft"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        ".github/workflows/host-process-acceptance.yml",
+        "agent-teams-controller/**",
+        "packages/legacy-agent-host/**",
+        "packages/task-change-ledger/**",
+        "src/features/agent-backend/**",
+        "src/main/utils/ownedProcess/**",
+        "src/main/utils/childProcess.ts",
+        "src/main/utils/electronNodeLaunch.ts",
+        "src/main/utils/linuxNodeExecArtifact.ts",
+        "src/main/services/team/WorkspaceMcpBundle.ts",
+        "test/main/build/electronBuilderAfterPack.test.ts",
+        "test/features/agent-backend/**",
+        "tools/owned-process-broker/**",
+        "scripts/build/buildOwnedProcessBroker.ts",
+        "tools/linux-node-exec/**",
+        "scripts/build/buildLinuxNodeExec.mjs",
+        "scripts/dev-with-runtime.mjs",
+        "scripts/build/linuxNodeExec.native.test.mjs",
+        "scripts/electron-builder/afterPack.cjs",
+        "scripts/electron-builder/dist.mjs",
+        "scripts/electron-builder/verifyLinuxNodeExec.cjs",
+        "scripts/ci/**",
+        "scripts/ensure-electron-install.cjs",
+        "vendor/provider-migration/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [
+        {
+          "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+          "patterns": [
+            "tools/owned-process-broker/**"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+          "patterns": [
+            "packages/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+          "patterns": [
+            "packages/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+          "patterns": [
+            "packages/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "patterns": [
+            "tools/owned-process-broker/**"
+          ]
+        }
+      ],
+      "addedMatches": [
+        {
+          "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "patterns": [
+            "tools/owned-process-broker/**"
+          ]
+        }
+      ],
+      "docsMatches": [],
+      "eligible": true
+    },
+    {
+      "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+      "pin": {
+        "bytes": 3335,
+        "sha256": "572df7cb9de920ed0685febc94f6ddd08f18d7d96312e8ed946933a63ccbcdb3",
+        "gitBlob": "95d681fe04abd838dd11799d7791fa59444c6e32"
+      },
+      "events": [
+        "push",
+        "pull_request"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "ready_for_review"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        "src/renderer/components/team/kanban/**",
+        "src/renderer/components/team/TeamDetailView.tsx",
+        "scripts/e2e/task-detail-tabs-desktop.ts",
+        "pnpm-lock.yaml",
+        ".github/workflows/kanban-table-desktop-e2e.yml"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/landing-hetzner-release.yml",
+      "pin": {
+        "bytes": 7306,
+        "sha256": "ad5337b9e4a36797703c0e340a9539f0c12f2739eed6805851fcfa8cb00d1290",
+        "gitBlob": "4b54f229156f9d347e1a33da0d83b3374acc4078"
+      },
+      "events": [
+        "push",
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        "landing/**",
+        "docs/screenshots/**",
+        "scripts/announcements/**",
+        "scripts/ci/transitive-security*",
+        "scripts/ci/audit-dependencies.mjs",
+        "pnpm-workspace.yaml",
+        "package.json",
+        "pnpm-lock.yaml",
+        ".node-version",
+        ".github/workflows/landing-hetzner-release.yml"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/landing.yml",
+      "pin": {
+        "bytes": 5592,
+        "sha256": "1bda852e705b3b744b5b001e0fe3cb2d8fd80eaa3108d17787c076ad3b753b32",
+        "gitBlob": "4a1ad9ae59ff2e338930a195d54fdff62da1ebc5"
+      },
+      "events": [
+        "push",
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        "landing/**",
+        "scripts/announcements/**",
+        "scripts/ci/transitive-security*",
+        "scripts/ci/audit-dependencies.mjs",
+        "pnpm-workspace.yaml",
+        "package.json",
+        "pnpm-lock.yaml",
+        ".github/workflows/landing.yml",
+        ".gitattributes"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/macos-signing-qualification.yml",
+      "pin": {
+        "bytes": 9635,
+        "sha256": "409769be92f1d49ed74ffca6e4affe25f365d5bf4bc4f5a18a1deebea11c3a0d",
+        "gitBlob": "d63bddd51302a5c0380762bf22171f43c38a39b0"
+      },
+      "events": [
+        "workflow_dispatch"
+      ],
+      "pr": false,
+      "opened": false,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": null,
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/opencode-desktop-e2e.yml",
+      "pin": {
+        "bytes": 6719,
+        "sha256": "ea78e9c6002db433bb57087c3d4eac3d652412746b3a3d5d2aad0cb02e76d17e",
+        "gitBlob": "3d2a90a0e335155d435bd4eae4f2bd2842425983"
+      },
+      "events": [
+        "workflow_dispatch",
+        "pull_request"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review",
+        "converted_to_draft"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        "scripts/e2e/opencode-diagnostics-desktop.mjs",
+        "src/renderer/store/index.ts",
+        "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts",
+        "src/features/runtime-provider-management/core/application/loadOpenCodeScopedCatalog.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts",
+        "src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts",
+        "scripts/e2e/opencode-diagnostics/**",
+        "test/scripts/opencodeStartupCleanupFixture.test.mjs",
+        ".github/workflows/opencode-desktop-e2e.yml",
+        "src/features/runtime-provider-management/core/domain/openCodeProviderCompatibility.ts",
+        "src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus.tsx",
+        "src/features/runtime-provider-management/renderer/RuntimeProviderManagementPanel.tsx",
+        "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "src/features/runtime-provider-management/renderer/hooks/maskRuntimeProviderStateForScope.ts",
+        "src/features/runtime-provider-management/renderer/hooks/runtimeProviderDirectoryCatalogPolicy.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect.ts",
+        "src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache.ts",
+        "src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx",
+        "src/renderer/components/runtime/openCodeStatusPresentation.ts"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "patterns": [
+            "scripts/e2e/opencode-diagnostics/**"
+          ]
+        },
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+          "patterns": [
+            "scripts/e2e/opencode-diagnostics/**"
+          ]
+        }
+      ],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": true
+    },
+    {
+      "path": ".github/workflows/opencode-native-windows-e2e.yml",
+      "pin": {
+        "bytes": 29178,
+        "sha256": "3f6ea47d1aac384382cca261686972222433330e9563a87b941d23ac345b8f80",
+        "gitBlob": "f5a2a472b752acf37399fc9e11f63f6d45bdb297"
+      },
+      "events": [
+        "workflow_call",
+        "workflow_dispatch"
+      ],
+      "pr": false,
+      "opened": false,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": null,
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/opencode-packaged-e2e.yml",
+      "pin": {
+        "bytes": 19616,
+        "sha256": "80a7c110468f22670a541dcf8cd452c6de754376f4ff970bbdf2888bd91fc2fe",
+        "gitBlob": "458e165ef020a1f8b05806b9ae7edc839134e1b4"
+      },
+      "events": [
+        "workflow_call",
+        "workflow_dispatch",
+        "pull_request"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review",
+        "converted_to_draft"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        ".github/workflows/opencode-packaged-e2e.yml",
+        "src/main/services/infrastructure/CliInstallerService.ts",
+        "src/features/runtime-provider-management/core/domain/openCodeProviderCompatibility.ts",
+        "src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus.tsx",
+        "scripts/e2e/opencode-diagnostics/packaged*.mjs",
+        "scripts/e2e/opencode-diagnostics/v2-support-repair*.mjs",
+        "scripts/e2e/opencode-diagnostics/stage-candidate*.mjs",
+        "scripts/e2e/opencode-diagnostics/run-packaged.mjs",
+        "scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts",
+        "scripts/e2e/opencode-diagnostics/native-test-pin.mts",
+        "scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.tsconfig.json",
+        "scripts/e2e/opencode-diagnostics-desktop.mjs",
+        "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "scripts/e2e/opencode-diagnostics/catalog.mjs",
+        "runtime.lock.json",
+        "scripts/stage-runtime.mjs",
+        "scripts/lib/github-release-download-error.mjs",
+        "scripts/lib/runtime-archive-checksum.mjs",
+        "scripts/lib/runtime-payload-cache.mjs",
+        "scripts/lib/runtime-payload-inventory.mts",
+        "scripts/lib/runtime-windows-zip-extraction.mts",
+        "scripts/lib/runtime-windows-zip-extraction.test.mts",
+        "scripts/lib/runtime-archive-extraction.mts"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "patterns": [
+            "scripts/e2e/opencode-diagnostics/platform.mjs"
+          ]
+        }
+      ],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": true
+    },
+    {
+      "path": ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+      "pin": {
+        "bytes": 2756,
+        "sha256": "2bd119e64866ae18519f01be6e7bffc138d0ce7b1e32ce2329a35e59de5a87a3",
+        "gitBlob": "be6a9ae5a88efadca344773ed4aa962d42823d28"
+      },
+      "events": [
+        "pull_request"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+        "src/renderer/store/index.ts",
+        "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts",
+        "src/features/runtime-provider-management/core/application/loadOpenCodeScopedCatalog.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts",
+        "src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts",
+        ".github/workflows/opencode-packaged-e2e.yml",
+        "scripts/e2e/opencode-diagnostics/packaged-verify.mjs",
+        "scripts/e2e/opencode-diagnostics/real-runtime.mjs",
+        "scripts/e2e/opencode-diagnostics/real-runtime.test.mjs",
+        "scripts/e2e/opencode-diagnostics/run-packaged.mjs",
+        "scripts/e2e/opencode-diagnostics/packaged.mjs",
+        "scripts/e2e/opencode-diagnostics/v2-support-repair*.mjs",
+        "runtime.lock.json",
+        "src/renderer/components/dashboard/ProviderConnectionCounts.tsx",
+        "src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts",
+        "src/features/runtime-provider-management/renderer/connectedCountObservationPolicy.ts",
+        "src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache.ts",
+        "src/renderer/components/dashboard/DashboardProviderSummary.tsx",
+        "src/features/runtime-provider-management/core/domain/runtimeProviderQuickConnect.ts"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "pin": {
+        "bytes": 36013,
+        "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+        "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+      },
+      "events": [
+        "pull_request"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        "runtime.lock.json",
+        "pnpm-lock.yaml",
+        "package.json",
+        "pnpm-workspace.yaml",
+        "packages/legacy-agent-host/package.json",
+        "packages/legacy-agent-host/tsconfig*.json",
+        "packages/legacy-agent-host/src/**",
+        "packages/legacy-agent-host/tests/**",
+        "packages/legacy-agent-host/native/**",
+        "packages/legacy-agent-host/scripts/**",
+        "scripts/legacy-agent-host/**",
+        "scripts/stage-runtime.mjs",
+        "scripts/lib/opencode-v2-base-inventory.mts",
+        "scripts/lib/runtime-archive-checksum.mjs",
+        "scripts/lib/runtime-payload-cache.mjs",
+        "src/features/opencode-runtime-installer/**",
+        "src/features/opencode-compatibility/**",
+        "src/main/services/infrastructure/openCode*.ts",
+        "src/main/services/runtime/openCode*.ts",
+        "src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts",
+        "src/main/services/infrastructure/openCodeRuntimePackageMetadata.ts",
+        "test/features/opencode-runtime-installer/**",
+        "test/main/services/infrastructure/OpenCodeRuntimeInstallerService.test.ts",
+        "vendor/provider-migration/**",
+        "scripts/ci/install-dependencies-with-retry.mjs",
+        "test/scripts/installDependenciesWithRetry.test.mjs",
+        ".github/workflows/opencode-v2-stage1-preflight.yml"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+          "patterns": [
+            "packages/legacy-agent-host/src/**"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+          "patterns": [
+            "packages/legacy-agent-host/tests/**"
+          ]
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+          "patterns": [
+            "packages/legacy-agent-host/tests/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        }
+      ],
+      "addedMatches": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/**"
+          ]
+        }
+      ],
+      "docsMatches": [],
+      "eligible": true
+    },
+    {
+      "path": ".github/workflows/prepare-updater-native-inputs.yml",
+      "pin": {
+        "bytes": 8825,
+        "sha256": "6f69a0083fd03597029533db66f2f44fda629b2b3a127c62978809eb990db229",
+        "gitBlob": "51beb92ade4931fe04336c7d3908bacfc932269e"
+      },
+      "events": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        "scripts/e2e/release-updater/windows-plan*.mts",
+        "scripts/e2e/release-updater/native-release-scenario.mts",
+        "scripts/e2e/release-updater/prepared-stage-download*.mts",
+        "scripts/e2e/release-updater/inputs.mts",
+        "scripts/ci/release/contract.ts",
+        ".github/workflows/prepare-updater-native-inputs.yml",
+        "scripts/tsconfig/tsconfig.updater-e2e.json",
+        "tsconfig.json",
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/provider-real-runtime-e2e.yml",
+      "pin": {
+        "bytes": 8958,
+        "sha256": "9903545813f74656b4e78e53641449a7c4c09b6b3564263f83aa7f2f2f8f0737",
+        "gitBlob": "4ee30807aa18f043fe53d090bfb6211bb5458ce0"
+      },
+      "events": [
+        "workflow_dispatch",
+        "push",
+        "pull_request"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review",
+        "converted_to_draft"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        "scripts/e2e/provider-real-runtime-*.ts",
+        "scripts/e2e/opencode-diagnostics/startup-resources.mjs",
+        "scripts/e2e/opencode-diagnostics/startup-resources.test.mjs",
+        "scripts/e2e/opencode-diagnostics/run.mjs",
+        "scripts/e2e/opencode-diagnostics/real-runtime.mjs",
+        "scripts/e2e/opencode-diagnostics-desktop.mjs",
+        "src/renderer/components/dashboard/DashboardProviderSummary.tsx",
+        "src/renderer/store/index.ts",
+        "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts",
+        "src/features/runtime-provider-management/core/application/loadOpenCodeScopedCatalog.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts",
+        "src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts",
+        ".github/workflows/provider-real-runtime-e2e.yml",
+        "runtime.lock.json"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/publish-carried-release.yml",
+      "pin": {
+        "bytes": 3908,
+        "sha256": "b360d26ec6945d7e6d53090860f6ffb4001827db8df8cffcc29007222cfb0546",
+        "gitBlob": "371ed6d3b2cf4e41c012da287a295783c39c426e"
+      },
+      "events": [
+        "workflow_dispatch"
+      ],
+      "pr": false,
+      "opened": false,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": null,
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/recover-existing-draft-payloads.yml",
+      "pin": {
+        "bytes": 1905,
+        "sha256": "b1c53692156cd7a56178dca761a942fc9471d5ca7fd182699b918d3165aeb2db",
+        "gitBlob": "eadeedf4381cbf1d7e32cd31105dd88cd2c8eb65"
+      },
+      "events": [
+        "workflow_dispatch"
+      ],
+      "pr": false,
+      "opened": false,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": null,
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/release-publication-guard.yml",
+      "pin": {
+        "bytes": 2706,
+        "sha256": "3e59073acae4e5a536a6c3e8a5ddadbd78e095cff4a87eb84a317173fe22dcac",
+        "gitBlob": "10b7abd2992cc740084a5c51ace7f3fe025220f9"
+      },
+      "events": [
+        "release"
+      ],
+      "pr": false,
+      "opened": false,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": null,
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "pin": {
+        "bytes": 46671,
+        "sha256": "22803b1c55d071932b59b66cd2802e31a3a528fc60db94f9b22a94b699048051",
+        "gitBlob": "d28bee6dea87ec191f0d40670f3e68c48251d049"
+      },
+      "events": [
+        "workflow_dispatch"
+      ],
+      "pr": false,
+      "opened": false,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": null,
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/reviewrouter-interaction.yml",
+      "pin": {
+        "bytes": 4238,
+        "sha256": "72904ac011de713511f51cd05d7f6d8e145ef537e3ae871e5b872f204de1b339",
+        "gitBlob": "edb68c51f54ad4a792eb29f1f557aad48e3a6218"
+      },
+      "events": [
+        "pull_request_review_comment",
+        "issue_comment",
+        "workflow_dispatch"
+      ],
+      "pr": false,
+      "opened": false,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": null,
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/reviewrouter-review.yml",
+      "pin": {
+        "bytes": 912,
+        "sha256": "d30c359c172a2d2e6ad8af7b5557894ae8d601f5f4957a87153aa93810966cc4",
+        "gitBlob": "04964f8ac7beadb3277fb28ec9cc0d61b86ca84b"
+      },
+      "events": [
+        "workflow_dispatch"
+      ],
+      "pr": false,
+      "opened": false,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": null,
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+      "pin": {
+        "bytes": 5079,
+        "sha256": "65e296bb4946582ca3745930f1ecf0b16df481d38fb591a06c26f80529881f15",
+        "gitBlob": "4020f668ab2a9a7b16fcb0aa7fd2d79a061f1d44"
+      },
+      "events": [
+        "workflow_dispatch",
+        "push",
+        "pull_request"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review",
+        "converted_to_draft"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        "runtime.lock.json",
+        "scripts/dev-with-runtime.mjs",
+        "scripts/ci/verify-public-runtime-bootstrap.mjs",
+        "scripts/ci/verify-runtime-lock.mjs",
+        "scripts/lib/github-release-download-error.mjs",
+        "scripts/lib/runtime-cli-version.mjs",
+        "scripts/lib/runtime-bootstrap-diagnostics.mts",
+        "scripts/lib/runtime-command-capture.mts",
+        "scripts/lib/runtime-archive-checksum.mjs",
+        "scripts/lib/runtime-payload-cache.mjs",
+        "scripts/lib/runtime-payload-cache.test.mjs",
+        "scripts/lib/runtime-payload-cache-async.test.mts",
+        "scripts/lib/runtime-payload-inventory.mts",
+        "scripts/lib/runtime-windows-zip-extraction.mts",
+        "scripts/lib/runtime-windows-zip-extraction.test.mts",
+        "scripts/lib/runtime-archive-extraction.mts",
+        "scripts/lib/runtime-archive-extraction.test.mts",
+        "scripts/lib/runtime-zip.test-fixture.mts",
+        ".github/workflows/runtime-bootstrap-smoke.yml"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/sentry-owned-process-native.yml",
+      "pin": {
+        "bytes": 39878,
+        "sha256": "2d84faae57ad758575935dc760df6561d219f16ee8c0bd615006ca3d88837357",
+        "gitBlob": "1188fa5b89d59b739d927082d1b6954a57181819"
+      },
+      "events": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review",
+        "converted_to_draft"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        ".github/workflows/sentry-owned-process-native.yml",
+        "tools/owned-process-broker/**",
+        "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+        "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+        "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+        "src/main/utils/ownedProcess/**",
+        "packages/legacy-agent-host/src/owned-process/**",
+        "packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts",
+        "packages/legacy-agent-host/src/adapters/providers/WindowsCapturedProcess.ts",
+        "packages/legacy-agent-host/src/composition/nativeProcessProfile.ts",
+        "packages/legacy-agent-host/src/composition/processCustody.ts",
+        "packages/legacy-agent-host/src/process/**",
+        "packages/legacy-agent-host/native/registered-process-linux.c",
+        "packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts",
+        "packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts",
+        "packages/legacy-agent-host/scripts/qualifyLinuxProcessAbi.ts",
+        "packages/legacy-agent-host/scripts/qualifyLinuxProcessAbiHost.ts",
+        "tsconfig.legacy-agent-host-scripts.json",
+        "packages/legacy-agent-host/tests/registered-process-linux.native.mjs",
+        "packages/legacy-agent-host/tests/fixtures/registered-process-actor.c",
+        "packages/legacy-agent-host/tests/fixtures/registered-process-parent.ts",
+        "packages/legacy-agent-host/package.json",
+        "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+        "scripts/legacy-agent-host/qualify-linux-process-cold-ui.ts",
+        "scripts/legacy-agent-host/qualify-linux-process-packed.ts",
+        "scripts/legacy-agent-host/candidate-*.ts",
+        "scripts/legacy-agent-host/stage-candidate.ts",
+        "scripts/legacy-agent-host/stage-node.ts",
+        "scripts/legacy-agent-host/desktop-proof-fixture.ts",
+        "scripts/legacy-agent-host/desktop-claude-native-selection.ts",
+        "scripts/legacy-agent-host/desktop-process-root-oracle.ts",
+        "scripts/legacy-agent-host/desktop-controlled-process-fixture.ts",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "scripts/legacy-agent-host/desktop-backend-observations.ts",
+        "scripts/legacy-agent-host/desktop-native-process-*.ts",
+        "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+        "scripts/legacy-agent-host/fixtures/process-foreground-service.ts",
+        "scripts/legacy-agent-host/fixtures/process-controlled-root.ts",
+        "scripts/legacy-agent-host/desktop-proof-management-sources.ts",
+        "scripts/build/buildOwnedProcessBroker.ts",
+        "eslint.config.js"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [
+        {
+          "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+          "patterns": [
+            "tools/owned-process-broker/**"
+          ]
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+          "patterns": [
+            "scripts/legacy-agent-host/desktop-native-process-*.ts"
+          ]
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "patterns": [
+            "tools/owned-process-broker/**"
+          ]
+        }
+      ],
+      "addedMatches": [
+        {
+          "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "patterns": [
+            "tools/owned-process-broker/**"
+          ]
+        }
+      ],
+      "docsMatches": [],
+      "eligible": true
+    },
+    {
+      "path": ".github/workflows/stage-existing-partial-draft.yml",
+      "pin": {
+        "bytes": 5418,
+        "sha256": "1644a7dd73642776d00077ab00d6f862679eb890cb5b154042f51dae30b6c37c",
+        "gitBlob": "295dbf212e13b15505696d997ec7c45b4ee3cfa9"
+      },
+      "events": [
+        "workflow_dispatch"
+      ],
+      "pr": false,
+      "opened": false,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": null,
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "pin": {
+        "bytes": 6522,
+        "sha256": "f57bf21347769c79b9c8c21f6f35b40b772fbfe9cb5f8155d7daabb54499d15f",
+        "gitBlob": "ef939f224a1642cb596906324c8d61441780ccc7"
+      },
+      "events": [
+        "pull_request",
+        "push"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "scripts/e2e/teams-create-page-desktop.mjs",
+        "src/shared/utils/cliArgsParser.ts",
+        "src/main/services/team/TeamRequestValidation.ts",
+        "src/main/ipc/teams.ts",
+        "src/main/services/infrastructure/CliInstallerService.ts",
+        "src/main/services/runtime/ClaudeMultimodelBridgeService.ts",
+        "src/main/services/runtime/runtimeStatusExecutionContext.ts",
+        "src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts",
+        "src/main/services/team/provisioning/TeamProvisioningProviderPreflight.ts",
+        "scripts/e2e/teams-create-page-owned-processes.mjs",
+        "scripts/e2e/teams-create-page-owned-processes.test.mjs",
+        "src/renderer/components/team/**",
+        "src/features/organizations/**",
+        "src/features/team-templates/**",
+        "src/features/gateway-provider/renderer/**",
+        "src/renderer/hooks/useCreateTeamDraft.ts",
+        "src/renderer/services/createTeamDraftStorage.ts"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/updater-linux-packages.yml",
+      "pin": {
+        "bytes": 21602,
+        "sha256": "37710e0293dcb00b31df74062b52a52a77f1c22f2e37d8ce2150c668baa98074",
+        "gitBlob": "60d214756c640b7925cfe11ba45ed4009f27ca3c"
+      },
+      "events": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        "scripts/e2e/release-updater/linux-packages*.mts",
+        ".github/workflows/updater-linux-packages.yml",
+        "scripts/e2e/release-updater/archive.mts",
+        "scripts/e2e/release-updater/cdp.mts",
+        "scripts/e2e/release-updater/inputs.mts",
+        "scripts/e2e/release-updater/native-release-scenario.mts",
+        "scripts/e2e/release-updater/native-window.mts",
+        "scripts/e2e/release-updater/transport.mts",
+        "scripts/ci/release/contract.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "scripts/tsconfig/tsconfig.updater-e2e.json"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/updater-mac-manual-migration.yml",
+      "pin": {
+        "bytes": 5900,
+        "sha256": "40898d8173495bcbe67effb3912294c355aafd42e020e1d099040b184c127d4f",
+        "gitBlob": "4aa3a4181259514c5a43fbc7dd4ad98811a3588e"
+      },
+      "events": [
+        "workflow_dispatch"
+      ],
+      "pr": false,
+      "opened": false,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": null,
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/updater-mac-old-updater.yml",
+      "pin": {
+        "bytes": 12460,
+        "sha256": "dfb731e1620c1bfe47b51cd2af5e9c90c7c46eaa3841b39c7993d7938224b71f",
+        "gitBlob": "067a25687f36caefe156b0446c5056d230d27c62"
+      },
+      "events": [
+        "workflow_dispatch"
+      ],
+      "pr": false,
+      "opened": false,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": null,
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/updater-mac-source.yml",
+      "pin": {
+        "bytes": 7512,
+        "sha256": "216b64cf04a7b5bebf527ffb21bfe3df0c12bcd828450a377bb67dc59540e025",
+        "gitBlob": "1196e40faa99e0ab64e329d91f3fea7c6ed47f94"
+      },
+      "events": [
+        "workflow_dispatch"
+      ],
+      "pr": false,
+      "opened": false,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": null,
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/updater-mac-updater.yml",
+      "pin": {
+        "bytes": 12323,
+        "sha256": "c71f29ef00ea623a30d11e3fa40ebc1d0fadd8a77f4552687c54b0527f4768db",
+        "gitBlob": "950f95892277ae303772ac699915250f0f4f66af"
+      },
+      "events": [
+        "workflow_dispatch"
+      ],
+      "pr": false,
+      "opened": false,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": null,
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/updater-native-feasibility.yml",
+      "pin": {
+        "bytes": 13476,
+        "sha256": "8fe371aab977f9ce0d54086c11e508ed7b370780db344b93efd3592d3b4a09ce",
+        "gitBlob": "b55e6cbcb4de61e2e8688e1ff4b4529b043a4ada"
+      },
+      "events": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        "scripts/e2e/release-updater/**",
+        ".github/workflows/updater-native-feasibility.yml",
+        "scripts/tsconfig/tsconfig.updater-e2e.json",
+        "tsconfig.json",
+        "package.json",
+        "pnpm-lock.yaml",
+        "eslint.fast.config.js"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/updater-windows-ota.yml",
+      "pin": {
+        "bytes": 27610,
+        "sha256": "3dcf1d333467391acd418869d6676c18d1193bb81d36040da358bd7e0f62743f",
+        "gitBlob": "10ffcd79e48a71346df7545af638208ce039ad83"
+      },
+      "events": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        "scripts/e2e/release-updater/windows-*.mts",
+        "scripts/e2e/release-updater/native-release-scenario.mts",
+        "scripts/e2e/release-updater/prepared-stage-download*.mts",
+        "scripts/e2e/release-updater/execution-provenance*.mts",
+        "scripts/e2e/release-updater/archive.mts",
+        "scripts/e2e/release-updater/cdp.mts",
+        "scripts/e2e/release-updater/transport.mts",
+        ".github/workflows/updater-windows-ota.yml",
+        ".github/workflows/updater-windows.yml",
+        "scripts/e2e/release-updater/serialized-function*.mts",
+        "scripts/ci/release/contract.ts",
+        "scripts/tsconfig/tsconfig.updater-e2e.json",
+        "tsconfig.json",
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/updater-windows.yml",
+      "pin": {
+        "bytes": 11849,
+        "sha256": "1be54468be42e72674c01f5b94c58789fbf75a3e4d7ac6deff312738f2b1f5e2",
+        "gitBlob": "a4e9375cb95c4129c503f1d7be82de1e3926ea62"
+      },
+      "events": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": null,
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        "scripts/e2e/release-updater/windows-*.mts",
+        "scripts/e2e/release-updater/archive.mts",
+        "scripts/e2e/release-updater/cdp.mts",
+        "scripts/e2e/release-updater/transport.mts",
+        ".github/workflows/updater-windows.yml",
+        "scripts/e2e/release-updater/serialized-function*.mts",
+        "scripts/ci/release/contract.ts",
+        "scripts/tsconfig/tsconfig.updater-e2e.json",
+        "tsconfig.json",
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    },
+    {
+      "path": ".github/workflows/windows-backfill-diagnostic.yml",
+      "pin": {
+        "bytes": 14471,
+        "sha256": "adfdc03d5de437d308916da76774a1e4ca31aa5786f4ea2fe2fae4e1a2127c2c",
+        "gitBlob": "44bec5d82998468d48ac539f3624d0c2de1c6648"
+      },
+      "events": [
+        "workflow_dispatch",
+        "pull_request"
+      ],
+      "pr": true,
+      "opened": true,
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review",
+        "converted_to_draft"
+      ],
+      "branches": null,
+      "branchIgnores": null,
+      "patterns": [
+        "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+        ".github/workflows/windows-backfill-diagnostic.yml",
+        "src/main/services/team/opencode/bridge/**",
+        "src/main/utils/childProcess.ts",
+        "src/main/utils/cliProcessDefaults.ts",
+        "src/main/utils/openCodeNodeModulesJunction.ts",
+        "src/main/services/runtime/openCodeAutoUpdatePolicy.ts",
+        "vitest.config.ts",
+        "test/setup.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        ".node-version"
+      ],
+      "ignores": null,
+      "broadNonDefaultBase": true,
+      "sourceMatches": [],
+      "addedMatches": [],
+      "docsMatches": [],
+      "eligible": false
+    }
+  ],
+  "eligibleDelta": {
+    "new": [],
+    "removed": []
+  },
+  "jobCounts": [
+    {
+      "path": ".github/workflows/announcements-content.yml",
+      "pin": {
+        "bytes": 2301,
+        "sha256": "4380473bf81c1e8762e11d1803bb023e60308c5525c6c409531d9749ec7661d8",
+        "gitBlob": "d7d1c6fde200971f29defe95c2c0436a0318b499"
+      },
+      "prospectiveExecutableJobs": 1,
+      "breakdown": "content-check1",
+      "draftSkipped": false,
+      "jobDefinitions": [
+        {
+          "id": "content-check",
+          "line": 18,
+          "guards": []
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/anthropic-compatible-status-e2e.yml",
+      "pin": {
+        "bytes": 8602,
+        "sha256": "037e94e79d2b13136a2209f2a1dac2c65ee5bee117c8dcfcf11e71c106b2e8a0",
+        "gitBlob": "6ec8f76ef4036fde31daab73db1205cf9f7dfdd2"
+      },
+      "prospectiveExecutableJobs": 0,
+      "breakdown": "packaged-windows Draft false",
+      "draftSkipped": true,
+      "jobDefinitions": [
+        {
+          "id": "packaged-windows",
+          "line": 47,
+          "guards": [
+            {
+              "line": 48,
+              "text": "    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "pin": {
+        "bytes": 175238,
+        "sha256": "8cac831e00dd87f656a971c6496b8278c7cfddc261f1eb48573a7e2acf83c2d1",
+        "gitBlob": "a93ff6ba1e5656523668694bca24910a468aebc7"
+      },
+      "prospectiveExecutableJobs": 3,
+      "breakdown": "plan1 + Fast feedback1 + Full qualification1",
+      "draftSkipped": false,
+      "jobDefinitions": [
+        {
+          "id": "plan",
+          "line": 59,
+          "guards": []
+        },
+        {
+          "id": "feedback",
+          "line": 90,
+          "guards": [
+            {
+              "line": 96,
+              "text": "    if: needs.plan.outputs.full == 'false' && needs.plan.outputs.metadata == 'false'"
+            }
+          ]
+        },
+        {
+          "id": "validate",
+          "line": 124,
+          "guards": [
+            {
+              "line": 130,
+              "text": "    if: needs.plan.outputs.full == 'true' && needs.plan.outputs.scope == 'full'"
+            }
+          ]
+        },
+        {
+          "id": "test",
+          "line": 186,
+          "guards": [
+            {
+              "line": 192,
+              "text": "    if: needs.plan.outputs.full == 'true' && (needs.plan.outputs.scope == 'full' || needs.plan.outputs.scope == 'source') && needs.plan.outputs.reuse != 'true'"
+            }
+          ]
+        },
+        {
+          "id": "lint",
+          "line": 291,
+          "guards": [
+            {
+              "line": 297,
+              "text": "    if: needs.plan.outputs.full == 'true' && needs.plan.outputs.scope == 'full' && needs.plan.outputs.reuse != 'true'"
+            }
+          ]
+        },
+        {
+          "id": "task-change-ledger-windows",
+          "line": 360,
+          "guards": [
+            {
+              "line": 366,
+              "text": "    if: needs.plan.outputs.full == 'true' && needs.plan.outputs.scope == 'full'"
+            }
+          ]
+        },
+        {
+          "id": "focused",
+          "line": 473,
+          "guards": [
+            {
+              "line": 476,
+              "text": "    if: needs.plan.outputs.full == 'true' && (needs.plan.outputs.scope == 'docs' || needs.plan.outputs.scope == 'assets' || needs.plan.outputs.scope == 'dmg')"
+            }
+          ]
+        },
+        {
+          "id": "source",
+          "line": 495,
+          "guards": [
+            {
+              "line": 501,
+              "text": "    if: needs.plan.outputs.full == 'true' && needs.plan.outputs.scope == 'source'"
+            }
+          ]
+        },
+        {
+          "id": "dmg-artwork",
+          "line": 519,
+          "guards": [
+            {
+              "line": 522,
+              "text": "    if: needs.plan.outputs.full == 'true' && needs.plan.outputs.scope == 'dmg'"
+            }
+          ]
+        },
+        {
+          "id": "retained-opencode-coexistence",
+          "line": 540,
+          "guards": [
+            {
+              "line": 543,
+              "text": "    if: >-\n      needs.plan.outputs.full == 'true' && needs.plan.outputs.reuse == 'false' &&\n      ((github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||\n      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository &&\n      (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1'))))"
+            }
+          ]
+        },
+        {
+          "id": "codex-login-desktop",
+          "line": 847,
+          "guards": [
+            {
+              "line": 852,
+              "text": "    if: >-\n      needs.plan.outputs.metadata == 'false' &&\n      github.event_name == 'pull_request' && github.event.pull_request.draft == false &&\n      github.event.pull_request.head.repo.full_name == github.repository &&\n      (github.event.pull_request.base.ref == 'feat/provider-host-frontend-parity-20261112' ||\n       github.event.pull_request.head.ref == 'feat/provider-host-frontend-parity-20261112')"
+            }
+          ]
+        },
+        {
+          "id": "stage1-desktop",
+          "line": 1010,
+          "guards": [
+            {
+              "line": 1014,
+              "text": "    if: >-\n      (github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||\n      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1' && github.event.pull_request.head.repo.full_name == github.repository)))"
+            }
+          ]
+        },
+        {
+          "id": "stage1-process-diagnostic",
+          "line": 2410,
+          "guards": [
+            {
+              "line": 2412,
+              "text": "    if: github.event_name == 'workflow_dispatch' && inputs.stage1_process_diagnostic"
+            }
+          ]
+        },
+        {
+          "id": "stage1-process-qualification",
+          "line": 2455,
+          "guards": [
+            {
+              "line": 2458,
+              "text": "    if: >-\n      (github.event_name == 'workflow_dispatch' && inputs.stage1_process_qualification) ||\n      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1' && github.event.pull_request.head.repo.full_name == github.repository)))"
+            }
+          ]
+        },
+        {
+          "id": "full-qualification",
+          "line": 2587,
+          "guards": [
+            {
+              "line": 2590,
+              "text": "    if: always() && !cancelled()"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "pin": {
+        "bytes": 2479,
+        "sha256": "d35b6d96c6d3582415b4feaf3144575f5d3a520c6e058c673ec15f95ddae5a7b",
+        "gitBlob": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1"
+      },
+      "prospectiveExecutableJobs": 0,
+      "breakdown": "analyze job-level Draft false",
+      "draftSkipped": true,
+      "jobDefinitions": [
+        {
+          "id": "analyze",
+          "line": 45,
+          "guards": [
+            {
+              "line": 46,
+              "text": "    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "pin": {
+        "bytes": 19532,
+        "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f",
+        "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69"
+      },
+      "prospectiveExecutableJobs": 7,
+      "breakdown": "scope1 + original five platforms + aggregate1",
+      "draftSkipped": false,
+      "jobDefinitions": [
+        {
+          "id": "packaged-scope",
+          "line": 19,
+          "guards": []
+        },
+        {
+          "id": "packaged-smoke",
+          "line": 42,
+          "guards": [
+            {
+              "line": 44,
+              "text": "    if: needs.packaged-scope.outputs.run == 'true' && github.event.pull_request.head.repo.full_name == github.repository"
+            }
+          ]
+        },
+        {
+          "id": "packaged-full-gate",
+          "line": 290,
+          "guards": [
+            {
+              "line": 292,
+              "text": "    if: always() && !cancelled()"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "pin": {
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      },
+      "prospectiveExecutableJobs": 23,
+      "breakdown": "original18 Desktop lanes +4 frontend shards +aggregate1",
+      "draftSkipped": false,
+      "jobDefinitions": [
+        {
+          "id": "offline-desktop-scenario",
+          "line": 43,
+          "guards": [
+            {
+              "line": 45,
+              "text": "    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository"
+            }
+          ]
+        },
+        {
+          "id": "offline-frontend-tests",
+          "line": 1170,
+          "guards": [
+            {
+              "line": 1172,
+              "text": "    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository"
+            }
+          ]
+        },
+        {
+          "id": "offline-desktop",
+          "line": 1235,
+          "guards": [
+            {
+              "line": 1237,
+              "text": "    if: ${{ always() && !cancelled() && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) }}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "pin": {
+        "bytes": 34313,
+        "sha256": "71b16b1b1fd1f0c88d3cb15a18cdfcce08b2b18908d3a5ce755330b4b2aeedf1",
+        "gitBlob": "70202d22a5840401a00025cd60b797c514f3e455"
+      },
+      "prospectiveExecutableJobs": 5,
+      "breakdown": "original five-platform process fixture matrix",
+      "draftSkipped": false,
+      "jobDefinitions": [
+        {
+          "id": "process-fixtures",
+          "line": 45,
+          "guards": [
+            {
+              "line": 47,
+              "text": "    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/opencode-desktop-e2e.yml",
+      "pin": {
+        "bytes": 6719,
+        "sha256": "ea78e9c6002db433bb57087c3d4eac3d652412746b3a3d5d2aad0cb02e76d17e",
+        "gitBlob": "3d2a90a0e335155d435bd4eae4f2bd2842425983"
+      },
+      "prospectiveExecutableJobs": 0,
+      "breakdown": "desktop job-level Draft false",
+      "draftSkipped": true,
+      "jobDefinitions": [
+        {
+          "id": "desktop",
+          "line": 43,
+          "guards": [
+            {
+              "line": 44,
+              "text": "    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/opencode-packaged-e2e.yml",
+      "pin": {
+        "bytes": 19616,
+        "sha256": "80a7c110468f22670a541dcf8cd452c6de754376f4ff970bbdf2888bd91fc2fe",
+        "gitBlob": "458e165ef020a1f8b05806b9ae7edc839134e1b4"
+      },
+      "prospectiveExecutableJobs": 0,
+      "breakdown": "native jobs dispatch-only; packaged-windows Draft false",
+      "draftSkipped": true,
+      "jobDefinitions": [
+        {
+          "id": "validate-native-inputs",
+          "line": 89,
+          "guards": [
+            {
+              "line": 90,
+              "text": "    if: github.event_name == 'workflow_dispatch' && (inputs.native_sdk_ref != '' || inputs.native_source_only || inputs.native_provider_only)"
+            }
+          ]
+        },
+        {
+          "id": "native-real-tasks",
+          "line": 119,
+          "guards": [
+            {
+              "line": 121,
+              "text": "    if: github.event_name == 'workflow_dispatch' && (inputs.native_sdk_ref != '' || inputs.native_source_only || inputs.native_provider_only)"
+            }
+          ]
+        },
+        {
+          "id": "packaged-windows",
+          "line": 135,
+          "guards": [
+            {
+              "line": 136,
+              "text": "    if: (github.event_name != 'pull_request' || github.event.pull_request.draft != true) && inputs.native_sdk_ref == '' && !inputs.native_source_only && !inputs.native_provider_only\n    # Distinct from the outer workflow's group; never self-cancel the caller."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "pin": {
+        "bytes": 36013,
+        "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+        "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+      },
+      "prospectiveExecutableJobs": 9,
+      "breakdown": "static2 +native-instructions1 +published-HTTP1 +embedded-Host5",
+      "draftSkipped": false,
+      "jobDefinitions": [
+        {
+          "id": "static-preflight",
+          "line": 51,
+          "guards": []
+        },
+        {
+          "id": "native-host-instructions",
+          "line": 126,
+          "guards": []
+        },
+        {
+          "id": "published-v2-http-persist",
+          "line": 203,
+          "guards": []
+        },
+        {
+          "id": "embedded-v2-native-host",
+          "line": 323,
+          "guards": []
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/sentry-owned-process-native.yml",
+      "pin": {
+        "bytes": 39878,
+        "sha256": "2d84faae57ad758575935dc760df6561d219f16ee8c0bd615006ca3d88837357",
+        "gitBlob": "1188fa5b89d59b739d927082d1b6954a57181819"
+      },
+      "prospectiveExecutableJobs": 0,
+      "breakdown": "all three job definitions Draft false",
+      "draftSkipped": true,
+      "jobDefinitions": [
+        {
+          "id": "linux-registered",
+          "line": 59,
+          "guards": [
+            {
+              "line": 60,
+              "text": "    if: (github.event_name != 'pull_request' || github.event.pull_request.draft != true) && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)"
+            }
+          ]
+        },
+        {
+          "id": "linux-abi",
+          "line": 275,
+          "guards": [
+            {
+              "line": 276,
+              "text": "    if: (github.event_name != 'pull_request' || github.event.pull_request.draft != true) && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)"
+            }
+          ]
+        },
+        {
+          "id": "native",
+          "line": 328,
+          "guards": [
+            {
+              "line": 329,
+              "text": "    if: (github.event_name != 'pull_request' || github.event.pull_request.draft != true) && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "counts": {
+    "workflows": 42,
+    "eventEligible": 11,
+    "blanketDraftSkipped": 5,
+    "withProspectiveExecutableJobs": 6,
+    "prospectiveExecutableJobs": 48,
+    "actualJobsObservedHere": 0
+  },
+  "jobCountLimits": "Counts describe original dependency graph and matrix branches, contingent on normal prerequisites. CI full qualification intentionally fails for a fast Draft; none is runtime PASS evidence.",
+  "existingTestRoutes": {
+    "settings": {
+      "workflow": ".github/workflows/host-emulated-acceptance.yml",
+      "line": 103,
+      "literal": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "currentWholeTitles": [
+        "extensions Settings peer exposes only isolated auth status through original custody",
+        "saved-import Settings peer exposes only isolated auth status through original custody",
+        "finite extension status uses the original Host auth command and retains its exact private namespace",
+        "finite extensions run through original Host ownership, persist four commands and survive inventory reload without replay",
+        "finite extension CLI refuses changed names/scopes and does not overwrite selected config",
+        "saved-import finite metadata and actual original probe receipt preserve model/effort with no extra input on lookup",
+        "saved-import peer refuses a business input without producing a probe or touching Host receipts",
+        "receipt summaries retain only the original nested mixed Settings owner"
+      ],
+      "currentCases": 8,
+      "proposedAppend": 3,
+      "prospectiveWholeCases": 11,
+      "node": "24.21.0",
+      "repeatedAcrossOriginalDesktopLanes": 18,
+      "qualification": "Whole original file once per lane command; no case filter and repeated GUI prerequisite executions must not be summed as unique cases."
+    },
+    "capturedStatus": {
+      "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+      "pin": {
+        "bytes": 8570,
+        "sha256": "37d0b61e60dd4f175c9c2d34e1f8aa399becac018e970655dd7f5595713f2fb6",
+        "gitBlob": "6e84953e1d1a08b705b4000f47d8d51177047ff3"
+      },
+      "currentRegistrationExpressions": [
+        {
+          "title": "the existing model/effort consumers receive native SDK metadata with no inferred auth, default or launch readiness",
+          "each": null
+        },
+        {
+          "title": "wrong profile, duplicate model rows and late context results never enter the existing UI",
+          "each": null
+        },
+        {
+          "title": "native default and named aliases of the same canonical model yield one existing selector option",
+          "each": null
+        },
+        {
+          "title": "independent native auth loggedIn=%s survives existing renderer reconciliation without granting launch",
+          "each": "[true, false]"
+        },
+        {
+          "title": "wrong auth revision and a context change during auth cannot create authoritative authentication",
+          "each": null
+        }
+      ],
+      "currentExpandedCases": 6,
+      "proposedAppend": 1,
+      "prospectiveWholeCases": 7,
+      "config": {
+        "bytes": 1187,
+        "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+        "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3"
+      },
+      "workflowLiteral": "  offline-frontend-tests:\n    name: Offline frontend tests (${{ matrix.shard }}/4)\n    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository\n    runs-on: ubuntu-latest\n    timeout-minutes: 45\n    strategy:\n      fail-fast: false\n      matrix:\n        shard: [1, 2, 3, 4]\n    defaults:\n      run:\n        shell: bash\n    env:\n      AGENT_TEAMS_INSTALL_PROFILE: node-ci\n      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'\n      HOST_EMULATED_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}\n      HOST_TEST_SHARD: ${{ matrix.shard }}\n    steps:\n      - uses: actions/checkout@v6\n        with:\n          ref: ${{ github.event.pull_request.head.sha || github.sha }}\n          persist-credentials: false\n      - uses: pnpm/action-setup@v6\n      - uses: actions/setup-node@v6\n        with:\n          node-version: 24.21.0\n      - name: Verify source and capture the original Host test runtime\n        run: |\n          set -euo pipefail\n          test \"$(git rev-parse HEAD)\" = \"$HOST_EMULATED_SOURCE_HEAD\"\n          echo \"AGENT_BACKEND_TEST_NODE=$(node -p 'process.execPath')\" >> \"$GITHUB_ENV\"\n      - name: Setup the original workspace test runtime\n        uses: actions/setup-node@v6\n        with:\n          node-version-file: .node-version\n          cache: pnpm\n      - name: Prepare original test prerequisites\n        run: |\n          set -euo pipefail\n          sudo apt-get update\n          sudo apt-get install -y lsof\n          node scripts/ci/install-dependencies-with-retry.mjs --child-concurrency=1\n          node scripts/ci/rebuild-better-sqlite3-node.cjs\n          pnpm --filter agent-teams-mcp build\n          pnpm --filter @agent-teams/legacy-agent-host build\n      - name: Run the complete safe frontend shard\n        run: |\n          set -euo pipefail\n          # Live subscriptions and real vendor executables are outside this finite lane.\n          # Excluded files remain unqualified; the existing native gates are unchanged.\n          pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" \\\n            --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' \\\n            --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" \\\n            2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\"\n      - name: Preserve original test results, including failures\n        if: always()\n        uses: actions/upload-artifact@v4\n        with:\n          name: host-offline-tests-${{ github.event.pull_request.head.sha || github.sha }}-${{ matrix.shard }}\n          retention-days: 14\n          if-no-files-found: warn\n          path: |\n            ${{ runner.temp }}/host-offline-tests-*.json\n            ${{ runner.temp }}/host-offline-tests-*.log\n",
+      "nodeVersionFile": {
+        "path": ".node-version",
+        "pin": {
+          "bytes": 8,
+          "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5",
+          "gitBlob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+        },
+        "method": "accepted complete immutable body rehashed"
+      },
+      "frontendNode": "26.12.1",
+      "hostChildNode": "24.21.0",
+      "timeoutMs": 15000,
+      "originalShards": 4,
+      "specificShardUnknown": true,
+      "exactCurrentFileMatchesExclusions": false,
+      "testTransport": "Actual createCapturedRuntimeProviderStatusClient, controlled management capture/request boundary; proposed actual teamModelAvailability composition belongs in this existing fullfile and requires ordinary source review."
+    },
+    "otherUnchangedRoutes": [
+      {
+        "scope": "GUI whole-file regression",
+        "workflow": "host-emulated-acceptance.yml",
+        "line": 103,
+        "file": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "prospectiveRegistrations": 39,
+        "existingRegistrations": 34,
+        "newLocalRegistrations": 5,
+        "node": "24.21.0",
+        "conditions": "Existing setup and Host/controller/MCP build steps succeed; full file remains in the eight-entry command; repeats per18Desktop lane are not added as independent test coverage totals.",
+        "countMeaning": "34 existing top-level registration expressions plus5 planned declarations; no callback/pass total inferred."
+      },
+      {
+        "scope": "Native diagnostics plus whole-platform regression",
+        "workflow": "opencode-v2-stage1-preflight.yml",
+        "line": 106,
+        "file": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "prospectiveRegistrations": 26,
+        "existingRegistrations": 9,
+        "newLocalRegistrations": 3,
+        "importedRegistrations": 14,
+        "node": "24.21.0",
+        "jobs": [
+          "ubuntu-24.04",
+          "windows-2022"
+        ],
+        "conditions": "Future exact sourceR2 retains one unconditional awaited whole-file import; Host build/typecheck and preceding steps must succeed. Linux13eligible+1originalskip; Windows14eligible. Registration is not callback completion."
+      },
+      {
+        "scope": "Windows-source regression file",
+        "workflow": "host-emulated-acceptance.yml",
+        "line": 385,
+        "file": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+        "prospectiveRegistrations": 8,
+        "node": "24.21.0",
+        "conditions": "Linux processes lane after its original process-capture setup. Source-slice exercise is not a Windows physical integration receipt."
+      },
+      {
+        "scope": "Packaged relaunch failure diagnostics",
+        "workflow": "electron-packaged-ci.yml",
+        "line": 264,
+        "file": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "matrix": [
+          "darwin-arm64",
+          "darwin-x64"
+        ],
+        "node": "24.21.0",
+        "conditions": "Existing preceding package/native steps succeed. Exact future projector/postimages are required; original finite SDK peer, receipt and cleanup remain."
+      },
+      {
+        "scope": "Original Windows same-Main integration",
+        "workflow": "electron-packaged-ci.yml",
+        "line": 243,
+        "file": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "matrix": [
+          "win32-x64",
+          "win32-arm64"
+        ],
+        "node": "24.21.0",
+        "conditions": "Full original controller120s/JS300s and preceding V2/native gates retained; all original source/binary/cleanup witnesses needed. New14 unit file does not substitute for this."
+      }
+    ]
+  },
+  "providerBoundary": {
+    "rootUserConstraint": "No actual Claude or Codex executable, including --version; allowed original OpenCode routes retain pinned finite/local TEST model scope.",
+    "fullPreviousVenueProof": {
+      "bytes": 40070,
+      "sha256": "8e4733e6f5cb1cb252ea222bcbcba7a99124ad5c7136388d833326287bb46236",
+      "gitBlob": "72d1c31fa760449d472d58307da11dde30eba32f"
+    },
+    "unchangedPrimaryBodyJoins": [
+      {
+        "path": ".node-version",
+        "pin": {
+          "bytes": 8,
+          "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5",
+          "gitBlob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+        },
+        "actual": {
+          "bytes": 8,
+          "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5",
+          "gitBlob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+        },
+        "passed": true
+      },
+      {
+        "path": "package.json",
+        "pin": {
+          "bytes": 26839,
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+          "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        "actual": {
+          "bytes": 26839,
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+          "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        "passed": true
+      },
+      {
+        "path": "vitest.config.ts",
+        "pin": {
+          "bytes": 1187,
+          "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+          "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3"
+        },
+        "actual": {
+          "bytes": 1187,
+          "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+          "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3"
+        },
+        "passed": true
+      },
+      {
+        "path": "scripts/ci/packaged-ci-cli.mts",
+        "pin": {
+          "bytes": 2971,
+          "sha256": "6fab9b80e1658c84b58c6ac1a427f8ae6a013e27d6d669521c8dc2fa021888c5",
+          "gitBlob": "92febe9965b7fb53c43c5d31c4ae41902e6461cd"
+        },
+        "actual": {
+          "bytes": 2971,
+          "sha256": "6fab9b80e1658c84b58c6ac1a427f8ae6a013e27d6d669521c8dc2fa021888c5",
+          "gitBlob": "92febe9965b7fb53c43c5d31c4ae41902e6461cd"
+        },
+        "passed": true
+      },
+      {
+        "path": "scripts/ci/packaged-ci-policy.mts",
+        "pin": {
+          "bytes": 6709,
+          "sha256": "67625c4ee15e54a4221b9497d24f9a03026e322f19cf626fab50ea2ac2e62fb7",
+          "gitBlob": "6f9d14d1e257c493bcad20c54a8ee12b0bab4670"
+        },
+        "actual": {
+          "bytes": 6709,
+          "sha256": "67625c4ee15e54a4221b9497d24f9a03026e322f19cf626fab50ea2ac2e62fb7",
+          "gitBlob": "6f9d14d1e257c493bcad20c54a8ee12b0bab4670"
+        },
+        "passed": true
+      },
+      {
+        "path": "scripts/ci/ci-feedback.mts",
+        "pin": {
+          "bytes": 19265,
+          "sha256": "c89f9b195d5efb183db154f87f3fee0c4e30345e4f24c6797b9a99e09311e40e",
+          "gitBlob": "9d734783b4e273a4e4fbad27d4e51984646d436d"
+        },
+        "actual": {
+          "bytes": 19265,
+          "sha256": "c89f9b195d5efb183db154f87f3fee0c4e30345e4f24c6797b9a99e09311e40e",
+          "gitBlob": "9d734783b4e273a4e4fbad27d4e51984646d436d"
+        },
+        "passed": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "pin": {
+          "bytes": 31223,
+          "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+          "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+        },
+        "actual": {
+          "bytes": 31223,
+          "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+          "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+        },
+        "passed": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+        "pin": {
+          "bytes": 7926,
+          "sha256": "8cdc9a1bcc80b61998e93813959f53542a85cb5953c93ae1feb2397e37d9080e",
+          "gitBlob": "67180ac5c567cbeb089d4ef3248391c792e1ba4d"
+        },
+        "actual": {
+          "bytes": 7926,
+          "sha256": "8cdc9a1bcc80b61998e93813959f53542a85cb5953c93ae1feb2397e37d9080e",
+          "gitBlob": "67180ac5c567cbeb089d4ef3248391c792e1ba4d"
+        },
+        "passed": true
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+        "pin": {
+          "bytes": 9569,
+          "sha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd",
+          "gitBlob": "44c8cba99e4932905da77539a59c904a39da4e36"
+        },
+        "actual": {
+          "bytes": 9569,
+          "sha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd",
+          "gitBlob": "44c8cba99e4932905da77539a59c904a39da4e36"
+        },
+        "passed": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeVendorInputs.ts",
+        "pin": {
+          "bytes": 5428,
+          "sha256": "b9e80eec40a2d74dfc5b1f5fa0c80e7b1f487e5362c1ab03b4926b1f77e2680f",
+          "gitBlob": "9e6a4756d79defb424cb18967089afeb221d077d"
+        },
+        "actual": {
+          "bytes": 5428,
+          "sha256": "b9e80eec40a2d74dfc5b1f5fa0c80e7b1f487e5362c1ab03b4926b1f77e2680f",
+          "gitBlob": "9e6a4756d79defb424cb18967089afeb221d077d"
+        },
+        "passed": true
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/run.mjs",
+        "pin": {
+          "bytes": 3726,
+          "sha256": "48b5a85fba726d2ff737f19c2c7882f4a79d60f375cbbdf762297eb7bb20f292",
+          "gitBlob": "7f5ed7276d4e5648dc0f11958283b66787629681"
+        },
+        "actual": {
+          "bytes": 3726,
+          "sha256": "48b5a85fba726d2ff737f19c2c7882f4a79d60f375cbbdf762297eb7bb20f292",
+          "gitBlob": "7f5ed7276d4e5648dc0f11958283b66787629681"
+        },
+        "passed": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/prepare-opencode-v2-native.ts",
+        "pin": {
+          "bytes": 9450,
+          "sha256": "40c7b16a40c3efaf859dffcaa762d927d630d84945810782da2ca172c06fe16e",
+          "gitBlob": "b6fef813e23b8f18d7f8ebae5b14f5c0a104a30c"
+        },
+        "actual": {
+          "bytes": 9450,
+          "sha256": "40c7b16a40c3efaf859dffcaa762d927d630d84945810782da2ca172c06fe16e",
+          "gitBlob": "b6fef813e23b8f18d7f8ebae5b14f5c0a104a30c"
+        },
+        "passed": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+        "pin": {
+          "bytes": 14137,
+          "sha256": "b6f0893cda4210adaa754d7b2af96f3ddd43dc9af64e0656a5736e26e79060e4",
+          "gitBlob": "44ccc655c11bb48dd354b10c09acb3d0e2d65c91"
+        },
+        "actual": {
+          "bytes": 14137,
+          "sha256": "b6f0893cda4210adaa754d7b2af96f3ddd43dc9af64e0656a5736e26e79060e4",
+          "gitBlob": "44ccc655c11bb48dd354b10c09acb3d0e2d65c91"
+        },
+        "passed": true
+      },
+      {
+        "path": "scripts/e2e/opencode-project-path-packaged.mjs",
+        "pin": {
+          "bytes": 3069,
+          "sha256": "88cf2a9320273f2f6dac9cccb20ddeb1f18640df8fb6493beb7ef51f5dc9ef25",
+          "gitBlob": "72af1c16a8ffd035f8f70dc519eaead13cd28bd4"
+        },
+        "actual": {
+          "bytes": 3069,
+          "sha256": "88cf2a9320273f2f6dac9cccb20ddeb1f18640df8fb6493beb7ef51f5dc9ef25",
+          "gitBlob": "72af1c16a8ffd035f8f70dc519eaead13cd28bd4"
+        },
+        "passed": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "pin": {
+          "bytes": 20996,
+          "sha256": "cc5fa1a4c6a2f841145b0e4f33709fd1b2d8c405dae7151477a8a8aac5fce02e",
+          "gitBlob": "b52876e3215910eba3a3a24756f61c289a0965f9"
+        },
+        "actual": {
+          "bytes": 20996,
+          "sha256": "cc5fa1a4c6a2f841145b0e4f33709fd1b2d8c405dae7151477a8a8aac5fce02e",
+          "gitBlob": "b52876e3215910eba3a3a24756f61c289a0965f9"
+        },
+        "passed": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "pin": {
+          "bytes": 54778,
+          "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+          "gitBlob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e"
+        },
+        "actual": {
+          "bytes": 54778,
+          "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+          "gitBlob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e"
+        },
+        "passed": true
+      }
+    ],
+    "hostEmulated": "LEGACY_DESKTOP_EMULATED_ONLY=1 and finite TEST peers; only the existing separately pinned OpenCode V2 management lane unsets it for localhost model work.",
+    "hostProcess": "Original five-platform controlled Node/shell/C++ and finite Codex/OpenCode/Claude peers. Explicit realProviderExecuted=false; no actual vendor CLI version probe.",
+    "packagedWindows": "nativeWindowsAppFixture rejects OWNED_PROCESS_VENDOR_TEST_GO and creates private Node-backed --version-only metadata wrappers. NativeEmulatedProfile binds the finite Node protocol peer and pinned C++ fixture. Names/version strings do not mean execution of a real vendor binary.",
+    "packagedMac": "Existing finite SDK relaunch and unchanged bundled explicit OpenCode status/model-list routes; full prior entry/preAction no-fallback proof9acdf467 remains scoped to those routes.",
+    "sentry": "Event-eligible but all jobs remain Draft-skipped. Its real Claude/Codex vendor gates are outside current authority; no Ready, dispatch or alternate input selected.",
+    "providerRealRuntime": "None of all15 source paths matches its PR filter. Its job also skips Draft.",
+    "scopeLimit": "Accepted route proof reused for unchanged bodies. No newly matched or runnable real Claude/Codex/version workflow under this exact Draft path map. Future five source postimages remain unauthored and unqualified; exact finite TEST contract must pass existing R1/sourceR2 review. This advisory grants no runtime/venue authority."
+  },
+  "sourceAndCapture": {
+    "explicitHeadCheckouts": [
+      "Host Emulated",
+      "Host Process",
+      "Electron Packaged",
+      "Stage1"
+    ],
+    "defaultEventMergeCheckouts": [
+      "ordinary CI",
+      "Announcements"
+    ],
+    "mutableSecondaryInput": "Stage1's separately checked-out current main runtime.lock requires its actual recorded product commit; it is distinct from the future source head.",
+    "futureMerge": "Bind actual base/head/merge identities from the genuine future event; no fabricated SHA or self-reference.",
+    "futureCapture": "Only new run IDs; exact attempt1 and PR/source/workflow joins; complete job pages, terminal full logs and artifact indexes; no old-run substitution or unknown-action retry."
+  },
+  "concurrency": [
+    {
+      "path": ".github/workflows/announcements-content.yml",
+      "present": true,
+      "groupIncludesWorkflow": true,
+      "groupIncludesEvent": true,
+      "groupIncludesPr": true,
+      "cancelOnPr": true,
+      "ciEditedSpecialCase": false,
+      "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}\n"
+    },
+    {
+      "path": ".github/workflows/anthropic-compatible-status-e2e.yml",
+      "present": true,
+      "groupIncludesWorkflow": true,
+      "groupIncludesEvent": true,
+      "groupIncludesPr": true,
+      "cancelOnPr": true,
+      "ciEditedSpecialCase": false,
+      "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}\n"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "present": true,
+      "groupIncludesWorkflow": true,
+      "groupIncludesEvent": true,
+      "groupIncludesPr": true,
+      "cancelOnPr": true,
+      "ciEditedSpecialCase": true,
+      "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}-${{ github.event_name == 'pull_request' && github.event.action == 'edited' && format('edited-{0}', github.run_id) || 'checks' }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'edited' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}\n"
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "present": true,
+      "groupIncludesWorkflow": true,
+      "groupIncludesEvent": true,
+      "groupIncludesPr": true,
+      "cancelOnPr": true,
+      "ciEditedSpecialCase": false,
+      "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}\n"
+    },
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "present": true,
+      "groupIncludesWorkflow": true,
+      "groupIncludesEvent": true,
+      "groupIncludesPr": true,
+      "cancelOnPr": true,
+      "ciEditedSpecialCase": false,
+      "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && format('metadata-{0}', github.run_id) || 'checks' }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' && !(github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body)) }}\n"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "present": true,
+      "groupIncludesWorkflow": true,
+      "groupIncludesEvent": true,
+      "groupIncludesPr": true,
+      "cancelOnPr": true,
+      "ciEditedSpecialCase": false,
+      "literal": "concurrency:\n  # Leave the obsolete always-aggregate group after all of its matrix jobs were cancelled.\n  group: ${{ github.workflow }}-v2-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}\n"
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "present": true,
+      "groupIncludesWorkflow": true,
+      "groupIncludesEvent": true,
+      "groupIncludesPr": true,
+      "cancelOnPr": true,
+      "ciEditedSpecialCase": false,
+      "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}\n"
+    },
+    {
+      "path": ".github/workflows/opencode-desktop-e2e.yml",
+      "present": true,
+      "groupIncludesWorkflow": true,
+      "groupIncludesEvent": true,
+      "groupIncludesPr": true,
+      "cancelOnPr": true,
+      "ciEditedSpecialCase": false,
+      "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}\n"
+    },
+    {
+      "path": ".github/workflows/opencode-packaged-e2e.yml",
+      "present": false,
+      "groupIncludesWorkflow": false,
+      "groupIncludesEvent": false,
+      "groupIncludesPr": false,
+      "cancelOnPr": false,
+      "ciEditedSpecialCase": false,
+      "literal": null
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "present": true,
+      "groupIncludesWorkflow": true,
+      "groupIncludesEvent": true,
+      "groupIncludesPr": true,
+      "cancelOnPr": true,
+      "ciEditedSpecialCase": false,
+      "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}\n"
+    },
+    {
+      "path": ".github/workflows/sentry-owned-process-native.yml",
+      "present": true,
+      "groupIncludesWorkflow": true,
+      "groupIncludesEvent": true,
+      "groupIncludesPr": true,
+      "cancelOnPr": true,
+      "ciEditedSpecialCase": false,
+      "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}\n"
+    }
+  ],
+  "pushAndCreate": {
+    "pushWorkflows": [
+      {
+        "path": ".github/workflows/announcements-content.yml",
+        "pin": {
+          "bytes": 2301,
+          "sha256": "4380473bf81c1e8762e11d1803bb023e60308c5525c6c409531d9749ec7661d8",
+          "gitBlob": "d7d1c6fde200971f29defe95c2c0436a0318b499"
+        },
+        "push": "  push:\n    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "pin": {
+          "bytes": 175238,
+          "sha256": "8cac831e00dd87f656a971c6496b8278c7cfddc261f1eb48573a7e2acf83c2d1",
+          "gitBlob": "a93ff6ba1e5656523668694bca24910a468aebc7"
+        },
+        "push": "  push:\n    branches:\n      - main\n      # Long-lived integration branches: pushes here previously ran no CI at all,\n      # which let multi-day test regressions land unnoticed (they only surfaced\n      # through PR #252's merge CI).\n      - refactor/team-provisioning-round2-reapply\n      - refactor/hosted-web-feature-boundaries"
+      },
+      {
+        "path": ".github/workflows/codeql.yml",
+        "pin": {
+          "bytes": 2479,
+          "sha256": "d35b6d96c6d3582415b4feaf3144575f5d3a520c6e058c673ec15f95ddae5a7b",
+          "gitBlob": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1"
+        },
+        "push": "  push:\n    branches: [main]\n    paths:\n      - 'src/**'\n      - 'packages/**'\n      - 'agent-teams-controller/**'\n      - 'mcp-server/**'\n      - 'scripts/**'\n      - '.github/workflows/**'\n      - '.github/codeql/**'\n      - 'package.json'\n      - 'pnpm-lock.yaml'\n      - 'pnpm-workspace.yaml'\n      - 'tsconfig*.json'"
+      },
+      {
+        "path": ".github/workflows/codex-runtime-smoke.yml",
+        "pin": {
+          "bytes": 3229,
+          "sha256": "2d9b2fb19cb3d1e2797611254104bf5ab433b588427350747f0c0c6196f4490d",
+          "gitBlob": "cef44447c47e39a7da678f37e2518952e218da08"
+        },
+        "push": "  push:\n    branches: [main]\n    paths:\n      - '.github/workflows/codex-runtime-smoke.yml'\n      - 'package.json'\n      - 'pnpm-lock.yaml'\n      - 'pnpm-workspace.yaml'\n      - 'scripts/smoke/codex-runtime-install.ts'\n      - 'src/features/codex-runtime-installer/**'\n      - 'src/main/services/infrastructure/codexAppServer/**'\n      - 'src/main/services/runtime/providerAwareCliEnv.ts'\n      - 'src/main/utils/childProcess.ts'\n      - 'src/main/utils/pathDecoder.ts'\n      - 'tsconfig*.json'\n      - 'scripts/tsconfig/**'\n"
+      },
+      {
+        "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+        "pin": {
+          "bytes": 3218,
+          "sha256": "c85dd3daa63c0d31b8c87e5fe4b935456f6c47dbf9a0be1f06b6b8fbfaf84d25",
+          "gitBlob": "490c2048dfbd9f275f784d7a0f1a6eeba0a9f361"
+        },
+        "push": "  push:\n    branches: [main]\n    paths:\n      - 'src/main/utils/electronDevPathOverrides.ts'\n      - 'src/main/utils/electronDevPathOverrides.test.ts'\n      - 'src/main/utils/electronUserDataMigration.ts'\n      - 'test/main/utils/electronUserDataMigration.test.ts'\n      - 'test/main/bootstrapConfigIsolation.test.ts'\n      - 'src/main/bootstrapUserDataMigration.ts'\n      - 'src/main/index.ts'\n      - '.github/workflows/electron-dev-profile-cross-platform.yml'\n"
+      },
+      {
+        "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+        "pin": {
+          "bytes": 3335,
+          "sha256": "572df7cb9de920ed0685febc94f6ddd08f18d7d96312e8ed946933a63ccbcdb3",
+          "gitBlob": "95d681fe04abd838dd11799d7791fa59444c6e32"
+        },
+        "push": "  push:\n    branches: [main]\n    paths:\n      - 'src/renderer/components/team/kanban/**'\n      - 'src/renderer/components/team/TeamDetailView.tsx'\n      - 'scripts/e2e/task-detail-tabs-desktop.ts'\n      - 'pnpm-lock.yaml'\n      - '.github/workflows/kanban-table-desktop-e2e.yml'"
+      },
+      {
+        "path": ".github/workflows/landing-hetzner-release.yml",
+        "pin": {
+          "bytes": 7306,
+          "sha256": "ad5337b9e4a36797703c0e340a9539f0c12f2739eed6805851fcfa8cb00d1290",
+          "gitBlob": "4b54f229156f9d347e1a33da0d83b3374acc4078"
+        },
+        "push": "  push:\n    branches: [main]\n    paths:\n      - 'landing/**'\n      - 'docs/screenshots/**'\n      - 'scripts/announcements/**'\n      - 'scripts/ci/transitive-security*'\n      - 'scripts/ci/audit-dependencies.mjs'\n      - 'pnpm-workspace.yaml'\n      - 'package.json'\n      - 'pnpm-lock.yaml'\n      - '.node-version'\n      - '.github/workflows/landing-hetzner-release.yml'"
+      },
+      {
+        "path": ".github/workflows/landing.yml",
+        "pin": {
+          "bytes": 5592,
+          "sha256": "1bda852e705b3b744b5b001e0fe3cb2d8fd80eaa3108d17787c076ad3b753b32",
+          "gitBlob": "4a1ad9ae59ff2e338930a195d54fdff62da1ebc5"
+        },
+        "push": "  push:\n    branches: [main]\n    paths:\n      - landing/**\n      - scripts/announcements/**\n      - scripts/ci/transitive-security*\n      - scripts/ci/audit-dependencies.mjs\n      - pnpm-workspace.yaml\n      - package.json\n      - pnpm-lock.yaml\n      - .github/workflows/landing.yml\n      - .gitattributes"
+      },
+      {
+        "path": ".github/workflows/provider-real-runtime-e2e.yml",
+        "pin": {
+          "bytes": 8958,
+          "sha256": "9903545813f74656b4e78e53641449a7c4c09b6b3564263f83aa7f2f2f8f0737",
+          "gitBlob": "4ee30807aa18f043fe53d090bfb6211bb5458ce0"
+        },
+        "push": "  push:\n    branches: [main]\n    paths:\n      - 'scripts/e2e/provider-real-runtime-*.ts'\n      - 'scripts/e2e/opencode-diagnostics/startup-resources.mjs'\n      - 'scripts/e2e/opencode-diagnostics/startup-resources.test.mjs'\n      - 'scripts/e2e/opencode-diagnostics/run.mjs'\n      - 'scripts/e2e/opencode-diagnostics/real-runtime.mjs'\n      - 'scripts/e2e/opencode-diagnostics-desktop.mjs'\n      - 'src/renderer/components/dashboard/DashboardProviderSummary.tsx'\n      - 'src/renderer/store/index.ts'\n      # Run actual installed V1 + isolated Electron checks for shared catalog\n      # invalidation/recovery changes, not merely provider-count presentation.\n      - 'src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts'\n      - 'src/features/runtime-provider-management/core/application/loadOpenCodeScopedCatalog.ts'\n      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.ts'\n      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts'\n      - 'src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts'\n      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts'\n      - '.github/workflows/provider-real-runtime-e2e.yml'\n      - 'runtime.lock.json'"
+      },
+      {
+        "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+        "pin": {
+          "bytes": 5079,
+          "sha256": "65e296bb4946582ca3745930f1ecf0b16df481d38fb591a06c26f80529881f15",
+          "gitBlob": "4020f668ab2a9a7b16fcb0aa7fd2d79a061f1d44"
+        },
+        "push": "  push:\n    branches: [main]\n    paths:\n      - 'runtime.lock.json'\n      - 'scripts/dev-with-runtime.mjs'\n      - 'scripts/ci/verify-public-runtime-bootstrap.mjs'\n      - 'scripts/ci/verify-runtime-lock.mjs'\n      - 'scripts/lib/github-release-download-error.mjs'\n      - 'scripts/lib/runtime-cli-version.mjs'\n      - 'scripts/lib/runtime-bootstrap-diagnostics.mts'\n      - 'scripts/lib/runtime-command-capture.mts'\n      - 'scripts/lib/runtime-archive-checksum.mjs'\n      - 'scripts/lib/runtime-payload-cache.mjs'\n      - 'scripts/lib/runtime-payload-cache.test.mjs'\n      - 'scripts/lib/runtime-payload-cache-async.test.mts'\n      - 'scripts/lib/runtime-payload-inventory.mts'\n      - 'scripts/lib/runtime-windows-zip-extraction.mts'\n      - 'scripts/lib/runtime-windows-zip-extraction.test.mts'\n      - 'scripts/lib/runtime-archive-extraction.mts'\n      - 'scripts/lib/runtime-archive-extraction.test.mts'\n      - 'scripts/lib/runtime-zip.test-fixture.mts'\n      - '.github/workflows/runtime-bootstrap-smoke.yml'"
+      },
+      {
+        "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "pin": {
+          "bytes": 6522,
+          "sha256": "f57bf21347769c79b9c8c21f6f35b40b772fbfe9cb5f8155d7daabb54499d15f",
+          "gitBlob": "ef939f224a1642cb596906324c8d61441780ccc7"
+        },
+        "push": "  push:\n    branches: [main]\n    paths:\n      - '.github/workflows/teams-create-page-desktop-e2e.yml'\n      - 'scripts/e2e/teams-create-page-desktop.mjs'\n      # Native desktop create/launch admission and Validate share these guards.\n      - 'src/shared/utils/cliArgsParser.ts'\n      - 'src/main/services/team/TeamRequestValidation.ts'\n      - 'src/main/ipc/teams.ts'\n      # Runtime provider preflight affects the existing Create/Launch controls.\n      - 'src/main/services/infrastructure/CliInstallerService.ts'\n      - 'src/main/services/runtime/ClaudeMultimodelBridgeService.ts'\n      - 'src/main/services/runtime/runtimeStatusExecutionContext.ts'\n      - 'src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts'\n      - 'src/main/services/team/provisioning/TeamProvisioningProviderPreflight.ts'\n      - 'scripts/e2e/teams-create-page-owned-processes.mjs'\n      - 'scripts/e2e/teams-create-page-owned-processes.test.mjs'\n      - 'src/renderer/components/team/**'\n      - 'src/features/organizations/**'\n      - 'src/features/team-templates/**'\n      - 'src/features/gateway-provider/renderer/**'\n      - 'src/renderer/hooks/useCreateTeamDraft.ts'\n      - 'src/renderer/services/createTeamDraftStorage.ts'\n"
+      }
+    ],
+    "mainOnly": 10,
+    "onlyOtherLiteralBranches": [
+      "refactor/team-provisioning-round2-reapply",
+      "refactor/hosted-web-feature-boundaries"
+    ],
+    "createWorkflows": 0,
+    "workflowRunWorkflows": 0,
+    "noNewAliasChosen": true
+  },
+  "environment": {
+    "status": "unavailable",
+    "authority": "Actual gate47bad records unavailable notification11:31:41; no newlocalprobe.",
+    "oldStandalone": "Original spent inode mismatch remains unrebound; no staging/replay."
+  },
+  "checks": [
+    {
+      "id": "complete42WorkflowBodies",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Complete unchanged bodies rehashed; exact .github root d95091ab anchors current ea1 source."
+    },
+    {
+      "id": "acceptedCurrentActualGate",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "47bad exact whole body; accepted AY root42/independent47 already full-read."
+    },
+    {
+      "id": "fiveExactCurrentPreimages",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Five prospective edit paths already exist; full 104295 bytes read/hash/rooted."
+    },
+    {
+      "id": "fifteenDistinctSourcePaths",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Ten accepted current changes versus fixed9d plus five prospective files, no source authored here."
+    },
+    {
+      "id": "completePathMapRecomputed",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "All positive path globs recomputed for each of15 paths and ordinary docs; no negation/exotic syntax occurs in current patterns."
+    },
+    {
+      "id": "eventEligibleEleven",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Complete mapping retained below; no assumption from prior result."
+    },
+    {
+      "id": "eligibleSetUnchanged",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "New5 cause no newly eligible or removed workflow."
+    },
+    {
+      "id": "draftSkippedFive",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Anthropic-compatible, CodeQL, OpenCodeDesktop, OpenCodePackaged and Sentry job guards remain false on opened Draft."
+    },
+    {
+      "id": "sixExecutableWorkflows",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Announcements, CI, Packaged, HostEmulated, HostProcess and Stage1."
+    },
+    {
+      "id": "prospectiveJobs48",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "1+3+7+23+5+9; expected branches after ordinary prerequisite success, not actual allocated/completed jobs."
+    },
+    {
+      "id": "noProviderRealMatch",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "None of15 selects provider-real-runtime; additionally its actual job skips Draft."
+    },
+    {
+      "id": "noCodexRuntimeMatch",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "No source path admits Codex install/version runtime workflow."
+    },
+    {
+      "id": "noRuntimeBootstrapMatch",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "No source path selects runtime bootstrap."
+    },
+    {
+      "id": "peerSpecificTriggers",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Three unfiltered + HostEmulated fixtures/** + HostProcess tools/** + Sentry tools/**; Sentry Draft skipped."
+    },
+    {
+      "id": "metadataFileTriggerLimit",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Metadata test alone matches only unfiltered Announcements/CI/Packaged; other planned files select HostEmulated."
+    },
+    {
+      "id": "wholeSettingsAuthenticCommand",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Existing complete eight-file node --test command, line103; Node24.21.0, after Host/controller/MCP builds."
+    },
+    {
+      "id": "wholeSettingsEightPreserved",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Six literal titles plus original two-kind loop; proposed3 append would be11, no runtime claim."
+    },
+    {
+      "id": "wholeMetadataSixPreserved",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Five registration expressions including2-valued it.each yield6; proposed1 append wouldbe7."
+    },
+    {
+      "id": "actualVitestRoute",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Current path included in root config; no matching .live/.live-e2e/.native exclusions; all4originalshards remain."
+    },
+    {
+      "id": "runtimeVersionsSeparated",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Desktop Node24.21.0; frontend captures24.21 Host Node then switches to .node-version26.12.1. No current execution inferred."
+    },
+    {
+      "id": "metadataTransportBoundary",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Existing actual status client with controlled capture/request seam; proposed actual catalog composition must be checked in later source review."
+    },
+    {
+      "id": "finitePeerCurrentBoundary",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Complete current peer uses pinned Node TEST roots and finite SDK wire; no child_process import/vendor launch path. Proposed exactauth branch not authored/reviewed here."
+    },
+    {
+      "id": "unchangedPreviouslyAcceptedRouteProof",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Reuse full accepted route proof with unchanged primary source pins, not recursive history."
+    },
+    {
+      "id": "noNewPushCreateRoute",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "All42 no create/workflow_run;11push declarations are main or two existing literal CI branches. No alias chosen or created."
+    },
+    {
+      "id": "sourceMergeAndMainLockSeparated",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Future actual source/head/base/merge must bind once; separateStage1current-main runtime.lock remains mutable secondary input."
+    },
+    {
+      "id": "concurrencyPreserved",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Existing perPR/workflow event groups; no snapshot edits while own selected newruns active; no newrun currentlyselected."
+    },
+    {
+      "id": "docsNoAdditionalPathWorkflow",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Ordinary docs/plans paths only unfiltered three; docs/screenshots is outside prospective docs scope."
+    },
+    {
+      "id": "noMutationOrExecution",
+      "status": "PASS_STATIC_ADVISORY",
+      "evidence": "Only immutable Git and pure in-memory data processing plus this permitted bare advisory retention."
+    }
+  ],
+  "checkCount": 28,
+  "failedChecks": [],
+  "unresolvedBlockers": [],
+  "runtimeUnknowns": [
+    "Future five source postimages and actual SDK argv remain unobserved.",
+    "No future source/head/base/merge or run identities are fabricated.",
+    "Specific frontend shard placement and all actual new test outcomes remain unknown.",
+    "No new physical receipt, artifact/screenshot or end-to-end qualification."
+  ],
+  "actions": {
+    "immutableGitReads": true,
+    "pureDataOnly": true,
+    "liveReads": false,
+    "sourceOrControlAuthorship": false,
+    "localOrTargetRuntime": false,
+    "refPRCIChanges": false,
+    "advisoryBlobOnly": true
+  },
+  "selfReadbackProtocol": "Send retained pin immediately, then fetch complete report and require literal/body/hash/schema/scope/check equality."
+}

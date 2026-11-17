@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "commandId": "team-preflight-5d7edbf6beb9ca90bcc62e4392376826605198d96009073820a733218eb7ba98",
+  "profileId": "team-probe-3722250172cb39813807748eef269afb76793aa980787ae974aebccd46c2440e",
+  "configRevision": "team-probe-3722250172cb39813807748eef269afb76793aa980787ae974aebccd46c2440e",
+  "providerId": "anthropic",
+  "fingerprint": "0fadbe64484ca622e80850f5687d0336661070ce52a780dc4327129477e0a579",
+  "selectionDigest": "051ea16e5e8d97dacf86404bc588dd8b08d8fa7dd11705953735a16a609142e3",
+  "resourceId": "1ff04af6940312d98969b62787fb1d50464aa09c9171693726f3ebbcf742c0f7",
+  "resourceHeld": false,
+  "kind": "model.probe",
+  "modelId": "sonnet",
+  "effort": "low",
+  "modelContext": "one-million",
+  "context": "f7d6e70330604cf8f31051d3aa607d8a19e4debabdfaee30656ca1c58ef6ed6e",
+  "phase": "completed",
+  "expiresAt": 1794911876618,
+  "ok": true,
+  "digest": "b380eb9db42e04d3be1394feedb926acf8690504f3335eeb95023daa7adf9b01"
+}

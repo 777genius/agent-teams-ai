@@ -1,0 +1,4176 @@
+{
+  "schemaVersion": 1,
+  "kind": "windows-selected-port-retry-pair-source-r2-root-actual",
+  "at": "2026-11-17 09:09:51 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "reviewer": "root",
+  "verdict": "ACCEPT_EXACT_SOURCE_R2_ACTUAL_PUBLICATION_ONLY_PENDING_INDEPENDENT_ACTUAL_CLOSE",
+  "accepted": true,
+  "commit": "1ca9566d70bd624283227a644fa6969eb8bf8f34",
+  "parent": "d693c62d59c2bc6a6866dcc0293c111380ed88c5",
+  "tree": "fd6a7a819adc8b68a4b3e1ec1ddfe9c57a48e03c",
+  "docsTree": "834eeb86f8ca3f94fec916e6044836bad8cbb348",
+  "scriptsTree": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+  "toolsTree": "b0ffcbc4be600e5edfbc0fbacf312e5b476af6aa",
+  "manifest": {
+    "bytes": 18251,
+    "sha256": "81fd9c07e222bf03a1b931ed451cbffed1bafd4618fb44153aa2780997a2fb78",
+    "gitBlob": "a77bb57b0bc194ae832418813f48109f19d02310"
+  },
+  "subject": {
+    "bytes": 42133,
+    "sha256": "d4cd670c434e83a6b9cf215f031c1ad5b587f66a0eba7a04a37c3d41da887f1b",
+    "gitBlob": "b5538bd991246d7ac099db3403f13c2118546bb3"
+  },
+  "r1ActualGate": {
+    "bytes": 32056,
+    "sha256": "5575685a2e92770fa70a999ff9e34f8de8b25f2fce9d524b108c2e956da78b2f",
+    "gitBlob": "27a1cd9204ccf9019a606c7835ddab4caf4797aa"
+  },
+  "reviews": [
+    {
+      "role": "rootReview",
+      "pin": {
+        "bytes": 41211,
+        "sha256": "951d31240dde547dcd9df9615ff32faa2f43b525ed3c3764edc951fddb2244a9",
+        "gitBlob": "15c874dea2f183e7abbaa78a33bfd8617965f2f3"
+      },
+      "checks": 49,
+      "decision": "ACCEPT_EXACT_FOUR_POSTIMAGES_FOR_SOURCE_R2_PUBLICATION_AFTER_INDEPENDENT_REVIEWS",
+      "completeRead": true,
+      "selfReadConfirmed": true
+    },
+    {
+      "role": "guardReview",
+      "pin": {
+        "bytes": 58924,
+        "sha256": "adf1c46a36bf7a2f08a7ac500556bdf9013d27e2e936b5acf37e8e7aecb07ec0",
+        "gitBlob": "3111cea0e195282541272413ca44806dfa702d52"
+      },
+      "checks": 46,
+      "decision": "ACCEPT_EXACT_FOUR_WINDOWS_SOURCE_POSTIMAGES_STATIC_GUARD_REVIEW_ONLY",
+      "completeRead": true,
+      "selfReadConfirmed": true
+    },
+    {
+      "role": "semanticReview",
+      "pin": {
+        "bytes": 38433,
+        "sha256": "ef9bcff7dedc441c3d2fe390657a3917f04f3f77420039791957b3b7143505da",
+        "gitBlob": "7404a9d711271ef52a6e779a948890c2b8ef0c3b"
+      },
+      "checks": 38,
+      "decision": "ACCEPT_EXACT_FOUR_POSTIMAGE_SOURCE_R2_STATIC_ONLY",
+      "completeRead": true,
+      "selfReadConfirmed": true
+    },
+    {
+      "role": "bindingReview",
+      "pin": {
+        "bytes": 82912,
+        "sha256": "b1ef231c6572e522e978ca834cb9f81b7dcd736cd686a0e6c93212091b078fbe",
+        "gitBlob": "9b034ac7ff624d1496eb1e5db4143eef40e6d326"
+      },
+      "checks": 48,
+      "decision": "ACCEPT_EXACT_FOUR_POSTIMAGES_FOR_SOURCE_R2_PUBLICATION_AFTER_EXISTING_REVIEWS",
+      "completeRead": true,
+      "selfReadConfirmed": true
+    }
+  ],
+  "staticChecks": 181,
+  "actualBodyReadbacks": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-source-r2-20261117.json",
+      "pin": {
+        "bytes": 42133,
+        "sha256": "d4cd670c434e83a6b9cf215f031c1ad5b587f66a0eba7a04a37c3d41da887f1b",
+        "gitBlob": "b5538bd991246d7ac099db3403f13c2118546bb3"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-source-r2-root-review-20261117.json",
+      "pin": {
+        "bytes": 41211,
+        "sha256": "951d31240dde547dcd9df9615ff32faa2f43b525ed3c3764edc951fddb2244a9",
+        "gitBlob": "15c874dea2f183e7abbaa78a33bfd8617965f2f3"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-source-r2-guard-review-20261117.json",
+      "pin": {
+        "bytes": 58924,
+        "sha256": "adf1c46a36bf7a2f08a7ac500556bdf9013d27e2e936b5acf37e8e7aecb07ec0",
+        "gitBlob": "3111cea0e195282541272413ca44806dfa702d52"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-source-r2-semantic-review-20261117.json",
+      "pin": {
+        "bytes": 38433,
+        "sha256": "ef9bcff7dedc441c3d2fe390657a3917f04f3f77420039791957b3b7143505da",
+        "gitBlob": "7404a9d711271ef52a6e779a948890c2b8ef0c3b"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-source-r2-binding-review-20261117.json",
+      "pin": {
+        "bytes": 82912,
+        "sha256": "b1ef231c6572e522e978ca834cb9f81b7dcd736cd686a0e6c93212091b078fbe",
+        "gitBlob": "9b034ac7ff624d1496eb1e5db4143eef40e6d326"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-root-actual-20261117.json",
+      "pin": {
+        "bytes": 84465,
+        "sha256": "9f4739eb0fd8b29478e91e17e0c0eb6e245ec6b3363bd04de8451b4f6ff26c2a",
+        "gitBlob": "c639a1cd00bf1b61f784821b0cdc34f7e4aead52"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-independent-actual-20261117.json",
+      "pin": {
+        "bytes": 205346,
+        "sha256": "a9fae5eb4662bf35d888c53e0c12b801f3c931ccc2b87ec1776a8b937fc836b0",
+        "gitBlob": "feb316c6522d8a62681d658cf63de4e414d5f04c"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-actual-gate-20261117.json",
+      "pin": {
+        "bytes": 32056,
+        "sha256": "5575685a2e92770fa70a999ff9e34f8de8b25f2fce9d524b108c2e956da78b2f",
+        "gitBlob": "27a1cd9204ccf9019a606c7835ddab4caf4797aa"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-observations3-5-20261117.json",
+      "pin": {
+        "bytes": 586464,
+        "sha256": "b71274f6fdc602b06ed121cfbbba2d5bfa64eafd44e50bd44a4210e49386c037",
+        "gitBlob": "2bcfdee3e10f25345b465274a49029aa1b19cab4"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-observation6-20261117.json",
+      "pin": {
+        "bytes": 238003,
+        "sha256": "8a2c6291ae6ad16080433039b29d46eda90764b1c2756396fe4759aec45a52d2",
+        "gitBlob": "ca574d34ede27bf8ded9a2caa20d66950acfa4e1"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-darwin-p09-log-only-20261117.json",
+      "pin": {
+        "bytes": 25222,
+        "sha256": "a15fc0ab85cbd39df36e7a1696c4b9209b32cd02173350cfa9a48dee8c827e13",
+        "gitBlob": "fbfddb7b807e53252c92eeed11928e631a39c5a2"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-packaged-classifier-full-job-20261117.log",
+      "pin": {
+        "bytes": 125812,
+        "sha256": "cfce181bdf15697fad83b5e51a54342a88ee42208c8f9d31933ffd893280fee0",
+        "gitBlob": "0f29779dd9ab38d0fb6d804b1bf17a25a63ee45e"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-linux-host-instructions-full-job-20261117.log",
+      "pin": {
+        "bytes": 74584,
+        "sha256": "4df0aed5c6ca1dee3af69f55208c79e51b86045a88017331dbbae3f69d9cb533",
+        "gitBlob": "79c0da5b8d57c0b5825605c27537a947f632aa3a"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-darwin-x64-stage1-full-job-20261117.log",
+      "pin": {
+        "bytes": 119136,
+        "sha256": "2cdcf5021c70c2780371386a00d4d9f9389c200a668b49755ecbc886829bc218",
+        "gitBlob": "db8cd08074436aa40a79918cf59fbe08093f3ec3"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-darwin-arm64-stage1-full-job-20261117.log",
+      "pin": {
+        "bytes": 110467,
+        "sha256": "ce10c274e3b893cae63f7c270d53e7deac3778c47c15cd7d1d239ef5429b2c62",
+        "gitBlob": "d5cc16b9906b7857291988afabf6f2089ef48cf9"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-ci-classifier-full-job-20261117.log",
+      "pin": {
+        "bytes": 123939,
+        "sha256": "33cec86f04669d5b03a68520dc320895e3dc0cd180f89520d8b9920c5932bbd4",
+        "gitBlob": "287ce5a537cd6b44d402392eb2fd2bc2d5576e47"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-darwin-arm64-packaged-full-job-20261117.log",
+      "pin": {
+        "bytes": 168421,
+        "sha256": "07f8843428c5de719fb4d6ee40de53b61dcdc3137e2d8d56061f9191683e7718",
+        "gitBlob": "0cfb8f940b2574cee58463240b6f1d9208c43497"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-windows-arm64-stage1-full-job-20261117.log",
+      "pin": {
+        "bytes": 127721,
+        "sha256": "bcadbd3a9f6fa010e5c4c6322a2d938e1cb2adf07c5753cffed689ccaa181276",
+        "gitBlob": "2aad3988d4b941c33ec1b96e275832244511d694"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-frontend-shard4-full-job-20261117.log",
+      "pin": {
+        "bytes": 213295,
+        "sha256": "9b9ddd4c587827290feb49f2725cc87cc89b2825a53490453d97d2bd2bcd7797",
+        "gitBlob": "036ba534633dc42e46a7a70190791cea9f8a4af9"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-frontend-shard2-full-job-20261117.log",
+      "pin": {
+        "bytes": 199252,
+        "sha256": "22fbd4d1dc84ed5a1b8327da641705e1250c0aad6ded28eb523d55998de50196",
+        "gitBlob": "e88e698c36ffd97c6c6f5d702fee5a60789aca98"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-frontend-shard1-full-job-20261117.log",
+      "pin": {
+        "bytes": 192534,
+        "sha256": "a0f004eeea9672fcd7f1e982ccff7987cd221893c77ff7f755b66500ae785e6d",
+        "gitBlob": "38d366b8d2a945f6103ea6b707c61ab0d40fa79a"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-linux-static-full-job-20261117.log",
+      "pin": {
+        "bytes": 101494,
+        "sha256": "25772eeb869f29a27411edc156503efe54e710d0a7560c69bf2772624fb6c182",
+        "gitBlob": "e9e601a6b1f5521b7412c5df67435aa275486699"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-windows-x64-stage1-full-job-20261117.log",
+      "pin": {
+        "bytes": 89707,
+        "sha256": "802221eb10a819d79d120549d83b870927f593378d4f4d167acb06b4af424a8c",
+        "gitBlob": "89631f02d342191668a9133e016f8b87b824fa6a"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-darwin-arm64-installer-full-job-20261117.log",
+      "pin": {
+        "bytes": 196149,
+        "sha256": "8221168833c5317e78a144b1d01059822ebaf8bdfa984a029fe16dee0409ff73",
+        "gitBlob": "27a35a3477f8bd724f277a2ed0d4b1b39e632893"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "pin": {
+        "bytes": 2609572,
+        "sha256": "ecce38e78ccbafa120bafa4cacabd6fb49f334094bc60472958d099ac7c2a0c2",
+        "gitBlob": "1d81a923ac5bcee2a46faa2080c6fb08bfeb246e"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "pin": {
+        "bytes": 86281,
+        "sha256": "4c5d037484f6914acab3ba5cae4d6fddf7ee837e13f6715fd87299b549fe3ca0",
+        "gitBlob": "2ab8a9f41c6e2ee37049661d73c9c72eb8437011"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "pin": {
+        "bytes": 580305,
+        "sha256": "e85399db9d2371376a658c394515c5c39f6cb0f7734871817032b2eb2d2749c0",
+        "gitBlob": "756ec650e5d50cee05c3c241d9c340489a1c117a"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-source-r2-publication-manifest-20261117.json",
+      "pin": {
+        "bytes": 18251,
+        "sha256": "81fd9c07e222bf03a1b931ed451cbffed1bafd4618fb44153aa2780997a2fb78",
+        "gitBlob": "a77bb57b0bc194ae832418813f48109f19d02310"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "pin": {
+        "bytes": 12389,
+        "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+        "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "pin": {
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "pin": {
+        "bytes": 37970,
+        "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+        "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "pin": {
+        "bytes": 50377,
+        "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+        "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    }
+  ],
+  "parentBodyReadbacks": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "pin": {
+        "bytes": 2601874,
+        "sha256": "8a7c57076c5db3e18be7fb7df763b72772e5c3b03a88ef1ffbdc5da6b4e7ef39",
+        "gitBlob": "a27b044c697366d37a153c9d1c23a84ea3ff5842"
+      },
+      "actual": {
+        "bytes": 2601874,
+        "sha256": "8a7c57076c5db3e18be7fb7df763b72772e5c3b03a88ef1ffbdc5da6b4e7ef39",
+        "gitBlob": "a27b044c697366d37a153c9d1c23a84ea3ff5842"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "pin": {
+        "bytes": 78583,
+        "sha256": "946dffd92f4f36e08f82ea560d8d08043f498765e405d2f3a850748bdab6ebf8",
+        "gitBlob": "53b3a1c41dc3ffc458289f5a3adef416abd9ef87"
+      },
+      "actual": {
+        "bytes": 78583,
+        "sha256": "946dffd92f4f36e08f82ea560d8d08043f498765e405d2f3a850748bdab6ebf8",
+        "gitBlob": "53b3a1c41dc3ffc458289f5a3adef416abd9ef87"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "pin": {
+        "bytes": 550343,
+        "sha256": "4cb5ea229f48fd75aecc0cd42c0de47128894b5fbc7d103dc6bf51381b66aba4",
+        "gitBlob": "a4306c48a735176359a5e22f5907e440750860aa"
+      },
+      "actual": {
+        "bytes": 550343,
+        "sha256": "4cb5ea229f48fd75aecc0cd42c0de47128894b5fbc7d103dc6bf51381b66aba4",
+        "gitBlob": "a4306c48a735176359a5e22f5907e440750860aa"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "pin": {
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e"
+      },
+      "actual": {
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "pin": {
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+      },
+      "actual": {
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "pin": {
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+      },
+      "actual": {
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "pin": {
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e"
+      },
+      "actual": {
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e"
+      },
+      "fullRead": true,
+      "literalEqual": true
+    }
+  ],
+  "treeProof": {
+    "delta": [
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "status": "modified",
+        "before": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a27b044c697366d37a153c9d1c23a84ea3ff5842",
+          "size": 2601874
+        },
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "1d81a923ac5bcee2a46faa2080c6fb08bfeb246e",
+          "size": 2609572
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "status": "modified",
+        "before": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "53b3a1c41dc3ffc458289f5a3adef416abd9ef87",
+          "size": 78583
+        },
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "2ab8a9f41c6e2ee37049661d73c9c72eb8437011",
+          "size": 86281
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+        "status": "modified",
+        "before": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a4306c48a735176359a5e22f5907e440750860aa",
+          "size": 550343
+        },
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "756ec650e5d50cee05c3c241d9c340489a1c117a",
+          "size": 580305
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-ci-classifier-full-job-20261117.log",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-ci-classifier-full-job-20261117.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "287ce5a537cd6b44d402392eb2fd2bc2d5576e47",
+          "size": 123939
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-darwin-arm64-installer-full-job-20261117.log",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-darwin-arm64-installer-full-job-20261117.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "27a35a3477f8bd724f277a2ed0d4b1b39e632893",
+          "size": 196149
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-darwin-arm64-packaged-full-job-20261117.log",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-darwin-arm64-packaged-full-job-20261117.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "0cfb8f940b2574cee58463240b6f1d9208c43497",
+          "size": 168421
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-darwin-arm64-stage1-full-job-20261117.log",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-darwin-arm64-stage1-full-job-20261117.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "d5cc16b9906b7857291988afabf6f2089ef48cf9",
+          "size": 110467
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-darwin-p09-log-only-20261117.json",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-darwin-p09-log-only-20261117.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "fbfddb7b807e53252c92eeed11928e631a39c5a2",
+          "size": 25222
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-darwin-x64-stage1-full-job-20261117.log",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-darwin-x64-stage1-full-job-20261117.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "db8cd08074436aa40a79918cf59fbe08093f3ec3",
+          "size": 119136
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-frontend-shard1-full-job-20261117.log",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-frontend-shard1-full-job-20261117.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "38d366b8d2a945f6103ea6b707c61ab0d40fa79a",
+          "size": 192534
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-frontend-shard2-full-job-20261117.log",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-frontend-shard2-full-job-20261117.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "e88e698c36ffd97c6c6f5d702fee5a60789aca98",
+          "size": 199252
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-frontend-shard4-full-job-20261117.log",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-frontend-shard4-full-job-20261117.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "036ba534633dc42e46a7a70190791cea9f8a4af9",
+          "size": 213295
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-linux-host-instructions-full-job-20261117.log",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-linux-host-instructions-full-job-20261117.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "79c0da5b8d57c0b5825605c27537a947f632aa3a",
+          "size": 74584
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-linux-static-full-job-20261117.log",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-linux-static-full-job-20261117.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "e9e601a6b1f5521b7412c5df67435aa275486699",
+          "size": 101494
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-observation6-20261117.json",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-observation6-20261117.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "ca574d34ede27bf8ded9a2caa20d66950acfa4e1",
+          "size": 238003
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-observations3-5-20261117.json",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-observations3-5-20261117.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "2bcfdee3e10f25345b465274a49029aa1b19cab4",
+          "size": 586464
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-packaged-classifier-full-job-20261117.log",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-packaged-classifier-full-job-20261117.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "0f29779dd9ab38d0fb6d804b1bf17a25a63ee45e",
+          "size": 125812
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-windows-arm64-stage1-full-job-20261117.log",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-windows-arm64-stage1-full-job-20261117.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "2aad3988d4b941c33ec1b96e275832244511d694",
+          "size": 127721
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-windows-x64-stage1-full-job-20261117.log",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1219-windows-x64-stage1-full-job-20261117.log",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "89631f02d342191668a9133e016f8b87b824fa6a",
+          "size": 89707
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-actual-gate-20261117.json",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-actual-gate-20261117.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "27a1cd9204ccf9019a606c7835ddab4caf4797aa",
+          "size": 32056
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-independent-actual-20261117.json",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-independent-actual-20261117.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "feb316c6522d8a62681d658cf63de4e414d5f04c",
+          "size": 205346
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-root-actual-20261117.json",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-r1-root-actual-20261117.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c639a1cd00bf1b61f784821b0cdc34f7e4aead52",
+          "size": 84465
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-source-r2-20261117.json",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-source-r2-20261117.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b5538bd991246d7ac099db3403f13c2118546bb3",
+          "size": 42133
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-source-r2-binding-review-20261117.json",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-source-r2-binding-review-20261117.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9b034ac7ff624d1496eb1e5db4143eef40e6d326",
+          "size": 82912
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-source-r2-guard-review-20261117.json",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-source-r2-guard-review-20261117.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "3111cea0e195282541272413ca44806dfa702d52",
+          "size": 58924
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-source-r2-publication-manifest-20261117.json",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-source-r2-publication-manifest-20261117.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a77bb57b0bc194ae832418813f48109f19d02310",
+          "size": 18251
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-source-r2-root-review-20261117.json",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-source-r2-root-review-20261117.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "15c874dea2f183e7abbaa78a33bfd8617965f2f3",
+          "size": 41211
+        }
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-source-r2-semantic-review-20261117.json",
+        "status": "added",
+        "before": null,
+        "after": {
+          "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-selected-port-retry-pair-source-r2-semantic-review-20261117.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "7404a9d711271ef52a6e779a948890c2b8ef0c3b",
+          "size": 38433
+        }
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "status": "modified",
+        "before": {
+          "path": "e2e/opencode-diagnostics/platform.mjs",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "71d5629149e8f499a45b54a99922145ee3cae09e",
+          "size": 12335
+        },
+        "after": {
+          "path": "e2e/opencode-diagnostics/platform.mjs",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c58df0899e23711e4367c0c1f9bf46570f794fb4",
+          "size": 12389
+        }
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "status": "modified",
+        "before": {
+          "path": "e2e/opencode-diagnostics/platform.test.mjs",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+          "size": 16835
+        },
+        "after": {
+          "path": "e2e/opencode-diagnostics/platform.test.mjs",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72",
+          "size": 20830
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+        "status": "modified",
+        "before": {
+          "path": "legacy-agent-host/desktop-native-process-ui.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "076fbd26bac85c4195312a83c1ae78067a8d742e",
+          "size": 41888
+        },
+        "after": {
+          "path": "legacy-agent-host/desktop-native-process-ui.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b4bbd33777a065e21eed91d6997e36c1570003cd",
+          "size": 50377
+        }
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "status": "modified",
+        "before": {
+          "path": "owned-process-broker/nativeWindowsAppGate.mjs",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+          "size": 37692
+        },
+        "after": {
+          "path": "owned-process-broker/nativeWindowsAppGate.mjs",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3",
+          "size": 37970
+        }
+      }
+    ],
+    "unchangedOtherRootEntries": 51,
+    "census": {
+      "parentLeaves": 12063,
+      "parentDocs": 3264,
+      "leaves": 12088,
+      "docs": 3289,
+      "nonDocs": 8799,
+      "unchangedOtherNonDocRootEntries": 51,
+      "sourceChangedRootEntries": [
+        "scripts",
+        "tools"
+      ],
+      "workflows": 42,
+      "production": 5020,
+      "exceptions": 141,
+      "sourceCap": 800
+    }
+  },
+  "fullActualSourceInverses": [
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "before": {
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e"
+      },
+      "after": {
+        "bytes": 12389,
+        "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+        "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+      },
+      "restored": {
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e"
+      },
+      "completeLiteralEquality": true
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "before": {
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+      },
+      "after": {
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+      },
+      "restored": {
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+      },
+      "completeLiteralEquality": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "before": {
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+      },
+      "after": {
+        "bytes": 37970,
+        "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+        "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3"
+      },
+      "restored": {
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+      },
+      "completeLiteralEquality": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "before": {
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e"
+      },
+      "after": {
+        "bytes": 50377,
+        "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+        "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+      },
+      "restored": {
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e"
+      },
+      "completeLiteralEquality": true
+    }
+  ],
+  "catalogPreservation": {
+    "all89OldValues": true,
+    "newKeys": [
+      "windowsSelectedPortRetryPairSourceR2Stage",
+      "windowsSelectedPortRetryPairSourceR2EvidenceFiles"
+    ],
+    "resultFields": 91,
+    "all27BundlesAndTotals": true,
+    "append": {
+      "bytes": 7698,
+      "sha256": "239fa7a8aa6808b88191f8e5e7df1574918885e7554973f6b7c5ee294deaa0ad",
+      "gitBlob": "bf84dddd06fee99830967547de0c9d4b473019ee"
+    }
+  },
+  "currentPointerJoins": [
+    {
+      "pin": {
+        "gitBlob": "b5538bd991246d7ac099db3403f13c2118546bb3",
+        "bytes": 42133,
+        "sha256": "d4cd670c434e83a6b9cf215f031c1ad5b587f66a0eba7a04a37c3d41da887f1b"
+      },
+      "locations": [
+        "manifest.subject",
+        "manifest.evidenceFiles.0",
+        "currentStage.subject",
+        "currentStage.evidenceFiles.0",
+        "currentEvidenceMap.0",
+        "currentEvidence.rootReview.subject",
+        "currentEvidence.guardReview.subject",
+        "currentEvidence.guardReview.fullSourceReads.proposal",
+        "currentEvidence.semanticReview.subject",
+        "currentEvidence.semanticReview.checks.0.evidence",
+        "currentEvidence.bindingReview.subject",
+        "currentEvidence.bindingReview.rootReviewJoin.subject",
+        "currentEvidence.bindingReview.checks.0.evidence.identity",
+        "currentEvidence.ciObservations35.sourceR2Separate.proposal",
+        "currentEvidence.ciObservation6.sourceR2NotInThisRun"
+      ],
+      "actual": {
+        "bytes": 42133,
+        "sha256": "d4cd670c434e83a6b9cf215f031c1ad5b587f66a0eba7a04a37c3d41da887f1b",
+        "gitBlob": "b5538bd991246d7ac099db3403f13c2118546bb3"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "15c874dea2f183e7abbaa78a33bfd8617965f2f3",
+        "bytes": 41211,
+        "sha256": "951d31240dde547dcd9df9615ff32faa2f43b525ed3c3764edc951fddb2244a9"
+      },
+      "locations": [
+        "manifest.reviews.0.pin",
+        "manifest.evidenceFiles.1",
+        "currentStage.reviews.0.pin",
+        "currentStage.evidenceFiles.1",
+        "currentEvidenceMap.1",
+        "currentEvidence.bindingReview.rootReviewJoin.identity",
+        "currentEvidence.bindingReview.checks.45.evidence.rootReview"
+      ],
+      "actual": {
+        "bytes": 41211,
+        "sha256": "951d31240dde547dcd9df9615ff32faa2f43b525ed3c3764edc951fddb2244a9",
+        "gitBlob": "15c874dea2f183e7abbaa78a33bfd8617965f2f3"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "3111cea0e195282541272413ca44806dfa702d52",
+        "bytes": 58924,
+        "sha256": "adf1c46a36bf7a2f08a7ac500556bdf9013d27e2e936b5acf37e8e7aecb07ec0"
+      },
+      "locations": [
+        "manifest.reviews.1.pin",
+        "manifest.evidenceFiles.2",
+        "currentStage.reviews.1.pin",
+        "currentStage.evidenceFiles.2",
+        "currentEvidenceMap.2"
+      ],
+      "actual": {
+        "bytes": 58924,
+        "sha256": "adf1c46a36bf7a2f08a7ac500556bdf9013d27e2e936b5acf37e8e7aecb07ec0",
+        "gitBlob": "3111cea0e195282541272413ca44806dfa702d52"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "7404a9d711271ef52a6e779a948890c2b8ef0c3b",
+        "bytes": 38433,
+        "sha256": "ef9bcff7dedc441c3d2fe390657a3917f04f3f77420039791957b3b7143505da"
+      },
+      "locations": [
+        "manifest.reviews.2.pin",
+        "manifest.evidenceFiles.3",
+        "currentStage.reviews.2.pin",
+        "currentStage.evidenceFiles.3",
+        "currentEvidenceMap.3"
+      ],
+      "actual": {
+        "bytes": 38433,
+        "sha256": "ef9bcff7dedc441c3d2fe390657a3917f04f3f77420039791957b3b7143505da",
+        "gitBlob": "7404a9d711271ef52a6e779a948890c2b8ef0c3b"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "9b034ac7ff624d1496eb1e5db4143eef40e6d326",
+        "bytes": 82912,
+        "sha256": "b1ef231c6572e522e978ca834cb9f81b7dcd736cd686a0e6c93212091b078fbe"
+      },
+      "locations": [
+        "manifest.reviews.3.pin",
+        "manifest.evidenceFiles.4",
+        "currentStage.reviews.3.pin",
+        "currentStage.evidenceFiles.4",
+        "currentEvidenceMap.4"
+      ],
+      "actual": {
+        "bytes": 82912,
+        "sha256": "b1ef231c6572e522e978ca834cb9f81b7dcd736cd686a0e6c93212091b078fbe",
+        "gitBlob": "9b034ac7ff624d1496eb1e5db4143eef40e6d326"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "27a1cd9204ccf9019a606c7835ddab4caf4797aa",
+        "bytes": 32056,
+        "sha256": "5575685a2e92770fa70a999ff9e34f8de8b25f2fce9d524b108c2e956da78b2f"
+      },
+      "locations": [
+        "manifest.r1ActualGate",
+        "manifest.evidenceFiles.7",
+        "currentStage.r1ActualGate",
+        "currentStage.evidenceFiles.7",
+        "currentEvidenceMap.7",
+        "currentEvidence.sourceR2.r1.actualGate",
+        "currentEvidence.rootReview.r1ActualGate",
+        "currentEvidence.rootReview.directPointerJoins.8.pin",
+        "currentEvidence.rootReview.directPointerJoins.8.actual",
+        "currentEvidence.rootReview.checks.1.evidence.gate",
+        "currentEvidence.guardReview.inheritedR1.closedGate",
+        "currentEvidence.guardReview.fullSourceReads.gate",
+        "currentEvidence.semanticReview.authority.actualGate",
+        "currentEvidence.semanticReview.checks.2.evidence.gate",
+        "currentEvidence.bindingReview.r1ActualGate",
+        "currentEvidence.bindingReview.directPointerJoins.8.pin",
+        "currentEvidence.bindingReview.directPointerJoins.8.actual",
+        "currentEvidence.bindingReview.checks.1.evidence.gate"
+      ],
+      "actual": {
+        "bytes": 32056,
+        "sha256": "5575685a2e92770fa70a999ff9e34f8de8b25f2fce9d524b108c2e956da78b2f",
+        "gitBlob": "27a1cd9204ccf9019a606c7835ddab4caf4797aa"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e"
+      },
+      "locations": [
+        "manifest.sourceChanges.0.before",
+        "currentStage.sourceChanges.0.before",
+        "currentEvidence.sourceR2.beforeAfterVector.0.before",
+        "currentEvidence.rootReview.sourceChanges.0.before",
+        "currentEvidence.rootReview.fullInverseProofs.0.restored",
+        "currentEvidence.rootReview.directPointerJoins.9.pin",
+        "currentEvidence.rootReview.directPointerJoins.9.actual",
+        "currentEvidence.rootReview.checks.5.evidence.0.before",
+        "currentEvidence.rootReview.checks.6.evidence.0.restored",
+        "currentEvidence.guardReview.beforeAfterVector.0.before",
+        "currentEvidence.guardReview.wholeByteInverses.0.before",
+        "currentEvidence.guardReview.wholeByteInverses.0.inverse",
+        "currentEvidence.semanticReview.completeBodies.0.before",
+        "currentEvidence.bindingReview.sourceChanges.0.before",
+        "currentEvidence.bindingReview.fullSourceJoins.0.before",
+        "currentEvidence.bindingReview.fullSourceJoins.0.declared.before",
+        "currentEvidence.bindingReview.sourceTreeJoins.0.before",
+        "currentEvidence.bindingReview.fullInverseProofs.0.restoredIdentity",
+        "currentEvidence.bindingReview.directPointerJoins.9.pin",
+        "currentEvidence.bindingReview.directPointerJoins.9.actual",
+        "currentEvidence.bindingReview.checks.8.evidence.paths.0.restored",
+        "currentEvidence.r1RootActual.currentPointerJoins.9.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.9.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.9.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.9.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.9.identity",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.9.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.9.actual",
+        "currentEvidence.r1ActualGate.preservation.sourcePreimages.0"
+      ],
+      "actual": {
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4",
+        "bytes": 12389,
+        "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34"
+      },
+      "locations": [
+        "manifest.sourceChanges.0.after",
+        "currentStage.sourceChanges.0.after",
+        "currentEvidence.sourceR2.beforeAfterVector.0.after",
+        "currentEvidence.rootReview.sourceChanges.0.after",
+        "currentEvidence.rootReview.directPointerJoins.10.pin",
+        "currentEvidence.rootReview.directPointerJoins.10.actual",
+        "currentEvidence.rootReview.checks.5.evidence.0.after",
+        "currentEvidence.guardReview.beforeAfterVector.0.after",
+        "currentEvidence.guardReview.wholeByteInverses.0.after",
+        "currentEvidence.semanticReview.completeBodies.0.after",
+        "currentEvidence.bindingReview.sourceChanges.0.after",
+        "currentEvidence.bindingReview.fullSourceJoins.0.after",
+        "currentEvidence.bindingReview.fullSourceJoins.0.declared.after",
+        "currentEvidence.bindingReview.directPointerJoins.10.pin",
+        "currentEvidence.bindingReview.directPointerJoins.10.actual"
+      ],
+      "actual": {
+        "bytes": 12389,
+        "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+        "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697"
+      },
+      "locations": [
+        "manifest.sourceChanges.1.before",
+        "currentStage.sourceChanges.1.before",
+        "currentEvidence.sourceR2.beforeAfterVector.1.before",
+        "currentEvidence.rootReview.sourceChanges.1.before",
+        "currentEvidence.rootReview.fullInverseProofs.1.restored",
+        "currentEvidence.rootReview.directPointerJoins.11.pin",
+        "currentEvidence.rootReview.directPointerJoins.11.actual",
+        "currentEvidence.rootReview.checks.5.evidence.1.before",
+        "currentEvidence.rootReview.checks.6.evidence.1.restored",
+        "currentEvidence.guardReview.beforeAfterVector.1.before",
+        "currentEvidence.guardReview.wholeByteInverses.1.before",
+        "currentEvidence.guardReview.wholeByteInverses.1.inverse",
+        "currentEvidence.semanticReview.completeBodies.1.before",
+        "currentEvidence.bindingReview.sourceChanges.1.before",
+        "currentEvidence.bindingReview.fullSourceJoins.1.before",
+        "currentEvidence.bindingReview.fullSourceJoins.1.declared.before",
+        "currentEvidence.bindingReview.sourceTreeJoins.1.before",
+        "currentEvidence.bindingReview.fullInverseProofs.1.restoredIdentity",
+        "currentEvidence.bindingReview.directPointerJoins.11.pin",
+        "currentEvidence.bindingReview.directPointerJoins.11.actual",
+        "currentEvidence.bindingReview.checks.8.evidence.paths.1.restored",
+        "currentEvidence.r1RootActual.currentPointerJoins.10.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.10.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.10.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.10.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.10.identity",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.10.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.10.actual",
+        "currentEvidence.r1ActualGate.preservation.sourcePreimages.1"
+      ],
+      "actual": {
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72",
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26"
+      },
+      "locations": [
+        "manifest.sourceChanges.1.after",
+        "currentStage.sourceChanges.1.after",
+        "currentEvidence.sourceR2.beforeAfterVector.1.after",
+        "currentEvidence.rootReview.sourceChanges.1.after",
+        "currentEvidence.rootReview.directPointerJoins.12.pin",
+        "currentEvidence.rootReview.directPointerJoins.12.actual",
+        "currentEvidence.rootReview.checks.5.evidence.1.after",
+        "currentEvidence.guardReview.beforeAfterVector.1.after",
+        "currentEvidence.guardReview.wholeByteInverses.1.after",
+        "currentEvidence.semanticReview.completeBodies.1.after",
+        "currentEvidence.bindingReview.sourceChanges.1.after",
+        "currentEvidence.bindingReview.fullSourceJoins.1.after",
+        "currentEvidence.bindingReview.fullSourceJoins.1.declared.after",
+        "currentEvidence.bindingReview.directPointerJoins.12.pin",
+        "currentEvidence.bindingReview.directPointerJoins.12.actual"
+      ],
+      "actual": {
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa"
+      },
+      "locations": [
+        "manifest.sourceChanges.2.before",
+        "currentStage.sourceChanges.2.before",
+        "currentEvidence.sourceR2.beforeAfterVector.2.before",
+        "currentEvidence.rootReview.sourceChanges.2.before",
+        "currentEvidence.rootReview.fullInverseProofs.2.restored",
+        "currentEvidence.rootReview.directPointerJoins.13.pin",
+        "currentEvidence.rootReview.directPointerJoins.13.actual",
+        "currentEvidence.rootReview.checks.5.evidence.2.before",
+        "currentEvidence.rootReview.checks.6.evidence.2.restored",
+        "currentEvidence.guardReview.beforeAfterVector.2.before",
+        "currentEvidence.guardReview.wholeByteInverses.2.before",
+        "currentEvidence.guardReview.wholeByteInverses.2.inverse",
+        "currentEvidence.semanticReview.completeBodies.2.before",
+        "currentEvidence.bindingReview.sourceChanges.2.before",
+        "currentEvidence.bindingReview.fullSourceJoins.2.before",
+        "currentEvidence.bindingReview.fullSourceJoins.2.declared.before",
+        "currentEvidence.bindingReview.sourceTreeJoins.2.before",
+        "currentEvidence.bindingReview.fullInverseProofs.2.restoredIdentity",
+        "currentEvidence.bindingReview.directPointerJoins.13.pin",
+        "currentEvidence.bindingReview.directPointerJoins.13.actual",
+        "currentEvidence.bindingReview.checks.8.evidence.paths.2.restored",
+        "currentEvidence.r1RootActual.currentPointerJoins.11.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.11.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.11.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.11.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.11.identity",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.11.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.11.actual",
+        "currentEvidence.r1ActualGate.preservation.sourcePreimages.2"
+      ],
+      "actual": {
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3",
+        "bytes": 37970,
+        "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb"
+      },
+      "locations": [
+        "manifest.sourceChanges.2.after",
+        "currentStage.sourceChanges.2.after",
+        "currentEvidence.sourceR2.beforeAfterVector.2.after",
+        "currentEvidence.rootReview.sourceChanges.2.after",
+        "currentEvidence.rootReview.directPointerJoins.14.pin",
+        "currentEvidence.rootReview.directPointerJoins.14.actual",
+        "currentEvidence.rootReview.checks.5.evidence.2.after",
+        "currentEvidence.guardReview.beforeAfterVector.2.after",
+        "currentEvidence.guardReview.wholeByteInverses.2.after",
+        "currentEvidence.semanticReview.completeBodies.2.after",
+        "currentEvidence.bindingReview.sourceChanges.2.after",
+        "currentEvidence.bindingReview.fullSourceJoins.2.after",
+        "currentEvidence.bindingReview.fullSourceJoins.2.declared.after",
+        "currentEvidence.bindingReview.directPointerJoins.14.pin",
+        "currentEvidence.bindingReview.directPointerJoins.14.actual"
+      ],
+      "actual": {
+        "bytes": 37970,
+        "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+        "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e",
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5"
+      },
+      "locations": [
+        "manifest.sourceChanges.3.before",
+        "currentStage.sourceChanges.3.before",
+        "currentEvidence.sourceR2.beforeAfterVector.3.before",
+        "currentEvidence.rootReview.sourceChanges.3.before",
+        "currentEvidence.rootReview.fullInverseProofs.3.restored",
+        "currentEvidence.rootReview.directPointerJoins.15.pin",
+        "currentEvidence.rootReview.directPointerJoins.15.actual",
+        "currentEvidence.rootReview.checks.5.evidence.3.before",
+        "currentEvidence.rootReview.checks.6.evidence.3.restored",
+        "currentEvidence.guardReview.beforeAfterVector.3.before",
+        "currentEvidence.guardReview.wholeByteInverses.3.before",
+        "currentEvidence.guardReview.wholeByteInverses.3.inverse",
+        "currentEvidence.semanticReview.completeBodies.3.before",
+        "currentEvidence.bindingReview.sourceChanges.3.before",
+        "currentEvidence.bindingReview.fullSourceJoins.3.before",
+        "currentEvidence.bindingReview.fullSourceJoins.3.declared.before",
+        "currentEvidence.bindingReview.sourceTreeJoins.3.before",
+        "currentEvidence.bindingReview.fullInverseProofs.3.restoredIdentity",
+        "currentEvidence.bindingReview.directPointerJoins.15.pin",
+        "currentEvidence.bindingReview.directPointerJoins.15.actual",
+        "currentEvidence.bindingReview.checks.8.evidence.paths.3.restored",
+        "currentEvidence.bindingReview.checks.25.evidence.prefix",
+        "currentEvidence.r1RootActual.currentPointerJoins.12.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.12.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.12.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.12.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.12.identity",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.12.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.12.actual",
+        "currentEvidence.r1ActualGate.preservation.sourcePreimages.3"
+      ],
+      "actual": {
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd",
+        "bytes": 50377,
+        "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac"
+      },
+      "locations": [
+        "manifest.sourceChanges.3.after",
+        "currentStage.sourceChanges.3.after",
+        "currentEvidence.sourceR2.beforeAfterVector.3.after",
+        "currentEvidence.rootReview.sourceChanges.3.after",
+        "currentEvidence.rootReview.directPointerJoins.16.pin",
+        "currentEvidence.rootReview.directPointerJoins.16.actual",
+        "currentEvidence.rootReview.checks.5.evidence.3.after",
+        "currentEvidence.guardReview.beforeAfterVector.3.after",
+        "currentEvidence.guardReview.wholeByteInverses.3.after",
+        "currentEvidence.semanticReview.completeBodies.3.after",
+        "currentEvidence.bindingReview.sourceChanges.3.after",
+        "currentEvidence.bindingReview.fullSourceJoins.3.after",
+        "currentEvidence.bindingReview.fullSourceJoins.3.declared.after",
+        "currentEvidence.bindingReview.directPointerJoins.16.pin",
+        "currentEvidence.bindingReview.directPointerJoins.16.actual"
+      ],
+      "actual": {
+        "bytes": 50377,
+        "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+        "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "c639a1cd00bf1b61f784821b0cdc34f7e4aead52",
+        "bytes": 84465,
+        "sha256": "9f4739eb0fd8b29478e91e17e0c0eb6e245ec6b3363bd04de8451b4f6ff26c2a"
+      },
+      "locations": [
+        "manifest.evidenceFiles.5",
+        "currentStage.evidenceFiles.5",
+        "currentEvidenceMap.5",
+        "currentEvidence.sourceR2.r1.rootActual",
+        "currentEvidence.rootReview.directPointerJoins.6.pin",
+        "currentEvidence.rootReview.directPointerJoins.6.actual",
+        "currentEvidence.guardReview.inheritedR1.rootActual",
+        "currentEvidence.bindingReview.authority.r1RootActual",
+        "currentEvidence.bindingReview.directPointerJoins.6.pin",
+        "currentEvidence.bindingReview.directPointerJoins.6.actual",
+        "currentEvidence.bindingReview.checks.2.evidence.root40",
+        "currentEvidence.r1IndependentActual.rootActualJoin.identity",
+        "currentEvidence.r1IndependentActual.checks.12.evidence.rootReport",
+        "currentEvidence.r1IndependentActual.checks.43.evidence.identity",
+        "currentEvidence.r1ActualGate.rootActual"
+      ],
+      "actual": {
+        "bytes": 84465,
+        "sha256": "9f4739eb0fd8b29478e91e17e0c0eb6e245ec6b3363bd04de8451b4f6ff26c2a",
+        "gitBlob": "c639a1cd00bf1b61f784821b0cdc34f7e4aead52"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "feb316c6522d8a62681d658cf63de4e414d5f04c",
+        "bytes": 205346,
+        "sha256": "a9fae5eb4662bf35d888c53e0c12b801f3c931ccc2b87ec1776a8b937fc836b0"
+      },
+      "locations": [
+        "manifest.evidenceFiles.6",
+        "currentStage.evidenceFiles.6",
+        "currentEvidenceMap.6",
+        "currentEvidence.sourceR2.r1.independentActual",
+        "currentEvidence.rootReview.directPointerJoins.7.pin",
+        "currentEvidence.rootReview.directPointerJoins.7.actual",
+        "currentEvidence.guardReview.inheritedR1.independentActual",
+        "currentEvidence.bindingReview.authority.r1IndependentActual",
+        "currentEvidence.bindingReview.directPointerJoins.7.pin",
+        "currentEvidence.bindingReview.directPointerJoins.7.actual",
+        "currentEvidence.bindingReview.checks.2.evidence.independent46",
+        "currentEvidence.bindingReview.checks.2.evidence.independentSelfRead.pin",
+        "currentEvidence.r1ActualGate.independentActual",
+        "currentEvidence.r1ActualGate.independentFullSelfReadback.pin"
+      ],
+      "actual": {
+        "bytes": 205346,
+        "sha256": "a9fae5eb4662bf35d888c53e0c12b801f3c931ccc2b87ec1776a8b937fc836b0",
+        "gitBlob": "feb316c6522d8a62681d658cf63de4e414d5f04c"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "2bcfdee3e10f25345b465274a49029aa1b19cab4",
+        "bytes": 586464,
+        "sha256": "b71274f6fdc602b06ed121cfbbba2d5bfa64eafd44e50bd44a4210e49386c037"
+      },
+      "locations": [
+        "manifest.evidenceFiles.8",
+        "currentStage.evidenceFiles.8",
+        "currentStage.currentCi.observations35",
+        "currentEvidenceMap.8",
+        "currentEvidence.ciObservation6.prior"
+      ],
+      "actual": {
+        "bytes": 586464,
+        "sha256": "b71274f6fdc602b06ed121cfbbba2d5bfa64eafd44e50bd44a4210e49386c037",
+        "gitBlob": "2bcfdee3e10f25345b465274a49029aa1b19cab4"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "ca574d34ede27bf8ded9a2caa20d66950acfa4e1",
+        "bytes": 238003,
+        "sha256": "8a2c6291ae6ad16080433039b29d46eda90764b1c2756396fe4759aec45a52d2"
+      },
+      "locations": [
+        "manifest.evidenceFiles.9",
+        "currentStage.evidenceFiles.9",
+        "currentStage.currentCi.observation6",
+        "currentEvidenceMap.9"
+      ],
+      "actual": {
+        "bytes": 238003,
+        "sha256": "8a2c6291ae6ad16080433039b29d46eda90764b1c2756396fe4759aec45a52d2",
+        "gitBlob": "ca574d34ede27bf8ded9a2caa20d66950acfa4e1"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "fbfddb7b807e53252c92eeed11928e631a39c5a2",
+        "bytes": 25222,
+        "sha256": "a15fc0ab85cbd39df36e7a1696c4b9209b32cd02173350cfa9a48dee8c827e13"
+      },
+      "locations": [
+        "manifest.evidenceFiles.10",
+        "currentStage.evidenceFiles.10",
+        "currentEvidenceMap.10",
+        "currentEvidence.ciObservations35.freshDarwinP09Advisory.pin"
+      ],
+      "actual": {
+        "bytes": 25222,
+        "sha256": "a15fc0ab85cbd39df36e7a1696c4b9209b32cd02173350cfa9a48dee8c827e13",
+        "gitBlob": "fbfddb7b807e53252c92eeed11928e631a39c5a2"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "0f29779dd9ab38d0fb6d804b1bf17a25a63ee45e",
+        "bytes": 125812,
+        "sha256": "cfce181bdf15697fad83b5e51a54342a88ee42208c8f9d31933ffd893280fee0"
+      },
+      "locations": [
+        "manifest.evidenceFiles.11",
+        "currentStage.evidenceFiles.11",
+        "currentEvidenceMap.11",
+        "currentEvidence.ciObservations35.completedJobLogs.1.fullLog"
+      ],
+      "actual": {
+        "bytes": 125812,
+        "sha256": "cfce181bdf15697fad83b5e51a54342a88ee42208c8f9d31933ffd893280fee0",
+        "gitBlob": "0f29779dd9ab38d0fb6d804b1bf17a25a63ee45e"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "79c0da5b8d57c0b5825605c27537a947f632aa3a",
+        "bytes": 74584,
+        "sha256": "4df0aed5c6ca1dee3af69f55208c79e51b86045a88017331dbbae3f69d9cb533"
+      },
+      "locations": [
+        "manifest.evidenceFiles.12",
+        "currentStage.evidenceFiles.12",
+        "currentEvidenceMap.12",
+        "currentEvidence.ciObservations35.completedJobLogs.2.fullLog"
+      ],
+      "actual": {
+        "bytes": 74584,
+        "sha256": "4df0aed5c6ca1dee3af69f55208c79e51b86045a88017331dbbae3f69d9cb533",
+        "gitBlob": "79c0da5b8d57c0b5825605c27537a947f632aa3a"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "db8cd08074436aa40a79918cf59fbe08093f3ec3",
+        "bytes": 119136,
+        "sha256": "2cdcf5021c70c2780371386a00d4d9f9389c200a668b49755ecbc886829bc218"
+      },
+      "locations": [
+        "manifest.evidenceFiles.13",
+        "currentStage.evidenceFiles.13",
+        "currentEvidenceMap.13",
+        "currentEvidence.ciObservations35.completedJobLogs.3.fullLog",
+        "currentEvidence.darwinLogOnly.evidence.fullLogs.0.identity"
+      ],
+      "actual": {
+        "bytes": 119136,
+        "sha256": "2cdcf5021c70c2780371386a00d4d9f9389c200a668b49755ecbc886829bc218",
+        "gitBlob": "db8cd08074436aa40a79918cf59fbe08093f3ec3"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "d5cc16b9906b7857291988afabf6f2089ef48cf9",
+        "bytes": 110467,
+        "sha256": "ce10c274e3b893cae63f7c270d53e7deac3778c47c15cd7d1d239ef5429b2c62"
+      },
+      "locations": [
+        "manifest.evidenceFiles.14",
+        "currentStage.evidenceFiles.14",
+        "currentEvidenceMap.14",
+        "currentEvidence.ciObservations35.completedJobLogs.4.fullLog",
+        "currentEvidence.darwinLogOnly.evidence.fullLogs.1.identity"
+      ],
+      "actual": {
+        "bytes": 110467,
+        "sha256": "ce10c274e3b893cae63f7c270d53e7deac3778c47c15cd7d1d239ef5429b2c62",
+        "gitBlob": "d5cc16b9906b7857291988afabf6f2089ef48cf9"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "287ce5a537cd6b44d402392eb2fd2bc2d5576e47",
+        "bytes": 123939,
+        "sha256": "33cec86f04669d5b03a68520dc320895e3dc0cd180f89520d8b9920c5932bbd4"
+      },
+      "locations": [
+        "manifest.evidenceFiles.15",
+        "currentStage.evidenceFiles.15",
+        "currentEvidenceMap.15",
+        "currentEvidence.ciObservations35.completedJobLogs.5.fullLog"
+      ],
+      "actual": {
+        "bytes": 123939,
+        "sha256": "33cec86f04669d5b03a68520dc320895e3dc0cd180f89520d8b9920c5932bbd4",
+        "gitBlob": "287ce5a537cd6b44d402392eb2fd2bc2d5576e47"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "0cfb8f940b2574cee58463240b6f1d9208c43497",
+        "bytes": 168421,
+        "sha256": "07f8843428c5de719fb4d6ee40de53b61dcdc3137e2d8d56061f9191683e7718"
+      },
+      "locations": [
+        "manifest.evidenceFiles.16",
+        "currentStage.evidenceFiles.16",
+        "currentEvidenceMap.16",
+        "currentEvidence.ciObservations35.completedJobLogs.6.fullLog",
+        "currentEvidence.ciObservations35.packagedDarwinArmFailure.fullLog"
+      ],
+      "actual": {
+        "bytes": 168421,
+        "sha256": "07f8843428c5de719fb4d6ee40de53b61dcdc3137e2d8d56061f9191683e7718",
+        "gitBlob": "0cfb8f940b2574cee58463240b6f1d9208c43497"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "2aad3988d4b941c33ec1b96e275832244511d694",
+        "bytes": 127721,
+        "sha256": "bcadbd3a9f6fa010e5c4c6322a2d938e1cb2adf07c5753cffed689ccaa181276"
+      },
+      "locations": [
+        "manifest.evidenceFiles.17",
+        "currentStage.evidenceFiles.17",
+        "currentEvidenceMap.17",
+        "currentEvidence.ciObservations35.completedJobLogs.7.fullLog"
+      ],
+      "actual": {
+        "bytes": 127721,
+        "sha256": "bcadbd3a9f6fa010e5c4c6322a2d938e1cb2adf07c5753cffed689ccaa181276",
+        "gitBlob": "2aad3988d4b941c33ec1b96e275832244511d694"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "036ba534633dc42e46a7a70190791cea9f8a4af9",
+        "bytes": 213295,
+        "sha256": "9b9ddd4c587827290feb49f2725cc87cc89b2825a53490453d97d2bd2bcd7797"
+      },
+      "locations": [
+        "manifest.evidenceFiles.18",
+        "currentStage.evidenceFiles.18",
+        "currentEvidenceMap.18",
+        "currentEvidence.ciObservations35.completedJobLogs.8.fullLog"
+      ],
+      "actual": {
+        "bytes": 213295,
+        "sha256": "9b9ddd4c587827290feb49f2725cc87cc89b2825a53490453d97d2bd2bcd7797",
+        "gitBlob": "036ba534633dc42e46a7a70190791cea9f8a4af9"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "e88e698c36ffd97c6c6f5d702fee5a60789aca98",
+        "bytes": 199252,
+        "sha256": "22fbd4d1dc84ed5a1b8327da641705e1250c0aad6ded28eb523d55998de50196"
+      },
+      "locations": [
+        "manifest.evidenceFiles.19",
+        "currentStage.evidenceFiles.19",
+        "currentEvidenceMap.19",
+        "currentEvidence.ciObservations35.completedJobLogs.9.fullLog"
+      ],
+      "actual": {
+        "bytes": 199252,
+        "sha256": "22fbd4d1dc84ed5a1b8327da641705e1250c0aad6ded28eb523d55998de50196",
+        "gitBlob": "e88e698c36ffd97c6c6f5d702fee5a60789aca98"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "38d366b8d2a945f6103ea6b707c61ab0d40fa79a",
+        "bytes": 192534,
+        "sha256": "a0f004eeea9672fcd7f1e982ccff7987cd221893c77ff7f755b66500ae785e6d"
+      },
+      "locations": [
+        "manifest.evidenceFiles.20",
+        "currentStage.evidenceFiles.20",
+        "currentEvidenceMap.20",
+        "currentEvidence.ciObservations35.completedJobLogs.10.fullLog"
+      ],
+      "actual": {
+        "bytes": 192534,
+        "sha256": "a0f004eeea9672fcd7f1e982ccff7987cd221893c77ff7f755b66500ae785e6d",
+        "gitBlob": "38d366b8d2a945f6103ea6b707c61ab0d40fa79a"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "e9e601a6b1f5521b7412c5df67435aa275486699",
+        "bytes": 101494,
+        "sha256": "25772eeb869f29a27411edc156503efe54e710d0a7560c69bf2772624fb6c182"
+      },
+      "locations": [
+        "manifest.evidenceFiles.21",
+        "currentStage.evidenceFiles.21",
+        "currentEvidenceMap.21",
+        "currentEvidence.ciObservation6.completedJobLogs.0.log"
+      ],
+      "actual": {
+        "bytes": 101494,
+        "sha256": "25772eeb869f29a27411edc156503efe54e710d0a7560c69bf2772624fb6c182",
+        "gitBlob": "e9e601a6b1f5521b7412c5df67435aa275486699"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "89631f02d342191668a9133e016f8b87b824fa6a",
+        "bytes": 89707,
+        "sha256": "802221eb10a819d79d120549d83b870927f593378d4f4d167acb06b4af424a8c"
+      },
+      "locations": [
+        "manifest.evidenceFiles.22",
+        "currentStage.evidenceFiles.22",
+        "currentEvidenceMap.22",
+        "currentEvidence.ciObservation6.completedJobLogs.1.log"
+      ],
+      "actual": {
+        "bytes": 89707,
+        "sha256": "802221eb10a819d79d120549d83b870927f593378d4f4d167acb06b4af424a8c",
+        "gitBlob": "89631f02d342191668a9133e016f8b87b824fa6a"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "27a35a3477f8bd724f277a2ed0d4b1b39e632893",
+        "bytes": 196149,
+        "sha256": "8221168833c5317e78a144b1d01059822ebaf8bdfa984a029fe16dee0409ff73"
+      },
+      "locations": [
+        "manifest.evidenceFiles.23",
+        "currentStage.evidenceFiles.23",
+        "currentEvidenceMap.23",
+        "currentEvidence.ciObservation6.completedJobLogs.2.log"
+      ],
+      "actual": {
+        "bytes": 196149,
+        "sha256": "8221168833c5317e78a144b1d01059822ebaf8bdfa984a029fe16dee0409ff73",
+        "gitBlob": "27a35a3477f8bd724f277a2ed0d4b1b39e632893"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "a27b044c697366d37a153c9d1c23a84ea3ff5842",
+        "bytes": 2601874,
+        "sha256": "8a7c57076c5db3e18be7fb7df763b72772e5c3b03a88ef1ffbdc5da6b4e7ef39"
+      },
+      "locations": [
+        "manifest.modifiedDocuments.0.before",
+        "currentEvidence.r1RootActual.actualBodyReadbacks.16",
+        "currentEvidence.r1RootActual.currentPointerJoins.22.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.22.actual",
+        "currentEvidence.r1RootActual.checks.15.evidence.after",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.16.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.16.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.16.actual",
+        "currentEvidence.r1IndependentActual.catalogPreservation.prefixes.0.after",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.22.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.22.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.22.identity",
+        "currentEvidence.r1IndependentActual.checks.17.evidence.after",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.22.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.22.actual"
+      ],
+      "actual": {
+        "bytes": 2601874,
+        "sha256": "8a7c57076c5db3e18be7fb7df763b72772e5c3b03a88ef1ffbdc5da6b4e7ef39",
+        "gitBlob": "a27b044c697366d37a153c9d1c23a84ea3ff5842"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "1d81a923ac5bcee2a46faa2080c6fb08bfeb246e",
+        "bytes": 2609572,
+        "sha256": "ecce38e78ccbafa120bafa4cacabd6fb49f334094bc60472958d099ac7c2a0c2"
+      },
+      "locations": [
+        "manifest.modifiedDocuments.0.after"
+      ],
+      "actual": {
+        "bytes": 2609572,
+        "sha256": "ecce38e78ccbafa120bafa4cacabd6fb49f334094bc60472958d099ac7c2a0c2",
+        "gitBlob": "1d81a923ac5bcee2a46faa2080c6fb08bfeb246e"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "53b3a1c41dc3ffc458289f5a3adef416abd9ef87",
+        "bytes": 78583,
+        "sha256": "946dffd92f4f36e08f82ea560d8d08043f498765e405d2f3a850748bdab6ebf8"
+      },
+      "locations": [
+        "manifest.modifiedDocuments.1.before",
+        "currentEvidence.r1RootActual.actualBodyReadbacks.17",
+        "currentEvidence.r1RootActual.currentPointerJoins.25.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.25.actual",
+        "currentEvidence.r1RootActual.checks.16.evidence.after",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.17.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.17.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.17.actual",
+        "currentEvidence.r1IndependentActual.catalogPreservation.prefixes.1.after",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.25.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.25.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.25.identity",
+        "currentEvidence.r1IndependentActual.checks.18.evidence.after",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.25.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.25.actual"
+      ],
+      "actual": {
+        "bytes": 78583,
+        "sha256": "946dffd92f4f36e08f82ea560d8d08043f498765e405d2f3a850748bdab6ebf8",
+        "gitBlob": "53b3a1c41dc3ffc458289f5a3adef416abd9ef87"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "2ab8a9f41c6e2ee37049661d73c9c72eb8437011",
+        "bytes": 86281,
+        "sha256": "4c5d037484f6914acab3ba5cae4d6fddf7ee837e13f6715fd87299b549fe3ca0"
+      },
+      "locations": [
+        "manifest.modifiedDocuments.1.after"
+      ],
+      "actual": {
+        "bytes": 86281,
+        "sha256": "4c5d037484f6914acab3ba5cae4d6fddf7ee837e13f6715fd87299b549fe3ca0",
+        "gitBlob": "2ab8a9f41c6e2ee37049661d73c9c72eb8437011"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "a4306c48a735176359a5e22f5907e440750860aa",
+        "bytes": 550343,
+        "sha256": "4cb5ea229f48fd75aecc0cd42c0de47128894b5fbc7d103dc6bf51381b66aba4"
+      },
+      "locations": [
+        "manifest.modifiedDocuments.2.before",
+        "currentEvidence.r1RootActual.actualBodyReadbacks.18",
+        "currentEvidence.r1RootActual.currentPointerJoins.27.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.27.actual",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.18.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.18.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.18.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.27.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.27.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.27.identity",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.27.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.27.actual"
+      ],
+      "actual": {
+        "bytes": 550343,
+        "sha256": "4cb5ea229f48fd75aecc0cd42c0de47128894b5fbc7d103dc6bf51381b66aba4",
+        "gitBlob": "a4306c48a735176359a5e22f5907e440750860aa"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "756ec650e5d50cee05c3c241d9c340489a1c117a",
+        "bytes": 580305,
+        "sha256": "e85399db9d2371376a658c394515c5c39f6cb0f7734871817032b2eb2d2749c0"
+      },
+      "locations": [
+        "manifest.modifiedDocuments.2.after"
+      ],
+      "actual": {
+        "bytes": 580305,
+        "sha256": "e85399db9d2371376a658c394515c5c39f6cb0f7734871817032b2eb2d2749c0",
+        "gitBlob": "756ec650e5d50cee05c3c241d9c340489a1c117a"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "bf84dddd06fee99830967547de0c9d4b473019ee",
+        "bytes": 7698,
+        "sha256": "239fa7a8aa6808b88191f8e5e7df1574918885e7554973f6b7c5ee294deaa0ad"
+      },
+      "locations": [
+        "manifest.appendSectionIdentity"
+      ],
+      "actual": {
+        "bytes": 7698,
+        "sha256": "239fa7a8aa6808b88191f8e5e7df1574918885e7554973f6b7c5ee294deaa0ad",
+        "gitBlob": "bf84dddd06fee99830967547de0c9d4b473019ee"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b",
+        "bytes": 3481,
+        "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2"
+      },
+      "locations": [
+        "currentStage.unchanged13ParityVector",
+        "currentStage.preservation.all13CurrentParityVector",
+        "currentEvidence.sourceR2.preservation.all13CurrentParityVector",
+        "currentEvidence.rootReview.directPointerJoins.19.pin",
+        "currentEvidence.rootReview.directPointerJoins.19.actual",
+        "currentEvidence.guardReview.frozenParityVector.pin",
+        "currentEvidence.guardReview.preservation.all13CurrentParityVector",
+        "currentEvidence.semanticReview.preservation.parityVector",
+        "currentEvidence.semanticReview.checks.35.evidence",
+        "currentEvidence.bindingReview.directPointerJoins.19.pin",
+        "currentEvidence.bindingReview.directPointerJoins.19.actual",
+        "currentEvidence.bindingReview.unchangedParityVector",
+        "currentEvidence.bindingReview.checks.35.evidence.vector",
+        "currentEvidence.r1RootActual.currentPointerJoins.28.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.28.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.28.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.28.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.28.identity",
+        "currentEvidence.r1IndependentActual.checks.28.evidence.all13Vector",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.28.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.28.actual"
+      ],
+      "actual": {
+        "bytes": 3481,
+        "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+        "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b"
+      },
+      "locations": [
+        "currentStage.preservation.unchangedCurrentControls",
+        "currentEvidence.sourceR2.preservation.unchangedCurrentControls",
+        "currentEvidence.rootReview.directPointerJoins.20.pin",
+        "currentEvidence.rootReview.directPointerJoins.20.actual",
+        "currentEvidence.rootReview.unchangedParityVectorJoins.8.pin",
+        "currentEvidence.rootReview.unchangedParityVectorJoins.8.actual",
+        "currentEvidence.guardReview.unchangedControlsAndSelector.controls",
+        "currentEvidence.guardReview.frozenParityVector.completeRows.8",
+        "currentEvidence.guardReview.preservation.unchangedCurrentControls",
+        "currentEvidence.semanticReview.preservation.helperPins.controls",
+        "currentEvidence.semanticReview.checks.20.evidence",
+        "currentEvidence.bindingReview.directPointerJoins.20.pin",
+        "currentEvidence.bindingReview.directPointerJoins.20.actual",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.8.expected",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.8.actual",
+        "currentEvidence.bindingReview.checks.33.evidence.actualControls",
+        "currentEvidence.bindingReview.checks.36.evidence.controls",
+        "currentEvidence.r1RootActual.currentPointerJoins.29.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.29.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.29.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.29.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.29.identity",
+        "currentEvidence.r1IndependentActual.checks.29.evidence.currentControls",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.29.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.29.actual",
+        "currentEvidence.ciObservation6.newGenericControlsLogEvidence.controls"
+      ],
+      "actual": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "12f4a7b122843acea95e8c37f876917331842a4a",
+        "bytes": 22604,
+        "sha256": "ebb52ab95cdbf0ddc86ce44b534a3c7255c7e8454e5cadb2cbb83278daa53a0f"
+      },
+      "locations": [
+        "currentStage.preservation.unchangedOwnerSelector",
+        "currentEvidence.sourceR2.preservation.unchangedOwnerSelector",
+        "currentEvidence.rootReview.directPointerJoins.21.pin",
+        "currentEvidence.rootReview.directPointerJoins.21.actual",
+        "currentEvidence.guardReview.unchangedControlsAndSelector.selector",
+        "currentEvidence.guardReview.preservation.unchangedOwnerSelector",
+        "currentEvidence.semanticReview.preservation.helperPins.ownerSelector",
+        "currentEvidence.semanticReview.checks.19.evidence",
+        "currentEvidence.bindingReview.directPointerJoins.21.pin",
+        "currentEvidence.bindingReview.directPointerJoins.21.actual",
+        "currentEvidence.bindingReview.checks.36.evidence.selector",
+        "currentEvidence.r1RootActual.currentPointerJoins.30.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.30.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.30.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.30.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.30.identity",
+        "currentEvidence.r1IndependentActual.checks.29.evidence.selector",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.30.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.30.actual"
+      ],
+      "actual": {
+        "bytes": 22604,
+        "sha256": "ebb52ab95cdbf0ddc86ce44b534a3c7255c7e8454e5cadb2cbb83278daa53a0f",
+        "gitBlob": "12f4a7b122843acea95e8c37f876917331842a4a"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "77e02e33a6db38b6083316f96c65cd02177354cb",
+        "bytes": 25565,
+        "sha256": "06c9e63f24c25dcbd6a39df9c6ac3d0c34cf6fc402791ff9e0a2e7a857128ff5"
+      },
+      "locations": [
+        "currentEvidence.sourceR2.r1.proposal",
+        "currentEvidence.rootReview.directPointerJoins.0.pin",
+        "currentEvidence.rootReview.directPointerJoins.0.actual",
+        "currentEvidence.guardReview.inheritedR1.subject",
+        "currentEvidence.semanticReview.authority.r1",
+        "currentEvidence.semanticReview.checks.1.evidence",
+        "currentEvidence.bindingReview.authority.r1",
+        "currentEvidence.bindingReview.directPointerJoins.0.pin",
+        "currentEvidence.bindingReview.directPointerJoins.0.actual",
+        "currentEvidence.bindingReview.checks.4.evidence.r1",
+        "currentEvidence.r1RootActual.subject",
+        "currentEvidence.r1RootActual.actualBodyReadbacks.0",
+        "currentEvidence.r1RootActual.currentPointerJoins.0.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.0.actual",
+        "currentEvidence.r1RootActual.checks.12.evidence",
+        "currentEvidence.r1IndependentActual.subject",
+        "currentEvidence.r1IndependentActual.rootActualJoin.subject",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.0.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.0.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.0.actual",
+        "currentEvidence.r1IndependentActual.reviewJoins.0.subject",
+        "currentEvidence.r1IndependentActual.reviewJoins.1.subject",
+        "currentEvidence.r1IndependentActual.reviewJoins.2.subject",
+        "currentEvidence.r1IndependentActual.reviewJoins.3.subject",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.0.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.0.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.0.identity",
+        "currentEvidence.r1IndependentActual.checks.14.evidence.subject",
+        "currentEvidence.r1IndependentActual.checks.43.evidence.subject",
+        "currentEvidence.r1ActualGate.subject",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.0.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.0.actual"
+      ],
+      "actual": {
+        "bytes": 25565,
+        "sha256": "06c9e63f24c25dcbd6a39df9c6ac3d0c34cf6fc402791ff9e0a2e7a857128ff5",
+        "gitBlob": "77e02e33a6db38b6083316f96c65cd02177354cb"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "5b459d31e5f6d2bc4f5c203eb66c5752a39cec11",
+        "bytes": 17709,
+        "sha256": "a532f223fdd5da0773483b618dc7116cca2d888c7584f74337493971fb36f960"
+      },
+      "locations": [
+        "currentEvidence.sourceR2.r1.reviews.0.pin",
+        "currentEvidence.rootReview.directPointerJoins.1.pin",
+        "currentEvidence.rootReview.directPointerJoins.1.actual",
+        "currentEvidence.bindingReview.directPointerJoins.1.pin",
+        "currentEvidence.bindingReview.directPointerJoins.1.actual",
+        "currentEvidence.r1RootActual.reviews.0.pin",
+        "currentEvidence.r1RootActual.actualBodyReadbacks.1",
+        "currentEvidence.r1RootActual.currentPointerJoins.1.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.1.actual",
+        "currentEvidence.r1RootActual.checks.13.evidence.0.pin",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.1.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.1.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.1.actual",
+        "currentEvidence.r1IndependentActual.reviewJoins.0.identity",
+        "currentEvidence.r1IndependentActual.reviewJoins.0.declared.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.1.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.1.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.1.identity",
+        "currentEvidence.r1IndependentActual.checks.14.evidence.reviewChecks.0.identity",
+        "currentEvidence.r1ActualGate.reviews.0.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.1.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.1.actual"
+      ],
+      "actual": {
+        "bytes": 17709,
+        "sha256": "a532f223fdd5da0773483b618dc7116cca2d888c7584f74337493971fb36f960",
+        "gitBlob": "5b459d31e5f6d2bc4f5c203eb66c5752a39cec11"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "08793ef3e50620c5fbbb138b69f46823b55b5cff",
+        "bytes": 35639,
+        "sha256": "63d7cb8b87acbedd3d99e08c682e57e5430a30b1399585484e2474ea1add4580"
+      },
+      "locations": [
+        "currentEvidence.sourceR2.r1.reviews.1.pin",
+        "currentEvidence.rootReview.directPointerJoins.2.pin",
+        "currentEvidence.rootReview.directPointerJoins.2.actual",
+        "currentEvidence.guardReview.inheritedR1.ownPriorGuard",
+        "currentEvidence.bindingReview.directPointerJoins.2.pin",
+        "currentEvidence.bindingReview.directPointerJoins.2.actual",
+        "currentEvidence.r1RootActual.reviews.1.pin",
+        "currentEvidence.r1RootActual.actualBodyReadbacks.2",
+        "currentEvidence.r1RootActual.currentPointerJoins.2.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.2.actual",
+        "currentEvidence.r1RootActual.checks.13.evidence.1.pin",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.2.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.2.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.2.actual",
+        "currentEvidence.r1IndependentActual.reviewJoins.1.identity",
+        "currentEvidence.r1IndependentActual.reviewJoins.1.declared.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.2.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.2.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.2.identity",
+        "currentEvidence.r1IndependentActual.checks.14.evidence.reviewChecks.1.identity",
+        "currentEvidence.r1ActualGate.reviews.1.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.2.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.2.actual"
+      ],
+      "actual": {
+        "bytes": 35639,
+        "sha256": "63d7cb8b87acbedd3d99e08c682e57e5430a30b1399585484e2474ea1add4580",
+        "gitBlob": "08793ef3e50620c5fbbb138b69f46823b55b5cff"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "fc41c456218ebf1e9c528cb621d0f8c3a9fe6fa2",
+        "bytes": 35885,
+        "sha256": "0c96120b2225ce3ca1290b3c6da2e0fb8c739fee7f7c66af18e6d6dc970acfa7"
+      },
+      "locations": [
+        "currentEvidence.sourceR2.r1.reviews.2.pin",
+        "currentEvidence.rootReview.directPointerJoins.3.pin",
+        "currentEvidence.rootReview.directPointerJoins.3.actual",
+        "currentEvidence.semanticReview.authority.r1SemanticReview",
+        "currentEvidence.bindingReview.directPointerJoins.3.pin",
+        "currentEvidence.bindingReview.directPointerJoins.3.actual",
+        "currentEvidence.r1RootActual.reviews.2.pin",
+        "currentEvidence.r1RootActual.actualBodyReadbacks.3",
+        "currentEvidence.r1RootActual.currentPointerJoins.3.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.3.actual",
+        "currentEvidence.r1RootActual.checks.13.evidence.2.pin",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.3.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.3.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.3.actual",
+        "currentEvidence.r1IndependentActual.reviewJoins.2.identity",
+        "currentEvidence.r1IndependentActual.reviewJoins.2.declared.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.3.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.3.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.3.identity",
+        "currentEvidence.r1IndependentActual.checks.14.evidence.reviewChecks.2.identity",
+        "currentEvidence.r1ActualGate.reviews.2.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.3.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.3.actual"
+      ],
+      "actual": {
+        "bytes": 35885,
+        "sha256": "0c96120b2225ce3ca1290b3c6da2e0fb8c739fee7f7c66af18e6d6dc970acfa7",
+        "gitBlob": "fc41c456218ebf1e9c528cb621d0f8c3a9fe6fa2"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "25337ae574861505bed80251f3070d8e2ddbb1bb",
+        "bytes": 62498,
+        "sha256": "75f67ca17a2e7c6047c20857cffb84f6236b104ddd2db68a62328c1d7f2eb8b1"
+      },
+      "locations": [
+        "currentEvidence.sourceR2.r1.reviews.3.pin",
+        "currentEvidence.rootReview.directPointerJoins.4.pin",
+        "currentEvidence.rootReview.directPointerJoins.4.actual",
+        "currentEvidence.bindingReview.directPointerJoins.4.pin",
+        "currentEvidence.bindingReview.directPointerJoins.4.actual",
+        "currentEvidence.r1RootActual.reviews.3.pin",
+        "currentEvidence.r1RootActual.actualBodyReadbacks.4",
+        "currentEvidence.r1RootActual.currentPointerJoins.4.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.4.actual",
+        "currentEvidence.r1RootActual.checks.13.evidence.3.pin",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.4.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.4.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.4.actual",
+        "currentEvidence.r1IndependentActual.reviewJoins.3.identity",
+        "currentEvidence.r1IndependentActual.reviewJoins.3.declared.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.4.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.4.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.4.identity",
+        "currentEvidence.r1IndependentActual.checks.14.evidence.reviewChecks.3.identity",
+        "currentEvidence.r1ActualGate.reviews.3.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.4.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.4.actual"
+      ],
+      "actual": {
+        "bytes": 62498,
+        "sha256": "75f67ca17a2e7c6047c20857cffb84f6236b104ddd2db68a62328c1d7f2eb8b1",
+        "gitBlob": "25337ae574861505bed80251f3070d8e2ddbb1bb"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "40cbe80d0338dedf3bf9c6e165c171c2d14d58f1",
+        "bytes": 15257,
+        "sha256": "cc57feba4a49361dcaaaf426718587dcc4709b4bebd3e1d8e327804089b30357"
+      },
+      "locations": [
+        "currentEvidence.sourceR2.r1.publicationManifest",
+        "currentEvidence.rootReview.directPointerJoins.5.pin",
+        "currentEvidence.rootReview.directPointerJoins.5.actual",
+        "currentEvidence.bindingReview.authority.r1Manifest",
+        "currentEvidence.bindingReview.directPointerJoins.5.pin",
+        "currentEvidence.bindingReview.directPointerJoins.5.actual",
+        "currentEvidence.bindingReview.checks.4.evidence.manifest",
+        "currentEvidence.r1RootActual.manifest",
+        "currentEvidence.r1RootActual.actualBodyReadbacks.19",
+        "currentEvidence.r1RootActual.checks.11.evidence",
+        "currentEvidence.r1IndependentActual.manifest",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.19.pin",
+        "currentEvidence.r1IndependentActual.checks.4.evidence",
+        "currentEvidence.r1ActualGate.manifest"
+      ],
+      "actual": {
+        "bytes": 15257,
+        "sha256": "cc57feba4a49361dcaaaf426718587dcc4709b4bebd3e1d8e327804089b30357",
+        "gitBlob": "40cbe80d0338dedf3bf9c6e165c171c2d14d58f1"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "b634cb443361cb18f9ee15a1f204b2ae0dfc686d",
+        "bytes": 3939,
+        "sha256": "1728b692431373fc162cc3354194af55776b179f3683cbf0267a9127a432d249"
+      },
+      "locations": [
+        "currentEvidence.sourceR2.edits.1.appendIdentity",
+        "currentEvidence.rootReview.directPointerJoins.17.pin",
+        "currentEvidence.rootReview.directPointerJoins.17.actual",
+        "currentEvidence.guardReview.wholeByteInverses.1.removedAppend",
+        "currentEvidence.guardReview.exactEditBoundaries.1.appendIdentity",
+        "currentEvidence.semanticReview.wholeByteVerification.results.1.appendIdentity",
+        "currentEvidence.bindingReview.fullInverseProofs.1.append",
+        "currentEvidence.bindingReview.fullInverseProofs.1.declaredAppend",
+        "currentEvidence.bindingReview.directPointerJoins.17.pin",
+        "currentEvidence.bindingReview.directPointerJoins.17.actual",
+        "currentEvidence.bindingReview.checks.16.evidence.appendIdentity"
+      ],
+      "actual": {
+        "bytes": 3939,
+        "sha256": "1728b692431373fc162cc3354194af55776b179f3683cbf0267a9127a432d249",
+        "gitBlob": "b634cb443361cb18f9ee15a1f204b2ae0dfc686d"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "7023532a0df8c077c179dc5b7c555a2df355777d",
+        "bytes": 8489,
+        "sha256": "33ee56e5f4b7dc09a089c8d3147a4acca7562af102fa4817dc0c0db918c5b071"
+      },
+      "locations": [
+        "currentEvidence.sourceR2.edits.3.appendIdentity",
+        "currentEvidence.rootReview.directPointerJoins.18.pin",
+        "currentEvidence.rootReview.directPointerJoins.18.actual",
+        "currentEvidence.guardReview.wholeByteInverses.3.removedAppend",
+        "currentEvidence.guardReview.exactEditBoundaries.3.appendIdentity",
+        "currentEvidence.semanticReview.wholeByteVerification.results.3.appendIdentity",
+        "currentEvidence.bindingReview.fullInverseProofs.3.append",
+        "currentEvidence.bindingReview.fullInverseProofs.3.declaredAppend",
+        "currentEvidence.bindingReview.directPointerJoins.18.pin",
+        "currentEvidence.bindingReview.directPointerJoins.18.actual",
+        "currentEvidence.bindingReview.checks.26.evidence.appendIdentity"
+      ],
+      "actual": {
+        "bytes": 8489,
+        "sha256": "33ee56e5f4b7dc09a089c8d3147a4acca7562af102fa4817dc0c0db918c5b071",
+        "gitBlob": "7023532a0df8c077c179dc5b7c555a2df355777d"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f",
+        "bytes": 69370,
+        "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00"
+      },
+      "locations": [
+        "currentEvidence.rootReview.unchangedParityVectorJoins.0.pin",
+        "currentEvidence.rootReview.unchangedParityVectorJoins.0.actual",
+        "currentEvidence.guardReview.frozenParityVector.completeRows.0",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.0.expected",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.0.actual"
+      ],
+      "actual": {
+        "bytes": 69370,
+        "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+        "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b"
+      },
+      "locations": [
+        "currentEvidence.rootReview.unchangedParityVectorJoins.1.pin",
+        "currentEvidence.rootReview.unchangedParityVectorJoins.1.actual",
+        "currentEvidence.guardReview.frozenParityVector.completeRows.1",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.1.expected",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.1.actual"
+      ],
+      "actual": {
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b"
+      },
+      "locations": [
+        "currentEvidence.rootReview.unchangedParityVectorJoins.2.pin",
+        "currentEvidence.rootReview.unchangedParityVectorJoins.2.actual",
+        "currentEvidence.guardReview.frozenParityVector.completeRows.2",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.2.expected",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.2.actual"
+      ],
+      "actual": {
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38"
+      },
+      "locations": [
+        "currentEvidence.rootReview.unchangedParityVectorJoins.3.pin",
+        "currentEvidence.rootReview.unchangedParityVectorJoins.3.actual",
+        "currentEvidence.guardReview.frozenParityVector.completeRows.3",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.3.expected",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.3.actual"
+      ],
+      "actual": {
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b"
+      },
+      "locations": [
+        "currentEvidence.rootReview.unchangedParityVectorJoins.4.pin",
+        "currentEvidence.rootReview.unchangedParityVectorJoins.4.actual",
+        "currentEvidence.guardReview.frozenParityVector.completeRows.4",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.4.expected",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.4.actual"
+      ],
+      "actual": {
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9"
+      },
+      "locations": [
+        "currentEvidence.rootReview.unchangedParityVectorJoins.5.pin",
+        "currentEvidence.rootReview.unchangedParityVectorJoins.5.actual",
+        "currentEvidence.guardReview.frozenParityVector.completeRows.5",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.5.expected",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.5.actual"
+      ],
+      "actual": {
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+        "bytes": 165022,
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581"
+      },
+      "locations": [
+        "currentEvidence.rootReview.unchangedParityVectorJoins.6.pin",
+        "currentEvidence.rootReview.unchangedParityVectorJoins.6.actual",
+        "currentEvidence.guardReview.frozenParityVector.completeRows.6",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.6.expected",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.6.actual",
+        "currentEvidence.ciObservation6.newGenericControlsLogEvidence.wholeAggregate"
+      ],
+      "actual": {
+        "bytes": 165022,
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda"
+      },
+      "locations": [
+        "currentEvidence.rootReview.unchangedParityVectorJoins.7.pin",
+        "currentEvidence.rootReview.unchangedParityVectorJoins.7.actual",
+        "currentEvidence.guardReview.frozenParityVector.completeRows.7",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.7.expected",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.7.actual",
+        "currentEvidence.ciObservation6.newGenericControlsLogEvidence.fixture"
+      ],
+      "actual": {
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c"
+      },
+      "locations": [
+        "currentEvidence.rootReview.unchangedParityVectorJoins.9.pin",
+        "currentEvidence.rootReview.unchangedParityVectorJoins.9.actual",
+        "currentEvidence.guardReview.frozenParityVector.completeRows.9",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.9.expected",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.9.actual"
+      ],
+      "actual": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+        "bytes": 32077,
+        "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43"
+      },
+      "locations": [
+        "currentEvidence.rootReview.unchangedParityVectorJoins.10.pin",
+        "currentEvidence.rootReview.unchangedParityVectorJoins.10.actual",
+        "currentEvidence.guardReview.frozenParityVector.completeRows.10",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.10.expected",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.10.actual"
+      ],
+      "actual": {
+        "bytes": 32077,
+        "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9"
+      },
+      "locations": [
+        "currentEvidence.rootReview.unchangedParityVectorJoins.11.pin",
+        "currentEvidence.rootReview.unchangedParityVectorJoins.11.actual",
+        "currentEvidence.guardReview.frozenParityVector.completeRows.11",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.11.expected",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.11.actual"
+      ],
+      "actual": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8"
+      },
+      "locations": [
+        "currentEvidence.rootReview.unchangedParityVectorJoins.12.pin",
+        "currentEvidence.rootReview.unchangedParityVectorJoins.12.actual",
+        "currentEvidence.guardReview.frozenParityVector.completeRows.12",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.12.expected",
+        "currentEvidence.bindingReview.unchangedParityVectorJoins.12.actual"
+      ],
+      "actual": {
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "682c9fc427db290816452d26c68140cb15477002",
+        "bytes": 255,
+        "sha256": "7aaeee083bac07f979b343d5e9d9aa1fb6eb9f4dc130e372c7cc360db392a31c"
+      },
+      "locations": [
+        "currentEvidence.guardReview.regressionSourceJoins.decodedIdentity",
+        "currentEvidence.guardReview.findings.tests.nativeUi.counterfactual",
+        "currentEvidence.semanticReview.tests.nativeUi.counterfactual.identity",
+        "currentEvidence.semanticReview.checks.26.evidence.derivedIdentity",
+        "currentEvidence.bindingReview.staticLiteralBindings.oldCounterfactual.identity",
+        "currentEvidence.bindingReview.staticLiteralBindings.finalBlock.oldIdentity",
+        "currentEvidence.bindingReview.checks.19.evidence.oldBlock",
+        "currentEvidence.bindingReview.checks.28.evidence.identity"
+      ],
+      "actual": {
+        "bytes": 255,
+        "sha256": "7aaeee083bac07f979b343d5e9d9aa1fb6eb9f4dc130e372c7cc360db392a31c",
+        "gitBlob": "682c9fc427db290816452d26c68140cb15477002"
+      },
+      "method": "complete derived original final loop",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "33dc8b23aab16c1786c3484347da3382a6ab0ee5",
+        "bytes": 39388,
+        "sha256": "68e439d5fe2674f430b93ad4729a53adc6144ee01dd241357ed0ba0bc4ab568b"
+      },
+      "locations": [
+        "currentEvidence.guardReview.primaryBasis.advisory",
+        "currentEvidence.r1RootActual.actualBodyReadbacks.5",
+        "currentEvidence.r1RootActual.currentPointerJoins.13.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.13.actual",
+        "currentEvidence.r1RootActual.checks.36.evidence.windowsFeasibility",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.5.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.5.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.5.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.13.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.13.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.13.identity",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.13.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.13.actual"
+      ],
+      "actual": {
+        "bytes": 39388,
+        "sha256": "68e439d5fe2674f430b93ad4729a53adc6144ee01dd241357ed0ba0bc4ab568b",
+        "gitBlob": "33dc8b23aab16c1786c3484347da3382a6ab0ee5"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "d14986dbfb49dc8e1c5931534ff83eeaddcbf06b",
+        "bytes": 533,
+        "sha256": "0579af60ce9a2fda7ffc3e78f1a6355e8bd966f113ffbfe7f28fdef63057d72f"
+      },
+      "locations": [
+        "currentEvidence.bindingReview.staticLiteralBindings.finalBlock.newIdentity",
+        "currentEvidence.bindingReview.checks.19.evidence.newBlock"
+      ],
+      "actual": {
+        "bytes": 533,
+        "sha256": "0579af60ce9a2fda7ffc3e78f1a6355e8bd966f113ffbfe7f28fdef63057d72f",
+        "gitBlob": "d14986dbfb49dc8e1c5931534ff83eeaddcbf06b"
+      },
+      "method": "complete derived final replacement block",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "d086975bfe93c9dc441e27dcf4ef2b61cf6daf51",
+        "bytes": 131,
+        "sha256": "cff6636316cc9e50c02eb5296200e2917eb4a76d27f6b2f5f6ab5d487cad850d"
+      },
+      "locations": [
+        "currentEvidence.bindingReview.staticLiteralBindings.ownerWrapper.oldIdentity",
+        "currentEvidence.bindingReview.staticLiteralBindings.ownerWrapper.newIdentity",
+        "currentEvidence.bindingReview.checks.20.evidence.wrapper.oldIdentity",
+        "currentEvidence.bindingReview.checks.20.evidence.wrapper.newIdentity"
+      ],
+      "actual": {
+        "bytes": 131,
+        "sha256": "cff6636316cc9e50c02eb5296200e2917eb4a76d27f6b2f5f6ab5d487cad850d",
+        "gitBlob": "d086975bfe93c9dc441e27dcf4ef2b61cf6daf51"
+      },
+      "method": "complete derived unchanged wrapper",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "694a22327a3ae7d0f91cd591cc95048d0d672e5a",
+        "bytes": 46778,
+        "sha256": "f2d5afe40801a17e6b8ed5f16c3c62ed0062420422839eab27efee9091a50514"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.actualBodyReadbacks.6",
+        "currentEvidence.r1RootActual.currentPointerJoins.14.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.14.actual",
+        "currentEvidence.r1RootActual.checks.36.evidence.darwinFollowup",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.6.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.6.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.6.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.14.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.14.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.14.identity",
+        "currentEvidence.r1IndependentActual.checks.39.evidence.darwin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.14.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.14.actual",
+        "currentEvidence.darwinLogOnly.evidence.comparisonAdvisory"
+      ],
+      "actual": {
+        "bytes": 46778,
+        "sha256": "f2d5afe40801a17e6b8ed5f16c3c62ed0062420422839eab27efee9091a50514",
+        "gitBlob": "694a22327a3ae7d0f91cd591cc95048d0d672e5a"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "aa697ba29de7175b9c1fb267bbfd77e6ebf07f9b",
+        "bytes": 13740,
+        "sha256": "ae288f8950b5b9daa9d5869ca4b16d44e4bb8552604517928588a2e783038a52"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.actualBodyReadbacks.7",
+        "currentEvidence.r1RootActual.currentPointerJoins.15.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.15.actual",
+        "currentEvidence.r1RootActual.checks.36.evidence.coldReconsideration",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.7.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.7.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.7.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.15.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.15.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.15.identity",
+        "currentEvidence.r1IndependentActual.checks.39.evidence.cold",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.15.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.15.actual"
+      ],
+      "actual": {
+        "bytes": 13740,
+        "sha256": "ae288f8950b5b9daa9d5869ca4b16d44e4bb8552604517928588a2e783038a52",
+        "gitBlob": "aa697ba29de7175b9c1fb267bbfd77e6ebf07f9b"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "757184208b6b39432f5f957011c0a2d40d5b344d",
+        "bytes": 76668,
+        "sha256": "8ef246ec40b9c443ddd13bad6b385e80fd60b1881b7eb2b342aba14bd74c56c3"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.actualBodyReadbacks.8",
+        "currentEvidence.r1RootActual.currentPointerJoins.6.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.6.actual",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.8.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.8.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.8.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.6.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.6.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.6.identity",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.6.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.6.actual"
+      ],
+      "actual": {
+        "bytes": 76668,
+        "sha256": "8ef246ec40b9c443ddd13bad6b385e80fd60b1881b7eb2b342aba14bd74c56c3",
+        "gitBlob": "757184208b6b39432f5f957011c0a2d40d5b344d"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "cc54c9d831a28eadf9e411fd8d53134fbcd6f881",
+        "bytes": 123197,
+        "sha256": "ecc5f229c0073fd48c218205e4feb0928e70f2a41a4ff53d60088e320ae0cef4"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.actualBodyReadbacks.9",
+        "currentEvidence.r1RootActual.currentPointerJoins.7.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.7.actual",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.9.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.9.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.9.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.7.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.7.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.7.identity",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.7.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.7.actual"
+      ],
+      "actual": {
+        "bytes": 123197,
+        "sha256": "ecc5f229c0073fd48c218205e4feb0928e70f2a41a4ff53d60088e320ae0cef4",
+        "gitBlob": "cc54c9d831a28eadf9e411fd8d53134fbcd6f881"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "e869a398b712541b17eef73ba5a44af49b00f70d",
+        "bytes": 9510,
+        "sha256": "7709fd167750dac768b1a826ff81904077a1afe936bbd5865b4041e126ffb599"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.actualBodyReadbacks.10",
+        "currentEvidence.r1RootActual.currentPointerJoins.5.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.5.actual",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.10.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.10.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.10.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.5.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.5.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.5.identity",
+        "currentEvidence.r1IndependentActual.checks.41.evidence.precedingGate",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.5.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.5.actual"
+      ],
+      "actual": {
+        "bytes": 9510,
+        "sha256": "7709fd167750dac768b1a826ff81904077a1afe936bbd5865b4041e126ffb599",
+        "gitBlob": "e869a398b712541b17eef73ba5a44af49b00f70d"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "df645b8eac669fbd71f243bfd64bd915a871583f",
+        "bytes": 34918,
+        "sha256": "4e54d76f0058e1024d6e9e9088962bfb167c491e2eb7a45b40d1607629a9c3d8"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.actualBodyReadbacks.11",
+        "currentEvidence.r1RootActual.currentPointerJoins.16.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.16.actual",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.11.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.11.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.11.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.16.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.16.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.16.identity",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.16.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.16.actual"
+      ],
+      "actual": {
+        "bytes": 34918,
+        "sha256": "4e54d76f0058e1024d6e9e9088962bfb167c491e2eb7a45b40d1607629a9c3d8",
+        "gitBlob": "df645b8eac669fbd71f243bfd64bd915a871583f"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "45f21a0ccfd99cde885b92d04a6fcdd11d73b432",
+        "bytes": 1678327,
+        "sha256": "db87c4862770dca1bb3432e08a304de8adc465e9b762f60cfa966a23d561f082"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.actualBodyReadbacks.12",
+        "currentEvidence.r1RootActual.currentPointerJoins.17.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.17.actual",
+        "currentEvidence.r1RootActual.checks.31.evidence.initialCapture",
+        "currentEvidence.r1RootActual.checks.32.evidence.initial",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.12.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.12.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.12.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.17.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.17.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.17.identity",
+        "currentEvidence.r1IndependentActual.publishedCiEvidence.initialCapture",
+        "currentEvidence.r1IndependentActual.checks.31.evidence.initial",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.17.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.17.actual",
+        "currentEvidence.ciObservations35.initial"
+      ],
+      "actual": {
+        "bytes": 1678327,
+        "sha256": "db87c4862770dca1bb3432e08a304de8adc465e9b762f60cfa966a23d561f082",
+        "gitBlob": "45f21a0ccfd99cde885b92d04a6fcdd11d73b432"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "d70eb8522cc6bbafaf5fea8e0ce354deb839d9f8",
+        "bytes": 89607,
+        "sha256": "3f339eb8a7926613e22dd4a290480f62922695bac6f978b4b78951b8a9856c7c"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.actualBodyReadbacks.13",
+        "currentEvidence.r1RootActual.currentPointerJoins.18.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.18.actual",
+        "currentEvidence.r1RootActual.checks.31.evidence.initialReview",
+        "currentEvidence.r1RootActual.checks.32.evidence.review",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.13.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.13.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.13.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.18.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.18.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.18.identity",
+        "currentEvidence.r1IndependentActual.publishedCiEvidence.initialReview",
+        "currentEvidence.r1IndependentActual.checks.31.evidence.review",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.18.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.18.actual",
+        "currentEvidence.ciObservations35.initialBindingReview"
+      ],
+      "actual": {
+        "bytes": 89607,
+        "sha256": "3f339eb8a7926613e22dd4a290480f62922695bac6f978b4b78951b8a9856c7c",
+        "gitBlob": "d70eb8522cc6bbafaf5fea8e0ce354deb839d9f8"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "e5c9ab2452e910510a13386fa9f91c002b2cbb81",
+        "bytes": 285909,
+        "sha256": "a549ea35a7d35d1141a67cc6a9df8c4e1c363c107e3165a5d88e5a866cdc3701"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.actualBodyReadbacks.14",
+        "currentEvidence.r1RootActual.currentPointerJoins.19.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.19.actual",
+        "currentEvidence.r1RootActual.checks.31.evidence.observationPacket",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.14.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.14.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.14.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.19.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.19.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.19.identity",
+        "currentEvidence.r1IndependentActual.publishedCiEvidence.observations",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.19.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.19.actual",
+        "currentEvidence.ciObservations35.priorObservations12"
+      ],
+      "actual": {
+        "bytes": 285909,
+        "sha256": "a549ea35a7d35d1141a67cc6a9df8c4e1c363c107e3165a5d88e5a866cdc3701",
+        "gitBlob": "e5c9ab2452e910510a13386fa9f91c002b2cbb81"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "a7d62b28d668446982415929aa47fbbf58d3ebd3",
+        "bytes": 119712,
+        "sha256": "e7f9799cc99b3f516f25da0039a7e30d542b37b7f8f23232d0aa80f66cb452d2"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.actualBodyReadbacks.15",
+        "currentEvidence.r1RootActual.currentPointerJoins.20.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.20.actual",
+        "currentEvidence.r1RootActual.checks.34.evidence.log",
+        "currentEvidence.r1IndependentActual.fullCurrentBodies.rows.15.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.15.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.15.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.20.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.20.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.20.identity",
+        "currentEvidence.r1IndependentActual.publishedCiEvidence.staticJob.fullLog",
+        "currentEvidence.r1IndependentActual.checks.35.evidence.log",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.20.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.20.actual",
+        "currentEvidence.ciObservations35.completedJobLogs.0.fullLog"
+      ],
+      "actual": {
+        "bytes": 119712,
+        "sha256": "e7f9799cc99b3f516f25da0039a7e30d542b37b7f8f23232d0aa80f66cb452d2",
+        "gitBlob": "a7d62b28d668446982415929aa47fbbf58d3ebd3"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "f92beaac04a935a029a66ba980f30ba548f026b6",
+        "bytes": 2596491,
+        "sha256": "6c34aade765ce8da00e364b067b26fa572f784d25aba9f06ad214bdadde49acf"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.parentBodyReadbacks.0",
+        "currentEvidence.r1RootActual.currentPointerJoins.21.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.21.actual",
+        "currentEvidence.r1RootActual.checks.15.evidence.before",
+        "currentEvidence.r1IndependentActual.fullParentDocuments.rows.0.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.19.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.19.actual",
+        "currentEvidence.r1IndependentActual.catalogPreservation.prefixes.0.before",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.21.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.21.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.21.identity",
+        "currentEvidence.r1IndependentActual.checks.17.evidence.before",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.21.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.21.actual"
+      ],
+      "actual": {
+        "bytes": 2596491,
+        "sha256": "6c34aade765ce8da00e364b067b26fa572f784d25aba9f06ad214bdadde49acf",
+        "gitBlob": "f92beaac04a935a029a66ba980f30ba548f026b6"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "2894072ed49cbe582281a4e6ad48e1cc45767688",
+        "bytes": 73200,
+        "sha256": "913e4310cf465a94a56fb76e254a7e9047a28614d396b588b78b8614bd917a5e"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.parentBodyReadbacks.1",
+        "currentEvidence.r1RootActual.currentPointerJoins.24.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.24.actual",
+        "currentEvidence.r1RootActual.checks.16.evidence.before",
+        "currentEvidence.r1IndependentActual.fullParentDocuments.rows.1.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.20.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.20.actual",
+        "currentEvidence.r1IndependentActual.catalogPreservation.prefixes.1.before",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.24.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.24.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.24.identity",
+        "currentEvidence.r1IndependentActual.checks.18.evidence.before",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.24.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.24.actual"
+      ],
+      "actual": {
+        "bytes": 73200,
+        "sha256": "913e4310cf465a94a56fb76e254a7e9047a28614d396b588b78b8614bd917a5e",
+        "gitBlob": "2894072ed49cbe582281a4e6ad48e1cc45767688"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "956cf8e3b7cb328de0bdf43936146adb71444a5c",
+        "bytes": 524540,
+        "sha256": "42466d768baf1d8eea69fb62e60d10a8ee464dc2932c536dbabae8cdc198bbfc"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.parentBodyReadbacks.2",
+        "currentEvidence.r1RootActual.currentPointerJoins.26.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.26.actual",
+        "currentEvidence.r1IndependentActual.fullParentDocuments.rows.2.pin",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.21.declared",
+        "currentEvidence.r1IndependentActual.freshBodyReadbacks.21.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.26.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.26.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.26.identity",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.26.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.26.actual"
+      ],
+      "actual": {
+        "bytes": 524540,
+        "sha256": "42466d768baf1d8eea69fb62e60d10a8ee464dc2932c536dbabae8cdc198bbfc",
+        "gitBlob": "956cf8e3b7cb328de0bdf43936146adb71444a5c"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "3aa070295059b9e1dd280ee36836712878b0b72c",
+        "bytes": 7050,
+        "sha256": "4a55ae270a3549fd97c712db801cf2378102e7974597c8ed2c3fe3b240e937cb"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.currentPointerJoins.8.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.8.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.8.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.8.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.8.identity",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.8.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.8.actual"
+      ],
+      "actual": {
+        "bytes": 7050,
+        "sha256": "4a55ae270a3549fd97c712db801cf2378102e7974597c8ed2c3fe3b240e937cb",
+        "gitBlob": "3aa070295059b9e1dd280ee36836712878b0b72c"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "04d599381ffaac944a82d36b9e17e9c13fb7b9c3",
+        "bytes": 5383,
+        "sha256": "eddc2210e634596479b044f5a82301f93f1f87b915c5de00594f6104b2f5e8b8"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.currentPointerJoins.23.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.23.actual",
+        "currentEvidence.r1RootActual.checks.15.evidence.appendIdentity",
+        "currentEvidence.r1RootActual.checks.16.evidence.appendIdentity",
+        "currentEvidence.r1RootActual.checks.17.evidence.pin",
+        "currentEvidence.r1IndependentActual.catalogPreservation.prefixes.0.suffix",
+        "currentEvidence.r1IndependentActual.catalogPreservation.prefixes.1.suffix",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.23.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.23.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.23.identity",
+        "currentEvidence.r1IndependentActual.checks.17.evidence.suffix",
+        "currentEvidence.r1IndependentActual.checks.18.evidence.suffix",
+        "currentEvidence.r1IndependentActual.checks.19.evidence.derivedIdentity",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.23.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.23.actual"
+      ],
+      "actual": {
+        "bytes": 5383,
+        "sha256": "eddc2210e634596479b044f5a82301f93f1f87b915c5de00594f6104b2f5e8b8",
+        "gitBlob": "04d599381ffaac944a82d36b9e17e9c13fb7b9c3"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "ba917dc0650ef48acbaf5646059550accb42d237",
+        "bytes": 57508,
+        "sha256": "905ca483abf73b19c2efb60180d8f6bbdefc1e8d8e744aa1377f66ecaf212456"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.currentPointerJoins.31.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.31.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.31.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.31.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.31.identity",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.31.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.31.actual"
+      ],
+      "actual": {
+        "bytes": 57508,
+        "sha256": "905ca483abf73b19c2efb60180d8f6bbdefc1e8d8e744aa1377f66ecaf212456",
+        "gitBlob": "ba917dc0650ef48acbaf5646059550accb42d237"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "4a8ee1f31e1ce056b06515e842ed0d68fb5ea917",
+        "bytes": 82021,
+        "sha256": "7a6dfd9d48f634d1e5434456ff4e787d0795baa01eecd092b2c6877025f352d3"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.currentPointerJoins.32.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.32.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.32.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.32.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.32.identity",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.32.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.32.actual"
+      ],
+      "actual": {
+        "bytes": 82021,
+        "sha256": "7a6dfd9d48f634d1e5434456ff4e787d0795baa01eecd092b2c6877025f352d3",
+        "gitBlob": "4a8ee1f31e1ce056b06515e842ed0d68fb5ea917"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "a5032a87abfe9c9a7a91227e31408993d6ee073a",
+        "bytes": 750631,
+        "sha256": "cf9c74713f42fbad360375ff883711a9b8baf8a434b8b39fd4beb412d6b635c9"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.currentPointerJoins.33.pin",
+        "currentEvidence.r1RootActual.currentPointerJoins.33.actual",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.33.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.33.actual",
+        "currentEvidence.r1IndependentActual.rootPointerCrossJoins.33.identity",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.33.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.root.33.actual"
+      ],
+      "actual": {
+        "bytes": 750631,
+        "sha256": "cf9c74713f42fbad360375ff883711a9b8baf8a434b8b39fd4beb412d6b635c9",
+        "gitBlob": "a5032a87abfe9c9a7a91227e31408993d6ee073a"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+        "bytes": 6127,
+        "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87"
+      },
+      "locations": [
+        "currentEvidence.r1RootActual.checks.34.evidence.lock",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.34.pin",
+        "currentEvidence.r1IndependentActual.currentPointerJoins.34.actual",
+        "currentEvidence.r1IndependentActual.publishedCiEvidence.separateProductLock.lock",
+        "currentEvidence.r1IndependentActual.publishedCiEvidence.separateProductLock.actualBodyIdentity",
+        "currentEvidence.r1IndependentActual.checks.26.evidence.extraIndependentPin",
+        "currentEvidence.r1IndependentActual.checks.37.evidence.lock",
+        "currentEvidence.r1IndependentActual.checks.37.evidence.actualBodyIdentity",
+        "currentEvidence.r1ActualGate.currentPointerClosure.additionalEmbeddedLock.pin",
+        "currentEvidence.r1ActualGate.currentPointerClosure.additionalEmbeddedLock.actual"
+      ],
+      "actual": {
+        "bytes": 6127,
+        "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87",
+        "gitBlob": "1757d79786da78e739a322e8bba81cd3dc88dcaa"
+      },
+      "method": "complete current/accepted immutable body rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "fc23d281777bcd460144b204b29ed2e66792cedf",
+        "bytes": 13821,
+        "sha256": "5fd8d18f1205b5615c3905ba88f0af176dcd0c6ecf6abcae1bab2a80b1a7316c"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.0.rawApi.0.identity",
+        "currentEvidence.ciObservations35.observations.1.rawApi.0.identity",
+        "currentEvidence.ciObservations35.observations.2.rawApi.0.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.0.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.10.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.20.identity",
+        "currentEvidence.ciObservation6.rawApiRecords.0.identity"
+      ],
+      "actual": {
+        "bytes": 13821,
+        "sha256": "5fd8d18f1205b5615c3905ba88f0af176dcd0c6ecf6abcae1bab2a80b1a7316c",
+        "gitBlob": "fc23d281777bcd460144b204b29ed2e66792cedf"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "dcd1f4748ae9e9861b71ed4fdfcf85b3e10d563a",
+        "bytes": 921,
+        "sha256": "1e94ec4ce31c2dcc66bda9a8eabbdb9c923fd6271b9146986f66345ba34d724a"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.0.rawApi.1.identity",
+        "currentEvidence.ciObservations35.observations.1.rawApi.1.identity",
+        "currentEvidence.ciObservations35.observations.2.rawApi.1.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.1.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.11.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.21.identity",
+        "currentEvidence.ciObservation6.rawApiRecords.1.identity"
+      ],
+      "actual": {
+        "bytes": 921,
+        "sha256": "1e94ec4ce31c2dcc66bda9a8eabbdb9c923fd6271b9146986f66345ba34d724a",
+        "gitBlob": "dcd1f4748ae9e9861b71ed4fdfcf85b3e10d563a"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "60a6c7c3170c87c58538287d0ae7208f6337649f",
+        "bytes": 13819,
+        "sha256": "f74cadd0cfa4d25769c17e1b937b94c24e250d958dedd3a6811f002675c9989d"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.0.rawApi.2.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.2.identity"
+      ],
+      "actual": {
+        "bytes": 13819,
+        "sha256": "f74cadd0cfa4d25769c17e1b937b94c24e250d958dedd3a6811f002675c9989d",
+        "gitBlob": "60a6c7c3170c87c58538287d0ae7208f6337649f"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "f0937f653685fc243465572e0e34865514989d32",
+        "bytes": 916,
+        "sha256": "4e44425624a9ef851e2c1152e6cd4bf559687bd07543e48b8b805d71b8e86997"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.0.rawApi.3.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.3.identity"
+      ],
+      "actual": {
+        "bytes": 916,
+        "sha256": "4e44425624a9ef851e2c1152e6cd4bf559687bd07543e48b8b805d71b8e86997",
+        "gitBlob": "f0937f653685fc243465572e0e34865514989d32"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "81609f53b60baca57d91e43c273f13406bf2cdf9",
+        "bytes": 13853,
+        "sha256": "dfea5c1dddb1451a263cfe40e09ba2e19ec6f10b8d193795745e72492403f47a"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.0.rawApi.4.identity",
+        "currentEvidence.ciObservations35.observations.1.rawApi.4.identity",
+        "currentEvidence.ciObservations35.observations.2.rawApi.4.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.4.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.14.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.24.identity",
+        "currentEvidence.ciObservation6.rawApiRecords.4.identity"
+      ],
+      "actual": {
+        "bytes": 13853,
+        "sha256": "dfea5c1dddb1451a263cfe40e09ba2e19ec6f10b8d193795745e72492403f47a",
+        "gitBlob": "81609f53b60baca57d91e43c273f13406bf2cdf9"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "29437fc6721b4c7b93ee8234544fd1243b43f327",
+        "bytes": 16926,
+        "sha256": "2eb6a4ce34a2f4329d356899dda936e375ea81f8048a4d2f5bb85c75d7f90e11"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.0.rawApi.5.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.5.identity"
+      ],
+      "actual": {
+        "bytes": 16926,
+        "sha256": "2eb6a4ce34a2f4329d356899dda936e375ea81f8048a4d2f5bb85c75d7f90e11",
+        "gitBlob": "29437fc6721b4c7b93ee8234544fd1243b43f327"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "eef56b75ef985f9d49be2474d0dba7a9c98e972b",
+        "bytes": 14106,
+        "sha256": "45496d0c4bccc8a123dae1e5a936b1e82422db66c5e9997a72aaa73a63a740ce"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.0.rawApi.6.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.6.identity"
+      ],
+      "actual": {
+        "bytes": 14106,
+        "sha256": "45496d0c4bccc8a123dae1e5a936b1e82422db66c5e9997a72aaa73a63a740ce",
+        "gitBlob": "eef56b75ef985f9d49be2474d0dba7a9c98e972b"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "76738920bf36fd47fd60ef07612d40243404084d",
+        "bytes": 4476,
+        "sha256": "0288e6c256c0643b0504a6fe8b0ff212104e2e42894dcec9dc06fe4f53da4b5c"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.0.rawApi.7.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.7.identity"
+      ],
+      "actual": {
+        "bytes": 4476,
+        "sha256": "0288e6c256c0643b0504a6fe8b0ff212104e2e42894dcec9dc06fe4f53da4b5c",
+        "gitBlob": "76738920bf36fd47fd60ef07612d40243404084d"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "10957625a0237b166ba2ef34b9a114f6016b2147",
+        "bytes": 13826,
+        "sha256": "ad2c32f65712b9584b6d7f1ab9f05e3cd8aed18f0e8fdb558738b75d8d4e8921"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.0.rawApi.8.identity",
+        "currentEvidence.ciObservations35.observations.1.rawApi.8.identity",
+        "currentEvidence.ciObservations35.observations.2.rawApi.8.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.8.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.18.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.28.identity",
+        "currentEvidence.ciObservation6.rawApiRecords.8.identity"
+      ],
+      "actual": {
+        "bytes": 13826,
+        "sha256": "ad2c32f65712b9584b6d7f1ab9f05e3cd8aed18f0e8fdb558738b75d8d4e8921",
+        "gitBlob": "10957625a0237b166ba2ef34b9a114f6016b2147"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "c29f5d54b502ec5aeaf5ebe3aa31c12f7f451cdb",
+        "bytes": 20102,
+        "sha256": "93f233a19ceb930233b039e3c12c09d8082e699c8f7dbafb58e8223b068574c6"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.0.rawApi.9.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.9.identity"
+      ],
+      "actual": {
+        "bytes": 20102,
+        "sha256": "93f233a19ceb930233b039e3c12c09d8082e699c8f7dbafb58e8223b068574c6",
+        "gitBlob": "c29f5d54b502ec5aeaf5ebe3aa31c12f7f451cdb"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "e74f7b9a6224cfeeb4630ac9073a122efcc57be4",
+        "bytes": 13819,
+        "sha256": "f81df3b670f267169114269fc3c318fa5c297dc71abedfbdcf7bef4250631829"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.1.rawApi.2.identity",
+        "currentEvidence.ciObservations35.observations.2.rawApi.2.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.12.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.22.identity",
+        "currentEvidence.ciObservation6.rawApiRecords.2.identity"
+      ],
+      "actual": {
+        "bytes": 13819,
+        "sha256": "f81df3b670f267169114269fc3c318fa5c297dc71abedfbdcf7bef4250631829",
+        "gitBlob": "e74f7b9a6224cfeeb4630ac9073a122efcc57be4"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "9c48a2895044314b595a7cf3037b2bee78778de5",
+        "bytes": 26957,
+        "sha256": "cfa84cc9c74be8ada1822ee1eecc2adf98d92d63c330ea855ee9803548467cc5"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.1.rawApi.3.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.13.identity"
+      ],
+      "actual": {
+        "bytes": 26957,
+        "sha256": "cfa84cc9c74be8ada1822ee1eecc2adf98d92d63c330ea855ee9803548467cc5",
+        "gitBlob": "9c48a2895044314b595a7cf3037b2bee78778de5"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "1562939f84683ad53dcacc41724eec47070b7cd9",
+        "bytes": 31536,
+        "sha256": "d5551a547404ea099719a77bddba9d7120ba3974923aa97dbe3a9760d55ac837"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.1.rawApi.5.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.15.identity"
+      ],
+      "actual": {
+        "bytes": 31536,
+        "sha256": "d5551a547404ea099719a77bddba9d7120ba3974923aa97dbe3a9760d55ac837",
+        "gitBlob": "1562939f84683ad53dcacc41724eec47070b7cd9"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "82698d7c662b0852b47663c584e12c68d3ec0da9",
+        "bytes": 14106,
+        "sha256": "b1e036fc85e7368dc7aaba928363f6ebe8effadd18cc471604c6ff8eaae4ca18"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.1.rawApi.6.identity",
+        "currentEvidence.ciObservations35.observations.2.rawApi.6.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.16.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.26.identity",
+        "currentEvidence.ciObservation6.rawApiRecords.6.identity"
+      ],
+      "actual": {
+        "bytes": 14106,
+        "sha256": "b1e036fc85e7368dc7aaba928363f6ebe8effadd18cc471604c6ff8eaae4ca18",
+        "gitBlob": "82698d7c662b0852b47663c584e12c68d3ec0da9"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "069f0ce0668f3155c49391d4d139e707fc64b371",
+        "bytes": 18708,
+        "sha256": "c7b4266bc095167f09a3af5ba3f0192cf3fae870f85a8c5b0dad6b272e552f0a"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.1.rawApi.7.identity",
+        "currentEvidence.ciObservations35.observations.2.rawApi.7.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.17.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.27.identity",
+        "currentEvidence.ciObservation6.rawApiRecords.7.identity"
+      ],
+      "actual": {
+        "bytes": 18708,
+        "sha256": "c7b4266bc095167f09a3af5ba3f0192cf3fae870f85a8c5b0dad6b272e552f0a",
+        "gitBlob": "069f0ce0668f3155c49391d4d139e707fc64b371"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "617cd8ebc2e1d84e22783f9e1f6957b39e39a159",
+        "bytes": 24274,
+        "sha256": "c4d2ab0b2d3310c6b7a88da1cae19886a831ca8864fcd7eff8f20f9f8318fb9a"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.1.rawApi.9.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.19.identity"
+      ],
+      "actual": {
+        "bytes": 24274,
+        "sha256": "c4d2ab0b2d3310c6b7a88da1cae19886a831ca8864fcd7eff8f20f9f8318fb9a",
+        "gitBlob": "617cd8ebc2e1d84e22783f9e1f6957b39e39a159"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "314b366f26b6ac96070a2f771532b36e93f6d045",
+        "bytes": 28530,
+        "sha256": "f839bb2bed95ac82f6abb734054a5a9ee63460701cb7ad1f7ad866d76c02d5f9"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.2.rawApi.3.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.23.identity"
+      ],
+      "actual": {
+        "bytes": 28530,
+        "sha256": "f839bb2bed95ac82f6abb734054a5a9ee63460701cb7ad1f7ad866d76c02d5f9",
+        "gitBlob": "314b366f26b6ac96070a2f771532b36e93f6d045"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "a996a7dbc98cc497af23a4fdc4443a7b9cef90f0",
+        "bytes": 40162,
+        "sha256": "067cd32b39078a208f84f38c244c6e063958604a9c965db838c5d551d2ea0af5"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.2.rawApi.5.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.25.identity"
+      ],
+      "actual": {
+        "bytes": 40162,
+        "sha256": "067cd32b39078a208f84f38c244c6e063958604a9c965db838c5d551d2ea0af5",
+        "gitBlob": "a996a7dbc98cc497af23a4fdc4443a7b9cef90f0"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "2d48c9f6a305bf9e50c72281e8c1d21dcb8163b8",
+        "bytes": 33898,
+        "sha256": "6ba568b3f8da8b803c501a90e85868a15a304c6939260999252d76c9929ad9ba"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.observations.2.rawApi.9.identity",
+        "currentEvidence.ciObservations35.rawApiRecords.29.identity"
+      ],
+      "actual": {
+        "bytes": 33898,
+        "sha256": "6ba568b3f8da8b803c501a90e85868a15a304c6939260999252d76c9929ad9ba",
+        "gitBlob": "2d48c9f6a305bf9e50c72281e8c1d21dcb8163b8"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "e3b42d1533b4c6759ece196c2bb1e43759a326d9",
+        "bytes": 3781,
+        "sha256": "6d1122cba225efa03afc2ef4842c2a8d785b6e70a0d5d7c625a604e6c2d152ab"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.rawApiRecords.30.identity"
+      ],
+      "actual": {
+        "bytes": 3781,
+        "sha256": "6d1122cba225efa03afc2ef4842c2a8d785b6e70a0d5d7c625a604e6c2d152ab",
+        "gitBlob": "e3b42d1533b4c6759ece196c2bb1e43759a326d9"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "7b24796c78749ff81f94dc76acdc95b7a4cb0415",
+        "bytes": 813,
+        "sha256": "8625abd94b2a2c8175b96a5a447e17c940e4c4dfb3e2e62e7823c22dab084a7f"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.rawApiRecords.31.identity"
+      ],
+      "actual": {
+        "bytes": 813,
+        "sha256": "8625abd94b2a2c8175b96a5a447e17c940e4c4dfb3e2e62e7823c22dab084a7f",
+        "gitBlob": "7b24796c78749ff81f94dc76acdc95b7a4cb0415"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "626e64a4524674ddacd7f51c691ace3e5f031a8c",
+        "bytes": 3140,
+        "sha256": "48443ed09985316687a8f59aeb423a315c7aa0877e4d778b7dac4ab38c3a4bfa"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.rawApiRecords.32.identity"
+      ],
+      "actual": {
+        "bytes": 3140,
+        "sha256": "48443ed09985316687a8f59aeb423a315c7aa0877e4d778b7dac4ab38c3a4bfa",
+        "gitBlob": "626e64a4524674ddacd7f51c691ace3e5f031a8c"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "b33e5290e4ed86a48b902a24ffc80509f1c89236",
+        "bytes": 22845,
+        "sha256": "135cd81f2edde1f087b231d4dcbed83d8cc8beade5a0230a093e6cbfcb1923ee"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.packagedDarwinArmFailure.actualSource.0"
+      ],
+      "actual": {
+        "bytes": 22845,
+        "sha256": "135cd81f2edde1f087b231d4dcbed83d8cc8beade5a0230a093e6cbfcb1923ee",
+        "gitBlob": "b33e5290e4ed86a48b902a24ffc80509f1c89236"
+      },
+      "method": "complete immutable source previously fetched for fixed9d failure analysis",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b"
+      },
+      "locations": [
+        "currentEvidence.ciObservations35.packagedDarwinArmFailure.actualSource.1"
+      ],
+      "actual": {
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+      },
+      "method": "complete immutable source previously fetched for fixed9d failure analysis",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "23e4f926329a23c9c169db4ac545bb1c36d41c61",
+        "bytes": 29686,
+        "sha256": "3a3afca6bc776cabd346903a188e5fb9b97e6536adcd679daeb684a635dfedfe"
+      },
+      "locations": [
+        "currentEvidence.ciObservation6.rawApiRecords.3.identity"
+      ],
+      "actual": {
+        "bytes": 29686,
+        "sha256": "3a3afca6bc776cabd346903a188e5fb9b97e6536adcd679daeb684a635dfedfe",
+        "gitBlob": "23e4f926329a23c9c169db4ac545bb1c36d41c61"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "b8b926f4873b9c9560eb608e8f9bf494199fd4f5",
+        "bytes": 46862,
+        "sha256": "930ad17e85fd2ecede24cd212e98b4f510723a8c270de329895adf05210d0704"
+      },
+      "locations": [
+        "currentEvidence.ciObservation6.rawApiRecords.5.identity"
+      ],
+      "actual": {
+        "bytes": 46862,
+        "sha256": "930ad17e85fd2ecede24cd212e98b4f510723a8c270de329895adf05210d0704",
+        "gitBlob": "b8b926f4873b9c9560eb608e8f9bf494199fd4f5"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "25b13312de5ebfa8391d4fdc4041bc8ac1e255f1",
+        "bytes": 34481,
+        "sha256": "340fe8d4ef744aa7e80021de32ef5531498ba9ada1947d59ecf2bd4cede09d64"
+      },
+      "locations": [
+        "currentEvidence.ciObservation6.rawApiRecords.9.identity"
+      ],
+      "actual": {
+        "bytes": 34481,
+        "sha256": "340fe8d4ef744aa7e80021de32ef5531498ba9ada1947d59ecf2bd4cede09d64",
+        "gitBlob": "25b13312de5ebfa8391d4fdc4041bc8ac1e255f1"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "f1e1d1145898e201723be343fa8768d73332fcb1",
+        "bytes": 27709,
+        "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e"
+      },
+      "locations": [
+        "currentEvidence.darwinLogOnly.evidence.directOracle.identity",
+        "currentEvidence.darwinLogOnly.evidence.unchangedSourcesFromPriorFull9dJoin.1.identity"
+      ],
+      "actual": {
+        "bytes": 27709,
+        "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e",
+        "gitBlob": "f1e1d1145898e201723be343fa8768d73332fcb1"
+      },
+      "method": "full immutable direct source blob fetched and rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "19aca56c55a666654b04827b3c2446d2ad03ad8d",
+        "bytes": 21219,
+        "sha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9"
+      },
+      "locations": [
+        "currentEvidence.darwinLogOnly.evidence.unchangedSourcesFromPriorFull9dJoin.0.identity"
+      ],
+      "actual": {
+        "bytes": 21219,
+        "sha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+        "gitBlob": "19aca56c55a666654b04827b3c2446d2ad03ad8d"
+      },
+      "method": "full immutable direct source blob fetched and rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "4f300228b8f28b870586794564ae63ccf1dee41f",
+        "bytes": 15524,
+        "sha256": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5"
+      },
+      "locations": [
+        "currentEvidence.darwinLogOnly.evidence.unchangedSourcesFromPriorFull9dJoin.2.identity"
+      ],
+      "actual": {
+        "bytes": 15524,
+        "sha256": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5",
+        "gitBlob": "4f300228b8f28b870586794564ae63ccf1dee41f"
+      },
+      "method": "full immutable direct source blob fetched and rehashed",
+      "passed": true
+    },
+    {
+      "pin": {
+        "gitBlob": "ca10512904b6abc3f110d4ebb852a7a0baf62548",
+        "bytes": 480,
+        "sha256": "8127557453bfbf2dad146bd4b1ba4cc17b99f81d3f2f907af9edcffde0b3927f"
+      },
+      "locations": [
+        "currentEvidence.darwinLogOnly.evidence.tupleAdmission.identity"
+      ],
+      "actual": {
+        "bytes": 480,
+        "sha256": "8127557453bfbf2dad146bd4b1ba4cc17b99f81d3f2f907af9edcffde0b3927f",
+        "gitBlob": "ca10512904b6abc3f110d4ebb852a7a0baf62548"
+      },
+      "method": "complete embedded/derived body rehashed; no separate Git claim",
+      "passed": true
+    }
+  ],
+  "currentPointerCount": 116,
+  "currentPointerBytes": 18210612,
+  "checks": [
+    {
+      "id": "actual-working-ref",
+      "result": "PASS_ACTUAL",
+      "evidence": "1ca9566d70bd624283227a644fa6969eb8bf8f34"
+    },
+    {
+      "id": "exact-sole-parent",
+      "result": "PASS_ACTUAL",
+      "evidence": [
+        "d693c62d59c2bc6a6866dcc0293c111380ed88c5"
+      ]
+    },
+    {
+      "id": "actual-root-and-three-subtrees",
+      "result": "PASS_ACTUAL",
+      "evidence": "Fresh complete actual tree metadata, matching all four candidate tree identities."
+    },
+    {
+      "id": "complete-actual-trees",
+      "result": "PASS_ACTUAL",
+      "evidence": "Root54 entries; docs3695; scripts635; tools57, all complete."
+    },
+    {
+      "id": "exact-parent-root-authority",
+      "result": "PASS_ACTUAL",
+      "evidence": "Closed d693 actual parent and complete immutable parent root/docs/scripts/tools trees retained."
+    },
+    {
+      "id": "all51-other-root-entries-identical",
+      "result": "PASS_ACTUAL",
+      "evidence": "Includes src/test/packages/.github and all source policy/config entries."
+    },
+    {
+      "id": "exact32-leaf-diff",
+      "result": "PASS_ACTUAL",
+      "evidence": "Actual leaf census matches all32 expected modes/SHA/sizes."
+    },
+    {
+      "id": "25add7modify-no-delete-or-mode-change",
+      "result": "PASS_ACTUAL",
+      "evidence": "25 docs additions,3 docs modifications,4 source modifications; zero deletes/renames/mode changes."
+    },
+    {
+      "id": "exact-four-source-modifications",
+      "result": "PASS_ACTUAL",
+      "evidence": "All existing canonical paths; no source additions."
+    },
+    {
+      "id": "immediate-expected-parent-push",
+      "result": "PASS_ACTUAL",
+      "evidence": "Create commit immediately followed by expected-parent force:false update_ref in the same cell."
+    },
+    {
+      "id": "all32-complete-current-bodies",
+      "result": "PASS_ACTUAL",
+      "evidence": "6693655 actual bytes fetched and matched literally."
+    },
+    {
+      "id": "all7-complete-parent-bodies",
+      "result": "PASS_ACTUAL",
+      "evidence": "3339550 actual parent bytes, three documents and four source preimages."
+    },
+    {
+      "id": "exact-actual-manifest",
+      "result": "PASS_ACTUAL",
+      "evidence": "Full18251-byte manifest a77bb57."
+    },
+    {
+      "id": "exact-r2-and-four-review-joins",
+      "result": "PASS_ACTUAL",
+      "evidence": "Root/guard/semantic/binding complete reports join exact b5538bd."
+    },
+    {
+      "id": "181-source-static-checks-closed",
+      "result": "PASS_ACTUAL",
+      "evidence": "49+46+38+48 static checks; all complete readbacks and self-read confirmations."
+    },
+    {
+      "id": "r1-actual-before-authorship",
+      "result": "PASS_ACTUAL",
+      "evidence": {
+        "gate": "2026-11-17 08:30:59 UTC",
+        "authored": "2026-11-17 08:33:13 UTC",
+        "r2Closed": "2026-11-17 08:56:43 UTC"
+      }
+    },
+    {
+      "id": "source-review-closure-before-publication",
+      "result": "PASS_ACTUAL",
+      "evidence": {
+        "reviewClosed": "2026-11-17 08:56:43 UTC",
+        "prepared": "2026-11-17 08:57:57 UTC"
+      }
+    },
+    {
+      "id": "four-full-actual-inverses",
+      "result": "PASS_ACTUAL",
+      "evidence": "All complete actual postimages restore all complete actual preimages."
+    },
+    {
+      "id": "query-one-literal-only",
+      "result": "PASS_ACTUAL",
+      "evidence": "Both callers, full Win32_Process query, parsers and cleanup query stay byte-identical outside the one query string."
+    },
+    {
+      "id": "actual-namespace-and-query-spec",
+      "result": "PASS_ACTUAL",
+      "evidence": "JavaScript source has two backslashes; emitted PowerShell has one. Exact port/Listen predicate and full OwningProcess projection preserved."
+    },
+    {
+      "id": "platform-original12-to14-only",
+      "result": "PASS_ACTUAL",
+      "evidence": "One old expected literal changed; two60-line append cases; all original other bytes preserved."
+    },
+    {
+      "id": "native-gate-only-final-pair",
+      "result": "PASS_ACTUAL",
+      "evidence": "Only255-byte final loop ->533-byte pair block; all prior and later native/UI authority/cleanup statements preserved."
+    },
+    {
+      "id": "native-test-whole620-prefix-to8",
+      "result": "PASS_ACTUAL",
+      "evidence": "Original41888-byte620-line7-case prefix exact; one125-line5000ms case."
+    },
+    {
+      "id": "all-four-line-caps",
+      "result": "PASS_ACTUAL",
+      "evidence": "312/391/653/745; no new source cap exception."
+    },
+    {
+      "id": "all89-parent-catalog-values",
+      "result": "PASS_ACTUAL",
+      "evidence": "Every complete prior value is identical, including all bundles and totals."
+    },
+    {
+      "id": "exact-two-new-fields91total",
+      "result": "PASS_ACTUAL",
+      "evidence": [
+        "windowsSelectedPortRetryPairSourceR2Stage",
+        "windowsSelectedPortRetryPairSourceR2EvidenceFiles"
+      ]
+    },
+    {
+      "id": "all27-bundles-and-totals-preserved",
+      "result": "PASS_ACTUAL",
+      "evidence": "Full-value proof covers the previously accepted27 bundles and immutable totals; new transport-only archives are not silently added as qualified bundles."
+    },
+    {
+      "id": "full-plan-prefix",
+      "result": "PASS_ACTUAL",
+      "evidence": "Old2601874-byte plan is the complete literal prefix."
+    },
+    {
+      "id": "full-status-prefix",
+      "result": "PASS_ACTUAL",
+      "evidence": "Old78583-byte status is the complete literal prefix."
+    },
+    {
+      "id": "identical7698-byte-append",
+      "result": "PASS_ACTUAL",
+      "evidence": "Derived common suffix, not an independent Git file."
+    },
+    {
+      "id": "exact-stage-and24-evidence-map",
+      "result": "PASS_ACTUAL",
+      "evidence": "New source stage and evidence map match exact reviewed subject/source/authority and retained partial CI evidence."
+    },
+    {
+      "id": "116-complete-current-direct-tuples",
+      "result": "PASS_ACTUAL",
+      "evidence": "18210612 bytes of complete current/accepted/embedded/derived bodies joined; derived literals/API bodies are not represented as independent Git files."
+    },
+    {
+      "id": "all13-parity-source-bodies-current",
+      "result": "PASS_ACTUAL",
+      "evidence": "Full unchanged13 bodies770681bytes; script entries checked directly, src/test roots identical to accepted parent."
+    },
+    {
+      "id": "controls-and-selector-unchanged",
+      "result": "PASS_ACTUAL",
+      "evidence": "Actual current controls/selector exact; original guards/cadence/post-await expiry remain."
+    },
+    {
+      "id": "full-leaf-census",
+      "result": "PASS_ACTUAL",
+      "evidence": "12088 total =3289docs+8799nonDocs; nonDocs fixed through51 unchanged roots and exact4 modifications."
+    },
+    {
+      "id": "production-policy-workflows-preserved",
+      "result": "PASS_ACTUAL",
+      "evidence": "42 workflows unchanged; no paths added/removed or policy/config changed, preserving5020 production/141exceptions/cap800."
+    },
+    {
+      "id": "production-timeouts-preserved",
+      "result": "PASS_ACTUAL",
+      "evidence": "No production budget/filter/skip/cleanup relaxation; test-local60ms/30ms only exercises unchanged deadline semantics."
+    },
+    {
+      "id": "published-packet35-full-raw-bindings",
+      "result": "PASS_ACTUAL",
+      "evidence": "Three complete observations plus three artifact indexes; all5 run identities remain source9d/PR1219/attempt1 in embedded actual metadata."
+    },
+    {
+      "id": "published-packet6-full-raw-bindings",
+      "result": "PASS_ACTUAL",
+      "evidence": "Complete exact historical observation6 at08:45:52, not a current-status claim."
+    },
+    {
+      "id": "13-new-full-logs-and-prior-static-log",
+      "result": "PASS_ACTUAL",
+      "evidence": "14 distinct complete logs are referenced; original Windows static is already in parent,13 new logs attached here."
+    },
+    {
+      "id": "prior-fixed9d-test-outcomes-limited",
+      "result": "PASS_ACTUAL",
+      "evidence": "Exact10 new passing title lines in combined239=238pass/1skip on Node24.21; standalone Node24.22.1 RED/GREEN not run. Catalogue43 and management85 are separate fixed9d log results."
+    },
+    {
+      "id": "retained-Darwin-failures-not-upgraded",
+      "result": "PASS_ACTUAL",
+      "evidence": "Repeated P09 failures and packaged model-readiness timeout explicitly retained; no cause/cleanup/native success invented."
+    },
+    {
+      "id": "ten-archives-transport-only",
+      "result": "PASS_ACTUAL",
+      "evidence": "Claimed GitHub sizes/digests are metadata, not independent archive verification; no receipt/screenshot qualification."
+    },
+    {
+      "id": "signed-transport-urls-omitted",
+      "result": "PASS_ACTUAL",
+      "evidence": "Published evidence carries reusable file IDs and stable GitHub metadata only."
+    },
+    {
+      "id": "final-corrected-guard-retained",
+      "result": "PASS_ACTUAL",
+      "evidence": "Unpublished candidate superseded solely for four-line wording; all source/test pins unchanged."
+    },
+    {
+      "id": "fixed-pr1219-source-separate",
+      "result": "PASS_ACTUAL",
+      "evidence": "Publication advanced only working branch; fixed CI snapshot refs/metadata untouched."
+    },
+    {
+      "id": "no-runtime-or-standalone-authorization",
+      "result": "PASS_ACTUAL",
+      "evidence": "No target execution/compilation/import, local stage/scope, alternate runtime, standalone invocation or new CI selection."
+    },
+    {
+      "id": "platform14-and-native8-gaps-explicit",
+      "result": "PASS_ACTUAL",
+      "evidence": "Current fixed9d CI does not qualify later source; native Windows timing and runtime query behavior unmeasured."
+    },
+    {
+      "id": "existing-next-steps-only",
+      "result": "PASS_ACTUAL",
+      "evidence": "Existing independent actual review must close before separate execution selection; no extra gate invented."
+    }
+  ],
+  "checkCount": 49,
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "unresolvedBlockers": [],
+  "runtimeAdmitted": false,
+  "targetCodeExecuted": false,
+  "targetCodeCompiled": false,
+  "standaloneInvoked": false,
+  "currentPr1219Untouched": true,
+  "currentCiRetainedObservationCutoff": 6,
+  "environment": "No usable local environment; no new availability notice. No physical staging or target execution.",
+  "qualification": "Actual source/docs identity and preservation only. No new whole14/8 or native Windows phase result, standalone RED/GREEN, artifact verification or whole E2E qualification.",
+  "documentationNotation": "Plan/status show Root\\\\StandardCimv2 as JavaScript source spelling and immediately state that PowerShell receives one separator; actual emitted query is bound to the exact R1 specification by source review.",
+  "selfReadbackProtocol": "Fetch full created report; literal equality and SHA256/Git identity before closure."
+}

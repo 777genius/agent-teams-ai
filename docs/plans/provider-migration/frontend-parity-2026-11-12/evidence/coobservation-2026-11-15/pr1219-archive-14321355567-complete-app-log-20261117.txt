@@ -1,0 +1,130 @@
+[WARN] Your node_modules are out of sync with your lockfile. The value of the enableGlobalVirtualStore setting has changed
+$ node ./scripts/dev-with-runtime.mjs --remoteDebuggingPort 9222 --remoteDebuggingPort 9222 --noSandbox
+Using runtime from explicit runtime override /home/runner/work/_temp/TEST-desktop-backend-ME3hLE/bin/claude-multimodel
+Runtime version: 2.777.777 (teams orchestrator)
+Using terminal-platform runtime from CLAUDE_TERMINAL_DAEMON_BINARY
+vite v6.4.4 building SSR bundle for development...
+transforming...
+node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js (74:0): A comment
+
+"/** Anchors a pattern source. The interpolation lives here rather than at the call site because
+ * esbuild will not drop a `@__PURE__` call whose own argument interpolates a variable, but it
+ * will drop `anchor(dateSource)`. Keeping it inline pinned `date` into every bundle. */"
+
+in "node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js (400:0): A comment
+
+"// Wrapped in a `@__PURE__` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle."
+
+in "node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+"fchmodSync", "ftruncateSync", "renameSync" and "unlinkSync" are imported from external module "fs" but never used in "node_modules/.pnpm/@anthropic-ai+claude-agent-sdk@0.3.305_@anthropic-ai+sdk@0.122.0_zod@4.6.7__@modelconte_62c9a77da74e02db303bb50cb88ff403/node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs".
+✓ 4018 modules transformed.
+rendering chunks...
+dist-electron/main/sentry-artifact-inventory.json                       0.22 kB
+dist-electron/main/task-change-worker.cjs                               2.35 kB │ map:      2.29 kB
+dist-electron/main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs       4.25 kB │ map:      7.76 kB
+dist-electron/main/chunks/index-yaJFGvjB.cjs                            4.30 kB │ map:      6.10 kB
+dist-electron/main/team-data-worker.cjs                                 6.59 kB │ map:     10.78 kB
+dist-electron/main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs       9.72 kB │ map:     19.61 kB
+dist-electron/main/chunks/index-D9GX0Q6a.cjs                           28.61 kB │ map:     38.45 kB
+dist-electron/main/team-fs-worker.cjs                                  56.73 kB │ map:    108.01 kB
+dist-electron/main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs              68.95 kB │ map:    135.17 kB
+dist-electron/main/internal-storage-worker.cjs                        212.54 kB │ map:    417.54 kB
+dist-electron/main/chunks/taskChangeState-rZolvpL6.cjs                561.88 kB │ map:    792.47 kB
+dist-electron/main/chunks/TeamDataService-DySh5-O-.cjs                800.65 kB │ map:  1,744.24 kB
+dist-electron/main/chunks/taskHistory-2kbwfqIg.cjs                  1,646.70 kB │ map:  3,906.19 kB
+dist-electron/main/index.cjs                                       11,738.11 kB │ map: 24,511.89 kB
+✓ built in 21.12s
+
+electron main process built successfully
+
+-----
+
+vite v6.4.4 building SSR bundle for development...
+transforming...
+✓ 109 modules transformed.
+rendering chunks...
+dist-electron/preload/index.js  96.17 kB
+✓ built in 167ms
+
+electron preload scripts built successfully
+
+-----
+
+[file-viewer:vite-plugin] Copied 18/18 renderer assets to /home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.cache/document-preview-public/file-viewer
+dev server running for the electron renderer process at:
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+
+starting electron app...
+
+[App] Electron dev path overrides enabled {
+  userDataDir: '/home/runner/work/_temp/TEST-desktop-backend-ME3hLE/userData',
+  claudeRoot: '/home/runner/work/_temp/TEST-desktop-backend-ME3hLE/claude'
+}
+[4301:1117/103341.148507:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+
+DevTools listening on ws://127.0.0.1:9222/devtools/browser/6fd7f68a-ec66-4c4c-afe8-b82d48625a20
+[4301:1117/103341.304854:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[App] [dev] loading renderer from http://localhost:5173
+[4301:1117/103341.458460:ERROR:dbus/object_proxy.cc:589] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[4301:1117/103341.461808:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[Feature:Announcements] State transition { reason: 'writer_busy' }
+[4301:1117/103341.523699:ERROR:dbus/object_proxy.cc:589] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[Feature:Announcements] State transition { reason: 'disabled' }
+[App] [startup] renderer dom-ready
+[App] [startup] renderer did-finish-load
+Error occurred in handler for 'codexAccount:refreshSnapshot': BackendRoutingError: Backend routing: unavailable
+    at DesktopBackendFeature.captureSourceTarget (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59473:13)
+    at DesktopBackendFeature.captureCurrentManagementTarget (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59462:32)
+    at DesktopBackendFeature.captureProviderManagement (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59358:17)
+    at async /home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:138668:22
+    at async Object.refreshSnapshot (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:76679:26)
+    at async Session.<anonymous> (node:electron/js2c/browser_init:1:119027) {
+  code: 'unavailable',
+  outcome: 'not-dispatched'
+}
+Error occurred in handler for 'codexAccount:refreshSnapshot': BackendRoutingError: Backend routing: unavailable
+    at DesktopBackendFeature.captureSourceTarget (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59473:13)
+    at DesktopBackendFeature.captureCurrentManagementTarget (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59462:32)
+    at DesktopBackendFeature.captureProviderManagement (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59358:17)
+    at async /home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:138668:22
+    at async Object.refreshSnapshot (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:76679:26)
+    at async Session.<anonymous> (node:electron/js2c/browser_init:1:119027) {
+  code: 'unavailable',
+  outcome: 'not-dispatched'
+}
+[4301:1117/103615.354099:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[4301:1117/103615.354163:ERROR:dbus/object_proxy.cc:589] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[4301:1117/103615.354213:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[4301:1117/103615.354231:ERROR:dbus/object_proxy.cc:589] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+Error occurred in handler for 'codexAccount:refreshSnapshot': BackendRoutingError: Backend routing: unavailable
+    at DesktopBackendFeature.captureSourceTarget (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59473:13)
+    at DesktopBackendFeature.captureCurrentManagementTarget (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59462:32)
+    at DesktopBackendFeature.captureProviderManagement (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59358:17)
+    at async /home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:138668:22
+    at async Object.refreshSnapshot (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:76679:26)
+    at async Session.<anonymous> (node:electron/js2c/browser_init:1:119027) {
+  code: 'unavailable',
+  outcome: 'not-dispatched'
+}
+[4301:1117/103702.253469:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[4301:1117/103702.254065:ERROR:dbus/object_proxy.cc:589] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[4301:1117/103702.254572:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[4301:1117/103702.254649:ERROR:dbus/object_proxy.cc:589] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+Error occurred in handler for 'codexAccount:refreshSnapshot': BackendRoutingError: Backend routing: unavailable
+    at DesktopBackendFeature.captureSourceTarget (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59473:13)
+    at DesktopBackendFeature.captureCurrentManagementTarget (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59462:32)
+    at DesktopBackendFeature.captureProviderManagement (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59358:17)
+    at async /home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:138668:22
+    at async Object.refreshSnapshot (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:76679:26)
+    at async Session.<anonymous> (node:electron/js2c/browser_init:1:119027) {
+  code: 'unavailable',
+  outcome: 'not-dispatched'
+}
+[4301:1117/103757.714918:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[4301:1117/103757.715163:ERROR:dbus/object_proxy.cc:589] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[4301:1117/103757.715357:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[4301:1117/103757.715478:ERROR:dbus/object_proxy.cc:589] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[Feature:Announcements] State transition { reason: 'writer_busy' }

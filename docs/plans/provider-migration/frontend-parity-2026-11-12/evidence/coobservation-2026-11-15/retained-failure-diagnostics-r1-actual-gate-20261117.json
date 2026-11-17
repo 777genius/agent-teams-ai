@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_RETAINED_FAILURE_DIAGNOSTICS_R1_ACTUAL_GATE",
+  "closedAt": "2026-11-17 10:42:30 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "commit": "c88b4fe2632f2644bf734293db713fe8288b5139",
+  "parent": "1ca9566d70bd624283227a644fa6969eb8bf8f34",
+  "tree": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+  "docsTree": "1aeddc4cacfc5288f3d6bb03c7bfcf52e24bf9bb",
+  "manifest": {
+    "bytes": 29386,
+    "sha256": "2587967e7c9d7863d1222e511f728824118cd8bedd587567d917989ca6719cf4",
+    "gitBlob": "a052e5941c68dbff6465e0dc0f59e38f5955715a"
+  },
+  "subject": {
+    "bytes": 31060,
+    "sha256": "188bd061a0aa0ed5afe3f8af4919c5ac111ae15d3deb5c92c19645eccab997bc",
+    "gitBlob": "d226951f5f24dd1a5a7d4742e25edcb3ef043213"
+  },
+  "root": {
+    "pin": {
+      "bytes": 438180,
+      "sha256": "f42c930100217775083c3c40465d92cebb52b8335ce695bc9f30cc2a1439da24",
+      "gitBlob": "9fc44701c3aa4e03ee1459b1468455776ecddfb8"
+    },
+    "checks": 38,
+    "completeReadback": true,
+    "selfReadConfirmed": true
+  },
+  "independent": {
+    "pin": {
+      "gitBlob": "4d9e68e8ec72b694892f5bda9ffcf3d42c120add",
+      "bytes": 626538,
+      "sha256": "264313dda69d9918a80d2e9edda76e9ce134ef3401b6e7db8645324c3fa69bd7"
+    },
+    "checks": 44,
+    "completeRootRead": true,
+    "selfReadConfirmed": true
+  },
+  "actualChecks": 82,
+  "staticChecks": 126,
+  "currentBodies": {
+    "count": 48,
+    "bytes": 12941944
+  },
+  "parentBodies": {
+    "count": 3,
+    "bytes": 3276158
+  },
+  "directPointerClosure": {
+    "repositoryScopedTuples": 273,
+    "bytes": 34928867,
+    "unresolved": 0
+  },
+  "delta": {
+    "docsAdded": 45,
+    "docsModified": 3,
+    "deleted": 0,
+    "source": 0
+  },
+  "preservation": {
+    "unchangedNonDocRootEntries": 53,
+    "nonDocLeaves": 8799,
+    "currentDocs": 3334,
+    "currentLeaves": 12133,
+    "all91PriorCatalogValues": true,
+    "originalBundles": 27,
+    "commonAppendBytes": 8960,
+    "current17SourceBodies": true,
+    "workflows": 42,
+    "production": 5020,
+    "cap": 800,
+    "exceptions": 141
+  },
+  "accepted": true,
+  "authorization": "Root may now author only the exact six selected source/test postimages under d226951f R1, followed by existing source R2 reviews, publication and immediate push, and actual readbacks before execution venue selection.",
+  "sourcePostimagesAuthored": false,
+  "sourceTestsAuthored": false,
+  "sourceCompiled": false,
+  "sourceExecuted": false,
+  "runtimeAdmitted": false,
+  "newExecutionVenueSelected": false,
+  "standaloneInvoked": false,
+  "environment": {
+    "readOnlyExecutionAvailableNow": true,
+    "originalWorkingDirectoryAbsent": true,
+    "correctedStandaloneScopeAbsent": true,
+    "pinnedNodeInodeChanged": true,
+    "standalonePhysicalAdmission": false
+  },
+  "qualification": {
+    "completeE2E": false,
+    "rootCauseResolved": false,
+    "fixRuntimeProven": false,
+    "archiveQualified": false,
+    "newWindows14Or8CasesExecuted": false,
+    "nativeDarwinP09Resolved": false,
+    "coldRendererResolved": false,
+    "standaloneRedGreen24_22_1Executed": false,
+    "readyMergeReleaseDefaultActivationStage2": false,
+    "wholePlatform14ActuallyExecuted": false
+  },
+  "remaining": "No complete E2E, root-cause resolution, archive verification or new source runtime result is asserted."
+}

@@ -1,0 +1,417 @@
+{
+  "schemaVersion": 1,
+  "kind": "windows-selected-port-final-retry-pair-root-R1-review",
+  "at": "2026-11-17 08:05:05 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "root",
+  "subject": {
+    "bytes": 25565,
+    "sha256": "06c9e63f24c25dcbd6a39df9c6ac3d0c34cf6fc402791ff9e0a2e7a857128ff5",
+    "gitBlob": "77e02e33a6db38b6083316f96c65cd02177354cb"
+  },
+  "verdict": "ACCEPT_EXACT_NARROW_WINDOWS_R1_STATIC_ONLY",
+  "accepted": true,
+  "sourceAnchor": {
+    "commit": "65cd08dc15e3735cb579578d475938fd0a3fb135",
+    "root": "e2347fe433055be9f5c8ee109e7db087bf365c16",
+    "docs": "1e97d02232e95ba34238c340713571bb6e5b2a91",
+    "soleParent": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "actualGate": {
+      "bytes": 9510,
+      "sha256": "7709fd167750dac768b1a826ff81904077a1afe936bbd5865b4041e126ffb599",
+      "gitBlob": "e869a398b712541b17eef73ba5a44af49b00f70d"
+    },
+    "rootActual": {
+      "bytes": 76668,
+      "sha256": "8ef246ec40b9c443ddd13bad6b385e80fd60b1881b7eb2b342aba14bd74c56c3",
+      "gitBlob": "757184208b6b39432f5f957011c0a2d40d5b344d"
+    },
+    "independentActual": {
+      "bytes": 123197,
+      "sha256": "ecc5f229c0073fd48c218205e4feb0928e70f2a41a4ff53d60088e320ae0cef4",
+      "gitBlob": "cc54c9d831a28eadf9e411fd8d53134fbcd6f881"
+    },
+    "nonDocsEquivalentTo": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "sourceGate": {
+      "bytes": 7050,
+      "sha256": "4a55ae270a3549fd97c712db801cf2378102e7974597c8ed2c3fe3b240e937cb",
+      "gitBlob": "3aa070295059b9e1dd280ee36836712878b0b72c"
+    },
+    "scriptsTree": "c3f4fe5a62dd79a743b6ffc0d07341ac68a25f73",
+    "toolsTree": "9356c03e96405eb578158f06d6fdcbc89d105bd6"
+  },
+  "completePreimages": [
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "mode": "100644",
+      "bytes": 12335,
+      "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+      "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+      "lines": 312
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "mode": "100644",
+      "bytes": 16835,
+      "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+      "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+      "lines": 331
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "mode": "100644",
+      "bytes": 37692,
+      "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+      "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+      "lines": 647
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "mode": "100644",
+      "bytes": 41888,
+      "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+      "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e",
+      "lines": 620
+    }
+  ],
+  "feasibility": {
+    "bytes": 39388,
+    "sha256": "68e439d5fe2674f430b93ad4729a53adc6144ee01dd241357ed0ba0bc4ab568b",
+    "gitBlob": "33dc8b23aab16c1786c3484347da3382a6ab0ee5"
+  },
+  "sourcePathCorrection": "Earlier root scratch-data key labeled platform.mjs under tools/owned-process-broker. The full blob was correct; the actual tree path is scripts/e2e/opencode-diagnostics/platform.mjs. No source file or postimage was authored. Canonical tree/path binding now explicitly verified.",
+  "checks": [
+    {
+      "id": "exact-proposal-full-readback",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "bytes": 25565,
+        "sha256": "06c9e63f24c25dcbd6a39df9c6ac3d0c34cf6fc402791ff9e0a2e7a857128ff5",
+        "gitBlob": "77e02e33a6db38b6083316f96c65cd02177354cb"
+      }
+    },
+    {
+      "id": "actual-anchor-closed-before-plan",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "commit": "65cd08dc15e3735cb579578d475938fd0a3fb135",
+        "gate": {
+          "bytes": 9510,
+          "sha256": "7709fd167750dac768b1a826ff81904077a1afe936bbd5865b4041e126ffb599",
+          "gitBlob": "e869a398b712541b17eef73ba5a44af49b00f70d"
+        }
+      }
+    },
+    {
+      "id": "source-head-and-docs-authority-distinct",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "commit": "65cd08dc15e3735cb579578d475938fd0a3fb135",
+        "root": "e2347fe433055be9f5c8ee109e7db087bf365c16",
+        "docs": "1e97d02232e95ba34238c340713571bb6e5b2a91",
+        "soleParent": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "actualGate": {
+          "bytes": 9510,
+          "sha256": "7709fd167750dac768b1a826ff81904077a1afe936bbd5865b4041e126ffb599",
+          "gitBlob": "e869a398b712541b17eef73ba5a44af49b00f70d"
+        },
+        "rootActual": {
+          "bytes": 76668,
+          "sha256": "8ef246ec40b9c443ddd13bad6b385e80fd60b1881b7eb2b342aba14bd74c56c3",
+          "gitBlob": "757184208b6b39432f5f957011c0a2d40d5b344d"
+        },
+        "independentActual": {
+          "bytes": 123197,
+          "sha256": "ecc5f229c0073fd48c218205e4feb0928e70f2a41a4ff53d60088e320ae0cef4",
+          "gitBlob": "cc54c9d831a28eadf9e411fd8d53134fbcd6f881"
+        },
+        "nonDocsEquivalentTo": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "sourceGate": {
+          "bytes": 7050,
+          "sha256": "4a55ae270a3549fd97c712db801cf2378102e7974597c8ed2c3fe3b240e937cb",
+          "gitBlob": "3aa070295059b9e1dd280ee36836712878b0b72c"
+        },
+        "scriptsTree": "c3f4fe5a62dd79a743b6ffc0d07341ac68a25f73",
+        "toolsTree": "9356c03e96405eb578158f06d6fdcbc89d105bd6"
+      }
+    },
+    {
+      "id": "exact-four-complete-preimages",
+      "result": "PASS_STATIC",
+      "evidence": [
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "mode": "100644",
+          "bytes": 12335,
+          "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+          "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+          "lines": 312
+        },
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+          "mode": "100644",
+          "bytes": 16835,
+          "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+          "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+          "lines": 331
+        },
+        {
+          "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+          "mode": "100644",
+          "bytes": 37692,
+          "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+          "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+          "lines": 647
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+          "mode": "100644",
+          "bytes": 41888,
+          "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+          "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e",
+          "lines": 620
+        }
+      ]
+    },
+    {
+      "id": "canonical-source-paths-actual-tree-bound",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "scratchLabelCorrection": "Earlier root scratch-data key labeled platform.mjs under tools/owned-process-broker. The full blob was correct; the actual tree path is scripts/e2e/opencode-diagnostics/platform.mjs. No source file or postimage was authored. Canonical tree/path binding now explicitly verified."
+      }
+    },
+    {
+      "id": "minimal-B-single-query-boundary",
+      "result": "PASS_STATIC",
+      "evidence": "One exact substitution with full inverse at later R2; no helper/import/API/caller/config changes."
+    },
+    {
+      "id": "documented-CIM-namespace-state-local-filter",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "primaryUrls": [
+          "https://learn.microsoft.com/en-us/windows/win32/fwp/wmi/nettcpipprov/msft-nettcpconnection",
+          "https://learn.microsoft.com/en-us/powershell/module/cimcmdlets/get-ciminstance?view=powershell-5.1",
+          "https://learn.microsoft.com/en-us/windows/win32/api/wbemcli/nf-wbemcli-iwbemservices-execquery",
+          "https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables?view=powershell-5.1"
+        ],
+        "schemaOnly": true
+      }
+    },
+    {
+      "id": "selected-port-validation-invariant",
+      "result": "PASS_STATIC",
+      "evidence": "Same validated port; no interpolated user text/new input surface."
+    },
+    {
+      "id": "all-owner-all-address-universe",
+      "result": "PASS_STATIC",
+      "evidence": "Projection keeps all owners, including foreign owners."
+    },
+    {
+      "id": "complete-process-query-and-order-preserved",
+      "result": "PASS_STATIC",
+      "evidence": "Full ProcessId/ParentProcessId/CreationDate/ExecutablePath/UTC identity remains."
+    },
+    {
+      "id": "fresh-interpreter-per-guard-preserved",
+      "result": "PASS_STATIC",
+      "evidence": "No cache/lease/TTL, combined clickguard or persistent CIM session."
+    },
+    {
+      "id": "empty-success-and-error-distinct",
+      "result": "PASS_STATIC",
+      "evidence": "Keep strict parser, Stop, original execFileSync failure; partial stdout never authorizes."
+    },
+    {
+      "id": "all-original-deadlines-preserved",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "phaseMs": 10000,
+        "controllerMs": 120000,
+        "javascriptOuterMs": 300000,
+        "powershellMs": 30000,
+        "genericWaitMs": 30000,
+        "pollMs": 100,
+        "change": false
+      }
+    },
+    {
+      "id": "no-native-performance-guarantee",
+      "result": "PASS_STATIC",
+      "evidence": "Actual latency and native provider behavior remain unmeasured; no guaranteed savings or10s completion."
+    },
+    {
+      "id": "A1-final-only-production-boundary",
+      "result": "PASS_STATIC",
+      "evidence": "Only final post-Retry loop after proof.afterRetryPublic and before proof.sameMainAfterRetry. Both surrounding statements and their order remain exact."
+    },
+    {
+      "id": "A1-existing-synchronous-pair-composition",
+      "result": "PASS_STATIC",
+      "evidence": "Same existing owner selectors with both available in one renderer evaluation."
+    },
+    {
+      "id": "both-full-ordered-row-comparisons",
+      "result": "PASS_STATIC",
+      "evidence": "Not reduced to identity-only acceptance."
+    },
+    {
+      "id": "ready-and-intervening-read-order-preserved",
+      "result": "PASS_STATIC",
+      "evidence": "No readiness move, native witness replay or callback duplication."
+    },
+    {
+      "id": "same-main-screenshot-and-stops-preserved",
+      "result": "PASS_STATIC",
+      "evidence": "Same Main, original two UI Kills, all exact native Stops/custody/source checks, ordinary Quit and full cleanup proofs remain. A primary failure/unreached step is not a PASS."
+    },
+    {
+      "id": "A1-stronger-sample-not-atomic-OS-claim",
+      "result": "PASS_STATIC",
+      "evidence": "Both original process owners must now be available in the same synchronous renderer sample. This is not an atomic OS/Host/React snapshot. It may change which missing-row/cutoff failure appears first. It removes one guard/read when both are immediately available; no quantified latency guarantee."
+    },
+    {
+      "id": "A1-does-not-repair-earlier-ARM-boundary",
+      "result": "PASS_STATIC",
+      "evidence": "Shared B may affect cost; outcome unmeasured."
+    },
+    {
+      "id": "platform-original12-preserved-exact-one-literal",
+      "result": "PASS_STATIC",
+      "evidence": "Exactly the expected listener query literal in the existing fresh ordered snapshot case, updated to B's literal specification. Every other original byte/case remains; no original skip/filter/runtime/cadence change."
+    },
+    {
+      "id": "platform-tests-freshness-errors-foreign-owners",
+      "result": "PASS_STATIC",
+      "evidence": "Existing real helper and downstream authority functions, nondefault port, no partial-output acceptance."
+    },
+    {
+      "id": "native-UI-original7-complete-prefix",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "whole": 8,
+        "append": 1
+      }
+    },
+    {
+      "id": "actual-final-block-regression-catches-before",
+      "result": "PASS_STATIC",
+      "evidence": "Split-frame behavior and changed second-row nonidentity values; no implementation mirror."
+    },
+    {
+      "id": "test-safety-bounds-and-case-preservation",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "cap": 800,
+        "existingLines": 620,
+        "allOriginalCasesPreserved": true
+      }
+    },
+    {
+      "id": "original-controls-and-selector-unchanged",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b"
+      }
+    },
+    {
+      "id": "all13-parity-source-vector-preserved",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "bytes": 3481,
+        "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+        "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+      }
+    },
+    {
+      "id": "no-source-leaf-cap-workflow-dependency-budget-change",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "nonDocLeaves": 8799,
+        "production": 5020,
+        "exceptions": 141,
+        "sourceCap": 800,
+        "workflows": 42
+      }
+    },
+    {
+      "id": "current-PR1219-unmodified-and-independent",
+      "result": "PASS_STATIC",
+      "evidence": "Both snapshot refs and all PR1219 metadata remain fixed while any selected run is active. Root observes only admitted active new runs; no terminal/frozen/old run polling. This new source plan is on the separate working evidence branch and cannot alter the running9d snapshot."
+    },
+    {
+      "id": "selected-Draft-platform-unit-coverage-gap-explicit",
+      "result": "PASS_STATIC",
+      "evidence": "Selected current Draft jobs do not execute this isolated file. Native/zero/error/IPv4/IPv6 behavior and whole14 results remain unqualified until actual authorized execution; no route/workflow is added here."
+    },
+    {
+      "id": "no-new-runtime-route-or-environment-fallback",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "status": "rejected",
+        "reason": "No usable execution environment is available. Wait for an environment to become available before using this tool."
+      }
+    },
+    {
+      "id": "no-real-vendor-surface-selected",
+      "result": "PASS_STATIC",
+      "evidence": "No real Claude/Codex even --version. No provider/runtime/control changes; finite TEST peer boundaries remain."
+    },
+    {
+      "id": "R1-docs87-values-preserved",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "workingBranch": "fix/frontend-parity-coobservation-c714-20261115",
+        "knownParent": "65cd08dc15e3735cb579578d475938fd0a3fb135",
+        "parentRoot": "e2347fe433055be9f5c8ee109e7db087bf365c16",
+        "parentDocs": "1e97d02232e95ba34238c340713571bb6e5b2a91",
+        "R1DocsOnly": true,
+        "all53NonDocRootEntriesUnchangedAtR1": true,
+        "parentCatalogFields": 87,
+        "newCatalogKeys": [
+          "windowsSelectedPortRetryPairR1Stage",
+          "windowsSelectedPortRetryPairR1EvidenceFiles"
+        ],
+        "all87ParentValuesAnd27BundlesAndTotalsPreserved": true,
+        "completePlanStatusPrefixesPreserved": true,
+        "manifestAndCompleteActualReadbacks": true,
+        "immediateExpectedParentForceFalsePush": true,
+        "postimageAuthorshipOnlyAfterActualR1Closed": true
+      }
+    },
+    {
+      "id": "existing-authoring-and-publication-sequence",
+      "result": "PASS_STATIC",
+      "evidence": [
+        "Root and independent guard/semantic/binding reviews of this exact narrow R1, complete readbacks.",
+        "Publish only R1/evidence documentation with immediate push; full root and independent actual publication readbacks.",
+        "Root may then author only the selected four source/test postimages, exact inverses, before/after vectors and meaningful tests. No runtime is selected by source authorship.",
+        "Exact R2 source/body reviews and publication with immediate push; full root and independent actual readbacks.",
+        "A matching actually available authorized execution venue is selected separately, with full provider/event/workflow/source review as necessary. No automatic current PR1219 mutation, dispatch, new branches, standalone replay or alternative runtime."
+      ]
+    },
+    {
+      "id": "postimages-and-target-execution-not-yet-authored",
+      "result": "PASS_STATIC",
+      "evidence": "No source/control implementation or runtime admission exists."
+    },
+    {
+      "id": "other-failures-remain-unresolved",
+      "result": "PASS_STATIC",
+      "evidence": "Prospective narrow source/test plan only. Static feasibility does not qualify native behavior, cost, whole14/8 tests, original10s recovery, GUI/native cleanup or fullE2E. Current fixed9d CI remains a different immutable source."
+    }
+  ],
+  "checkCount": 37,
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "unresolvedBlockers": [],
+  "sourcePostimagesAuthored": false,
+  "runtimeAdmitted": false,
+  "targetCodeExecuted": false,
+  "qualification": "Prospective narrow source/test plan only. Static feasibility does not qualify native behavior, cost, whole14/8 tests, original10s recovery, GUI/native cleanup or fullE2E. Current fixed9d CI remains a different immutable source.",
+  "selfReadbackProtocol": "Retain and fetch the full literal report; compare bytes/SHA256/Git identity/subject/all checks before closure."
+}

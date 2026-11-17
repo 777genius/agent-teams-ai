@@ -1,0 +1,331 @@
+﻿2026-11-17T08:57:53.2780611Z Current runner version: '2.338.2'
+2026-11-17T08:57:53.2818746Z ##[group]Runner Image Provisioner
+2026-11-17T08:57:53.2820232Z Hosted Compute Agent
+2026-11-17T08:57:53.2821258Z Version: 20261103.629
+2026-11-17T08:57:53.2822400Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-17T08:57:53.2823667Z Build Date: 2026-11-03T17:26:59Z
+2026-11-17T08:57:53.2824886Z Worker ID: {e34996a0-b698-4351-918f-9c41ea7f4266}
+2026-11-17T08:57:53.2826385Z Region: eastus2
+2026-11-17T08:57:53.2827326Z Cloud: Azure
+2026-11-17T08:57:53.2828697Z ##[endgroup]
+2026-11-17T08:57:53.2831097Z ##[group]Operating System
+2026-11-17T08:57:53.2832257Z Ubuntu
+2026-11-17T08:57:53.2833229Z 24.04.5
+2026-11-17T08:57:53.2834037Z LTS
+2026-11-17T08:57:53.2834991Z ##[endgroup]
+2026-11-17T08:57:53.2835941Z ##[group]Runner Image
+2026-11-17T08:57:53.2837003Z Image: ubuntu-24.04
+2026-11-17T08:57:53.2838704Z Version: 20261111.370.1
+2026-11-17T08:57:53.2840815Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261111.370/images/ubuntu/Ubuntu2404-Readme.md
+2026-11-17T08:57:53.2843645Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261111.370
+2026-11-17T08:57:53.2845547Z ##[endgroup]
+2026-11-17T08:57:53.2848311Z ##[group]GITHUB_TOKEN Permissions
+2026-11-17T08:57:53.2851150Z Actions: read
+2026-11-17T08:57:53.2852163Z Contents: read
+2026-11-17T08:57:53.2853059Z Metadata: read
+2026-11-17T08:57:53.2854182Z PullRequests: read
+2026-11-17T08:57:53.2855173Z ##[endgroup]
+2026-11-17T08:57:53.2858529Z Secret source: Actions
+2026-11-17T08:57:53.2860107Z Cache mode: write
+2026-11-17T08:57:53.2861330Z Prepare workflow directory
+2026-11-17T08:57:53.3436958Z Prepare all required actions
+2026-11-17T08:57:53.3511091Z Getting action download info
+2026-11-17T08:57:53.5450434Z Download action repository 'actions/checkout@v6' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-11-17T08:57:53.7109370Z Download action repository 'actions/setup-node@v6' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+2026-11-17T08:57:53.9404658Z Complete job name: Full qualification
+2026-11-17T08:57:54.0284411Z ##[group]Run actions/checkout@v6
+2026-11-17T08:57:54.0285353Z with:
+2026-11-17T08:57:54.0285829Z   repository: 777genius/agent-teams-ai
+2026-11-17T08:57:54.0289745Z   token: ***
+2026-11-17T08:57:54.0290198Z   ssh-strict: true
+2026-11-17T08:57:54.0290640Z   ssh-user: git
+2026-11-17T08:57:54.0291096Z   persist-credentials: true
+2026-11-17T08:57:54.0291592Z   clean: true
+2026-11-17T08:57:54.0292052Z   sparse-checkout-cone-mode: true
+2026-11-17T08:57:54.0292581Z   fetch-depth: 1
+2026-11-17T08:57:54.0293013Z   fetch-tags: false
+2026-11-17T08:57:54.0293454Z   show-progress: true
+2026-11-17T08:57:54.0293901Z   lfs: false
+2026-11-17T08:57:54.0294317Z   submodules: false
+2026-11-17T08:57:54.0294775Z   set-safe-directory: true
+2026-11-17T08:57:54.0295295Z   allow-unsafe-pr-checkout: false
+2026-11-17T08:57:54.0296100Z env:
+2026-11-17T08:57:54.0296526Z   CI_ROOT_TEST_SHARDS: 4
+2026-11-17T08:57:54.0296999Z ##[endgroup]
+2026-11-17T08:57:54.3639165Z Syncing repository: 777genius/agent-teams-ai
+2026-11-17T08:57:54.3642108Z ##[group]Getting Git version info
+2026-11-17T08:57:54.3643535Z Working directory is '/home/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-17T08:57:54.3645742Z [command]/usr/bin/git version
+2026-11-17T08:57:54.3816330Z git version 2.56.1
+2026-11-17T08:57:54.3850316Z ##[endgroup]
+2026-11-17T08:57:54.3865770Z Temporarily overriding HOME='/home/runner/work/_temp/950accdb-158c-4c4d-8b97-feeb807b62f5' before making global git config changes
+2026-11-17T08:57:54.3868929Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-17T08:57:54.3872760Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-17T08:57:54.3947052Z Deleting the contents of '/home/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-17T08:57:54.3951628Z ##[group]Determining repository object format
+2026-11-17T08:57:54.3953582Z ##[endgroup]
+2026-11-17T08:57:54.3954961Z ##[group]Initializing the repository
+2026-11-17T08:57:54.3958528Z [command]/usr/bin/git init /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-17T08:57:54.4094468Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-17T08:57:54.4096769Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-17T08:57:54.4099067Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-17T08:57:54.4100835Z hint: call:
+2026-11-17T08:57:54.4101830Z hint:
+2026-11-17T08:57:54.4103252Z hint: 	git config --global init.defaultBranch <name>
+2026-11-17T08:57:54.4104508Z hint:
+2026-11-17T08:57:54.4105797Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-17T08:57:54.4107887Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-17T08:57:54.4109956Z hint:
+2026-11-17T08:57:54.4110922Z hint: 	git branch -m <name>
+2026-11-17T08:57:54.4111963Z hint:
+2026-11-17T08:57:54.4113380Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-17T08:57:54.4115654Z Initialized empty Git repository in /home/runner/work/agent-teams-ai/agent-teams-ai/.git/
+2026-11-17T08:57:54.4119936Z [command]/usr/bin/git remote add origin https://github.com/777genius/agent-teams-ai
+2026-11-17T08:57:54.4184039Z ##[endgroup]
+2026-11-17T08:57:54.4185757Z ##[group]Disabling automatic garbage collection
+2026-11-17T08:57:54.4188297Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-17T08:57:54.4232773Z ##[endgroup]
+2026-11-17T08:57:54.4234744Z ##[group]Setting up auth
+2026-11-17T08:57:54.4235966Z Removing SSH command configuration
+2026-11-17T08:57:54.4242830Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-17T08:57:54.4301579Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-17T08:57:54.4752017Z Removing HTTP extra header
+2026-11-17T08:57:54.4759721Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-17T08:57:54.4804805Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-17T08:57:54.5043606Z Removing includeIf entries pointing to credentials config files
+2026-11-17T08:57:54.5050549Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-17T08:57:54.5095660Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-17T08:57:54.5342765Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-d09a2891-04dd-4403-bc71-9fd22f6b2270.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-17T08:57:54.5392920Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path /home/runner/work/_temp/git-credentials-d09a2891-04dd-4403-bc71-9fd22f6b2270.config
+2026-11-17T08:57:54.5447813Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-d09a2891-04dd-4403-bc71-9fd22f6b2270.config
+2026-11-17T08:57:54.5490466Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-d09a2891-04dd-4403-bc71-9fd22f6b2270.config
+2026-11-17T08:57:54.5531761Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-d09a2891-04dd-4403-bc71-9fd22f6b2270.config
+2026-11-17T08:57:54.5569212Z ##[endgroup]
+2026-11-17T08:57:54.5570087Z ##[group]Fetching the repository
+2026-11-17T08:57:54.5577140Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +c0e6845650002dfaabf6b1dcc727d13b2f0570f6:refs/remotes/pull/1219/merge
+2026-11-17T08:58:04.0814686Z From https://github.com/777genius/agent-teams-ai
+2026-11-17T08:58:04.0816007Z  * [new ref]         c0e6845650002dfaabf6b1dcc727d13b2f0570f6 -> pull/1219/merge
+2026-11-17T08:58:04.0827061Z ##[endgroup]
+2026-11-17T08:58:04.0827886Z ##[group]Determining the checkout info
+2026-11-17T08:58:04.0828811Z ##[endgroup]
+2026-11-17T08:58:04.0830723Z [command]/usr/bin/git sparse-checkout disable
+2026-11-17T08:58:04.0906814Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-17T08:58:04.0949675Z ##[group]Checking out the ref
+2026-11-17T08:58:04.0955021Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/1219/merge
+2026-11-17T08:58:05.1226573Z Updating files:  21% (2629/12033)
+2026-11-17T08:58:05.1781088Z Updating files:  22% (2648/12033)
+2026-11-17T08:58:05.2145596Z Updating files:  23% (2768/12033)
+2026-11-17T08:58:05.2769731Z Updating files:  24% (2888/12033)
+2026-11-17T08:58:05.3100837Z Updating files:  25% (3009/12033)
+2026-11-17T08:58:05.3570419Z Updating files:  26% (3129/12033)
+2026-11-17T08:58:05.4608798Z Updating files:  27% (3249/12033)
+2026-11-17T08:58:05.4799940Z Updating files:  28% (3370/12033)
+2026-11-17T08:58:05.4908965Z Updating files:  29% (3490/12033)
+2026-11-17T08:58:05.5137997Z Updating files:  30% (3610/12033)
+2026-11-17T08:58:05.5252348Z Updating files:  31% (3731/12033)
+2026-11-17T08:58:05.5329308Z Updating files:  32% (3851/12033)
+2026-11-17T08:58:05.5404008Z Updating files:  33% (3971/12033)
+2026-11-17T08:58:05.5471053Z Updating files:  34% (4092/12033)
+2026-11-17T08:58:05.5544736Z Updating files:  35% (4212/12033)
+2026-11-17T08:58:05.5613389Z Updating files:  36% (4332/12033)
+2026-11-17T08:58:05.5704046Z Updating files:  37% (4453/12033)
+2026-11-17T08:58:05.5846383Z Updating files:  38% (4573/12033)
+2026-11-17T08:58:05.5964729Z Updating files:  39% (4693/12033)
+2026-11-17T08:58:05.6186282Z Updating files:  40% (4814/12033)
+2026-11-17T08:58:05.6305853Z Updating files:  41% (4934/12033)
+2026-11-17T08:58:05.6397105Z Updating files:  42% (5054/12033)
+2026-11-17T08:58:05.6506447Z Updating files:  43% (5175/12033)
+2026-11-17T08:58:05.6678272Z Updating files:  44% (5295/12033)
+2026-11-17T08:58:05.6753486Z Updating files:  45% (5415/12033)
+2026-11-17T08:58:05.6820729Z Updating files:  46% (5536/12033)
+2026-11-17T08:58:05.6901413Z Updating files:  47% (5656/12033)
+2026-11-17T08:58:05.6980020Z Updating files:  48% (5776/12033)
+2026-11-17T08:58:05.7061245Z Updating files:  49% (5897/12033)
+2026-11-17T08:58:05.7301901Z Updating files:  50% (6017/12033)
+2026-11-17T08:58:05.7498069Z Updating files:  51% (6137/12033)
+2026-11-17T08:58:05.7569050Z Updating files:  52% (6258/12033)
+2026-11-17T08:58:05.7635692Z Updating files:  53% (6378/12033)
+2026-11-17T08:58:05.7719568Z Updating files:  54% (6498/12033)
+2026-11-17T08:58:05.7800178Z Updating files:  55% (6619/12033)
+2026-11-17T08:58:05.7873339Z Updating files:  56% (6739/12033)
+2026-11-17T08:58:05.7952308Z Updating files:  57% (6859/12033)
+2026-11-17T08:58:05.8034351Z Updating files:  58% (6980/12033)
+2026-11-17T08:58:05.8118163Z Updating files:  59% (7100/12033)
+2026-11-17T08:58:05.8197700Z Updating files:  60% (7220/12033)
+2026-11-17T08:58:05.8282751Z Updating files:  61% (7341/12033)
+2026-11-17T08:58:05.8376725Z Updating files:  62% (7461/12033)
+2026-11-17T08:58:05.8463998Z Updating files:  63% (7581/12033)
+2026-11-17T08:58:05.8553585Z Updating files:  64% (7702/12033)
+2026-11-17T08:58:05.8631922Z Updating files:  65% (7822/12033)
+2026-11-17T08:58:05.8719745Z Updating files:  66% (7942/12033)
+2026-11-17T08:58:05.8807257Z Updating files:  67% (8063/12033)
+2026-11-17T08:58:05.8888574Z Updating files:  68% (8183/12033)
+2026-11-17T08:58:05.8983108Z Updating files:  69% (8303/12033)
+2026-11-17T08:58:05.9065874Z Updating files:  70% (8424/12033)
+2026-11-17T08:58:05.9142683Z Updating files:  71% (8544/12033)
+2026-11-17T08:58:05.9241496Z Updating files:  72% (8664/12033)
+2026-11-17T08:58:05.9315643Z Updating files:  73% (8785/12033)
+2026-11-17T08:58:05.9477006Z Updating files:  74% (8905/12033)
+2026-11-17T08:58:05.9479688Z Updating files:  75% (9025/12033)
+2026-11-17T08:58:05.9553542Z Updating files:  76% (9146/12033)
+2026-11-17T08:58:05.9627067Z Updating files:  77% (9266/12033)
+2026-11-17T08:58:05.9705359Z Updating files:  78% (9386/12033)
+2026-11-17T08:58:05.9768371Z Updating files:  79% (9507/12033)
+2026-11-17T08:58:05.9839063Z Updating files:  80% (9627/12033)
+2026-11-17T08:58:05.9920139Z Updating files:  81% (9747/12033)
+2026-11-17T08:58:05.9991916Z Updating files:  82% (9868/12033)
+2026-11-17T08:58:06.0049862Z Updating files:  83% (9988/12033)
+2026-11-17T08:58:06.0147187Z Updating files:  84% (10108/12033)
+2026-11-17T08:58:06.0244710Z Updating files:  85% (10229/12033)
+2026-11-17T08:58:06.0339200Z Updating files:  86% (10349/12033)
+2026-11-17T08:58:06.0430437Z Updating files:  87% (10469/12033)
+2026-11-17T08:58:06.0532541Z Updating files:  88% (10590/12033)
+2026-11-17T08:58:06.0628306Z Updating files:  89% (10710/12033)
+2026-11-17T08:58:06.0736456Z Updating files:  90% (10830/12033)
+2026-11-17T08:58:06.0880590Z Updating files:  91% (10951/12033)
+2026-11-17T08:58:06.0994767Z Updating files:  92% (11071/12033)
+2026-11-17T08:58:06.1078554Z Updating files:  93% (11191/12033)
+2026-11-17T08:58:06.1118358Z Updating files:  94% (11312/12033)
+2026-11-17T08:58:06.1181337Z Updating files:  94% (11344/12033)
+2026-11-17T08:58:06.1266238Z Updating files:  95% (11432/12033)
+2026-11-17T08:58:06.1361479Z Updating files:  96% (11552/12033)
+2026-11-17T08:58:06.1443311Z Updating files:  97% (11673/12033)
+2026-11-17T08:58:06.1528395Z Updating files:  98% (11793/12033)
+2026-11-17T08:58:06.1635564Z Updating files:  99% (11913/12033)
+2026-11-17T08:58:06.1636058Z Updating files: 100% (12033/12033)
+2026-11-17T08:58:06.1636413Z Updating files: 100% (12033/12033), done.
+2026-11-17T08:58:06.1771745Z Note: switching to 'refs/remotes/pull/1219/merge'.
+2026-11-17T08:58:06.1772489Z 
+2026-11-17T08:58:06.1773105Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-17T08:58:06.1774483Z changes and commit them, and you can discard any commits you make in this
+2026-11-17T08:58:06.1775445Z state without impacting any branches by switching back to a branch.
+2026-11-17T08:58:06.1776006Z 
+2026-11-17T08:58:06.1776375Z If you want to create a new branch to retain commits you create, you may
+2026-11-17T08:58:06.1777256Z do so (now or later) by using -c with the switch command. Example:
+2026-11-17T08:58:06.1777775Z 
+2026-11-17T08:58:06.1777974Z   git switch -c <new-branch-name>
+2026-11-17T08:58:06.1778654Z 
+2026-11-17T08:58:06.1778844Z Or undo this operation with:
+2026-11-17T08:58:06.1779160Z 
+2026-11-17T08:58:06.1779319Z   git switch -
+2026-11-17T08:58:06.1779561Z 
+2026-11-17T08:58:06.1779989Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-17T08:58:06.1780619Z 
+2026-11-17T08:58:06.1781236Z HEAD is now at c0e6845 Merge 9d79abcf1f5c498687c2e5c443e3edf220070aa6 into 77993819c233737f1e2b4c11c8ca1a5d360bcbe3
+2026-11-17T08:58:06.1901902Z ##[endgroup]
+2026-11-17T08:58:06.1967743Z [command]/usr/bin/git log -1 --format=%H
+2026-11-17T08:58:06.2005361Z c0e6845650002dfaabf6b1dcc727d13b2f0570f6
+2026-11-17T08:58:06.2288351Z ##[group]Run actions/setup-node@v6
+2026-11-17T08:58:06.2288659Z with:
+2026-11-17T08:58:06.2288872Z   node-version-file: .node-version
+2026-11-17T08:58:06.2289129Z   check-latest: false
+2026-11-17T08:58:06.2291496Z   token: ***
+2026-11-17T08:58:06.2291729Z   package-manager-cache: true
+2026-11-17T08:58:06.2291972Z env:
+2026-11-17T08:58:06.2292165Z   CI_ROOT_TEST_SHARDS: 4
+2026-11-17T08:58:06.2292386Z ##[endgroup]
+2026-11-17T08:58:06.3764943Z Node version file is not JSON file
+2026-11-17T08:58:06.3767370Z Resolved .node-version as 26.12.1
+2026-11-17T08:58:06.3791754Z Attempting to download 26.12.1...
+2026-11-17T08:58:06.9379930Z Acquiring 26.12.1 - x64 from https://github.com/actions/node-versions/releases/download/26.12.1-39618969937/node-26.12.1-linux-x64.tar.gz
+2026-11-17T08:58:07.3370066Z Extracting ...
+2026-11-17T08:58:07.3503643Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/1d074837-00ab-4b99-81a3-ed27e77d566c -f /home/runner/work/_temp/18abfd81-ca2a-4744-bb4f-983769f3b320
+2026-11-17T08:58:08.7172864Z Adding to the cache ...
+2026-11-17T08:58:10.4980415Z ##[group]Environment details
+2026-11-17T08:58:10.7297614Z node: v26.12.1
+2026-11-17T08:58:10.7298245Z npm: 11.20.0
+2026-11-17T08:58:10.7298528Z yarn: 1.22.22
+2026-11-17T08:58:10.7299144Z ##[endgroup]
+2026-11-17T08:58:10.7582422Z ##[group]Run node scripts/ci/ci-feedback.mts gate
+2026-11-17T08:58:10.7582890Z [36;1mnode scripts/ci/ci-feedback.mts gate[0m
+2026-11-17T08:58:10.7607989Z shell: /usr/bin/bash -e {0}
+2026-11-17T08:58:10.7608648Z env:
+2026-11-17T08:58:10.7608977Z   CI_ROOT_TEST_SHARDS: 4
+2026-11-17T08:58:10.7613098Z   JOB_RESULTS: {
+  "plan": {
+    "result": "success",
+    "outputs": {
+      "full": "false",
+      "metadata": "false",
+      "reuse": "false",
+      "image": "ubuntu24@20261111.370.1",
+      "linux_arch": "X64",
+      "scope": "full"
+    }
+  },
+  "validate": {
+    "result": "skipped",
+    "outputs": {}
+  },
+  "test": {
+    "result": "skipped",
+    "outputs": {}
+  },
+  "lint": {
+    "result": "skipped",
+    "outputs": {}
+  },
+  "task-change-ledger-windows": {
+    "result": "skipped",
+    "outputs": {}
+  },
+  "focused": {
+    "result": "skipped",
+    "outputs": {}
+  },
+  "source": {
+    "result": "skipped",
+    "outputs": {}
+  },
+  "dmg-artwork": {
+    "result": "skipped",
+    "outputs": {}
+  },
+  "retained-opencode-coexistence": {
+    "result": "skipped",
+    "outputs": {}
+  },
+  "codex-login-desktop": {
+    "result": "skipped",
+    "outputs": {}
+  }
+}
+2026-11-17T08:58:10.7616873Z   MODE_FULL: false
+2026-11-17T08:58:10.7617097Z   MODE_REUSE: false
+2026-11-17T08:58:10.7617303Z   SOURCE_RUN: 
+2026-11-17T08:58:10.7617516Z ##[endgroup]
+2026-11-17T08:58:10.8665192Z Draft feedback does not qualify for merge
+2026-11-17T08:58:10.8751617Z ##[error]Process completed with exit code 1.
+2026-11-17T08:58:10.8921534Z Post job cleanup.
+2026-11-17T08:58:10.9845459Z [command]/usr/bin/git version
+2026-11-17T08:58:10.9885211Z git version 2.56.1
+2026-11-17T08:58:10.9934176Z Temporarily overriding HOME='/home/runner/work/_temp/7be48195-ef91-4a00-842c-2228cdd8c7aa' before making global git config changes
+2026-11-17T08:58:10.9935799Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-17T08:58:10.9938982Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-17T08:58:10.9976432Z Removing SSH command configuration
+2026-11-17T08:58:10.9983771Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-17T08:58:11.0021920Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-17T08:58:11.0302619Z Removing HTTP extra header
+2026-11-17T08:58:11.0310400Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-17T08:58:11.0401861Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-17T08:58:11.0774778Z Removing includeIf entries pointing to credentials config files
+2026-11-17T08:58:11.0786006Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-17T08:58:11.0847949Z includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-17T08:58:11.0850135Z includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-17T08:58:11.0851454Z includeif.gitdir:/github/workspace/.git.path
+2026-11-17T08:58:11.0852472Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-17T08:58:11.0867313Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-17T08:58:11.0908302Z /home/runner/work/_temp/git-credentials-d09a2891-04dd-4403-bc71-9fd22f6b2270.config
+2026-11-17T08:58:11.0925081Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path /home/runner/work/_temp/git-credentials-d09a2891-04dd-4403-bc71-9fd22f6b2270.config
+2026-11-17T08:58:11.0976696Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-17T08:58:11.1013835Z /home/runner/work/_temp/git-credentials-d09a2891-04dd-4403-bc71-9fd22f6b2270.config
+2026-11-17T08:58:11.1025566Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-d09a2891-04dd-4403-bc71-9fd22f6b2270.config
+2026-11-17T08:58:11.1071845Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-11-17T08:58:11.1105491Z /github/runner_temp/git-credentials-d09a2891-04dd-4403-bc71-9fd22f6b2270.config
+2026-11-17T08:58:11.1117264Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-d09a2891-04dd-4403-bc71-9fd22f6b2270.config
+2026-11-17T08:58:11.1165624Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-17T08:58:11.1200344Z /github/runner_temp/git-credentials-d09a2891-04dd-4403-bc71-9fd22f6b2270.config
+2026-11-17T08:58:11.1209589Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-d09a2891-04dd-4403-bc71-9fd22f6b2270.config
+2026-11-17T08:58:11.1263808Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-17T08:58:11.1543690Z Removing credentials config '/home/runner/work/_temp/git-credentials-d09a2891-04dd-4403-bc71-9fd22f6b2270.config'
+2026-11-17T08:58:11.1727934Z Cleaning up orphan processes

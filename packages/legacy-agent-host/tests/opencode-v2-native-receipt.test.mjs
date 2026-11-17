@@ -343,3 +343,305 @@ test('raw native V2 variant readback cannot attest a missing or inherited defaul
     assert.equal(matchesOpenCodeV2ModelVariant(undefined, variant), accepted, label);
   }
 });
+
+
+// Actual producer fragments and the original passive projections, with finite TEST peers only.
+const { channel: diagnosticChannel } = await import('node:diagnostics_channel');
+const { stripTypeScriptTypes } = await import('node:module');
+const { createPassiveNativeDiagnosticCapture } = await import('./fixtures/native-opencode-team/passive-diagnostics.ts');
+const diagnosticPrefix = 'TEST_OPENCODE_V2_DIAGNOSTIC ';
+const diagnosticRunCodes = ['ABORT_ERR', 'ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT',
+  'UND_ERR_ABORTED', 'UND_ERR_SOCKET', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT'];
+
+function modelProbeDiagnosticFragments(compiled) {
+  const unique = pattern => {
+    const matches = [...compiled.matchAll(pattern)];
+    assert.equal(matches.length, 1, 'one actual compiled diagnostic boundary: ' + pattern);
+    return matches[0].index;
+  };
+  const state = unique(/^[ \t]*let runState\s*=\s*['"]not-started['"];\r?$/gm);
+  const stateEnd = unique(/^[ \t]*let coordinationResult(?:\s*=\s*undefined)?;\r?$/gm);
+  const run = unique(/^[ \t]*run:\s*\(signal,\s*originalDeadline\)\s*=>\s*\{\r?$/gm);
+  const runEnd = unique(/^[ \t]*close:\s*(?:originalDeadline|\(originalDeadline\))\s*=>\s*\{\r?$/gm);
+  const publish = unique(/^[ \t]*closing\s*=\s*\(purposeBound\s*\?\s*closeCoordinationByDeadline\([^\n]+$/gm);
+  const publishEnd = unique(/^[ \t]*return closing;\r?$/gm);
+  assert.ok(state < stateEnd && stateEnd < run && run < runEnd && runEnd < publish && publish < publishEnd);
+  return { state: compiled.slice(state, stateEnd), run: compiled.slice(run, runEnd),
+    publish: compiled.slice(publish, publishEnd) };
+}
+
+function modelProbeDiagnosticHarness(fragments, channel, runner, coordination = false) {
+  // Only the real declarations, run wrapper and failed-close continuation are evaluated.
+  // No constructor, Host, provider, request, server or actual cleanup operation is invoked.
+  const body = fragments.state + '\nlet running, closing, released;\n' +
+    'const methods = {' + fragments.run + '};\n' +
+    'return { run: methods.run, finish(stage, reason) {\n' +
+    'noteCloseFailure(stage, reason);\n' +
+    'const work = Promise.resolve(false), purposeBound = false, originalDeadline = 0, deadline = 0;\n' +
+    fragments.publish + '\nreturn closing;\n} };';
+  return new Function('channel', 'run', 'coordination', 'captured', body)(
+    channel, runner, coordination, 'a'.repeat(64));
+}
+
+function actualModelProbeDiagnosticFragments() {
+  return modelProbeDiagnosticFragments(readFileSync(
+    new URL('../dist/adapters/providers/OpenCodeV2ModelProbe.js', import.meta.url), 'utf8'));
+}
+
+async function observeOriginalRunRejection(fragments, error, errorClass = 'unknown') {
+  const rows = [], diagnostic = diagnosticChannel('agent-teams:opencode-v2:host-probe-close-failed');
+  const observe = value => rows.push(value);
+  diagnostic.subscribe(observe);
+  try {
+    const harness = modelProbeDiagnosticHarness(fragments, diagnosticChannel, async () => { throw error; });
+    let caught, rejected = false;
+    try { await harness.run(undefined, 123); } catch (value) { caught = value; rejected = true; }
+    assert.equal(rejected, true);
+    assert.equal(caught, error, 'the exact original rejection object/value is preserved');
+    assert.equal(await harness.finish('driver-close', 'unconfirmed'), false);
+    assert.equal(rows.length, 1);
+    assert.deepEqual({ probeDigest: rows[0].probeDigest, runState: rows[0].runState, outcome: rows[0].outcome,
+      errorClass: rows[0].errorClass, stage: rows[0].stage, reason: rows[0].reason },
+      { probeDigest: 'a'.repeat(64), runState: 'threw', outcome: 'unobserved',
+        errorClass,
+        stage: 'driver-close', reason: 'unconfirmed' });
+    return rows[0];
+  } finally { diagnostic.unsubscribe(observe); }
+}
+
+const originalRunWrapperSource = "    run: (signal, originalDeadline) => {\n      if (running) return running;\n      if (coordination) return (running = run(signal, originalDeadline));\n      runState = 'pending';\n      return (running = run(signal, originalDeadline).then(result => {\n        runState = result ? 'true' : 'false'; return result;\n      }, (error: unknown) => {\n        runState = 'threw'; errorClass = 'unknown';\n        try {\n          if (error && (typeof error === 'object' || typeof error === 'function')) {\n            const field = Object.getOwnPropertyDescriptor(error, 'code');\n            const code: unknown = field && 'value' in field ? field.value : undefined;\n            if (code === 'held' || code === 'invalid' || code === 'conflict' || code === 'busy') errorClass = code;\n          }\n        } catch { /* An opaque diagnostic cannot replace the original exception. */ }\n        throw error;\n      }));\n    },\n";
+const originalFailedClosePublisher = "      closing = (purposeBound ? closeCoordinationByDeadline(work, originalDeadline ?? deadline) : work)\n        .then(clean => {\n          released = clean;\n          if (!clean && !coordination) {\n            noteCloseFailure('close-result', 'unconfirmed');\n            try {\n              const diagnostic = channel('agent-teams:opencode-v2:host-probe-close-failed');\n              if (diagnostic.hasSubscribers) diagnostic.publish({ probeDigest: captured, runState, outcome,\n                errorClass, ...firstCloseFailure });\n            } catch { /* Failure-only observation cannot change the original cleanup result. */ }\n          }\n          return clean;\n        });\n";
+
+test('actual ModelProbe run rejection keeps original identity and close classification with bounded own error codes', async () => {
+  const fragments = actualModelProbeDiagnosticFragments();
+  let getterCalls = 0;
+  const getter = () => { getterCalls++; throw new Error('TEST_PRIVATE_GETTER'); };
+  const codeGetter = Object.defineProperty({ cause: { code: 'UND_ERR_SOCKET' } }, 'code', { get: getter });
+  const causeGetter = Object.defineProperty({ code: 'ECONNRESET' }, 'cause', { get: getter });
+  const nestedGetter = { cause: Object.defineProperty({}, 'code', { get: getter }) };
+  const inherited = Object.create({ code: 'EPIPE', cause: { code: 'UND_ERR_SOCKET' } });
+  const cases = [
+    ...diagnosticRunCodes.map(code => ({ error: { code, message: 'TEST_PRIVATE_MESSAGE', name: 'TEST_PRIVATE_NAME' },
+      runErrorCode: code, runCauseCode: null, errorClass: 'unknown' })),
+    { error: { code: 'conflict', cause: { code: 'UND_ERR_BODY_TIMEOUT', message: 'TEST_PRIVATE_CAUSE' } },
+      runErrorCode: null, runCauseCode: 'UND_ERR_BODY_TIMEOUT', errorClass: 'conflict' },
+    ...['held', 'invalid', 'busy'].map(errorClass => ({
+      error: { code: errorClass, cause: { code: 'UND_ERR_HEADERS_TIMEOUT' } },
+      runErrorCode: null, runCauseCode: 'UND_ERR_HEADERS_TIMEOUT', errorClass,
+    })),
+    { error: { code: 'EPIPE', cause: { cause: { code: 'UND_ERR_SOCKET' } } },
+      runErrorCode: 'EPIPE', runCauseCode: null, errorClass: 'unknown' },
+    { error: Object.assign(function originalError() {}, {
+      code: 'ABORT_ERR', cause: Object.assign(function originalCause() {}, { code: 'UND_ERR_ABORTED' }),
+    }), runErrorCode: 'ABORT_ERR', runCauseCode: 'UND_ERR_ABORTED', errorClass: 'unknown' },
+    { error: { code: 'TEST_PRIVATE_CODE', cause: { code: 'TEST_PRIVATE_CAUSE' } },
+      runErrorCode: null, runCauseCode: null, errorClass: 'unknown' },
+    { error: { code: new String('EPIPE'), cause: { code: { toString: getter } } },
+      runErrorCode: null, runCauseCode: null, errorClass: 'unknown' },
+    { error: codeGetter, runErrorCode: null, runCauseCode: 'UND_ERR_SOCKET', errorClass: 'unknown' },
+    { error: causeGetter, runErrorCode: 'ECONNRESET', runCauseCode: null, errorClass: 'unknown' },
+    { error: nestedGetter, runErrorCode: null, runCauseCode: null, errorClass: 'unknown' },
+    { error: inherited, runErrorCode: null, runCauseCode: null, errorClass: 'unknown' },
+    ...[null, undefined, 7, 'TEST_PRIVATE_THROWN', Symbol('TEST_PRIVATE_SYMBOL')].map(error =>
+      ({ error, runErrorCode: null, runCauseCode: null, errorClass: 'unknown' })),
+  ];
+  for (const fixture of cases) {
+    const observed = await observeOriginalRunRejection(fragments, fixture.error, fixture.errorClass);
+    assert.equal(observed.runErrorCode, fixture.runErrorCode);
+    assert.equal(observed.runCauseCode, fixture.runCauseCode);
+    assert.equal(observed.errorClass, fixture.errorClass);
+    assert.doesNotMatch(JSON.stringify(observed), /TEST_PRIVATE_|toString|message|stack/);
+  }
+  assert.equal(getterCalls, 0);
+  // These reflection traps are intentionally opaque. Observation must keep the original rejection.
+  for (const field of ['code', 'cause']) {
+    const target = { code: 'ECONNRESET', cause: { code: 'UND_ERR_SOCKET' } };
+    const opaque = new Proxy(target, { getOwnPropertyDescriptor(row, key) {
+      if (key === field) throw new Error('TEST_PRIVATE_DESCRIPTOR');
+      return Reflect.getOwnPropertyDescriptor(row, key);
+    } });
+    const rows = [], diagnostic = diagnosticChannel('agent-teams:opencode-v2:host-probe-close-failed');
+    const observe = value => rows.push(value);
+    diagnostic.subscribe(observe);
+    try {
+      const harness = modelProbeDiagnosticHarness(fragments, diagnosticChannel, async () => { throw opaque; });
+      let rejected = false;
+      try { await harness.run(); } catch (caught) { rejected = true; assert.equal(caught, opaque); }
+      assert.equal(rejected, true);
+      assert.equal(await harness.finish('driver-close', 'unconfirmed'), false);
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0].stage, 'driver-close'); assert.equal(rows[0].reason, 'unconfirmed');
+      assert.equal(rows[0].errorClass, 'unknown');
+      assert.equal(rows[0].runErrorCode, field === 'code' ? null : 'ECONNRESET');
+      assert.equal(rows[0].runCauseCode, null);
+    } finally { diagnostic.unsubscribe(observe); }
+  }
+  for (const result of [true, false]) {
+    const rows = [], diagnostic = diagnosticChannel('agent-teams:opencode-v2:host-probe-close-failed');
+    const observe = value => rows.push(value);
+    diagnostic.subscribe(observe);
+    try {
+      const harness = modelProbeDiagnosticHarness(fragments, diagnosticChannel, async () => result);
+      assert.equal(await harness.run(), result);
+      assert.equal(await harness.finish('driver-close', 'unconfirmed'), false);
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0].runState, String(result));
+      assert.equal('runErrorCode' in rows[0], false); assert.equal('runCauseCode' in rows[0], false);
+    } finally { diagnostic.unsubscribe(observe); }
+  }
+  assert.equal(createHash('sha256').update(originalRunWrapperSource).digest('hex'),
+    'c225fad7432f205e57fb1a086c1d84213f30ba900705e11e15c6a5ca0763b13e');
+  assert.equal(createHash('sha256').update(originalFailedClosePublisher).digest('hex'),
+    '339d052a0a4d205dd1f7c57130386635bf5d04d61c9cd542703f125650dfcc91');
+  const wrapped = stripTypeScriptTypes('({' + originalRunWrapperSource + '})');
+  assert.ok(wrapped.startsWith('({') && wrapped.endsWith('})'));
+  const old = { ...fragments, run: wrapped.slice(2, -2), publish: originalFailedClosePublisher };
+  const counterfactual = await observeOriginalRunRejection(old, { code: 'ECONNRESET', cause: { code: 'UND_ERR_SOCKET' } });
+  assert.equal('runErrorCode' in counterfactual, false);
+  assert.equal('runCauseCode' in counterfactual, false, 'the exact old catch/publisher loses the selected diagnostic information');
+});
+
+test('actual finite Node observer and parent retain producer error codes in the reserved close slot after trace exhaustion', () => {
+  assert.equal(process.version, 'v24.21.0', 'the existing passive observer has this exact runtime admission');
+  assert.ok(process.platform === 'linux' && process.arch === 'x64' ||
+    (process.platform === 'darwin' || process.platform === 'win32') && (process.arch === 'x64' || process.arch === 'arm64'),
+  'an unsupported observer tuple is unqualified, never a passive-observation PASS');
+  const root = mkdtempSync(join(tmpdir(), 'TEST-v2-original-error-diagnostic-'));
+  const entry = join(root, 'finite-diagnostic-peer.mjs');
+  const observer = new URL('./fixtures/native-opencode-team/passive-diagnostics.ts', import.meta.url).href;
+  const compiled = new URL('../dist/adapters/providers/OpenCodeV2ModelProbe.js', import.meta.url).href;
+  const secret = 'TEST_PRIVATE_NATIVE_' + randomBytes(12).toString('hex');
+  const source = [
+    "import assert from 'node:assert/strict';",
+    "import { channel } from 'node:diagnostics_channel';",
+    "import { readFileSync } from 'node:fs';",
+    modelProbeDiagnosticFragments.toString(),
+    modelProbeDiagnosticHarness.toString(),
+    'const fragments = modelProbeDiagnosticFragments(readFileSync(new URL(' + JSON.stringify(compiled) + "), 'utf8'));",
+    'const secret = ' + JSON.stringify(secret) + ';',
+    "for (let index = 0; index < 300; index++) channel('undici:request:create').publish({ request: {",
+    "  origin: 'http://127.0.0.1:65530', path: '/api/info?private=' + secret, method: 'GET' } });",
+    "const error = { code: 'ECONNRESET', message: secret, stack: secret, cause: { code: 'UND_ERR_SOCKET', message: secret } };",
+    'const harness = modelProbeDiagnosticHarness(fragments, channel, async () => { throw error; });',
+    'let rejected = false;',
+    'try { await harness.run(); } catch (caught) { assert.equal(caught, error); rejected = true; }',
+    'assert.equal(rejected, true);',
+    "assert.equal(await harness.finish('driver-close', 'unconfirmed'), false);",
+    "await new Promise(resolve => process.stderr.write('', resolve));",
+    "process.stdout.write('finite-diagnostic-peer-finished\\n');",
+  ].join('\n') + '\n';
+  try {
+    writeFileSync(entry, source, { mode: 0o600 });
+    const result = spawnSync(process.execPath, ['--import', observer, entry], {
+      encoding: 'utf8', timeout: 10000, maxBuffer: 256 * 1024,
+    });
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 0); assert.equal(result.signal, null);
+    assert.equal(result.stdout, 'finite-diagnostic-peer-finished\n');
+    assert.doesNotMatch(result.stderr, /TEST_PRIVATE_NATIVE_|private=|ECONNRESET.*message/);
+    const lines = result.stderr.split('\n').filter(line => line.startsWith(diagnosticPrefix));
+    assert.ok(lines.length > 250 && lines.length <= 257);
+    assert.ok(lines.every(line => Buffer.byteLength(line) <= 512));
+    assert.ok(lines.reduce((sum, line) => sum + Buffer.byteLength(line) + 1, 0) <= 64 * 1024);
+    assert.equal(lines.filter(line => JSON.parse(line.slice(diagnosticPrefix.length)).event === 'trace-limit').length, 1);
+    const capture = createPassiveNativeDiagnosticCapture();
+    capture.accept(Buffer.from(result.stderr), 1);
+    const closes = capture.entries.filter(row => row.event === 'host-probe-close-failed');
+    assert.equal(closes.length, 1);
+    assert.deepEqual({ stage: closes[0].stage, code: closes[0].code, runState: closes[0].runState,
+      outcome: closes[0].outcome, errorClass: closes[0].errorClass,
+      runErrorCode: closes[0].runErrorCode, runCauseCode: closes[0].runCauseCode },
+      { stage: 'driver-close', code: 'unconfirmed', runState: 'threw', outcome: 'unobserved',
+        errorClass: 'unknown', runErrorCode: 'ECONNRESET', runCauseCode: 'UND_ERR_SOCKET' });
+    assert.equal(capture.limited, true);
+    assert.ok(capture.entries.length <= 257);
+    assert.ok(capture.entries.every(row => Buffer.byteLength(JSON.stringify(row)) + 1 <= 513));
+    assert.ok(capture.entries.reduce((sum, row) => sum + Buffer.byteLength(JSON.stringify(row)) + 1, 0) <= 64 * 1024);
+    assert.doesNotMatch(JSON.stringify(capture.entries), /TEST_PRIVATE_NATIVE_|private=|message|stack/);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('actual close projection preserves legacy rows and opaque optional fields within original reservation and byte limits', () => {
+  const source = readFileSync(new URL('./fixtures/native-opencode-team/passive-diagnostics.ts', import.meta.url), 'utf8');
+  const between = (start, end) => {
+    assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
+    const from = source.indexOf(start), until = source.indexOf(end, from);
+    assert.ok(until > from); return source.slice(from, until);
+  };
+  const helpers = between('const codes = ', 'const readCutStages = ');
+  const project = between('function projectHostProbeCloseFailure(value: unknown) {',
+    '/** Project again at the receipt boundary; native text/IDs/credentials are never retained. */');
+  const actualProject = new Function(stripTypeScriptTypes(helpers + '\n' + project) +
+    '\nreturn projectHostProbeCloseFailure;')();
+  const legacy = { probeDigest: 'a'.repeat(64), runState: 'threw', outcome: 'unobserved',
+    errorClass: 'unknown', stage: 'driver-close', reason: 'unconfirmed' };
+  assert.deepEqual(actualProject(legacy), legacy, 'absent optional fields preserve the original legacy shape');
+  let getters = 0;
+  const opaque = () => { getters++; throw new Error('TEST_PRIVATE_OPTIONAL'); };
+  const accessor = Object.defineProperties({ ...legacy }, { runErrorCode: { get: opaque }, runCauseCode: { get: opaque } });
+  assert.deepEqual(actualProject(accessor), { ...legacy, runErrorCode: null, runCauseCode: null });
+  const proxy = new Proxy({ ...legacy }, { getOwnPropertyDescriptor(row, key) {
+    if (key === 'runErrorCode' || key === 'runCauseCode') throw new Error('TEST_PRIVATE_OPTIONAL');
+    return Reflect.getOwnPropertyDescriptor(row, key);
+  } });
+  assert.deepEqual(actualProject(proxy), { ...legacy, runErrorCode: null, runCauseCode: null },
+    'optional reflection failure cannot discard a valid original close row');
+  assert.equal(getters, 0);
+  assert.deepEqual(actualProject(Object.assign(Object.create({ runErrorCode: 'EPIPE' }), legacy)), legacy);
+  for (const value of [undefined, null, 'unknown', 'TEST_PRIVATE_CODE', 7, false, [], { toString: opaque }])
+    assert.deepEqual(actualProject({ ...legacy, runErrorCode: value, runCauseCode: value }),
+      { ...legacy, runErrorCode: null, runCauseCode: null });
+  assert.equal(getters, 0);
+  assert.equal(actualProject({ ...legacy, stage: 'TEST_PRIVATE_STAGE', runErrorCode: 'EPIPE' }), undefined);
+
+  const frame = (value, atMs = 3_600_000) => diagnosticPrefix + JSON.stringify({ atMs, event: 'host-probe-close-failed', ...value }) + '\n';
+  const epoch = -0.0000010000000000000002;
+  let maxLine = 0, maxRecord = 0;
+  for (const runErrorCode of [...diagnosticRunCodes, null]) for (const runCauseCode of [...diagnosticRunCodes, null]) {
+    const selected = { ...legacy, stage: 'request-drain', errorClass: 'conflict', runErrorCode, runCauseCode };
+    const text = frame(selected), capture = createPassiveNativeDiagnosticCapture();
+    capture.accept(Buffer.from(text), epoch);
+    assert.equal(capture.entries.length, 1);
+    const row = capture.entries[0];
+    assert.equal(row.stage, 'request-drain'); assert.equal(row.code, 'unconfirmed');
+    assert.equal(row.errorClass, 'conflict'); assert.equal(row.runState, 'threw'); assert.equal(row.outcome, 'unobserved');
+    assert.equal(row.runErrorCode, runErrorCode); assert.equal(row.runCauseCode, runCauseCode);
+    maxLine = Math.max(maxLine, Buffer.byteLength(text));
+    maxRecord = Math.max(maxRecord, Buffer.byteLength(JSON.stringify(row)) + 1);
+    assert.ok(Buffer.byteLength(text) - 1 <= 512);
+    assert.ok(Buffer.byteLength(JSON.stringify(row)) + 1 <= 513);
+  }
+  assert.equal(maxLine, 355); assert.equal(maxRecord, 499);
+  const legacyCapture = createPassiveNativeDiagnosticCapture();
+  legacyCapture.accept(Buffer.from(frame(legacy)), 1);
+  assert.equal(legacyCapture.entries.length, 1);
+  assert.equal('runErrorCode' in legacyCapture.entries[0], false);
+  assert.equal('runCauseCode' in legacyCapture.entries[0], false);
+  const malformed = createPassiveNativeDiagnosticCapture();
+  malformed.accept(Buffer.from(frame({ ...legacy, runErrorCode: { private: 'TEST_PRIVATE_CODE' }, runCauseCode: 'unknown' })), 1);
+  assert.equal(malformed.entries.length, 1);
+  assert.equal(malformed.entries[0].runErrorCode, null); assert.equal(malformed.entries[0].runCauseCode, null);
+  assert.doesNotMatch(JSON.stringify(malformed.entries), /TEST_PRIVATE_|private/);
+
+  const saturated = createPassiveNativeDiagnosticCapture();
+  for (let index = 0; index < 300; index++)
+    saturated.accept(Buffer.from(diagnosticPrefix + JSON.stringify({ event: 'request', atMs: 0, request: index + 1 }) + '\n'), 1);
+  assert.equal(saturated.limited, true);
+  saturated.accept(Buffer.from(frame({ ...legacy, runErrorCode: 'EPIPE', runCauseCode: null })), 2);
+  saturated.accept(Buffer.from(frame({ ...legacy, stage: 'server-stop', runErrorCode: 'ETIMEDOUT' })), 3);
+  const closes = saturated.entries.filter(row => row.event === 'host-probe-close-failed');
+  assert.equal(closes.length, 1); assert.equal(closes[0].epoch, 2);
+  assert.equal(closes[0].stage, 'driver-close'); assert.equal(closes[0].runErrorCode, 'EPIPE');
+  assert.ok(saturated.entries.length <= 257);
+  assert.ok(saturated.entries.reduce((sum, row) => sum + Buffer.byteLength(JSON.stringify(row)) + 1, 0) <= 64 * 1024);
+  const bounded = createPassiveNativeDiagnosticCapture();
+  bounded.accept(Buffer.from(frame({ ...legacy, ignored: 'x'.repeat(600) })), 1);
+  bounded.accept(Buffer.alloc(64 * 1024 + 1, 120), 1);
+  assert.equal(bounded.entries.length, 0);
+  assert.equal(bounded.limited, true);
+  bounded.accept(Buffer.from(frame({ ...legacy, runErrorCode: null, runCauseCode: null })), 2);
+  assert.equal(bounded.entries.length, 1, 'rejected oversized input does not consume the reserved valid close observation');
+});
+
+// Whole existing platform suite: preserve every original case and its original platform skip.
+await import('../../../scripts/e2e/opencode-diagnostics/platform.test.mjs');

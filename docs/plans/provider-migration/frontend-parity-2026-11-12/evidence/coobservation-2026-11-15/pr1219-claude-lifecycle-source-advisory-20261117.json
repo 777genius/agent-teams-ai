@@ -1,0 +1,945 @@
+{
+  "schemaVersion": 1,
+  "kind": "c714-claude-lifecycle-readiness-source-advisory",
+  "createdAtUtc": "2026-11-17 11:19:07 UTC",
+  "reviewer": "/root/producer_r2_semantic",
+  "repository": "777genius/agent-teams-ai",
+  "decision": "SUPPORTED_BOUNDED_FIXTURE_REPAIR_SCOPE_ONLY_NOT_SELECTED",
+  "authority": "Root alone may select a concrete later R1 and author/apply source or controls. This immutable source/evidence advisory authorizes no runtime or ref/PR/CI action and adds no gate.",
+  "subject": {
+    "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "pr": 1219,
+    "runId": 44042341273,
+    "jobId": 133899668413,
+    "lane": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+    "receipt": {
+      "bytes": 784414,
+      "sha256": "06f4e40ca5785eee90b831e6e4387b7d9f4881137524f30384c6800f6c88da75",
+      "gitBlob": "ef0809bb111639f21584c7d573f8371310f305af"
+    },
+    "jobLog": {
+      "bytes": 190574,
+      "sha256": "64131ce59f369e94085830d64b05eb98be084ca81ec5177fcf4318ca1e0a4129",
+      "gitBlob": "8b388e032ada33d81e46fdac4ee1c8b643d751bd"
+    },
+    "appLog": {
+      "bytes": 23920,
+      "sha256": "071deed37ad700b60eeed02547eb93125db349bb6d44b2348b4dfb400afa6975",
+      "gitBlob": "3692095d2929a45e60813356b2e6b3531d105c5f"
+    },
+    "archive": {
+      "artifactId": 14320153728,
+      "bytes": 698075,
+      "sha256": "441a844d1399c23644099395328c854d93011c98030d6c23713ec9fb3f2451bd",
+      "crcAndCompleteExtraction": "Root verified; reviewer did not download or extract any artifact.",
+      "appLogMember": "TEST-desktop-backend-g9FwgL/desktop-app.log"
+    },
+    "separation": "This fixed9d failure precedes the independently reviewed diagnostics postimages. It does not qualify or fail future source at1ca/c88 or later publications."
+  },
+  "method": {
+    "allowedUsed": [
+      "Immutable Git blob/file reads",
+      "Pure data parsing/string/range/hash comparisons",
+      "Bare advisory retention"
+    ],
+    "notUsed": [
+      "Shell or local filesystem",
+      "Target source evaluation/import/compilation",
+      "Runtime/vendor/version invocation",
+      "Live CI/run/artifact APIs",
+      "Ref/PR/source/control mutations",
+      "Browser"
+    ],
+    "identityHelper": {
+      "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8",
+      "bytes": 3982,
+      "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7"
+    },
+    "readScope": "Complete receipt and both logs were fetched and identity-verified; the entire app log and decisive retained receipt/dialog/cleanup/probe fields were read. The job log was read at setup, original command, failure and artifact neighborhoods, not recast as an exhaustive unrelated unit-result audit. Complete1757-row vectors were parsed and compared, not a claim to re-audit1757 source bodies. Every critical protocol, catalog utility and cited whole test file was read fully; larger routing files have precise read scope below."
+  },
+  "observed": {
+    "source": {
+      "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "dirty": false
+    },
+    "sourceVectors": {
+      "beforeCount": 1757,
+      "afterCount": 1757,
+      "literalJsonEqual": true,
+      "beforeJSON": {
+        "bytes": 266427,
+        "sha256": "b0cfcff69886a06e2e0a04423c1700aca7ed5a0629197f9ab18653c61ce50ab7",
+        "gitBlob": "27279a6d1c818199d01dcdcf929f376cd615446e"
+      },
+      "afterJSON": {
+        "bytes": 266427,
+        "sha256": "b0cfcff69886a06e2e0a04423c1700aca7ed5a0629197f9ab18653c61ce50ab7",
+        "gitBlob": "27279a6d1c818199d01dcdcf929f376cd615446e"
+      },
+      "rowKeys": [
+        "path",
+        "sha256"
+      ],
+      "example": [
+        {
+          "path": "scripts/legacy-agent-host/startup-passive-observer.ts",
+          "sha256": "4c64958f572aa2c06e8792244b40d923e5a4a12fecab41807b7580db851e5afc"
+        },
+        {
+          "path": "scripts/legacy-agent-host/candidate-electron.ts",
+          "sha256": "4adeeba8b68bca33f84de10fd72244b5d66f4c5d144dfdad768047e2c8dba761"
+        }
+      ],
+      "derivedIdentityNotice": "The vector JSON gitBlob is computed in memory, not a separately retained Git object."
+    },
+    "failure": "UI read timed out: original lifecycle model readiness; no mutation retry",
+    "failureSource": {
+      "kind": "error",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:209:11",
+        "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts:88:3",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:421:12",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+      ]
+    },
+    "readinessPredicate": "[...document.querySelectorAll('[role=\"dialog\"] button')].some(e=>e.textContent.trim()==='Launch team'&&!e.disabled)",
+    "readinessBudgetMs": 90000,
+    "reachedActions": [
+      "Saved TEST Team selected",
+      "Original saved Team Launch opens dialog",
+      "Optional saved settings expanded",
+      "Original dialog prompt filled with TEST_UI_BOOT",
+      "Original Launch team button revealed by existing scrollTo",
+      "Enabled Launch team wait failed"
+    ],
+    "notReached": [
+      "Launch team submit",
+      "Original business boot input",
+      "Original Stop",
+      "Cold same-profile second epoch",
+      "Checkpoint Resume",
+      "Composer continuation",
+      "Active/queued Quit proof"
+    ],
+    "savedDialog": {
+      "snapshotKind": "Retained failure sample; not atomic with previous input or all provider state",
+      "readyState": "complete",
+      "uiDidInit": true,
+      "rootChildCount": 1,
+      "dialogCount": 1,
+      "launchButtons": [
+        {
+          "text": "Launch team",
+          "disabled": true,
+          "x": 916.3125,
+          "y": 769.875,
+          "width": 164.6875,
+          "height": 44
+        }
+      ],
+      "textFacts": [
+        "Model \"sonnet\" is not available for the current Anthropic runtime. Pick one of the listed models or use Default.",
+        "Anthropic / Needs attention",
+        "The verified model catalog is being refreshed. Wait for provider status to finish."
+      ],
+      "globalTasksError": "Host read crossed a mutation boundary",
+      "noInferenceFromGlobalTasksError": true
+    },
+    "finiteProbe": {
+      "inputs": [
+        {
+          "provider": "claude",
+          "role": "runtime",
+          "pid": 5342,
+          "event": "input",
+          "inputId": "b39b7517-2795-4a92-ac43-eb855fde0dd5",
+          "marker": "TEST_MODEL_PROBE",
+          "sessionId": "89ba5578-0fc2-482d-98e2-776ee17ae1c9",
+          "wrapped": false
+        }
+      ],
+      "terminals": [
+        {
+          "provider": "claude",
+          "role": "runtime",
+          "pid": 5342,
+          "event": "terminal",
+          "inputId": "b39b7517-2795-4a92-ac43-eb855fde0dd5",
+          "marker": "Reply only OK. Do not use tools, access files or run commands.",
+          "outcome": "succeeded",
+          "text": "OK",
+          "usage": {
+            "input_tokens": 42,
+            "output_tokens": 18,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          },
+          "cumulativeCostUsd": 0.0123
+        }
+      ],
+      "businessCommandCount": 0
+    },
+    "cleanup": {
+      "processGroup": 3871,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "peerCleanup": {
+      "originalPeerPids": [
+        5038,
+        5225,
+        5342
+      ],
+      "remaining": [],
+      "absent": true
+    },
+    "sentinel": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": null,
+      "postQuitOrCleanupInvocations": null,
+      "refusedInvocations": [],
+      "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+    },
+    "scopeLimit": "This finite SDK/TEST evidence is neither vendor authentication nor native model execution or full lifecycle success. Only recorded peers are qualified absent; the captured Host absence/exit fields remain explicitly unknown."
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "classification": "PROVED_TEST_PROTOCOL_MISMATCH",
+      "title": "The selected lifecycle peer cannot answer the current auth-status contract",
+      "chain": [
+        "desktop-emulated-runtime-fixture.ts selects only claudeProviderPeer.mjs for Claude and uses one verified executable for management/runtime; it does not select the Settings auth router.",
+        "readCapturedClaudeStatus awaits claude.metadata then independently invokes readCapturedClaudeAuthentication; the latter requests claude.auth through the captured management owner.",
+        "ClaudeAuthenticationCoordinator.read constructs the original ClaudeAuthConversation; status launches the selected executable with exactly auth/status/--json.",
+        "claudeProviderPeer.mjs accepts only --flag argv and rejects positional auth before its journal/exit handlers are installed.",
+        "parseClaudeAuthStatus requires valid bounded JSON and exact selected configDirectory/exit semantics. This source route cannot return valid auth metadata from the current lifecycle peer.",
+        "The metadata projector catches auth failure as null, marks status model_only/partial_response and leaves authenticated/teamLaunch false. Reconciliation can retain stale/loading catalog presentation, consistent with the saved notice."
+      ],
+      "contract": {
+        "argv": [
+          "auth",
+          "status",
+          "--json"
+        ],
+        "stdoutLimitBytes": 65536,
+        "apiProvider": "firstParty",
+        "authMethodAllowlist": [
+          "none",
+          "claude.ai",
+          "oauth_token",
+          "api_key",
+          "api_key_helper",
+          "third_party"
+        ],
+        "configDirectory": "Exact captured canonical directory; no redirect or alias.",
+        "exit": "0 for loggedIn true,1 for false; false requires none and true forbids none.",
+        "unchangedGuards": [
+          "profile/config revision",
+          "current captured owner",
+          "namespace inode/realpath checks",
+          "original process custody",
+          "confirmed close before result"
+        ]
+      },
+      "causalLimit": "The original receipt has no raw auth response/exit or private auth-stage record. This proves an incompatibility of the selected sources, not which exact original auth exception occurred. A target could also fail an earlier guard; no PID from generic app trace is relabeled as the auth child."
+    },
+    {
+      "id": "F2",
+      "classification": "PROVED_FIXTURE_SELECTION_CATALOG_CONTRACT_MISMATCH",
+      "title": "The fixture saves the alias while the accepted UI contract offers the resolved launch value",
+      "mapping": {
+        "peerModelId": "sonnet",
+        "peerResolvedModel": "TEST-claude-sonnet",
+        "projectedCatalogId": "sonnet",
+        "projectedLaunchModel": "TEST-claude-sonnet",
+        "uiOptionValue": "TEST-claude-sonnet",
+        "fixtureSavedAndInitialRuntimeModel": "sonnet"
+      },
+      "chain": [
+        "capturedClaudeMetadata maps row.modelId to id and row.resolvedModel ?? row.modelId to launchModel; that distinction is deliberate.",
+        "teamModelAvailability recognizes claude-sdk as first-party catalog evidence and builds visible offered values from launchModel.",
+        "The first-party availability branch requires the selected value in that offered list, checks the catalog row/hidden state and explicit unavailable status. It does not promote id aliases into additional offered values.",
+        "Whole catalog43 creates this exact sonnet/TEST-claude-sonnet pair and requires sonnet,opus and claude-opus-4-6 to remain refused while accepting only the resolved TEST offer.",
+        "The lifecycle fixture still seeds sonnet. The saved error is therefore consistent with the accepted validator, and altering the validator to accept aliases would contradict existing reviewed tests."
+      ],
+      "correctionRecord": "A preliminary message tentatively called the alias rejection a product defect and proposed id-to-launchModel acceptance. Full current test review disproved that recommendation. It was immediately retracted before any report or source authorship. The final conclusion preserves catalog43 and the current production predicate.",
+      "guardSeparation": "Display membership is not launch authorization. Existing tests keep authenticated=false,verificationState=unknown and modelVerificationState=idle; hidden/unavailable refusal and exact scoped/current/expiry authority remain independent."
+    }
+  ],
+  "candidateBoundaries": {
+    "selected": false,
+    "authored": false,
+    "minimumSemanticScope": [
+      "Keep production teamModelAvailability.ts and its whole43 cases unchanged. In the finite lifecycle fixture, seed/select the exact offered TEST-claude-sonnet launch value consistently for saved settings and the selected runtime recipe. Preserve model/effort and all original UI steps, not a Default fallback or skipped model check.",
+      "Keep the actual production auth command/parser/currentness/custody unchanged. A concrete small TEST-only candidate is exact management-role auth-status handling in the already selected peer or its existing fixture wrapper, before the SDK-only argv parser. It must reject login/logout/other argv and runtime-role auth, validate the same captured TEST roots, emit only bounded finite metadata and record the original finite child for cleanup.",
+      "The existing Settings auth helper demonstrates the accepted finite response and namespace checks, but is currently restricted to extensions/saved-import and dummy loopback API-key environment. Any reuse must explicitly bind an amended TEST scope and exact source/wrapper/profile hashes in the later R1; no silent mode masquerading, real vendor fallback or new arbitrary command route.",
+      "Root chooses the exact two fixture boundaries and existing test location in a concrete R1. This advisory does not choose final files, write postimages or loosen frozen-source constraints."
+    ],
+    "possibleExistingFiles": [
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs"
+    ],
+    "existingTestSeams": [
+      "scripts/legacy-agent-host/desktop-emulated-settings.test.ts uses actual ClaudeAuthConversation/Coordinator with an owned finite wrapper and tests exact argv/namespace/no mutation receipt.",
+      "packages/legacy-agent-host/tests/claude-management-host.test.ts uses the actual pinned SDK and actual finite peer for metadata/probe and asserts original cleanup; it does not currently test auth-status.",
+      "test/renderer/utils/teamModelAvailability.test.ts whole43 is already the exact positive/negative catalog contract and must remain unchanged."
+    ],
+    "rejectedDirections": [
+      "Accepting sonnet alias by weakening catalog43",
+      "Using Default to evade exact model selection",
+      "Treating probe OK as auth or final readiness",
+      "Replacing current/hidden/unavailable/expiry/ownership guards",
+      "Adding real Claude/Codex/version probes",
+      "Increasing90,000ms or retrying Launch",
+      "Changing workflows/filters/provider matrices or selecting a new venue"
+    ]
+  },
+  "proofRequirementsForAnyLaterSelectedCandidate": [
+    "Through the actual auth conversation/coordinator and selected finite peer, prove exact auth-status response and original child cleanup; malformed/extra argv, login/logout, wrong role/namespace and changed captured identity stay refused. Do not test a copied parser or synthetic parent-only result.",
+    "Through the original catalog projector and actual model utility, show that the fixture's exact selected launchModel is the offered resolved value; keep original43 assertions including sonnet alias refusal, hidden/unavailable handling and no authentication promotion.",
+    "Retain SDK metadata/probe behavior and no-extra-business-input guarantees; a metadata status read must not mutate Host command receipts, native credentials or another TEST namespace.",
+    "Only the unchanged original E2E can qualify the original90-second enabled Launch, one actual submit, Stop, cold epoch/Resume and final cleanup. A finite component success or source proof cannot substitute for those unreached steps.",
+    "Keep149/43/85 and all existing selected whole inventories distinct from this advisory; any fresh execution requires the already established separately selected source/control publication procedure, not an extra gate invented here."
+  ],
+  "sourceRecords": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "bytes": 21981,
+      "sha256": "d0d00254e7e39ab8b5163e02cc93754775a8efe56ff28b8c87f07d02e0292c7e",
+      "gitBlob": "7b5edfbd4967debe454387c7a8b6246e67216dc8",
+      "lines": 280,
+      "readScope": "complete",
+      "decisiveRanges": "35-158 and 161-280",
+      "purpose": "Actual lifecycle wrapper, shared captured executable, saved model and peer/effect custody.",
+      "receiptSelectedSourceSHA256": "d0d00254e7e39ab8b5163e02cc93754775a8efe56ff28b8c87f07d02e0292c7e",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "bytes": 32221,
+      "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+      "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+      "lines": 463,
+      "readScope": "complete",
+      "decisiveRanges": "16-137,170-171,331-463",
+      "purpose": "Only SDK argv is accepted; exact alias/resolved offer; finite input and cleanup journal.",
+      "receiptSelectedSourceSHA256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeAuthConversation.ts",
+      "bytes": 10334,
+      "sha256": "709d66ffc366f0b83d9af0a49a1b9126bda1e33e72f796da0458356349b18880",
+      "gitBlob": "a4d47563cffaed2ea48381887e47820ed727422e",
+      "lines": 275,
+      "readScope": "complete",
+      "decisiveRanges": "constructor/current, read/withClosedCustody, launch/status/close",
+      "purpose": "Actual captured auth argv, exact process owner and original cleanup.",
+      "receiptSelectedSourceSHA256": "709d66ffc366f0b83d9af0a49a1b9126bda1e33e72f796da0458356349b18880",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "packages/legacy-agent-host/src/adapters/providers/claudeAuthStatus.ts",
+      "bytes": 2618,
+      "sha256": "588b932ed1427203a6ff27690787799cb43cb5f7aaee115f7aaab4d4cc1cd388",
+      "gitBlob": "3ce5814e42e72d0a46f229791dfec25668e22896",
+      "lines": 69,
+      "readScope": "complete",
+      "decisiveRanges": "1-51",
+      "purpose": "Actual auth response schema, exact namespace and exit code.",
+      "receiptSelectedSourceSHA256": "588b932ed1427203a6ff27690787799cb43cb5f7aaee115f7aaab4d4cc1cd388",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "packages/legacy-agent-host/src/composition/ClaudeAuthenticationCoordinator.ts",
+      "bytes": 7797,
+      "sha256": "c5004da14dbf88f92a8a56984f7d0c6e31f4cff27e1f00f3b3f2a5e382f35a81",
+      "gitBlob": "5f129052b232eed045304284167bc9258141b720",
+      "lines": 193,
+      "readScope": "complete",
+      "decisiveRanges": "create/closeConversation/read",
+      "purpose": "Profile/currentness/resource ownership and returned auth DTO.",
+      "receiptSelectedSourceSHA256": "c5004da14dbf88f92a8a56984f7d0c6e31f4cff27e1f00f3b3f2a5e382f35a81",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+      "bytes": 7477,
+      "sha256": "c4d8333cc5b562b7eb8de8398bde8275d579fdb7775c59c3d1ae5123e88cfdc8",
+      "gitBlob": "c0bd14811e8cd76dd34bcf42afac2785769e37ad",
+      "lines": 186,
+      "readScope": "complete",
+      "decisiveRanges": "decode and readCapturedClaudeStatus",
+      "purpose": "SDK id-to-launchModel mapping and auth-failure-to-partial-status projection.",
+      "receiptSelectedSourceSHA256": "c4d8333cc5b562b7eb8de8398bde8275d579fdb7775c59c3d1ae5123e88cfdc8",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/features/runtime-provider-management/main/adapters/output/capturedClaudeAuthentication.ts",
+      "bytes": 3092,
+      "sha256": "c4ca2ee17177e804122d551d55c80b91c8fbba59b9bbc87465819cad130cb4e7",
+      "gitBlob": "7ee86041e36d33033ede953ba05e76244f9586ca",
+      "lines": 99,
+      "readScope": "complete",
+      "decisiveRanges": "readCapturedClaudeAuthentication",
+      "purpose": "Exact management request and independently checked auth response.",
+      "receiptSelectedSourceSHA256": "c4ca2ee17177e804122d551d55c80b91c8fbba59b9bbc87465819cad130cb4e7",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/features/agent-backend/main/infrastructure/CapturedProviderManagement.ts",
+      "bytes": 5433,
+      "sha256": "8ea983e9aec5c56ca5e2438a39e4272c0133ae6c2d4839bbcb6926afb605b760",
+      "gitBlob": "60b08011e5aa2df1a6d2215155d7dabf0b2b15af",
+      "lines": 164,
+      "readScope": "complete",
+      "decisiveRanges": "captureProviderManagement/request",
+      "purpose": "Captured profile binding, no caller-substituted identity, checks before and after dispatch.",
+      "receiptSelectedSourceSHA256": "8ea983e9aec5c56ca5e2438a39e4272c0133ae6c2d4839bbcb6926afb605b760",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts",
+      "bytes": 15353,
+      "sha256": "606098a4895f1715ea58677cfff11337790d5bbcf1be3fcdf3efcdf171b59aab",
+      "gitBlob": "500b04c5a0b9e15bc8f4401d5f7bdc0d4267e2a6",
+      "lines": 401,
+      "readScope": "relevant ranges; complete body fetched and hashed",
+      "decisiveRanges": "150-247, specifically getProviderStatus anthropic branch",
+      "purpose": "Current capture guard and catalogScope join; no unrelated OpenCode claim.",
+      "receiptSelectedSourceSHA256": "606098a4895f1715ea58677cfff11337790d5bbcf1be3fcdf3efcdf171b59aab",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/renderer/store/slices/cliInstallerStatusReconciliation.ts",
+      "bytes": 9017,
+      "sha256": "363bd187bf5ac466c9e8e9bd5b535c7b9a7e52f62bbadd1d6db01ba8317f732e",
+      "gitBlob": "c3347aaded7d5705b775b8aa1ca29f6d37a58c8e",
+      "lines": 227,
+      "readScope": "complete",
+      "decisiveRanges": "mergeProviderCatalogCache/revokeProviderLaunchAuthority/reconcileCliProviderSnapshot",
+      "purpose": "Partial response can retain loading display evidence without launch authority.",
+      "receiptSelectedSourceSHA256": "363bd187bf5ac466c9e8e9bd5b535c7b9a7e52f62bbadd1d6db01ba8317f732e",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/renderer/store/slices/cliInstallerSlice.ts",
+      "bytes": 59054,
+      "sha256": "c7194f07ac40c75f3a13bd09b0a2be71b9b4c0d0bde887ca5fccd083b24f5714",
+      "gitBlob": "38de9ccec33c7b9b1250a17173003e1e6fb96d9c",
+      "lines": 1648,
+      "readScope": "relevant ranges; complete body fetched and hashed",
+      "decisiveRanges": "1-310,1190-1560",
+      "purpose": "Current request epoch/generation/id and provider fetch publication; not a full store audit.",
+      "receiptSelectedSourceSHA256": "c7194f07ac40c75f3a13bd09b0a2be71b9b4c0d0bde887ca5fccd083b24f5714",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/shared/utils/providerStatusAuthority.ts",
+      "bytes": 4567,
+      "sha256": "67241d584fdbef940ad2a0ef7eb459eb85af618bd907710d42c005821c2fa4fa",
+      "gitBlob": "56a1d52d3ba392ec00f60ccf6b7aedaffe6ba570",
+      "lines": 129,
+      "readScope": "complete",
+      "decisiveRanges": "isProviderModelCatalogExactReady and authoritative evidence helpers",
+      "purpose": "Exact ready, nonempty, time-bounded catalog and separate authentication/launch authority.",
+      "receiptSelectedSourceSHA256": "67241d584fdbef940ad2a0ef7eb459eb85af618bd907710d42c005821c2fa4fa",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/renderer/utils/providerReadiness.ts",
+      "bytes": 2022,
+      "sha256": "4c68a3835384f0358b884930965719286d40ded7cce4a0f47ba63ad50937d297",
+      "gitBlob": "b912faca5caef24aebf1ce4105556e2dc8b3bdaf",
+      "lines": 45,
+      "readScope": "complete",
+      "decisiveRanges": "hasEffectiveProviderLaunchAuthority/getProviderLaunchReadinessDetail",
+      "purpose": "Exact source of saved catalog-refresh notice and strict authority requirements.",
+      "receiptSelectedSourceSHA256": null,
+      "receiptSelectedSourceMatch": null
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/renderer/hooks/useEffectiveCliProviderStatus.ts",
+      "bytes": 9697,
+      "sha256": "d7db83f4787e51b205fae22b5399d6b19cfe478bda586efb86bfc39ed38be1f1",
+      "gitBlob": "4a4c5150cc13bc59a914d34f29033890a2541697",
+      "lines": 286,
+      "readScope": "complete",
+      "decisiveRanges": "gateProviderLaunch/useLaunchAuthorityGatedCliStatus",
+      "purpose": "Conservative clock and expiry gating; no broadening of launch capability.",
+      "receiptSelectedSourceSHA256": null,
+      "receiptSelectedSourceMatch": null
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/renderer/hooks/useProviderReadinessRevalidation.ts",
+      "bytes": 6495,
+      "sha256": "8aadcca8af81d9aaa2031aa4eeffa5db2c1f0bc01d82932487719c176c0d7c6b",
+      "gitBlob": "ba9aab03f3830fd865a606699100ea002329cd91",
+      "lines": 181,
+      "readScope": "complete",
+      "decisiveRanges": "one automatic attempt per unhealthy episode",
+      "purpose": "Loading is not evidence of a live pending request; no hidden retry recommendation.",
+      "receiptSelectedSourceSHA256": null,
+      "receiptSelectedSourceMatch": null
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "bytes": 32077,
+      "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+      "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+      "lines": 982,
+      "readScope": "complete",
+      "decisiveRanges": "173-211,313-330,374-494,596-653,682-790,842-982",
+      "purpose": "Whole accepted resolved SDK offer semantics.",
+      "receiptSelectedSourceSHA256": null,
+      "receiptSelectedSourceMatch": null
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "test/renderer/utils/teamModelAvailability.test.ts",
+      "bytes": 56775,
+      "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+      "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+      "lines": 1611,
+      "readScope": "complete",
+      "decisiveRanges": "1430-1611, especially 1473-1504",
+      "purpose": "Whole43 preserves refusal of sonnet alias for this exact id/launchModel pair.",
+      "receiptSelectedSourceSHA256": null,
+      "receiptSelectedSourceMatch": null
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/renderer/utils/teamProviderRuntimeStatusLoading.ts",
+      "bytes": 4395,
+      "sha256": "623fb0291c50dd43016d08b54635d5ec4b4cbb582fd1a7768efba904980d175c",
+      "gitBlob": "305aea0b97d3b2b59dd897e06e39cc2c82406ee9",
+      "lines": 119,
+      "readScope": "complete",
+      "decisiveRanges": "isTeamProviderRuntimeStatusLoading",
+      "purpose": "Runtime loading is separate from the retained loading catalog label.",
+      "receiptSelectedSourceSHA256": null,
+      "receiptSelectedSourceMatch": null
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/renderer/components/team/dialogs/memberModelScope.ts",
+      "bytes": 12942,
+      "sha256": "0033354db6b28e7b69eaa8f10db35332883707b9a6576c80e55c78f997a670a8",
+      "gitBlob": "d24060b3c0440b4ed6cf62c87e83098529d951c4",
+      "lines": 380,
+      "readScope": "relevant ranges; complete body fetched and hashed",
+      "decisiveRanges": "125-183 and referenced helper calls",
+      "purpose": "Visible model error consumer; no unrelated member-edit claim.",
+      "receiptSelectedSourceSHA256": null,
+      "receiptSelectedSourceMatch": null
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "bytes": 132317,
+      "sha256": "af7b6f9da352008ef014dad120b868090626e071cd5d94037fd03385e2234d40",
+      "gitBlob": "4bd95a0f2e5636a21d1f0d83dd45f228b054b048",
+      "lines": 3219,
+      "readScope": "relevant ranges; complete body fetched and hashed",
+      "decisiveRanges": "210-259,510-700,1190-1320,1478-1850,2410-2475,3030-3110",
+      "purpose": "Actual selected model validation, scoped readiness and disabled Launch button composition.",
+      "receiptSelectedSourceSHA256": "af7b6f9da352008ef014dad120b868090626e071cd5d94037fd03385e2234d40",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/renderer/components/team/dialogs/providerLaunchAuthority.ts",
+      "bytes": 8286,
+      "sha256": "7c122f43c764f438d9c9d78413f5e3912e83f29a3c30f72631333dc34d6e44d0",
+      "gitBlob": "a6dbcf114109c75f5a0dfad9ca20e71884956f31",
+      "lines": 223,
+      "readScope": "complete",
+      "decisiveRanges": "createLaunchGuard",
+      "purpose": "Captured current proof or strict provider authority, never raw SDK terminal text.",
+      "receiptSelectedSourceSHA256": "7c122f43c764f438d9c9d78413f5e3912e83f29a3c30f72631333dc34d6e44d0",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/renderer/components/team/dialogs/capturedTeamLaunchReadiness.ts",
+      "bytes": 1376,
+      "sha256": "5a3e24af0a051afe0e8736e4d79e21239ef23b3aeb7a972c59fe5e79655db09e",
+      "gitBlob": "7a78f0791a54d09bcdda9c466b4df9c8b3b569d1",
+      "lines": 45,
+      "readScope": "complete",
+      "decisiveRanges": "hasCapturedTeamLaunchReadiness",
+      "purpose": "Handle/preparation/draft/selection/launch/roster/expiry guard.",
+      "receiptSelectedSourceSHA256": "5a3e24af0a051afe0e8736e4d79e21239ef23b3aeb7a972c59fe5e79655db09e",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/renderer/components/team/dialogs/useCapturedTeamLaunchReadiness.ts",
+      "bytes": 5710,
+      "sha256": "7327fb6ed0504e412dcdafe4989c91625c2ef0712edf0705c767c5bfc52775af",
+      "gitBlob": "e8f5137ea0b7b69f4c098203d797780be99a5c01",
+      "lines": 149,
+      "readScope": "complete",
+      "decisiveRanges": "draftSignature/runPreflight/permits/captureForSubmit",
+      "purpose": "Dialog currentness and sourceRevision required for permits.",
+      "receiptSelectedSourceSHA256": "7327fb6ed0504e412dcdafe4989c91625c2ef0712edf0705c767c5bfc52775af",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/renderer/components/team/dialogs/withCapturedTeamReadiness.ts",
+      "bytes": 1500,
+      "sha256": "9777cab955f2dbe26d2226a9848adc032d62d51d331ab63a3c319b6269198091",
+      "gitBlob": "9321399f64afdb461bdbfdb59b532b29523da96d",
+      "lines": 33,
+      "readScope": "complete",
+      "decisiveRanges": "whole helper",
+      "purpose": "Only last ready original preparation transfers its scoped proof.",
+      "receiptSelectedSourceSHA256": "9777cab955f2dbe26d2226a9848adc032d62d51d331ab63a3c319b6269198091",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/features/agent-backend/main/application/prepareCapturedTeamModels.ts",
+      "bytes": 20613,
+      "sha256": "c49452670a14256b257478f1f4a2532b3df19fb11175e51e11472c1921e9c8a6",
+      "gitBlob": "c1432a74804a9382d0137ed040e49b3ed51316fd",
+      "lines": 478,
+      "readScope": "complete",
+      "decisiveRanges": "readConfiguration, selection mapping, read/start/read and final fingerprint",
+      "purpose": "Actual probe success must still pass current configuration, selection and expiry checks.",
+      "receiptSelectedSourceSHA256": "c49452670a14256b257478f1f4a2532b3df19fb11175e51e11472c1921e9c8a6",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "src/features/agent-backend/main/adapters/output/projectLaunchModelProbe.ts",
+      "bytes": 2538,
+      "sha256": "c20d555192061bb985bc3245a59b0277d289c8f69e08c7d4e4ff04f4c75c5a99",
+      "gitBlob": "b4d23d44696675a45f98bae19ed451354ad16be7",
+      "lines": 64,
+      "readScope": "complete",
+      "decisiveRanges": "whole projector",
+      "purpose": "Command and exact selection identity must match before a probe DTO is accepted.",
+      "receiptSelectedSourceSHA256": "c20d555192061bb985bc3245a59b0277d289c8f69e08c7d4e4ff04f4c75c5a99",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+      "bytes": 22845,
+      "sha256": "135cd81f2edde1f087b231d4dcbed83d8cc8beade5a0230a093e6cbfcb1923ee",
+      "gitBlob": "b33e5290e4ed86a48b902a24ffc80509f1c89236",
+      "lines": 253,
+      "readScope": "reached entry 1-105 freshly read; complete body fetched and hashed",
+      "decisiveRanges": "75-91",
+      "purpose": "Original90,000ms enabled Launch team wait and later submit not reached.",
+      "receiptSelectedSourceSHA256": "135cd81f2edde1f087b231d4dcbed83d8cc8beade5a0230a093e6cbfcb1923ee",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-boundary.ts",
+      "bytes": 9825,
+      "sha256": "aa936c996a96c12c6728cbf1bca27f94e428b691e0fa2baabcd8fd74c449a499",
+      "gitBlob": "41d42274a468f086941eb4b9435fa4ff09adf2be",
+      "lines": 126,
+      "readScope": "complete",
+      "decisiveRanges": "whole original cold-boundary function",
+      "purpose": "Defines later original epoch/ownership requirements; none promoted as reached.",
+      "receiptSelectedSourceSHA256": "aa936c996a96c12c6728cbf1bca27f94e428b691e0fa2baabcd8fd74c449a499",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "scripts/legacy-agent-host/desktop-emulated-claude-settings-fixture.ts",
+      "bytes": 5663,
+      "sha256": "0370ef4c293ffc173d5952cc04671459022dfff2782b5c915209c6d93195c7b6",
+      "gitBlob": "5f18c861f297cbf62b9acaceba615079d0b77d0d",
+      "lines": 92,
+      "readScope": "complete",
+      "decisiveRanges": "desktopEmulatedClaudeSettingsWrapper and prepare function",
+      "purpose": "Existing finite auth routing is Settings-specific, not selected in lifecycle.",
+      "receiptSelectedSourceSHA256": "0370ef4c293ffc173d5952cc04671459022dfff2782b5c915209c6d93195c7b6",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "tools/owned-process-broker/fixtures/claudeSettingsAuthPeer.ts",
+      "bytes": 2154,
+      "sha256": "e21bfb7f4b548ad37d6f07d2cc8e9b61407822b11cb8c0e5051a68e34b1b382d",
+      "gitBlob": "329a0d3b3c35f5c6736bd214c3ed9717248c1d7d",
+      "lines": 39,
+      "readScope": "complete",
+      "decisiveRanges": "whole39-line peer",
+      "purpose": "Existing exact auth contract example, restricted to extensions/saved-import.",
+      "receiptSelectedSourceSHA256": "e21bfb7f4b548ad37d6f07d2cc8e9b61407822b11cb8c0e5051a68e34b1b382d",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "bytes": 24968,
+      "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+      "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+      "lines": 333,
+      "readScope": "complete",
+      "decisiveRanges": "75-104,191-284 and all remaining original cases",
+      "purpose": "Actual original auth conversation/coordinator and refusal tests; useful existing test seam.",
+      "receiptSelectedSourceSHA256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+      "receiptSelectedSourceMatch": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "packages/legacy-agent-host/tests/claude-management-host.test.ts",
+      "bytes": 13620,
+      "sha256": "0c90e1992310021a746897425e4440dff4116dcb8a7a19651def8a47563925be",
+      "gitBlob": "7f7ee01121e64f0ab55c127f62c796bf20b3fc70",
+      "lines": 223,
+      "readScope": "complete",
+      "decisiveRanges": "169-223 plus original preceding cases",
+      "purpose": "Actual SDK peer metadata/probe coverage is not auth-status coverage.",
+      "receiptSelectedSourceSHA256": null,
+      "receiptSelectedSourceMatch": null
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 165022,
+      "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+      "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+      "lines": 2702,
+      "readScope": "whole bytes joined; bounded string inventory and final import freshly inspected",
+      "decisiveRanges": "whole139 prefix plus final awaited deadline-module import",
+      "purpose": "Unchanged149 aggregate identity; no replacement or new149 execution claimed.",
+      "receiptSelectedSourceSHA256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+      "receiptSelectedSourceMatch": true
+    }
+  ],
+  "catalogInventory": {
+    "literalCount": 39,
+    "eachExpressions": 2,
+    "eachRows": 4,
+    "expectedExpanded": 43
+  },
+  "checks": [
+    {
+      "id": "C01",
+      "status": "OBSERVED_RETAINED",
+      "detail": "All784,414 receipt bytes,190,574 job-log bytes and23,920 app-log bytes were freshly fetched and locally identity-joined in pure memory to the supplied immutable pins; no CI API was read."
+    },
+    {
+      "id": "C02",
+      "status": "OBSERVED_RETAINED",
+      "detail": "Receipt source is exact9d79,dirty=false; both complete1757-row selected-source vectors are JSON-literal equal."
+    },
+    {
+      "id": "C03",
+      "status": "OBSERVED_RETAINED",
+      "detail": "The exact source rows among this bounded trace match their physical receipt SHA256 values. Other decisive renderer utilities/tests are exact immutable9d Git bodies but are not falsely claimed to be individually in the1757-row vector."
+    },
+    {
+      "id": "C04",
+      "status": "OBSERVED_RETAINED",
+      "detail": "The original lane is Linux x64 Claude lifecycle, job133899668413/run44042341273; Node24.21.0 and Ubuntu26.04.1 are retained log facts."
+    },
+    {
+      "id": "C05",
+      "status": "OBSERVED_RETAINED",
+      "detail": "Failure is the original90,000ms enabled Launch team wait at lifecycle line88, controls209, before Launch team submit; proof commands are empty."
+    },
+    {
+      "id": "C06",
+      "status": "OBSERVED_RETAINED",
+      "detail": "Saved initialized renderer has one dialog with Launch team disabled, sonnet-unavailable text and the exact verified-catalog-refresh notice. This is a retained sample, not an atomic history of all provider state."
+    },
+    {
+      "id": "C07",
+      "status": "OBSERVED_RETAINED",
+      "detail": "One runtime TEST_MODEL_PROBE input has one matching succeeded/OK terminal; no business input or successful launch is inferred."
+    },
+    {
+      "id": "C08",
+      "status": "OBSERVED_RETAINED",
+      "detail": "App requested Quit exited0 with no signal and original group empty; recorded three peers are absent. capturedHostObserved=false and capturedHostAbsent=null stay unknown, not a separate Host exit qualification."
+    },
+    {
+      "id": "C09",
+      "status": "SUPPORTED_STATIC",
+      "detail": "The complete lifecycle fixture selects a single SDK peer source and imports it unconditionally for Claude; the same pinned executable is placed in runtime member/template and management profiles."
+    },
+    {
+      "id": "C10",
+      "status": "SUPPORTED_STATIC",
+      "detail": "The actual production auth status operation launches exactly ['auth','status','--json'] through that selected profile's original custody."
+    },
+    {
+      "id": "C11",
+      "status": "SUPPORTED_STATIC",
+      "detail": "The whole SDK peer permits only --flag argv, so positional auth cannot produce the required auth JSON. Its launch/failure/exit journal handlers are installed after this parser, so absence of auth rows does not prove the request was never attempted."
+    },
+    {
+      "id": "C12",
+      "status": "SUPPORTED_STATIC",
+      "detail": "Auth parser requires a bounded object, allowlisted method, firstParty, exact canonical captured configDirectory and loggedIn-dependent exit status; invalid, changed or unconfirmed custody remains a failure."
+    },
+    {
+      "id": "C13",
+      "status": "SUPPORTED_STATIC",
+      "detail": "readCapturedClaudeStatus independently catches auth-read failure as null and emits model_only/partial_response, authenticated=false and no teamLaunch capability; metadata does not synthesize account authority."
+    },
+    {
+      "id": "C14",
+      "status": "SUPPORTED_STATIC",
+      "detail": "Renderer reconciliation may represent that retained partial catalog as stale/loading and revokes launch authority. The displayed refresh message proves that label in the selected provider, not an actively pending network/Host call."
+    },
+    {
+      "id": "C15",
+      "status": "SUPPORTED_STATIC",
+      "detail": "The SDK source offers modelId sonnet resolvedModel TEST-claude-sonnet; production projection produces id sonnet and launchModel TEST-claude-sonnet."
+    },
+    {
+      "id": "C16",
+      "status": "SUPPORTED_STATIC",
+      "detail": "The current fixture seeds savedSettings/model and initial runtime member model with sonnet; the currently offered UI option value is TEST-claude-sonnet."
+    },
+    {
+      "id": "C17",
+      "status": "CORRECTED_ASSESSMENT",
+      "detail": "Whole catalog43 explicitly rejects sonnet for this exact pair. The earlier tentative alias-promotion suggestion is retracted; this report classifies a fixture selection/catalog contract mismatch and preserves the production rule."
+    },
+    {
+      "id": "C18",
+      "status": "SUPPORTED_STATIC",
+      "detail": "Whole utility and whole43 test body confirm resolved offer accepted, aliases/unoffered values refused, hidden models excluded and explicit unavailable rows refused without manufacturing fallback."
+    },
+    {
+      "id": "C19",
+      "status": "SUPPORTED_STATIC",
+      "detail": "Model display membership does not modify authenticated, verificationState or modelVerificationState; global launch authority still requires exact current ready catalog plus authoritative authenticated capability, or a current exact captured Team proof."
+    },
+    {
+      "id": "C20",
+      "status": "SUPPORTED_STATIC",
+      "detail": "Captured Team proof independently binds handle, preparation, sourceRevision, draft/selection, launch/roster and expiry; raw peer OK is insufficient to prove these fields or final acceptance."
+    },
+    {
+      "id": "C21",
+      "status": "SUPPORTED_STATIC",
+      "detail": "Existing Settings auth peer is a concrete finite-contract example but its current mode/env/role assertions do not admit lifecycle; silently reusing it without a reviewed scope change is not a fix."
+    },
+    {
+      "id": "C22",
+      "status": "SUPPORTED_STATIC",
+      "detail": "Whole Settings test file exercises actual ClaudeAuthConversation and Coordinator, exact namespace, no mutation receipts and negative command shapes; whole Claude-management test exercises SDK metadata/probe but not lifecycle auth-status dispatch."
+    },
+    {
+      "id": "C23",
+      "status": "SUPPORTED_STATIC",
+      "detail": "A bounded future fixture candidate can retain the current production authority and all43 tests: select the exact offered launchModel and add only exact finite management auth-status handling in the chosen TEST peer/wrapper."
+    },
+    {
+      "id": "C24",
+      "status": "LIMIT",
+      "detail": "No original raw auth reply/exit/error-stage record, full provider-status DTO, capturedTeamReadiness object or final intent/configuration proof was retained in the supplied receipt. The static protocol mismatch is proved; the exact original auth subfailure and every possible additional blocker are not."
+    },
+    {
+      "id": "C25",
+      "status": "LIMIT",
+      "detail": "The globalTasks mutation-boundary message and unrelated provider routing errors are observations only; this trace does not establish either as the launch blocker."
+    },
+    {
+      "id": "C26",
+      "status": "LIMIT",
+      "detail": "No inference to packaged Darwin, collaboration, general Claude-runtime, OpenCode management or any other lane is made; shared code alone does not establish shared observed cause."
+    },
+    {
+      "id": "C27",
+      "status": "SUPPORTED_STATIC",
+      "detail": "Original90,000ms readiness wait, no mutation retry, strict catalog/ownership/currentness, full149/43/85 and later lifecycle obligations stay unchanged by this advice."
+    },
+    {
+      "id": "C28",
+      "status": "LIMIT",
+      "detail": "Advisory only: no source/control postimage, test execution, compilation, live CI read, replay, gate or execution venue was authored/selected."
+    }
+  ],
+  "checkCount": 28,
+  "outcomeCounts": {
+    "OBSERVED_RETAINED": 8,
+    "SUPPORTED_STATIC": 15,
+    "CORRECTED_ASSESSMENT": 1,
+    "LIMIT": 4
+  },
+  "remainingUnknowns": [
+    "Original auth command result/exit and which guard failed first are not captured in the supplied receipt/app log.",
+    "No full original renderer provider-status DTO or capturedTeamReadiness is saved; the exact cause of missing final captured authority is not established.",
+    "The source-proved two fixture mismatches are concrete repair candidates, not a guarantee that correcting them alone makes the whole lifecycle pass.",
+    "The unrelated global task mutation-boundary message is not causally joined.",
+    "No same-cause conclusion for any other lane or native environment.",
+    "No source, control, execution venue, new gate or runtime result is selected or authored."
+  ]
+}

@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "kind": "exact-member-reveal-inode64-combined-R2-actual-publication-gate",
+  "at": "2026-11-17 07:14:06 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "verdict": "EXACT_COMBINED_R2_ACTUAL_READBACKS_CLOSED_NO_RUNTIME_ADMISSION",
+  "commit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+  "parent": "6d06207d96ea1c7ae7d9199a552ec776451dc231",
+  "tree": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+  "docsTree": "4dd9acfdf6c93a036a81089b166bb13bc08868e9",
+  "scriptsTree": "c3f4fe5a62dd79a743b6ffc0d07341ac68a25f73",
+  "manifest": {
+    "bytes": 14219,
+    "sha256": "f8edf426d500c6bb9f51d6be642401aea32c73d4930f7545451a67851e5ca023",
+    "gitBlob": "63a56db8844bb4d9c3f25047bee9deaffddee768"
+  },
+  "r1": {
+    "bytes": 27869,
+    "sha256": "e3a891024d750f7c868a7a253f2ed1f3630b833e92d1698af38b533c8ebc5db7",
+    "gitBlob": "b16bf54091cfb2fd2756ad7a951d0f9143611d2b"
+  },
+  "r1ActualGate": {
+    "bytes": 4441,
+    "sha256": "11dd4fe224bb0531f2432fc73f5de4a0f06c7afe9118d09981674d96fe6dfd8c",
+    "gitBlob": "6bbf83caa77cb9eaab9e262f46bed45f03494968"
+  },
+  "sourceControlR2": {
+    "bytes": 29036,
+    "sha256": "0737bd331fb0ac13e8589b75c1aa392a3a428e8ca4b81e3a763bcba4d1bdcdec",
+    "gitBlob": "bb9a1cddc7add50dae7a907e247dd2a5efc61885"
+  },
+  "source": {
+    "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+    "mode": "100644",
+    "before": {
+      "bytes": 69194,
+      "sha256": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+      "gitBlob": "43ab487464098fed0425ffd51441a38abc206f3b"
+    },
+    "after": {
+      "bytes": 69370,
+      "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+      "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+    },
+    "beforeLines": 794,
+    "afterLines": 798,
+    "exactInsertion": "  await ui.scrollTo(\n    'div[role=\"button\"][tabindex=\"0\"][class~=\"group/member\"] span',\n    'reveal original member detail name', 'alice', 12, { requireCenterHit: true }\n  );\n",
+    "insertionBytes": 176,
+    "location": "Immediately after proof.stats = stats; before the unique original649-byte member-detail click.",
+    "wholeInverseVerified": true,
+    "unchangedOriginalClick": {
+      "bytes": 649,
+      "sha256": "41c01f7e76509f264fe9337294554e84bc7c22e355558ab000469f9dae086f24",
+      "gitBlob": "0119d9327d234e9eeacb4d68e0422c5a038c79f9"
+    },
+    "semantics": "Call the existing scrollTo with exact original row-scoped name span, trim-equal alice, max12 and fifth argument requireCenterHit:true. It prepares the original target only. Unchanged click remains final row/name/center/non-button/ownership/stability authority and one press/release.",
+    "limits": "No other driver byte changes, new helper/test/import, fallback, DOM write, provider branch, timeout increase or mutation retry. Existing helper per-observation30s, ±600 wheel and100ms cadence remain; no single30s reveal-total claim.",
+    "beforeVector": {
+      "identity": {
+        "bytes": 3481,
+        "sha256": "075a300c213fcb595ce025c7f9ba3af9dc955ca5ca61f9a0a1b17ebf4f7c938b",
+        "gitBlob": "866c64a6d2c90fc92988c1094cbdd81b469c2c10"
+      },
+      "rows": 13
+    },
+    "afterVector": {
+      "identity": {
+        "bytes": 3481,
+        "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+        "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+      },
+      "rows": 13
+    },
+    "vectorMeaning": "Original published12 preservation rows remain literal identity records; add the newly selected driver to form a13-path before/after review vector. Only driver identity changes. This is not a new file or production-count increase."
+  },
+  "runner": {
+    "bytes": 25819,
+    "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+    "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+  },
+  "binding": {
+    "bytes": 107295,
+    "sha256": "d8626f22a432926350c4d69c657313a61b935764dae972159a1a88fc03163b5b",
+    "gitBlob": "381c51a331b9d03f5aab87835af3dad5a6643d3c"
+  },
+  "rootActual": {
+    "bytes": 159127,
+    "sha256": "1133d67553be7b4b0085cbfbe698842d4839228956e43f9930c456ee50ce4beb",
+    "gitBlob": "64d074f6f878440222347058c0fbc3a559953908"
+  },
+  "independentActual": {
+    "bytes": 432844,
+    "sha256": "995c58b5b1f0c2c765b934c2ee93fdce20940db5b12da9f5a97b2ab5ce747b37",
+    "gitBlob": "4f6feae04f1bc9fe1e6357876481fe14e7fb8cd3"
+  },
+  "fullRootReadback": true,
+  "fullIndependentReadback": true,
+  "independentFullSelfReadback": true,
+  "actualChecks": {
+    "root": 46,
+    "independent": 60,
+    "total": 106
+  },
+  "currentPointerClosure": {
+    "root": 140,
+    "independent": 140,
+    "uniqueBytes": 28302185,
+    "allIdentical": true
+  },
+  "actualBodyReadbacks": {
+    "currentBodies": 23,
+    "currentBytes": 5785988,
+    "parentBodies": 4,
+    "parentBytes": 3204436
+  },
+  "preservation": {
+    "all83CatalogValues": true,
+    "currentCatalogFields": 85,
+    "bundles": 27,
+    "fullPlanStatusPrefixes": true,
+    "leaves": 12033,
+    "docs": 3234,
+    "nonDocs": 8799,
+    "workflows": 42,
+    "production": 5020,
+    "sourceCap": 800,
+    "exceptions": 141
+  },
+  "originalCi": {
+    "pr": 1218,
+    "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "allSevenTerminal": true,
+    "furtherPolling": false,
+    "terminalPacket": {
+      "bytes": 1470199,
+      "sha256": "4f66346fff2f9f0869fdb5290781037a100c316400ac31d4fd232c350bda211c",
+      "gitBlob": "8d679dba4598084dd3a3ce5ebc84c0b0a78beed9"
+    }
+  },
+  "environment": {
+    "status": "rejected",
+    "reason": "No usable execution environment is available. Wait for an environment to become available before using this tool."
+  },
+  "physicalState": "Current scope/stage/Node state is unknown while the execution environment is unavailable. The new scope and stage have never been created or invoked by this continuation; prior absence reads are historical.",
+  "priorAttempt": "REFUSED_BEFORE_SCOPE_ADMISSION_SPENT",
+  "admissionAuthored": false,
+  "stageCreated": false,
+  "scopeCreated": false,
+  "runtimeExecuted": false,
+  "runtimeAuthorized": false,
+  "newCiEventSelected": false,
+  "qualification": "Static exact source/control publication only; no standalone10, whole149, catalog43, new-driverGUI, typecheck, packaged/native or fullE2E pass. Existing renderer85 and prior139 results retain their original frozen-source scope.",
+  "dataOnlySchemaCorrection": {
+    "kind": "REPORT_SCHEMA_ADAPTER_CORRECTION_BEFORE_GATE",
+    "reason": "Independent pointer rows wrap the identity; comparing an assumed flat row threw before retention. No gate was created or accepted and no source/control/runtime action occurred."
+  },
+  "next": "The selected original standalone may proceed only after an available exact matching physical venue and external immutable admission; none exists now. Any new CI event needs a separate concrete reviewed scope and inputs. No source/control postimage is changed by this gate."
+}
