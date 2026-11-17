@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
@@ -12,6 +12,7 @@ import { TeamHistoryModePicker } from './TeamHistoryModePicker';
 import { resolveTeamProjectSelection } from './teamProjectSelection';
 
 import type { TeamProjectContextView } from '@features/team-project-context/contracts';
+import type { TeamLaunchRequest } from '@shared/types';
 
 interface Props {
   teamName: string;
@@ -26,6 +27,9 @@ interface ViewResult {
 }
 
 const POLL_INTERVAL_MS = 2_500;
+const LaunchTeamDialog = lazy(() =>
+  import('./dialogs/LaunchTeamDialog').then((mod) => ({ default: mod.LaunchTeamDialog }))
+);
 
 /**
  * One visible logical-team tab. A ready, owner-verified native alias is passed
@@ -75,6 +79,7 @@ export function ProjectScopedTeamDetailView({
   );
   const key = `${teamName}\u0000${selectedProjectPath ?? ''}`;
   const [result, setResult] = useState<ViewResult | null>(null);
+  const [launchDialogOpen, setLaunchDialogOpen] = useState(false);
   const [launchingKey, setLaunchingKey] = useState<string | null>(null);
   const [awaitingReadyKey, setAwaitingReadyKey] = useState<string | null>(null);
   const activeKeyRef = useRef(key);
@@ -163,28 +168,33 @@ export function ProjectScopedTeamDetailView({
     );
   }, [isActive, redirectTeam, redirectProject, teamName]);
 
-  const start = useCallback(async (): Promise<void> => {
-    if (!selectedProjectPath || launchingKey !== null) return;
-    setLaunchingKey(key);
-    setAwaitingReadyKey(key);
-    launchRef.current = { key, runId: null };
+  const start = useCallback(async (request: TeamLaunchRequest): Promise<void> => {
+    const cwd = request.cwd.trim();
+    if (!cwd || launchingKey !== null) throw new Error('Choose a project before launch');
+    const targetKey = `${teamName}\u0000${cwd}`;
+    setLaunchingKey(targetKey);
+    setAwaitingReadyKey(targetKey);
+    launchRef.current = { key: targetKey, runId: null };
     try {
-      const outcome = await api.teams.launchTeam({ teamName, cwd: selectedProjectPath });
-      if (launchRef.current?.key === key) launchRef.current.runId = outcome.runId;
-      await refresh(() => activeKeyRef.current === key);
+      const outcome = await api.teams.launchTeam({ ...request, teamName, cwd });
+      if (launchRef.current?.key === targetKey) launchRef.current.runId = outcome.runId;
+      if (activeKeyRef.current === targetKey) {
+        await refresh(() => activeKeyRef.current === targetKey);
+      }
     } catch (reason) {
-      if (activeKeyRef.current === key) {
-        setAwaitingReadyKey((current) => current === key ? null : current);
+      if (activeKeyRef.current === targetKey) {
+        setAwaitingReadyKey((current) => current === targetKey ? null : current);
         setResult({
-          key,
+          key: targetKey,
           error: reason instanceof Error ? reason.message : String(reason),
         });
       }
-      if (launchRef.current?.key === key) launchRef.current = null;
+      if (launchRef.current?.key === targetKey) launchRef.current = null;
+      throw reason;
     } finally {
-      setLaunchingKey((current) => current === key ? null : current);
+      setLaunchingKey((current) => current === targetKey ? null : current);
     }
-  }, [key, launchingKey, refresh, selectedProjectPath, teamName]);
+  }, [launchingKey, refresh, teamName]);
 
   if (context?.state === 'ready') {
     if (context.mode === 'shared') {
@@ -256,7 +266,7 @@ export function ProjectScopedTeamDetailView({
         {message}
       </p>
       {canStart && (
-        <Button onClick={() => { void start(); }} disabled={launching}>
+        <Button onClick={() => setLaunchDialogOpen(true)} disabled={launching}>
           {t('projectContextView.start')}
         </Button>
       )}
@@ -266,6 +276,20 @@ export function ProjectScopedTeamDetailView({
         </Button>
       )}
       </div>
+      {launchDialogOpen && selectedProjectPath && (
+        <Suspense fallback={null}>
+          <LaunchTeamDialog
+            mode="launch"
+            open
+            teamName={teamName}
+            members={[]}
+            defaultProjectPath={selectedProjectPath}
+            provisioningError={error ?? null}
+            onClose={() => setLaunchDialogOpen(false)}
+            onLaunch={start}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
