@@ -1,0 +1,1590 @@
+{
+  "kind": "post-transport-recovery-combined-red-root-actual-review",
+  "at": "2026-11-17 01:14:28 UTC",
+  "packet": {
+    "bytes": 441196,
+    "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+    "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+  },
+  "outer": {
+    "bytes": 13970,
+    "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+    "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+  },
+  "phaseReceipt": {
+    "bytes": 139946,
+    "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+    "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32"
+  },
+  "largeBodyJoin": {
+    "bytes": 8914,
+    "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+    "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+  },
+  "staging": {
+    "receipt": {
+      "bytes": 11043,
+      "sha256": "c1756a537d22715d6fceb028766118431e23ed6b6a4d73eca26d7eb046dd5d9e",
+      "gitBlob": "5767257560e858647f6314d36b6d2d4b7109ffb3"
+    },
+    "outer": {
+      "bytes": 10974,
+      "sha256": "2818cefbe09ae13378d36d13b34ac8cf741ec4945bf02e1edbb1481785b5170e",
+      "gitBlob": "dda19a73d4c36027e70edd9a602ae4fbdee775cd"
+    },
+    "intent": {
+      "bytes": 11872,
+      "sha256": "b6e0901f227c8cb64f887d809224bfda88a37c48dd9c08a7959924381749c30b",
+      "gitBlob": "7e9bab21cb6580a324ee6f330f98a83d140ea5b2"
+    }
+  },
+  "subject": {
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "binding": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    "sourceVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "tests": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    }
+  },
+  "publicationGate": {
+    "kind": "post-transport-recovery-control-publication-staging-gate-closed",
+    "at": "2026-11-17 00:55:44 UTC",
+    "commit": "1eff2aef92a5952618cb600604160c3a3024b2dd",
+    "tree": "10345c00d2e260245594ed2b1cca4b0eefdde42f",
+    "docsTree": "256de64227a513df688d8af07bc089718f5f8e64",
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "binding": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    "rootActual": {
+      "bytes": 54354,
+      "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+      "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+    },
+    "independentActual": {
+      "bytes": 100624,
+      "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+      "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+    },
+    "rootFullReadIndependent": true,
+    "independentFullReadRoot": true,
+    "allowedNow": "Root may perform the one selected exclusive source-free staging of the exact active pair plus six immutable data replicas, then invoke the one complete newRED. Complete fresh physical before/after, unchanged clocks/capture/cleanup and separately observed outer remain mandatory. No test rematerialization, repair, replay, partial resume or producer postimages. Accepted newRED and publication/readbacks precede producer authorship.",
+    "selectedFilesStagedBeforeGate": false,
+    "newRuntimeExecutedBeforeGate": false,
+    "newSourcePostimagesAuthored": false,
+    "old54393": "UNKNOWN/INCOMPLETE/SPENT; outer/termination/custody/cleanup remain unknown",
+    "old64038": "REFUSED/SPENT; observedouter2"
+  },
+  "acceptedCombinedRed": true,
+  "observedOuterExit": 0,
+  "primaryChildExits": {
+    "node": 1,
+    "renderer": 1
+  },
+  "nodeSummary": {
+    "tests": 139,
+    "suites": 0,
+    "pass": 134,
+    "fail": 5,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "durationMs": 11855.818035
+  },
+  "rendererSummary": {
+    "numTotalTests": 85,
+    "numPassedTests": 82,
+    "numFailedTests": 3,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "numTotalTestSuites": 2,
+    "numPassedTestSuites": 0,
+    "numFailedTestSuites": 2,
+    "numPendingTestSuites": 0
+  },
+  "timing": {
+    "preflight": 54.09297038999648,
+    "primaryPackage": 20.89086687099916,
+    "postflight": 55.21619509100128,
+    "total": 130.2032738830021
+  },
+  "sourceCensus": {
+    "trackedTreeAndIndex": 11567,
+    "nonDocs": 8798,
+    "workflows": 42,
+    "selectedBindingRecords": 9,
+    "physicalChangesFromC5": 6,
+    "clarification": "aad388d4 sourceCensus.overlays=9 counts binding sourceOverlay records, including3unchanged producer preimages; actual physical changedTrackedPaths=6."
+  },
+  "checks": [
+    {
+      "name": "exact once-only separate outer zero",
+      "passed": true
+    },
+    {
+      "name": "actual complete capture census",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes phase-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-10-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-10-start.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-10.log",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-10.stderr",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-11-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-11-start.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-11.stderr",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-12-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-12-start.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-12.log",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-12.stderr",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-13-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-13-start.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-13.log",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-13.stderr",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-14-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-14-start.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-14.stderr",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-15-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-15-start.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-15.log",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-15.stderr",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-9-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-9-start.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-9.log",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-after-metadata-9.stderr",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-1-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-1-start.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-1.log",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-1.stderr",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-2-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-2-start.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-2.log",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-2.stderr",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-3-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-3-start.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-3.stderr",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-4-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-4-start.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-4.log",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-4.stderr",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-5-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-5-start.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-5.log",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-5.stderr",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-6-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-6-start.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-6.stderr",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-7-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-7-start.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-7.log",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-before-metadata-7.stderr",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-native-metadata-8-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-native-metadata-8-start.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-native-metadata-8.log",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-native-metadata-8.stderr",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-native-route-admission.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-node-1-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-node-1-start.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-node-1.log",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-node-semantics.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-node-tmp-gate.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-renderer-1-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-renderer-1-start.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-renderer-1.log",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-renderer-output-ownership.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-renderer-semantics.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-renderer-tmp-surviving-transients.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red-vite-config-surviving-transients.json",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes red.attempt",
+      "passed": true
+    },
+    {
+      "name": "full literal bytes renderer-results.json",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.suiteCommands[0].primaryReceipt",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.suiteCommands[0].record.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.suiteCommands[0].invocationRecords[0].record.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.suiteCommands[0].invocationRecords[0].finalReceipt",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.suiteCommands[0].semanticReceipt",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.suiteCommands[1].primaryReceipt",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.suiteCommands[1].record.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.suiteCommands[1].invocationRecords[0].record.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.suiteCommands[1].invocationRecords[0].finalReceipt",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.suiteCommands[1].semanticReceipt",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.primaryInvocations[0].record.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.primaryInvocations[0].finalReceipt",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.primaryInvocations[1].record.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.primaryInvocations[1].finalReceipt",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.before.source",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.before.dependencies",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.before.compiled",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.nodeTmpGate",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.nativeRouteAdmission",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.rendererTransientCleanup.vite.survivingCapture",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.rendererTransientCleanup.tmp.survivingCapture",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.after.source",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.after.dependencies",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer phase.after.compiled",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer nodeSemantic.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer rendererSemantic.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer rendererSemantic.result",
+      "passed": true
+    },
+    {
+      "name": "phase belongs to exact active pair",
+      "passed": true
+    },
+    {
+      "name": "frozen source vector and tests",
+      "passed": true
+    },
+    {
+      "name": "actual C5 source and selected9 records",
+      "passed": true
+    },
+    {
+      "name": "phase truth scopeCompleted",
+      "passed": true
+    },
+    {
+      "name": "phase truth fullRuntimeInputsRequested",
+      "passed": true
+    },
+    {
+      "name": "phase truth fullRuntimeInputsInspected",
+      "passed": true
+    },
+    {
+      "name": "phase truth fullRuntimeInputsPreserved",
+      "passed": true
+    },
+    {
+      "name": "phase truth inputsPreserved",
+      "passed": true
+    },
+    {
+      "name": "phase truth sourceAndSupervisorMetadataPreserved",
+      "passed": true
+    },
+    {
+      "name": "phase truth commandCompletedNormally",
+      "passed": true
+    },
+    {
+      "name": "phase truth semanticAdmissionComplete",
+      "passed": true
+    },
+    {
+      "name": "phase truth primaryFinalizationComplete",
+      "passed": true
+    },
+    {
+      "name": "both complete whole runtime boundaries",
+      "passed": true
+    },
+    {
+      "name": "empty interruptions",
+      "passed": true
+    },
+    {
+      "name": "empty primaryInvocationsWithoutFinalReceipt",
+      "passed": true
+    },
+    {
+      "name": "empty unreachedCommands",
+      "passed": true
+    },
+    {
+      "name": "empty unacceptedCommands",
+      "passed": true
+    },
+    {
+      "name": "no execution/postflight/transient error",
+      "passed": true
+    },
+    {
+      "name": "original command and metadata limits",
+      "passed": true
+    },
+    {
+      "name": "full identical before/after tools",
+      "passed": true
+    },
+    {
+      "name": "full identical before/after pnpm",
+      "passed": true
+    },
+    {
+      "name": "full identical before/after environment",
+      "passed": true
+    },
+    {
+      "name": "full identical before/after controls",
+      "passed": true
+    },
+    {
+      "name": "full identical before/after providers",
+      "passed": true
+    },
+    {
+      "name": "full identical before/after rendererRuntime",
+      "passed": true
+    },
+    {
+      "name": "full identical before/after bootstrapCache",
+      "passed": true
+    },
+    {
+      "name": "full current manifests retained unchanged source",
+      "passed": true
+    },
+    {
+      "name": "full current manifests retained unchanged dependencies",
+      "passed": true
+    },
+    {
+      "name": "full current manifests retained unchanged compiled",
+      "passed": true
+    },
+    {
+      "name": "exact13 distinct control paths",
+      "passed": true
+    },
+    {
+      "name": "staged data remains exact /workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py",
+      "passed": true
+    },
+    {
+      "name": "staged data remains exact /workspace/scratch/c714-post-transport-20261117/controls/red-binding.json",
+      "passed": true
+    },
+    {
+      "name": "staged data remains exact /workspace/scratch/c714-post-transport-20261117/replicas/bootstrap-binding.json",
+      "passed": true
+    },
+    {
+      "name": "staged data remains exact /workspace/scratch/c714-post-transport-20261117/replicas/fresh-current-input-boundary.json",
+      "passed": true
+    },
+    {
+      "name": "staged data remains exact /workspace/scratch/c714-post-transport-20261117/replicas/historical-original-binding.json",
+      "passed": true
+    },
+    {
+      "name": "staged data remains exact /workspace/scratch/c714-post-transport-20261117/replicas/historical-original-runner.py",
+      "passed": true
+    },
+    {
+      "name": "staged data remains exact /workspace/scratch/c714-post-transport-20261117/replicas/historical-test-materialization-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "staged data remains exact /workspace/scratch/c714-post-transport-20261117/replicas/provider-archives-fresh-review.json",
+      "passed": true
+    },
+    {
+      "name": "original7cachefiles preserved",
+      "passed": true
+    },
+    {
+      "name": "D253 and SPI12 exact archive member admission",
+      "passed": true
+    },
+    {
+      "name": "renderer13staticpins2links12absence paths",
+      "passed": true
+    },
+    {
+      "name": "HOME and CODEX_HOME retained",
+      "passed": true
+    },
+    {
+      "name": "15 complete metadata receipts",
+      "passed": true
+    },
+    {
+      "name": "metadata ordinary zero red-after-metadata-10-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-after-metadata-10-receipt.json.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-after-metadata-10-receipt.json.rawStderr",
+      "passed": true
+    },
+    {
+      "name": "metadata ordinary zero red-after-metadata-11-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-after-metadata-11-receipt.json.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-after-metadata-11-receipt.json.rawStderr",
+      "passed": true
+    },
+    {
+      "name": "metadata ordinary zero red-after-metadata-12-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-after-metadata-12-receipt.json.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-after-metadata-12-receipt.json.rawStderr",
+      "passed": true
+    },
+    {
+      "name": "metadata ordinary zero red-after-metadata-13-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-after-metadata-13-receipt.json.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-after-metadata-13-receipt.json.rawStderr",
+      "passed": true
+    },
+    {
+      "name": "metadata ordinary zero red-after-metadata-14-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-after-metadata-14-receipt.json.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-after-metadata-14-receipt.json.rawStderr",
+      "passed": true
+    },
+    {
+      "name": "metadata ordinary zero red-after-metadata-15-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-after-metadata-15-receipt.json.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-after-metadata-15-receipt.json.rawStderr",
+      "passed": true
+    },
+    {
+      "name": "metadata ordinary zero red-after-metadata-9-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-after-metadata-9-receipt.json.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-after-metadata-9-receipt.json.rawStderr",
+      "passed": true
+    },
+    {
+      "name": "metadata ordinary zero red-before-metadata-1-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-before-metadata-1-receipt.json.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-before-metadata-1-receipt.json.rawStderr",
+      "passed": true
+    },
+    {
+      "name": "metadata ordinary zero red-before-metadata-2-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-before-metadata-2-receipt.json.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-before-metadata-2-receipt.json.rawStderr",
+      "passed": true
+    },
+    {
+      "name": "metadata ordinary zero red-before-metadata-3-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-before-metadata-3-receipt.json.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-before-metadata-3-receipt.json.rawStderr",
+      "passed": true
+    },
+    {
+      "name": "metadata ordinary zero red-before-metadata-4-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-before-metadata-4-receipt.json.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-before-metadata-4-receipt.json.rawStderr",
+      "passed": true
+    },
+    {
+      "name": "metadata ordinary zero red-before-metadata-5-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-before-metadata-5-receipt.json.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-before-metadata-5-receipt.json.rawStderr",
+      "passed": true
+    },
+    {
+      "name": "metadata ordinary zero red-before-metadata-6-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-before-metadata-6-receipt.json.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-before-metadata-6-receipt.json.rawStderr",
+      "passed": true
+    },
+    {
+      "name": "metadata ordinary zero red-before-metadata-7-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-before-metadata-7-receipt.json.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-before-metadata-7-receipt.json.rawStderr",
+      "passed": true
+    },
+    {
+      "name": "metadata ordinary zero red-native-metadata-8-receipt.json",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-native-metadata-8-receipt.json.raw",
+      "passed": true
+    },
+    {
+      "name": "current evidence pointer red-native-metadata-8-receipt.json.rawStderr",
+      "passed": true
+    },
+    {
+      "name": "exact2 captured primary invocations",
+      "passed": true
+    },
+    {
+      "name": "primary ordinary selected RED node",
+      "passed": true
+    },
+    {
+      "name": "exact frozen argv node",
+      "passed": true
+    },
+    {
+      "name": "final primary fullbody receipt node",
+      "passed": true
+    },
+    {
+      "name": "primary ordinary selected RED renderer",
+      "passed": true
+    },
+    {
+      "name": "exact frozen argv renderer",
+      "passed": true
+    },
+    {
+      "name": "final primary fullbody receipt renderer",
+      "passed": true
+    },
+    {
+      "name": "independent parse all139 raw ordered cases",
+      "passed": true
+    },
+    {
+      "name": "node exact134pass5fail",
+      "passed": true
+    },
+    {
+      "name": "all original133 node cases pass",
+      "passed": true
+    },
+    {
+      "name": "node positive control137 passes",
+      "passed": true
+    },
+    {
+      "name": "node no cancelled",
+      "passed": true
+    },
+    {
+      "name": "node no skipped",
+      "passed": true
+    },
+    {
+      "name": "node no todo",
+      "passed": true
+    },
+    {
+      "name": "node exact 5 failure records",
+      "passed": true
+    },
+    {
+      "name": "node exact failure contract 134",
+      "passed": true
+    },
+    {
+      "name": "node exact failure contract 135",
+      "passed": true
+    },
+    {
+      "name": "node exact failure contract 136",
+      "passed": true
+    },
+    {
+      "name": "node exact failure contract 138",
+      "passed": true
+    },
+    {
+      "name": "node exact failure contract 139",
+      "passed": true
+    },
+    {
+      "name": "node139 exact input action sequence failure",
+      "passed": true
+    },
+    {
+      "name": "renderer one actual selected test file",
+      "passed": true
+    },
+    {
+      "name": "all85 JSON equals full semantic assertions",
+      "passed": true
+    },
+    {
+      "name": "renderer exact82pass3selectedfail",
+      "passed": true
+    },
+    {
+      "name": "renderer original80 and controls84/85 pass",
+      "passed": true
+    },
+    {
+      "name": "renderer no numPendingTests",
+      "passed": true
+    },
+    {
+      "name": "renderer no numTodoTests",
+      "passed": true
+    },
+    {
+      "name": "renderer no numPendingTestSuites",
+      "passed": true
+    },
+    {
+      "name": "renderer exact failure site 81",
+      "passed": true
+    },
+    {
+      "name": "renderer exact failure site 82",
+      "passed": true
+    },
+    {
+      "name": "renderer exact failure site 83",
+      "passed": true
+    },
+    {
+      "name": "no snapshot updates/debt",
+      "passed": true
+    },
+    {
+      "name": "captured-session and owned-output cleanup empty",
+      "passed": true
+    },
+    {
+      "name": "transients captured before selected removal",
+      "passed": true
+    },
+    {
+      "name": "separate post-completion output observation",
+      "passed": true
+    },
+    {
+      "name": "exact6 physical source overlays not9record claim",
+      "passed": true
+    },
+    {
+      "name": "current full lossless reconstruction joined",
+      "passed": true
+    },
+    {
+      "name": "chronology gate stage launch",
+      "passed": true
+    }
+  ],
+  "checkedCurrentEvidencePointers": [
+    {
+      "where": "phase.suiteCommands[0].primaryReceipt",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1-receipt.json",
+        "bytes": 1493,
+        "sha256": "1aa1484785db24981be9f0f764d9cd8c560801cac730aa556332b0641e7585be",
+        "gitBlob": "bf39ac175f5268cdef3e81764f639b0ea533ce76"
+      }
+    },
+    {
+      "where": "phase.suiteCommands[0].record.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1.log",
+        "bytes": 17331,
+        "sha256": "6b51be634a1c4486ad7e487529943747c5a79faf32e02ffbe70cec56bb7026f4",
+        "gitBlob": "c6cf3d83a698a4a63e85e8f8ff33471a30916ffe"
+      }
+    },
+    {
+      "where": "phase.suiteCommands[0].invocationRecords[0].record.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1.log",
+        "bytes": 17331,
+        "sha256": "6b51be634a1c4486ad7e487529943747c5a79faf32e02ffbe70cec56bb7026f4",
+        "gitBlob": "c6cf3d83a698a4a63e85e8f8ff33471a30916ffe"
+      }
+    },
+    {
+      "where": "phase.suiteCommands[0].invocationRecords[0].finalReceipt",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1-receipt.json",
+        "bytes": 1493,
+        "sha256": "1aa1484785db24981be9f0f764d9cd8c560801cac730aa556332b0641e7585be",
+        "gitBlob": "bf39ac175f5268cdef3e81764f639b0ea533ce76"
+      }
+    },
+    {
+      "where": "phase.suiteCommands[0].semanticReceipt",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-semantics.json",
+        "bytes": 32721,
+        "sha256": "d0fc5d22dfb5223f60dbef480b7f896e8d1e55fa4d722760d1f905cf5e1a6e2e",
+        "gitBlob": "5f74a06ff1aa1329621f90f9a0bce0b93caa71f6"
+      }
+    },
+    {
+      "where": "phase.suiteCommands[1].primaryReceipt",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1-receipt.json",
+        "bytes": 2655,
+        "sha256": "8deb3e3760e9b1b83c01e0d9264ff91c48219a0756c0c4765c230077f78d3dbf",
+        "gitBlob": "fc0f6a243bbca33429d0679b3441a6c329452919"
+      }
+    },
+    {
+      "where": "phase.suiteCommands[1].record.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1.log",
+        "bytes": 12192,
+        "sha256": "26ff4a883cebd3a6eeaee658b850b290a5942a45db14357df5387d69b6554de4",
+        "gitBlob": "bc4499f3ed88260418bf227fab9f5c327eaf5d46"
+      }
+    },
+    {
+      "where": "phase.suiteCommands[1].invocationRecords[0].record.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1.log",
+        "bytes": 12192,
+        "sha256": "26ff4a883cebd3a6eeaee658b850b290a5942a45db14357df5387d69b6554de4",
+        "gitBlob": "bc4499f3ed88260418bf227fab9f5c327eaf5d46"
+      }
+    },
+    {
+      "where": "phase.suiteCommands[1].invocationRecords[0].finalReceipt",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1-receipt.json",
+        "bytes": 2655,
+        "sha256": "8deb3e3760e9b1b83c01e0d9264ff91c48219a0756c0c4765c230077f78d3dbf",
+        "gitBlob": "fc0f6a243bbca33429d0679b3441a6c329452919"
+      }
+    },
+    {
+      "where": "phase.suiteCommands[1].semanticReceipt",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-semantics.json",
+        "bytes": 37405,
+        "sha256": "bc6b4bb7e51e11556dfd4f65ca2ce07f84909cb8b04d94b1b9f63b7448306ae1",
+        "gitBlob": "2b15bbf586cdb07929b363b4064f874f3115436a"
+      }
+    },
+    {
+      "where": "phase.primaryInvocations[0].record.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1.log",
+        "bytes": 17331,
+        "sha256": "6b51be634a1c4486ad7e487529943747c5a79faf32e02ffbe70cec56bb7026f4",
+        "gitBlob": "c6cf3d83a698a4a63e85e8f8ff33471a30916ffe"
+      }
+    },
+    {
+      "where": "phase.primaryInvocations[0].finalReceipt",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1-receipt.json",
+        "bytes": 1493,
+        "sha256": "1aa1484785db24981be9f0f764d9cd8c560801cac730aa556332b0641e7585be",
+        "gitBlob": "bf39ac175f5268cdef3e81764f639b0ea533ce76"
+      }
+    },
+    {
+      "where": "phase.primaryInvocations[1].record.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1.log",
+        "bytes": 12192,
+        "sha256": "26ff4a883cebd3a6eeaee658b850b290a5942a45db14357df5387d69b6554de4",
+        "gitBlob": "bc4499f3ed88260418bf227fab9f5c327eaf5d46"
+      }
+    },
+    {
+      "where": "phase.primaryInvocations[1].finalReceipt",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1-receipt.json",
+        "bytes": 2655,
+        "sha256": "8deb3e3760e9b1b83c01e0d9264ff91c48219a0756c0c4765c230077f78d3dbf",
+        "gitBlob": "fc0f6a243bbca33429d0679b3441a6c329452919"
+      }
+    },
+    {
+      "where": "phase.before.source",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-source.json",
+        "bytes": 2478745,
+        "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+        "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+      }
+    },
+    {
+      "where": "phase.before.dependencies",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-dependencies.json",
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      }
+    },
+    {
+      "where": "phase.before.compiled",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-compiled.json",
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      }
+    },
+    {
+      "where": "phase.nodeTmpGate",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-tmp-gate.json",
+        "bytes": 349,
+        "sha256": "e7ab4e295e2a885af926247f0dcd67ea03bcffd483d899d4e0c16a3a198e05b7",
+        "gitBlob": "c526ecce61873ead31fbc5c8a17c2855463fe48a"
+      }
+    },
+    {
+      "where": "phase.nativeRouteAdmission",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-native-route-admission.json",
+        "bytes": 4350,
+        "sha256": "808ef902859e6c34fdc8bedbba0d0b13c5667ce4a9b28f14393a6533707d5a95",
+        "gitBlob": "5ee71ac876a45056b63a8788143af578e8da025e"
+      }
+    },
+    {
+      "where": "phase.rendererTransientCleanup.vite.survivingCapture",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-vite-config-surviving-transients.json",
+        "bytes": 345,
+        "sha256": "965c3b3d21ad75060b50fc8b5e046b339e42eb32ea9bacecbbc18895ff327c72",
+        "gitBlob": "9450900afcff0d08478fbed2ebda16560f347074"
+      }
+    },
+    {
+      "where": "phase.rendererTransientCleanup.tmp.survivingCapture",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-tmp-surviving-transients.json",
+        "bytes": 341,
+        "sha256": "170285b8c01b6bddbcf866c658af989a5b1a5e6405ea718c47dcaa2d9bbe08a1",
+        "gitBlob": "da01f0203f23ba3db3d220ad1d74579e30061955"
+      }
+    },
+    {
+      "where": "phase.after.source",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-source.json",
+        "bytes": 2478745,
+        "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+        "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+      }
+    },
+    {
+      "where": "phase.after.dependencies",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-dependencies.json",
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      }
+    },
+    {
+      "where": "phase.after.compiled",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-compiled.json",
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      }
+    },
+    {
+      "where": "nodeSemantic.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1.log",
+        "bytes": 17331,
+        "sha256": "6b51be634a1c4486ad7e487529943747c5a79faf32e02ffbe70cec56bb7026f4",
+        "gitBlob": "c6cf3d83a698a4a63e85e8f8ff33471a30916ffe"
+      }
+    },
+    {
+      "where": "rendererSemantic.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1.log",
+        "bytes": 12192,
+        "sha256": "26ff4a883cebd3a6eeaee658b850b290a5942a45db14357df5387d69b6554de4",
+        "gitBlob": "bc4499f3ed88260418bf227fab9f5c327eaf5d46"
+      }
+    },
+    {
+      "where": "rendererSemantic.result",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/renderer-results.json",
+        "bytes": 29580,
+        "sha256": "29625263630c0baa70b120a8bc38bee28e21830107ba2fd79f9e545eeab0b05d",
+        "gitBlob": "3b6051dfcf671de4ccd687b4ea49765ddaac44b3"
+      }
+    },
+    {
+      "where": "red-after-metadata-10-receipt.json.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-10.log",
+        "bytes": 41,
+        "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+        "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+      }
+    },
+    {
+      "where": "red-after-metadata-10-receipt.json.rawStderr",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-10.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    },
+    {
+      "where": "red-after-metadata-11-receipt.json.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-11.log",
+        "bytes": 1527575,
+        "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+        "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+      }
+    },
+    {
+      "where": "red-after-metadata-11-receipt.json.rawStderr",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-11.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    },
+    {
+      "where": "red-after-metadata-12-receipt.json.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-12.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    },
+    {
+      "where": "red-after-metadata-12-receipt.json.rawStderr",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-12.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    },
+    {
+      "where": "red-after-metadata-13-receipt.json.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-13.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    },
+    {
+      "where": "red-after-metadata-13-receipt.json.rawStderr",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-13.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    },
+    {
+      "where": "red-after-metadata-14-receipt.json.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-14.log",
+        "bytes": 1492874,
+        "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+        "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+      }
+    },
+    {
+      "where": "red-after-metadata-14-receipt.json.rawStderr",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-14.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    },
+    {
+      "where": "red-after-metadata-15-receipt.json.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-15.log",
+        "bytes": 372,
+        "sha256": "1c7f849fbf69eeafbc32b149725885f28946c2728c9eb88718a2edcf314e1b88",
+        "gitBlob": "4fae9729a55e3202b79d0658abaf25745f9d8cf8"
+      }
+    },
+    {
+      "where": "red-after-metadata-15-receipt.json.rawStderr",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-15.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    },
+    {
+      "where": "red-after-metadata-9-receipt.json.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-9.log",
+        "bytes": 41,
+        "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+        "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+      }
+    },
+    {
+      "where": "red-after-metadata-9-receipt.json.rawStderr",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-9.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    },
+    {
+      "where": "red-before-metadata-1-receipt.json.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-1.log",
+        "bytes": 41,
+        "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+        "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+      }
+    },
+    {
+      "where": "red-before-metadata-1-receipt.json.rawStderr",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-1.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    },
+    {
+      "where": "red-before-metadata-2-receipt.json.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-2.log",
+        "bytes": 41,
+        "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+        "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+      }
+    },
+    {
+      "where": "red-before-metadata-2-receipt.json.rawStderr",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-2.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    },
+    {
+      "where": "red-before-metadata-3-receipt.json.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-3.log",
+        "bytes": 1527575,
+        "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+        "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+      }
+    },
+    {
+      "where": "red-before-metadata-3-receipt.json.rawStderr",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-3.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    },
+    {
+      "where": "red-before-metadata-4-receipt.json.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-4.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    },
+    {
+      "where": "red-before-metadata-4-receipt.json.rawStderr",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-4.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    },
+    {
+      "where": "red-before-metadata-5-receipt.json.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-5.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    },
+    {
+      "where": "red-before-metadata-5-receipt.json.rawStderr",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-5.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    },
+    {
+      "where": "red-before-metadata-6-receipt.json.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-6.log",
+        "bytes": 1492874,
+        "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+        "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+      }
+    },
+    {
+      "where": "red-before-metadata-6-receipt.json.rawStderr",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-6.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    },
+    {
+      "where": "red-before-metadata-7-receipt.json.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-7.log",
+        "bytes": 372,
+        "sha256": "1c7f849fbf69eeafbc32b149725885f28946c2728c9eb88718a2edcf314e1b88",
+        "gitBlob": "4fae9729a55e3202b79d0658abaf25745f9d8cf8"
+      }
+    },
+    {
+      "where": "red-before-metadata-7-receipt.json.rawStderr",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-7.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    },
+    {
+      "where": "red-native-metadata-8-receipt.json.raw",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-native-metadata-8.log",
+        "bytes": 391,
+        "sha256": "5feb3118fc317ab05ced98da5dc9ec1666e4b9fc4bb729c04a752b7910fea838",
+        "gitBlob": "eb64ef76ecd02a50b3e389cc385eea743fe13cb4"
+      }
+    },
+    {
+      "where": "red-native-metadata-8-receipt.json.rawStderr",
+      "pointer": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-native-metadata-8.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      }
+    }
+  ],
+  "failedChecks": [],
+  "unresolvedBlockers": [],
+  "publicationRequiredBeforeProducerAuthorship": true,
+  "producerPostimagesAuthored": false,
+  "oldAttempts": {
+    "54393": "UNKNOWN/INCOMPLETE/SPENT; outer/termination/custody/cleanup unknown",
+    "64038": "REFUSED/SPENT observedouter2"
+  },
+  "limits": [
+    "RED failed cases qualify only reached first failure; laterbranches require GREEN.",
+    "Point-in-time ownership and captured groups only; no continuous inode/mode/native custody claim.",
+    "No real Claude/Codex execution, GUI/native/vendor/fullE2E, new CI, main/default/Stage2 activation."
+  ],
+  "verdict": "ACCEPTED_EXACT_NEW_COMBINED_RED_FOR_OUTCOME_PUBLICATION; independent fullreviews pending"
+}

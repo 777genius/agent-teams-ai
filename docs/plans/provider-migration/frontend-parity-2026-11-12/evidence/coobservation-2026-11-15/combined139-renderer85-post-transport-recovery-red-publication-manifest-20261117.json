@@ -1,0 +1,256 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-17 01:24:03 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "parent": "1eff2aef92a5952618cb600604160c3a3024b2dd",
+  "parentTree": "10345c00d2e260245594ed2b1cca4b0eefdde42f",
+  "purpose": "Publish the independently accepted exact separate combined RED outcome and all current staging/control-publication evidence. Complete actual outcome readbacks still precede producer authorship.",
+  "subject": {
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "binding": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    "packet": {
+      "bytes": 441196,
+      "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+      "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+    },
+    "outer": {
+      "bytes": 13970,
+      "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+      "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+    },
+    "phaseReceipt": {
+      "bytes": 139946,
+      "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+      "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32"
+    }
+  },
+  "r1": {
+    "bytes": 139634,
+    "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+    "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+  },
+  "controlActualGate": {
+    "kind": "post-transport-recovery-control-publication-staging-gate-closed",
+    "at": "2026-11-17 00:55:44 UTC",
+    "commit": "1eff2aef92a5952618cb600604160c3a3024b2dd",
+    "tree": "10345c00d2e260245594ed2b1cca4b0eefdde42f",
+    "docsTree": "256de64227a513df688d8af07bc089718f5f8e64",
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "binding": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    "rootActual": {
+      "bytes": 54354,
+      "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+      "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+    },
+    "independentActual": {
+      "bytes": 100624,
+      "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+      "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+    },
+    "rootFullReadIndependent": true,
+    "independentFullReadRoot": true,
+    "allowedNow": "Root may perform the one selected exclusive source-free staging of the exact active pair plus six immutable data replicas, then invoke the one complete newRED. Complete fresh physical before/after, unchanged clocks/capture/cleanup and separately observed outer remain mandatory. No test rematerialization, repair, replay, partial resume or producer postimages. Accepted newRED and publication/readbacks precede producer authorship.",
+    "selectedFilesStagedBeforeGate": false,
+    "newRuntimeExecutedBeforeGate": false,
+    "newSourcePostimagesAuthored": false,
+    "old54393": "UNKNOWN/INCOMPLETE/SPENT; outer/termination/custody/cleanup remain unknown",
+    "old64038": "REFUSED/SPENT; observedouter2"
+  },
+  "rootReview": {
+    "bytes": 50772,
+    "sha256": "b708a3eb026e85f1a733cbb1e4836c7e5cabf571bb3c68fbc74c9ac2a719c882",
+    "gitBlob": "19fcd35a9e8783dfa28c824d23a8df510209ca80"
+  },
+  "independentReviews": {
+    "guard": {
+      "bytes": 261789,
+      "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+      "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+    },
+    "semantic": {
+      "bytes": 229314,
+      "sha256": "2e05bcc76671b35883fc04e072d46e0961c86c2d293de2582e0e0fe0196692da",
+      "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55"
+    }
+  },
+  "reviewsClosedAt": "2026-11-17 01:24:03 UTC",
+  "evidenceFiles": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-actual-root-publication-20261117.json",
+      "bytes": 54354,
+      "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+      "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-actual-independent-publication-20261117.json",
+      "bytes": 100624,
+      "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+      "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-staging-intent-20261117.json",
+      "bytes": 11872,
+      "sha256": "b6e0901f227c8cb64f887d809224bfda88a37c48dd9c08a7959924381749c30b",
+      "gitBlob": "7e9bab21cb6580a324ee6f330f98a83d140ea5b2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-staging-receipt-20261117.json",
+      "bytes": 11043,
+      "sha256": "c1756a537d22715d6fceb028766118431e23ed6b6a4d73eca26d7eb046dd5d9e",
+      "gitBlob": "5767257560e858647f6314d36b6d2d4b7109ffb3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-staging-outer-20261117.json",
+      "bytes": 10974,
+      "sha256": "2818cefbe09ae13378d36d13b34ac8cf741ec4945bf02e1edbb1481785b5170e",
+      "gitBlob": "dda19a73d4c36027e70edd9a602ae4fbdee775cd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-outer-20261117.json",
+      "bytes": 13970,
+      "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+      "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-evidence-packet-20261117.json",
+      "bytes": 441196,
+      "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+      "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-full-input-reconstruction-join-20261117.json",
+      "bytes": 8914,
+      "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+      "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-root-review-20261117.json",
+      "bytes": 50772,
+      "sha256": "b708a3eb026e85f1a733cbb1e4836c7e5cabf571bb3c68fbc74c9ac2a719c882",
+      "gitBlob": "19fcd35a9e8783dfa28c824d23a8df510209ca80"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-guard-review-20261117.json",
+      "bytes": 261789,
+      "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+      "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-semantic-review-20261117.json",
+      "bytes": 229314,
+      "sha256": "2e05bcc76671b35883fc04e072d46e0961c86c2d293de2582e0e0fe0196692da",
+      "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55"
+    }
+  ],
+  "modifiedFiles": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2560337,
+      "sha256": "1ea54bc9f596e274c1bd2e0207742b8c453efcfda7b57f345bf7395df2dbda83",
+      "gitBlob": "b4c035726a57b68ddfdf7e0fe8eebcbf5d84b10d",
+      "prior": {
+        "bytes": 2556771,
+        "sha256": "2a782d7db69ed274360c7191611be83b24998248117d42220774d8080ba185ff",
+        "gitBlob": "c419ee4d2121e28b525b5e52ae28a3646fb7f8df"
+      },
+      "exactPrefixPreserved": true,
+      "appendIdentity": {
+        "bytes": 3566,
+        "sha256": "230344d52fc81d3d0a561ee22fe2e95d890031674356bfc3c8515c694697fc6c",
+        "gitBlob": "fdaf58ef4967193a545980a68da0b36e9e744a1f"
+      },
+      "appendIdentityIsDerivedNotStandalone": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 46758,
+      "sha256": "e50f8e11d74d42feb4897f00050ef6f60b71e66ccbdecf8fef1698a48074844d",
+      "gitBlob": "6eccc39aa5580df54dc86f2917e67f980d5574de",
+      "prior": {
+        "bytes": 45761,
+        "sha256": "ed5db2c90431dbbdb3db3efb9bcb25ce21b1e20d86a4354f846d92d7675a2309",
+        "gitBlob": "b32c162be541825a56bd0225614d1c2599ab44b1"
+      },
+      "exactPrefixPreserved": true,
+      "appendIdentity": {
+        "bytes": 997,
+        "sha256": "f7ce0a75efb2c5d47bb37919661e040766d8b93890e0c3df8acbab20c3d5e7ca",
+        "gitBlob": "b06fe1f80a7267221a1074c91c36230edbffc024"
+      },
+      "appendIdentityIsDerivedNotStandalone": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 197602,
+      "sha256": "3c8ec7dd7b8257e0df08e77a0c7cd43226a5d69f449614e8dc9baab03fbfc310",
+      "gitBlob": "dc80f5b02f336f0aac80058a69d08a79b48314fb",
+      "prior": {
+        "bytes": 179642,
+        "sha256": "ce0a8f0bad1e0b48e620912b1424b8dd90c7492c145d654dfc1901b285164017",
+        "gitBlob": "40456ae51fdcf653749601bf3c840c8538d21539"
+      },
+      "preservedOriginalBundles": 27,
+      "preservedOriginalTotals": {
+        "bundles": 27,
+        "outerBytes": 17894693,
+        "payloadInstances": 219,
+        "payloadBytes": 15911913
+      },
+      "preservedOtherParentFields": 62,
+      "archiveKey": "priorCombinedNodeRendererStageAtPostTransportRecoveryRed",
+      "evidenceKey": "combined139Renderer85PostTransportRecoveryRedEvidenceFiles"
+    }
+  ],
+  "manifestPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-publication-manifest-20261117.json",
+  "expectedDelta": {
+    "changed": 15,
+    "added": 12,
+    "modified": 3,
+    "deleted": 0,
+    "modesChanged": 0,
+    "docsOnly": true
+  },
+  "expectedCensus": {
+    "parentLeaves": 11876,
+    "parentDocs": 3078,
+    "leaves": 11888,
+    "docs": 3090,
+    "nonDocs": 8798,
+    "workflows": 42
+  },
+  "catalogPreservation": {
+    "archiveKey": "priorCombinedNodeRendererStageAtPostTransportRecoveryRed",
+    "evidenceKey": "combined139Renderer85PostTransportRecoveryRedEvidenceFiles",
+    "originalBundles": 27,
+    "totals": {
+      "bundles": 27,
+      "outerBytes": 17894693,
+      "payloadInstances": 219,
+      "payloadBytes": 15911913
+    },
+    "allOtherParentFieldsPreserved": true
+  },
+  "qualification": "Exact new finite TEST RED accepted; no GREEN or producer change yet. Old refused and unknown attempts remain spent. No broader GUI/native/vendor/E2E qualification."
+}

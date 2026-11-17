@@ -1,0 +1,305 @@
+{
+  "kind": "post-transport-recovery-exclusive-source-free-staging",
+  "startedAt": "2026-11-17T00:59:17.846988+00:00",
+  "attempt": 1,
+  "completed": true,
+  "sourceWrites": 0,
+  "testRematerialization": false,
+  "targetRuntimeEvaluated": false,
+  "oldPhysicalContinuityRecovered": false,
+  "oldCleanupQualified": false,
+  "directoriesCreated": [
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117",
+      "device": 27,
+      "inode": 3961079,
+      "mode": 448,
+      "uid": 1000,
+      "gid": 1000
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/controls",
+      "device": 27,
+      "inode": 3961080,
+      "mode": 448,
+      "uid": 1000,
+      "gid": 1000
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas",
+      "device": 27,
+      "inode": 3961081,
+      "mode": 448,
+      "uid": 1000,
+      "gid": 1000
+    }
+  ],
+  "filesWritten": [
+    {
+      "role": "activeRunner",
+      "path": "/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py",
+      "device": 27,
+      "inode": 3961082,
+      "mode": 384,
+      "uid": 1000,
+      "gid": 1000,
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    {
+      "role": "activeBinding",
+      "path": "/workspace/scratch/c714-post-transport-20261117/controls/red-binding.json",
+      "device": 27,
+      "inode": 3961083,
+      "mode": 384,
+      "uid": 1000,
+      "gid": 1000,
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    {
+      "role": "bootstrapInput",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/bootstrap-binding.json",
+      "device": 27,
+      "inode": 3961084,
+      "mode": 384,
+      "uid": 1000,
+      "gid": 1000,
+      "bytes": 2790411,
+      "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+      "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+    },
+    {
+      "role": "bootstrapInput",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/fresh-current-input-boundary.json",
+      "device": 27,
+      "inode": 3961085,
+      "mode": 384,
+      "uid": 1000,
+      "gid": 1000,
+      "bytes": 3654,
+      "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+      "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+    },
+    {
+      "role": "bootstrapInput",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/provider-archives-fresh-review.json",
+      "device": 27,
+      "inode": 3961086,
+      "mode": 384,
+      "uid": 1000,
+      "gid": 1000,
+      "bytes": 789090,
+      "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+      "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+    },
+    {
+      "role": "originalRunner",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-runner.py",
+      "device": 27,
+      "inode": 3961087,
+      "mode": 384,
+      "uid": 1000,
+      "gid": 1000,
+      "bytes": 89953,
+      "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+      "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+    },
+    {
+      "role": "originalBinding",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-binding.json",
+      "device": 27,
+      "inode": 3961088,
+      "mode": 384,
+      "uid": 1000,
+      "gid": 1000,
+      "bytes": 4898503,
+      "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+      "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+    },
+    {
+      "role": "historicalTestMaterializationReceipt",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-test-materialization-receipt.json",
+      "device": 27,
+      "inode": 3961089,
+      "mode": 384,
+      "uid": 1000,
+      "gid": 1000,
+      "bytes": 92391,
+      "sha256": "3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d",
+      "gitBlob": "f542dde38b84f533e5658aeafe5a06642c1dcca9"
+    }
+  ],
+  "fullReadbacks": [
+    {
+      "role": "activeRunner",
+      "path": "/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py",
+      "device": 27,
+      "inode": 3961082,
+      "mode": 384,
+      "uid": 1000,
+      "gid": 1000,
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    {
+      "role": "activeBinding",
+      "path": "/workspace/scratch/c714-post-transport-20261117/controls/red-binding.json",
+      "device": 27,
+      "inode": 3961083,
+      "mode": 384,
+      "uid": 1000,
+      "gid": 1000,
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    {
+      "role": "bootstrapInput",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/bootstrap-binding.json",
+      "device": 27,
+      "inode": 3961084,
+      "mode": 384,
+      "uid": 1000,
+      "gid": 1000,
+      "bytes": 2790411,
+      "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+      "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+    },
+    {
+      "role": "bootstrapInput",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/fresh-current-input-boundary.json",
+      "device": 27,
+      "inode": 3961085,
+      "mode": 384,
+      "uid": 1000,
+      "gid": 1000,
+      "bytes": 3654,
+      "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+      "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+    },
+    {
+      "role": "bootstrapInput",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/provider-archives-fresh-review.json",
+      "device": 27,
+      "inode": 3961086,
+      "mode": 384,
+      "uid": 1000,
+      "gid": 1000,
+      "bytes": 789090,
+      "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+      "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+    },
+    {
+      "role": "originalRunner",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-runner.py",
+      "device": 27,
+      "inode": 3961087,
+      "mode": 384,
+      "uid": 1000,
+      "gid": 1000,
+      "bytes": 89953,
+      "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+      "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+    },
+    {
+      "role": "originalBinding",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-binding.json",
+      "device": 27,
+      "inode": 3961088,
+      "mode": 384,
+      "uid": 1000,
+      "gid": 1000,
+      "bytes": 4898503,
+      "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+      "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+    },
+    {
+      "role": "historicalTestMaterializationReceipt",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-test-materialization-receipt.json",
+      "device": 27,
+      "inode": 3961089,
+      "mode": 384,
+      "uid": 1000,
+      "gid": 1000,
+      "bytes": 92391,
+      "sha256": "3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d",
+      "gitBlob": "f542dde38b84f533e5658aeafe5a06642c1dcca9"
+    }
+  ],
+  "error": null,
+  "transferPacket": {
+    "path": "/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/post-transport-authoring/source-free-staging-transfer.json",
+    "bytes": 9502989,
+    "sha256": "847ae52d5899ad21f03d93f54eb23b1d3a390884d95c24ef449d9d0c3730822c",
+    "gitBlob": "5283bce1aafe719e564a493a2526601cbe87ee0e",
+    "kind": "local transfer data; payload identities retained in published R1 and original blobs/containers"
+  },
+  "publicationGate": {
+    "kind": "post-transport-recovery-control-publication-staging-gate-closed",
+    "at": "2026-11-17 00:55:44 UTC",
+    "commit": "1eff2aef92a5952618cb600604160c3a3024b2dd",
+    "tree": "10345c00d2e260245594ed2b1cca4b0eefdde42f",
+    "docsTree": "256de64227a513df688d8af07bc089718f5f8e64",
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "binding": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    "rootActual": {
+      "bytes": 54354,
+      "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+      "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+    },
+    "independentActual": {
+      "bytes": 100624,
+      "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+      "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+    },
+    "rootFullReadIndependent": true,
+    "independentFullReadRoot": true,
+    "allowedNow": "Root may perform the one selected exclusive source-free staging of the exact active pair plus six immutable data replicas, then invoke the one complete newRED. Complete fresh physical before/after, unchanged clocks/capture/cleanup and separately observed outer remain mandatory. No test rematerialization, repair, replay, partial resume or producer postimages. Accepted newRED and publication/readbacks precede producer authorship.",
+    "selectedFilesStagedBeforeGate": false,
+    "newRuntimeExecutedBeforeGate": false,
+    "newSourcePostimagesAuthored": false,
+    "old54393": "UNKNOWN/INCOMPLETE/SPENT; outer/termination/custody/cleanup remain unknown",
+    "old64038": "REFUSED/SPENT; observedouter2"
+  },
+  "allEightBodiesFullyReadAndVerifiedBeforeSelectedWrites": true,
+  "selectedPayloadBytes": 15167305,
+  "preWritePaths": [
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117",
+      "lexists": false
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/controls",
+      "lexists": false
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas",
+      "lexists": false
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence",
+      "lexists": false
+    }
+  ],
+  "evidenceRootAbsent": true,
+  "finishedAt": "2026-11-17T00:59:18.316678+00:00",
+  "exitCode": 0,
+  "qualification": "Exact new source-free files and point-in-time ownership only. No target execution, fresh whole runtime boundary, old inode/process continuity or old cleanup qualification."
+}

@@ -1,0 +1,65 @@
+{
+  "kind": "one-selected-source-free-staging-intent",
+  "at": "2026-11-17 00:59:17 UTC",
+  "publicationGate": {
+    "kind": "post-transport-recovery-control-publication-staging-gate-closed",
+    "at": "2026-11-17 00:55:44 UTC",
+    "commit": "1eff2aef92a5952618cb600604160c3a3024b2dd",
+    "tree": "10345c00d2e260245594ed2b1cca4b0eefdde42f",
+    "docsTree": "256de64227a513df688d8af07bc089718f5f8e64",
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "binding": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    "rootActual": {
+      "bytes": 54354,
+      "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+      "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+    },
+    "independentActual": {
+      "bytes": 100624,
+      "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+      "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+    },
+    "rootFullReadIndependent": true,
+    "independentFullReadRoot": true,
+    "allowedNow": "Root may perform the one selected exclusive source-free staging of the exact active pair plus six immutable data replicas, then invoke the one complete newRED. Complete fresh physical before/after, unchanged clocks/capture/cleanup and separately observed outer remain mandatory. No test rematerialization, repair, replay, partial resume or producer postimages. Accepted newRED and publication/readbacks precede producer authorship.",
+    "selectedFilesStagedBeforeGate": false,
+    "newRuntimeExecutedBeforeGate": false,
+    "newSourcePostimagesAuthored": false,
+    "old54393": "UNKNOWN/INCOMPLETE/SPENT; outer/termination/custody/cleanup remain unknown",
+    "old64038": "REFUSED/SPENT; observedouter2"
+  },
+  "transferPacket": {
+    "path": "/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/post-transport-authoring/source-free-staging-transfer.json",
+    "bytes": 9502989,
+    "sha256": "847ae52d5899ad21f03d93f54eb23b1d3a390884d95c24ef449d9d0c3730822c",
+    "gitBlob": "5283bce1aafe719e564a493a2526601cbe87ee0e"
+  },
+  "script": {
+    "identity": {
+      "bytes": 8847,
+      "sha256": "42d5c9c457bff8349cdf18cfed5927e98e3117418317b7f901b176d9fb48dac7",
+      "gitBlob": "5fb498002d6f93eb92e80df2d73b728e65669c63"
+    },
+    "body": "import datetime, hashlib, json, os, pathlib, stat, sys\npacket_path = pathlib.Path(\"/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/post-transport-authoring/source-free-staging-transfer.json\")\nexpected_packet = {\"bytes\":9502989,\"sha256\":\"847ae52d5899ad21f03d93f54eb23b1d3a390884d95c24ef449d9d0c3730822c\",\"gitBlob\":\"5283bce1aafe719e564a493a2526601cbe87ee0e\"}\nreceipt_path = pathlib.Path('/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/post-transport-recovery-staging-receipt-20261117.json')\ndef ident(data):\n    return {'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest(), 'gitBlob': hashlib.sha1(b'blob '+str(len(data)).encode()+b'\\0'+data).hexdigest()}\ndef meta(info):\n    return {'device': info.st_dev, 'inode': info.st_ino, 'mode': stat.S_IMODE(info.st_mode), 'uid': info.st_uid, 'gid': info.st_gid}\ndef stable_read(path):\n    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)\n    try:\n        before = os.fstat(fd)\n        assert stat.S_ISREG(before.st_mode)\n        with os.fdopen(os.dup(fd), 'rb') as stream:\n            data = stream.read()\n        after = os.fstat(fd)\n        assert (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns) == (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns)\n        return data\n    finally:\n        os.close(fd)\nreceipt = {'kind': 'post-transport-recovery-exclusive-source-free-staging', 'startedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(), 'attempt': 1, 'completed': False, 'sourceWrites': 0, 'testRematerialization': False, 'targetRuntimeEvaluated': False, 'oldPhysicalContinuityRecovered': False, 'oldCleanupQualified': False, 'directoriesCreated': [], 'filesWritten': [], 'fullReadbacks': [], 'error': None}\nfds = []\nexit_code = 2\ntry:\n    assert not os.path.lexists(receipt_path), 'staging receipt already exists'\n    raw = stable_read(packet_path)\n    assert ident(raw) == expected_packet, 'transfer packet identity'\n    packet = json.loads(raw)\n    receipt['transferPacket'] = {'path': str(packet_path), **ident(raw), 'kind': 'local transfer data; payload identities retained in published R1 and original blobs/containers'}\n    receipt['publicationGate'] = packet['publicationGate']\n    assert packet['publicationGate']['commit'] == '1eff2aef92a5952618cb600604160c3a3024b2dd'\n    assert packet['publicationGate']['rootFullReadIndependent'] is True and packet['publicationGate']['independentFullReadRoot'] is True\n    scope = pathlib.Path(packet['scopeRoot'])\n    controls = pathlib.Path(packet['controlRoot'])\n    replicas = pathlib.Path(packet['replicaRoot'])\n    evidence = pathlib.Path(packet['evidenceRoot'])\n    assert scope == pathlib.Path('/workspace/scratch/c714-post-transport-20261117')\n    assert controls == scope / 'controls' and replicas == scope / 'replicas' and evidence == scope / 'evidence'\n    selected = []\n    for row in packet['controls']:\n        data = stable_read(pathlib.Path(row['sourcePath']))\n        assert ident(data) == row['identity']\n        selected.append((row, data, 'controls'))\n    assert len(selected) == 2 and [row['role'] for row, _data, _kind in selected] == ['activeRunner', 'activeBinding']\n    cfg = json.loads(selected[1][1])\n    assert cfg['runnerIdentity'] == selected[0][0]['identity'] == packet['publicationGate']['runner']\n    assert selected[1][0]['identity'] == packet['publicationGate']['binding']\n    assert cfg['runnerLocalPath'] == selected[0][0]['path'] and cfg['bindingLocalPath'] == selected[1][0]['path']\n    r1 = json.loads(cfg['combinedR1Body'])\n    assert ident(cfg['combinedR1Body'].encode()) == packet['publicationGate']['r1']\n    assert r1['execution']['scopeRoot'] == str(scope) and r1['execution']['controlRoot'] == str(controls)\n    assert r1['execution']['replicaRoot'] == str(replicas) and r1['execution']['outputRoot'] == str(evidence)\n    assert len(packet['replicas']) == len(r1['dataReplicaRecovery']['replicas']) == 6\n    for row, original in zip(packet['replicas'], r1['dataReplicaRecovery']['replicas']):\n        assert {key: value for key, value in row.items() if key not in ['body', 'containerRead']} == original\n        data = row['body'].encode()\n        assert ident(data) == row['identity']\n        if row['source']['kind'] == 'complete-retained-container-member':\n            assert row['containerRead'] == row['source']['container']\n        selected.append((row, data, 'replicas'))\n    assert len(selected) == 8 and len({row['path'] for row, _data, _kind in selected}) == 8\n    assert sum(len(data) for _row, data, _kind in selected) == 15167305\n    assert all(pathlib.Path(row['path']).parent == (controls if kind == 'controls' else replicas) for row, _data, kind in selected)\n    receipt['allEightBodiesFullyReadAndVerifiedBeforeSelectedWrites'] = True\n    receipt['selectedPayloadBytes'] = 15167305\n    receipt['preWritePaths'] = [{'path': str(path), 'lexists': os.path.lexists(path)} for path in [scope, controls, replicas, evidence]]\n    assert all(not row['lexists'] for row in receipt['preWritePaths'])\n    parent = scope.parent\n    assert parent.is_dir() and not parent.is_symlink() and parent.resolve() == parent\n    parent_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)\n    fds.append(parent_fd)\n    os.mkdir(scope.name, mode=0o700, dir_fd=parent_fd)\n    scope_fd = os.open(scope.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)\n    fds.append(scope_fd)\n    scope_info = os.fstat(scope_fd)\n    assert stat.S_ISDIR(scope_info.st_mode) and stat.S_IMODE(scope_info.st_mode) == 0o700 and scope_info.st_uid == os.getuid()\n    receipt['directoriesCreated'].append({'path': str(scope), **meta(scope_info)})\n    directory_fds = {}\n    for name in ['controls', 'replicas']:\n        os.mkdir(name, mode=0o700, dir_fd=scope_fd)\n        directory_fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=scope_fd)\n        fds.append(directory_fd)\n        info = os.fstat(directory_fd)\n        assert stat.S_ISDIR(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o700 and info.st_uid == os.getuid()\n        directory_fds[name] = directory_fd\n        receipt['directoriesCreated'].append({'path': str(scope / name), **meta(info)})\n    for row, data, kind in selected:\n        name = pathlib.Path(row['path']).name\n        fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=directory_fds[kind])\n        try:\n            with os.fdopen(os.dup(fd), 'wb') as stream:\n                stream.write(data)\n                stream.flush()\n                os.fsync(stream.fileno())\n            info = os.fstat(fd)\n            assert stat.S_ISREG(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o600 and info.st_uid == os.getuid() and info.st_nlink == 1\n            receipt['filesWritten'].append({'role': row['role'], 'path': row['path'], **meta(info), **ident(data)})\n        finally:\n            os.close(fd)\n        readback = stable_read(pathlib.Path(row['path']))\n        assert readback == data and ident(readback) == row['identity']\n        after = pathlib.Path(row['path']).lstat()\n        assert stat.S_ISREG(after.st_mode) and stat.S_IMODE(after.st_mode) == 0o600 and after.st_uid == os.getuid()\n        assert (after.st_dev, after.st_ino) == (info.st_dev, info.st_ino)\n        receipt['fullReadbacks'].append({'role': row['role'], 'path': row['path'], **meta(after), **ident(readback)})\n    assert sorted(os.listdir(scope_fd)) == ['controls', 'replicas']\n    assert sorted(os.listdir(directory_fds['controls'])) == ['combined-runner.py', 'red-binding.json']\n    assert sorted(os.listdir(directory_fds['replicas'])) == sorted(pathlib.Path(row['path']).name for row in packet['replicas'])\n    receipt['evidenceRootAbsent'] = not os.path.lexists(evidence)\n    assert receipt['evidenceRootAbsent']\n    receipt['completed'] = True\n    exit_code = 0\nexcept BaseException as error:\n    receipt['error'] = type(error).__name__ + ': ' + str(error)\nfinally:\n    for fd in reversed(fds):\n        os.close(fd)\n    receipt['finishedAt'] = datetime.datetime.now(datetime.timezone.utc).isoformat()\n    receipt['exitCode'] = exit_code\n    receipt['qualification'] = 'Exact new source-free files and point-in-time ownership only. No target execution, fresh whole runtime boundary, old inode/process continuity or old cleanup qualification.'\n    receipt_data = (json.dumps(receipt, indent=2) + '\\n').encode()\n    fd = os.open(receipt_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)\n    with os.fdopen(fd, 'wb') as stream:\n        stream.write(receipt_data)\n        stream.flush()\n        os.fsync(stream.fileno())\n    assert stable_read(receipt_path) == receipt_data\n    print(json.dumps({'receipt': {'path': str(receipt_path), **ident(receipt_data)}, 'result': receipt}))\nsys.exit(exit_code)\n"
+  },
+  "shell": "bash",
+  "login": false,
+  "cwd": "/",
+  "sourceWritesSelected": 0,
+  "selectedAttempts": 1,
+  "noRetry": true,
+  "selectedRuntimeExecuted": false
+}

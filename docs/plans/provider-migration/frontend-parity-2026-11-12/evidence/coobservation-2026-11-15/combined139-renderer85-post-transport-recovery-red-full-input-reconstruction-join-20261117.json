@@ -1,0 +1,254 @@
+{
+  "kind": "post-transport-recovery-red-root-full-lossless-reconstruction-and-current-instance-join",
+  "at": "2026-11-17 01:11:55 UTC",
+  "packet": {
+    "bytes": 441196,
+    "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+    "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+  },
+  "outer": {
+    "bytes": 13970,
+    "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+    "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+  },
+  "completeContainers": [
+    {
+      "bytes": 4326013,
+      "sha256": "78b5d2718cb8d11b44bfff74d83d29bedf28f5c6cdf74ba5fda2ae5a78cd751c",
+      "gitBlob": "bc970c1035aa7804b9fd6f50e45204fb466ba02f"
+    },
+    {
+      "bytes": 4141629,
+      "sha256": "867bad8dc5bea19cfabd3e5e33748228e3a119129b8be4ff72f43fea8c4b3abb",
+      "gitBlob": "36e809c267f130aa696632f14f9f25d32b13bea3"
+    },
+    {
+      "bytes": 4204973,
+      "sha256": "1c63baf237ccf2485bb8787b50f9a243953c431f490cb970f55567d9543ebd76",
+      "gitBlob": "ec99ecaf06e8a2f013944e66983c5e771b9f86a5"
+    },
+    {
+      "bytes": 4167930,
+      "sha256": "b1c98bd7747f44ca2ff26d35c8dd3dec845bc52a47e0f85b42a4ca7560b358b0",
+      "gitBlob": "93491c2c85d205867ce5f25363d0c33d0c8f3420"
+    },
+    {
+      "bytes": 2572284,
+      "sha256": "22fe3985fc1fa3708a4c0387ecbb955c687d653538e11ba1fed1a64d19633652",
+      "gitBlob": "5192e6e0290dd5beaf486a3315b984759fef96bd"
+    },
+    {
+      "bytes": 3160415,
+      "sha256": "2f440a7180dc483ae5b24b3b42fba01fb29544677927d0327def687ec09685c9",
+      "gitBlob": "93493e8223667b4b1af3822a4fbaa5faa2468424"
+    },
+    {
+      "bytes": 2478745,
+      "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+      "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+    }
+  ],
+  "joinedBodies": [
+    {
+      "name": "dependencies",
+      "identity": {
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "fullBodyReadAndRehashed": true,
+      "freshActualInstances": [
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-dependencies.json",
+          "name": "red-after-dependencies.json",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969701,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 39168001,
+          "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+          "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-dependencies.json",
+          "name": "red-before-dependencies.json",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969281,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 39168001,
+          "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+          "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+        }
+      ]
+    },
+    {
+      "name": "compiled",
+      "identity": {
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      },
+      "fullBodyReadAndRehashed": true,
+      "freshActualInstances": [
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-compiled.json",
+          "name": "red-after-compiled.json",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969702,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 400300,
+          "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+          "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-compiled.json",
+          "name": "red-before-compiled.json",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969282,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 400300,
+          "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+          "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+        }
+      ]
+    },
+    {
+      "name": "tree",
+      "identity": {
+        "bytes": 1527575,
+        "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+        "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+      },
+      "fullBodyReadAndRehashed": true,
+      "freshActualInstances": [
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-11.log",
+          "name": "red-after-metadata-11.log",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969322,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 1527575,
+          "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+          "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-3.log",
+          "name": "red-before-metadata-3.log",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969261,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 1527575,
+          "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+          "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+        }
+      ]
+    },
+    {
+      "name": "index",
+      "identity": {
+        "bytes": 1492874,
+        "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+        "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+      },
+      "fullBodyReadAndRehashed": true,
+      "freshActualInstances": [
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-14.log",
+          "name": "red-after-metadata-14.log",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969334,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 1492874,
+          "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+          "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-6.log",
+          "name": "red-before-metadata-6.log",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969273,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 1492874,
+          "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+          "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+        }
+      ]
+    },
+    {
+      "name": "source",
+      "identity": {
+        "bytes": 2478745,
+        "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+        "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+      },
+      "fullBodyReadAndRehashed": true,
+      "freshActualInstances": [
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-source.json",
+          "name": "red-after-source.json",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969700,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 2478745,
+          "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+          "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-source.json",
+          "name": "red-before-source.json",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969280,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 2478745,
+          "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+          "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+        }
+      ]
+    }
+  ],
+  "completeUniqueBodyBytes": 45067495,
+  "freshActualInstances": 10,
+  "dependencyCensus": {
+    "rows": 122773,
+    "regular": 117336,
+    "links": 5437,
+    "regularBytes": 1393889166
+  },
+  "compiledCensus": {
+    "rows": 1454,
+    "regularBytes": 6243084
+  },
+  "sourceCensus": {
+    "rows": 8798,
+    "selectedSourcePins": 9,
+    "overlays": 9,
+    "workflows": 42,
+    "tree": 11567,
+    "index": 11567,
+    "allTreeIndexRowsEqual": true
+  },
+  "allFullBodiesAndFreshInstancesJoin": true,
+  "noHistoricalStatusTransfer": true,
+  "sourceWrites": 0,
+  "runtimeInvoked": false,
+  "qualification": "Full exact retained data plus fresh actual instance identities; no old54393 custody/cleanup recovery and no GUI/native/E2E qualification."
+}

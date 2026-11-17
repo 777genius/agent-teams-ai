@@ -1,0 +1,205 @@
+{
+  "kind": "post-transport-recovery-combined-red-outer-observation",
+  "scope": "new separate once-only full combined139/renderer85 RED",
+  "invocationIntentAt": "2026-11-17 01:04:38 UTC",
+  "argv": [
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+    "/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py",
+    "/workspace/scratch/c714-post-transport-20261117/controls/red-binding.json",
+    "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+    "run",
+    "red"
+  ],
+  "executionOptions": {
+    "shell": "bash",
+    "login": false,
+    "workdir": "/"
+  },
+  "sessionId": 53054,
+  "invocationCount": 1,
+  "toolObservations": [
+    {
+      "chunk_id": "274a09",
+      "wall_time_seconds": 1.001572093,
+      "session_id": 53054,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "13ada0",
+      "wall_time_seconds": 30.001039925,
+      "session_id": 53054,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "3ab091",
+      "wall_time_seconds": 30.001363334,
+      "session_id": 53054,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "d46e14",
+      "wall_time_seconds": 21.175586091,
+      "exit_code": 0,
+      "original_token_count": 690,
+      "output": "{\"command\": \"red\", \"action\": \"run\", \"phase\": \"red\", \"exitCode\": 1, \"exitSignal\": null, \"timedOut\": false, \"executionError\": null, \"postflightError\": null, \"transientCleanupError\": null, \"inputsPreserved\": true, \"fullRuntimeInputsInspected\": true, \"fullRuntimeInputsPreserved\": true, \"sourceAndSupervisorMetadataPreserved\": true, \"commandCompletedNormally\": true, \"semanticAdmissionComplete\": true, \"scopeCompleted\": true, \"preflightSeconds\": 54.09297038999648, \"commandPhaseSeconds\": 20.89086687099916, \"cleanupSeconds\": 0, \"transientCaptureAndCleanupSeconds\": 0.0019510150013957173, \"postflightSeconds\": 55.21619509100128, \"totalInvocationSeconds\": 130.2032738830021, \"unreachedCommands\": [], \"unacceptedCommands\": [], \"cleanup\": {\"unknownPrimaryLaunches\": [], \"capturedSessionMembersAfter\": [], \"newTestTempsRemaining\": [], \"taskTmpEntriesAfter\": [], \"viteTempAbsent\": true, \"nodeDebtGatePassed\": true, \"scope\": \"Captured primary sessions/groups and exact owned phase outputs; metadata sessions checked individually. No universal escaped-child/native custody claim.\"}, \"signalAdmissionCutoff\": {\"at\": \"2026-11-17T01:06:49.839057+00:00\", \"pendingSignals\": [], \"supervisorExitZeroRequired\": true, \"scope\": \"Managed-signal pending snapshot while blocked; later signals require separate observed outer-exit admission.\"}, \"primarySummaries\": [{\"command\": \"node\", \"status\": \"ACCEPTED\", \"primaryReceipt\": {\"path\": \"/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1-receipt.json\", \"bytes\": 1493, \"sha256\": \"1aa1484785db24981be9f0f764d9cd8c560801cac730aa556332b0641e7585be\", \"gitBlob\": \"bf39ac175f5268cdef3e81764f639b0ea533ce76\"}, \"semanticReceipt\": {\"path\": \"/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-semantics.json\", \"bytes\": 32721, \"sha256\": \"d0fc5d22dfb5223f60dbef480b7f896e8d1e55fa4d722760d1f905cf5e1a6e2e\", \"gitBlob\": \"5f74a06ff1aa1329621f90f9a0bce0b93caa71f6\"}}, {\"command\": \"renderer\", \"status\": \"ACCEPTED\", \"primaryReceipt\": {\"path\": \"/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1-receipt.json\", \"bytes\": 2655, \"sha256\": \"8deb3e3760e9b1b83c01e0d9264ff91c48219a0756c0c4765c230077f78d3dbf\", \"gitBlob\": \"fc0f6a243bbca33429d0679b3441a6c329452919\"}, \"semanticReceipt\": {\"path\": \"/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-semantics.json\", \"bytes\": 37405, \"sha256\": \"bc6b4bb7e51e11556dfd4f65ca2ce07f84909cb8b04d94b1b9f63b7448306ae1\", \"gitBlob\": \"2b15bbf586cdb07929b363b4064f874f3115436a\"}}], \"finalReceipt\": {\"path\": \"/workspace/scratch/c714-post-transport-20261117/evidence/red/phase-receipt.json\", \"bytes\": 139946, \"sha256\": \"51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be\", \"gitBlob\": \"bcc31247c2752b2017edba9adcd129a1c83cdd32\"}}\n"
+    }
+  ],
+  "observedOuterExit": 0,
+  "finalToolResult": {
+    "chunk_id": "d46e14",
+    "wall_time_seconds": 21.175586091,
+    "exit_code": 0,
+    "original_token_count": 690,
+    "output": "{\"command\": \"red\", \"action\": \"run\", \"phase\": \"red\", \"exitCode\": 1, \"exitSignal\": null, \"timedOut\": false, \"executionError\": null, \"postflightError\": null, \"transientCleanupError\": null, \"inputsPreserved\": true, \"fullRuntimeInputsInspected\": true, \"fullRuntimeInputsPreserved\": true, \"sourceAndSupervisorMetadataPreserved\": true, \"commandCompletedNormally\": true, \"semanticAdmissionComplete\": true, \"scopeCompleted\": true, \"preflightSeconds\": 54.09297038999648, \"commandPhaseSeconds\": 20.89086687099916, \"cleanupSeconds\": 0, \"transientCaptureAndCleanupSeconds\": 0.0019510150013957173, \"postflightSeconds\": 55.21619509100128, \"totalInvocationSeconds\": 130.2032738830021, \"unreachedCommands\": [], \"unacceptedCommands\": [], \"cleanup\": {\"unknownPrimaryLaunches\": [], \"capturedSessionMembersAfter\": [], \"newTestTempsRemaining\": [], \"taskTmpEntriesAfter\": [], \"viteTempAbsent\": true, \"nodeDebtGatePassed\": true, \"scope\": \"Captured primary sessions/groups and exact owned phase outputs; metadata sessions checked individually. No universal escaped-child/native custody claim.\"}, \"signalAdmissionCutoff\": {\"at\": \"2026-11-17T01:06:49.839057+00:00\", \"pendingSignals\": [], \"supervisorExitZeroRequired\": true, \"scope\": \"Managed-signal pending snapshot while blocked; later signals require separate observed outer-exit admission.\"}, \"primarySummaries\": [{\"command\": \"node\", \"status\": \"ACCEPTED\", \"primaryReceipt\": {\"path\": \"/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1-receipt.json\", \"bytes\": 1493, \"sha256\": \"1aa1484785db24981be9f0f764d9cd8c560801cac730aa556332b0641e7585be\", \"gitBlob\": \"bf39ac175f5268cdef3e81764f639b0ea533ce76\"}, \"semanticReceipt\": {\"path\": \"/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-semantics.json\", \"bytes\": 32721, \"sha256\": \"d0fc5d22dfb5223f60dbef480b7f896e8d1e55fa4d722760d1f905cf5e1a6e2e\", \"gitBlob\": \"5f74a06ff1aa1329621f90f9a0bce0b93caa71f6\"}}, {\"command\": \"renderer\", \"status\": \"ACCEPTED\", \"primaryReceipt\": {\"path\": \"/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1-receipt.json\", \"bytes\": 2655, \"sha256\": \"8deb3e3760e9b1b83c01e0d9264ff91c48219a0756c0c4765c230077f78d3dbf\", \"gitBlob\": \"fc0f6a243bbca33429d0679b3441a6c329452919\"}, \"semanticReceipt\": {\"path\": \"/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-semantics.json\", \"bytes\": 37405, \"sha256\": \"bc6b4bb7e51e11556dfd4f65ca2ce07f84909cb8b04d94b1b9f63b7448306ae1\", \"gitBlob\": \"2b15bbf586cdb07929b363b4064f874f3115436a\"}}], \"finalReceipt\": {\"path\": \"/workspace/scratch/c714-post-transport-20261117/evidence/red/phase-receipt.json\", \"bytes\": 139946, \"sha256\": \"51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be\", \"gitBlob\": \"bcc31247c2752b2017edba9adcd129a1c83cdd32\"}}\n"
+  },
+  "parsedFinalSummary": {
+    "command": "red",
+    "action": "run",
+    "phase": "red",
+    "exitCode": 1,
+    "exitSignal": null,
+    "timedOut": false,
+    "executionError": null,
+    "postflightError": null,
+    "transientCleanupError": null,
+    "inputsPreserved": true,
+    "fullRuntimeInputsInspected": true,
+    "fullRuntimeInputsPreserved": true,
+    "sourceAndSupervisorMetadataPreserved": true,
+    "commandCompletedNormally": true,
+    "semanticAdmissionComplete": true,
+    "scopeCompleted": true,
+    "preflightSeconds": 54.09297038999648,
+    "commandPhaseSeconds": 20.89086687099916,
+    "cleanupSeconds": 0,
+    "transientCaptureAndCleanupSeconds": 0.0019510150013957173,
+    "postflightSeconds": 55.21619509100128,
+    "totalInvocationSeconds": 130.2032738830021,
+    "unreachedCommands": [],
+    "unacceptedCommands": [],
+    "cleanup": {
+      "unknownPrimaryLaunches": [],
+      "capturedSessionMembersAfter": [],
+      "newTestTempsRemaining": [],
+      "taskTmpEntriesAfter": [],
+      "viteTempAbsent": true,
+      "nodeDebtGatePassed": true,
+      "scope": "Captured primary sessions/groups and exact owned phase outputs; metadata sessions checked individually. No universal escaped-child/native custody claim."
+    },
+    "signalAdmissionCutoff": {
+      "at": "2026-11-17T01:06:49.839057+00:00",
+      "pendingSignals": [],
+      "supervisorExitZeroRequired": true,
+      "scope": "Managed-signal pending snapshot while blocked; later signals require separate observed outer-exit admission."
+    },
+    "primarySummaries": [
+      {
+        "command": "node",
+        "status": "ACCEPTED",
+        "primaryReceipt": {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1-receipt.json",
+          "bytes": 1493,
+          "sha256": "1aa1484785db24981be9f0f764d9cd8c560801cac730aa556332b0641e7585be",
+          "gitBlob": "bf39ac175f5268cdef3e81764f639b0ea533ce76"
+        },
+        "semanticReceipt": {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-semantics.json",
+          "bytes": 32721,
+          "sha256": "d0fc5d22dfb5223f60dbef480b7f896e8d1e55fa4d722760d1f905cf5e1a6e2e",
+          "gitBlob": "5f74a06ff1aa1329621f90f9a0bce0b93caa71f6"
+        }
+      },
+      {
+        "command": "renderer",
+        "status": "ACCEPTED",
+        "primaryReceipt": {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1-receipt.json",
+          "bytes": 2655,
+          "sha256": "8deb3e3760e9b1b83c01e0d9264ff91c48219a0756c0c4765c230077f78d3dbf",
+          "gitBlob": "fc0f6a243bbca33429d0679b3441a6c329452919"
+        },
+        "semanticReceipt": {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-semantics.json",
+          "bytes": 37405,
+          "sha256": "bc6b4bb7e51e11556dfd4f65ca2ce07f84909cb8b04d94b1b9f63b7448306ae1",
+          "gitBlob": "2b15bbf586cdb07929b363b4064f874f3115436a"
+        }
+      }
+    ],
+    "finalReceipt": {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/phase-receipt.json",
+      "bytes": 139946,
+      "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+      "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32"
+    }
+  },
+  "runner": {
+    "bytes": 104131,
+    "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+    "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+  },
+  "binding": {
+    "bytes": 6399172,
+    "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+    "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+  },
+  "publicationGate": {
+    "kind": "post-transport-recovery-control-publication-staging-gate-closed",
+    "at": "2026-11-17 00:55:44 UTC",
+    "commit": "1eff2aef92a5952618cb600604160c3a3024b2dd",
+    "tree": "10345c00d2e260245594ed2b1cca4b0eefdde42f",
+    "docsTree": "256de64227a513df688d8af07bc089718f5f8e64",
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "binding": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    "rootActual": {
+      "bytes": 54354,
+      "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+      "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+    },
+    "independentActual": {
+      "bytes": 100624,
+      "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+      "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+    },
+    "rootFullReadIndependent": true,
+    "independentFullReadRoot": true,
+    "allowedNow": "Root may perform the one selected exclusive source-free staging of the exact active pair plus six immutable data replicas, then invoke the one complete newRED. Complete fresh physical before/after, unchanged clocks/capture/cleanup and separately observed outer remain mandatory. No test rematerialization, repair, replay, partial resume or producer postimages. Accepted newRED and publication/readbacks precede producer authorship.",
+    "selectedFilesStagedBeforeGate": false,
+    "newRuntimeExecutedBeforeGate": false,
+    "newSourcePostimagesAuthored": false,
+    "old54393": "UNKNOWN/INCOMPLETE/SPENT; outer/termination/custody/cleanup remain unknown",
+    "old64038": "REFUSED/SPENT; observedouter2"
+  },
+  "stagingReceipt": {
+    "bytes": 11043,
+    "sha256": "c1756a537d22715d6fceb028766118431e23ed6b6a4d73eca26d7eb046dd5d9e",
+    "gitBlob": "5767257560e858647f6314d36b6d2d4b7109ffb3"
+  },
+  "stagingOuter": {
+    "bytes": 10974,
+    "sha256": "2818cefbe09ae13378d36d13b34ac8cf741ec4945bf02e1edbb1481785b5170e",
+    "gitBlob": "dda19a73d4c36027e70edd9a602ae4fbdee775cd"
+  },
+  "classification": "COMPLETE expected RED candidate; full actual packet and independent reviews pending",
+  "old64038": "REFUSED/SPENT; observed outer2; no result transfer",
+  "old54393": "UNKNOWN/INCOMPLETE/SPENT; no final outer/termination/custody/cleanup recovery",
+  "producerPostimagesAuthored": false,
+  "replay": false,
+  "qualification": "Finite actual-source suites only; no GUI/native/vendor/full E2E qualification."
+}
