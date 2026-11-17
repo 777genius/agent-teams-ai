@@ -21,3 +21,11 @@ its real upstream version, these hashes, and fresh-process behavioral probes.
 Other HIGH/CRITICAL findings and unrecognized code fail closed. Both pnpm native
 patching and npm postinstall use the same shipped source diffs; package licenses
 remain present in installed upstream packages.
+
+An advisory with no published fix at all (GitHub `first_patched_version` null)
+and no reviewed upstream change to backport is the only other accepted case. It
+lives in `scripts/ci/unpatched-advisories.mjs` with the exact advisory, package,
+installed versions per report (pnpm workspace, landing npm lockfile), the
+dev/build dependency roots that may reach it and a hard expiry date. Any other
+version, root, advisory or an expired entry fails the audit again. Remove the
+entry as soon as a patched release exists.

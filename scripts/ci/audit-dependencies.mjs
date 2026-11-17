@@ -1,7 +1,16 @@
 import { spawnSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BACKPORTS, installedBackportPackages, verifyBackport } from './transitive-security.ts';
+import {
+  UNPATCHED_EXCEPTIONS,
+  expiryMessage,
+  npmInstallsAllowed,
+  npmLockfileInstalls,
+  pnpmEntryAllowed,
+  unpatchedExpired,
+} from './unpatched-advisories.mjs';
 
 const severities = ['info', 'low', 'moderate', 'high', 'critical'];
 const severe = (severity) => severity === 'high' || severity === 'critical';
@@ -26,7 +35,12 @@ function advisoryId(value) {
 }
 
 // Exceptions require exact advisories/packages AND independently verified installed code.
-export function assessAuditReport(report, { npm = false, backported = [] } = {}) {
+// The only other path is an opt-in, expiring exception from unpatched-advisories.mjs
+// for an advisory without any published fix whose installs are dev/build-only.
+export function assessAuditReport(
+  report,
+  { npm = false, backported = [], unpatched = [], now = Date.now(), npmInstalls = new Map() } = {}
+) {
   assert(object(report) && !report.error && !report.errors, 'error or missing report');
   const entries = npm ? report.vulnerabilities : report.advisories;
   assert(object(entries), 'missing vulnerability map');
@@ -62,7 +76,24 @@ export function assessAuditReport(report, { npm = false, backported = [] } = {})
     );
   }
   const blocked = [],
-    excepted = [];
+    excepted = [],
+    temporary = [],
+    expired = new Set();
+  const temporaryAllowed = (item) => {
+    const spec = unpatched.find(
+      (candidate) =>
+        candidate.advisory === advisoryId(item) &&
+        (!npm || (item.name === candidate.name && item.dependency === candidate.name))
+    );
+    if (!spec) return false;
+    if (unpatchedExpired(spec, now)) {
+      expired.add(expiryMessage(spec));
+      return false;
+    }
+    return npm
+      ? npmInstallsAllowed(spec, entries[spec.name]?.nodes, npmInstalls)
+      : pnpmEntryAllowed(spec, item);
+  };
   for (const [name, entry] of items) {
     if (!severe(entry.severity)) continue;
     const concrete = [];
@@ -81,22 +112,28 @@ export function assessAuditReport(report, { npm = false, backported = [] } = {})
       visit(name);
     } else concrete.push(entry);
     const high = concrete.filter((item) => severe(item.severity));
+    const backportAllowed = (item) => {
+      const spec = BACKPORTS.find((candidate) => candidate.advisory === advisoryId(item));
+      if (!spec || !backported.includes(spec.name)) return false;
+      if (npm) return item.name === spec.name && item.dependency === spec.name;
+      return (
+        item.module_name === spec.name &&
+        Array.isArray(item.findings) &&
+        item.findings.length > 0 &&
+        item.findings.every((finding) => finding.version === spec.version)
+      );
+    };
+    let usesTemporary = false;
     const allowed =
       high.length > 0 &&
       high.every((item) => {
-        const spec = BACKPORTS.find((candidate) => candidate.advisory === advisoryId(item));
-        if (!spec || !backported.includes(spec.name)) return false;
-        if (npm) return item.name === spec.name && item.dependency === spec.name;
-        return (
-          item.module_name === spec.name &&
-          Array.isArray(item.findings) &&
-          item.findings.length > 0 &&
-          item.findings.every((finding) => finding.version === spec.version)
-        );
+        if (backportAllowed(item)) return true;
+        usesTemporary = true;
+        return temporaryAllowed(item);
       });
-    (allowed ? excepted : blocked).push(name);
+    (allowed ? (usesTemporary ? temporary : excepted) : blocked).push(name);
   }
-  return { blocked, excepted };
+  return { blocked, excepted, temporary, expired: [...expired] };
 }
 
 export function auditDependencies({ npm = false, cwd = process.cwd() } = {}) {
@@ -143,7 +180,15 @@ export function auditDependencies({ npm = false, cwd = process.cwd() } = {}) {
     for (const target of targets) verifyBackport(spec.name, target);
     backported.push(spec.name);
   }
-  const assessed = assessAuditReport(report, { npm, backported });
+  const npmInstalls = npm
+    ? npmLockfileInstalls(JSON.parse(readFileSync(join(cwd, 'package-lock.json'), 'utf8')))
+    : new Map();
+  const assessed = assessAuditReport(report, {
+    npm,
+    backported,
+    unpatched: UNPATCHED_EXCEPTIONS,
+    npmInstalls,
+  });
   // Retain the full raw report so advisories below the chosen threshold remain visible.
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   if (assessed.excepted.length) {
@@ -154,6 +199,14 @@ export function auditDependencies({ npm = false, cwd = process.cwd() } = {}) {
       `Verified local security backports: ${advisories.join(', ')} (${assessed.excepted.join(', ')})`
     );
   }
+  if (assessed.temporary.length) {
+    for (const spec of UNPATCHED_EXCEPTIONS)
+      console.warn(
+        `Temporary unpatched-advisory exception ${spec.advisory} (${spec.name}), valid through ${spec.validThrough}, dev/build paths only: ${spec.reason}`
+      );
+    console.warn(`Accepted only by that exception: ${assessed.temporary.join(', ')}`);
+  }
+  for (const message of assessed.expired) console.error(message);
   if (assessed.blocked.length)
     throw new Error(`Unresolved HIGH/CRITICAL vulnerabilities: ${assessed.blocked.join(', ')}`);
   return assessed;
