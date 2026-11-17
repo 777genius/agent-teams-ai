@@ -1,0 +1,2468 @@
+{
+  "schemaVersion": 1,
+  "kind": "post-transport-recovery-control-root-static-r2",
+  "reviewer": "root",
+  "at": "2026-11-17 00:34:31 UTC",
+  "verdict": "Exact control inverse, complete data joins and unchanged algorithms pass static review. Independent fullR2 and publication/readbacks remain required before staging/runtime.",
+  "subject": {
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "binding": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    "runnerAuthoredAt": "2026-11-17 00:28:47 UTC",
+    "bindingAuthoredAt": "2026-11-17 00:30:32 UTC"
+  },
+  "r1": {
+    "identity": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "publication": "9365591561744e36ac4e85da9cc41a92b88c2477",
+    "actualGate": {
+      "kind": "post-transport-recovery-r1-control-authorship-gate-closed",
+      "at": "2026-11-17 00:27:36 UTC",
+      "r1": {
+        "bytes": 139634,
+        "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+        "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+      },
+      "commit": "9365591561744e36ac4e85da9cc41a92b88c2477",
+      "tree": "1724877d45a44411d50dc74ad0dbb484d29baf42",
+      "docsTree": "a56582120c253cfc498934dd3f3cdc80f22f9516",
+      "root": {
+        "bytes": 32853,
+        "sha256": "4b353847c949f242095de78453d619f78ec03bca0ccbc87a91fb6c90cc579754",
+        "gitBlob": "99812b3efa965d202d67feca8b5d7948e0800b11"
+      },
+      "independent": {
+        "bytes": 68306,
+        "sha256": "3e2b87c35227e99abc32e5a95808895a1298df30267994f6278c1c63a806bae9",
+        "gitBlob": "d277c2271e3457882c895e927b76a8a32427f83a"
+      },
+      "rootFullReadIndependent": true,
+      "independentFullReadRoot": true,
+      "allowedNow": "Only minimal descendant runner/full binding authorship under exact R1 8ce893. Complete independent control R2, immediate publication and both full actual readbacks precede any selected root/control/replica creation or runtime. Producer postimages remain gated on accepted complete new RED and its publication/readbacks.",
+      "newControlsAuthoredBeforeGate": false,
+      "newSourcePostimagesAuthored": false,
+      "newReplicaFilesStaged": false,
+      "newRuntimeExecuted": false,
+      "original64038": "REFUSED/SPENT; observed outer2",
+      "corrected54393": "UNKNOWN/INCOMPLETE/SPENT; outer/termination/old custody and cleanup remain unknown; no replay or primary transfer"
+    }
+  },
+  "proposal": {
+    "bytes": 66071,
+    "sha256": "b4e9fadeea673015aa1c3fd76c5c890b1c6833650806032b8eff39dd74866753",
+    "gitBlob": "c1a656dc11ebf298c3ac0da816ed3d6daf6e65b9"
+  },
+  "baseline": {
+    "runner": {
+      "bytes": 94938,
+      "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+      "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+    },
+    "binding": {
+      "bytes": 5856749,
+      "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+      "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+    }
+  },
+  "method": {
+    "fullOldAndNewControlsReadAndHashed": true,
+    "noControlOrTargetEvaluation": true,
+    "exactGlobalReplacementsOnly": true,
+    "all52FunctionsAnd17ImportsUnchanged": true,
+    "completeRunnerInverseExact": true,
+    "completeBindingInverseExact": true,
+    "all58ReviewBodiesReadAndHashed": true,
+    "all18OverlayBodiesReadAndHashed": true,
+    "old43RecordsLiteralIdentical": true,
+    "newPhysicalRootAbsent": true
+  },
+  "runnerDeltaSummary": {
+    "replacements": 10,
+    "functions": 52,
+    "imports": 17,
+    "functionIdentities": [
+      {
+        "name": "identity",
+        "oldLine": 79,
+        "newLine": 79,
+        "identity": {
+          "bytes": 197,
+          "sha256": "6945b8229d7c6e16dc90de687c6fc36ece804e6769d3faa4c0b6b01a63edfae2",
+          "gitBlob": "bc0a4bae8477a2ad4031882e39ee63277259e605"
+        }
+      },
+      {
+        "name": "canonical",
+        "oldLine": 83,
+        "newLine": 83,
+        "identity": {
+          "bytes": 100,
+          "sha256": "5032092fe454c2fda2efebace7b4cbfea3127588118d8833bc6307d7c2256a01",
+          "gitBlob": "68408ebec5ae79c7d76695e4a3cf2d9478399623"
+        }
+      },
+      {
+        "name": "utc",
+        "oldLine": 86,
+        "newLine": 86,
+        "identity": {
+          "bytes": 80,
+          "sha256": "7be38ebd469ff3fa4bdad9a1cf71023d6d4e497fb6fe56c76bcdd3783c202c28",
+          "gitBlob": "c95897478593e5be71ebbcac7be4404c44c9e025"
+        }
+      },
+      {
+        "name": "write_new",
+        "oldLine": 89,
+        "newLine": 89,
+        "identity": {
+          "bytes": 220,
+          "sha256": "f9be73b781acaab0d94e6c199b44f6fef8d0b8148c900eba7735d66e5a9c426f",
+          "gitBlob": "8059bb6dc2d4d4be19880f7835d1a3570e0bc533"
+        }
+      },
+      {
+        "name": "process_rows",
+        "oldLine": 96,
+        "newLine": 96,
+        "identity": {
+          "bytes": 639,
+          "sha256": "45185fbc2a6060c9e62d28d61387b66522794ead799b3ce3b9ccc1aa69e3d5b2",
+          "gitBlob": "3e421996e3b45aaa4ebf245a467fd2ec4b188e3d"
+        }
+      },
+      {
+        "name": "package_values",
+        "oldLine": 112,
+        "newLine": 112,
+        "identity": {
+          "bytes": 167,
+          "sha256": "11a84c9a92270496c7fc5b5a8dee088f47062da83a044fd564e7322b97f69f3e",
+          "gitBlob": "07949b016be8e4b1fb26a95aba4131a90e7b0163"
+        }
+      },
+      {
+        "name": "transport_values",
+        "oldLine": 116,
+        "newLine": 116,
+        "identity": {
+          "bytes": 192,
+          "sha256": "3f557cda55c256d5b839482c27fad7ee16f198ad3b5c04febff08a8267b841fc",
+          "gitBlob": "94c035a7ca2a7f1d1b8136732afadc75a3837a73"
+        }
+      },
+      {
+        "name": "admit_environment",
+        "oldLine": 120,
+        "newLine": 120,
+        "identity": {
+          "bytes": 2261,
+          "sha256": "7b20105ca4f1d1716e3c8450164cecbc3877804356b36ad340b7d6d565a94a90",
+          "gitBlob": "be031caf7b4adc3435729412570b5f9f5df225ae"
+        }
+      },
+      {
+        "name": "environment_check",
+        "oldLine": 161,
+        "newLine": 161,
+        "identity": {
+          "bytes": 1549,
+          "sha256": "031204145d10b1933739ba496284315a7f4837651c7cc656064cd8414312fd07",
+          "gitBlob": "b9d81af8d8cd3d8c9b137c8a71c929a7123a6fb5"
+        }
+      },
+      {
+        "name": "tooling",
+        "oldLine": 181,
+        "newLine": 181,
+        "identity": {
+          "bytes": 695,
+          "sha256": "7249aed221889609afcec7a0b66a8ff56a0ab9b5ea74c62a8ac217a9bcda6a5d",
+          "gitBlob": "1575abda72427c72d189c8b2b688cce867d12f07"
+        }
+      },
+      {
+        "name": "file_row",
+        "oldLine": 195,
+        "newLine": 195,
+        "identity": {
+          "bytes": 393,
+          "sha256": "33b654ca7319d8a586fede2ffd68d590b9e16d955d3a979469677a8ee8125c27",
+          "gitBlob": "6772a7f9d17083ae3ddd8f92a0a16a8c0ebd81bb"
+        }
+      },
+      {
+        "name": "directory_manifest_entry",
+        "oldLine": 205,
+        "newLine": 205,
+        "identity": {
+          "bytes": 377,
+          "sha256": "1535d3747f8a134b8632564f19f15eb3524a51dcf2c3e4e9381232257015a90c",
+          "gitBlob": "5916cc0de64f407eb5c974c097fe4737a4dc8b80"
+        }
+      },
+      {
+        "name": "directory_manifest",
+        "oldLine": 216,
+        "newLine": 216,
+        "identity": {
+          "bytes": 3062,
+          "sha256": "49e1e30543aacf6c2952e97a098e1e50f18778226b458e96e28c333542326308",
+          "gitBlob": "a73000dac32844d0195079ca7a648139510485fe"
+        }
+      },
+      {
+        "name": "dependencies",
+        "oldLine": 288,
+        "newLine": 288,
+        "identity": {
+          "bytes": 114,
+          "sha256": "cac06ac70de142507971a4ab9558a99c5c11412ebcf8c20950b31d491d118db7",
+          "gitBlob": "be11fc3e38d3eedded0bde5f44673bee5502b6f6"
+        }
+      },
+      {
+        "name": "compiled",
+        "oldLine": 291,
+        "newLine": 291,
+        "identity": {
+          "bytes": 165,
+          "sha256": "1845f8267e6a1455fa4ad24d7b49e3a1dcfa947481b067c91d21eb223a9c9b0d",
+          "gitBlob": "0fa089afb525410d4a8d34f3716014ecfe0267a7"
+        }
+      },
+      {
+        "name": "toolchain_inventory",
+        "oldLine": 295,
+        "newLine": 295,
+        "identity": {
+          "bytes": 442,
+          "sha256": "852f03fb0200a29737a545e3b41ebb16e6b9c6ab0b168ff9c351f0bfce990b00",
+          "gitBlob": "3fa334f89bf49baa2400866c814972e35984323d"
+        }
+      },
+      {
+        "name": "verify_pnpm",
+        "oldLine": 305,
+        "newLine": 305,
+        "identity": {
+          "bytes": 1094,
+          "sha256": "f3cccb716c22ddf7114bef3ce9b199554cae5ceecbf248917886ec64fa797fdd",
+          "gitBlob": "1965c670e88ebdca4a0a04c7dd6fd7eebb2bf274"
+        }
+      },
+      {
+        "name": "group_members",
+        "oldLine": 323,
+        "newLine": 323,
+        "identity": {
+          "bytes": 115,
+          "sha256": "5c9e5ce7b3ec14a230c9ee8ca59ac71819eb389330d35ab1fd7f057c30d84e6e",
+          "gitBlob": "79c589efc927acd09d5fbd559414e9ab6bad99c9"
+        }
+      },
+      {
+        "name": "interrupt",
+        "oldLine": 326,
+        "newLine": 326,
+        "identity": {
+          "bytes": 187,
+          "sha256": "01a13b0f13f5e58c23f157f88e2b6a8210db036df4fb1f5429c0ce3afa93eb3b",
+          "gitBlob": "52a12e23272cff44105e4436940a1a62c7b08083"
+        }
+      },
+      {
+        "name": "terminate_captured",
+        "oldLine": 332,
+        "newLine": 332,
+        "identity": {
+          "bytes": 985,
+          "sha256": "19e8d99a3d8706c37bd319bd15ddddae92c618d1d85673de5283ee17a04a87ae",
+          "gitBlob": "60f2d4214ed4b12fd8b8814d16d9ef184e23915f"
+        }
+      },
+      {
+        "name": "run_child",
+        "oldLine": 357,
+        "newLine": 357,
+        "identity": {
+          "bytes": 5279,
+          "sha256": "7aaefd9904f768458394c407adeddd65cf74e32283571d52c131d88058e2858a",
+          "gitBlob": "59da1200b4e0d36dc6211676eec14042deeca909"
+        }
+      },
+      {
+        "name": "git_read",
+        "oldLine": 448,
+        "newLine": 448,
+        "identity": {
+          "bytes": 584,
+          "sha256": "58cedbe06c248442bce3aebaa4bb368cd1f38f709f031503da2e169f69e45f46",
+          "gitBlob": "89c28e4e204faba44789350d7079294564c1f81a"
+        }
+      },
+      {
+        "name": "source_snapshot",
+        "oldLine": 460,
+        "newLine": 460,
+        "identity": {
+          "bytes": 3112,
+          "sha256": "6a982072b2bd279c17128289ac020829d3cad27a33a01e360b0d4dd2b16afb4b",
+          "gitBlob": "51ee1090c5ec33ab9527423502e9c2667903b94b"
+        }
+      },
+      {
+        "name": "provider_archives",
+        "oldLine": 508,
+        "newLine": 508,
+        "identity": {
+          "bytes": 1627,
+          "sha256": "6864d53d928e29d5ada8fd3c45aa7464295bf2f3d8e6d8f2332dee490474ba2e",
+          "gitBlob": "e389447177234848fff95eae868e69f21a092e54"
+        }
+      },
+      {
+        "name": "control_snapshot",
+        "oldLine": 538,
+        "newLine": 538,
+        "identity": {
+          "bytes": 343,
+          "sha256": "d81cef95d01cda8fe6f68bcc069a77cb7c8fffb5265c32895da2155dcbab4d1a",
+          "gitBlob": "1e95a9fa1d34b98dcc6e359a76be63c971f78ff5"
+        }
+      },
+      {
+        "name": "source_metadata_snapshot",
+        "oldLine": 548,
+        "newLine": 548,
+        "identity": {
+          "bytes": 1220,
+          "sha256": "1c802e8e7cef6604cc2cedb2feff80706f6e0a4cd817a07c2f46799704a3f468",
+          "gitBlob": "895bc943126f9a934f2391471f6d12780e2d512a"
+        }
+      },
+      {
+        "name": "input_snapshot",
+        "oldLine": 566,
+        "newLine": 566,
+        "identity": {
+          "bytes": 2103,
+          "sha256": "9019b0a423057a412bf812eb2e2d5a31508b3b23a6173205282e57b0b2334ce0",
+          "gitBlob": "44d86d809543ce51dbd9cb07c5cad1265f16ca0d"
+        }
+      },
+      {
+        "name": "preserved",
+        "oldLine": 602,
+        "newLine": 602,
+        "identity": {
+          "bytes": 378,
+          "sha256": "d99fe23d73aec460348f55e259735730e360d66dbae80e546df104a5948d96c7",
+          "gitBlob": "12f5036c9e24606369efe76ce0a5d7f36958e730"
+        }
+      },
+      {
+        "name": "ordinary_completion",
+        "oldLine": 608,
+        "newLine": 608,
+        "identity": {
+          "bytes": 443,
+          "sha256": "55f1b977a85713e032619a77bf062a8052b20955e9706ff04052e166e83ba98d",
+          "gitBlob": "c4b2be97237a297a74e2a267bf2525cfa04c670b"
+        }
+      },
+      {
+        "name": "primary_cleanup_seconds",
+        "oldLine": 616,
+        "newLine": 616,
+        "identity": {
+          "bytes": 261,
+          "sha256": "05a9b54e141a49babe3396378a9b62c6b90057db9cf2a6f16d951b75c6983d55",
+          "gitBlob": "c3a95c9661b4edff55d82d709f58c5478ada09e2"
+        }
+      },
+      {
+        "name": "vector_identity",
+        "oldLine": 625,
+        "newLine": 625,
+        "identity": {
+          "bytes": 214,
+          "sha256": "2e12ef911844c7564c8b59d6d1e564873ccbe6cdfe1bc1c6290f732de6946374",
+          "gitBlob": "e7c838d10e339cf695d20d6b86c102a33a9ee08c"
+        }
+      },
+      {
+        "name": "same_identity",
+        "oldLine": 630,
+        "newLine": 630,
+        "identity": {
+          "bytes": 118,
+          "sha256": "0d957774c1d7997fa4d1703b50eabde6b58316692ae071f85913ad7abbd4f182",
+          "gitBlob": "6c79f0bbe82aa2a81e484ef5f7de278115c1cbe8"
+        }
+      },
+      {
+        "name": "regular_pointer",
+        "oldLine": 633,
+        "newLine": 633,
+        "identity": {
+          "bytes": 477,
+          "sha256": "8e653964d269f45b7b10da1146236bed88ebd20d54bfcc63a1ce5fc5a0ffa88e",
+          "gitBlob": "b5deeb09e1cfd38befcb2b582c4f9de63e639edc"
+        }
+      },
+      {
+        "name": "renderer_environment_check",
+        "oldLine": 642,
+        "newLine": 642,
+        "identity": {
+          "bytes": 1702,
+          "sha256": "ded5e1af8130f6f80554008e360b72f1d1c74d7c0b731373d27dcfbdf510c329",
+          "gitBlob": "ab9d9e2edc735ec43d6126549a1204486d55666a"
+        }
+      },
+      {
+        "name": "renderer_static_check",
+        "oldLine": 668,
+        "newLine": 668,
+        "identity": {
+          "bytes": 1656,
+          "sha256": "fce490f4f2b25c6d8bddcb00f6f9b3d6b2247c10be72c5af04107a022cddac17",
+          "gitBlob": "75e189b226dc15d1f7ee28ccf6216d44c88de09a"
+        }
+      },
+      {
+        "name": "directory_owner",
+        "oldLine": 696,
+        "newLine": 696,
+        "identity": {
+          "bytes": 374,
+          "sha256": "ce047901ac1fb03b798905a19cde817e169abe9ff74b7b0e509414948ab598a1",
+          "gitBlob": "a69aca1c23ff935a1ac61f952994a157d352dea6"
+        }
+      },
+      {
+        "name": "same_directory",
+        "oldLine": 703,
+        "newLine": 703,
+        "identity": {
+          "bytes": 126,
+          "sha256": "b1d90a4d7fd2d5078cf42de36db1d92a401f5bf5a249ee579b9f1a817901ba5e",
+          "gitBlob": "aa4f24d25caa36570cdf62cebeebc15d78bd9684"
+        }
+      },
+      {
+        "name": "node_tmp_gate",
+        "oldLine": 706,
+        "newLine": 706,
+        "identity": {
+          "bytes": 464,
+          "sha256": "3028e6a36d16b83204f9176586ba98c9ab0f2fb493554d1dd88122ae4d445a9c",
+          "gitBlob": "8ace297c6a3cf51817ee381690cd01ad057bb08b"
+        }
+      },
+      {
+        "name": "stat_signature",
+        "oldLine": 716,
+        "newLine": 716,
+        "identity": {
+          "bytes": 176,
+          "sha256": "eb94e9f897680617d0016e49ce3848f36ff62c4ed8dfb13dc0e646db4db05d91",
+          "gitBlob": "03d1956bd6083e7fe4f43f170cc8e853c918c9c8"
+        }
+      },
+      {
+        "name": "owner_matches_fd",
+        "oldLine": 720,
+        "newLine": 720,
+        "identity": {
+          "bytes": 301,
+          "sha256": "7291d8fcee6a17c74708156a85019dd37e5423bc7b0b56bbaa7396d9de28677b",
+          "gitBlob": "f4bc7f5d36c418ea31fd1607c9aaf5e9d10e5cb9"
+        }
+      },
+      {
+        "name": "open_owned_root",
+        "oldLine": 727,
+        "newLine": 727,
+        "identity": {
+          "bytes": 296,
+          "sha256": "42aab373c74797b99edb7b5411599679b3d33e941edf6076ec0133b1279728f9",
+          "gitBlob": "650e97df35833f525b89c8811f59435c9f35ce6c"
+        }
+      },
+      {
+        "name": "read_regular_at",
+        "oldLine": 738,
+        "newLine": 738,
+        "identity": {
+          "bytes": 711,
+          "sha256": "cb4e9668697150b4efc9530d13e68c24d71364f10b1270ef24560ec5b9667489",
+          "gitBlob": "87c3158f5e6baf4e24c95375bfca4a868b768f3b"
+        }
+      },
+      {
+        "name": "walk_error",
+        "oldLine": 751,
+        "newLine": 751,
+        "identity": {
+          "bytes": 40,
+          "sha256": "c028b74a5683d0a0027b04d57399f29320475d3bdf52d7e0bcf86d7a89cb94b6",
+          "gitBlob": "f0bae2dc7bde0eef96d839a89ede3682479821b4"
+        }
+      },
+      {
+        "name": "owned_inventory",
+        "oldLine": 754,
+        "newLine": 754,
+        "identity": {
+          "bytes": 2916,
+          "sha256": "2d8a1aa8e767c8818483bb316362afe1fb446a1fe67e8fdf28ecd7039a420fc3",
+          "gitBlob": "cfcab1efec94691e6ad5e78d13dd033dc5809b61"
+        }
+      },
+      {
+        "name": "open_captured_parent",
+        "oldLine": 798,
+        "newLine": 798,
+        "identity": {
+          "bytes": 798,
+          "sha256": "9cddecba8d9b1b015a0ffb0b4f08fd23c9f9b7aecf1229bd4cb5cc5d564e650d",
+          "gitBlob": "55dd3e7a31be3be771cd2b2ea99536395ab2e260"
+        }
+      },
+      {
+        "name": "expected_renderer_transient",
+        "oldLine": 821,
+        "newLine": 821,
+        "identity": {
+          "bytes": 1023,
+          "sha256": "c157b2f48e5abcd637384f0269d916cbbc5e88f3e25d75aacee470f37ce102c3",
+          "gitBlob": "f6c6178884f4bc0f742328cdbc505b6bd3fea8d8"
+        }
+      },
+      {
+        "name": "capture_and_remove_owned",
+        "oldLine": 843,
+        "newLine": 843,
+        "identity": {
+          "bytes": 3837,
+          "sha256": "511c4afafcd7a3fc1b6f6fdf27d0c4ba301dc5379f78d723ae822cb15a865661",
+          "gitBlob": "c8f6e64e28c145502b833772b2a4b59889ff4d72"
+        }
+      },
+      {
+        "name": "node_semantics",
+        "oldLine": 907,
+        "newLine": 907,
+        "identity": {
+          "bytes": 4856,
+          "sha256": "bd7caaf0c3d18c8e4a098cc06b4fe734daff7c4d03612f86ead5fc69dbb52073",
+          "gitBlob": "cf0e5e51e46ef0de4caa30cd8588850a95274cb7"
+        }
+      },
+      {
+        "name": "renderer_semantics",
+        "oldLine": 976,
+        "newLine": 976,
+        "identity": {
+          "bytes": 3861,
+          "sha256": "fa7b7535e3becfac6dd6bb71ba33acf87e027e5e5308319d9574a1f20d77e3a5",
+          "gitBlob": "ba6555859369ce00d65a75e94b10a9d494cebfd7"
+        }
+      },
+      {
+        "name": "native_route_gate",
+        "oldLine": 1037,
+        "newLine": 1037,
+        "identity": {
+          "bytes": 1580,
+          "sha256": "cfe182bcd01828fa32fed9763daa70408ad9d29dc5322cb06612e35a5ee83c04",
+          "gitBlob": "0fd056a1f79cc13be4eac95eaf44a30c04c7ad9c"
+        }
+      },
+      {
+        "name": "compose_source",
+        "oldLine": 1148,
+        "newLine": 1250,
+        "identity": {
+          "bytes": 239,
+          "sha256": "41c3171efbbbc6e547458122e0f220897c7b8269b401e875d3ed01e476b5adb4",
+          "gitBlob": "4163aa969d98d8803db8e5dcc13df0696a878082"
+        }
+      },
+      {
+        "name": "accepted_combined",
+        "oldLine": 1179,
+        "newLine": 1281,
+        "identity": {
+          "bytes": 1517,
+          "sha256": "459c68cc05186250db64de4e900b362a565c46163d2739a7250f9bec67affc63",
+          "gitBlob": "c537e4964bc0592d066aa386b3ed20847fbb1b9b"
+        }
+      }
+    ]
+  },
+  "bindingDelta": {
+    "changed": [
+      {
+        "key": "kind",
+        "beforeValueIdentity": {
+          "bytes": 69,
+          "sha256": "73852e2ce8fd1101f565b91a7d43d5a8d5fb467eb6bbed06071e9f07aaa7f421",
+          "gitBlob": "04d5cfa22ec4c3123075fa51dae97ba7347b0ed8"
+        },
+        "afterValueIdentity": {
+          "bytes": 77,
+          "sha256": "994871744765f485cce65a9357cddde9b65bec576022216c110662d91601b95a",
+          "gitBlob": "2203e4fb4f0a8a7d55f4bf5f5d2fbeea54959ce1"
+        }
+      },
+      {
+        "key": "publishedR1",
+        "beforeValueIdentity": {
+          "bytes": 43,
+          "sha256": "53176995d745db020905f08d8968d243d3d7d55839b4a1a538d2705ac1abe15f",
+          "gitBlob": "29c206ecbefabf4744f3cb74c9c9bd19707b577e"
+        },
+        "afterValueIdentity": {
+          "bytes": 43,
+          "sha256": "e63982f9694652d326912349961d0f1f0f5d07fd3bcc063dc3b95f9b83108a2c",
+          "gitBlob": "d43143392f4ae173c0ba410486568cafb8fc45a4"
+        }
+      },
+      {
+        "key": "combinedR1Identity",
+        "beforeValueIdentity": {
+          "bytes": 145,
+          "sha256": "9ea4245cae3b4d0e4f99a87b9e204a75c9b2e85fa6541a984956c25d5ec0270f",
+          "gitBlob": "41501d0f821ac0cb3fa56ce527d412fbc23934c8"
+        },
+        "afterValueIdentity": {
+          "bytes": 146,
+          "sha256": "c5bead157306d7d1e38d3d37f8513e18f0b600084fa645693fd9a63a9bd4ca79",
+          "gitBlob": "8c11cbc6dd0bfa347128829d0c674d3ad4963d94"
+        }
+      },
+      {
+        "key": "combinedR1Body",
+        "beforeValueIdentity": {
+          "bytes": 103452,
+          "sha256": "71b24ddfc68d798e553ad727f5d78b54eec1e6511f055e713cd2ae21e9429c96",
+          "gitBlob": "8ee3f90806275d272facec4f9a5efba0771bd528"
+        },
+        "afterValueIdentity": {
+          "bytes": 146459,
+          "sha256": "4a8dc526c7e85c550c2db417260737b1490bc0f62f696d216553aec6f620a496",
+          "gitBlob": "0fe0dbaeb1316fa1efe33561a99ebd433ee2059a"
+        }
+      },
+      {
+        "key": "combinedR1ActualReadbackEvidence",
+        "beforeValueIdentity": {
+          "bytes": 313,
+          "sha256": "7e85e769e6f086e364e42a30e28e308b6847dc682f0f8f79271f4cddf512b9cd",
+          "gitBlob": "cf6e71ea297e9268966cf4a5ac73078ac2f527e9"
+        },
+        "afterValueIdentity": {
+          "bytes": 313,
+          "sha256": "5a1ce9b877d23cefdbb5d51cc97665ecb32cd15803cbc266500407adf72c0fd9",
+          "gitBlob": "8f12905999b2f6da88952c52cde30bde1abdf9c6"
+        }
+      },
+      {
+        "key": "runnerLocalPath",
+        "beforeValueIdentity": {
+          "bytes": 65,
+          "sha256": "a5c99a755996440985b7c4ca2abdd2daf144be837c6dc3b7a5afc5053d5a747d",
+          "gitBlob": "30c16d9f69b97a7948d2efbe6f009b36ed6c6c83"
+        },
+        "afterValueIdentity": {
+          "bytes": 78,
+          "sha256": "c06f0faab5e6d9e5dcb61904634439cba007b09e3a3fad322c70a789427d6b54",
+          "gitBlob": "03fad72cb3da01ccf02acbb6f8675f9612f61b1e"
+        }
+      },
+      {
+        "key": "bindingLocalPath",
+        "beforeValueIdentity": {
+          "bytes": 63,
+          "sha256": "85e35eea8e49e78a7f5ba0859bf676bf3c2ebcdf04c4d0adc255291b27ec50e8",
+          "gitBlob": "e4856f05562cae3df0d923d072a43dffa39ebe28"
+        },
+        "afterValueIdentity": {
+          "bytes": 76,
+          "sha256": "b3ddc1784708b98fe938a48f5fb08878cf84a22cda803a0138bec5e28caca981",
+          "gitBlob": "6f504f895df8827414c1db27be2976c977f5e043"
+        }
+      },
+      {
+        "key": "runnerIdentity",
+        "beforeValueIdentity": {
+          "bytes": 145,
+          "sha256": "ee1df0870ee7bc08afd021f3f1841d3d0fa8b2ad27668832160b1c7a9e1bb197",
+          "gitBlob": "218b3d1c6985086195d8ecfc42f24315e535cdc4"
+        },
+        "afterValueIdentity": {
+          "bytes": 146,
+          "sha256": "c2b959f4f5bee775834b77eb377935b1fbb27213b993833179156514e619a47b",
+          "gitBlob": "46d39e78962ef331e25c955ae5517e23f6d62cb2"
+        }
+      },
+      {
+        "key": "acceptedReviewBodies",
+        "beforeValueIdentity": {
+          "bytes": 4438765,
+          "sha256": "01180138f2e31b7c52fde731afe02bb53af0c7a741cdb6a9eaea3750ed3835e3",
+          "gitBlob": "a7b45399b36251823fdcc5b1ec04353d92296be7"
+        },
+        "afterValueIdentity": {
+          "bytes": 4894303,
+          "sha256": "984096d5684b52f89d226eb5c989c52dbbad8e0bdf8af9af83223af526fbc69a",
+          "gitBlob": "bdce79c26eb5ef4164ca7694562b7d71a9c4cd6c"
+        }
+      },
+      {
+        "key": "inputFiles",
+        "beforeValueIdentity": {
+          "bytes": 1919,
+          "sha256": "612596c074c03d69ce59044a4d2d7e9c158ebf432be7200316906b774df55ee7",
+          "gitBlob": "13cb4bfa8d1cd0716774cc85a73e77c7932356af"
+        },
+        "afterValueIdentity": {
+          "bytes": 2003,
+          "sha256": "ba195bbc95973c01040933e1cc8c4d1d97bdc760b10c39a670e514ac7f195f05",
+          "gitBlob": "9bb6757fcf2ba2b95f71d902cf023b4d7a42fb60"
+        }
+      },
+      {
+        "key": "commandVectors",
+        "beforeValueIdentity": {
+          "bytes": 4253,
+          "sha256": "7ea385333530a72d2378d3a8675b953d6f6fa09ed4a14434a0e3c0a2c0d4c650",
+          "gitBlob": "162b1e12bba7455179b3bfe45116e15deac1a14d"
+        },
+        "afterValueIdentity": {
+          "bytes": 4279,
+          "sha256": "65d7e9d5148e879477908837a6e8cb8a874326a05e83f77f6db0200301b2c49b",
+          "gitBlob": "d1dd3ba2915687c21ee0003fef06be3335a4c8cf"
+        }
+      },
+      {
+        "key": "outputRoots",
+        "beforeValueIdentity": {
+          "bytes": 364,
+          "sha256": "7f9f7657599d08717f98add68cd320cae909e256bb1e4d737c95d4797b7c013d",
+          "gitBlob": "e48ed59c220fcc1685eea444c6388585ec8cc074"
+        },
+        "afterValueIdentity": {
+          "bytes": 429,
+          "sha256": "44ed4f7eb4e3ff08f4e525f250006f95273f6dedef5296e3c866f86a79ca7b9f",
+          "gitBlob": "072933f5727ba57518215fe64dd341ba12dc98ff"
+        }
+      },
+      {
+        "key": "tempRoots",
+        "beforeValueIdentity": {
+          "bytes": 384,
+          "sha256": "db775d7cb985913d67beda8bb0b64d3fbb67d69edd39eefb77db4a878a13532c",
+          "gitBlob": "ce846da466ef9f0e5b417c9103ad1423c6a90b50"
+        },
+        "afterValueIdentity": {
+          "bytes": 449,
+          "sha256": "4dbbffa2330cc3c8bf8d6c9d63ac20e98fcb425895343ea1d869e1deaae4db3d",
+          "gitBlob": "7e7c9c5ea6e0a14b1f91564e65be866cf2cda8b9"
+        }
+      },
+      {
+        "key": "materializationReceiptScope",
+        "beforeValueIdentity": {
+          "bytes": 2670,
+          "sha256": "35efd98d74e5c94d977cef4d44e1b9e182313580267aa3b7e270ac6ce26188ae",
+          "gitBlob": "9b8a7dd9c140eb13da4d1dcf23cc53d319f48a12"
+        },
+        "afterValueIdentity": {
+          "bytes": 2696,
+          "sha256": "fb3ac941c1843e6732f59ee22dc4b514bcf44706130a3293a0484414a4526c3c",
+          "gitBlob": "1e3662ee814ca3faf5c12ef724c4b2db50e4f82a"
+        }
+      },
+      {
+        "key": "authorshipGate",
+        "beforeValueIdentity": {
+          "bytes": 792,
+          "sha256": "5666845047220e4904611fc9c50210e82bbcb4dd314ab852afc46094cec1dc38",
+          "gitBlob": "370e702734cd365316204dc98f1e0e6817cfc896"
+        },
+        "afterValueIdentity": {
+          "bytes": 1079,
+          "sha256": "3f2b005b8742372c186ae1d11dc2aee57511221fd2cb2791ab9288d2e1e03365",
+          "gitBlob": "3111ad09e1bedd55e148a4b38390f4a5977b5bd2"
+        }
+      },
+      {
+        "key": "draftState",
+        "beforeValueIdentity": {
+          "bytes": 351,
+          "sha256": "002a92c81e6439fe08ca7b20a04162265b591b33979101c4540fb967d5ad14f1",
+          "gitBlob": "81a7961f199c0b9c31d22702f8e33b95c63a3b5e"
+        },
+        "afterValueIdentity": {
+          "bytes": 594,
+          "sha256": "bbab50fdd8e7c2156e30287791b8e9f0a2f2e897d8f8d9d543c5a6cc0d05af17",
+          "gitBlob": "c7e3627937d23fe668fc1dcebb48e415c0d82145"
+        }
+      },
+      {
+        "key": "historicalTestMaterialization",
+        "beforeValueIdentity": {
+          "bytes": 4193,
+          "sha256": "fbf46173953eefa32a7c853def6ddda67f61e5edd141b13e9dfaaa0cdf2e171a",
+          "gitBlob": "587a89a6ebcd46a7c92fdb8a5d09bce51084d853"
+        },
+        "afterValueIdentity": {
+          "bytes": 7162,
+          "sha256": "0d840c4902848dc1eea53b99147821fdd8cacff4d9ca9bc706d3be28559a6381",
+          "gitBlob": "662a88ddf9b9994533fb2303553707d910ce13f1"
+        }
+      },
+      {
+        "key": "historicalEvidenceBodies",
+        "beforeValueIdentity": {
+          "bytes": 16606,
+          "sha256": "948723dd9747932e20f02a2e11ef962f23d086c6faae3e856e9eb400bbdd6b4c",
+          "gitBlob": "6fd42fe3f1d1f1c77f621dbbd71fd5ec68dd6e29"
+        },
+        "afterValueIdentity": {
+          "bytes": 32142,
+          "sha256": "45372b167a557d80e755dd889502e5e31c70caa1b2bcbfc6409ed3a02269f3fd",
+          "gitBlob": "f8243d1d11e32ec7eadc8405903f944d73fbba36"
+        }
+      }
+    ],
+    "unchanged": [
+      "schemaVersion",
+      "publishedRecoveryR1",
+      "publishedTransportAmendment",
+      "combinedR1ActualReadbackAccepted",
+      "phase",
+      "actualPublishedSubjectReadbackAccepted",
+      "publishedSubject",
+      "actualPublishedSubjectReadbackEvidence",
+      "combinedInputImportAdmission",
+      "beforeSourceOverlay",
+      "sourceOverlay",
+      "sourcePins",
+      "sourceVectorIdentity",
+      "testIdentities",
+      "nodeNames",
+      "rendererNames",
+      "nodeRedFailureSites",
+      "rendererRedFailureSites",
+      "nativeMetadataArgv",
+      "rendererRawEnvironment",
+      "rendererEffectiveAbsentKeys",
+      "rendererAbsentPaths",
+      "rendererStaticPins",
+      "rendererStaticLinks",
+      "rendererNativePins",
+      "rendererEntryRelative",
+      "rollupLocalOverride",
+      "rendererDerivedConfig",
+      "materializePaths",
+      "acceptedCombinedRed",
+      "acceptedCombinedGreen",
+      "producerR2ReviewedAndPublished",
+      "producerActualReadbackAccepted",
+      "behavioralAttempts",
+      "timing",
+      "executionScope",
+      "historicalRecoveryProvenance",
+      "historicalPredictionCorrection",
+      "historicalBeforeSourceOverlayQualification",
+      "correctedControlAuthoredAtUtc"
+    ],
+    "addedKeys": [
+      "dataReplicaRecovery",
+      "postTransportRecoveryProvenance",
+      "postTransportControlAuthoredAtUtc"
+    ],
+    "codec": "Each compact JSON value followed by LF; full binding uses JSON.stringify(value,null,2)+LF. Value fingerprints are derived, not standalone blobs.",
+    "fullInverseExact": true
+  },
+  "reviewIdentities": [
+    {
+      "role": "freshBootstrapGuardActualReview",
+      "bytes": 32514,
+      "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+      "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075"
+    },
+    {
+      "role": "freshSdkIndependentReview",
+      "bytes": 84719,
+      "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+      "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6"
+    },
+    {
+      "role": "freshMcpIndependentReview",
+      "bytes": 155439,
+      "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+      "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239"
+    },
+    {
+      "role": "crossR1ActualPublicationReadback",
+      "bytes": 24775,
+      "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+      "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+    },
+    {
+      "role": "crossTestGuardR2",
+      "bytes": 35700,
+      "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+      "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+    },
+    {
+      "role": "crossTestParityR2",
+      "bytes": 98112,
+      "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+      "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+    },
+    {
+      "role": "crossTestActualPublicationReadback",
+      "bytes": 56894,
+      "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+      "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+    },
+    {
+      "role": "crossActualRedGuard",
+      "bytes": 140038,
+      "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+      "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+    },
+    {
+      "role": "crossActualRedPrimarySemantic",
+      "bytes": 190694,
+      "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+      "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+    },
+    {
+      "role": "crossActualRedSemanticClosure",
+      "bytes": 86249,
+      "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+      "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+    },
+    {
+      "role": "crossProducerGuardR2",
+      "bytes": 121044,
+      "sha256": "438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339",
+      "gitBlob": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637"
+    },
+    {
+      "role": "crossProducerParityR2",
+      "bytes": 109607,
+      "sha256": "da402e2bc50d090cc5b2a57ff1eac0dc5d6767b77876d97f301937db7197536b",
+      "gitBlob": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f"
+    },
+    {
+      "role": "crossProducerActualPublicationReadback",
+      "bytes": 31670,
+      "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+      "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+    },
+    {
+      "role": "crossActualGreenFullGuard",
+      "bytes": 209270,
+      "sha256": "b56c4d2a4328f11a679a73de100d13af4ec7e8ccc6fe8f6333de98dec4d2d329",
+      "gitBlob": "848e6efd0b924e4415848551cfea034f22b84221"
+    },
+    {
+      "role": "crossActualGreenFinalSemantic",
+      "bytes": 140647,
+      "sha256": "74936b31eeefd735ec329d286ae145b2eddb16fa025e5fb8cc6f715c5b133fd3",
+      "gitBlob": "4a49adfedbc84301e88d524d71b766a7ad785d14"
+    },
+    {
+      "role": "crossActualGreenFullEnvelope",
+      "bytes": 166444,
+      "sha256": "c1ec7ed1270235d520b436e28cbdeb0988bc1af4c8473b5226e34b081b305981",
+      "gitBlob": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b"
+    },
+    {
+      "role": "crossOriginalValidationIncompleteGuard",
+      "bytes": 146237,
+      "sha256": "22813b7c3fa165d506e7eb487b5be229ea7910d4208c73a930a9621978a4703e",
+      "gitBlob": "736df253a457b9a7260febbd74071ed2615be2bd"
+    },
+    {
+      "role": "crossOriginalValidationIncompleteParity",
+      "bytes": 169081,
+      "sha256": "0863878d6085e61a91e8f96d970bdb9cd83a3ea6ce0a174c80bf0a0eb5cd9175",
+      "gitBlob": "7567c92bcc194c2de5e26abfed0a8604522fe589"
+    },
+    {
+      "role": "isolatedRecoveryR1Guard",
+      "bytes": 167262,
+      "sha256": "9375e23aeba4b871ad016c82c76ae539f769bea1a5f2ab72c63a8d615af24585",
+      "gitBlob": "0fdbe9a84daa354332d61c13a532090199d50c88"
+    },
+    {
+      "role": "isolatedRecoveryR1Parity",
+      "bytes": 133047,
+      "sha256": "d94fb2464c47195fadfcaf311732025c578e8084b9b7ef701dd52c76e6aeca77",
+      "gitBlob": "97bfd42e46bc1dd2160f8c9826de68219303b67d"
+    },
+    {
+      "role": "isolatedRecoveryR1CompositeActualPublicationReadback",
+      "bytes": 231365,
+      "sha256": "393a6ee912d88ff0faf979c8229a705578e1bd6723a3cf58769449205dbe2335",
+      "gitBlob": "e695dd8aca0559256e01175166317ab905f467a4"
+    },
+    {
+      "role": "combinedR1RootActual",
+      "bytes": 25481,
+      "sha256": "54c837bf45a6318cf43452ba3b6e66e341d7c4153a1d4d5d93a323bb24b9196d",
+      "gitBlob": "72db8984a98696287225899a3bf0c31bfd57a71f"
+    },
+    {
+      "role": "combinedR1IndependentActual",
+      "bytes": 80224,
+      "sha256": "aa8a8c7f6fa8b49593a9e233ae8ae9b0eb4848365915dde71bb7cb81b19e1f4e",
+      "gitBlob": "0669feaf0e8759ad2fd4330efe315c5540b55252"
+    },
+    {
+      "role": "combinedTestGuardR2",
+      "bytes": 25359,
+      "sha256": "dc7aebf5607cb8150b04c23b5e5a36f83735e5081ba18b78586ef30283d77843",
+      "gitBlob": "4d3004a5c76544dc8e47b842e981f22e7fbcdcc3"
+    },
+    {
+      "role": "combinedTestRendererR2",
+      "bytes": 97016,
+      "sha256": "9b67a3fa8a4fa07231f986881698b13ffc75c2171f18ed9f919a30e7875d145b",
+      "gitBlob": "6580a4f45747c0f079e37e0f3db042eca6c33c9e"
+    },
+    {
+      "role": "combinedTestRootActual",
+      "bytes": 29341,
+      "sha256": "fe81d1f6216e3aa89c456d22cd0a8c7ff735fb255902cfc99e915fae030875e8",
+      "gitBlob": "19ae837ffe2a9b1caaa2496cb08ac24841900752"
+    },
+    {
+      "role": "combinedTestIndependentActual",
+      "bytes": 57841,
+      "sha256": "a8736b98140b38c92578210fd9064f6952a96e3ea07df5471d9f88b11849f37e",
+      "gitBlob": "156f7b1977379568bcd7aa487be21d7ef95880f1"
+    },
+    {
+      "role": "rendererInitialInstalledAdmission",
+      "bytes": 156717,
+      "sha256": "76e5d3440254a5e778eb700eb306251a779d0f5a8c6dfe8c47e740895b316154",
+      "gitBlob": "a342571a13ce31b46e9782356cc23527c61ee644"
+    },
+    {
+      "role": "rendererAdditionalInstalledAdmission",
+      "bytes": 167326,
+      "sha256": "c880352c1d6cc0ac0c2c37bfb4d18d3a9718170298e814cb884f67fbc7e0413b",
+      "gitBlob": "e37de06a48b2d958fbd54de599ca5f933e3c23b0"
+    },
+    {
+      "role": "rendererCombinedFeasibility",
+      "bytes": 53474,
+      "sha256": "1ce3d9e96b5a8a100bccb1caa7bb1ab2ee8f234cb2afd35e940eb298c64c1238",
+      "gitBlob": "6ee0aadb457acd58e35df41c8fa8492ff6654933"
+    },
+    {
+      "role": "rendererPathDataAdmission",
+      "bytes": 8151,
+      "sha256": "9ceef73e09588b59852323fba2d2396cd83b2a524849a8cfb20b4bb278daa323",
+      "gitBlob": "d688c295815c064fad5e6d4f3a7481c083c6cd06"
+    },
+    {
+      "role": "combinedSemanticSourceGuide",
+      "bytes": 13467,
+      "sha256": "fd44402a9555871ddc2d26aa4ff87337c2591995f78f6642eab63142e8645254",
+      "gitBlob": "969d58ae7fb9788b0266ff6cefd8c9cd2aad7231"
+    },
+    {
+      "role": "combinedWholeTestsR2Proposal",
+      "bytes": 24017,
+      "sha256": "1532df713cd8c75025fccaaecbc7041e05f3ced87d1894f041a97a01e6d8f9a1",
+      "gitBlob": "061cb0545b58d847ef69b05baa2b140065456730"
+    },
+    {
+      "role": "correctedTitleR1GuardReview",
+      "bytes": 59821,
+      "sha256": "42f0bc02651b061669e9b54eb572561904ec33098ad15257c4f0cb3ca91ef5b3",
+      "gitBlob": "097d04fa9d0fa693c31a3c1d14bc47758defc760"
+    },
+    {
+      "role": "correctedTitleR1SemanticReview",
+      "bytes": 72429,
+      "sha256": "b158a9a257fe0ae01af6741630aeac2d37de0be52264902df0972297b12e5f5a",
+      "gitBlob": "ca250c5c83647d5d6956d205c5ceb9791b9634ea"
+    },
+    {
+      "role": "correctedTitleR1BindingReview",
+      "bytes": 61763,
+      "sha256": "d24e61f10818e156fec7eadccd7f9d04607bd2f6e0095b72b070af2ef9ae3406",
+      "gitBlob": "c1c1ace034643b96bf4cd4e9234a87dbd28822bc"
+    },
+    {
+      "role": "correctedTitleR1RootActual",
+      "bytes": 20615,
+      "sha256": "771c21e1e7f582d6983e2070bf93602ad3d24cfd4c737bdb1dda3e71ae14c255",
+      "gitBlob": "3985861870b7ebd448978d83e4ea7577c4d0eb58"
+    },
+    {
+      "role": "correctedTitleR1IndependentActual",
+      "bytes": 74113,
+      "sha256": "ec3023dae83daed61ef312d10d106c73aa222b2e0016061a0b627383f14779ff",
+      "gitBlob": "ab99273cdb4da1f27d6650242755cb24e5d0c3a6"
+    },
+    {
+      "role": "historicalTestMaterializationGuard",
+      "bytes": 126054,
+      "sha256": "34a3bb0df97616ea1b93524a628f320594f1700ee158617b04258c98d610cb9c",
+      "gitBlob": "62fda73c295b6fa1467a121685e4daa85a686869"
+    },
+    {
+      "role": "historicalTestMaterializationParity",
+      "bytes": 113999,
+      "sha256": "48dc8af6e125667c960df0d8fcead2c8a82428d8fd8b45294a1465071267ced9",
+      "gitBlob": "eeb4a37b7967a387bf01c16337788fc75f3bbb6e"
+    },
+    {
+      "role": "historicalTestMaterializationRootActual",
+      "bytes": 68230,
+      "sha256": "8cd9f33fc3afeba9e1b9843620022272a850aef36a740a87e3147b9df89c3737",
+      "gitBlob": "1a90d32206b2b31ae3e3dba8e2edde55349851c7"
+    },
+    {
+      "role": "historicalTestMaterializationIndependentActual",
+      "bytes": 115641,
+      "sha256": "fcfa1571b7ea385fea409dcbe5d5adfe2e9b8b60309a6b331c439feb26704790",
+      "gitBlob": "374fc9db427cb6bcd3380190e836717fa661fe3f"
+    },
+    {
+      "role": "originalSixTitlePredictionDiagnosis",
+      "bytes": 127784,
+      "sha256": "7deff97792b556dea4da2ed2e1c10fc158445d51e4343171f2e813ff242b6196",
+      "gitBlob": "b80e069b705d41405733ff4fd40caa3ad2a753e6"
+    },
+    {
+      "role": "postTransportRecoveryR1RootReview",
+      "bytes": 22893,
+      "sha256": "c69c619dd888465c09a133f6145449b5e8db37b2892ccf954e70c333aef97206",
+      "gitBlob": "569e0fd96a6408d1ada2c5c0894ca2512e7564e1"
+    },
+    {
+      "role": "postTransportRecoveryR1GuardReview",
+      "bytes": 32255,
+      "sha256": "fe3306e57dd3bc667cf1692a937fcbc41184d1350bee2daf4f23e203e75e351a",
+      "gitBlob": "327c0e80e9f04a2515bd4655acc4513aa67ba689"
+    },
+    {
+      "role": "postTransportRecoveryR1BindingReview",
+      "bytes": 47731,
+      "sha256": "4a924e4f9cc8b1bea52e2f359a0932e64c95e2211001f9ce2150c48cfd526323",
+      "gitBlob": "1675502277a40634814c524137687895b88006da"
+    },
+    {
+      "role": "postTransportRecoveryR1SemanticReview",
+      "bytes": 47224,
+      "sha256": "8c30827b94fff969551d37eaaec4e9e4756a126cff645bc677c19df10547bc40",
+      "gitBlob": "e875f6847ac7f80d647cfd9080b28e31968c8358"
+    },
+    {
+      "role": "postTransportRecoveryR1RootActual",
+      "bytes": 32853,
+      "sha256": "4b353847c949f242095de78453d619f78ec03bca0ccbc87a91fb6c90cc579754",
+      "gitBlob": "99812b3efa965d202d67feca8b5d7948e0800b11"
+    },
+    {
+      "role": "postTransportRecoveryR1IndependentActual",
+      "bytes": 68306,
+      "sha256": "3e2b87c35227e99abc32e5a95808895a1298df30267994f6278c1c63a806bae9",
+      "gitBlob": "d277c2271e3457882c895e927b76a8a32427f83a"
+    },
+    {
+      "role": "correctedRedIncompleteRootAccounting",
+      "bytes": 6076,
+      "sha256": "8cceaba2e0d81fc158541a708f0ae89e0bcbad702db4530b5fa135ce0482e125",
+      "gitBlob": "e483e532de888e7f3698d5d2310d5ddecd2875ee"
+    },
+    {
+      "role": "correctedRedIncompleteGuardReview",
+      "bytes": 9251,
+      "sha256": "4f902f51c54b9d0a6db2bb99cc6d267bab21e962d13ec30a4c4ef6762384ce34",
+      "gitBlob": "80a17feff65625c696d35aaee26e3614544cff23"
+    },
+    {
+      "role": "correctedRedIncompleteSemanticReview",
+      "bytes": 10310,
+      "sha256": "fb97e622ad21ff840bc781d4ad23a1a3624d2fc4c71d06e22645ded36da21d09",
+      "gitBlob": "ff3ed051ca16e886c0d60248294c99c71643d7ad"
+    },
+    {
+      "role": "correctedRedIncompleteRootActual",
+      "bytes": 23920,
+      "sha256": "ac86fb03a9bad33ed0c2555abc7346a3c7e1ec5141b78d24592aeca3cd508938",
+      "gitBlob": "306d9b854656fe560f98620856b4a2e7bc98254c"
+    },
+    {
+      "role": "correctedRedIncompleteIndependentActual",
+      "bytes": 67084,
+      "sha256": "981e5a19ff9b2f1891010395c47d1bc470e56ef671195bc4e83c7aeabbf9a56c",
+      "gitBlob": "65be34f4b4d7373c3cc18b9c299fca90e8dddabc"
+    },
+    {
+      "role": "postTransportRecoveryRecommendations",
+      "bytes": 27997,
+      "sha256": "9e08049327575391ebfaaf8ff4f41877ac43ebfad8d063a16d31cad41316b664",
+      "gitBlob": "10c383ebb2cb5827fd811d6f0e7ad6a950fbae7f"
+    },
+    {
+      "role": "returnedSourceInputObservation",
+      "bytes": 13750,
+      "sha256": "7a217af0f942da5789b6d65962f7c8b3ccd830be96e31f6f3965ae162b9e2e6b",
+      "gitBlob": "0988f7b08ae156529fc7cbc9b37c9d82f405164e"
+    },
+    {
+      "role": "returnedPathObservation",
+      "bytes": 2135,
+      "sha256": "d3be601285716e140c0ec98b596ae2e59ba1d286cfbedb4c739a526628cd1b53",
+      "gitBlob": "7063e49185bd288bf32ccd9ca6aead6388679c37"
+    },
+    {
+      "role": "returnedToolCacheObservation",
+      "bytes": 8115,
+      "sha256": "f30cd2786b3b6c8ec49440f835f16c5ed0367fb73bc6160f09d5d363409bade7",
+      "gitBlob": "75b276dbcd832a2f496c684a4bbe3f6a9b607da1"
+    }
+  ],
+  "overlayIdentities": [
+    {
+      "group": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+    },
+    {
+      "group": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "bytes": 24759,
+      "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+      "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+    },
+    {
+      "group": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "bytes": 8457,
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+    },
+    {
+      "group": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "bytes": 36260,
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+    },
+    {
+      "group": "beforeSourceOverlay",
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "bytes": 74351,
+      "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+      "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+    },
+    {
+      "group": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "bytes": 45707,
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+      "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+    },
+    {
+      "group": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "bytes": 32845,
+      "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+      "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+    },
+    {
+      "group": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    },
+    {
+      "group": "beforeSourceOverlay",
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 180091,
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+      "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978"
+    },
+    {
+      "group": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+    },
+    {
+      "group": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "bytes": 24759,
+      "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+      "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+    },
+    {
+      "group": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "bytes": 8457,
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+    },
+    {
+      "group": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "bytes": 36260,
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+    },
+    {
+      "group": "sourceOverlay",
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "bytes": 74351,
+      "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+      "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+    },
+    {
+      "group": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "bytes": 45707,
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+      "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+    },
+    {
+      "group": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "bytes": 32845,
+      "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+      "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+    },
+    {
+      "group": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    {
+      "group": "sourceOverlay",
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+    }
+  ],
+  "historicalUnknownAdmission": {
+    "identity": {
+      "bytes": 14209,
+      "sha256": "ca765d1710162c77bad581e09b7eb2f7856bec93ee36c77463ce4f7f72266ec4",
+      "gitBlob": "df4e4caeb8a2602942a5cb95b140101c595c3f47"
+    },
+    "classification": "UNKNOWN/INCOMPLETE/SPENT",
+    "observations": {
+      "sessionId": 54393,
+      "invocationCount": 1,
+      "observedOuterExit": null,
+      "finalToolResult": null,
+      "freshPrimaryResultsObserved": [],
+      "freshPhaseReceiptRead": false,
+      "freshBeforeBoundaryRead": false,
+      "freshAfterBoundaryRead": false,
+      "capturedCleanupObserved": false,
+      "completeRuntimeInputPreservation": null,
+      "processTermination": null,
+      "originalExecutorContinuity": null
+    },
+    "acceptedCombinedRed": null,
+    "producerAuthorshipGateOpened": false
+  },
+  "currentSourceVector": {
+    "bytes": 2118,
+    "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+    "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+  },
+  "currentTests": {
+    "node": {
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    "renderer": {
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+    }
+  },
+  "fullInputMap": {
+    "setupBinding": {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/bootstrap-binding.json",
+      "bytes": 2790411,
+      "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+      "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+    },
+    "sourceFull": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/source-restore-source-after.json",
+      "bytes": 3451167,
+      "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+      "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+    },
+    "sourceNonDoc": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-source-after.json",
+      "bytes": 2478318,
+      "sha256": "59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751",
+      "gitBlob": "51bf0d0962e07fcc7843fcd65c3202ec9133a607"
+    },
+    "dependencies": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json",
+      "bytes": 39168001,
+      "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+      "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+    },
+    "compiled": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-compiled-after.json",
+      "bytes": 400300,
+      "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+      "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+    },
+    "pnpm": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/pnpm-inventory.json",
+      "bytes": 253936,
+      "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+      "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c"
+    },
+    "currentBoundary": {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/fresh-current-input-boundary.json",
+      "bytes": 3654,
+      "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+      "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+    },
+    "providers": {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/provider-archives-fresh-review.json",
+      "bytes": 789090,
+      "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+      "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+    }
+  },
+  "controlCensus": 13,
+  "localObservation": {
+    "toolChunk": "db1c15",
+    "exitCode": 0,
+    "dataOnly": true,
+    "targetExecuted": false,
+    "selectedScopeRootExists": false,
+    "files": [
+      {
+        "file": "baseline-runner.py.data",
+        "bytes": 94938,
+        "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+        "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+      },
+      {
+        "file": "runner-v1.py",
+        "bytes": 104131,
+        "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+        "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+      },
+      {
+        "file": "baseline-binding.json.data",
+        "bytes": 5856749,
+        "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+        "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+      },
+      {
+        "file": "red-binding-v1.json",
+        "bytes": 6399172,
+        "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+        "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "name": "Exact complete runner/new binding and baselines",
+      "passed": true
+    },
+    {
+      "name": "R1 full actual gate closed before both control authorships",
+      "passed": true
+    },
+    {
+      "name": "Unique inverse replacement complete unique thirteen-control RED census",
+      "passed": true
+    },
+    {
+      "name": "Unique inverse replacement precise original/current eight-input map and three path-only relocations",
+      "passed": true
+    },
+    {
+      "name": "Unique inverse replacement current R1 actual and unknown-spent historical provenance admission",
+      "passed": true
+    },
+    {
+      "name": "Unique inverse replacement new replica ownership and exact current-map admission",
+      "passed": true
+    },
+    {
+      "name": "Unique inverse replacement providers path",
+      "passed": true
+    },
+    {
+      "name": "Unique inverse replacement currentBoundary path",
+      "passed": true
+    },
+    {
+      "name": "Unique inverse replacement setupBinding path",
+      "passed": true
+    },
+    {
+      "name": "Unique inverse replacement R1 blob",
+      "passed": true
+    },
+    {
+      "name": "Unique inverse replacement R1 publication",
+      "passed": true
+    },
+    {
+      "name": "Unique inverse replacement output root",
+      "passed": true
+    },
+    {
+      "name": "Complete runner inverse is byte-identical 7a79",
+      "passed": true
+    },
+    {
+      "name": "52 complete function blocks in both scripts",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function identity",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function canonical",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function utc",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function write_new",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function process_rows",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function package_values",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function transport_values",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function admit_environment",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function environment_check",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function tooling",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function file_row",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function directory_manifest_entry",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function directory_manifest",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function dependencies",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function compiled",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function toolchain_inventory",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function verify_pnpm",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function group_members",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function interrupt",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function terminate_captured",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function run_child",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function git_read",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function source_snapshot",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function provider_archives",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function control_snapshot",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function source_metadata_snapshot",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function input_snapshot",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function preserved",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function ordinary_completion",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function primary_cleanup_seconds",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function vector_identity",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function same_identity",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function regular_pointer",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function renderer_environment_check",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function renderer_static_check",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function directory_owner",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function same_directory",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function node_tmp_gate",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function stat_signature",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function owner_matches_fd",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function open_owned_root",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function read_regular_at",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function walk_error",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function owned_inventory",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function open_captured_parent",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function expected_renderer_transient",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function capture_and_remove_owned",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function node_semantics",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function renderer_semantics",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function native_route_gate",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function compose_source",
+      "passed": true
+    },
+    {
+      "name": "Frozen complete function accepted_combined",
+      "passed": true
+    },
+    {
+      "name": "All17 imports literal-identical",
+      "passed": true
+    },
+    {
+      "name": "Data-only Python AST independently confirmed52functions17imports with no evaluation",
+      "passed": true,
+      "evidence": {
+        "dataOnlyAstParse": true,
+        "targetExecuted": false,
+        "toolChunk": "bce028",
+        "exitCode": 0,
+        "oldBytes": 94938,
+        "newBytes": 104131,
+        "newSha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+        "unchangedFullFunctions": 52,
+        "unchangedImportStatements": 17
+      }
+    },
+    {
+      "name": "Exact18 inherited changes40 unchanged3added and no removal",
+      "passed": true
+    },
+    {
+      "name": "Complete binding inverse is byte-identical a5c9",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group schemaVersion",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group publishedRecoveryR1",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group publishedTransportAmendment",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group combinedR1ActualReadbackAccepted",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group phase",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group actualPublishedSubjectReadbackAccepted",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group publishedSubject",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group actualPublishedSubjectReadbackEvidence",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group combinedInputImportAdmission",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group beforeSourceOverlay",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group sourceOverlay",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group sourcePins",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group sourceVectorIdentity",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group testIdentities",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group nodeNames",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group rendererNames",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group nodeRedFailureSites",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group rendererRedFailureSites",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group nativeMetadataArgv",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group rendererRawEnvironment",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group rendererEffectiveAbsentKeys",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group rendererAbsentPaths",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group rendererStaticPins",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group rendererStaticLinks",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group rendererNativePins",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group rendererEntryRelative",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group rollupLocalOverride",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group rendererDerivedConfig",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group materializePaths",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group acceptedCombinedRed",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group acceptedCombinedGreen",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group producerR2ReviewedAndPublished",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group producerActualReadbackAccepted",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group behavioralAttempts",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group timing",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group executionScope",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group historicalRecoveryProvenance",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group historicalPredictionCorrection",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group historicalBeforeSourceOverlayQualification",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete binding group correctedControlAuthoredAtUtc",
+      "passed": true
+    },
+    {
+      "name": "All original43 review records literal-identical and roles unique",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity freshBootstrapGuardActualReview",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity freshSdkIndependentReview",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity freshMcpIndependentReview",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity crossR1ActualPublicationReadback",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity crossTestGuardR2",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity crossTestParityR2",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity crossTestActualPublicationReadback",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity crossActualRedGuard",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity crossActualRedPrimarySemantic",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity crossActualRedSemanticClosure",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity crossProducerGuardR2",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity crossProducerParityR2",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity crossProducerActualPublicationReadback",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity crossActualGreenFullGuard",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity crossActualGreenFinalSemantic",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity crossActualGreenFullEnvelope",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity crossOriginalValidationIncompleteGuard",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity crossOriginalValidationIncompleteParity",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity isolatedRecoveryR1Guard",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity isolatedRecoveryR1Parity",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity isolatedRecoveryR1CompositeActualPublicationReadback",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity combinedR1RootActual",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity combinedR1IndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity combinedTestGuardR2",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity combinedTestRendererR2",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity combinedTestRootActual",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity combinedTestIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity rendererInitialInstalledAdmission",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity rendererAdditionalInstalledAdmission",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity rendererCombinedFeasibility",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity rendererPathDataAdmission",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity combinedSemanticSourceGuide",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity combinedWholeTestsR2Proposal",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity correctedTitleR1GuardReview",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity correctedTitleR1SemanticReview",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity correctedTitleR1BindingReview",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity correctedTitleR1RootActual",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity correctedTitleR1IndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity historicalTestMaterializationGuard",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity historicalTestMaterializationParity",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity historicalTestMaterializationRootActual",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity historicalTestMaterializationIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity originalSixTitlePredictionDiagnosis",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity postTransportRecoveryR1RootReview",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity postTransportRecoveryR1GuardReview",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity postTransportRecoveryR1BindingReview",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity postTransportRecoveryR1SemanticReview",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity postTransportRecoveryR1RootActual",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity postTransportRecoveryR1IndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity correctedRedIncompleteRootAccounting",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity correctedRedIncompleteGuardReview",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity correctedRedIncompleteSemanticReview",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity correctedRedIncompleteRootActual",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity correctedRedIncompleteIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity postTransportRecoveryRecommendations",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity returnedSourceInputObservation",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity returnedPathObservation",
+      "passed": true
+    },
+    {
+      "name": "Full embedded review identity returnedToolCacheObservation",
+      "passed": true
+    },
+    {
+      "name": "Full nine overlays unchanged beforeSourceOverlay",
+      "passed": true
+    },
+    {
+      "name": "Whole overlay beforeSourceOverlay scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "passed": true
+    },
+    {
+      "name": "Whole overlay beforeSourceOverlay scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "passed": true
+    },
+    {
+      "name": "Whole overlay beforeSourceOverlay scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "passed": true
+    },
+    {
+      "name": "Whole overlay beforeSourceOverlay scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Whole overlay beforeSourceOverlay src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Whole overlay beforeSourceOverlay scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Whole overlay beforeSourceOverlay scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Whole overlay beforeSourceOverlay scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Whole overlay beforeSourceOverlay test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Full nine overlays unchanged sourceOverlay",
+      "passed": true
+    },
+    {
+      "name": "Whole overlay sourceOverlay scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "passed": true
+    },
+    {
+      "name": "Whole overlay sourceOverlay scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "passed": true
+    },
+    {
+      "name": "Whole overlay sourceOverlay scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "passed": true
+    },
+    {
+      "name": "Whole overlay sourceOverlay scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Whole overlay sourceOverlay src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Whole overlay sourceOverlay scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Whole overlay sourceOverlay scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Whole overlay sourceOverlay scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Whole overlay sourceOverlay test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "passed": true
+    },
+    {
+      "name": "139Node and85renderer exact unique names and failure contracts",
+      "passed": true
+    },
+    {
+      "name": "Corrected renderer80+5 names exactly currentR1",
+      "passed": true
+    },
+    {
+      "name": "Complete9source pins/vector and whole two tests unchanged",
+      "passed": true
+    },
+    {
+      "name": "Exact currentR1/body/publication/readback identities",
+      "passed": true
+    },
+    {
+      "name": "Exact publishedR1 actual schemas used by globals",
+      "passed": true
+    },
+    {
+      "name": "New roots/control paths/output andTMP matchR1",
+      "passed": true
+    },
+    {
+      "name": "Only selected renderer output-file arguments change",
+      "passed": true
+    },
+    {
+      "name": "All commandvectors exactR1 and native metadata argv unchanged",
+      "passed": true
+    },
+    {
+      "name": "Full current data-replica contract exactR1",
+      "passed": true
+    },
+    {
+      "name": "Whole8original map matches baseline and current map exact binding",
+      "passed": true
+    },
+    {
+      "name": "Exact nonpath fields setupBinding",
+      "passed": true
+    },
+    {
+      "name": "Exact nonpath fields sourceFull",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged input record sourceFull",
+      "passed": true
+    },
+    {
+      "name": "Exact nonpath fields sourceNonDoc",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged input record sourceNonDoc",
+      "passed": true
+    },
+    {
+      "name": "Exact nonpath fields dependencies",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged input record dependencies",
+      "passed": true
+    },
+    {
+      "name": "Exact nonpath fields compiled",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged input record compiled",
+      "passed": true
+    },
+    {
+      "name": "Exact nonpath fields pnpm",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged input record pnpm",
+      "passed": true
+    },
+    {
+      "name": "Exact nonpath fields currentBoundary",
+      "passed": true
+    },
+    {
+      "name": "Exact nonpath fields providers",
+      "passed": true
+    },
+    {
+      "name": "Precisely3 named input relocations",
+      "passed": true
+    },
+    {
+      "name": "Exactly6replicas8664002B and13uniqueREDcontrols",
+      "passed": true
+    },
+    {
+      "name": "Historical receipt contract full exactR1 and old original-map preserved",
+      "passed": true
+    },
+    {
+      "name": "Historical materialization and refusal bodies literal unchanged",
+      "passed": true
+    },
+    {
+      "name": "Complete corrected-incomplete envelope exact df4e",
+      "passed": true
+    },
+    {
+      "name": "Exact oldunknown schema/flags matched without replay or qualification",
+      "passed": true
+    },
+    {
+      "name": "Both full oldincomplete actual schemas and envelope joins exact",
+      "passed": true
+    },
+    {
+      "name": "Oldouter0 and originalouter2 remain distinct",
+      "passed": true
+    },
+    {
+      "name": "Current materialization scope matchesR1 withzeroREDbudget",
+      "passed": true
+    },
+    {
+      "name": "Early testmaterialization prohibition precedes allselected outputcreation",
+      "passed": true
+    },
+    {
+      "name": "GREEN current-binding producer receipt and acceptedRED gate remain exact",
+      "passed": true
+    },
+    {
+      "name": "Full root ownership admission adds no continuous custody claim",
+      "passed": true
+    },
+    {
+      "name": "R2/state/current authority remains prospective with no acceptedRED/GREEN/producers",
+      "passed": true
+    },
+    {
+      "name": "All four complete local authoring files exact and selected staging root absent",
+      "passed": true,
+      "evidence": {
+        "dataOnly": true,
+        "targetExecuted": false,
+        "selectedScopeRootExists": false,
+        "files": [
+          {
+            "file": "baseline-runner.py.data",
+            "bytes": 94938,
+            "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+            "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+          },
+          {
+            "file": "runner-v1.py",
+            "bytes": 104131,
+            "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+            "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+          },
+          {
+            "file": "baseline-binding.json.data",
+            "bytes": 5856749,
+            "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+            "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+          },
+          {
+            "file": "red-binding-v1.json",
+            "bytes": 6399172,
+            "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+            "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+          }
+        ]
+      }
+    }
+  ],
+  "checkCount": 226,
+  "failedChecks": [],
+  "unresolvedBlockers": [],
+  "limits": {
+    "noStagingYet": true,
+    "noSourceOrProducerPostimages": true,
+    "noRuntimeExecuted": true,
+    "old54393StillUnknownSpent": true,
+    "noOldContinuousCustodyOrCleanupProof": true,
+    "pointInTimeNewOwnerChecksOnly": true,
+    "fullCurrentPhysicalAdmissionStillRequired": true,
+    "wholeE2EQualified": false
+  },
+  "next": "Full independent R2 of exact controls and this complete inverse/data proposal, immediate publication and actual root+independent readbacks precede exclusive source-free staging and the one new RED. Accepted newRED and publication/readbacks precede producer postimages."
+}

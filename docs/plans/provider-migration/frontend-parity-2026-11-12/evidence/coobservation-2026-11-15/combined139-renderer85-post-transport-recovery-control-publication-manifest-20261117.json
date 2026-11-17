@@ -1,0 +1,215 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-17 00:45:31 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "parent": "9365591561744e36ac4e85da9cc41a92b88c2477",
+  "parentTree": "1724877d45a44411d50dc74ad0dbb484d29baf42",
+  "purpose": "Publish exact independently accepted recovery controls; full actual publication readbacks still precede selected control/replica staging and one new completeRED. No source or runtime qualification.",
+  "subject": {
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "binding": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    }
+  },
+  "r1": {
+    "bytes": 139634,
+    "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+    "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+  },
+  "r1ActualGate": {
+    "kind": "post-transport-recovery-r1-control-authorship-gate-closed",
+    "at": "2026-11-17 00:27:36 UTC",
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "commit": "9365591561744e36ac4e85da9cc41a92b88c2477",
+    "tree": "1724877d45a44411d50dc74ad0dbb484d29baf42",
+    "docsTree": "a56582120c253cfc498934dd3f3cdc80f22f9516",
+    "root": {
+      "bytes": 32853,
+      "sha256": "4b353847c949f242095de78453d619f78ec03bca0ccbc87a91fb6c90cc579754",
+      "gitBlob": "99812b3efa965d202d67feca8b5d7948e0800b11"
+    },
+    "independent": {
+      "bytes": 68306,
+      "sha256": "3e2b87c35227e99abc32e5a95808895a1298df30267994f6278c1c63a806bae9",
+      "gitBlob": "d277c2271e3457882c895e927b76a8a32427f83a"
+    },
+    "rootFullReadIndependent": true,
+    "independentFullReadRoot": true,
+    "allowedNow": "Only minimal descendant runner/full binding authorship under exact R1 8ce893. Complete independent control R2, immediate publication and both full actual readbacks precede any selected root/control/replica creation or runtime. Producer postimages remain gated on accepted complete new RED and its publication/readbacks.",
+    "newControlsAuthoredBeforeGate": false,
+    "newSourcePostimagesAuthored": false,
+    "newReplicaFilesStaged": false,
+    "newRuntimeExecuted": false,
+    "original64038": "REFUSED/SPENT; observed outer2",
+    "corrected54393": "UNKNOWN/INCOMPLETE/SPENT; outer/termination/old custody and cleanup remain unknown; no replay or primary transfer"
+  },
+  "proposal": {
+    "bytes": 66071,
+    "sha256": "b4e9fadeea673015aa1c3fd76c5c890b1c6833650806032b8eff39dd74866753",
+    "gitBlob": "c1a656dc11ebf298c3ac0da816ed3d6daf6e65b9"
+  },
+  "rootStatic": {
+    "bytes": 80403,
+    "sha256": "441381c474684c2556746c545b1b2272f802255476d9ef64110c00dc1f9b0a19",
+    "gitBlob": "463b42d217c939e767e11131bba2b95db3da08b3"
+  },
+  "independentReviews": {
+    "guard": {
+      "bytes": 89006,
+      "sha256": "dbc468fcd69f0e9dd787d8ab771898035eba5a0b86bf173ef75f76633b8dbcb0",
+      "gitBlob": "cd2e3cca0676a7a8c172983db898395b17bf1c9d"
+    },
+    "binding": {
+      "bytes": 103283,
+      "sha256": "7768e3f7b57338606022ab60a465d433277f6338623d73e1860de8b066f8fca8",
+      "gitBlob": "f80f679c38ae44282737dad4c1264f4fe2a9cf88"
+    },
+    "semantic": {
+      "bytes": 108528,
+      "sha256": "3d68dd58d14ddd7e6692f983f76e6f4ea7b16b183a297484a4b24fe3fe5e996b",
+      "gitBlob": "79ac44200a804c78576ba02ea35679c80fde95d2"
+    }
+  },
+  "r2ReviewsClosedAt": "2026-11-17 00:44:03 UTC",
+  "evidenceFiles": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-runner-20261117.py",
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-binding-20261117.json",
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-r2-proposal-20261117.json",
+      "bytes": 66071,
+      "sha256": "b4e9fadeea673015aa1c3fd76c5c890b1c6833650806032b8eff39dd74866753",
+      "gitBlob": "c1a656dc11ebf298c3ac0da816ed3d6daf6e65b9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-root-review-20261117.json",
+      "bytes": 80403,
+      "sha256": "441381c474684c2556746c545b1b2272f802255476d9ef64110c00dc1f9b0a19",
+      "gitBlob": "463b42d217c939e767e11131bba2b95db3da08b3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-guard-review-20261117.json",
+      "bytes": 89006,
+      "sha256": "dbc468fcd69f0e9dd787d8ab771898035eba5a0b86bf173ef75f76633b8dbcb0",
+      "gitBlob": "cd2e3cca0676a7a8c172983db898395b17bf1c9d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-binding-review-20261117.json",
+      "bytes": 103283,
+      "sha256": "7768e3f7b57338606022ab60a465d433277f6338623d73e1860de8b066f8fca8",
+      "gitBlob": "f80f679c38ae44282737dad4c1264f4fe2a9cf88"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-semantic-review-20261117.json",
+      "bytes": 108528,
+      "sha256": "3d68dd58d14ddd7e6692f983f76e6f4ea7b16b183a297484a4b24fe3fe5e996b",
+      "gitBlob": "79ac44200a804c78576ba02ea35679c80fde95d2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-actual-root-publication-20261117.json",
+      "bytes": 32853,
+      "sha256": "4b353847c949f242095de78453d619f78ec03bca0ccbc87a91fb6c90cc579754",
+      "gitBlob": "99812b3efa965d202d67feca8b5d7948e0800b11"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-actual-independent-publication-20261117.json",
+      "bytes": 68306,
+      "sha256": "3e2b87c35227e99abc32e5a95808895a1298df30267994f6278c1c63a806bae9",
+      "gitBlob": "d277c2271e3457882c895e927b76a8a32427f83a"
+    }
+  ],
+  "modifiedFiles": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2556771,
+      "sha256": "2a782d7db69ed274360c7191611be83b24998248117d42220774d8080ba185ff",
+      "gitBlob": "c419ee4d2121e28b525b5e52ae28a3646fb7f8df",
+      "prior": {
+        "bytes": 2553255,
+        "sha256": "c1e7ff2d49ac2dd20fe9a02cd648911f75ed1b2ea47e63a924b8d26dc66a3be2",
+        "gitBlob": "a22d14c9067cb1d7e81dab56be573a2bfb38be87"
+      },
+      "exactPrefixPreserved": true,
+      "appendIdentity": {
+        "bytes": 3516,
+        "sha256": "be88a8882ac0bea3ad8a6ede5cdb7e6ac885f7fc8355b870e5bc21d7bb84eab4",
+        "gitBlob": "3a61470b8ea9df27eb65394734908b546584a0f9"
+      },
+      "appendIdentityIsDerivedNotStandalone": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 45761,
+      "sha256": "ed5db2c90431dbbdb3db3efb9bcb25ce21b1e20d86a4354f846d92d7675a2309",
+      "gitBlob": "b32c162be541825a56bd0225614d1c2599ab44b1",
+      "prior": {
+        "bytes": 44475,
+        "sha256": "f00853f7a950265cb8147384e8aa0d5df0be79fd83d168dfa76be14457af9dbe",
+        "gitBlob": "1086b0222cc213655797881c6b21b8db3237dc9e"
+      },
+      "exactPrefixPreserved": true,
+      "appendIdentity": {
+        "bytes": 1286,
+        "sha256": "c14c73018b5b63d1bee202d4ce651b7a1d04bd6f120ec582ff7075e07d2a1376",
+        "gitBlob": "3c3a38e71ea2d95ff212e0fb4ac0a98b633fac31"
+      },
+      "appendIdentityIsDerivedNotStandalone": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 179642,
+      "sha256": "ce0a8f0bad1e0b48e620912b1424b8dd90c7492c145d654dfc1901b285164017",
+      "gitBlob": "40456ae51fdcf653749601bf3c840c8538d21539",
+      "prior": {
+        "bytes": 168968,
+        "sha256": "ce2cdb721c6d2c8c1a7e070e9899c3f9f2174a9daf24526adbd1a0569207c8c0",
+        "gitBlob": "a9a1c2f9f228dd9a614235df3626aadccdb50641"
+      },
+      "preservedOriginalBundles": 27,
+      "preservedOriginalTotals": {
+        "bundles": 27,
+        "outerBytes": 17894693,
+        "payloadInstances": 219,
+        "payloadBytes": 15911913
+      }
+    }
+  ],
+  "manifestPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-publication-manifest-20261117.json",
+  "expectedDelta": {
+    "changed": 13,
+    "added": 10,
+    "modified": 3,
+    "deleted": 0,
+    "modesChanged": 0,
+    "docsOnly": true
+  },
+  "expectedCensus": {
+    "parentLeaves": 11866,
+    "parentDocs": 3068,
+    "leaves": 11876,
+    "docs": 3078,
+    "nonDocs": 8798,
+    "workflows": 42
+  },
+  "qualification": "Exact control R2 only. Current full physical pre/post, primary/capture/cleanup/outer and independently accepted complete newRED remain unobserved. Both prior attempts stay permanently spent; producer and wholeE2E gates stay closed."
+}

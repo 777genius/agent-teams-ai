@@ -1,0 +1,765 @@
+{
+  "schemaVersion": 1,
+  "kind": "post-transport-recovery-r1-actual-root-publication-readback",
+  "at": "2026-11-17 00:20:36 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "verdict": "ACCEPTED exact actual R1 publication. Independent actual readback and root full read remain required before descendant control authorship.",
+  "actualCommit": "9365591561744e36ac4e85da9cc41a92b88c2477",
+  "actualTree": "1724877d45a44411d50dc74ad0dbb484d29baf42",
+  "actualDocsTree": "a56582120c253cfc498934dd3f3cdc80f22f9516",
+  "soleParent": "bc357526da9884cda1a76d2e6e6ea1a1b017d740",
+  "manifest": {
+    "bytes": 9029,
+    "sha256": "f5f0a1ecef10016c52a50fadb50ddd523bebf8513319fc92eff952a718ee3324",
+    "gitBlob": "2324a980af0a8a0d0d566ab2c902d93989b23474"
+  },
+  "subject": {
+    "bytes": 139634,
+    "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+    "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+  },
+  "method": {
+    "allTwelveActualBodiesReadAndHashed": true,
+    "fullActualBytes": 3164583,
+    "allThreeParentModifiedBodiesReadAndHashed": true,
+    "completeCurrentAndParentDocsTreesRead": true,
+    "all53OtherRootEntriesExactlyPreserved": true,
+    "sourceCensusMethod": "Inherited accepted8798non-doc/42workflow under exact unchanged Git subtrees. No fresh runtime physical boundary claimed.",
+    "allPriorPlanStatusBytesCompared": true,
+    "allPriorCatalogValuesCompared": true,
+    "fullActualR1AndFourReportsRead": true,
+    "priorImmutableReplicaReviewsReliedUpon": true,
+    "noFreshReplicaPayloadReadClaimedHere": true,
+    "codeModeStoreLoss": "An earlier successful full12-body readback lost all code-mode stores before report retention. This report refetched complete actual/parent bodies and Git trees; no runtime/control operation was involved. One data-only report assembly was corrected for the root review using r1 rather than subject as its schema key; no published data or result changed.",
+    "noTargetRuntime": true,
+    "noSourceControlPostimages": true
+  },
+  "actualReadbacks": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-20261117.json",
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e",
+      "completeReadback": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-root-review-20261117.json",
+      "bytes": 22893,
+      "sha256": "c69c619dd888465c09a133f6145449b5e8db37b2892ccf954e70c333aef97206",
+      "gitBlob": "569e0fd96a6408d1ada2c5c0894ca2512e7564e1",
+      "completeReadback": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-guard-review-20261117.json",
+      "bytes": 32255,
+      "sha256": "fe3306e57dd3bc667cf1692a937fcbc41184d1350bee2daf4f23e203e75e351a",
+      "gitBlob": "327c0e80e9f04a2515bd4655acc4513aa67ba689",
+      "completeReadback": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-binding-review-20261117.json",
+      "bytes": 47731,
+      "sha256": "4a924e4f9cc8b1bea52e2f359a0932e64c95e2211001f9ce2150c48cfd526323",
+      "gitBlob": "1675502277a40634814c524137687895b88006da",
+      "completeReadback": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-semantic-review-20261117.json",
+      "bytes": 47224,
+      "sha256": "8c30827b94fff969551d37eaaec4e9e4756a126cff645bc677c19df10547bc40",
+      "gitBlob": "e875f6847ac7f80d647cfd9080b28e31968c8358",
+      "completeReadback": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-red-incomplete-actual-root-publication-20261116.json",
+      "bytes": 23920,
+      "sha256": "ac86fb03a9bad33ed0c2555abc7346a3c7e1ec5141b78d24592aeca3cd508938",
+      "gitBlob": "306d9b854656fe560f98620856b4a2e7bc98254c",
+      "completeReadback": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-red-incomplete-actual-independent-publication-20261116.json",
+      "bytes": 67084,
+      "sha256": "981e5a19ff9b2f1891010395c47d1bc470e56ef671195bc4e83c7aeabbf9a56c",
+      "gitBlob": "65be34f4b4d7373c3cc18b9c299fca90e8dddabc",
+      "completeReadback": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/post-executor-change-tool-cache-observation-20261116.json",
+      "bytes": 8115,
+      "sha256": "f30cd2786b3b6c8ec49440f835f16c5ed0367fb73bc6160f09d5d363409bade7",
+      "gitBlob": "75b276dbcd832a2f496c684a4bbe3f6a9b607da1",
+      "completeReadback": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2553255,
+      "sha256": "c1e7ff2d49ac2dd20fe9a02cd648911f75ed1b2ea47e63a924b8d26dc66a3be2",
+      "gitBlob": "a22d14c9067cb1d7e81dab56be573a2bfb38be87",
+      "completeReadback": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 44475,
+      "sha256": "f00853f7a950265cb8147384e8aa0d5df0be79fd83d168dfa76be14457af9dbe",
+      "gitBlob": "1086b0222cc213655797881c6b21b8db3237dc9e",
+      "completeReadback": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 168968,
+      "sha256": "ce2cdb721c6d2c8c1a7e070e9899c3f9f2174a9daf24526adbd1a0569207c8c0",
+      "gitBlob": "a9a1c2f9f228dd9a614235df3626aadccdb50641",
+      "completeReadback": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-publication-manifest-20261117.json",
+      "bytes": 9029,
+      "sha256": "f5f0a1ecef10016c52a50fadb50ddd523bebf8513319fc92eff952a718ee3324",
+      "gitBlob": "2324a980af0a8a0d0d566ab2c902d93989b23474",
+      "completeReadback": true
+    }
+  ],
+  "delta": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "status": "modified",
+      "before": {
+        "path": "plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bc3959395d9c29659656ede7d3988aa7b8834df0",
+        "size": 2550063,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/bc3959395d9c29659656ede7d3988aa7b8834df0"
+      },
+      "after": {
+        "path": "plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a22d14c9067cb1d7e81dab56be573a2bfb38be87",
+        "size": 2553255,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a22d14c9067cb1d7e81dab56be573a2bfb38be87"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "status": "modified",
+      "before": {
+        "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "363be248255780306d0db159a608e67afdc8c6d9",
+        "size": 43112,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/363be248255780306d0db159a608e67afdc8c6d9"
+      },
+      "after": {
+        "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1086b0222cc213655797881c6b21b8db3237dc9e",
+        "size": 44475,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1086b0222cc213655797881c6b21b8db3237dc9e"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "status": "modified",
+      "before": {
+        "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7a5923f73e3c3869c2a88a927cb08f463875b1b6",
+        "size": 159329,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/7a5923f73e3c3869c2a88a927cb08f463875b1b6"
+      },
+      "after": {
+        "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a9a1c2f9f228dd9a614235df3626aadccdb50641",
+        "size": 168968,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a9a1c2f9f228dd9a614235df3626aadccdb50641"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-red-incomplete-actual-independent-publication-20261116.json",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-red-incomplete-actual-independent-publication-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "65be34f4b4d7373c3cc18b9c299fca90e8dddabc",
+        "size": 67084,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/65be34f4b4d7373c3cc18b9c299fca90e8dddabc"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-red-incomplete-actual-root-publication-20261116.json",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-red-incomplete-actual-root-publication-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "306d9b854656fe560f98620856b4a2e7bc98254c",
+        "size": 23920,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/306d9b854656fe560f98620856b4a2e7bc98254c"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-20261117.json",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-20261117.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8ce89328171e58ec3e0631dce9607ee7e1eba54e",
+        "size": 139634,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-binding-review-20261117.json",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-binding-review-20261117.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1675502277a40634814c524137687895b88006da",
+        "size": 47731,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1675502277a40634814c524137687895b88006da"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-guard-review-20261117.json",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-guard-review-20261117.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "327c0e80e9f04a2515bd4655acc4513aa67ba689",
+        "size": 32255,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/327c0e80e9f04a2515bd4655acc4513aa67ba689"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-publication-manifest-20261117.json",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-publication-manifest-20261117.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2324a980af0a8a0d0d566ab2c902d93989b23474",
+        "size": 9029,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2324a980af0a8a0d0d566ab2c902d93989b23474"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-root-review-20261117.json",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-root-review-20261117.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "569e0fd96a6408d1ada2c5c0894ca2512e7564e1",
+        "size": 22893,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/569e0fd96a6408d1ada2c5c0894ca2512e7564e1"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-semantic-review-20261117.json",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-semantic-review-20261117.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e875f6847ac7f80d647cfd9080b28e31968c8358",
+        "size": 47224,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/e875f6847ac7f80d647cfd9080b28e31968c8358"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/post-executor-change-tool-cache-observation-20261116.json",
+      "status": "added",
+      "before": null,
+      "after": {
+        "path": "plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/post-executor-change-tool-cache-observation-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "75b276dbcd832a2f496c684a4bbe3f6a9b607da1",
+        "size": 8115,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/75b276dbcd832a2f496c684a4bbe3f6a9b607da1"
+      }
+    }
+  ],
+  "census": {
+    "parentLeaves": 11857,
+    "parentDocs": 3059,
+    "leaves": 11866,
+    "docs": 3068,
+    "nonDocs": 8798,
+    "workflows": 42
+  },
+  "acceptedReviews": [
+    {
+      "role": "root",
+      "bytes": 22893,
+      "sha256": "c69c619dd888465c09a133f6145449b5e8db37b2892ccf954e70c333aef97206",
+      "gitBlob": "569e0fd96a6408d1ada2c5c0894ca2512e7564e1",
+      "checks": 65
+    },
+    {
+      "role": "guard",
+      "bytes": 32255,
+      "sha256": "fe3306e57dd3bc667cf1692a937fcbc41184d1350bee2daf4f23e203e75e351a",
+      "gitBlob": "327c0e80e9f04a2515bd4655acc4513aa67ba689",
+      "checks": 123
+    },
+    {
+      "role": "binding",
+      "bytes": 47731,
+      "sha256": "4a924e4f9cc8b1bea52e2f359a0932e64c95e2211001f9ce2150c48cfd526323",
+      "gitBlob": "1675502277a40634814c524137687895b88006da",
+      "checks": 53
+    },
+    {
+      "role": "semantic",
+      "bytes": 47224,
+      "sha256": "8c30827b94fff969551d37eaaec4e9e4756a126cff645bc677c19df10547bc40",
+      "gitBlob": "e875f6847ac7f80d647cfd9080b28e31968c8358",
+      "checks": 121
+    }
+  ],
+  "currentStage": {
+    "stage": "separate post-transport recovery R1 independently accepted; exact publication actual readbacks pending before descendant control authorship",
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "r1AuthoredAt": "2026-11-17T00:04:19.693Z",
+    "incompletePublicationGate": {
+      "kind": "corrected-incomplete-publication-gate-closed",
+      "at": "2026-11-16 23:58:11 UTC",
+      "commit": "bc357526da9884cda1a76d2e6e6ea1a1b017d740",
+      "tree": "45edcbe0dc0d6471da393f159e4a6871404ffb95",
+      "docsTree": "b2dfd9c749d7c07b026c9670daa6294d7006a5ef",
+      "root": {
+        "bytes": 23920,
+        "sha256": "ac86fb03a9bad33ed0c2555abc7346a3c7e1ec5141b78d24592aeca3cd508938",
+        "gitBlob": "306d9b854656fe560f98620856b4a2e7bc98254c"
+      },
+      "independent": {
+        "bytes": 67084,
+        "sha256": "981e5a19ff9b2f1891010395c47d1bc470e56ef671195bc4e83c7aeabbf9a56c",
+        "gitBlob": "65be34f4b4d7373c3cc18b9c299fca90e8dddabc"
+      },
+      "rootReadFullIndependent": true,
+      "independentReadFullRoot": true,
+      "originalRefused": "64038 observedouter2 REFUSED/SPENT",
+      "correctedIncomplete": "54393 UNKNOWN/INCOMPLETE/SPENT; finalouter and oldcleanup/custody unknown",
+      "allowed": "Select and author only a distinct prospective recovery R1 for independent review. No new control/source postimages, staging, primary execution or producer authority until their separately required R1/R2/publication/actual-readback gates.",
+      "newRecoveryScopeAuthoredBeforeGate": false,
+      "producerPostimagesAuthored": false
+    },
+    "rootStatic": {
+      "bytes": 22893,
+      "sha256": "c69c619dd888465c09a133f6145449b5e8db37b2892ccf954e70c333aef97206",
+      "gitBlob": "569e0fd96a6408d1ada2c5c0894ca2512e7564e1"
+    },
+    "independentReviews": {
+      "guard": {
+        "bytes": 32255,
+        "sha256": "fe3306e57dd3bc667cf1692a937fcbc41184d1350bee2daf4f23e203e75e351a",
+        "gitBlob": "327c0e80e9f04a2515bd4655acc4513aa67ba689"
+      },
+      "binding": {
+        "bytes": 47731,
+        "sha256": "4a924e4f9cc8b1bea52e2f359a0932e64c95e2211001f9ce2150c48cfd526323",
+        "gitBlob": "1675502277a40634814c524137687895b88006da"
+      },
+      "semantic": {
+        "bytes": 47224,
+        "sha256": "8c30827b94fff969551d37eaaec4e9e4756a126cff645bc677c19df10547bc40",
+        "gitBlob": "e875f6847ac7f80d647cfd9080b28e31968c8358"
+      }
+    },
+    "baselineRunner": {
+      "bytes": 94938,
+      "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+      "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+    },
+    "baselineBinding": {
+      "bytes": 5856749,
+      "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+      "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+    },
+    "currentTests": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    },
+    "currentSourceVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "currentSource": {
+      "identity": {
+        "bytes": 2478745,
+        "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+        "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+      },
+      "sourceRows": 8798,
+      "physicalOverlays": 6,
+      "workflowLeaves": 42,
+      "fullC5IndexLeaves": 11567,
+      "qualification": "Historical exact source-after reference only; fresh complete current source/runtime inputs remain required before and after the new package."
+    },
+    "selectedRoots": {
+      "scope": "/workspace/scratch/c714-post-transport-20261117",
+      "controls": "/workspace/scratch/c714-post-transport-20261117/controls",
+      "replicas": "/workspace/scratch/c714-post-transport-20261117/replicas",
+      "evidence": "/workspace/scratch/c714-post-transport-20261117/evidence"
+    },
+    "immutableReplicaCount": 6,
+    "immutableReplicaBytes": 8664002,
+    "currentInputCount": 8,
+    "relocatedInputNames": [
+      "setupBinding",
+      "currentBoundary",
+      "providers"
+    ],
+    "currentControlCensus": 13,
+    "unchangedFullRunnerFunctions": 52,
+    "allImportsFrozen": true,
+    "inherited43ReviewRecordsFrozen": true,
+    "attempts": {
+      "materializeTests": 0,
+      "redPackage": 1,
+      "materializeProducers": 1,
+      "greenPackage": 1,
+      "validationPackage": 1
+    },
+    "originalAttempt": {
+      "session": 64038,
+      "classification": "REFUSED/SPENT",
+      "observedOuter": 2,
+      "replayed": false,
+      "retrospectivelyAccepted": false
+    },
+    "correctedAttempt": {
+      "session": 54393,
+      "classification": "UNKNOWN/INCOMPLETE/SPENT",
+      "observedOuter": null,
+      "oldTermination": null,
+      "oldExecutorContinuity": null,
+      "oldCleanupQualified": false,
+      "replayed": false,
+      "partialResume": false
+    },
+    "toolCacheObservation": {
+      "bytes": 8115,
+      "sha256": "f30cd2786b3b6c8ec49440f835f16c5ed0367fb73bc6160f09d5d363409bade7",
+      "gitBlob": "75b276dbcd832a2f496c684a4bbe3f6a9b607da1"
+    },
+    "observationQualification": "Data-only four exact tool files and seven exact original cache files; no whole current physical admission or old custody proof.",
+    "recoveryScopeSelected": true,
+    "r1Reviewed": true,
+    "newControlPostimagesAuthored": false,
+    "newSourcePostimagesAuthored": false,
+    "newReplicaFilesStaged": false,
+    "currentRuntimeExecuted": false,
+    "acceptedCombinedRed": null,
+    "acceptedCombinedGreen": null,
+    "producerAuthorshipGateOpened": false,
+    "wholeE2EQualified": false,
+    "next": "Complete root and independent full actual readbacks of this exact R1 publication, then author the narrowly allowed global runner/binding deltas. Exact control R2/publication/readbacks precede exclusive new control/replica staging and one new complete RED. Accepted fresh new RED with observed outer0 and publication/readbacks precedes the three producer postimages. No old replay, partial resume, source/test/runtime repair or old cleanup qualification."
+  },
+  "checks": [
+    {
+      "name": "Actual ref exact subject",
+      "passed": true
+    },
+    {
+      "name": "Actual sole parent and exact tree",
+      "passed": true
+    },
+    {
+      "name": "Complete root54entries and exact53 non-doc entries",
+      "passed": true
+    },
+    {
+      "name": "Complete current3068 and parent3059 docs leaves",
+      "passed": true
+    },
+    {
+      "name": "Exact12docs delta9added3modified no delete/modechange",
+      "passed": true
+    },
+    {
+      "name": "Full actual body combined139-renderer85-post-transport-recovery-r1-20261117.json",
+      "passed": true,
+      "detail": {
+        "bytes": 139634,
+        "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+        "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+      }
+    },
+    {
+      "name": "Full actual body combined139-renderer85-post-transport-recovery-r1-root-review-20261117.json",
+      "passed": true,
+      "detail": {
+        "bytes": 22893,
+        "sha256": "c69c619dd888465c09a133f6145449b5e8db37b2892ccf954e70c333aef97206",
+        "gitBlob": "569e0fd96a6408d1ada2c5c0894ca2512e7564e1"
+      }
+    },
+    {
+      "name": "Full actual body combined139-renderer85-post-transport-recovery-r1-guard-review-20261117.json",
+      "passed": true,
+      "detail": {
+        "bytes": 32255,
+        "sha256": "fe3306e57dd3bc667cf1692a937fcbc41184d1350bee2daf4f23e203e75e351a",
+        "gitBlob": "327c0e80e9f04a2515bd4655acc4513aa67ba689"
+      }
+    },
+    {
+      "name": "Full actual body combined139-renderer85-post-transport-recovery-r1-binding-review-20261117.json",
+      "passed": true,
+      "detail": {
+        "bytes": 47731,
+        "sha256": "4a924e4f9cc8b1bea52e2f359a0932e64c95e2211001f9ce2150c48cfd526323",
+        "gitBlob": "1675502277a40634814c524137687895b88006da"
+      }
+    },
+    {
+      "name": "Full actual body combined139-renderer85-post-transport-recovery-r1-semantic-review-20261117.json",
+      "passed": true,
+      "detail": {
+        "bytes": 47224,
+        "sha256": "8c30827b94fff969551d37eaaec4e9e4756a126cff645bc677c19df10547bc40",
+        "gitBlob": "e875f6847ac7f80d647cfd9080b28e31968c8358"
+      }
+    },
+    {
+      "name": "Full actual body combined139-renderer85-corrected-red-incomplete-actual-root-publication-20261116.json",
+      "passed": true,
+      "detail": {
+        "bytes": 23920,
+        "sha256": "ac86fb03a9bad33ed0c2555abc7346a3c7e1ec5141b78d24592aeca3cd508938",
+        "gitBlob": "306d9b854656fe560f98620856b4a2e7bc98254c"
+      }
+    },
+    {
+      "name": "Full actual body combined139-renderer85-corrected-red-incomplete-actual-independent-publication-20261116.json",
+      "passed": true,
+      "detail": {
+        "bytes": 67084,
+        "sha256": "981e5a19ff9b2f1891010395c47d1bc470e56ef671195bc4e83c7aeabbf9a56c",
+        "gitBlob": "65be34f4b4d7373c3cc18b9c299fca90e8dddabc"
+      }
+    },
+    {
+      "name": "Full actual body post-executor-change-tool-cache-observation-20261116.json",
+      "passed": true,
+      "detail": {
+        "bytes": 8115,
+        "sha256": "f30cd2786b3b6c8ec49440f835f16c5ed0367fb73bc6160f09d5d363409bade7",
+        "gitBlob": "75b276dbcd832a2f496c684a4bbe3f6a9b607da1"
+      }
+    },
+    {
+      "name": "Full actual body 29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "passed": true,
+      "detail": {
+        "bytes": 2553255,
+        "sha256": "c1e7ff2d49ac2dd20fe9a02cd648911f75ed1b2ea47e63a924b8d26dc66a3be2",
+        "gitBlob": "a22d14c9067cb1d7e81dab56be573a2bfb38be87"
+      }
+    },
+    {
+      "name": "Full actual body continuation-status-20261116.md",
+      "passed": true,
+      "detail": {
+        "bytes": 44475,
+        "sha256": "f00853f7a950265cb8147384e8aa0d5df0be79fd83d168dfa76be14457af9dbe",
+        "gitBlob": "1086b0222cc213655797881c6b21b8db3237dc9e"
+      }
+    },
+    {
+      "name": "Full actual body pr1213-retention-catalog-20261116.json",
+      "passed": true,
+      "detail": {
+        "bytes": 168968,
+        "sha256": "ce2cdb721c6d2c8c1a7e070e9899c3f9f2174a9daf24526adbd1a0569207c8c0",
+        "gitBlob": "a9a1c2f9f228dd9a614235df3626aadccdb50641"
+      }
+    },
+    {
+      "name": "Full actual body combined139-renderer85-post-transport-recovery-r1-publication-manifest-20261117.json",
+      "passed": true,
+      "detail": {
+        "bytes": 9029,
+        "sha256": "f5f0a1ecef10016c52a50fadb50ddd523bebf8513319fc92eff952a718ee3324",
+        "gitBlob": "2324a980af0a8a0d0d566ab2c902d93989b23474"
+      }
+    },
+    {
+      "name": "Actual manifest exact parent and reviewed subject",
+      "passed": true
+    },
+    {
+      "name": "Census11866/3068/8798/42 derived without source change",
+      "passed": true,
+      "detail": "8798non-doc/42workflow inherited from accepted parent under all53 unchanged root entries; complete currentdocs enumeration, not current runtime census."
+    },
+    {
+      "name": "Complete prefix and suffix 29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "passed": true
+    },
+    {
+      "name": "Complete prefix and suffix continuation-status-20261116.md",
+      "passed": true
+    },
+    {
+      "name": "All27 catalog bundles and complete totals preserved",
+      "passed": true
+    },
+    {
+      "name": "All original catalog values preserved except current stage",
+      "passed": true
+    },
+    {
+      "name": "Entire previous current stage retained as history",
+      "passed": true
+    },
+    {
+      "name": "Current eight evidence entries exactly manifest",
+      "passed": true
+    },
+    {
+      "name": "Complete actual R1 matches accepted139634byte identity",
+      "passed": true
+    },
+    {
+      "name": "Complete actual root R1 review exact and all checks pass",
+      "passed": true,
+      "detail": {
+        "pin": {
+          "bytes": 22893,
+          "sha256": "c69c619dd888465c09a133f6145449b5e8db37b2892ccf954e70c333aef97206",
+          "gitBlob": "569e0fd96a6408d1ada2c5c0894ca2512e7564e1"
+        },
+        "count": 65
+      }
+    },
+    {
+      "name": "Complete actual guard R1 review exact and all checks pass",
+      "passed": true,
+      "detail": {
+        "pin": {
+          "bytes": 32255,
+          "sha256": "fe3306e57dd3bc667cf1692a937fcbc41184d1350bee2daf4f23e203e75e351a",
+          "gitBlob": "327c0e80e9f04a2515bd4655acc4513aa67ba689"
+        },
+        "count": 123
+      }
+    },
+    {
+      "name": "Complete actual binding R1 review exact and all checks pass",
+      "passed": true,
+      "detail": {
+        "pin": {
+          "bytes": 47731,
+          "sha256": "4a924e4f9cc8b1bea52e2f359a0932e64c95e2211001f9ce2150c48cfd526323",
+          "gitBlob": "1675502277a40634814c524137687895b88006da"
+        },
+        "count": 53
+      }
+    },
+    {
+      "name": "Complete actual semantic R1 review exact and all checks pass",
+      "passed": true,
+      "detail": {
+        "pin": {
+          "bytes": 47224,
+          "sha256": "8c30827b94fff969551d37eaaec4e9e4756a126cff645bc677c19df10547bc40",
+          "gitBlob": "e875f6847ac7f80d647cfd9080b28e31968c8358"
+        },
+        "count": 121
+      }
+    },
+    {
+      "name": "Both complete actual incomplete reports present and all checks accepted",
+      "passed": true
+    },
+    {
+      "name": "All repeated incomplete gates identical",
+      "passed": true
+    },
+    {
+      "name": "R1 authored after gate from exact parent",
+      "passed": true
+    },
+    {
+      "name": "Complete immutable source/test/semantics/boundary/clock/noReplay contracts",
+      "passed": true
+    },
+    {
+      "name": "Current pointers exact R1/reviews/source/tests/vector/baseline runner",
+      "passed": true
+    },
+    {
+      "name": "Replica and input counts/mapping exact",
+      "passed": true
+    },
+    {
+      "name": "Toolcache pointer joins exact full limited actual report",
+      "passed": true
+    },
+    {
+      "name": "No new control/source postimages/staging/runtime/producer authority",
+      "passed": true
+    },
+    {
+      "name": "Originalouter2refusal and unknown54393 remain distinct spent histories",
+      "passed": true
+    },
+    {
+      "name": "Zero test materialization and frozen52functions/imports/43records",
+      "passed": true
+    }
+  ],
+  "checkCount": 40,
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "scope": {
+    "actualR1PublicationAccepted": true,
+    "independentActualReadbackPending": true,
+    "controlAuthorshipGateClosedUntilIndependentReadback": true,
+    "newControlsAuthored": false,
+    "newReplicasStaged": false,
+    "newSourcePostimagesAuthored": false,
+    "newRuntimeExecuted": false,
+    "producerGateOpened": false,
+    "wholeE2EQualified": false,
+    "oldUnknownCustodyRecovered": false
+  },
+  "next": "Finish independent actual publication readback and root full read. Close R1 gate before descendant control authorship. Exact controlR2/publication/readbacks still precede staging/runtime; accepted newRED/publication/readbacks precede producer postimages."
+}

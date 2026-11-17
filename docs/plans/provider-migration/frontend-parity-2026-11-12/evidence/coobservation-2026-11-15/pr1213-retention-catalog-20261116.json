@@ -2484,69 +2484,98 @@
     }
   ],
   "currentCombinedNodeRendererStage": {
-    "stage": "separate post-transport recovery R1 independently accepted; exact publication actual readbacks pending before descendant control authorship",
+    "stage": "exact post-transport recovery controls independently accepted; actual control publication readbacks pending before staging and newRED",
     "r1": {
       "bytes": 139634,
       "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
       "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
     },
-    "r1AuthoredAt": "2026-11-17T00:04:19.693Z",
-    "incompletePublicationGate": {
-      "kind": "corrected-incomplete-publication-gate-closed",
-      "at": "2026-11-16 23:58:11 UTC",
-      "commit": "bc357526da9884cda1a76d2e6e6ea1a1b017d740",
-      "tree": "45edcbe0dc0d6471da393f159e4a6871404ffb95",
-      "docsTree": "b2dfd9c749d7c07b026c9670daa6294d7006a5ef",
+    "r1Publication": "9365591561744e36ac4e85da9cc41a92b88c2477",
+    "r1ActualGate": {
+      "kind": "post-transport-recovery-r1-control-authorship-gate-closed",
+      "at": "2026-11-17 00:27:36 UTC",
+      "r1": {
+        "bytes": 139634,
+        "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+        "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+      },
+      "commit": "9365591561744e36ac4e85da9cc41a92b88c2477",
+      "tree": "1724877d45a44411d50dc74ad0dbb484d29baf42",
+      "docsTree": "a56582120c253cfc498934dd3f3cdc80f22f9516",
       "root": {
-        "bytes": 23920,
-        "sha256": "ac86fb03a9bad33ed0c2555abc7346a3c7e1ec5141b78d24592aeca3cd508938",
-        "gitBlob": "306d9b854656fe560f98620856b4a2e7bc98254c"
+        "bytes": 32853,
+        "sha256": "4b353847c949f242095de78453d619f78ec03bca0ccbc87a91fb6c90cc579754",
+        "gitBlob": "99812b3efa965d202d67feca8b5d7948e0800b11"
       },
       "independent": {
-        "bytes": 67084,
-        "sha256": "981e5a19ff9b2f1891010395c47d1bc470e56ef671195bc4e83c7aeabbf9a56c",
-        "gitBlob": "65be34f4b4d7373c3cc18b9c299fca90e8dddabc"
+        "bytes": 68306,
+        "sha256": "3e2b87c35227e99abc32e5a95808895a1298df30267994f6278c1c63a806bae9",
+        "gitBlob": "d277c2271e3457882c895e927b76a8a32427f83a"
       },
-      "rootReadFullIndependent": true,
-      "independentReadFullRoot": true,
-      "originalRefused": "64038 observedouter2 REFUSED/SPENT",
-      "correctedIncomplete": "54393 UNKNOWN/INCOMPLETE/SPENT; finalouter and oldcleanup/custody unknown",
-      "allowed": "Select and author only a distinct prospective recovery R1 for independent review. No new control/source postimages, staging, primary execution or producer authority until their separately required R1/R2/publication/actual-readback gates.",
-      "newRecoveryScopeAuthoredBeforeGate": false,
-      "producerPostimagesAuthored": false
+      "rootFullReadIndependent": true,
+      "independentFullReadRoot": true,
+      "allowedNow": "Only minimal descendant runner/full binding authorship under exact R1 8ce893. Complete independent control R2, immediate publication and both full actual readbacks precede any selected root/control/replica creation or runtime. Producer postimages remain gated on accepted complete new RED and its publication/readbacks.",
+      "newControlsAuthoredBeforeGate": false,
+      "newSourcePostimagesAuthored": false,
+      "newReplicaFilesStaged": false,
+      "newRuntimeExecuted": false,
+      "original64038": "REFUSED/SPENT; observed outer2",
+      "corrected54393": "UNKNOWN/INCOMPLETE/SPENT; outer/termination/old custody and cleanup remain unknown; no replay or primary transfer"
+    },
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "binding": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    "proposal": {
+      "bytes": 66071,
+      "sha256": "b4e9fadeea673015aa1c3fd76c5c890b1c6833650806032b8eff39dd74866753",
+      "gitBlob": "c1a656dc11ebf298c3ac0da816ed3d6daf6e65b9"
     },
     "rootStatic": {
-      "bytes": 22893,
-      "sha256": "c69c619dd888465c09a133f6145449b5e8db37b2892ccf954e70c333aef97206",
-      "gitBlob": "569e0fd96a6408d1ada2c5c0894ca2512e7564e1"
+      "bytes": 80403,
+      "sha256": "441381c474684c2556746c545b1b2272f802255476d9ef64110c00dc1f9b0a19",
+      "gitBlob": "463b42d217c939e767e11131bba2b95db3da08b3"
     },
     "independentReviews": {
       "guard": {
-        "bytes": 32255,
-        "sha256": "fe3306e57dd3bc667cf1692a937fcbc41184d1350bee2daf4f23e203e75e351a",
-        "gitBlob": "327c0e80e9f04a2515bd4655acc4513aa67ba689"
+        "bytes": 89006,
+        "sha256": "dbc468fcd69f0e9dd787d8ab771898035eba5a0b86bf173ef75f76633b8dbcb0",
+        "gitBlob": "cd2e3cca0676a7a8c172983db898395b17bf1c9d"
       },
       "binding": {
-        "bytes": 47731,
-        "sha256": "4a924e4f9cc8b1bea52e2f359a0932e64c95e2211001f9ce2150c48cfd526323",
-        "gitBlob": "1675502277a40634814c524137687895b88006da"
+        "bytes": 103283,
+        "sha256": "7768e3f7b57338606022ab60a465d433277f6338623d73e1860de8b066f8fca8",
+        "gitBlob": "f80f679c38ae44282737dad4c1264f4fe2a9cf88"
       },
       "semantic": {
-        "bytes": 47224,
-        "sha256": "8c30827b94fff969551d37eaaec4e9e4756a126cff645bc677c19df10547bc40",
-        "gitBlob": "e875f6847ac7f80d647cfd9080b28e31968c8358"
+        "bytes": 108528,
+        "sha256": "3d68dd58d14ddd7e6692f983f76e6f4ea7b16b183a297484a4b24fe3fe5e996b",
+        "gitBlob": "79ac44200a804c78576ba02ea35679c80fde95d2"
       }
     },
-    "baselineRunner": {
-      "bytes": 94938,
-      "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
-      "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+    "r2ReviewsClosedAt": "2026-11-17 00:44:03 UTC",
+    "runnerAuthoredAt": "2026-11-17 00:28:47 UTC",
+    "bindingAuthoredAt": "2026-11-17 00:30:32 UTC",
+    "exactRunnerReplacements": 10,
+    "unchangedFullFunctions": 52,
+    "unchangedImportStatements": 17,
+    "bindingDelta": {
+      "changedInheritedGroups": 18,
+      "unchangedGroups": 40,
+      "addedGroups": 3,
+      "completeInverseExact": true
     },
-    "baselineBinding": {
-      "bytes": 5856749,
-      "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
-      "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
-    },
+    "original43ReviewRecordsLiteralIdentical": true,
+    "totalReviewBodies": 58,
+    "totalReviewBodyBytes": 4529571,
+    "unchangedOverlayInstances": 18,
+    "unchangedOverlayBytes": 1191075,
     "currentTests": {
       "node": {
         "bytes": 164965,
@@ -2590,10 +2619,7 @@
       "currentBoundary",
       "providers"
     ],
-    "currentControlCensus": 13,
-    "unchangedFullRunnerFunctions": 52,
-    "allImportsFrozen": true,
-    "inherited43ReviewRecordsFrozen": true,
+    "redUniqueControlCensus": 13,
     "attempts": {
       "materializeTests": 0,
       "redPackage": 1,
@@ -2601,40 +2627,31 @@
       "greenPackage": 1,
       "validationPackage": 1
     },
-    "originalAttempt": {
-      "session": 64038,
+    "original64038": {
       "classification": "REFUSED/SPENT",
       "observedOuter": 2,
-      "replayed": false,
-      "retrospectivelyAccepted": false
+      "replayed": false
     },
-    "correctedAttempt": {
-      "session": 54393,
+    "corrected54393": {
       "classification": "UNKNOWN/INCOMPLETE/SPENT",
       "observedOuter": null,
-      "oldTermination": null,
-      "oldExecutorContinuity": null,
-      "oldCleanupQualified": false,
+      "termination": null,
+      "executorContinuity": null,
+      "cleanupQualified": false,
       "replayed": false,
       "partialResume": false
     },
-    "toolCacheObservation": {
-      "bytes": 8115,
-      "sha256": "f30cd2786b3b6c8ec49440f835f16c5ed0367fb73bc6160f09d5d363409bade7",
-      "gitBlob": "75b276dbcd832a2f496c684a4bbe3f6a9b607da1"
-    },
-    "observationQualification": "Data-only four exact tool files and seven exact original cache files; no whole current physical admission or old custody proof.",
-    "recoveryScopeSelected": true,
-    "r1Reviewed": true,
-    "newControlPostimagesAuthored": false,
-    "newSourcePostimagesAuthored": false,
+    "controlsAuthored": true,
+    "controlsR2Accepted": true,
+    "controlsStaged": false,
     "newReplicaFilesStaged": false,
+    "newSourcePostimagesAuthored": false,
     "currentRuntimeExecuted": false,
     "acceptedCombinedRed": null,
     "acceptedCombinedGreen": null,
     "producerAuthorshipGateOpened": false,
     "wholeE2EQualified": false,
-    "next": "Complete root and independent full actual readbacks of this exact R1 publication, then author the narrowly allowed global runner/binding deltas. Exact control R2/publication/readbacks precede exclusive new control/replica staging and one new complete RED. Accepted fresh new RED with observed outer0 and publication/readbacks precedes the three producer postimages. No old replay, partial resume, source/test/runtime repair or old cleanup qualification."
+    "next": "Complete root and independent full actual readbacks of this exact control publication, then one exclusive source-free staging of the exact active pair and six immutable data replicas at the selected new paths, followed by one complete newRED. No test rematerialization. Full fresh physical pre/post and separately observed outer0 with independent accepted complete results plus publication/readbacks precede producer authorship. Old attempts are never resumed or reclassified."
   },
   "priorCombinedNodeRendererStageAtTestPublication": {
     "stage": "exact R1 published; complete actual readback required before authorship",
@@ -3819,6 +3836,215 @@
       "bytes": 8115,
       "sha256": "f30cd2786b3b6c8ec49440f835f16c5ed0367fb73bc6160f09d5d363409bade7",
       "gitBlob": "75b276dbcd832a2f496c684a4bbe3f6a9b607da1"
+    }
+  ],
+  "priorCombinedNodeRendererStageAtPostTransportRecoveryControls": {
+    "stage": "separate post-transport recovery R1 independently accepted; exact publication actual readbacks pending before descendant control authorship",
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "r1AuthoredAt": "2026-11-17T00:04:19.693Z",
+    "incompletePublicationGate": {
+      "kind": "corrected-incomplete-publication-gate-closed",
+      "at": "2026-11-16 23:58:11 UTC",
+      "commit": "bc357526da9884cda1a76d2e6e6ea1a1b017d740",
+      "tree": "45edcbe0dc0d6471da393f159e4a6871404ffb95",
+      "docsTree": "b2dfd9c749d7c07b026c9670daa6294d7006a5ef",
+      "root": {
+        "bytes": 23920,
+        "sha256": "ac86fb03a9bad33ed0c2555abc7346a3c7e1ec5141b78d24592aeca3cd508938",
+        "gitBlob": "306d9b854656fe560f98620856b4a2e7bc98254c"
+      },
+      "independent": {
+        "bytes": 67084,
+        "sha256": "981e5a19ff9b2f1891010395c47d1bc470e56ef671195bc4e83c7aeabbf9a56c",
+        "gitBlob": "65be34f4b4d7373c3cc18b9c299fca90e8dddabc"
+      },
+      "rootReadFullIndependent": true,
+      "independentReadFullRoot": true,
+      "originalRefused": "64038 observedouter2 REFUSED/SPENT",
+      "correctedIncomplete": "54393 UNKNOWN/INCOMPLETE/SPENT; finalouter and oldcleanup/custody unknown",
+      "allowed": "Select and author only a distinct prospective recovery R1 for independent review. No new control/source postimages, staging, primary execution or producer authority until their separately required R1/R2/publication/actual-readback gates.",
+      "newRecoveryScopeAuthoredBeforeGate": false,
+      "producerPostimagesAuthored": false
+    },
+    "rootStatic": {
+      "bytes": 22893,
+      "sha256": "c69c619dd888465c09a133f6145449b5e8db37b2892ccf954e70c333aef97206",
+      "gitBlob": "569e0fd96a6408d1ada2c5c0894ca2512e7564e1"
+    },
+    "independentReviews": {
+      "guard": {
+        "bytes": 32255,
+        "sha256": "fe3306e57dd3bc667cf1692a937fcbc41184d1350bee2daf4f23e203e75e351a",
+        "gitBlob": "327c0e80e9f04a2515bd4655acc4513aa67ba689"
+      },
+      "binding": {
+        "bytes": 47731,
+        "sha256": "4a924e4f9cc8b1bea52e2f359a0932e64c95e2211001f9ce2150c48cfd526323",
+        "gitBlob": "1675502277a40634814c524137687895b88006da"
+      },
+      "semantic": {
+        "bytes": 47224,
+        "sha256": "8c30827b94fff969551d37eaaec4e9e4756a126cff645bc677c19df10547bc40",
+        "gitBlob": "e875f6847ac7f80d647cfd9080b28e31968c8358"
+      }
+    },
+    "baselineRunner": {
+      "bytes": 94938,
+      "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+      "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+    },
+    "baselineBinding": {
+      "bytes": 5856749,
+      "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+      "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+    },
+    "currentTests": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    },
+    "currentSourceVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "currentSource": {
+      "identity": {
+        "bytes": 2478745,
+        "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+        "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+      },
+      "sourceRows": 8798,
+      "physicalOverlays": 6,
+      "workflowLeaves": 42,
+      "fullC5IndexLeaves": 11567,
+      "qualification": "Historical exact source-after reference only; fresh complete current source/runtime inputs remain required before and after the new package."
+    },
+    "selectedRoots": {
+      "scope": "/workspace/scratch/c714-post-transport-20261117",
+      "controls": "/workspace/scratch/c714-post-transport-20261117/controls",
+      "replicas": "/workspace/scratch/c714-post-transport-20261117/replicas",
+      "evidence": "/workspace/scratch/c714-post-transport-20261117/evidence"
+    },
+    "immutableReplicaCount": 6,
+    "immutableReplicaBytes": 8664002,
+    "currentInputCount": 8,
+    "relocatedInputNames": [
+      "setupBinding",
+      "currentBoundary",
+      "providers"
+    ],
+    "currentControlCensus": 13,
+    "unchangedFullRunnerFunctions": 52,
+    "allImportsFrozen": true,
+    "inherited43ReviewRecordsFrozen": true,
+    "attempts": {
+      "materializeTests": 0,
+      "redPackage": 1,
+      "materializeProducers": 1,
+      "greenPackage": 1,
+      "validationPackage": 1
+    },
+    "originalAttempt": {
+      "session": 64038,
+      "classification": "REFUSED/SPENT",
+      "observedOuter": 2,
+      "replayed": false,
+      "retrospectivelyAccepted": false
+    },
+    "correctedAttempt": {
+      "session": 54393,
+      "classification": "UNKNOWN/INCOMPLETE/SPENT",
+      "observedOuter": null,
+      "oldTermination": null,
+      "oldExecutorContinuity": null,
+      "oldCleanupQualified": false,
+      "replayed": false,
+      "partialResume": false
+    },
+    "toolCacheObservation": {
+      "bytes": 8115,
+      "sha256": "f30cd2786b3b6c8ec49440f835f16c5ed0367fb73bc6160f09d5d363409bade7",
+      "gitBlob": "75b276dbcd832a2f496c684a4bbe3f6a9b607da1"
+    },
+    "observationQualification": "Data-only four exact tool files and seven exact original cache files; no whole current physical admission or old custody proof.",
+    "recoveryScopeSelected": true,
+    "r1Reviewed": true,
+    "newControlPostimagesAuthored": false,
+    "newSourcePostimagesAuthored": false,
+    "newReplicaFilesStaged": false,
+    "currentRuntimeExecuted": false,
+    "acceptedCombinedRed": null,
+    "acceptedCombinedGreen": null,
+    "producerAuthorshipGateOpened": false,
+    "wholeE2EQualified": false,
+    "next": "Complete root and independent full actual readbacks of this exact R1 publication, then author the narrowly allowed global runner/binding deltas. Exact control R2/publication/readbacks precede exclusive new control/replica staging and one new complete RED. Accepted fresh new RED with observed outer0 and publication/readbacks precedes the three producer postimages. No old replay, partial resume, source/test/runtime repair or old cleanup qualification."
+  },
+  "combined139Renderer85PostTransportRecoveryControlEvidenceFiles": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-runner-20261117.py",
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-binding-20261117.json",
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-r2-proposal-20261117.json",
+      "bytes": 66071,
+      "sha256": "b4e9fadeea673015aa1c3fd76c5c890b1c6833650806032b8eff39dd74866753",
+      "gitBlob": "c1a656dc11ebf298c3ac0da816ed3d6daf6e65b9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-root-review-20261117.json",
+      "bytes": 80403,
+      "sha256": "441381c474684c2556746c545b1b2272f802255476d9ef64110c00dc1f9b0a19",
+      "gitBlob": "463b42d217c939e767e11131bba2b95db3da08b3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-guard-review-20261117.json",
+      "bytes": 89006,
+      "sha256": "dbc468fcd69f0e9dd787d8ab771898035eba5a0b86bf173ef75f76633b8dbcb0",
+      "gitBlob": "cd2e3cca0676a7a8c172983db898395b17bf1c9d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-binding-review-20261117.json",
+      "bytes": 103283,
+      "sha256": "7768e3f7b57338606022ab60a465d433277f6338623d73e1860de8b066f8fca8",
+      "gitBlob": "f80f679c38ae44282737dad4c1264f4fe2a9cf88"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-semantic-review-20261117.json",
+      "bytes": 108528,
+      "sha256": "3d68dd58d14ddd7e6692f983f76e6f4ea7b16b183a297484a4b24fe3fe5e996b",
+      "gitBlob": "79ac44200a804c78576ba02ea35679c80fde95d2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-actual-root-publication-20261117.json",
+      "bytes": 32853,
+      "sha256": "4b353847c949f242095de78453d619f78ec03bca0ccbc87a91fb6c90cc579754",
+      "gitBlob": "99812b3efa965d202d67feca8b5d7948e0800b11"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-r1-actual-independent-publication-20261117.json",
+      "bytes": 68306,
+      "sha256": "3e2b87c35227e99abc32e5a95808895a1298df30267994f6278c1c63a806bae9",
+      "gitBlob": "d277c2271e3457882c895e927b76a8a32427f83a"
     }
   ]
 }
