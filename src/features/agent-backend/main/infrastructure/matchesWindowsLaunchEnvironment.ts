@@ -44,8 +44,11 @@ type Selection = NativeProcessProfile & {
   provider: 'claude' | 'codex' | 'opencode';
   environmentRecipe?: WindowsEnvironmentRecipe;
 };
-type LimitChange = { providerId: string; modelId: string;
-  limits: { contextTokens: number; outputTokens: number } };
+interface LimitChange {
+  providerId: string;
+  modelId: string;
+  limits: { contextTokens: number; outputTokens: number };
+}
 
 const invalid: () => never = () => { throw new Error('Captured Windows environment mismatch'); };
 const row = (value: unknown): RecordValue =>
@@ -77,7 +80,7 @@ export function applyWindowsEnvironmentSource<T extends Selection>(original: T,
     if (recipe.profile.provider === 'opencode') {
       if (recipe.kind === 'management' && recipe.profile.provider === 'opencode')
         recipe.profile = applyOpenCodeRuntimeSource(recipe.profile, candidate);
-      else if (recipe.kind !== 'management' && recipe.profile.provider === 'opencode')
+      if (recipe.kind !== 'management' && recipe.profile.provider === 'opencode')
         recipe.profile = applyOpenCodeRuntimeSource(recipe.profile, candidate);
     }
     selected.environment = { ...recipe.profile.environment };
@@ -110,7 +113,7 @@ function endpoint(value: unknown, kind: 'team' | 'coordination'): NativeTeamEndp
   const bearerToken = headers.Authorization.slice(7);
   const address = /^http:\/\/127\.0\.0\.1:([1-9]\d{0,4})(\/.*)$/.exec(server.url);
   const path = kind === 'team' ? /^\/mcp\/[A-Za-z0-9_-]{32}$/ : /^\/coordination$/;
-  if (!token(bearerToken) || !address || Number(address[1]) > 65535 || !path.test(address[2]!)) invalid();
+  if (!token(bearerToken) || !address || Number(address[1]) > 65535 || !path.test(address[2])) invalid();
   return { url: server.url, bearerToken };
 }
 
@@ -215,7 +218,7 @@ function capturedMcp(profile: OpenCodeMemberProfile, native: RecordValue) {
 function requiredTools(permission: unknown, serverName: string): string[] {
   const entries = Object.entries(row(permission)), result: string[] = [];
   for (let index = entries.length - 1; index >= 0; index--) {
-    const [name, value] = entries[index]!;
+    const [name, value] = entries[index];
     if (value !== 'allow' || !name.startsWith(serverName + '_')) break;
     const tool = name.slice(serverName.length + 1);
     if (!/^[a-z][a-z0-9_]{0,127}$/.test(tool)) break;
@@ -309,9 +312,9 @@ function coordinationEnvironment(base: OpenCodeManagementProfile, actual: Enviro
     cache: win32.join(root, 'cache'), state: win32.join(root, 'state'),
   });
   const providers = row(config.provider), keys = Object.keys(providers);
-  if (keys.length !== 1 || !id(keys[0]!) || typeof config.model !== 'string' ||
-      !config.model.startsWith(keys[0]! + '/')) return false;
-  const providerId = keys[0]!, modelId = config.model.slice(providerId.length + 1);
+  if (keys.length !== 1 || !id(keys[0]) || typeof config.model !== 'string' ||
+      !config.model.startsWith(keys[0] + '/')) return false;
+  const providerId = keys[0], modelId = config.model.slice(providerId.length + 1);
   if (!id(modelId)) return false;
   const provider = selectOpenCodeCoordinationProvider(row(providers[providerId]), { providerId, modelId });
   if (!provider) return false;
