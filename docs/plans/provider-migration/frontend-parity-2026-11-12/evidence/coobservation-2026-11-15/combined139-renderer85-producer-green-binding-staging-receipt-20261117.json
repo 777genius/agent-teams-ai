@@ -1,0 +1,353 @@
+{
+  "schemaVersion": 1,
+  "kind": "c714-source-free-immutable-green-binding-staging-receipt",
+  "startedAt": "2026-11-17T02:21:49.018614+00:00",
+  "finishedAt": "2026-11-17T02:21:49.504469+00:00",
+  "durationSeconds": 0.4858598290011287,
+  "publicationGate": {
+    "bytes": 7095,
+    "sha256": "b50ae2a0bb3d61f67716688361cf36ca3e23954f9c37106e6350ddd27997a7bb",
+    "gitBlob": "0bf466496fc388dabe652eb4121229dd981b8f16"
+  },
+  "publication": "9a37963441396d6eddaf507e57e504e21503878c",
+  "binding": {
+    "bytes": 8262787,
+    "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+    "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+  },
+  "runner": {
+    "bytes": 104131,
+    "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+    "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+  },
+  "partReadbacks": [
+    {
+      "ordinal": 0,
+      "identity": {
+        "bytes": 2801279,
+        "sha256": "98639f464306184d3131ed36e625ae6e88e156a96aeb57e31787a1be2ea5f916",
+        "gitBlob": "441fd0ecb053bf9191332e635ff764cd511c4d0e"
+      },
+      "path": "/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/green-binding-transfer-part-0-20261117.json"
+    },
+    {
+      "ordinal": 1,
+      "identity": {
+        "bytes": 2800142,
+        "sha256": "16214d8009f81bea6e90fdc12de912a36542024aaa2451d0d7bc9f5ae8954957",
+        "gitBlob": "58fc694520738dae1507e0545fd5d18f7344fe89"
+      },
+      "path": "/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/green-binding-transfer-part-1-20261117.json"
+    },
+    {
+      "ordinal": 2,
+      "identity": {
+        "bytes": 2661366,
+        "sha256": "197b6c989795fad2a4d46205aaca86aa79391ece81eb267205e85bf3b18f233f",
+        "gitBlob": "92de54c81f85a21da8b4ff9346f89d9c55bd5d79"
+      },
+      "path": "/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/green-binding-transfer-part-2-20261117.json"
+    }
+  ],
+  "rootsBefore": [
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117",
+      "device": 27,
+      "inode": 3961079,
+      "uid": 1000,
+      "mode": "0o700"
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/controls",
+      "device": 27,
+      "inode": 3961080,
+      "uid": 1000,
+      "mode": "0o700"
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas",
+      "device": 27,
+      "inode": 3961081,
+      "uid": 1000,
+      "mode": "0o700"
+    }
+  ],
+  "rootsAfter": [
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117",
+      "device": 27,
+      "inode": 3961079,
+      "uid": 1000,
+      "mode": "0o700"
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/controls",
+      "device": 27,
+      "inode": 3961080,
+      "uid": 1000,
+      "mode": "0o700"
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas",
+      "device": 27,
+      "inode": 3961081,
+      "uid": 1000,
+      "mode": "0o700"
+    }
+  ],
+  "existingControlsAndReplicasBefore": [
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py",
+      "identity": {
+        "bytes": 104131,
+        "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+        "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+      },
+      "device": 27,
+      "inode": 3961082,
+      "uid": 1000,
+      "mode": "0o600",
+      "size": 104131,
+      "mtimeNs": 1794877158187294722
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/controls/red-binding.json",
+      "identity": {
+        "bytes": 6399172,
+        "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+        "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+      },
+      "device": 27,
+      "inode": 3961083,
+      "uid": 1000,
+      "mode": "0o600",
+      "size": 6399172,
+      "mtimeNs": 1794877158190969533
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/bootstrap-binding.json",
+      "identity": {
+        "bytes": 2790411,
+        "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+        "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+      },
+      "device": 27,
+      "inode": 3961084,
+      "uid": 1000,
+      "mode": "0o600",
+      "size": 2790411,
+      "mtimeNs": 1794877158255014922
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/fresh-current-input-boundary.json",
+      "identity": {
+        "bytes": 3654,
+        "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+        "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+      },
+      "device": 27,
+      "inode": 3961085,
+      "uid": 1000,
+      "mode": "0o600",
+      "size": 3654,
+      "mtimeNs": 1794877158274223013
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/provider-archives-fresh-review.json",
+      "identity": {
+        "bytes": 789090,
+        "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+        "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+      },
+      "device": 27,
+      "inode": 3961086,
+      "uid": 1000,
+      "mode": "0o600",
+      "size": 789090,
+      "mtimeNs": 1794877158275686985
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-runner.py",
+      "identity": {
+        "bytes": 89953,
+        "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+        "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+      },
+      "device": 27,
+      "inode": 3961087,
+      "uid": 1000,
+      "mode": "0o600",
+      "size": 89953,
+      "mtimeNs": 1794877158282866737
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-binding.json",
+      "identity": {
+        "bytes": 4898503,
+        "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+        "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+      },
+      "device": 27,
+      "inode": 3961088,
+      "uid": 1000,
+      "mode": "0o600",
+      "size": 4898503,
+      "mtimeNs": 1794877158285041508
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-test-materialization-receipt.json",
+      "identity": {
+        "bytes": 92391,
+        "sha256": "3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d",
+        "gitBlob": "f542dde38b84f533e5658aeafe5a06642c1dcca9"
+      },
+      "device": 27,
+      "inode": 3961089,
+      "uid": 1000,
+      "mode": "0o600",
+      "size": 92391,
+      "mtimeNs": 1794877158314174927
+    }
+  ],
+  "existingControlsAndReplicasAfter": [
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py",
+      "identity": {
+        "bytes": 104131,
+        "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+        "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+      },
+      "device": 27,
+      "inode": 3961082,
+      "uid": 1000,
+      "mode": "0o600",
+      "size": 104131,
+      "mtimeNs": 1794877158187294722
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/controls/red-binding.json",
+      "identity": {
+        "bytes": 6399172,
+        "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+        "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+      },
+      "device": 27,
+      "inode": 3961083,
+      "uid": 1000,
+      "mode": "0o600",
+      "size": 6399172,
+      "mtimeNs": 1794877158190969533
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/bootstrap-binding.json",
+      "identity": {
+        "bytes": 2790411,
+        "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+        "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+      },
+      "device": 27,
+      "inode": 3961084,
+      "uid": 1000,
+      "mode": "0o600",
+      "size": 2790411,
+      "mtimeNs": 1794877158255014922
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/fresh-current-input-boundary.json",
+      "identity": {
+        "bytes": 3654,
+        "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+        "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+      },
+      "device": 27,
+      "inode": 3961085,
+      "uid": 1000,
+      "mode": "0o600",
+      "size": 3654,
+      "mtimeNs": 1794877158274223013
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/provider-archives-fresh-review.json",
+      "identity": {
+        "bytes": 789090,
+        "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+        "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+      },
+      "device": 27,
+      "inode": 3961086,
+      "uid": 1000,
+      "mode": "0o600",
+      "size": 789090,
+      "mtimeNs": 1794877158275686985
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-runner.py",
+      "identity": {
+        "bytes": 89953,
+        "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+        "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+      },
+      "device": 27,
+      "inode": 3961087,
+      "uid": 1000,
+      "mode": "0o600",
+      "size": 89953,
+      "mtimeNs": 1794877158282866737
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-binding.json",
+      "identity": {
+        "bytes": 4898503,
+        "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+        "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+      },
+      "device": 27,
+      "inode": 3961088,
+      "uid": 1000,
+      "mode": "0o600",
+      "size": 4898503,
+      "mtimeNs": 1794877158285041508
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-test-materialization-receipt.json",
+      "identity": {
+        "bytes": 92391,
+        "sha256": "3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d",
+        "gitBlob": "f542dde38b84f533e5658aeafe5a06642c1dcca9"
+      },
+      "device": 27,
+      "inode": 3961089,
+      "uid": 1000,
+      "mode": "0o600",
+      "size": 92391,
+      "mtimeNs": 1794877158314174927
+    }
+  ],
+  "newFile": {
+    "path": "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+    "identity": {
+      "bytes": 8262787,
+      "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+      "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+    },
+    "device": 27,
+    "inode": 3985209,
+    "uid": 1000,
+    "mode": "0o600",
+    "size": 8262787,
+    "mtimeNs": 1794882109431755766
+  },
+  "writtenSelectedPaths": [
+    "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json"
+  ],
+  "existingFilesUnchanged": true,
+  "completeBindingReadback": true,
+  "sourceWrites": 0,
+  "runtimeInputWrites": 0,
+  "targetRunnerInvoked": false,
+  "materializationInvoked": false,
+  "greenInvoked": false,
+  "validationInvoked": false,
+  "wholeE2EQualified": false,
+  "qualification": "Source-free point-in-time exclusive control staging only; no target source or runtime admission. Root must separately observe this staging supervisor exit, then invoke the selected unchanged runner once."
+}

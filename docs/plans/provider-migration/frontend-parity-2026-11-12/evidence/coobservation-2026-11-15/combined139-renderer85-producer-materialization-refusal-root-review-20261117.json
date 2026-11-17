@@ -1,0 +1,550 @@
+{
+  "schemaVersion": 1,
+  "kind": "c714-three-producer-materialization-root-refusal-accounting",
+  "reviewer": "root",
+  "at": "2026-11-17 02:26:50 UTC",
+  "verdict": "ACCEPT_OBSERVED_REFUSAL_ACCOUNTING_NO_MATERIALIZATION_ACCEPTANCE",
+  "subject": {
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "binding": {
+      "bytes": 8262787,
+      "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+      "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+    },
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "bindingPublication": "9a37963441396d6eddaf507e57e504e21503878c",
+    "publicationGate": {
+      "bytes": 7095,
+      "sha256": "b50ae2a0bb3d61f67716688361cf36ca3e23954f9c37106e6350ddd27997a7bb",
+      "gitBlob": "0bf466496fc388dabe652eb4121229dd981b8f16"
+    },
+    "stagingIntent": {
+      "bytes": 14258,
+      "sha256": "0b26402f1f5a182fb1b482072b5d2ca3e398fa8e033a33695cc5bde6aed2ec99",
+      "gitBlob": "dbf620ef39ab35952f13a7972be1292cc33e4705"
+    },
+    "stagingReceipt": {
+      "bytes": 11570,
+      "sha256": "be71e278da80f76e3c0f3ed62c616cf4262627f237d2cec63829f2310d079c16",
+      "gitBlob": "dd48b15ec75ae4f5d12b84617159f3b152bacdbb"
+    },
+    "stagingOuter": {
+      "bytes": 26602,
+      "sha256": "5820ae411b46929282dd0119d98b65acd79879e7d2043de3eb3ee0418e314670",
+      "gitBlob": "85c0b89906a819d5a93d88fd7613587361ef7c72"
+    },
+    "materializationIntent": {
+      "bytes": 3489,
+      "sha256": "042c3ff0a2668e4bae8aeea9c178860eaa055c1739a3b0af5404dbd988f3f528",
+      "gitBlob": "d775e502038485469b3ab2f96569e5fd6b3ee98c"
+    },
+    "materializationRefusal": {
+      "bytes": 5796,
+      "sha256": "7865c3e53095955d2ff2406faa0a7d1bedfb0d4fbca5770b02922615ba9127c5",
+      "gitBlob": "ba7c846e55a9e87aca99cba43b52baddef6b760a"
+    },
+    "currentPathObservation": {
+      "bytes": 4110,
+      "sha256": "2625f6aec302e50b5fb88183bdadd010bb90b03b4abdd3c4c99bd3ff777e2360",
+      "gitBlob": "814c9c40adec04824d9fa5a52c95e4b52d7d783a"
+    },
+    "observedMaterializationOuter": 1,
+    "observedStagingOuter": 0,
+    "classification": "REFUSED_BEFORE_SOURCE_ROOT_ADMISSION_SPENT"
+  },
+  "method": "Full data reads and hashes of actual binding publication/readback gate, source-free staging intent/code/receipt/tool outer, selected materialization intent and final observed traceback, and read-only path/control observation. Exact unchanged runner control-flow order establishes what this invocation did not reach; no unavailable source census is manufactured.",
+  "fullBodyReadbacks": [
+    {
+      "role": "bindingActualRoot",
+      "identity": {
+        "bytes": 108913,
+        "sha256": "2cfe625d223e099d1d3642c254b7913ee11e59c0098d2bc20df492169fcd50ff",
+        "gitBlob": "a23b2fbe580fd610653cb1452e48c67a7007c69f"
+      }
+    },
+    {
+      "role": "bindingActualIndependent",
+      "identity": {
+        "bytes": 153895,
+        "sha256": "3b2b57d8b96388235c4a03271984783a0801032a67cb7530ffdf047cf8922656",
+        "gitBlob": "2aec11137769eef832609bdaeb6acc94774ce005"
+      }
+    },
+    {
+      "role": "bindingPublicationGate",
+      "identity": {
+        "bytes": 7095,
+        "sha256": "b50ae2a0bb3d61f67716688361cf36ca3e23954f9c37106e6350ddd27997a7bb",
+        "gitBlob": "0bf466496fc388dabe652eb4121229dd981b8f16"
+      }
+    },
+    {
+      "role": "stagingIntent",
+      "identity": {
+        "bytes": 14258,
+        "sha256": "0b26402f1f5a182fb1b482072b5d2ca3e398fa8e033a33695cc5bde6aed2ec99",
+        "gitBlob": "dbf620ef39ab35952f13a7972be1292cc33e4705"
+      }
+    },
+    {
+      "role": "stagingReceipt",
+      "identity": {
+        "bytes": 11570,
+        "sha256": "be71e278da80f76e3c0f3ed62c616cf4262627f237d2cec63829f2310d079c16",
+        "gitBlob": "dd48b15ec75ae4f5d12b84617159f3b152bacdbb"
+      }
+    },
+    {
+      "role": "stagingOuter",
+      "identity": {
+        "bytes": 26602,
+        "sha256": "5820ae411b46929282dd0119d98b65acd79879e7d2043de3eb3ee0418e314670",
+        "gitBlob": "85c0b89906a819d5a93d88fd7613587361ef7c72"
+      }
+    },
+    {
+      "role": "materializationIntent",
+      "identity": {
+        "bytes": 3489,
+        "sha256": "042c3ff0a2668e4bae8aeea9c178860eaa055c1739a3b0af5404dbd988f3f528",
+        "gitBlob": "d775e502038485469b3ab2f96569e5fd6b3ee98c"
+      }
+    },
+    {
+      "role": "materializationRefusal",
+      "identity": {
+        "bytes": 5796,
+        "sha256": "7865c3e53095955d2ff2406faa0a7d1bedfb0d4fbca5770b02922615ba9127c5",
+        "gitBlob": "ba7c846e55a9e87aca99cba43b52baddef6b760a"
+      }
+    },
+    {
+      "role": "currentPathObservation",
+      "identity": {
+        "bytes": 4110,
+        "sha256": "2625f6aec302e50b5fb88183bdadd010bb90b03b4abdd3c4c99bd3ff777e2360",
+        "gitBlob": "814c9c40adec04824d9fa5a52c95e4b52d7d783a"
+      }
+    }
+  ],
+  "controlFlow": {
+    "exactRunner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "failureLine": 1098,
+    "exactAssertion": "assert ROOT.is_dir() and not ROOT.is_symlink() and REPO.is_dir() and not REPO.is_symlink()",
+    "inputLoop": 1149,
+    "ownerCreation": 1412,
+    "sourceBeforeSnapshot": 1487,
+    "materializationWriteLoop": 1496,
+    "scope": "Module-level admission fails before all selected phase outputs and metadata/primary/source activity. This is not a universal process-custody or historical filesystem-continuity claim."
+  },
+  "observedOutcome": {
+    "schemaVersion": 1,
+    "kind": "c714-three-producer-materialization-observed-refusal-envelope",
+    "at": "2026-11-17 02:24:38 UTC",
+    "classification": "REFUSED_BEFORE_SOURCE_ROOT_ADMISSION_SPENT",
+    "selectedSupervisorInvoked": true,
+    "selectedAttemptSpent": true,
+    "replayed": false,
+    "observedOuterSupervisorExit": 1,
+    "finalToolResult": {
+      "chunk_id": "b6a241",
+      "wall_time_seconds": 0.420282123,
+      "exit_code": 1,
+      "original_token_count": 88,
+      "output": "Traceback (most recent call last):\n  File \"/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py\", line 1098, in <module>\n    assert ROOT.is_dir() and not ROOT.is_symlink() and REPO.is_dir() and not REPO.is_symlink()\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+    },
+    "toolObservations": [
+      {
+        "chunk_id": "b6a241",
+        "wall_time_seconds": 0.420282123,
+        "exit_code": 1,
+        "original_token_count": 88,
+        "output": "Traceback (most recent call last):\n  File \"/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py\", line 1098, in <module>\n    assert ROOT.is_dir() and not ROOT.is_symlink() and REPO.is_dir() and not REPO.is_symlink()\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+      }
+    ],
+    "invocationIntent": {
+      "bytes": 3489,
+      "sha256": "042c3ff0a2668e4bae8aeea9c178860eaa055c1739a3b0af5404dbd988f3f528",
+      "gitBlob": "d775e502038485469b3ab2f96569e5fd6b3ee98c"
+    },
+    "argv": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+      "/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py",
+      "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+      "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+      "materialize",
+      "green"
+    ],
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "binding": {
+      "bytes": 8262787,
+      "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+      "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+    },
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "bindingPublication": "9a37963441396d6eddaf507e57e504e21503878c",
+    "publicationGate": {
+      "bytes": 7095,
+      "sha256": "b50ae2a0bb3d61f67716688361cf36ca3e23954f9c37106e6350ddd27997a7bb",
+      "gitBlob": "0bf466496fc388dabe652eb4121229dd981b8f16"
+    },
+    "stagingIntent": {
+      "bytes": 14258,
+      "sha256": "0b26402f1f5a182fb1b482072b5d2ca3e398fa8e033a33695cc5bde6aed2ec99",
+      "gitBlob": "dbf620ef39ab35952f13a7972be1292cc33e4705"
+    },
+    "stagingReceipt": {
+      "bytes": 11570,
+      "sha256": "be71e278da80f76e3c0f3ed62c616cf4262627f237d2cec63829f2310d079c16",
+      "gitBlob": "dd48b15ec75ae4f5d12b84617159f3b152bacdbb"
+    },
+    "stagingOuter": {
+      "bytes": 26602,
+      "sha256": "5820ae411b46929282dd0119d98b65acd79879e7d2043de3eb3ee0418e314670",
+      "gitBlob": "85c0b89906a819d5a93d88fd7613587361ef7c72"
+    },
+    "stagingObservedOuterExit": 0,
+    "failure": {
+      "type": "AssertionError",
+      "runnerLine": 1098,
+      "exactAssertion": "assert ROOT.is_dir() and not ROOT.is_symlink() and REPO.is_dir() and not REPO.is_symlink()",
+      "root": "/workspace/scratch/c714-fresh-20261116",
+      "repo": "/workspace/scratch/c714-fresh-20261116/source",
+      "pointInTimeObservation": {
+        "bytes": 4110,
+        "sha256": "2625f6aec302e50b5fb88183bdadd010bb90b03b4abdd3c4c99bd3ff777e2360",
+        "gitBlob": "814c9c40adec04824d9fa5a52c95e4b52d7d783a"
+      },
+      "rootAndSourceObservedAbsent": true,
+      "causeOfDisappearance": "UNKNOWN; no claim about when, why, or another executor's custody",
+      "phaseRoot": "/workspace/scratch/c714-post-transport-20261117/evidence/materialize-producers",
+      "phaseRootObservedAbsent": true,
+      "phaseReceipt": null
+    },
+    "unreached": {
+      "inputFileLoop": true,
+      "metadataCommands": true,
+      "sourceBeforeBoundary": true,
+      "sourceWrites": true,
+      "sourceAfterBoundary": true,
+      "primaryInvocations": true,
+      "green": true,
+      "validation": true
+    },
+    "sourceWritesBySelectedRunner": 0,
+    "sourceWriteQualification": "Derived from the exact retained runner control flow: line1098 assertion precedes inputFiles reading, output-root/phase creation, every metadata/primary spawn and the materialization write loop. Current absence confirms the selected source root and phase outputs are absent; no full physical source census or preservation claim follows.",
+    "fullSourceBoundaryObserved": false,
+    "fullRuntimeInputsInspected": false,
+    "inputsPreserved": null,
+    "fullRuntimeInputsPreserved": null,
+    "sourceAndSupervisorMetadataPreserved": null,
+    "phaseAccepted": false,
+    "greenAccepted": false,
+    "validationAccepted": false,
+    "wholeE2EQualified": false,
+    "existingHistoricalResults": {
+      "postTransportRed": "The prior complete accepted RED53054 remains historical and complete; it does not supply a current physical input census or authorize a replay.",
+      "original64038": "REFUSED/SPENT observedouter2, unchanged",
+      "corrected54393": "UNKNOWN/INCOMPLETE/SPENT, unchanged"
+    },
+    "requiredNext": "Retain and independently review/publish/read back this refused/spent invocation. Do not re-invoke this materialization, manufacture a phase receipt, restore inputs in place, or run GREEN/validation under this spent local sequence. A separate prospective venue requires its own concrete review and authority; current CI investigation is read-only advisory."
+  },
+  "pointInTimeObservation": {
+    "kind": "c714-materialization-refusal-current-path-observation",
+    "at": "2026-11-17T02:23:32.563915+00:00",
+    "paths": [
+      {
+        "path": "/workspace/scratch/c714-fresh-20261116",
+        "lexists": false,
+        "isDir": false,
+        "isFile": false,
+        "isSymlink": false
+      },
+      {
+        "path": "/workspace/scratch/c714-fresh-20261116/source",
+        "lexists": false,
+        "isDir": false,
+        "isFile": false,
+        "isSymlink": false
+      },
+      {
+        "path": "/workspace/scratch/c714-fresh-20261116/toolchain",
+        "lexists": false,
+        "isDir": false,
+        "isFile": false,
+        "isSymlink": false
+      },
+      {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence",
+        "lexists": false,
+        "isDir": false,
+        "isFile": false,
+        "isSymlink": false
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117",
+        "lexists": true,
+        "isDir": true,
+        "isFile": false,
+        "isSymlink": false,
+        "device": 27,
+        "inode": 3961079,
+        "mode": "0o700",
+        "uid": 1000,
+        "immediateEntries": [
+          "controls",
+          "evidence",
+          "replicas"
+        ]
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/controls",
+        "lexists": true,
+        "isDir": true,
+        "isFile": false,
+        "isSymlink": false,
+        "device": 27,
+        "inode": 3961080,
+        "mode": "0o700",
+        "uid": 1000,
+        "immediateEntries": [
+          "combined-runner.py",
+          "green-binding.json",
+          "red-binding.json"
+        ]
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/replicas",
+        "lexists": true,
+        "isDir": true,
+        "isFile": false,
+        "isSymlink": false,
+        "device": 27,
+        "inode": 3961081,
+        "mode": "0o700",
+        "uid": 1000,
+        "immediateEntries": [
+          "bootstrap-binding.json",
+          "fresh-current-input-boundary.json",
+          "historical-original-binding.json",
+          "historical-original-runner.py",
+          "historical-test-materialization-receipt.json",
+          "provider-archives-fresh-review.json"
+        ]
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence",
+        "lexists": true,
+        "isDir": true,
+        "isFile": false,
+        "isSymlink": false,
+        "device": 27,
+        "inode": 3969246,
+        "mode": "0o700",
+        "uid": 1000,
+        "immediateEntries": [
+          "owner.json",
+          "red"
+        ]
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/materialize-producers",
+        "lexists": false,
+        "isDir": false,
+        "isFile": false,
+        "isSymlink": false
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/green",
+        "lexists": false,
+        "isDir": false,
+        "isFile": false,
+        "isSymlink": false
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/validation",
+        "lexists": false,
+        "isDir": false,
+        "isFile": false,
+        "isSymlink": false
+      }
+    ],
+    "completeCurrentControlReadbacks": [
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py",
+        "bytes": 104131,
+        "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+        "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/controls/red-binding.json",
+        "bytes": 6399172,
+        "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+        "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+        "bytes": 8262787,
+        "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+        "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+      }
+    ],
+    "sourceWritten": false,
+    "runtimeInvoked": false,
+    "qualification": "Read-only point-in-time observations after observed outer1; no reconstruction, replay, current source census, or continuity inference."
+  },
+  "checks": [
+    {
+      "name": "Complete retained body: bindingActualRoot",
+      "passed": true
+    },
+    {
+      "name": "Complete retained body: bindingActualIndependent",
+      "passed": true
+    },
+    {
+      "name": "Complete retained body: bindingPublicationGate",
+      "passed": true
+    },
+    {
+      "name": "Complete retained body: stagingIntent",
+      "passed": true
+    },
+    {
+      "name": "Complete retained body: stagingReceipt",
+      "passed": true
+    },
+    {
+      "name": "Complete retained body: stagingOuter",
+      "passed": true
+    },
+    {
+      "name": "Complete retained body: materializationIntent",
+      "passed": true
+    },
+    {
+      "name": "Complete retained body: materializationRefusal",
+      "passed": true
+    },
+    {
+      "name": "Complete retained body: currentPathObservation",
+      "passed": true
+    },
+    {
+      "name": "One observed outer1 materialization result",
+      "passed": true
+    },
+    {
+      "name": "Exact caught traceback refers to current runner1098",
+      "passed": true
+    },
+    {
+      "name": "Exact pinned c81 source contains failing assertion at1098",
+      "passed": true
+    },
+    {
+      "name": "All target output/input/metadata/source work is after refusal",
+      "passed": true,
+      "detail": {
+        "inputLoop": 1149,
+        "owner": 1412,
+        "sourceBoundary": 1487,
+        "writeLoop": 1496
+      }
+    },
+    {
+      "name": "Current ROOT and REPO absent as observation only",
+      "passed": true
+    },
+    {
+      "name": "Phase/GREEN/validation roots absent",
+      "passed": true
+    },
+    {
+      "name": "Complete current control bytes unchanged: combined-runner.py",
+      "passed": true
+    },
+    {
+      "name": "Complete current control bytes unchanged: red-binding.json",
+      "passed": true
+    },
+    {
+      "name": "Complete current control bytes unchanged: green-binding.json",
+      "passed": true
+    },
+    {
+      "name": "Distinct successful source-free staging outer0",
+      "passed": true
+    },
+    {
+      "name": "Exactly1 selected new control write",
+      "passed": true
+    },
+    {
+      "name": "Gate completed before staging",
+      "passed": true
+    },
+    {
+      "name": "Staging completed before materialization intent",
+      "passed": true
+    },
+    {
+      "name": "Exact once-only materialization argv",
+      "passed": true
+    },
+    {
+      "name": "Failed attempt remains spent and not replayed",
+      "passed": true
+    },
+    {
+      "name": "No false phase receipt or source preservation",
+      "passed": true
+    },
+    {
+      "name": "No source write by this early-refused invocation",
+      "passed": true
+    },
+    {
+      "name": "Metadata/primaries/GREEN/validation remain unreached",
+      "passed": true
+    },
+    {
+      "name": "No full E2E or local successfulphase acceptance",
+      "passed": true
+    },
+    {
+      "name": "Missing root cause/time remains unknown",
+      "passed": true
+    }
+  ],
+  "failedChecks": [],
+  "unresolvedAccountingBlockers": [],
+  "underlyingMissingRootCause": "UNKNOWN",
+  "materializationAccepted": false,
+  "green": "UNREACHED",
+  "validation": "UNREACHED",
+  "sourceWritesBySelectedInvocation": 0,
+  "sourceInputPreservation": null,
+  "requiredNext": "Independent refusal accounting, publication/immediate push and complete actual readbacks. No retry/restore-in-place/phase receipt fabrication or GREEN/validation under this spent local attempt. Separately select a concrete fresh venue using current-source-only advisory and original real-CLI prohibitions.",
+  "wholeE2EQualified": false
+}

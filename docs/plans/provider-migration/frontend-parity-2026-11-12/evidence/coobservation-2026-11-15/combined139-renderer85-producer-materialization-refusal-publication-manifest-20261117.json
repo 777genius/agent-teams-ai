@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-17 02:30:11 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "parent": "9a37963441396d6eddaf507e57e504e21503878c",
+  "parentTree": "be29c27287629d087ac7426a6eecc5f42bc750c6",
+  "parentDocsTree": "3e7b4912a1c160546f172802132057ecccc740ab",
+  "purpose": "Retain complete source-free staging success and the subsequent separately observed spent materialization refusal without source/input preservation or GREEN claims.",
+  "subject": {
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "binding": {
+      "bytes": 8262787,
+      "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+      "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+    },
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "bindingPublication": "9a37963441396d6eddaf507e57e504e21503878c",
+    "publicationGate": {
+      "bytes": 7095,
+      "sha256": "b50ae2a0bb3d61f67716688361cf36ca3e23954f9c37106e6350ddd27997a7bb",
+      "gitBlob": "0bf466496fc388dabe652eb4121229dd981b8f16"
+    },
+    "stagingIntent": {
+      "bytes": 14258,
+      "sha256": "0b26402f1f5a182fb1b482072b5d2ca3e398fa8e033a33695cc5bde6aed2ec99",
+      "gitBlob": "dbf620ef39ab35952f13a7972be1292cc33e4705"
+    },
+    "stagingReceipt": {
+      "bytes": 11570,
+      "sha256": "be71e278da80f76e3c0f3ed62c616cf4262627f237d2cec63829f2310d079c16",
+      "gitBlob": "dd48b15ec75ae4f5d12b84617159f3b152bacdbb"
+    },
+    "stagingOuter": {
+      "bytes": 26602,
+      "sha256": "5820ae411b46929282dd0119d98b65acd79879e7d2043de3eb3ee0418e314670",
+      "gitBlob": "85c0b89906a819d5a93d88fd7613587361ef7c72"
+    },
+    "materializationIntent": {
+      "bytes": 3489,
+      "sha256": "042c3ff0a2668e4bae8aeea9c178860eaa055c1739a3b0af5404dbd988f3f528",
+      "gitBlob": "d775e502038485469b3ab2f96569e5fd6b3ee98c"
+    },
+    "materializationRefusal": {
+      "bytes": 5796,
+      "sha256": "7865c3e53095955d2ff2406faa0a7d1bedfb0d4fbca5770b02922615ba9127c5",
+      "gitBlob": "ba7c846e55a9e87aca99cba43b52baddef6b760a"
+    },
+    "currentPathObservation": {
+      "bytes": 4110,
+      "sha256": "2625f6aec302e50b5fb88183bdadd010bb90b03b4abdd3c4c99bd3ff777e2360",
+      "gitBlob": "814c9c40adec04824d9fa5a52c95e4b52d7d783a"
+    },
+    "observedMaterializationOuter": 1,
+    "observedStagingOuter": 0,
+    "classification": "REFUSED_BEFORE_SOURCE_ROOT_ADMISSION_SPENT"
+  },
+  "rootReview": {
+    "bytes": 19849,
+    "sha256": "22f04f74ed43688d833ac6687da0dcfa1721d12bf22de2bcfae82705c69604f4",
+    "gitBlob": "7a30c61d3816a20810533e8e341780faea811088"
+  },
+  "independentReview": {
+    "bytes": 53515,
+    "sha256": "e7d845b69e10d9d0916e08a0ae02324a76fd69a892d0203115c44ad2ec73edc5",
+    "gitBlob": "c83325fd3692af5faff2527488d12ec1a3da4ea4"
+  },
+  "reviewsClosedAt": "2026-11-17 02:29:01 UTC",
+  "evidenceFiles": [
+    {
+      "role": "bindingActualRoot",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-actual-root-publication-20261117.json",
+      "mode": "100644",
+      "bytes": 108913,
+      "sha256": "2cfe625d223e099d1d3642c254b7913ee11e59c0098d2bc20df492169fcd50ff",
+      "gitBlob": "a23b2fbe580fd610653cb1452e48c67a7007c69f"
+    },
+    {
+      "role": "bindingActualIndependent",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-actual-independent-publication-20261117.json",
+      "mode": "100644",
+      "bytes": 153895,
+      "sha256": "3b2b57d8b96388235c4a03271984783a0801032a67cb7530ffdf047cf8922656",
+      "gitBlob": "2aec11137769eef832609bdaeb6acc94774ce005"
+    },
+    {
+      "role": "bindingPublicationGate",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-actual-gate-20261117.json",
+      "mode": "100644",
+      "bytes": 7095,
+      "sha256": "b50ae2a0bb3d61f67716688361cf36ca3e23954f9c37106e6350ddd27997a7bb",
+      "gitBlob": "0bf466496fc388dabe652eb4121229dd981b8f16"
+    },
+    {
+      "role": "stagingIntent",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-staging-intent-20261117.json",
+      "mode": "100644",
+      "bytes": 14258,
+      "sha256": "0b26402f1f5a182fb1b482072b5d2ca3e398fa8e033a33695cc5bde6aed2ec99",
+      "gitBlob": "dbf620ef39ab35952f13a7972be1292cc33e4705"
+    },
+    {
+      "role": "stagingReceipt",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-staging-receipt-20261117.json",
+      "mode": "100644",
+      "bytes": 11570,
+      "sha256": "be71e278da80f76e3c0f3ed62c616cf4262627f237d2cec63829f2310d079c16",
+      "gitBlob": "dd48b15ec75ae4f5d12b84617159f3b152bacdbb"
+    },
+    {
+      "role": "stagingOuter",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-staging-outer-20261117.json",
+      "mode": "100644",
+      "bytes": 26602,
+      "sha256": "5820ae411b46929282dd0119d98b65acd79879e7d2043de3eb3ee0418e314670",
+      "gitBlob": "85c0b89906a819d5a93d88fd7613587361ef7c72"
+    },
+    {
+      "role": "materializationIntent",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-materialization-intent-20261117.json",
+      "mode": "100644",
+      "bytes": 3489,
+      "sha256": "042c3ff0a2668e4bae8aeea9c178860eaa055c1739a3b0af5404dbd988f3f528",
+      "gitBlob": "d775e502038485469b3ab2f96569e5fd6b3ee98c"
+    },
+    {
+      "role": "materializationRefusal",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-materialization-refusal-20261117.json",
+      "mode": "100644",
+      "bytes": 5796,
+      "sha256": "7865c3e53095955d2ff2406faa0a7d1bedfb0d4fbca5770b02922615ba9127c5",
+      "gitBlob": "ba7c846e55a9e87aca99cba43b52baddef6b760a"
+    },
+    {
+      "role": "currentPathObservation",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-materialization-refusal-paths-20261117.json",
+      "mode": "100644",
+      "bytes": 4110,
+      "sha256": "2625f6aec302e50b5fb88183bdadd010bb90b03b4abdd3c4c99bd3ff777e2360",
+      "gitBlob": "814c9c40adec04824d9fa5a52c95e4b52d7d783a"
+    },
+    {
+      "role": "rootRefusalReview",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-materialization-refusal-root-review-20261117.json",
+      "mode": "100644",
+      "bytes": 19849,
+      "sha256": "22f04f74ed43688d833ac6687da0dcfa1721d12bf22de2bcfae82705c69604f4",
+      "gitBlob": "7a30c61d3816a20810533e8e341780faea811088"
+    },
+    {
+      "role": "guardRefusalReview",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-materialization-refusal-guard-review-20261117.json",
+      "mode": "100644",
+      "bytes": 53515,
+      "sha256": "e7d845b69e10d9d0916e08a0ae02324a76fd69a892d0203115c44ad2ec73edc5",
+      "gitBlob": "c83325fd3692af5faff2527488d12ec1a3da4ea4"
+    }
+  ],
+  "modifiedFiles": [
+    {
+      "role": "plan",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "bytes": 2569158,
+      "sha256": "76bc017d18e1ef850ac88bb0654f86fe5c7112f2a1845a98bf5c941ca16c6e95",
+      "gitBlob": "b35e162950c72c8160e8ee5ffa44a584ede5152e"
+    },
+    {
+      "role": "status",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "mode": "100644",
+      "bytes": 49770,
+      "sha256": "91fa3326dedbd2e65aa6e09cc29338a1539b56ba3f3aaf542cbacddc39970f0c",
+      "gitBlob": "9e7daa6bb118d16f86d7560dfc011d205a036303"
+    },
+    {
+      "role": "catalog",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "mode": "100644",
+      "bytes": 315823,
+      "sha256": "cd7dad78c049e02695fd549b43253923fe0d6835e0e44a2784487fb1ae68a2ec",
+      "gitBlob": "329435a6356258b36b77de12a515f646a60908c2"
+    }
+  ],
+  "manifestPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-materialization-refusal-publication-manifest-20261117.json",
+  "expectedDelta": {
+    "changed": 15,
+    "added": 12,
+    "modified": 3,
+    "deleted": 0,
+    "modesChanged": 0,
+    "nonDocChanged": 0,
+    "workflowChanged": 0
+  },
+  "expectedCensus": {
+    "parentLeaves": 11911,
+    "parentDocs": 3113,
+    "leaves": 11923,
+    "docs": 3125,
+    "nonDocs": 8798,
+    "workflows": 42
+  },
+  "catalogPreservation": {
+    "archiveKey": "priorCombinedNodeRendererStageAtProducerMaterializationRefusal",
+    "evidenceKey": "combined139Renderer85ProducerMaterializationRefusalEvidenceFiles",
+    "wholePriorCurrentStage": true,
+    "otherParentFields": 68,
+    "completeBundles": 27,
+    "totalsUnchanged": true,
+    "planAndStatusFullPrefixesPreserved": true
+  },
+  "qualification": {
+    "stagingObservedOuter": 0,
+    "materializationObservedOuter": 1,
+    "sourceWritesBySelectedInvocation": 0,
+    "sourceBoundaryObserved": false,
+    "sourceInputPreservation": null,
+    "phaseReceipt": null,
+    "attemptSpent": true,
+    "replayed": false,
+    "green": "UNREACHED",
+    "validation": "UNREACHED",
+    "wholeE2EQualified": false,
+    "missingRootCauseAndTime": "UNKNOWN",
+    "newVenueSelected": false
+  }
+}
