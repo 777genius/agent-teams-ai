@@ -11,6 +11,7 @@ import {
 } from '@features/agent-attachments/main';
 import { readNativeInboxAttachmentCapability } from '@features/member-work-sync/main';
 import { parseNewTeamProjectContextMode } from '@features/team-project-context/core';
+import { projectTeamSummaries } from '@features/team-project-context/main';
 import { persistNodeMemberSettingsRelaunch } from '@features/team-provisioning/main';
 import {
   classifyTeamReadWorkerFailure,
@@ -1102,7 +1103,8 @@ async function handleListTeams(_event: IpcMainInvokeEvent): Promise<IpcResult<Te
   const startedAt = Date.now();
   try {
     return await wrapTeamHandler('list', () => {
-      const loadFresh = () => getTeamDataService().listTeams();
+      const loadFresh = async () =>
+        projectTeamSummaries(await getTeamDataService().listTeams(), teamMetaStore);
       return launchIoGovernor
         ? launchIoGovernor.runSummaryOperation('teams:list', loadFresh, {
             clone: cloneLaunchIoGovernorPayload,
