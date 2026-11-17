@@ -1,4 +1,5 @@
 import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
+import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 
 import type { ProjectTeamRuntimePorts } from './teamProjectContextCreate';
 import type { TeamLaunchRequest, TeamProvisioningProgress } from '@shared/types';
@@ -25,6 +26,10 @@ export async function prepareTeamContextLaunch(
   const parts = createProjectContextRuntimeParts(ports);
   const mode = await parts.resolver.getMode(request.teamName);
   if (mode === 'shared') return { request };
+  const logicalMeta = await new TeamMetaStore().getMeta(request.teamName);
+  if (logicalMeta?.deletedAt) {
+    throw new Error('TEAM_TRASHED: Restore the team before launching');
+  }
 
   const address = { logicalTeamName: request.teamName, projectPath: request.cwd };
   const reserved = await parts.resolver.reserveForProvisioning(address);

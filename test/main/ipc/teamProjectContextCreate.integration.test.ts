@@ -196,6 +196,25 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
     expect((await registry.find('builders', f.projectPath))?.id).toBe(a.id);
   });
 
+  it('does not materialize any project aliases when the logical team is trashed', async () => {
+    const f = await fixture();
+    await createTeamWithProjectContext({
+      teamName: 'builders', cwd: f.projectPath, members: [], projectContextMode: 'per_project',
+    }, f.onProgress, f.ports);
+    const metaPath = path.join(getTeamsBasePath(), 'builders', 'team.meta.json');
+    const meta = JSON.parse(await fs.readFile(metaPath, 'utf8')) as Record<string, unknown>;
+    await fs.writeFile(metaPath, JSON.stringify({
+      ...meta, deletedAt: '2026-11-17T00:00:00Z',
+    }));
+    const projectB = path.join(path.dirname(f.projectPath), 'project-b');
+    await fs.mkdir(projectB);
+    await expect(prepareTeamContextLaunch({
+      teamName: 'builders', cwd: projectB,
+    }, f.ports)).rejects.toThrow('TEAM_TRASHED');
+    const registry = TeamProjectContextRegistry.fromCurrentApp();
+    expect(await registry.inspect('builders', projectB)).toBeNull();
+  });
+
   it('refuses project B while A is running and does not leave a dead reservation', async () => {
     const f = await fixture();
     await createTeamWithProjectContext({
