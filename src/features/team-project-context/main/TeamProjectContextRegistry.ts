@@ -265,6 +265,26 @@ export class TeamProjectContextRegistry {
     }, { preventLiveOwnerTakeover: true });
   }
 
+  /**
+   * A scheduling target is a project alias only when an owned, validated
+   * logical team's manifest explicitly maps to it. Never trust the prefix.
+   * This is used only at schedule admission/dispatch, not on hot UI reads.
+   */
+  async isOwnedExecutionAlias(executionTeamName: string): Promise<boolean> {
+    if (!executionTeamName.startsWith('ptc-')) return false;
+    const entries = await fs.readdir(this.paths.teamsBasePath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name === executionTeamName) continue;
+      if (!validateTeamName(entry.name).valid) continue;
+      const dir = path.join(this.paths.teamsBasePath, entry.name);
+      if (!(await exists(path.join(dir, INDEX_FILE)))) continue;
+      if ((await readTeamOwnerProfileScope(dir)) !== this.paths.profileScope) continue;
+      const index = await this.readIndex(entry.name);
+      if (index.contexts.some((row) => row.executionTeamName === executionTeamName)) return true;
+    }
+    return false;
+  }
+
   /** A retained index may outlive the selected history mode. */
   async hasRetainedIndex(logicalTeamName: string): Promise<boolean> {
     return exists(this.indexPath(logicalTeamName));

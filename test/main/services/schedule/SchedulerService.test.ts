@@ -212,6 +212,26 @@ describe('SchedulerService', () => {
     return service;
   }
 
+  it('blocks project aliases at create and manual launch admission', async () => {
+    const service = new SchedulerService(
+      repo, executor as never, warmUpFn, undefined,
+      async (name) => !name.startsWith('ptc-')
+    );
+    await expect(service.createSchedule({
+      teamName: 'ptc-project-a',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project-a', prompt: 'must never dispatch' },
+    })).rejects.toThrow('Project-context scheduling is unavailable');
+    expect(repo.saveSchedule).not.toHaveBeenCalled();
+
+    const previous = makeSchedule({ teamName: 'ptc-project-a' });
+    await repo.saveSchedule(previous);
+    await expect(service.triggerNow(previous.id)).rejects.toThrow('Project-context scheduling');
+    await expect(service.resumeSchedule(previous.id)).rejects.toThrow('Project-context scheduling');
+    expect(executor.execute).not.toHaveBeenCalled();
+  });
+
   // --- Lifecycle ---
 
   it('start() loads schedules and creates cron jobs for active ones', async () => {

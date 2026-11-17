@@ -277,6 +277,14 @@ describe('TeamProjectContextRegistry', () => {
       .rejects.toBeInstanceOf(TeamProjectContextUnavailableError);
   });
 
+  it('recognizes only aliases mapped by an owned manifest for schedule protection', async () => {
+    const f = await fixture();
+    const reserved = await f.registry.reserve('logical-team', f.workspaceA);
+    expect(await f.registry.isOwnedExecutionAlias(reserved.executionTeamName)).toBe(true);
+    expect(await f.registry.isOwnedExecutionAlias('ptc-not-owned')).toBe(false);
+    expect(await f.registry.isOwnedExecutionAlias('ordinary-team')).toBe(false);
+  });
+
   it('accepts long legacy identifiers and trailing hyphens for retained-index checks', async () => {
     const f = await fixture();
     const legacyName = 'legacy-' + 'a'.repeat(90) + '-';

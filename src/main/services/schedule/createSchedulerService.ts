@@ -1,3 +1,5 @@
+import { TeamProjectContextRegistry } from '@features/team-project-context/main';
+import { TeamMetaStore } from '../team/TeamMetaStore';
 import { isControllerTaskNotFoundError } from '../team/taskCreationIdempotency';
 import { TeamConfigReader } from '../team/TeamConfigReader';
 
@@ -66,6 +68,13 @@ export function createSchedulerService(
       const result = await provisioning.prepareForProvisioning(cwd, { forceFresh: true });
       return { ready: result.ready, message: result.message };
     },
-    dispatcher
+    dispatcher,
+    async (teamName) => {
+      const store = new TeamMetaStore();
+      const meta = await store.getMeta(teamName);
+      if (!meta && (await store.metadataFileExists(teamName))) return false;
+      if (meta?.projectContextMode === 'per_project') return false;
+      return !(await TeamProjectContextRegistry.fromCurrentApp().isOwnedExecutionAlias(teamName));
+    }
   );
 }

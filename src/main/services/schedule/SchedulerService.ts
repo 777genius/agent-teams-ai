@@ -79,7 +79,9 @@ export class SchedulerService {
     repository: ScheduleRepository,
     executor: ScheduledTaskExecutor,
     warmUpFn?: WarmUpFn,
-    smartDispatcher?: SmartScheduleDispatcher
+    smartDispatcher?: SmartScheduleDispatcher,
+    private readonly allowTeamSchedule: (teamName: string) => Promise<boolean> =
+      async () => true
   ) {
     this.repository = repository;
     this.executor = executor;
@@ -174,6 +176,9 @@ export class SchedulerService {
   }
 
   async createSchedule(input: CreateScheduleInput): Promise<Schedule> {
+    if (!(await this.allowTeamSchedule(input.teamName))) {
+      throw new Error('Project-context scheduling is unavailable until logical-team admission is supported');
+    }
     const cronExpression = input.cronExpression.trim();
     const timezone = input.timezone.trim();
     getValidScheduleNextRuns(cronExpression, timezone);
@@ -222,6 +227,9 @@ export class SchedulerService {
   async updateSchedule(id: string, patch: UpdateSchedulePatch): Promise<Schedule> {
     const existing = await this.repository.getSchedule(id);
     if (!existing) throw new Error(`Schedule not found: ${id}`);
+    if (!(await this.allowTeamSchedule(existing.teamName))) {
+      throw new Error('Project-context scheduling is unavailable until logical-team admission is supported');
+    }
     if (patch.reviewedSavedPrompt && !existing.taskFirst) throw new Error('Review requires task-first schedule');
     const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
     const cronExpression = (patch.cronExpression ?? existing.cronExpression).trim();
@@ -312,6 +320,9 @@ export class SchedulerService {
   async resumeSchedule(id: string): Promise<void> {
     const existing = await this.repository.getSchedule(id);
     if (!existing) throw new Error(`Schedule not found: ${id}`);
+    if (!(await this.allowTeamSchedule(existing.teamName))) {
+      throw new Error('Project-context scheduling is unavailable until logical-team admission is supported');
+    }
 
     // A historic invalid schedule must be repaired before it can be resumed.
     getValidScheduleNextRuns(existing.cronExpression, existing.timezone);
@@ -364,6 +375,9 @@ export class SchedulerService {
     const schedule = await this.repository.getSchedule(id);
     if (!schedule) {
       throw new Error(`Schedule not found: ${id}`);
+    }
+    if (!(await this.allowTeamSchedule(schedule.teamName))) {
+      throw new Error('Project-context scheduling is unavailable until logical-team admission is supported');
     }
 
     // Check locks
@@ -595,7 +609,10 @@ export class SchedulerService {
     let finishFinalization: (() => void) | undefined;
 
     try {
-      const outcome = schedule.executionMode
+      const permitted = await this.allowTeamSchedule(schedule.teamName);
+      const outcome = !permitted
+        ? { kind: 'skipped' as const, summary: 'Project-context scheduling is unavailable until logical-team admission is supported' }
+        : schedule.executionMode
         ? await this.smartDispatcher?.dispatch(schedule, run.id, () =>
             this.stopped || generation !== this.lifecycleEpoch || this.activeRuns.get(scheduleId)?.id !== run.id
           )
