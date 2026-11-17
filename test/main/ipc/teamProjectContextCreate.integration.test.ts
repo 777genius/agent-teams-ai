@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { createTeamWithProjectContext } from '../../../src/main/ipc/teams/teamProjectContextCreate';
+import { prepareTeamContextLaunch } from '../../../src/main/ipc/teams/teamProjectContextLaunch';
 import {
   getTasksBasePath,
   getTeamsBasePath,
@@ -137,4 +138,73 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
     await expect(fs.readFile(path.join(getTeamsBasePath(), 'legacy', 'project-contexts.json')))
       .rejects.toMatchObject({ code: 'ENOENT' });
   });
+  it('prepares B independently from a previously ready A, then restores A', async () => {
+    const f = await fixture();
+    await createTeamWithProjectContext({
+      teamName: 'builders', cwd: f.projectPath, members: [], projectContextMode: 'per_project',
+    }, f.onProgress, f.ports);
+    const registry = TeamProjectContextRegistry.fromCurrentApp();
+    const a = await vi.waitFor(async () => {
+      const row = await registry.find('builders', f.projectPath);
+      expect(row?.state).toBe('ready');
+      return row!;
+    });
+    const projectB = path.join(path.dirname(f.projectPath), 'project-b');
+    await fs.mkdir(projectB);
+    const prepared = await prepareTeamContextLaunch({
+      teamName: 'builders', cwd: projectB,
+    }, f.ports);
+    expect(prepared.request.teamName).not.toBe('builders');
+    expect(prepared.request.teamName).not.toBe(a.executionTeamName);
+    await fs.writeFile(path.join(
+      getTeamsBasePath(), prepared.request.teamName, 'config.json'
+    ), JSON.stringify({ name: prepared.request.teamName }));
+    const send = vi.fn<(p: TeamProvisioningProgress) => void>();
+    prepared.mapProgress?.({
+      runId: 'run-b',
+      teamName: prepared.request.teamName,
+      state: 'ready',
+      message: 'Native launch ready',
+      startedAt: '', updatedAt: '',
+    }, send);
+    await vi.waitFor(async () => {
+      const b = await registry.find('builders', projectB);
+      expect(b?.state).toBe('ready');
+      expect(send).toHaveBeenCalledWith(expect.objectContaining({
+        teamName: 'builders', state: 'ready',
+      }));
+    });
+    expect((await registry.find('builders', f.projectPath))?.id).toBe(a.id);
+  });
+
+  it('refuses project B while A is running and does not leave a dead reservation', async () => {
+    const f = await fixture();
+    await createTeamWithProjectContext({
+      teamName: 'builders', cwd: f.projectPath, members: [], projectContextMode: 'per_project',
+    }, f.onProgress, f.ports);
+    const registry = TeamProjectContextRegistry.fromCurrentApp();
+    const a = await vi.waitFor(async () => {
+      const row = await registry.find('builders', f.projectPath);
+      expect(row).not.toBeNull();
+      return row!;
+    });
+    const original = f.ports.runtime.getRuntimeState;
+    f.ports.runtime.getRuntimeState = async (name) =>
+      name === a.executionTeamName
+        ? { teamName: name, runId: 'active-run', isAlive: true, progress: null }
+        : original(name);
+    const projectB = path.join(path.dirname(f.projectPath), 'project-b');
+    await fs.mkdir(projectB);
+    await expect(prepareTeamContextLaunch({
+      teamName: 'builders', cwd: projectB,
+    }, f.ports)).rejects.toThrow('running');
+    expect((await registry.list('builders')).map((row) => row.projectPath))
+      .toEqual([a.projectPath]);
+    f.ports.runtime.getRuntimeState = original;
+    const prepared = await prepareTeamContextLaunch({
+      teamName: 'builders', cwd: projectB,
+    }, f.ports);
+    expect(prepared.request.teamName).not.toBe(a.executionTeamName);
+  });
+
 });
