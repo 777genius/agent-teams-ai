@@ -735,17 +735,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_UPDATE_TASK_FIELDS, handleUpdateTaskFields);
   ipcMain.handle(TEAM_DELETE_TEAM, (e, n) => deleteLogicalTeamWithContexts(n, (t) => handleStopTeam(e, t), (t) => getTeamDataService().deleteTeam(t), () => handleDeleteTeam(e, n), undefined, undefined, undefined, { physical: (t) => getTeamDataService().restoreTeam(t), logical: () => handleRestoreTeam(e, n) }));
   ipcMain.handle(TEAM_RESTORE, (e, n) => restoreLogicalTeamWithContexts(n, (t) => getTeamDataService().restoreTeam(t), () => handleRestoreTeam(e, n)));
-  ipcMain.handle(TEAM_PERMANENTLY_DELETE, (event, name) =>
-    permanentlyDeleteLogicalTeam(name, {
-      stopNative: (alias) => handleStopTeam(event, alias),
-      deleteNative: (alias, draft) =>
-        getPermanentDeletionCoordinator().permanentlyDelete(alias, { draft }),
-      deleteLogical: (draft) => draft
-        ? wrapTeamHandler('permanentlyDeleteTeam', () =>
-            getPermanentDeletionCoordinator().permanentlyDelete(String(name), { draft: true }))
-        : handlePermanentlyDeleteTeam(event, name),
-    })
-  );
+  ipcMain.handle(TEAM_PERMANENTLY_DELETE, handleProjectAwarePermanentDelete);
   ipcMain.handle(TEAM_PROCESS_SEND, handleProcessSend);
   ipcMain.handle(TEAM_PROCESS_ALIVE, handleProcessAlive);
   ipcMain.handle(TEAM_ALIVE_LIST, handleAliveList);
@@ -1477,16 +1467,19 @@ async function handleRestoreTeam(
     getTeamDataWorkerClient().invalidateTeamConfig(validated.value!);
   });
 }
-async function handlePermanentlyDeleteTeam(
-  _event: IpcMainInvokeEvent,
-  teamName: unknown
+async function handleProjectAwarePermanentDelete(
+  event: IpcMainInvokeEvent, name: unknown, forceDraft = false
 ): Promise<IpcResult<void>> {
-  const validated = validateTeamName(teamName);
-  if (!validated.valid) {
-    return { success: false, error: validated.error ?? 'Invalid teamName' };
-  }
-  return wrapTeamHandler('permanentlyDeleteTeam', async () => {
-    await getPermanentDeletionCoordinator().permanentlyDelete(validated.value!);
+  const checked = validateTeamName(name);
+  if (!checked.valid) return { success: false, error: checked.error ?? 'Invalid teamName' };
+  return permanentlyDeleteLogicalTeam(checked.value!, {
+    stopNative: (alias) => handleStopTeam(event, alias),
+    deleteNative: (alias, draft) =>
+      getPermanentDeletionCoordinator().permanentlyDelete(alias, { draft }),
+    deleteLogical: (draft) => wrapTeamHandler('permanentlyDeleteTeam', () =>
+      getPermanentDeletionCoordinator().permanentlyDelete(checked.value!, {
+        draft: draft || forceDraft,
+      })),
   });
 }
 async function handleUpdateConfig(
@@ -5431,6 +5424,8 @@ async function handleDeleteDraft(
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
-    await getPermanentDeletionCoordinator().permanentlyDelete(validated.value!, { draft: true });
+    // Pending logical drafts may already own live physical project runtimes.
+    const result = await handleProjectAwarePermanentDelete(_event, validated.value!, true);
+    if (!result.success) throw new Error(result.error || 'Project draft deletion failed');
   });
 }
