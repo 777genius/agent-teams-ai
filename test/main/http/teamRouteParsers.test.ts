@@ -172,6 +172,7 @@ describe('HTTP team route parsers', () => {
       })
     ).toEqual({
       teamName: 'new-team',
+      projectContextMode: 'per_project',
       displayName: 'New Team',
       description: 'Saved draft',
       members: [
@@ -196,6 +197,14 @@ describe('HTTP team route parsers', () => {
       limitContext: false,
     });
 
+    expect(parseCreateTeamRequest({ teamName: 'new-team', projectContextMode: 'shared' })).toMatchObject({
+      projectContextMode: 'shared',
+    });
+    expectBadRequest(
+      () => parseCreateTeamRequest({ teamName: 'new-team', projectContextMode: 'invalid' }),
+      'projectContextMode must be shared or per_project'
+    );
+
     expectBadRequest(
       () => parseCreateTeamRequest({ teamName: 'new-team', members: 'builder' }),
       'members must be an array'
@@ -208,6 +217,7 @@ describe('HTTP team route parsers', () => {
 
     expect(parseCreateTeamRequest({ teamName: 'new-team' })).toEqual({
       teamName: 'new-team',
+      projectContextMode: 'per_project',
       members: [],
     });
 

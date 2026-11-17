@@ -370,9 +370,15 @@ export function parseCreateTeamRequest(body: unknown): TeamCreateConfigRequest {
   const worktree = assertOptionalString(payload.worktree, 'worktree');
   const extraCliArgs = assertOptionalExtraCliArgs(payload.extraCliArgs);
 
+  let projectContextMode: TeamCreateConfigRequest['projectContextMode'];
+  try {
+    projectContextMode = parseNewTeamProjectContextMode(payload.projectContextMode);
+  } catch {
+    throw new TeamRequestValidationError('projectContextMode must be shared or per_project');
+  }
   const request: TeamCreateConfigRequest = {
     teamName,
-    projectContextMode: parseNewTeamProjectContextMode(payload.projectContextMode),
+    projectContextMode,
     runtimeSelectionVersion,
     members: parseCreateMembers(payload.members, providerId ?? 'anthropic'),
     ...(displayName ? { displayName } : {}),
