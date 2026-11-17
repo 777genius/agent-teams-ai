@@ -438,10 +438,6 @@ export class TeamProjectContextRegistry {
   }
 
   /**
-   * Confirm only after the existing native provisioning flow has created an
-   * owned, valid physical team and task directory. No inferred success.
-   */
-  /**
    * Release a failed draft reservation only when absolutely no native artifact
    * exists. The caller must hold the logical team's operation admission lock
    * and prove that no provisioning run is active. Never delete ready contexts.

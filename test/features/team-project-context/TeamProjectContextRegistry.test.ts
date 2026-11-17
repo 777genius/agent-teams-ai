@@ -66,6 +66,55 @@ describe('TeamProjectContextRegistry', () => {
     expect(other.id).not.toBe(first.id);
   });
 
+  it('blocks project operations during soft delete and restores admission on cancellation', async () => {
+    const f = await fixture();
+    const reserved = await f.registry.reserve('logical-team', f.workspaceA);
+    await simulateNativeProvisioning(f, reserved.executionTeamName);
+    await f.registry.confirmReady('logical-team', f.workspaceA, reserved.executionTeamName);
+    await f.registry.beginSoftDelete('logical-team');
+    await expect(f.registry.reserve('logical-team', f.workspaceB)).rejects.toThrow(/deletion|trash/);
+    await expect(f.registry.inspect('logical-team', f.workspaceA)).rejects.toThrow(/deleted|trash/);
+    await expect(f.registry.confirmReady(
+      'logical-team', f.workspaceA, reserved.executionTeamName
+    )).rejects.toThrow('being deleted');
+    await f.registry.cancelSoftDelete('logical-team');
+    expect((await f.registry.find('logical-team', f.workspaceA))?.id).toBe(reserved.id);
+    expect((await f.registry.reserve('logical-team', f.workspaceB)).state).toBe('reserved');
+  });
+
+  it('does not drop a soft-delete fence when permanent deletion is cancelled', async () => {
+    const f = await fixture();
+    await f.registry.beginSoftDelete('logical-team');
+    await f.registry.beginPermanentDeletion('logical-team');
+    await f.registry.cancelPermanentDeletion('logical-team');
+    await expect(f.registry.reserve('logical-team', f.workspaceA))
+      .rejects.toThrow(/deletion|trash/);
+    await f.registry.cancelSoftDelete('logical-team');
+    const reserved = await f.registry.reserve('logical-team', f.workspaceA);
+    expect(reserved.state).toBe('reserved');
+    await f.registry.beginPermanentDeletion('logical-team');
+    await expect(f.registry.beginSoftDelete('logical-team'))
+      .rejects.toThrow('Permanent deletion is already in progress');
+  });
+
+  it('matches mixed-case stored Windows project paths without changing the index on reads', async () => {
+    if (process.platform !== 'win32') return;
+    const f = await fixture();
+    const reserved = await f.registry.reserve('logical-team', f.workspaceA);
+    await simulateNativeProvisioning(f, reserved.executionTeamName);
+    await f.registry.confirmReady('logical-team', f.workspaceA, reserved.executionTeamName);
+    const indexPath = path.join(f.teamsBasePath, 'logical-team', 'project-contexts.json');
+    const index = JSON.parse(await readFile(indexPath, 'utf8')) as {
+      contexts: { projectKey: string }[];
+    };
+    const original = index.contexts[0]!.projectKey;
+    index.contexts[0]!.projectKey = original.toUpperCase();
+    const mixedCaseIndex = JSON.stringify(index);
+    await writeFile(indexPath, mixedCaseIndex);
+    expect((await f.registry.find('logical-team', f.workspaceA))?.id).toBe(reserved.id);
+    expect(await readFile(indexPath, 'utf8')).toBe(mixedCaseIndex);
+  });
+
   it('keeps retained contexts discoverable after switching history mode', async () => {
     const f = await fixture();
     expect(await f.registry.hasRetainedIndex('logical-team')).toBe(false);
