@@ -21,22 +21,23 @@ import type { TeamRuntimeState } from '../../../src/shared/types/team';
 
 const roots: string[] = [];
 
-async function fixture(options?: { owner?: string; mode?: 'shared' | 'per_project' }) {
+async function fixture(options?: { owner?: string; mode?: 'shared' | 'per_project'; name?: string }) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'team-history-mode-'));
   roots.push(root);
   setClaudeBasePathOverride(path.join(root, 'claude'));
   setAppDataBasePath(path.join(root, 'app'));
-  const teamDir = path.join(getTeamsBasePath(), 'builders');
+  const teamName = options?.name ?? 'builders';
+  const teamDir = path.join(getTeamsBasePath(), teamName);
   await fs.mkdir(teamDir, { recursive: true });
   const meta = new TeamMetaStore();
-  await meta.writeMeta('builders', {
+  await meta.writeMeta(teamName, {
     cwd: root, createdAt: 1,
     ...(options?.mode ? { projectContextMode: options.mode } : {}),
   });
   if (options?.owner) {
     await claimTeamForThisProfile({
       teamsBasePath: getTeamsBasePath(),
-      teamName: 'builders',
+      teamName,
       reason: 'create',
       profileScope: options.owner,
     });
@@ -56,7 +57,7 @@ async function fixture(options?: { owner?: string; mode?: 'shared' | 'per_projec
   registerTeamProjectContextModeHandler(ipc as never, runtime);
   return {
     meta, teamDir, runtime,
-    setMode: async (mode: unknown, name: unknown = 'builders') => {
+    setMode: async (mode: unknown, name: unknown = teamName) => {
       const handler = handlers.get(TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL);
       if (!handler) throw new Error('Not registered');
       return handler(null, name, mode) as Promise<{ success: boolean; error?: string }>;
@@ -96,6 +97,14 @@ describe('team history mode IPC', () => {
     const result = await f.setMode('per_project');
     expect(result).toMatchObject({ success: false });
     expect((await f.meta.getMeta('builders'))?.projectContextMode).toBeUndefined();
+  });
+
+  it('accepts legacy names up to 128 characters when switching team history mode', async () => {
+    const name = 'legacy-' + 'a'.repeat(100);
+    const f = await fixture({ name });
+    expect(await f.setMode('per_project')).toMatchObject({ success: true });
+    expect((await f.meta.getMeta(name))?.projectContextMode).toBe('per_project');
+    expect(await readTeamOwnerProfileScope(f.teamDir)).toBe(resolveThisAppProfileScope());
   });
 
   it('rejects invalid modes instead of persisting unknown metadata', async () => {

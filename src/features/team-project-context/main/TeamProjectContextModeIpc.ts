@@ -10,6 +10,7 @@ import {
 } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 
 import { TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL } from '../contracts';
 
@@ -51,18 +52,20 @@ async function setMode(
   requestedMode: unknown,
   runtime: ModeRuntimePorts
 ): Promise<IpcResult<void>> {
-  if (typeof teamName !== 'string' || !/^[a-z0-9-]{1,64}$/.test(teamName)) {
-    return { success: false, error: 'Invalid team name' };
+  const validatedTeam = validateTeamName(teamName);
+  if (!validatedTeam.valid) {
+    return { success: false, error: validatedTeam.error ?? 'Invalid team name' };
   }
   if (requestedMode !== 'shared' && requestedMode !== 'per_project') {
     return { success: false, error: 'Invalid project history mode' };
   }
   const mode = requestedMode as TeamProjectContextMode;
+  const name = validatedTeam.value!;
   try {
     const meta = new TeamMetaStore();
     const registry = TeamProjectContextRegistry.fromCurrentApp();
     const schedules = new JsonScheduleRepository();
-    await changeTeamProjectContextMode(teamName, mode, {
+    await changeTeamProjectContextMode(name, mode, {
       getMeta: (name) => meta.getMeta(name),
       metadataFileExists: (name) => meta.metadataFileExists(name),
       updateMode: (name, next) => meta.updateMeta(name, (current) => {
