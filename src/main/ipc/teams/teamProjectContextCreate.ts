@@ -25,24 +25,18 @@ import type {
   TeamProvisioningProgress,
 } from '@shared/types';
 
-/**
- * The Electron transport is one of the application boundaries. Keep project
- * routing here rather than rewriting native controller/task/chat internals.
- */
-export async function createTeamWithProjectContext(
-  request: TeamCreateRequest,
-  onProgress: (progress: TeamProvisioningProgress) => void,
-  ports: {
-    data: Pick<TeamDataService, 'createTeamConfig' | 'getSavedRequest' | 'runConfigurationOperation'>;
-    start: Pick<TeamProvisioningStartApi, 'createTeam'>;
-    runtime: Pick<TeamRuntimeApi, 'getRuntimeState'>;
-    run: Pick<TeamProvisioningRunApi, 'hasProvisioningRun'>;
-    watchNativeTeam(teamName: string): void;
-  }
-): Promise<TeamCreateResponse> {
-  if (request.projectContextMode !== 'per_project') {
-    return ports.start.createTeam(request, onProgress);
-  }
+export interface ProjectTeamRuntimePorts {
+  data: Pick<TeamDataService, 'createTeamConfig' | 'getSavedRequest' | 'runConfigurationOperation'>;
+  runtime: Pick<TeamRuntimeApi, 'getRuntimeState'>;
+  run: Pick<TeamProvisioningRunApi, 'hasProvisioningRun'>;
+}
+
+export interface ProjectTeamCreatePorts extends ProjectTeamRuntimePorts {
+  start: Pick<TeamProvisioningStartApi, 'createTeam'>;
+  watchNativeTeam(teamName: string): void;
+}
+
+export function createProjectContextRuntimeParts(ports: ProjectTeamRuntimePorts) {
   const registry = TeamProjectContextRegistry.fromCurrentApp();
   const resolver = new TeamProjectContextRuntimeResolver(new TeamMetaStore(), registry);
   const materializer = new TeamProjectContextDraftMaterializer(resolver, {
@@ -59,6 +53,22 @@ export async function createTeamWithProjectContext(
     getRuntimeState: (teamName) => ports.runtime.getRuntimeState(teamName),
     hasProvisioningRun: (teamName) => ports.run.hasProvisioningRun(teamName),
   });
+  return { registry, resolver, materializer, gate };
+}
+
+/**
+ * The Electron transport is one of the application boundaries. Keep project
+ * routing here rather than rewriting native controller/task/chat internals.
+ */
+export async function createTeamWithProjectContext(
+  request: TeamCreateRequest,
+  onProgress: (progress: TeamProvisioningProgress) => void,
+  ports: ProjectTeamCreatePorts
+): Promise<TeamCreateResponse> {
+  if (request.projectContextMode !== 'per_project') {
+    return ports.start.createTeam(request, onProgress);
+  }
+  const { registry, resolver, materializer, gate } = createProjectContextRuntimeParts(ports);
   const coordinator = new TeamProjectContextCreateCoordinator({
     createLogicalDraft: (creation) => ports.data.createTeamConfig(creation),
     withLogicalTeamLock: (teamName, operation) =>
