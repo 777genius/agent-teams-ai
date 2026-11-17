@@ -3982,6 +3982,12 @@ export default interface Resources {
         "prompt": "Prompt for team lead (optional)",
         "teamName": "Team name"
       },
+      "projectContextMode": {
+        "label": "Team history",
+        "perProject": "Separate tasks and chats for each project (default)",
+        "shared": "Shared across projects",
+        "description": "Existing teams keep their current mode. This choice only affects this new team's work history."
+      },
       "launchAfterCreate": {
         "description": "Start the team immediately using its configured agent runtimes.",
         "label": "Run command after create"
