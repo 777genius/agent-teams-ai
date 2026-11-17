@@ -4,7 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { createTeamWithProjectContext } from '../../../src/main/ipc/teams/teamProjectContextCreate';
-import { prepareTeamContextLaunch } from '../../../src/main/ipc/teams/teamProjectContextLaunch';
+import { prepareTeamContextLaunch, withPreparedContextLaunch } from '../../../src/main/ipc/teams/teamProjectContextLaunch';
 import {
   getTasksBasePath,
   getTeamsBasePath,
@@ -213,6 +213,29 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
     }, f.ports)).rejects.toThrow('TEAM_TRASHED');
     const registry = TeamProjectContextRegistry.fromCurrentApp();
     expect(await registry.inspect('builders', projectB)).toBeNull();
+  });
+
+  it('rejects invalid overrides before materializing or reserving any project', async () => {
+    const f = await fixture();
+    await f.ports.data.createTeamConfig({
+      teamName: 'builders', cwd: f.projectPath,
+      members: [], projectContextMode: 'per_project',
+    });
+    const invoke = vi.fn(async () => ({ success: true }));
+    await expect(withPreparedContextLaunch({
+      teamName: 'builders',
+      cwd: f.projectPath,
+      effort: 'bogus' as never,
+    }, f.ports, invoke)).rejects.toThrow('effort');
+    await expect(withPreparedContextLaunch({
+      teamName: 'builders',
+      cwd: f.projectPath,
+      fastMode: 'not-allowed' as never,
+    }, f.ports, invoke)).rejects.toThrow('fastMode');
+    expect(invoke).not.toHaveBeenCalled();
+    await expect(fs.readFile(
+      path.join(getTeamsBasePath(), 'builders', 'project-contexts.json'), 'utf8'
+    )).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('refuses project B while A is running and does not leave a dead reservation', async () => {
