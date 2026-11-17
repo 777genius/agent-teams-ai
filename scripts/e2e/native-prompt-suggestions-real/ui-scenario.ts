@@ -18,6 +18,9 @@ export interface UiScenarioInput {
   readonly handleId: string;
   readonly out: string;
   readonly maxTurns: number;
+  readonly vendor: 'claude' | 'codex';
+  /** The user turned this provider's setting off: the proof is that nothing is offered. */
+  readonly providerOff?: boolean;
 }
 export interface UiScenarioReport {
   status: 'pass' | 'fail' | 'inconclusive';
@@ -191,11 +194,13 @@ export async function runUiScenario(input: UiScenarioInput): Promise<UiScenarioR
     }
     await until(composerReachable, 'composer reachable (not covered by a dialog)', 10_000);
     const optIn = await ev(
-      `window.electronAPI.config.get().then(c => c.general.nativeNextPromptSuggestionsEnabled === true)`
+      `window.electronAPI.config.get().then(c => c.providerConnections.${input.vendor === 'codex' ? 'codex' : 'anthropic'}.nativeNextPromptSuggestionsEnabled === true)`
     );
     step({ optIn, windowState });
-    if (optIn !== true)
-      throw new Error('the native suggestion opt-in is not active in the app config');
+    if (optIn !== !input.providerOff)
+      throw new Error(
+        `the provider setting is ${String(optIn)} in the app config, expected ${!input.providerOff}`
+      );
     await ev(
       `(() => { window.__REAL_notices=[]; window.electronAPI.nativePromptSuggestions.onUpdated(v => window.__REAL_notices.push(JSON.parse(JSON.stringify(v)))); return true; })()`
     );
@@ -212,6 +217,28 @@ export async function runUiScenario(input: UiScenarioInput): Promise<UiScenarioR
         `native session not ready: ${JSON.stringify(opened.value?.diagnostic ?? opened.error ?? null)}`
       );
     await shot('00-opened');
+    if (input.providerOff) {
+      // Negative proof: only meaningful next to a passing positive run for the same vendor and account.
+      for (const text of PROMPTS.slice(0, Math.min(2, input.maxTurns))) {
+        await send(text);
+        for (
+          const end = Date.now() + 150_000;
+          Date.now() < end && !(await allTerminal().catch(() => false));
+          await sleep(1_500)
+        );
+        await sleep(30_000);
+      }
+      const offered = ((await ev('window.__REAL_notices')) as unknown[]).length;
+      const rows = await rowText();
+      report.turns.push({ providerOff: true, notices: offered, row: rows });
+      report.status = offered === 0 && rows === null ? 'pass' : 'fail';
+      if (report.status === 'fail')
+        report.reason = `provider setting is off but ${offered} notice(s) and row ${JSON.stringify(rows)} appeared`;
+      writeFileSync(join(input.out, 'ui-report.json'), `${JSON.stringify(report, null, 2)}\n`, {
+        mode: 0o600,
+      });
+      return report;
+    }
 
     const sendsBefore0 = humanSends();
     let sent = 0;

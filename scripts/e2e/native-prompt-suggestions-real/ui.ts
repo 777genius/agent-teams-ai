@@ -1,5 +1,5 @@
 // REAL Claude/Codex composer proof in the live Electron app (`pnpm dev:mcp`, captured Host mode).
-// Usage: node scripts/e2e/native-prompt-suggestions-real/ui.ts [--vendor claude|codex|all] [--turns N] [--shipped-default]
+// Usage: node scripts/e2e/native-prompt-suggestions-real/ui.ts [--vendor claude|codex|all] [--turns N] [--shipped-default|--provider-off]
 // Exit codes: 0 pass, 1 fail, 3 inconclusive. See README.md.
 import { spawn } from 'node:child_process';
 import {
@@ -48,6 +48,8 @@ const vendors: RealVendor[] = wanted === 'all' ? ['claude', 'codex'] : [wanted a
 const maxTurns = Number(option('--turns', '8'));
 // Do not seed the setting at all: the app must apply its own default for the proof to pass.
 const shippedDefault = args.includes('--shipped-default');
+// The user turned the provider setting off: nothing may be offered (negative proof).
+const providerOff = args.includes('--provider-off');
 const receiptDir = process.env.REAL_RECEIPT_DIR ?? join(homedir(), '.cache/agent-teams-real-e2e');
 const stamp = new Date().toISOString().replace(/[:.]/gu, '-');
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
@@ -167,7 +169,10 @@ async function runVendor(vendor: RealVendor): Promise<{ status: string; reason?:
         await transform(context);
       },
     });
-    await applyNativeNextPromptPreference(fixture.root, shippedDefault ? 'default' : 'on');
+    await applyNativeNextPromptPreference(
+      fixture.root,
+      providerOff ? 'off' : shippedDefault ? 'default' : 'on'
+    );
 
     const port = await freePort();
     const logPath = join(fixture.root, 'app.log');
@@ -225,6 +230,8 @@ async function runVendor(vendor: RealVendor): Promise<{ status: string; reason?:
       handleId: fixture.handleId,
       out,
       maxTurns,
+      vendor,
+      providerOff,
     });
     Object.assign(receipt, {
       status: report.status,

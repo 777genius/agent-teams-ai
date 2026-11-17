@@ -46,20 +46,22 @@ export const realVendorProfileTransform =
   };
 
 /**
- * `on`: seed the setting as an explicit true. `default`: remove the key, so the app must apply its own shipped
- * default (proves the default end to end). Not a pinned file.
+ * `on`/`off`: seed both providers' settings as an explicit true/false. `default`: remove the keys, so the app must apply
+ * its own shipped default (proves the default end to end). Not a pinned file.
  */
 export async function applyNativeNextPromptPreference(
   root: string,
-  mode: 'on' | 'default'
+  mode: 'on' | 'default' | 'off'
 ): Promise<void> {
   const configPath = join(root, 'claude/agent-teams-config.json');
   const config = JSON.parse(await readFile(configPath, 'utf8')) as {
-    general?: Record<string, unknown>;
+    providerConnections?: Record<string, Record<string, unknown>>;
   };
-  const general = { ...config.general };
-  if (mode === 'on') general.nativeNextPromptSuggestionsEnabled = true;
-  else delete general.nativeNextPromptSuggestionsEnabled;
-  config.general = general;
+  const connections = (config.providerConnections ??= {});
+  for (const provider of ['anthropic', 'codex']) {
+    const settings = (connections[provider] ??= {});
+    if (mode === 'default') delete settings.nativeNextPromptSuggestionsEnabled;
+    else settings.nativeNextPromptSuggestionsEnabled = mode === 'on';
+  }
   await writeFile(configPath, JSON.stringify(config), { mode: 0o600 });
 }

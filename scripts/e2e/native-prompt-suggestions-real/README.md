@@ -9,6 +9,8 @@ pnpm test:real:suggestions                 # Claude + Codex in parallel, through
 pnpm test:real:suggestions -- --vendor codex
 pnpm test:real:suggestions:ui              # live Electron app (dev:mcp), Claude
 pnpm test:real:suggestions:ui -- --vendor all
+pnpm test:real:suggestions:ui -- --shipped-default   # config has no setting: the app's own default must apply
+pnpm test:real:suggestions:ui -- --provider-off       # setting off: nothing may be offered (negative proof)
 ```
 
 ## What is proven
@@ -47,11 +49,10 @@ Receipts are written to `~/.cache/agent-teams-real-e2e/` (last 40 kept; UI also 
   Point at a newer binary with `REAL_CODEX_BIN`. A refreshed credential copy is reported as a warning.
 - **Claude gates suggestions behind its own rollout flag**, which is account- and time-dependent. In one
   session the same Sonnet setup offered a suggestion on every first turn, then went silent for 20+ minutes;
-  setting `CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=true` made them arrive at once again (direct SDK and Host).
-  The proof tests our pipeline, not Anthropic's rollout, so the runner forces that flag by default.
-  `REAL_CLAUDE_NATURAL_SUGGESTIONS=1` keeps the vendor's own behaviour (it can offer nothing: exit 3).
-  The product's Host cannot set it: a member's process environment is captured by the profile
-  producer, and `CapturedProcess` launches with exactly that environment.
+  setting `CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=true` made them arrive at once again. The captured Host
+  therefore adds that variable to the launch environment of every Claude member whose provider setting is
+  on (`ClaudeMemberProvider`), and this proof relies on that mechanism: it sets nothing itself. If it ever
+  goes silent while the Host is healthy, check that the variable is still in the child's environment.
 - **The weakest Claude model (Haiku) offered nothing even with that flag forced** (0 of 7 turns across two
   runs), while Sonnet offered one on its first turn. So the model matters too: on Haiku the row never
   appears, which is the vendor not producing a suggestion, not a UI fault. (Measured here, not documented
