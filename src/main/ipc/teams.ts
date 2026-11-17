@@ -20,6 +20,7 @@ import {
 import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
+import { createProjectContextTeam } from './teams/teamProjectContextCreate';
 import { OpenCodeRetainedPrimaryRestartError } from '@main/services/team/provisioning/OpenCodeRetainedPrimaryRestartError';
 import {
   getTeamDataWorkerClient,
@@ -2067,11 +2068,20 @@ async function handleCreateTeam(
     // its initial config, tasks, inboxes, and launch state.
     markTeamEngaged(validation.value.teamName);
     try {
+      const onProgress = (progress: TeamProvisioningProgress): void => {
+        launchIoGovernor?.noteProvisioningProgress(progress);
+        sendProvisioningProgress(progressTargetWindow, progress);
+      };
       const create = (): Promise<TeamCreateResponse> =>
-        getTeamProvisioningStartApi().createTeam(validation.value, (progress) => {
-          launchIoGovernor?.noteProvisioningProgress(progress);
-          sendProvisioningProgress(progressTargetWindow, progress);
-        });
+        validation.value.projectContextMode === 'per_project'
+          ? createProjectContextTeam(validation.value, onProgress, {
+              data: getTeamDataService(),
+              start: getTeamProvisioningStartApi(),
+              runtime: getTeamRuntimeApi(),
+              run: getTeamProvisioningRunApi(),
+              watchNativeTeam: markTeamEngaged,
+            })
+          : getTeamProvisioningStartApi().createTeam(validation.value, onProgress);
       const response = teamBackupService
         ? await teamBackupService.withTeamIdentityFence(validation.value.teamName, create)
         : await create();
