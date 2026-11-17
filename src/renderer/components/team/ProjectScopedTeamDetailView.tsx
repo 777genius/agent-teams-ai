@@ -151,6 +151,13 @@ export function ProjectScopedTeamDetailView({
 
   const context = result?.key === key ? result.context : undefined;
   const error = result?.key === key ? result.error : undefined;
+  const redirect = context?.state === 'redirect' ? context : null;
+  useEffect(() => {
+    if (!isActive || !redirect) return;
+    // A deep link may still use the physical alias. Navigate through its
+    // verified owner; never mount the alias as an independent team editor.
+    useStore.getState().openTeamTab(redirect.logicalTeamName, redirect.projectPath);
+  }, [isActive, redirect?.logicalTeamName, redirect?.projectPath]);
 
   const start = useCallback(async (): Promise<void> => {
     if (!selectedProjectPath || launchingKey !== null) return;
