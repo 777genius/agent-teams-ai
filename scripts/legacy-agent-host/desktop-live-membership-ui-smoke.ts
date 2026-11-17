@@ -259,7 +259,6 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   await pins(); await ui.observeInput();
   await openOriginalCreateForm(cdp, ui, workspace, mixedDesktopTeamName);
   const create = '[data-testid="create-team-page"]';
-  await checked(cdp, ui, create + ' #launch-team', false);
   await checked(cdp, ui, create + ' #sync-models-with-lead', false);
   const leadToggle = create + ' button[aria-label*=" provider,"]';
   await ui.scrollTo(leadToggle, 'original explicit lead model');
@@ -276,6 +275,7 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   if (optional.expanded !== 'true') await ui.click(create + ' button[aria-controls=' + literal(optional.id) + ']', 'expand original optional launch settings');
   await checked(cdp, ui, create + ' #create-skip-permissions', true);
   await replace(cdp, ui, create + ' #team-prompt', '', 'empty original launch prompt');
+  await checked(cdp, ui, create + ' #launch-team', false);
   await ui.scrollTo(create + ' button', 'original member JSON editor', 'Edit as JSON');
   await ui.click(create + ' button', 'open original member JSON editor', 'Edit as JSON');
   await ui.scrollTo(create + ' .cm-editor', 'original member JSON input');
