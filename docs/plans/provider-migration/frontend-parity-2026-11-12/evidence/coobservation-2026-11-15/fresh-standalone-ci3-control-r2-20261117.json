@@ -1,0 +1,755 @@
+{
+  "schemaVersion": 1,
+  "kind": "R2_EXACT_FRESH_CI3_STANDALONE_CONTROLS",
+  "at": "2026-11-17 14:14:04 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "workingBranch": "fix/frontend-parity-coobservation-c714-20261115",
+  "author": "/root",
+  "r1": {
+    "bytes": 23198,
+    "sha256": "d51a9c97849dae83885d8339cfbc77fb1a1803a509fd3ba27af6ae447b63a0ac",
+    "gitBlob": "7f214219f9c757b73c3fad164bf4db04223f9594"
+  },
+  "precedingActualGate": {
+    "bytes": 10359,
+    "sha256": "050ba8ff411a13b9dab6a2a6d85db55667039150be087426aa3bf847e81ffc61",
+    "gitBlob": "b7ad77e3f8b1d45cba44e862e4728ed40639cc98"
+  },
+  "gateClosedAt": "2026-11-17 14:13:00 UTC",
+  "authoredAfterGate": true,
+  "parent": {
+    "commit": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+    "tree": "d184c36463e367fb7e237a8d17fc441deeabdf76",
+    "docsTree": "2e62a0d62e7a490be29de271c7bffd888ffaf4dc",
+    "rootActual": {
+      "bytes": 430785,
+      "sha256": "0246e3c028aff5fc69a587f14bfaa7c091b43465417945b505375a6e6a64144f",
+      "gitBlob": "37339ab5bc478fcd158ad68cd334a880672f86a0"
+    },
+    "independentActual": {
+      "bytes": 642238,
+      "sha256": "b87c334066e1648506aa7d98b2bdcb0b49fc8b0e7233137ac4b7d27dec35dc17",
+      "gitBlob": "548faa37ceb7491afd9a38e837417cc1c33869ac"
+    }
+  },
+  "purpose": "Rebind the unchanged whole-ten deadline RED/GREEN supervisor to the observed current Node inode and genuinely fresh paths, preserving its exact existing execution logic and all source/test bodies. No application source change.",
+  "controls": [
+    {
+      "role": "runner",
+      "publicationPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-waitread-supervisor-20261117.cjs",
+      "stagedName": "waitread-supervisor.cjs",
+      "mode": "100644",
+      "before": {
+        "bytes": 25819,
+        "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+        "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+      },
+      "after": {
+        "bytes": 25796,
+        "sha256": "72b743e8cde32af416f0a3d14f0dd7284fd817c2408e42b3c24e2b0f52c1aa8f",
+        "gitBlob": "72fe3f4f791550c3402d0bae54d154aabe06e63c"
+      },
+      "changes": [
+        {
+          "before": "/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117",
+          "after": "/workspace/scratch/c714-waitread-ci3-controls-20261117"
+        },
+        {
+          "before": "/workspace/scratch/c714-waitread-inode64-20261117",
+          "after": "/workspace/scratch/c714-waitread-ci3-20261117"
+        }
+      ],
+      "exactInverseRestoresCompleteBefore": true,
+      "physicalLinesBefore": 429,
+      "physicalLinesAfter": 429,
+      "executionLogicChanges": 0
+    },
+    {
+      "role": "binding",
+      "publicationPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-waitread-binding-20261117.json",
+      "stagedName": "waitread-binding.json",
+      "mode": "100644",
+      "before": {
+        "bytes": 107295,
+        "sha256": "d8626f22a432926350c4d69c657313a61b935764dae972159a1a88fc03163b5b",
+        "gitBlob": "381c51a331b9d03f5aab87835af3dad5a6643d3c"
+      },
+      "after": {
+        "bytes": 107643,
+        "sha256": "b44db6175efc66890593fe75189e0de9b16dee90672547e87cfd5f22e3d5ab8a",
+        "gitBlob": "7f69d9936a35f5e3612470076e13d2d9308da40a"
+      },
+      "allowedChangedPaths": [
+        "attemptToken",
+        "sourceCommit",
+        "sourceTree",
+        "sourceActualGate",
+        "r1",
+        "r1ActualGate",
+        "scope",
+        "stage",
+        "runner",
+        "node.inode",
+        "sourceAnchorEvidence.actualR1Root",
+        "sourceAnchorEvidence.actualR1Independent",
+        "sourceAnchorEvidence.meaning"
+      ],
+      "actualLeafChanges": [
+        {
+          "path": "attemptToken",
+          "before": "c714-waitread-inode64-20261117-original-one-shot",
+          "after": "c714-waitread-ci3-20261117-original-one-shot"
+        },
+        {
+          "path": "sourceCommit",
+          "before": "6d06207d96ea1c7ae7d9199a552ec776451dc231",
+          "after": "59723bc7058d31dd51730f4088eaf66df2735d4b"
+        },
+        {
+          "path": "sourceTree",
+          "before": "b5bb45adf162e15fd7d909140adeaf958c23d1f9",
+          "after": "d184c36463e367fb7e237a8d17fc441deeabdf76"
+        },
+        {
+          "path": "sourceActualGate.bytes",
+          "before": 4441,
+          "after": 10359
+        },
+        {
+          "path": "sourceActualGate.sha256",
+          "before": "11dd4fe224bb0531f2432fc73f5de4a0f06c7afe9118d09981674d96fe6dfd8c",
+          "after": "050ba8ff411a13b9dab6a2a6d85db55667039150be087426aa3bf847e81ffc61"
+        },
+        {
+          "path": "sourceActualGate.gitBlob",
+          "before": "6bbf83caa77cb9eaab9e262f46bed45f03494968",
+          "after": "b7ad77e3f8b1d45cba44e862e4728ed40639cc98"
+        },
+        {
+          "path": "r1.bytes",
+          "before": 27869,
+          "after": 23198
+        },
+        {
+          "path": "r1.sha256",
+          "before": "e3a891024d750f7c868a7a253f2ed1f3630b833e92d1698af38b533c8ebc5db7",
+          "after": "d51a9c97849dae83885d8339cfbc77fb1a1803a509fd3ba27af6ae447b63a0ac"
+        },
+        {
+          "path": "r1.gitBlob",
+          "before": "b16bf54091cfb2fd2756ad7a951d0f9143611d2b",
+          "after": "7f214219f9c757b73c3fad164bf4db04223f9594"
+        },
+        {
+          "path": "r1ActualGate.bytes",
+          "before": 4441,
+          "after": 10359
+        },
+        {
+          "path": "r1ActualGate.sha256",
+          "before": "11dd4fe224bb0531f2432fc73f5de4a0f06c7afe9118d09981674d96fe6dfd8c",
+          "after": "050ba8ff411a13b9dab6a2a6d85db55667039150be087426aa3bf847e81ffc61"
+        },
+        {
+          "path": "r1ActualGate.gitBlob",
+          "before": "6bbf83caa77cb9eaab9e262f46bed45f03494968",
+          "after": "b7ad77e3f8b1d45cba44e862e4728ed40639cc98"
+        },
+        {
+          "path": "scope",
+          "before": "/workspace/scratch/c714-waitread-inode64-20261117",
+          "after": "/workspace/scratch/c714-waitread-ci3-20261117"
+        },
+        {
+          "path": "stage",
+          "before": "/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117",
+          "after": "/workspace/scratch/c714-waitread-ci3-controls-20261117"
+        },
+        {
+          "path": "runner.bytes",
+          "before": 25819,
+          "after": 25796
+        },
+        {
+          "path": "runner.sha256",
+          "before": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+          "after": "72b743e8cde32af416f0a3d14f0dd7284fd817c2408e42b3c24e2b0f52c1aa8f"
+        },
+        {
+          "path": "runner.gitBlob",
+          "before": "19662be9d55c70166c8f2c2e74775e6b03098197",
+          "after": "72fe3f4f791550c3402d0bae54d154aabe06e63c"
+        },
+        {
+          "path": "node.inode",
+          "before": "9223372036854818252",
+          "after": "9223372036854818268"
+        },
+        {
+          "path": "sourceAnchorEvidence.actualR1Root.bytes",
+          "before": 74741,
+          "after": 430785
+        },
+        {
+          "path": "sourceAnchorEvidence.actualR1Root.sha256",
+          "before": "c6eee115daa3d4c205baecfe47bbfc33c02750616790a612eccb71b7a95d23b7",
+          "after": "0246e3c028aff5fc69a587f14bfaa7c091b43465417945b505375a6e6a64144f"
+        },
+        {
+          "path": "sourceAnchorEvidence.actualR1Root.gitBlob",
+          "before": "987cd165ec38747d8425b0d5984e797a4886b6b1",
+          "after": "37339ab5bc478fcd158ad68cd334a880672f86a0"
+        },
+        {
+          "path": "sourceAnchorEvidence.actualR1Independent.bytes",
+          "before": 170762,
+          "after": 642238
+        },
+        {
+          "path": "sourceAnchorEvidence.actualR1Independent.sha256",
+          "before": "30270672655a4793b8f568647421a0fd6aa8c911b277fba2a616f373edd62306",
+          "after": "b87c334066e1648506aa7d98b2bdcb0b49fc8b0e7233137ac4b7d27dec35dc17"
+        },
+        {
+          "path": "sourceAnchorEvidence.actualR1Independent.gitBlob",
+          "before": "62e961fcb91218d41557049ac5d43de98eeceaa0",
+          "after": "548faa37ceb7491afd9a38e837417cc1c33869ac"
+        },
+        {
+          "path": "sourceAnchorEvidence.meaning",
+          "before": "sourceR2 and sourceBeforeVector/sourceAfterVector retain the accepted unchanged original674 input source/test corpus. The actual docs-only R1 anchor proves the selected package, fixed controls and fixture are byte-identical. The later driver-only R2 is outside these three inputs. Admission independently joins its actual combined source/control publication after that identity exists.",
+          "after": "sourceR2 and sourceBeforeVector/sourceAfterVector retain the accepted original674 source/test corpus and its historical source actual gate. The actual fresh R1 documentation publication59723bc7058d31dd51730f4088eaf66df2735d4b is this binding's sourceCommit and the mandatory sole parent of the forthcoming control publication. Its complete root and independent actual readbacks prove package, fixed controls and the whole-ten fixture byte-identical to the fixed86f52244b5375834a4040cbc63803d68cc708087 source and prior59e documentation head. No application source changes enter these3 inputs. A later external admission will join only the actual control publication and actual root/independent reports after those identities exist; no future SHA is guessed."
+        }
+      ],
+      "allOtherStructuredValuesIdentical": true
+    }
+  ],
+  "binding": {
+    "sourceCommit": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+    "sourceTree": "d184c36463e367fb7e237a8d17fc441deeabdf76",
+    "sourceActualGate": {
+      "bytes": 10359,
+      "sha256": "050ba8ff411a13b9dab6a2a6d85db55667039150be087426aa3bf847e81ffc61",
+      "gitBlob": "b7ad77e3f8b1d45cba44e862e4728ed40639cc98"
+    },
+    "r1": {
+      "bytes": 23198,
+      "sha256": "d51a9c97849dae83885d8339cfbc77fb1a1803a509fd3ba27af6ae447b63a0ac",
+      "gitBlob": "7f214219f9c757b73c3fad164bf4db04223f9594"
+    },
+    "r1ActualGate": {
+      "bytes": 10359,
+      "sha256": "050ba8ff411a13b9dab6a2a6d85db55667039150be087426aa3bf847e81ffc61",
+      "gitBlob": "b7ad77e3f8b1d45cba44e862e4728ed40639cc98"
+    },
+    "scope": "/workspace/scratch/c714-waitread-ci3-20261117",
+    "stage": "/workspace/scratch/c714-waitread-ci3-controls-20261117",
+    "attemptToken": "c714-waitread-ci3-20261117-original-one-shot",
+    "node": {
+      "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "bytes": 126939688,
+      "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+      "device": "27",
+      "inode": "9223372036854818268",
+      "uid": "65534",
+      "gid": "65534",
+      "mode": "0o755",
+      "mtimeNs": "1794515386000000000",
+      "ctimeNs": "1794515386000000000",
+      "versionPreviouslyObserved": "v24.22.1"
+    },
+    "stageFiles": [
+      "execution-admission.json",
+      "waitread-binding.json",
+      "waitread-supervisor.cjs"
+    ],
+    "runner": {
+      "bytes": 25796,
+      "sha256": "72b743e8cde32af416f0a3d14f0dd7284fd817c2408e42b3c24e2b0f52c1aa8f",
+      "gitBlob": "72fe3f4f791550c3402d0bae54d154aabe06e63c"
+    },
+    "binding": {
+      "bytes": 107643,
+      "sha256": "b44db6175efc66890593fe75189e0de9b16dee90672547e87cfd5f22e3d5ab8a",
+      "gitBlob": "7f69d9936a35f5e3612470076e13d2d9308da40a"
+    },
+    "sourceAnchorEvidence": {
+      "originalSourceCommit": "674d32a84644f87544910c28bb4d2a4214958fb5",
+      "originalSourceActualGate": {
+        "bytes": 5512,
+        "sha256": "6a7448cf1d88673af3c65741c51e2faf07703a99dfee37bf4fccd5383a943bf7",
+        "gitBlob": "be45f8ee4cd349456d196f6cfb1a1038c218c80c"
+      },
+      "actualR1Root": {
+        "bytes": 430785,
+        "sha256": "0246e3c028aff5fc69a587f14bfaa7c091b43465417945b505375a6e6a64144f",
+        "gitBlob": "37339ab5bc478fcd158ad68cd334a880672f86a0"
+      },
+      "actualR1Independent": {
+        "bytes": 642238,
+        "sha256": "b87c334066e1648506aa7d98b2bdcb0b49fc8b0e7233137ac4b7d27dec35dc17",
+        "gitBlob": "548faa37ceb7491afd9a38e837417cc1c33869ac"
+      },
+      "selectedFixedInputs": [
+        {
+          "path": "package.json",
+          "mode": "100644",
+          "bytes": 26839,
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+          "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "mode": "100644",
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        }
+      ],
+      "meaning": "sourceR2 and sourceBeforeVector/sourceAfterVector retain the accepted original674 source/test corpus and its historical source actual gate. The actual fresh R1 documentation publication59723bc7058d31dd51730f4088eaf66df2735d4b is this binding's sourceCommit and the mandatory sole parent of the forthcoming control publication. Its complete root and independent actual readbacks prove package, fixed controls and the whole-ten fixture byte-identical to the fixed86f52244b5375834a4040cbc63803d68cc708087 source and prior59e documentation head. No application source changes enter these3 inputs. A later external admission will join only the actual control publication and actual root/independent reports after those identities exist; no future SHA is guessed."
+    }
+  },
+  "unchangedInputs": {
+    "sourceR2": {
+      "bytes": 19187,
+      "sha256": "8bb84de228b570dfc121233893d32209a9389da44aa1747c7924dff936fa4c1a",
+      "gitBlob": "1318b887473a61e1cbfb3960812fbc84e3b4df13"
+    },
+    "sourceBeforeVector": {
+      "bytes": 2552,
+      "sha256": "647b7a268b8b8921d875327e3394726916d54cc3c10c1bb8d2e2e9538db2d496",
+      "gitBlob": "ae0aa3e814cb90d9568cef5f35be6a0d8f46a361"
+    },
+    "sourceAfterVector": {
+      "bytes": 2784,
+      "sha256": "6a212eb715b312ae74c25e58078fd26b1247695d94f5c47536dc2a20aed49ce1",
+      "gitBlob": "fff972049718ae5ddaa7000e17341fade490233e"
+    },
+    "redFiles": [
+      {
+        "path": "package.json",
+        "mode": "100644",
+        "pin": {
+          "bytes": 26839,
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+          "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "mode": "100644",
+        "pin": {
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "pin": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        }
+      }
+    ],
+    "greenControls": {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "pin": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      }
+    },
+    "currentFixedSource": {
+      "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+      "tree": "11ccb7c57cc49af613c62620a1d348bf6de8aa3d",
+      "actualGate": {
+        "bytes": 8975,
+        "sha256": "70cbc7861cf6b7781600a76eec8df62486be3ee1e657c2694db4c3b4d1357725",
+        "gitBlob": "246e59b55ed2d395524f40f466c1ef7c8362a553"
+      },
+      "selectedFixedInputs": [
+        {
+          "path": "package.json",
+          "mode": "100644",
+          "bytes": 26839,
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+          "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "mode": "100644",
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        }
+      ],
+      "join": "The subsequent documentation-only59e head retains these exact three source leaves. The fresh R1 actual publication must again prove their exact modes, bytes, SHA256 and Git blob identities. The controls fixed43-byte insertion and complete fixture are unchanged."
+    },
+    "actualR1SourceJoins": [
+      {
+        "path": "package.json",
+        "expected": {
+          "path": "package.json",
+          "mode": "100644",
+          "bytes": 26839,
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+          "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        "actual": {
+          "path": "package.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+          "size": 26839,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        "atCommits": [
+          "86f52244b5375834a4040cbc63803d68cc708087",
+          "59e8d621717314d3fc3525af559a2a3beb9a7602"
+        ],
+        "rootAnchored": true,
+        "sharedScriptsTree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "sharedLegacyTree": "0dde19356dc8aee18cd9d77fff817ec3e109d198",
+        "atCommit": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+        "actualRoot": "d184c36463e367fb7e237a8d17fc441deeabdf76",
+        "sourceSubtreeUnchanged": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "expected": {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        "actual": {
+          "path": "desktop-ui-controls.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "5286c036a63a14e98925711a224df202c9a7caa7",
+          "size": 29017,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        "atCommits": [
+          "86f52244b5375834a4040cbc63803d68cc708087",
+          "59e8d621717314d3fc3525af559a2a3beb9a7602"
+        ],
+        "rootAnchored": true,
+        "sharedScriptsTree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "sharedLegacyTree": "0dde19356dc8aee18cd9d77fff817ec3e109d198",
+        "atCommit": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+        "actualRoot": "d184c36463e367fb7e237a8d17fc441deeabdf76",
+        "sourceSubtreeUnchanged": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "expected": {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "mode": "100644",
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        },
+        "actual": {
+          "path": "desktop-ui-controls-deadline.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+          "size": 7883,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        },
+        "atCommits": [
+          "86f52244b5375834a4040cbc63803d68cc708087",
+          "59e8d621717314d3fc3525af559a2a3beb9a7602"
+        ],
+        "rootAnchored": true,
+        "sharedScriptsTree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "sharedLegacyTree": "0dde19356dc8aee18cd9d77fff817ec3e109d198",
+        "atCommit": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+        "actualRoot": "d184c36463e367fb7e237a8d17fc441deeabdf76",
+        "sourceSubtreeUnchanged": true
+      }
+    ],
+    "fullEmbeddedBodiesIdentical": true,
+    "originalControls43ByteFixUnchanged": true,
+    "sourceEdits": 0
+  },
+  "unchangedExecution": {
+    "argv": [
+      "--test",
+      "--test-reporter=tap",
+      "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+    ],
+    "parentEnvironment": "empty via bash exec -c; no NODE_OPTIONS/preloads/config/compile-cache environment",
+    "childEnvironment": {
+      "PATH": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin",
+      "LANG": "C.UTF-8",
+      "TZ": "UTC"
+    },
+    "budgets": {
+      "phaseWallMs": 60000,
+      "supervisorWallMs": 135000,
+      "cleanupWallMs": 4000,
+      "outputLimitBytes": 8388608,
+      "perTestMs": 5000,
+      "originalUiDefaultMs": 30000,
+      "originalPollMs": 100
+    },
+    "completePhases": [
+      {
+        "label": "RED",
+        "exitCode": 1,
+        "tests": [
+          {
+            "number": 1,
+            "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 2,
+            "title": "generic UI read refuses its first fulfilled value after the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 3,
+            "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 4,
+            "title": "generic UI read refuses a later fulfilled value after the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 5,
+            "title": "generic UI read does not admit or poll again after a late false observation",
+            "result": "FAIL",
+            "signature": "late-false-readiness"
+          },
+          {
+            "number": 6,
+            "title": "generic UI read preserves a timely first value and its exact identity",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 7,
+            "title": "generic UI read preserves its original cadence and a timely later value",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 8,
+            "title": "generic UI read honors a supplied budget at its strict boundary",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 9,
+            "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 10,
+            "title": "generic UI hover preserves one movement after three timely stable points",
+            "result": "PASS",
+            "signature": null
+          }
+        ]
+      },
+      {
+        "label": "GREEN",
+        "exitCode": 0,
+        "tests": [
+          {
+            "number": 1,
+            "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 2,
+            "title": "generic UI read refuses its first fulfilled value after the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 3,
+            "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 4,
+            "title": "generic UI read refuses a later fulfilled value after the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 5,
+            "title": "generic UI read does not admit or poll again after a late false observation",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 6,
+            "title": "generic UI read preserves a timely first value and its exact identity",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 7,
+            "title": "generic UI read preserves its original cadence and a timely later value",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 8,
+            "title": "generic UI read honors a supplied budget at its strict boundary",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 9,
+            "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 10,
+            "title": "generic UI hover preserves one movement after three timely stable points",
+            "result": "PASS",
+            "signature": null
+          }
+        ]
+      }
+    ],
+    "classifications": {
+      "red": "New whole10 fixture plus old controls; not a historical full-tree checkout. Exactly7 expected assertion failures plus3 preservation passes.",
+      "green": "The same whole10 fixture/package with only the published43-byte controls insertion;10 passes.",
+      "anyOther": "INCOMPLETE_SPENT or REFUSED_BEFORE_SCOPE_ADMISSION_SPENT; no source/phase replay, filtering or retry.",
+      "scope": "Only standalone deadline/hover regressions from the exact three files. This does not execute or qualify the separately changed shared member driver, typecheck, whole149/catalog43/renderer85/canonical/GUI/provider/native/E2E."
+    },
+    "preservedSupervisor": [
+      "Exact Node realpath/hash/size/device/mode/owner/times and full before/after checks.",
+      "Parent exec-c empty environment, cwd/, exact argv/no execArgv; detached child Node session and fixed env.",
+      "Only3 regular0644/nlink1 staged controls and0755 directories; no symlinks; exclusive fresh scope and no pre-existing artifacts.",
+      "Full source/control/root before/after censuses; only oldcontrols→fixedcontrols on the same original inode after accepted RED and ordinary cleanup.",
+      "One original monotonic supervisor deadline, unchanged phase deadlines and immediate synchronous pre-admission cutoff checks before scope/materialization/transition/write/spawn.",
+      "Full process samples before validation and finally retention; PID/start/session/group/uid/exe/argv ownership; no unrelated-process signaling.",
+      "One original4s cleanup deadline across continuation, no repeated TERM/KILL pass, original250ms TERM→KILL.",
+      "Complete raw stdout/stderr8MiB cap, exact TAP10 ordered cases/plan/counters/diagnostics; no skip/todo/cancel/nested substitute/bailout.",
+      "Ordinary close/EOF/exact status/no signal and no surviving captured process/session/group before acceptance.",
+      "Any refusal, timeout, unknown, retention or cleanup error spends the attempt; no silent retry."
+    ],
+    "signed64InodeLogicUnchanged": true,
+    "fullStageSourceNodeBeforeAfterCustody": true,
+    "oneOriginalSupervisorInvocation": true,
+    "originalAttemptsStillSpent": true
+  },
+  "externalAdmission": {
+    "authored": false,
+    "requiredAfterActualControlPublication": true,
+    "sourceCommitMustEqual": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+    "controlParentMustEqual": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+    "requiredActualFields": [
+      "controlCommit",
+      "controlTree",
+      "controlDocsTree",
+      "controlProposal",
+      "rootActual",
+      "independentActual"
+    ],
+    "bindingSha256MustEqual": "b44db6175efc66890593fe75189e0de9b16dee90672547e87cfd5f22e3d5ab8a",
+    "runnerMustEqual": {
+      "bytes": 25796,
+      "sha256": "72b743e8cde32af416f0a3d14f0dd7284fd817c2408e42b3c24e2b0f52c1aa8f",
+      "gitBlob": "72fe3f4f791550c3402d0bae54d154aabe06e63c"
+    },
+    "attemptToken": "c714-waitread-ci3-20261117-original-one-shot",
+    "scope": "/workspace/scratch/c714-waitread-ci3-20261117",
+    "stage": "/workspace/scratch/c714-waitread-ci3-controls-20261117",
+    "fullReadbacksAcceptedRequired": true,
+    "originalAttemptsStillSpentRequired": true,
+    "noFutureCommitInvented": true
+  },
+  "publication": {
+    "branch": "fix/frontend-parity-coobservation-c714-20261115",
+    "soleParentMustEqual": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+    "docsOnly": true,
+    "sourceEdits": 0,
+    "sourceAddsDeletesRenamesModes": 0,
+    "immediateExactParentPush": true,
+    "force": false,
+    "expectedEvidence": "Exact R2, four static reviews, both exact control blobs, preceding R1 actual gate and both actual reports; manifest and append-only plan/status/catalog. No CI ref or PR mutation.",
+    "rootAndIndependentActualRequired": true
+  },
+  "preservation": {
+    "production": 5020,
+    "cap": 800,
+    "exceptions": 141,
+    "nonDocLeaves": 8799,
+    "workflows": 42,
+    "whole149": 149,
+    "catalog43": 43,
+    "renderer85": 85,
+    "standalone10": 10,
+    "existingCatalogFields": 105,
+    "bundles": 27,
+    "allPriorCatalogValuesAndTotals": true,
+    "fullDocumentPrefixes": true,
+    "noDependenciesWorkflowsBudgetsOrCaseChanges": true,
+    "noRealClaudeCodexEvenVersion": true,
+    "noFrozenPrMutation": true,
+    "noMainReadyReleaseDefaultStage2": true
+  },
+  "ci": {
+    "pr": 1223,
+    "head": "86f52244b5375834a4040cbc63803d68cc708087",
+    "base": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "merge": "9314c0ae24985707992399b3ec263e667b4a0cd8",
+    "frozenRefsAndMetadata": true,
+    "terminalRunsExcluded": true,
+    "standaloneIsSeparate": true,
+    "note": "CurrentCI outcomes are captured separately; this control-only scope neither fixes nor reclassifies any actual CI failure."
+  },
+  "status": {
+    "controlPostimagesAuthored": true,
+    "controlsFullyRetainedAndSelfRead": true,
+    "fourR2ReviewsClosed": false,
+    "controlsPublished": false,
+    "controlActualGateClosed": false,
+    "externalAdmissionAuthored": false,
+    "newStageCreated": false,
+    "newScopeCreated": false,
+    "standaloneInvoked": false,
+    "standaloneRuntimeQualified": false,
+    "wholeE2EQualified": false
+  },
+  "next": "Complete the existing root/guard/semantic/binding exact R2 reviews; publish and immediately push only exact reviewed controls/evidence; root plus independent actual readbacks; external admission; exact fresh staging and one invocation."
+}

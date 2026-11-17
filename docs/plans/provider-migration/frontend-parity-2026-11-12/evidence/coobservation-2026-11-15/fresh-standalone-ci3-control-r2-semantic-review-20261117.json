@@ -1,0 +1,695 @@
+{
+  "schemaVersion": 1,
+  "kind": "INDEPENDENT_SEMANTIC_R2_FRESH_STANDALONE_CI3_CONTROLS",
+  "reviewer": "/root/producer_r2_semantic",
+  "at": "2026-11-17 14:18:27 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "bytes": 31811,
+    "sha256": "8fdf7d0248b19ca1beedfb9218411bc31b21f4345a719a42827cba095cb08295",
+    "gitBlob": "47bcc9f514079504369b47a72d9468ddb3bcdab8"
+  },
+  "after": {
+    "runner": {
+      "bytes": 25796,
+      "sha256": "72b743e8cde32af416f0a3d14f0dd7284fd817c2408e42b3c24e2b0f52c1aa8f",
+      "gitBlob": "72fe3f4f791550c3402d0bae54d154aabe06e63c"
+    },
+    "binding": {
+      "bytes": 107643,
+      "sha256": "b44db6175efc66890593fe75189e0de9b16dee90672547e87cfd5f22e3d5ab8a",
+      "gitBlob": "7f69d9936a35f5e3612470076e13d2d9308da40a"
+    }
+  },
+  "before": {
+    "runner": {
+      "bytes": 25819,
+      "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+      "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+    },
+    "binding": {
+      "bytes": 107295,
+      "sha256": "d8626f22a432926350c4d69c657313a61b935764dae972159a1a88fc03163b5b",
+      "gitBlob": "381c51a331b9d03f5aab87835af3dad5a6643d3c"
+    }
+  },
+  "r1": {
+    "bytes": 23198,
+    "sha256": "d51a9c97849dae83885d8339cfbc77fb1a1803a509fd3ba27af6ae447b63a0ac",
+    "gitBlob": "7f214219f9c757b73c3fad164bf4db04223f9594"
+  },
+  "precedingActualGate": {
+    "bytes": 10359,
+    "sha256": "050ba8ff411a13b9dab6a2a6d85db55667039150be087426aa3bf847e81ffc61",
+    "gitBlob": "b7ad77e3f8b1d45cba44e862e4728ed40639cc98"
+  },
+  "priorOwnR1SemanticReview": {
+    "bytes": 38457,
+    "sha256": "a91e945aa2ada73344bc8d04998786d9bc66252ba0015f10fe10aaa12e6b3d30",
+    "gitBlob": "d6036fb2dbede32bba75d347076fc50977611902",
+    "fullSelfReadAtUtc": "2026-11-17 13:59:54 UTC"
+  },
+  "decision": {
+    "verdict": "ACCEPT_EXACT_R2_STATIC",
+    "checks": 32,
+    "allStaticChecksPass": true,
+    "blockers": [],
+    "scope": "Exact source-free control rebinding only; existing publication/actual/external-admission sequence remains pending. No runtime or phase result is claimed.",
+    "newGateCreated": false
+  },
+  "method": {
+    "freshFullReads": [
+      "Exact complete R2 proposal",
+      "Exact complete new supervisor",
+      "Exact complete actual R1 gate",
+      "Every non-body binding value, including all changed and unchanged structures",
+      "Whole embedded ten-case fixture"
+    ],
+    "completeBodyJoins": "All four embedded bodies were independently rehashed and literal/full-record compared against the already fully read original binding; unchanged complete package and both controls reads are reused. The complete old/new supervisor inverse and serialized binding inverse were independently reconstructed as data.",
+    "sourceEvaluation": false,
+    "targetTestExecution": false,
+    "actualPublicationLimit": "This is not another actual-publication review. The accepted full gate and its three fixed-source joins are used directly; large already accepted root/independent actual reports are pinned by the gate and are not redundantly nested or newly represented as independent reads.",
+    "priorSourceAndFixture": "The earlier complete R1 semantic review binds the same four original bodies, full cases and exact 43-byte inverse. This review freshly rereads the fixture and selected actual waitRead/hover boundaries after proving all four full literal identities."
+  },
+  "checks": [
+    {
+      "id": "S01",
+      "status": "PASS_STATIC_R2",
+      "claim": "Exact full proposal body matches the assigned 31,811-byte Git/SHA identity.",
+      "evidence": {
+        "bytes": 31811,
+        "sha256": "8fdf7d0248b19ca1beedfb9218411bc31b21f4345a719a42827cba095cb08295",
+        "gitBlob": "47bcc9f514079504369b47a72d9468ddb3bcdab8"
+      }
+    },
+    {
+      "id": "S02",
+      "status": "PASS_STATIC_R2",
+      "claim": "Exact complete new supervisor and binding match their assigned identities.",
+      "evidence": {
+        "runner": {
+          "bytes": 25796,
+          "sha256": "72b743e8cde32af416f0a3d14f0dd7284fd817c2408e42b3c24e2b0f52c1aa8f",
+          "gitBlob": "72fe3f4f791550c3402d0bae54d154aabe06e63c"
+        },
+        "binding": {
+          "bytes": 107643,
+          "sha256": "b44db6175efc66890593fe75189e0de9b16dee90672547e87cfd5f22e3d5ab8a",
+          "gitBlob": "7f69d9936a35f5e3612470076e13d2d9308da40a"
+        }
+      }
+    },
+    {
+      "id": "S03",
+      "status": "PASS_STATIC_R2",
+      "claim": "The full accepted R1 actual gate closes at 14:13:00 UTC before control authorship at 14:14:04 UTC; it names the same R1 and actual docs-only parent.",
+      "evidence": {
+        "gate": {
+          "bytes": 10359,
+          "sha256": "050ba8ff411a13b9dab6a2a6d85db55667039150be087426aa3bf847e81ffc61",
+          "gitBlob": "b7ad77e3f8b1d45cba44e862e4728ed40639cc98"
+        },
+        "closedAt": "2026-11-17 14:13:00 UTC",
+        "authoredAt": "2026-11-17 14:14:04 UTC",
+        "parent": "59723bc7058d31dd51730f4088eaf66df2735d4b"
+      }
+    },
+    {
+      "id": "S04",
+      "status": "PASS_STATIC_R2",
+      "claim": "The actual source/control parent is 59723bc7058d31dd51730f4088eaf66df2735d4b with root d184c36463e367fb7e237a8d17fc441deeabdf76, not the older fixed CI source or a guessed future control SHA.",
+      "evidence": {
+        "sourceCommit": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+        "sourceTree": "d184c36463e367fb7e237a8d17fc441deeabdf76"
+      }
+    },
+    {
+      "id": "S05",
+      "status": "PASS_STATIC_R2",
+      "claim": "Only the two uniquely occurring R1 directory literals differ in the supervisor; the complete inverse restores every old byte.",
+      "evidence": {
+        "changes": [
+          {
+            "before": "/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117",
+            "after": "/workspace/scratch/c714-waitread-ci3-controls-20261117",
+            "countOld": 1,
+            "countNew": 1
+          },
+          {
+            "before": "/workspace/scratch/c714-waitread-inode64-20261117",
+            "after": "/workspace/scratch/c714-waitread-ci3-20261117",
+            "countOld": 1,
+            "countNew": 1
+          }
+        ],
+        "inverse": true
+      }
+    },
+    {
+      "id": "S06",
+      "status": "PASS_STATIC_R2",
+      "claim": "Supervisor physical line count is unchanged at 429; the final empty split element is not an extra physical line.",
+      "evidence": {
+        "physicalLines": 429
+      }
+    },
+    {
+      "id": "S07",
+      "status": "PASS_STATIC_R2",
+      "claim": "Binding has exactly 25 scalar leaf changes under the 13 permitted R1 paths, with no other structured values changed; the full serialized inverse restores the old binding.",
+      "evidence": {
+        "allowedPaths": [
+          "attemptToken",
+          "sourceCommit",
+          "sourceTree",
+          "sourceActualGate",
+          "r1",
+          "r1ActualGate",
+          "scope",
+          "stage",
+          "runner",
+          "node.inode",
+          "sourceAnchorEvidence.actualR1Root",
+          "sourceAnchorEvidence.actualR1Independent",
+          "sourceAnchorEvidence.meaning"
+        ],
+        "leafCount": 25,
+        "wholeInverse": true
+      }
+    },
+    {
+      "id": "S08",
+      "status": "PASS_STATIC_R2",
+      "claim": "All four embedded source bodies and their full records are identical to the accepted original binding; total 92,713 bytes.",
+      "evidence": {
+        "bodies": [
+          {
+            "path": "package.json",
+            "phase": "RED",
+            "bytes": 26839,
+            "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+            "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+            "fullRecordUnchanged": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+            "phase": "RED",
+            "bytes": 7883,
+            "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+            "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+            "fullRecordUnchanged": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+            "phase": "RED",
+            "bytes": 28974,
+            "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+            "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+            "fullRecordUnchanged": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+            "phase": "GREEN-only-controls",
+            "bytes": 29017,
+            "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+            "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+            "fullRecordUnchanged": true
+          }
+        ],
+        "totalBytes": 92713
+      }
+    },
+    {
+      "id": "S09",
+      "status": "PASS_STATIC_R2",
+      "claim": "GREEN differs from RED controls by only the published 43-byte post-fulfillment cutoff line; deleting it restores the complete old controls.",
+      "evidence": {
+        "insertion": "        if (Date.now() >= deadline) break;\n",
+        "bytes": 43,
+        "inverse": true
+      }
+    },
+    {
+      "id": "S10",
+      "status": "PASS_STATIC_R2",
+      "claim": "All selected fixed input paths/modes/pins join the accepted actual R1 gate and remain the exact fixed86f source leaves.",
+      "evidence": {
+        "inputs": [
+          {
+            "path": "package.json",
+            "mode": "100644",
+            "bytes": 26839,
+            "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+            "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+            "mode": "100644",
+            "bytes": 29017,
+            "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+            "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+            "mode": "100644",
+            "bytes": 7883,
+            "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+            "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+          }
+        ]
+      }
+    },
+    {
+      "id": "S11",
+      "status": "PASS_STATIC_R2",
+      "claim": "The R1 actual root/independent evidence pins and both gate fields join the new binding; original674 sourceR2/vectors and historical source gate remain intact.",
+      "evidence": {
+        "sourceActualGate": {
+          "bytes": 10359,
+          "sha256": "050ba8ff411a13b9dab6a2a6d85db55667039150be087426aa3bf847e81ffc61",
+          "gitBlob": "b7ad77e3f8b1d45cba44e862e4728ed40639cc98"
+        },
+        "r1ActualGate": {
+          "bytes": 10359,
+          "sha256": "050ba8ff411a13b9dab6a2a6d85db55667039150be087426aa3bf847e81ffc61",
+          "gitBlob": "b7ad77e3f8b1d45cba44e862e4728ed40639cc98"
+        },
+        "originalSourceCommit": "674d32a84644f87544910c28bb4d2a4214958fb5"
+      }
+    },
+    {
+      "id": "S12",
+      "status": "PASS_STATIC_R2",
+      "claim": "The observed Node inode is the only changed physical Node field; the exact same path, bytes, SHA, device, owners, mode and times remain required.",
+      "evidence": {
+        "node": {
+          "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "bytes": 126939688,
+          "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+          "device": "27",
+          "inode": "9223372036854818268",
+          "uid": "65534",
+          "gid": "65534",
+          "mode": "0o755",
+          "mtimeNs": "1794515386000000000",
+          "ctimeNs": "1794515386000000000",
+          "versionPreviouslyObserved": "v24.22.1"
+        }
+      }
+    },
+    {
+      "id": "S13",
+      "status": "PASS_STATIC_R2",
+      "claim": "Existing signed64 range checks and unsigned64 comparison are unchanged; the new unsigned pin maps exactly to raw signed -9223372036854733348 while retaining both representations in evidence.",
+      "evidence": {
+        "rawSigned64": "-9223372036854733348",
+        "canonicalUnsigned64": "9223372036854818268"
+      }
+    },
+    {
+      "id": "S14",
+      "status": "PASS_STATIC_R2",
+      "claim": "The new scope/stage/token equal the selected R1. Earlier metadata absence is an observation, not reservation; original exclusive creation checks remain authoritative at admission.",
+      "evidence": {
+        "scope": "/workspace/scratch/c714-waitread-ci3-20261117",
+        "stage": "/workspace/scratch/c714-waitread-ci3-controls-20261117",
+        "attemptToken": "c714-waitread-ci3-20261117-original-one-shot"
+      }
+    },
+    {
+      "id": "S15",
+      "status": "PASS_STATIC_R2",
+      "claim": "Exact empty parent environment, cwd /, no execArgv, exact Node/runner/argv, fixed child env and detached child session remain unchanged.",
+      "evidence": {
+        "testArgv": [
+          "--test",
+          "--test-reporter=tap",
+          "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+        ],
+        "childEnvironment": {
+          "PATH": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin",
+          "LANG": "C.UTF-8",
+          "TZ": "UTC"
+        },
+        "parentEnvironment": "empty via bash exec -c; no NODE_OPTIONS/preloads/config/compile-cache environment"
+      }
+    },
+    {
+      "id": "S16",
+      "status": "PASS_STATIC_R2",
+      "claim": "Only the exact three source files and three staged controls are admitted. Package type module and controls/fixture value imports require Node builtins only; no app/vendor/GUI launch is introduced.",
+      "evidence": {
+        "sourcePaths": [
+          "package.json",
+          "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "scripts/legacy-agent-host/desktop-ui-controls.ts"
+        ],
+        "stageFiles": [
+          "execution-admission.json",
+          "waitread-binding.json",
+          "waitread-supervisor.cjs"
+        ]
+      }
+    },
+    {
+      "id": "S17",
+      "status": "PASS_STATIC_R2",
+      "claim": "Original 60-second phase, 135-second supervisor, 4-second cleanup, 8 MiB output threshold, 5-second per-test, 30-second UI default and 100 ms cadence remain unchanged.",
+      "evidence": {
+        "phaseWallMs": 60000,
+        "supervisorWallMs": 135000,
+        "cleanupWallMs": 4000,
+        "outputLimitBytes": 8388608,
+        "perTestMs": 5000,
+        "originalUiDefaultMs": 30000,
+        "originalPollMs": 100
+      }
+    },
+    {
+      "id": "S18",
+      "status": "PASS_STATIC_R2",
+      "claim": "Original monotonic admission checks remain immediately before scope admission, materializations, RED→GREEN transition, fixed open/write and child spawns; a delayed timer callback cannot alone admit later work.",
+      "evidence": {
+        "executionLogicChanges": 0
+      }
+    },
+    {
+      "id": "S19",
+      "status": "PASS_STATIC_R2",
+      "claim": "Process identity admission, raw process samples before validation, exact original PID/start/session/group/uid/exe/argv, failure identity retention and no unrelated signaling remain unchanged.",
+      "evidence": {
+        "executionLogicChanges": 0
+      }
+    },
+    {
+      "id": "S20",
+      "status": "PASS_STATIC_R2",
+      "claim": "Exceptional cleanup retains one original absolute 4-second interval and nonreplayed TERM/KILL attempts with original 250 ms delay; reentry cannot renew the budget.",
+      "evidence": {
+        "executionLogicChanges": 0
+      }
+    },
+    {
+      "id": "S21",
+      "status": "PASS_STATIC_R2",
+      "claim": "Ordinary close/EOF, exact exit code, no signal, empty detached group/session and absence of each captured original process remain necessary before phase acceptance.",
+      "evidence": {
+        "executionLogicChanges": 0
+      }
+    },
+    {
+      "id": "S22",
+      "status": "PASS_STATIC_R2",
+      "claim": "Source, staged controls, directory roots and Node identities are checked before/after; the only admitted transition rewrites fixed controls on the already observed original inode after accepted RED.",
+      "evidence": {
+        "executionLogicChanges": 0
+      }
+    },
+    {
+      "id": "S23",
+      "status": "PASS_STATIC_R2",
+      "claim": "Whole ten fixture titles and ordering exactly equal R1, binding and proposal inventories; no selected case is filtered, skipped, duplicated or replaced.",
+      "evidence": {
+        "titles": [
+          "generic UI read refuses its first fulfilled value exactly at the original deadline",
+          "generic UI read refuses its first fulfilled value after the original deadline",
+          "generic UI read refuses a later fulfilled value exactly at the original deadline",
+          "generic UI read refuses a later fulfilled value after the original deadline",
+          "generic UI read does not admit or poll again after a late false observation",
+          "generic UI read preserves a timely first value and its exact identity",
+          "generic UI read preserves its original cadence and a timely later value",
+          "generic UI read honors a supplied budget at its strict boundary",
+          "generic UI hover refuses a third stable point arriving at the original deadline",
+          "generic UI hover preserves one movement after three timely stable points"
+        ]
+      }
+    },
+    {
+      "id": "S24",
+      "status": "PASS_STATIC_R2",
+      "claim": "Static RED predictions remain seven assertion failures at cases 1,2,3,4,5,8,9 and three preservation passes at 6,7,10. GREEN predicts all ten; these are not observed results.",
+      "evidence": {
+        "redFailures": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          8,
+          9
+        ],
+        "redPreservations": [
+          6,
+          7,
+          10
+        ],
+        "greenPass": 10
+      }
+    },
+    {
+      "id": "S25",
+      "status": "PASS_STATIC_R2",
+      "claim": "Late fulfilled values, including false, are rejected before readiness predicate side effects or another polling wait; timely values preserve exact identity, guards and original cadence.",
+      "evidence": {
+        "waitReadBoundary": "Date.now() >= original deadline immediately after fulfilled evaluate and before isReady"
+      }
+    },
+    {
+      "id": "S26",
+      "status": "PASS_STATIC_R2",
+      "claim": "Actual hoverExpression is exercised through the original controls: the late third stable point produces no movement; three timely points produce exactly one mouseMoved action and retain the extra ownership guard.",
+      "evidence": {
+        "cases": [
+          9,
+          10
+        ]
+      }
+    },
+    {
+      "id": "S27",
+      "status": "PASS_STATIC_R2",
+      "claim": "The fixture uses Date-only clock mocks plus the original real timers, restores method mocks and Date in finally, and asserts no pending original timer. The parent supervisor has no fixture clock mocks.",
+      "evidence": {
+        "fixture": {
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        }
+      }
+    },
+    {
+      "id": "S28",
+      "status": "PASS_STATIC_R2",
+      "claim": "Strict existing TAP parsing requires all ten ordered titles, leaf results, plan and exact pass/fail/cancel/skip/todo counters; expected failures must be assertion failures with the selected signatures.",
+      "evidence": {
+        "redExit": 1,
+        "greenExit": 0,
+        "signatureCounts": {
+          "missingRejection": 6,
+          "lateFalseReadiness": 1
+        }
+      }
+    },
+    {
+      "id": "S29",
+      "status": "PASS_STATIC_R2",
+      "claim": "GREEN remains conditional on accepted RED, complete ordinary exit/custody, exact source/Node/control checks and the single original deadline; any refusal/unknown/capture/retention failure spends the attempt.",
+      "evidence": {
+        "oneOriginalAttempt": true,
+        "oldAttemptsStillSpent": true
+      }
+    },
+    {
+      "id": "S30",
+      "status": "PASS_STATIC_R2",
+      "claim": "External admission remains noncircular and is not authored here: it must later join the actual control commit/tree/docs/proposal and accepted actual reports, pin both exact controls, and require controlParent === sourceCommit === actual R1 parent.",
+      "evidence": {
+        "requiredControlParent": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+        "bindingSha256": "b44db6175efc66890593fe75189e0de9b16dee90672547e87cfd5f22e3d5ab8a",
+        "runner": {
+          "bytes": 25796,
+          "sha256": "72b743e8cde32af416f0a3d14f0dd7284fd817c2408e42b3c24e2b0f52c1aa8f",
+          "gitBlob": "72fe3f4f791550c3402d0bae54d154aabe06e63c"
+        }
+      }
+    },
+    {
+      "id": "S31",
+      "status": "PASS_STATIC_R2",
+      "claim": "No application source, whole149/catalog43/renderer85 inventory, frozen CI3 ref/metadata, native/GUI/provider workflow or original deadline is changed or qualified by these controls.",
+      "evidence": {
+        "standaloneOnly": true,
+        "whole149Qualified": false,
+        "catalog43Qualified": false,
+        "renderer85Qualified": false,
+        "wholeE2EQualified": false
+      }
+    },
+    {
+      "id": "S32",
+      "status": "PASS_STATIC_R2",
+      "claim": "Review is static and read-only. No local files, staging, target execution, compile/import, CI read/poll/action, source/ref/PR mutation or new gate was performed.",
+      "evidence": {
+        "rootSoleAuthorAndExecutor": true
+      }
+    }
+  ],
+  "completeBodyJoins": [
+    {
+      "path": "package.json",
+      "phase": "RED",
+      "bytes": 26839,
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "fullRecordUnchanged": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "phase": "RED",
+      "bytes": 7883,
+      "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+      "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+      "fullRecordUnchanged": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "phase": "RED",
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "fullRecordUnchanged": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "phase": "GREEN-only-controls",
+      "bytes": 29017,
+      "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+      "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+      "fullRecordUnchanged": true
+    }
+  ],
+  "permittedBindingPaths": [
+    "attemptToken",
+    "sourceCommit",
+    "sourceTree",
+    "sourceActualGate",
+    "r1",
+    "r1ActualGate",
+    "scope",
+    "stage",
+    "runner",
+    "node.inode",
+    "sourceAnchorEvidence.actualR1Root",
+    "sourceAnchorEvidence.actualR1Independent",
+    "sourceAnchorEvidence.meaning"
+  ],
+  "exactChangedLeafPaths": [
+    "attemptToken",
+    "sourceCommit",
+    "sourceTree",
+    "sourceActualGate.bytes",
+    "sourceActualGate.sha256",
+    "sourceActualGate.gitBlob",
+    "r1.bytes",
+    "r1.sha256",
+    "r1.gitBlob",
+    "r1ActualGate.bytes",
+    "r1ActualGate.sha256",
+    "r1ActualGate.gitBlob",
+    "scope",
+    "stage",
+    "runner.bytes",
+    "runner.sha256",
+    "runner.gitBlob",
+    "node.inode",
+    "sourceAnchorEvidence.actualR1Root.bytes",
+    "sourceAnchorEvidence.actualR1Root.sha256",
+    "sourceAnchorEvidence.actualR1Root.gitBlob",
+    "sourceAnchorEvidence.actualR1Independent.bytes",
+    "sourceAnchorEvidence.actualR1Independent.sha256",
+    "sourceAnchorEvidence.actualR1Independent.gitBlob",
+    "sourceAnchorEvidence.meaning"
+  ],
+  "testSemantics": [
+    {
+      "cases": [
+        1,
+        2
+      ],
+      "shape": "First fulfilled truthy value exactly at 30,000 or after at 30,001.",
+      "red": "Missing expected rejection.",
+      "green": "Original timeout before isReady; no tick/input."
+    },
+    {
+      "cases": [
+        3,
+        4
+      ],
+      "shape": "Timely false first value, one original 100 ms tick, then truthy fulfillment exactly at or after the original deadline.",
+      "red": "Missing expected rejection.",
+      "green": "Only first false enters readiness; no extra poll or input."
+    },
+    {
+      "cases": [
+        5
+      ],
+      "shape": "Late false fulfillment exactly at the deadline.",
+      "red": "Timeout occurs but readiness sees false and a further poll wait occurs; expected empty predicate list fails deepStrictEqual.",
+      "green": "No late predicate call and no extra tick."
+    },
+    {
+      "cases": [
+        6,
+        7
+      ],
+      "shape": "Timely first or later truthy value.",
+      "red": "PASS preservation.",
+      "green": "Same exact object, guard count and original cadence."
+    },
+    {
+      "cases": [
+        8
+      ],
+      "shape": "Supplied timeout 73 with fulfillment at 72 and 73.",
+      "red": "Timely subcase passes, exact-boundary subcase has missing expected rejection.",
+      "green": "Both supplied-budget boundary expectations pass."
+    },
+    {
+      "cases": [
+        9
+      ],
+      "shape": "Actual hover sees stable points at 0, 100 and 30,000.",
+      "red": "Third point enters stateful predicate and movement occurs; missing expected rejection.",
+      "green": "Deadline gate precedes stateful predicate; no movement."
+    },
+    {
+      "cases": [
+        10
+      ],
+      "shape": "Actual hover sees stable points at 0, 100 and 29,999.",
+      "red": "PASS preservation.",
+      "green": "Exactly one movement after three points and a final ownership guard."
+    }
+  ],
+  "semanticLimits": [
+    "The post-fulfillment UI cutoff does not cancel an already pending CDP evaluation and does not add a deadline check after a user-supplied predicate executes.",
+    "Date mocking is confined to each test fixture. Real original polling waits remain; parent monotonic supervision remains independent.",
+    "Synchronous filesystem/hash work is not preempted by a timer. Existing monotonic checks refuse subsequent admission and final PASS after the original wall deadline.",
+    "8 MiB is the unchanged observed raw-output overflow threshold, not a promise of exact truncation at the byte boundary; a delivered chunk can cross it and makes the attempt incomplete.",
+    "Bare control publication is not staging, external admission or execution. Any later physical mismatch/refusal remains a spent attempt under the original procedure.",
+    "RED is the current full ten-case fixture with historical old controls, not a historical whole-tree checkout.",
+    "A future standalone ten-case result cannot substitute for whole149, catalog43, renderer85, typecheck, canonical/provider/native/GUI or full E2E qualification.",
+    "The 13:39:49 metadata observation did not invoke Node and does not continuously reserve the path/inode or fresh directories.",
+    "No old attempt or old scope is reopened. Current CI3 refs and metadata remain frozen."
+  ],
+  "existingNextStepsOnly": "Root's already selected process: exact reviewed control publication and immediate push, root/independent actual readbacks, external admission binding only actual identities, exclusive fresh staging, then at most the single original supervisor invocation. This review adds no step or gate.",
+  "runtimeStatus": {
+    "staged": false,
+    "invoked": false,
+    "redObserved": false,
+    "greenObserved": false,
+    "standaloneRuntimeQualified": false,
+    "wholeE2EQualified": false
+  }
+}

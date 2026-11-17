@@ -1,0 +1,255 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_FRESH_STANDALONE_CI3_R1_ACTUAL_AUTHORSHIP_GATE",
+  "repository": "777genius/agent-teams-ai",
+  "closedAt": "2026-11-17 14:13:00 UTC",
+  "accepted": true,
+  "decision": "ACCEPT_EXACT_ACTUAL_R1_PUBLICATION_FOR_THE_SELECTED_CONTROL_R2_AUTHORSHIP_ONLY",
+  "subject": {
+    "bytes": 23198,
+    "sha256": "d51a9c97849dae83885d8339cfbc77fb1a1803a509fd3ba27af6ae447b63a0ac",
+    "gitBlob": "7f214219f9c757b73c3fad164bf4db04223f9594"
+  },
+  "manifest": {
+    "bytes": 16658,
+    "sha256": "1dcb276a2820c556ee930f005ff9d991640f98211bc70724fba3831808cc9f68",
+    "gitBlob": "a8592f884d2fa4baa056948aeb092e50f3b1b68a"
+  },
+  "actualCommit": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+  "actualTree": "d184c36463e367fb7e237a8d17fc441deeabdf76",
+  "actualDocsTree": "2e62a0d62e7a490be29de271c7bffd888ffaf4dc",
+  "soleParent": "59e8d621717314d3fc3525af559a2a3beb9a7602",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "pushedAt": "2026-11-17 14:00:43 UTC",
+  "rootActual": {
+    "bytes": 430785,
+    "sha256": "0246e3c028aff5fc69a587f14bfaa7c091b43465417945b505375a6e6a64144f",
+    "gitBlob": "37339ab5bc478fcd158ad68cd334a880672f86a0"
+  },
+  "independentActual": {
+    "bytes": 642238,
+    "sha256": "b87c334066e1648506aa7d98b2bdcb0b49fc8b0e7233137ac4b7d27dec35dc17",
+    "gitBlob": "548faa37ceb7491afd9a38e837417cc1c33869ac"
+  },
+  "fullReadbacksAccepted": true,
+  "rootSelfReadConfirmed": true,
+  "independentSelfReadConfirmed": true,
+  "independentSelfReadAt": "2026-11-17 14:11:59 UTC",
+  "rootChecks": 29,
+  "independentChecks": 44,
+  "totalActualChecks": 73,
+  "currentBodyCount": 21,
+  "currentBodyBytes": 6224456,
+  "parentBodyCount": 3,
+  "parentBodyBytes": 3562223,
+  "exactDelta": {
+    "changed": 21,
+    "added": 18,
+    "modified": 3,
+    "deleted": 0,
+    "modesChanged": 0,
+    "sourceChanged": 0,
+    "workflowsChanged": 0
+  },
+  "currentPointerCount": 503,
+  "currentPointerBytes": 74623121,
+  "unresolvedTextPointers": [],
+  "unresolvedBlockers": [],
+  "unreadBinaryMetadataReferences": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3",
+        "bytes": 186398,
+        "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+      },
+      "locations": [
+        "file:ci3ActualGate.unreadBinaryMetadataReferences.0.pin",
+        "file:ci3RootActual.unreadBinaryMetadataReferences.0.pin",
+        "file:ci3IndependentActual.unreadBinaryMetadataReferences.0.pin",
+        "file:ci3IndependentActual.rootActualBinaryCrossJoin.pin",
+        "file:ci3IndependentActual.checks.35.evidence.tuple.pin"
+      ],
+      "classification": "Original binary TGZ fetch was refused by UTF8-only API once; existing metadata exception remains separate and unread. No retry, extraction, runtime or qualification."
+    }
+  ],
+  "sourceAnchor": {
+    "commit": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+    "tree": "d184c36463e367fb7e237a8d17fc441deeabdf76",
+    "unchangedCurrentSource": "86f52244b5375834a4040cbc63803d68cc708087",
+    "selectedFixedInputs": [
+      {
+        "path": "package.json",
+        "mode": "100644",
+        "bytes": 26839,
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "mode": "100644",
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+      }
+    ],
+    "joins": [
+      {
+        "path": "package.json",
+        "expected": {
+          "path": "package.json",
+          "mode": "100644",
+          "bytes": 26839,
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+          "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        "actual": {
+          "path": "package.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+          "size": 26839,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        "atCommits": [
+          "86f52244b5375834a4040cbc63803d68cc708087",
+          "59e8d621717314d3fc3525af559a2a3beb9a7602"
+        ],
+        "rootAnchored": true,
+        "sharedScriptsTree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "sharedLegacyTree": "0dde19356dc8aee18cd9d77fff817ec3e109d198",
+        "atCommit": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+        "actualRoot": "d184c36463e367fb7e237a8d17fc441deeabdf76",
+        "sourceSubtreeUnchanged": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "expected": {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        "actual": {
+          "path": "desktop-ui-controls.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "5286c036a63a14e98925711a224df202c9a7caa7",
+          "size": 29017,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        "atCommits": [
+          "86f52244b5375834a4040cbc63803d68cc708087",
+          "59e8d621717314d3fc3525af559a2a3beb9a7602"
+        ],
+        "rootAnchored": true,
+        "sharedScriptsTree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "sharedLegacyTree": "0dde19356dc8aee18cd9d77fff817ec3e109d198",
+        "atCommit": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+        "actualRoot": "d184c36463e367fb7e237a8d17fc441deeabdf76",
+        "sourceSubtreeUnchanged": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "expected": {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "mode": "100644",
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        },
+        "actual": {
+          "path": "desktop-ui-controls-deadline.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+          "size": 7883,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        },
+        "atCommits": [
+          "86f52244b5375834a4040cbc63803d68cc708087",
+          "59e8d621717314d3fc3525af559a2a3beb9a7602"
+        ],
+        "rootAnchored": true,
+        "sharedScriptsTree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "sharedLegacyTree": "0dde19356dc8aee18cd9d77fff817ec3e109d198",
+        "atCommit": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+        "actualRoot": "d184c36463e367fb7e237a8d17fc441deeabdf76",
+        "sourceSubtreeUnchanged": true
+      }
+    ]
+  },
+  "preservation": {
+    "nonDocRootEntries": 53,
+    "nonDocLeaves": 8799,
+    "production": 5020,
+    "cap": 800,
+    "exceptions": 141,
+    "workflows": 42,
+    "catalogBefore": 101,
+    "catalogAfter": 105,
+    "allPriorValues": true,
+    "bundles": 27,
+    "totals": true,
+    "fullDocumentPrefixes": true
+  },
+  "permittedNext": {
+    "rootOnly": true,
+    "supervisor": {
+      "baseline": {
+        "bytes": 25819,
+        "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+        "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+      },
+      "exactlyTwoUniqueLiteralReplacements": [
+        {
+          "before": "/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117",
+          "after": "/workspace/scratch/c714-waitread-ci3-controls-20261117"
+        },
+        {
+          "before": "/workspace/scratch/c714-waitread-inode64-20261117",
+          "after": "/workspace/scratch/c714-waitread-ci3-20261117"
+        }
+      ],
+      "executionLogicChanges": 0,
+      "inodeLogic": "Keep the existing signed64 metadata read, range checks, BigInt.asUintN(64) comparison and raw/canonical evidence exactly. Change only the binding's observed unsigned inode pin; do not replace the conversion logic or weaken any metadata/hash check."
+    },
+    "binding": {
+      "change": [
+        "attemptToken",
+        "sourceCommit",
+        "sourceTree",
+        "sourceActualGate",
+        "r1",
+        "r1ActualGate",
+        "scope",
+        "stage",
+        "runner",
+        "node.inode",
+        "sourceAnchorEvidence.actualR1Root",
+        "sourceAnchorEvidence.actualR1Independent",
+        "sourceAnchorEvidence.meaning"
+      ],
+      "preserve": "All other fields byte/structure-identical, including schemaVersion/kind, original sourceR2/vectors, originalSourceCommit and originalSourceActualGate, selectedFixedInputs, all embedded source bodies and pins, exact phases and failure signatures, argv/env/budgets/classifications. No control postimage is authored before this R1 actual gate closes."
+    },
+    "sourceEdits": 0,
+    "controlPublicationMustHaveSoleParent": "59723bc7058d31dd51730f4088eaf66df2735d4b"
+  },
+  "pending": "Existing exact control R2 four reviews, publication/immediate push, root and independent actual readbacks, external admission and fresh exclusive staging before one supervisor invocation.",
+  "qualification": {
+    "documentationPublicationOnly": true,
+    "controlPostimagesAuthored": false,
+    "standaloneInvoked": false,
+    "standaloneRuntimeQualified": false,
+    "wholeE2EQualified": false
+  },
+  "ci": "PR1223 head/base/metadata frozen independently; earlier snapshot4 is historical. Later actual Windows failures are separate retained evidence, not altered by this gate."
+}
