@@ -419,7 +419,9 @@ export class TeamBackupService {
     if (!(await this.isConfigReady(teamName))) {
       // Native backup requires config.json; metadata-only logical teams need
       // their own small app-owned snapshot, without a fabricated CLI config.
-      await backupProjectTeamDefinition(teamName);
+      await backupProjectTeamDefinition(teamName).catch((error: unknown) => {
+        logger.warn(`[Backup] definition backup skipped for ${teamName}: ${String(error)}`);
+      });
       return;
     }
     if (await this.permanentDeletion.isPermanentDeletionFenced(teamName)) return;
