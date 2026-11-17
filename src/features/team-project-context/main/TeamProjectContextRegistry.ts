@@ -187,6 +187,22 @@ export class TeamProjectContextRegistry {
     });
   }
 
+  /**
+   * Enumerate only verified native aliases; never treat a matching name prefix
+   * as proof that a directory belongs to this team or this app profile.
+   */
+  async list(logicalTeamName: string): Promise<readonly PersistedTeamWorkContext[]> {
+    await this.assertOwnedDirectory(logicalTeamName);
+    const { contexts } = await this.readIndex(logicalTeamName);
+    for (const row of contexts) {
+      if (row.state !== 'ready') {
+        throw new TeamProjectContextUnavailableError('Project context creation is incomplete');
+      }
+      await this.assertOwnedDirectory(row.executionTeamName);
+    }
+    return contexts;
+  }
+
   /** Read-only queries never create a physical context or mutate a native team. */
   async find(logicalTeamName: string, projectPath: string): Promise<PersistedTeamWorkContext | null> {
     await this.assertOwnedDirectory(logicalTeamName);
