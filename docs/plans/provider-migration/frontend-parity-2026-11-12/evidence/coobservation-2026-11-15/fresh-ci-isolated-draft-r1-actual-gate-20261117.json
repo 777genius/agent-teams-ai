@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "kind": "closed-actual-fresh-isolated-draft-ci-r1-publication-gate",
+  "closedAtUtc": "2026-11-17 03:13:12 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "workingBranch": "fix/frontend-parity-coobservation-c714-20261115",
+  "r1": {
+    "bytes": 83960,
+    "sha256": "6ffeef78018e330679aa9a2bc2da5422aca9d2a38fb4c60834959bfd880e6e58",
+    "gitBlob": "7237425e51bda9feb7d0ded4e424fe72745680c1"
+  },
+  "actualCommit": "9c9c73190840592963142d36562ea07d2b5d2d71",
+  "actualTree": "ebd6c383f34c6fd4331b6f0a3da5b90597b5cc1f",
+  "actualDocsTree": "b69634e8cafeca602c409caf888d9b17de8c13e7",
+  "soleParent": "cba4af86044e89c9ff3cce25f05dc5424bf06329",
+  "manifest": {
+    "bytes": 9828,
+    "sha256": "ca1d9308f8875e951e5f6c8ef16fcd5a976aaef14de6dcc6c4c3a8f5e1478a62",
+    "gitBlob": "f2694264b51fdf48a12b26b5095546c580e7211e"
+  },
+  "rootActual": {
+    "bytes": 192606,
+    "sha256": "1dc0a2f36dd3448f190f03b748be9ef2a52c5419b0bf1065097f8b3bf4a85a7f",
+    "gitBlob": "ba7f15a2e0964f00f7b9fbefdcdfcb7593aa733d"
+  },
+  "independentActual": {
+    "bytes": 292888,
+    "sha256": "307b15ae5c8bd2dd6003b3c9caf44c0ce3972f3c1392313402d9125ab4c4d600",
+    "gitBlob": "176dfbe127f3a9f9f81c089dfab445c8d1ce3ff9"
+  },
+  "rootFullReadBothActualReports": true,
+  "independentFullReadRootActual": true,
+  "independentFullSelfReadback": true,
+  "rootChecks": 142,
+  "independentChecks": 182,
+  "currentPointerJoins": 25,
+  "allActualChangedBodies": {
+    "count": 16,
+    "bytes": 5142065
+  },
+  "allParentModifiedBodies": {
+    "count": 3,
+    "bytes": 2934751
+  },
+  "actualPublicationAccepted": true,
+  "sourceAndWorkflowUnchanged": true,
+  "census": {
+    "leaves": 11936,
+    "docs": 3138,
+    "nonDocs": 8798,
+    "workflows": 42
+  },
+  "finalAncestorCompare": {
+    "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "mergeBase": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "ahead": 4,
+    "behind": 0,
+    "files": 54,
+    "docsFiles": 51,
+    "sourceFiles": 3
+  },
+  "onlyAllowedCiHead": "9c9c73190840592963142d36562ea07d2b5d2d71",
+  "selectedBase": {
+    "branch": "ci/frontend-parity-c714-20261117-base",
+    "commit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "tree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca"
+  },
+  "selectedHead": {
+    "branch": "ci/frontend-parity-c714-20261117-head",
+    "commit": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "tree": "ebd6c383f34c6fd4331b6f0a3da5b90597b5cc1f"
+  },
+  "gateOpensOnly": "External exact-head mutation intent followed by the exact one-shot new snapshot refs and one opened Draft PR specified in accepted R1; original new-ID-only evidence capture. No other runtime/action gate is opened.",
+  "externalMutationIntentRequired": true,
+  "prospectiveSelection": "SELECTED",
+  "newRefsCreated": false,
+  "newPrCreated": false,
+  "newCiInvoked": false,
+  "localMaterializationReplayAllowed": false,
+  "localMaterializationStatus": "REFUSED_BEFORE_SOURCE_ROOT_ADMISSION_SPENT",
+  "localGreen": "UNREACHED",
+  "localValidation": "UNREACHED",
+  "noRealClaudeOrCodex": true,
+  "frozenPrsAndOriginalNineUnchanged": true,
+  "wholeE2EQualified": false
+}

@@ -284,3 +284,12 @@ R1 `7237425e51bda9feb7d0ded4e424fe72745680c1` is accepted by root and all three 
 Next, after full actual-publication root/independent readbacks, externally bind this actual publication commit to the fresh immutable CI-head ref, create the exact ancestor-base ref, read both back, and open the one reviewed Draft PR. Working evidence pushes stay separate, so active CI runs will not be replaced by synchronize. No new ref/PR/run has been created yet.
 
 Expected selection: five active workflow families, two Draft-skipped families; CI's Draft full-qualification failure remains intentional policy. Host Process is not selected. Actual job/test/artifact/cleanup outcomes are unobserved, not PASS. The refused local attempt remains spent, source root unavailable at its last observation, and GREEN/validation remain unexecuted. No broader qualification, real Claude/Codex execution, frozen/old-run mutation, release or merge is selected.
+
+
+## 2026-11-17 03:41:21 UTC — PR1218 opened; exact CI evidence is still pending
+
+Actual R1 gate `082178036bc188dabaeb82d1d2a91e8840f2b13e` and external intent `a692320653688e84c8f006c9c7eb883350f16423` admitted exactly two fresh ref creations and one opened Draft PR. CI head stays `9c9c73190840592963142d36562ea07d2b5d2d71`, base stays `77993819c233737f1e2b4c11c8ca1a5d360bcbe3`; working evidence commits do not move the snapshot refs.
+
+All seven attempt1 runs bind directly to PR1218 in their complete attempt metadata. Host44008782843, Packaged44008782844, CI44008782909, Stage144008782832 and Announcements44008782869 remain QUEUED at the latest retained03:34:31 UTC observation. CodeQL44008782825 and OpenCodeDesktop44008782932 are completed expected Draft skips; their one-job/zero-artifact captures are final and are not polled further. The initial39-job snapshot is not the final dependent-job census.
+
+No current Node139/renderer85/Desktop result, source checkout or cleanup PASS is available. Queue cause remains UNKNOWN. Static Windows/Darwin/provider follow-ups add bounded evidence, not source adoption or native qualification. The old local materialization remains REFUSED/SPENT; its GREEN/validation are still UNREACHED. Continue only the five bound active runs under the unchanged R1 capture contract. Whole E2E remains incomplete.

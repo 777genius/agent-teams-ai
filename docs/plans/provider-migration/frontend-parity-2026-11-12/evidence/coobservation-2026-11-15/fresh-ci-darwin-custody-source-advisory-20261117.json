@@ -1,0 +1,1414 @@
+{
+  "schemaVersion": 1,
+  "kind": "READ_ONLY_STRICT_DARWIN_P09_PRIMITIVE_FOLLOWUP",
+  "reviewer": "/root/producer_r2_semantic",
+  "recordedAt": "2026-11-17T03:19:45.574Z",
+  "status": "NO_CONCRETE_DEPLOYABLE_CUSTODY_PRIMITIVE_ESTABLISHED",
+  "analysisCompleteWithinAssignedScope": true,
+  "blocksFreshCiLaunch": false,
+  "strictP09Qualified": false,
+  "sourceOrControlAuthored": false,
+  "runtimeExecuted": false,
+  "ciReadOrPolled": false,
+  "scope": "Bounded follow-up to settled strict P09 source/evidence audit. Resolve whether the absent dynamic hard/kill flags or documented Endpoint Security path supplies a valid correction under the original same-inode, existing-writer adversary. Identify exact native proof blockers without relaxing the oracle.",
+  "authority": {
+    "rootSoleAuthorAndExecutor": true,
+    "GitReads": true,
+    "primaryDocsResearch": true,
+    "pureJavaScriptDataOnly": true,
+    "bareAdvisoryRetention": true,
+    "shell": false,
+    "nativeProbe": false,
+    "targetRuntime": false,
+    "sourceMutation": false,
+    "controlAuthorship": false,
+    "ciPolling": false,
+    "ciMutation": false,
+    "refOrPrMutation": false,
+    "noRealClaudeOrCodex": true,
+    "noOriginalOrFrozenPolling": true,
+    "noNewLaunchGate": true
+  },
+  "evidence": {
+    "historicalSourceReport": {
+      "bytes": 125540,
+      "sha256": "59c3e362cc73580491633bb56f9fd8ebc853ec57be1f84b5bdcea43d09bdec79",
+      "gitBlob": "96c0cd4e7209a2df5ebb35c0634712581dd5cfc3"
+    },
+    "originalFullArtifactReports": {
+      "x64": {
+        "bytes": 130500,
+        "sha256": "7ceebfec788ca68ce6f93d325a87b5229f09984c7542cdb641ee485a6dd5096f",
+        "gitBlob": "47bd44b7bf25b9c54b3fb741abe084caddfafdaf"
+      },
+      "arm64": {
+        "bytes": 130480,
+        "sha256": "453bff87f588c51c745ed342794845232f0dd6669f53c0d048031f6e6139a484",
+        "gitBlob": "8c895bf8310f8890e354d61c4b7f9091bb474097"
+      }
+    },
+    "originalArchiveIdentities": {
+      "x64": {
+        "bytes": 10545,
+        "sha256": "2f56428580670888afd0aa7e49ff43e0f54a5e287d205328f04d10c818a29186",
+        "gitBlob": "e6c78cc7736c176a8ea796b9ffb96d74a5303d32"
+      },
+      "arm64": {
+        "bytes": 10455,
+        "sha256": "29ceeb0f0fdb4d4281d7a3747904c2e0896a52488926847425b6252301b5ee56",
+        "gitBlob": "626e8b0052a61f7fee889e542964252e44f8c894"
+      }
+    },
+    "allEightArtifactMemberJoins": [
+      {
+        "arch": "x64",
+        "path": "opencode-v2-embedded-inputs.json",
+        "identity": {
+          "bytes": 2370,
+          "sha256": "ae978c8426f0c4e4314df59090a2cd8615a92314b99e2262299b6ca22a5da88b",
+          "gitBlob": "32c0c83742120d83aeb53d552fd6c2b0cbb45311"
+        }
+      },
+      {
+        "arch": "x64",
+        "path": "opencode-v2-darwin-custody.json",
+        "identity": {
+          "bytes": 1450,
+          "sha256": "b3d46650496b43405a785b8b5658d6029e3eff2521d3a6bd31081fd2d76c1a31",
+          "gitBlob": "ee70650acca315c19ece91282b1fe293ce04e70a"
+        }
+      },
+      {
+        "arch": "x64",
+        "path": "opencode-v2-embedded-host.json",
+        "identity": {
+          "bytes": 95033,
+          "sha256": "a6e71a356724cdc84d34365273843fa9f10a6026190b8117252861bc905ede74",
+          "gitBlob": "b66d6df428a8a7e7733767c910e27f02ebb76b9f"
+        }
+      },
+      {
+        "arch": "x64",
+        "path": "opencode-v2-posix-exec.json",
+        "identity": {
+          "bytes": 14545,
+          "sha256": "fbe4d651e4eed6ea49fd99689e1d667e2fe286b45b05a3e2c6ce15e84b936169",
+          "gitBlob": "5bab1184ec36b1c48372e83cea04571def937646"
+        }
+      },
+      {
+        "arch": "arm",
+        "path": "opencode-v2-darwin-custody.json",
+        "identity": {
+          "bytes": 1440,
+          "sha256": "11d61f04957abcacdb022ee19d8c7121ab026d537b4ef0523926e951b589fb34",
+          "gitBlob": "81f597a1c14a1fb52738fe01af7d5921968a5719"
+        }
+      },
+      {
+        "arch": "arm",
+        "path": "opencode-v2-embedded-host.json",
+        "identity": {
+          "bytes": 94987,
+          "sha256": "1650e94a849142be78371b39485e650583cad4cf798a3180f4dc728fb3803beb",
+          "gitBlob": "dafadaf6b2da4b54c5a946f082ca7deac63c8eb4"
+        }
+      },
+      {
+        "arch": "arm",
+        "path": "opencode-v2-posix-exec.json",
+        "identity": {
+          "bytes": 14566,
+          "sha256": "6bc2b4d48b2991d95539d9cd26baeed758ee08e2a7f843119d003cfcef8861da",
+          "gitBlob": "a81868b4f7f02d1de34872324c2d590ccda943fe"
+        }
+      },
+      {
+        "arch": "arm",
+        "path": "opencode-v2-embedded-inputs.json",
+        "identity": {
+          "bytes": 2374,
+          "sha256": "8c46a882a6cea63142d3bb30b76444d93c88e0d1c6b62100cae0a4def62240bc",
+          "gitBlob": "06ae8d4fd9d144f2cef846fb07c396f258a759ca"
+        }
+      }
+    ],
+    "historicalEmbeddedSourceJoins": [
+      {
+        "path": "packages/legacy-agent-host/native/registered-process-darwin.c",
+        "identity": {
+          "bytes": 15524,
+          "sha256": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5",
+          "gitBlob": "4f300228b8f28b870586794564ae63ccf1dee41f"
+        },
+        "fullBodyHashVerified": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/process/DarwinRegisteredProcess.ts",
+        "identity": {
+          "bytes": 8710,
+          "sha256": "8922908891a3094000703397d3374bd74d3c4ea2800723eddb1a3db4d33d907a",
+          "gitBlob": "4978aefb5c3adada81b5b962c33e48324fdce34f"
+        },
+        "fullBodyHashVerified": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts",
+        "identity": {
+          "bytes": 11502,
+          "sha256": "ccf4bd25cb828b6ea08b437337552f7a8d662dd49fb6aeabb2d7af4d9c29897f",
+          "gitBlob": "c3670e3828e2b9470a2997d29d6cad225107d8fc"
+        },
+        "fullBodyHashVerified": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/processCustody.ts",
+        "identity": {
+          "bytes": 1995,
+          "sha256": "89865559d4ed06d9f47d010f03b6dd098cb7589db8cad01baa9ad33ed972fd7b",
+          "gitBlob": "7e537486aaa681c9e11cdd517f1e48e9291c3c64"
+        },
+        "fullBodyHashVerified": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/process/registeredProcessContracts.ts",
+        "identity": {
+          "bytes": 6572,
+          "sha256": "6a8250e5f1f82ad39ac223d6f515a336cf4f26daef53a782348737d47e40c8a1",
+          "gitBlob": "83caa9c3f1a2f57eca67b329dd5e8ec7065a1f79"
+        },
+        "fullBodyHashVerified": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.ts",
+        "identity": {
+          "bytes": 17536,
+          "sha256": "4903b7fd153ac007c8922ce86be3c06d943a643dd49c56c5699f9f8c961a7be7",
+          "gitBlob": "c03bedfba9577adeb24120b5ef98cb3d82ff33b8"
+        },
+        "fullBodyHashVerified": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2CustodyReadback.ts",
+        "identity": {
+          "bytes": 1559,
+          "sha256": "481ea0e880f991f775cdc69b1fb9b58316b8ab8787e2ba13276cc508838ffe58",
+          "gitBlob": "13e42373819467ed2c472c9ddb600009765013e5"
+        },
+        "fullBodyHashVerified": true
+      }
+    ],
+    "currentSourceCommit": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "currentDecisiveSourceReads": [
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+        "commit": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "identity": {
+          "bytes": 21219,
+          "sha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+          "gitBlob": "19aca56c55a666654b04827b3c2446d2ad03ad8d"
+        },
+        "unchangedFromHistorical": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+        "commit": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "identity": {
+          "bytes": 27709,
+          "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e",
+          "gitBlob": "f1e1d1145898e201723be343fa8768d73332fcb1"
+        },
+        "unchangedFromHistorical": true
+      },
+      {
+        "path": "packages/legacy-agent-host/native/registered-process-darwin.c",
+        "commit": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "identity": {
+          "bytes": 15524,
+          "sha256": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5",
+          "gitBlob": "4f300228b8f28b870586794564ae63ccf1dee41f"
+        },
+        "unchangedFromHistorical": true
+      }
+    ],
+    "unchangedLockedRuntime": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+    "completeAppleSourceIdentities": [
+      {
+        "repository": "apple-oss-distributions/xnu",
+        "commit": "f6217f891ac0bb64f3d375211650a4c1ff8ca1ea",
+        "path": "bsd/kern/kern_proc.c",
+        "identity": {
+          "bytes": 152022,
+          "sha256": "34f745a213769ffa47b4edace6e3e158f654075def1b0fe50edf97f9bf53589d",
+          "gitBlob": "a08362b2e777ee607e226d869131efd5e164e526"
+        },
+        "url": "https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/kern/kern_proc.c"
+      },
+      {
+        "repository": "apple-oss-distributions/xnu",
+        "commit": "f6217f891ac0bb64f3d375211650a4c1ff8ca1ea",
+        "path": "osfmk/kern/cs_blobs.h",
+        "identity": {
+          "bytes": 14256,
+          "sha256": "71179676100bab2b321abd888237d4a6eda0088489f9930a77559c517d8c7c80",
+          "gitBlob": "9d36c1af4a00548fd47b1da6d95c0635326a6ff6"
+        },
+        "url": "https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/osfmk/kern/cs_blobs.h"
+      },
+      {
+        "repository": "apple-oss-distributions/Security",
+        "commit": "db15acbe6a7f257a859ad9a3bb86097bfe0679d9",
+        "path": "OSX/libsecurity_codesigning/lib/CSCommon.h",
+        "identity": {
+          "bytes": 22431,
+          "sha256": "f67ea0a42d5bb3fb9812206c421e0942ee54a002bd48a0659fee36a794cf4a4f",
+          "gitBlob": "e58b6a31731e225ed6a4f1c6a48077bdd7ed3e79"
+        },
+        "url": "https://github.com/apple-oss-distributions/Security/blob/db15acbe6a7f257a859ad9a3bb86097bfe0679d9/OSX/libsecurity_codesigning/lib/CSCommon.h"
+      },
+      {
+        "repository": "apple-oss-distributions/Security",
+        "commit": "db15acbe6a7f257a859ad9a3bb86097bfe0679d9",
+        "path": "OSX/libsecurity_codesigning/lib/SecCodePriv.h",
+        "identity": {
+          "bytes": 12358,
+          "sha256": "89b7d9eb39d402cb9297ed16b4de7a6b633500543c9eadae42ca6638e500463e",
+          "gitBlob": "3d5f36ea1d2984b737cb672d176679028c18b216"
+        },
+        "url": "https://github.com/apple-oss-distributions/Security/blob/db15acbe6a7f257a859ad9a3bb86097bfe0679d9/OSX/libsecurity_codesigning/lib/SecCodePriv.h"
+      },
+      {
+        "repository": "apple-oss-distributions/xnu",
+        "commit": "f6217f891ac0bb64f3d375211650a4c1ff8ca1ea",
+        "path": "bsd/kern/kern_cs.c",
+        "identity": {
+          "bytes": 42449,
+          "sha256": "3a75f217f695b911b997aaf995827f0a9fd22cecea1fa0b7124a85a48fe9382a",
+          "gitBlob": "c1c3929fb6505c3f1c74a4da1c565031ebc2949e"
+        },
+        "url": "https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/kern/kern_cs.c"
+      },
+      {
+        "repository": "apple-oss-distributions/xnu",
+        "commit": "f6217f891ac0bb64f3d375211650a4c1ff8ca1ea",
+        "path": "bsd/kern/kern_exec.c",
+        "identity": {
+          "bytes": 251651,
+          "sha256": "89531d33618b8361064236189212c3c96be1b32e098690b17802b6b15d932d1a",
+          "gitBlob": "47420f9f8f620233f112e87a51ed8f576caa3546"
+        },
+        "url": "https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/kern/kern_exec.c"
+      },
+      {
+        "repository": "apple-oss-distributions/Security",
+        "commit": "db15acbe6a7f257a859ad9a3bb86097bfe0679d9",
+        "path": "OSX/libsecurity_codesigning/lib/cskernel.cpp",
+        "identity": {
+          "bytes": 7750,
+          "sha256": "caa29bbc4711f2739ff6a86a68358d38ff7a5d851132fd44b91463353f0baa3b",
+          "gitBlob": "d26ff479f8c8aa4d1568ed55337c00548b34cf61"
+        },
+        "url": "https://github.com/apple-oss-distributions/Security/blob/db15acbe6a7f257a859ad9a3bb86097bfe0679d9/OSX/libsecurity_codesigning/lib/cskernel.cpp"
+      },
+      {
+        "repository": "apple-oss-distributions/Security",
+        "commit": "db15acbe6a7f257a859ad9a3bb86097bfe0679d9",
+        "path": "OSX/libsecurity_codesigning/lib/csprocess.cpp",
+        "identity": {
+          "bytes": 3305,
+          "sha256": "55e223a3b7f78305bead7b24f6f6c881c67e234faa5a53ef31107885d131b3e6",
+          "gitBlob": "0a55a65cc26d01b6aebbb422715428ca3cb7a428"
+        },
+        "url": "https://github.com/apple-oss-distributions/Security/blob/db15acbe6a7f257a859ad9a3bb86097bfe0679d9/OSX/libsecurity_codesigning/lib/csprocess.cpp"
+      },
+      {
+        "repository": "apple-oss-distributions/Security",
+        "commit": "db15acbe6a7f257a859ad9a3bb86097bfe0679d9",
+        "path": "OSX/libsecurity_codesigning/lib/Code.cpp",
+        "identity": {
+          "bytes": 9427,
+          "sha256": "934526c5c9ca668b5204963a6a3e623f23d1f87d7ff1e3f1878bd3b088b334d0",
+          "gitBlob": "da3c6b0522167f8576c11454b30fb827fbf4245b"
+        },
+        "url": "https://github.com/apple-oss-distributions/Security/blob/db15acbe6a7f257a859ad9a3bb86097bfe0679d9/OSX/libsecurity_codesigning/lib/Code.cpp"
+      },
+      {
+        "repository": "apple-oss-distributions/Security",
+        "commit": "db15acbe6a7f257a859ad9a3bb86097bfe0679d9",
+        "path": "OSX/libsecurity_codesigning/lib/SecCode.cpp",
+        "identity": {
+          "bytes": 12998,
+          "sha256": "e66a8e915c9919f0ee07b67d70d5a3a92b3cc3bb0a0ee875ec9b773b680b9854",
+          "gitBlob": "d1caf847426190f4973f710e26dde2af736761c1"
+        },
+        "url": "https://github.com/apple-oss-distributions/Security/blob/db15acbe6a7f257a859ad9a3bb86097bfe0679d9/OSX/libsecurity_codesigning/lib/SecCode.cpp"
+      }
+    ],
+    "AppleSourceVersionLimit": "The exact Git commits and complete source body hashes are pinned. These are explanatory Apple-published sources; no match to the installed kernel/Security binaries on original builds 24G830 or 24H232 is established."
+  },
+  "method": {
+    "noSettledAuditReplay": "Fetched and verified the full immutable historical report and both full original artifact reports. Rehashed all eight embedded artifact bodies and all seven source bodies in the settled report. Read the relevant original receipt cases and source/oracle paths; did not re-open or poll the original CI.",
+    "currentJoin": "Read the three decisive complete current file bodies by exact 9c9 commit and verified unchanged identities. Re-read the complete native controller and native adapter plus the complete strict P09 TypeScript test function/oracle/cleanup.",
+    "primaryResearch": "Fetched ten complete Apple source bodies at resolved immutable commits and reviewed the relevant status setter, guest dispatch, privilege, fault, exec-inheritance and enum/status regions. cskernel.cpp and csprocess.cpp were read completely. Other large Apple files were hashed completely but only the decisive functions/regions were analyzed.",
+    "webOnlyPrimaryReliance": "Only Apple Developer documentation and Apple-published source support the conclusions. Non-primary search hits were not relied on.",
+    "dataOnly": "Evaluated only the previously authorized identity helper plus pure data comparisons/bit decoding. No repository source or native code was evaluated.",
+    "readbackProtocol": "This bare report is retained and its pin sent before a separate complete self-readback. That later readback is not claimed in this body."
+  },
+  "unchangedFacts": {
+    "originalResults": {
+      "x64": {
+        "osBuild": "24G830",
+        "cases": 10,
+        "pass": 6,
+        "incomplete": 3,
+        "counterexample": 1,
+        "cleanup": true
+      },
+      "arm64": {
+        "osBuild": "24H232",
+        "cases": 10,
+        "pass": 7,
+        "incomplete": 2,
+        "counterexample": 1,
+        "cleanup": true
+      },
+      "postcheck": {
+        "cases": [
+          "adhoc-test-only:after-check",
+          "adhoc-test-only:writer-open"
+        ],
+        "bothArchitectures": true,
+        "prewriteImageMatched": true,
+        "rawMutationErrno": 0,
+        "resumed": true,
+        "markers": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "exitCode": 0,
+        "exitSignal": 0,
+        "result": "INCOMPLETE"
+      },
+      "unsignedX64": {
+        "case": "compiler-default:baseline",
+        "stage": "kernel-image-validity",
+        "mappedErrno": 13,
+        "codeSigningError": -67062,
+        "resumed": false,
+        "markers": [],
+        "interpretation": "The chosen signing witness refuses the unsigned executable. This is not a demonstrated filesystem-permission failure and cannot be repaired by quietly signing/replacing the case."
+      },
+      "limits": [
+        "Only pre-write executable-file hashes and signing information were retained. No post-write held-FD digest or mapped-page observation exists.",
+        "A markers establish that A ran, not B execution, a particular cache mechanism, or precise resident mapping bytes.",
+        "Separate signed-Bun custody and embedded-Host receipts do not qualify P09. Broader qualification remains false."
+      ]
+    },
+    "strictOracle": {
+      "sameTenCasesAndOrder": true,
+      "successfulMutationRequiredOutcome": {
+        "rawMutationErrno": 0,
+        "markerLines": [],
+        "exitCode": -1,
+        "exitSignal": "greater than zero"
+      },
+      "refusedMutationRequiredOutcome": {
+        "rawMutationErrno": "actual ETXTBSY",
+        "exitCode": 0,
+        "exactAOutput": true
+      },
+      "otherDenialsNotAccepted": [
+        "EPERM",
+        "EACCES",
+        "EBUSY",
+        "EAGAIN",
+        "EWOULDBLOCK"
+      ],
+      "forbiddenSubstitutes": [
+        "No auto-signing, compiler/signing/workflow change, case drop, skip, or A-output acceptance.",
+        "No raw-error remapping to ETXTBSY.",
+        "No last-moment path/hash/signature check advertised as continuous byte custody.",
+        "No mode-aware kill based on known test-adversary mutation result; that uses test knowledge rather than a product custody primitive.",
+        "No copy/alternate-inode execution, private path, changed writer privileges, or read-only mount presented as preserving the current original-path/writer adversary.",
+        "No increased deadline or original CI retry."
+      ],
+      "limits": {
+        "cControllerMs": 15000,
+        "enclosingMs": 100000,
+        "testTimeoutMs": 120000,
+        "controllerRecordBytes": 4096,
+        "actorOutputBytes": 8192,
+        "receiptBytes": 65536,
+        "cleanupReserveMs": 4000
+      },
+      "lifetime": [
+        "Original PID/birth/audit-token/parent/group/session bindings stay authoritative.",
+        "At most the original one resume; no replacement-process adoption.",
+        "Errors, cancellation, timeout and refusal retain and clean only original owned handles/groups.",
+        "Extra hashing uses the current subprocess mechanism and needs exact invocation/drain accounting within unchanged deadlines."
+      ]
+    },
+    "currentControlBoundary": [
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+        "ranges": [
+          "179-247",
+          "249-269",
+          "287-411"
+        ],
+        "meaning": "Audited original child is spawned suspended, original path/inode/hash is observed, adversary writes after the observation, then the original child is resumed once without a new image check."
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+        "ranges": [
+          "318-547",
+          "469-503"
+        ],
+        "meaning": "The ten-case Darwin oracle is literal. Write-success requires zero library/constructor/main markers and signal termination. Genuine ETXTBSY permits exact A and normal exit. Other errors do not qualify."
+      },
+      {
+        "path": "packages/legacy-agent-host/native/registered-process-darwin.c",
+        "ranges": [
+          "129-186",
+          "297-309"
+        ],
+        "meaning": "Current product native ABI measures/signals existing original identities. It does not acquire a continuous byte guard or own suspended launch/release."
+      }
+    ],
+    "separateUnsignedFailure": {
+      "arch": "x64",
+      "osBuild": "24G830",
+      "case": "compiler-default:baseline",
+      "stage": "kernel-image-validity",
+      "mappedErrno": 13,
+      "codeSigningError": -67062,
+      "resumed": false,
+      "markers": [],
+      "implication": "The existing dynamic signature witness rejects unsigned compiler-default code. This is separate from after-check byte custody and cannot be silently repaired by signing, skipping, replacing, or allowing a path-only witness."
+    },
+    "interpretationBoundary": "The historical A markers establish that A reached its library constructor, binary constructor and main. They do not prove B execution, the exact mapped bytes after mutation, a particular cache mechanism, or a production exploit."
+  },
+  "newBoundedFindings": [
+    {
+      "name": "The failed signed cases did not test hard/kill policy",
+      "evidence": [
+        {
+          "arch": "x64",
+          "label": "adhoc-test-only:after-check",
+          "decimal": 570425345,
+          "hex": "0x22000001",
+          "hard": false,
+          "kill": false,
+          "enforcement": false,
+          "write": 0,
+          "markers": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "exit": 0,
+          "signal": 0
+        },
+        {
+          "arch": "x64",
+          "label": "adhoc-test-only:writer-open",
+          "decimal": 570425345,
+          "hex": "0x22000001",
+          "hard": false,
+          "kill": false,
+          "enforcement": false,
+          "write": 0,
+          "markers": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "exit": 0,
+          "signal": 0
+        },
+        {
+          "arch": "arm",
+          "label": "adhoc-test-only:after-check",
+          "decimal": 570425345,
+          "hex": "0x22000001",
+          "hard": false,
+          "kill": false,
+          "enforcement": false,
+          "write": 0,
+          "markers": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "exit": 0,
+          "signal": 0
+        },
+        {
+          "arch": "arm",
+          "label": "adhoc-test-only:writer-open",
+          "decimal": 570425345,
+          "hex": "0x22000001",
+          "hard": false,
+          "kill": false,
+          "enforcement": false,
+          "write": 0,
+          "markers": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "exit": 0,
+          "signal": 0
+        }
+      ],
+      "source": "osfmk/kern/cs_blobs.h and Security CSCommon.h define HARD=0x100, KILL=0x200, ENFORCEMENT=0x1000.",
+      "result": "All four retained signed after-check/writer-open cases record 0x22000001. None has those three bits set at the recorded pre-adversary observation.",
+      "implication": "One cannot claim these receipts experimentally falsified every hard/kill configuration. Conversely, absence of the bits is not proof that setting them fixes custody."
+    },
+    {
+      "name": "A post-spawn hard/kill setter is not an unprivileged parent fix",
+      "callPath": [
+        "SecCodeSetStatus calls SecCode::status",
+        "SecCode::status delegates to its host's changeGuestStatus",
+        "ProcessCode's host is KernelCode",
+        "KernelCode maps SetHard/SetKill to CS_OPS_MARKHARD/CS_OPS_MARKKILL",
+        "ProcessCode calls csops_audittoken when an audit token exists, otherwise csops",
+        "Pinned XNU csops_internal rejects non-self, non-root setter operations with EPERM before the later MAC policy check"
+      ],
+      "sourceRegions": [
+        "SecCode.cpp:98-110",
+        "Code.cpp:123-139",
+        "cskernel.cpp:194-217",
+        "csprocess.cpp:39-57",
+        "kern_proc.c:3538-3620"
+      ],
+      "implication": "Using the Security wrapper does not supply a privilege-bypassing daemon or make a POSIX parent the kernel's signing host. The actual original environment's implementation still requires native verification; no sudo, privilege or signing change is inferred or selected.",
+      "status": "REJECTED_AS_ESTABLISHED_DEPLOYABLE_FIX"
+    },
+    {
+      "name": "Dynamic kill policy is not continuous file-write custody",
+      "evidence": [
+        "Apple Security status documentation distinguishes dynamic validity from static validity, and explicitly does not promise immediate termination for a static-validity change.",
+        "Pinned XNU MARKKILL sets the sticky bit and sends SIGKILL immediately only if CS_VALID is already absent.",
+        "Pinned XNU cs_invalid_page sends the kill on the invalid-page fault path; HARD denies invalid mapping.",
+        "Apple TN3126 describes lazy per-page verification and platform/policy distinctions.",
+        "Apple Endpoint Security invalidation documentation describes invalid-page-in or explicit MARKINVALID, with a HARD caveat."
+      ],
+      "implication": "No reviewed source connects every successful same-inode write, especially through an existing writer, atomically to zero pre-user markers and signal termination. A last status/hash/signature check followed by resume still leaves a temporal gap.",
+      "status": "NO_SUFFICIENT_PRIMITIVE_ESTABLISHED"
+    },
+    {
+      "name": "Inherited exec flags are a source-supported policy path, not a selected correction",
+      "sourceRegions": [
+        "kern_proc.c:3838-3871",
+        "kern_exec.c:1560-1583"
+      ],
+      "fact": "SET_STATUS can set an allowed subset including EXEC_SET_HARD/KILL/ENFORCEMENT only for a dynamically valid process; the exec path transfers those requested policies to a new image.",
+      "limits": [
+        "No such flag-acquisition/inheritance result is retained from the original controller/child tuple.",
+        "Self inheritance would alter launch policy and must preserve every original compiler-default/plain/baseline case, including unsigned x64; it cannot be assumed compatible.",
+        "Even verified inherited flags still require proof that the adversary's successful write triggers the strict zero-marker/signalled-exit outcome.",
+        "No private flag, privilege, compiler, signing, case, workflow or runtime modification is proposed here."
+      ],
+      "status": "UNPROVED_NATIVE_POLICY_HYPOTHESIS_NOT_A_FIX_OR_RUNNABLE_R1"
+    },
+    {
+      "name": "The public Endpoint Security event set does not close the existing-writer gap",
+      "source": "Complete Apple es_event_type_t documentation lists AUTH_OPEN/MMAP/MPROTECT/TRUNCATE and NOTIFY_WRITE; it does not list AUTH_WRITE.",
+      "inference": "A new-open authorization policy cannot by itself revoke or serialize the original already-open descriptor used by writer-open. A write notification plus a later user-space kill has no demonstrated ordering before the suspended child can be resumed and produce a marker. Denying truncate after earlier writes is also not the frozen outcome.",
+      "status": "NO_CURRENT_CONTINUOUS_GUARD_ESTABLISHED",
+      "unchangedBoundary": "No entitlement, root requirement, later-OS API or external monitoring service is introduced."
+    },
+    {
+      "name": "Kernel cache/prefault source is context, not an explanation proved by these receipts",
+      "source": "Apple Updating Mac Software describes signature-cache behavior for in-place updates; pinned XNU exec_prefault_data can fault the executable or dyld entry point before user execution.",
+      "inference": "These mechanisms are consistent with the need to distinguish backing-file bytes, resident mappings and dynamic invalidity. They do not establish why the two original architectures emitted A.",
+      "missingEvidence": "Original receipts have no post-write held-FD digest, post-write audit-bound status or mapping/fault witness.",
+      "forbiddenSubstitute": "Apple's updater recommendation to replace an inode is not used here: that would change the original same-inode writer adversary and fails this proof's scope."
+    }
+  ],
+  "preciseRemainingBlocker": {
+    "custody": "No demonstrated deployable native operation in the reviewed source acquires and retains the required same-path/same-inode byte custody before user instructions, including a writer opened before launch, and maintains it through the one original release/resume and lifetime.",
+    "ordering": "For write-success, the missing native fact is that the real guard forces signal termination before every selected sibling-library, binary-constructor or main marker can occur, without consulting the TEST mode or write result. For write-denial, it must be genuine raw ETXTBSY with the original normal-A outcome.",
+    "initialWitness": "Independently, unsigned compiler-default x64 needs a valid original-image witness under the unchanged compiler/signing case. Removing SecCodeCheckValidity or accepting only the current path/hash would not establish that witness.",
+    "nativeObservationRequired": true,
+    "impossibilityClaim": false,
+    "productionPatchReady": false
+  },
+  "discriminatingFutureProof": {
+    "selectedNow": false,
+    "implementationAuthored": false,
+    "executableControlAuthored": false,
+    "statement": "The following are evidence requirements for any separately selected concrete native candidate. They are not an instruction to rerun or modify the current fixture, and are not a new gate on the fresh CI venue.",
+    "candidateAdmission": [
+      "Identify the exact documented/native guard operation, its supported OS/arch/SDK/filesystem/policy tuple, authority requirements and raw return values.",
+      "Show acquisition against the same inode while the original writer descriptor already exists. Prove that no privilege, file replacement, changed writer authority, signing or mount-policy change is needed.",
+      "Bind the guard to original PID, audit token, birth, parent/group/session and retained executable identity before any payload or library instruction.",
+      "Specify how loss, cancellation, timeout, error and owner death prevent release and retire only the original resources without PID replacement or a second resume."
+    ],
+    "observationsThatDiscriminate": [
+      "Keep the existing expected-A/replacement-B identities; record the complete held-FD digest and inode after successful write/fsync while the original child remains stopped. A missing or unchanged digest prevents attributing the outcome to mutated backing bytes.",
+      "Record the audit-bound dynamic flags before acquisition, after acquisition and after adversary completion when the original child is still live. Keep acquisition/transition errors distinct from raw mutation errno.",
+      "Record whether the original child is already dead/stopped at the release boundary and retain raw wait status. Preserve the single original resume rule.",
+      "Retain exact marker absence/presence, exit code and signal for every case, plus original identity and cleanup evidence. Instrumentation must not add a post-check acceptance gate that substitutes for continuous guard enforcement.",
+      "If mapping/fault observations are proposed, identify how they can be collected without forcing pages, changing signing/authority or altering the adversary. Otherwise leave cache/mapping cause UNKNOWN.",
+      "Pin actual OS build, kernel version/revision, SDK/compiler, filesystem/mount and relevant policy. Current Apple source commits are not a substitute for the original installed tuple."
+    ],
+    "fullRegressionObligation": "The same ten literal cases in the same order on both Darwin architectures, including compiler-default/plain/baseline, signed controls, rename/in-place negatives and script counterexample, remain required under the original deadlines and cleanup. Passing only two isolated signed cases does not qualify P09.",
+    "decisionTable": [
+      {
+        "observation": "genuine raw ETXTBSY; original exact A output; normal exit; owned cleanup",
+        "interpretation": "Allowed refused-mutation branch, provided the same original adversary and guard/lifetime are proved."
+      },
+      {
+        "observation": "raw mutation 0; post-write same-inode bytes evidenced; zero markers; signal exit; owned cleanup",
+        "interpretation": "Required successful-mutation branch, but signal causality must come from the actual independent guard, not TEST-mode knowledge."
+      },
+      {
+        "observation": "raw mutation 0; any A or B library/constructor/main marker",
+        "interpretation": "Strict failure, even if code later dies or only original A executes."
+      },
+      {
+        "observation": "EPERM/EACCES/EBUSY/EAGAIN/EWOULDBLOCK or unobserved acquisition",
+        "interpretation": "Does not meet the frozen alternatives; no errno remapping or pass promotion."
+      },
+      {
+        "observation": "guard works only after signing/replacing/privilege/mount/deadline/case change",
+        "interpretation": "Different contract, not a correction to this strict P09 proof."
+      }
+    ],
+    "conditionalProductBoundary": [
+      {
+        "path": "packages/legacy-agent-host/native/registered-process-darwin.c",
+        "boundary": "Native original launch, retained byte guard, release/abort lifecycle, if demonstrated."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/process/DarwinRegisteredProcess.ts",
+        "boundary": "Opaque live custody resource rather than digest as lasting authority."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/process/registeredProcessContracts.ts",
+        "boundary": "Trusted launch/lifetime capability preserving original identity and stop ownership."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts",
+        "boundary": "Darwin delegates launch to resource; preserve original IO/exit/cleanup."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.ts",
+        "boundary": "Original launch facade and private input only after acquired native guard; ready/readback identity unchanged."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/processCustody.ts",
+        "boundary": "Select only separately qualified packaged implementation."
+      }
+    ],
+    "integrationLimit": "The six settled product paths remain a dependency boundary only. No ABI, file set or production implementation is selected before a concrete primitive is established; ordinary Node spawn plus later measurement cannot supply pre-user custody."
+  },
+  "freshCiHandling": {
+    "noLaunchGate": true,
+    "noNewCiRead": true,
+    "existingJobsRemainUnchanged": true,
+    "useOfFutureRootEvidence": "Root may later supply fresh exact run evidence. Review observed original cases/OS tuples truthfully. Unchanged fixtures can confirm current outcomes but cannot validate an unimplemented native guard or fill unrecorded post-write/mapping facts.",
+    "noWaiver": true,
+    "noRetryOrRerunSelected": true
+  },
+  "primaryDocumentation": [
+    {
+      "url": "https://developer.apple.com/documentation/technotes/tn3126-inside-code-signing-hashes.md",
+      "support": "Lazy per-page validation and enforcement distinctions.",
+      "readRanges": [
+        "141-185"
+      ],
+      "wordUse": "Paraphrase only; no code copied."
+    },
+    {
+      "url": "https://developer.apple.com/documentation/endpointsecurity/es_event_cs_invalidated_t.md",
+      "support": "Dynamic invalidation event sources and HARD caveat.",
+      "readRanges": [
+        "21-35"
+      ],
+      "wordUse": "Paraphrase only."
+    },
+    {
+      "url": "https://developer.apple.com/documentation/endpointsecurity/es_event_type_t.md",
+      "support": "Complete authorization/notification taxonomy, including NOTIFY_WRITE and no listed AUTH_WRITE.",
+      "readRanges": [
+        "21-456"
+      ],
+      "wordUse": "API identifiers and bounded paraphrase."
+    },
+    {
+      "url": "https://developer.apple.com/documentation/security/updating-mac-software.md",
+      "support": "Signature-cache/in-place update caveat; not a custody or same-inode guarantee.",
+      "readRanges": [
+        "11-87"
+      ],
+      "wordUse": "Bounded paraphrase only."
+    }
+  ],
+  "researchTransportNotes": [
+    "Pinned Apple GitHub web-rendered URLs returned DisabledError in the web service. The same exact-commit file bodies were successfully obtained through the Git connector and independently hashed; no source fact rests on the failed web result.",
+    "The web find helper returned no matches even for visible event identifiers. The complete Markdown event enumeration was then opened and read directly. Absence of AUTH_WRITE is based on the complete displayed enumeration, not the erroneous find result.",
+    "An earlier combined output truncated the controller tail; the entire tail and the complete P09 oracle/cleanup were subsequently displayed. No truncated wrapper is treated as a complete read."
+  ],
+  "checkCount": 26,
+  "checks": [
+    {
+      "name": "Historical source report whole identity",
+      "status": "PASS",
+      "evidence": {
+        "bytes": 125540,
+        "sha256": "59c3e362cc73580491633bb56f9fd8ebc853ec57be1f84b5bdcea43d09bdec79",
+        "gitBlob": "96c0cd4e7209a2df5ebb35c0634712581dd5cfc3"
+      }
+    },
+    {
+      "name": "Original x64 full artifact report identity",
+      "status": "PASS",
+      "evidence": {
+        "bytes": 130500,
+        "sha256": "7ceebfec788ca68ce6f93d325a87b5229f09984c7542cdb641ee485a6dd5096f",
+        "gitBlob": "47bd44b7bf25b9c54b3fb741abe084caddfafdaf"
+      }
+    },
+    {
+      "name": "Original arm64 full artifact report identity",
+      "status": "PASS",
+      "evidence": {
+        "bytes": 130480,
+        "sha256": "453bff87f588c51c745ed342794845232f0dd6669f53c0d048031f6e6139a484",
+        "gitBlob": "8c895bf8310f8890e354d61c4b7f9091bb474097"
+      }
+    },
+    {
+      "name": "All eight embedded artifact members independently hash",
+      "status": "PASS",
+      "evidence": [
+        {
+          "arch": "x64",
+          "path": "opencode-v2-embedded-inputs.json",
+          "identity": {
+            "bytes": 2370,
+            "sha256": "ae978c8426f0c4e4314df59090a2cd8615a92314b99e2262299b6ca22a5da88b",
+            "gitBlob": "32c0c83742120d83aeb53d552fd6c2b0cbb45311"
+          }
+        },
+        {
+          "arch": "x64",
+          "path": "opencode-v2-darwin-custody.json",
+          "identity": {
+            "bytes": 1450,
+            "sha256": "b3d46650496b43405a785b8b5658d6029e3eff2521d3a6bd31081fd2d76c1a31",
+            "gitBlob": "ee70650acca315c19ece91282b1fe293ce04e70a"
+          }
+        },
+        {
+          "arch": "x64",
+          "path": "opencode-v2-embedded-host.json",
+          "identity": {
+            "bytes": 95033,
+            "sha256": "a6e71a356724cdc84d34365273843fa9f10a6026190b8117252861bc905ede74",
+            "gitBlob": "b66d6df428a8a7e7733767c910e27f02ebb76b9f"
+          }
+        },
+        {
+          "arch": "x64",
+          "path": "opencode-v2-posix-exec.json",
+          "identity": {
+            "bytes": 14545,
+            "sha256": "fbe4d651e4eed6ea49fd99689e1d667e2fe286b45b05a3e2c6ce15e84b936169",
+            "gitBlob": "5bab1184ec36b1c48372e83cea04571def937646"
+          }
+        },
+        {
+          "arch": "arm",
+          "path": "opencode-v2-darwin-custody.json",
+          "identity": {
+            "bytes": 1440,
+            "sha256": "11d61f04957abcacdb022ee19d8c7121ab026d537b4ef0523926e951b589fb34",
+            "gitBlob": "81f597a1c14a1fb52738fe01af7d5921968a5719"
+          }
+        },
+        {
+          "arch": "arm",
+          "path": "opencode-v2-embedded-host.json",
+          "identity": {
+            "bytes": 94987,
+            "sha256": "1650e94a849142be78371b39485e650583cad4cf798a3180f4dc728fb3803beb",
+            "gitBlob": "dafadaf6b2da4b54c5a946f082ca7deac63c8eb4"
+          }
+        },
+        {
+          "arch": "arm",
+          "path": "opencode-v2-posix-exec.json",
+          "identity": {
+            "bytes": 14566,
+            "sha256": "6bc2b4d48b2991d95539d9cd26baeed758ee08e2a7f843119d003cfcef8861da",
+            "gitBlob": "a81868b4f7f02d1de34872324c2d590ccda943fe"
+          }
+        },
+        {
+          "arch": "arm",
+          "path": "opencode-v2-embedded-inputs.json",
+          "identity": {
+            "bytes": 2374,
+            "sha256": "8c46a882a6cea63142d3bb30b76444d93c88e0d1c6b62100cae0a4def62240bc",
+            "gitBlob": "06ae8d4fd9d144f2cef846fb07c396f258a759ca"
+          }
+        }
+      ]
+    },
+    {
+      "name": "All seven historical embedded product source bodies independently hash",
+      "status": "PASS",
+      "evidence": [
+        {
+          "path": "packages/legacy-agent-host/native/registered-process-darwin.c",
+          "identity": {
+            "bytes": 15524,
+            "sha256": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5",
+            "gitBlob": "4f300228b8f28b870586794564ae63ccf1dee41f"
+          },
+          "fullBodyHashVerified": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/process/DarwinRegisteredProcess.ts",
+          "identity": {
+            "bytes": 8710,
+            "sha256": "8922908891a3094000703397d3374bd74d3c4ea2800723eddb1a3db4d33d907a",
+            "gitBlob": "4978aefb5c3adada81b5b962c33e48324fdce34f"
+          },
+          "fullBodyHashVerified": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts",
+          "identity": {
+            "bytes": 11502,
+            "sha256": "ccf4bd25cb828b6ea08b437337552f7a8d662dd49fb6aeabb2d7af4d9c29897f",
+            "gitBlob": "c3670e3828e2b9470a2997d29d6cad225107d8fc"
+          },
+          "fullBodyHashVerified": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/processCustody.ts",
+          "identity": {
+            "bytes": 1995,
+            "sha256": "89865559d4ed06d9f47d010f03b6dd098cb7589db8cad01baa9ad33ed972fd7b",
+            "gitBlob": "7e537486aaa681c9e11cdd517f1e48e9291c3c64"
+          },
+          "fullBodyHashVerified": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/process/registeredProcessContracts.ts",
+          "identity": {
+            "bytes": 6572,
+            "sha256": "6a8250e5f1f82ad39ac223d6f515a336cf4f26daef53a782348737d47e40c8a1",
+            "gitBlob": "83caa9c3f1a2f57eca67b329dd5e8ec7065a1f79"
+          },
+          "fullBodyHashVerified": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.ts",
+          "identity": {
+            "bytes": 17536,
+            "sha256": "4903b7fd153ac007c8922ce86be3c06d943a643dd49c56c5699f9f8c961a7be7",
+            "gitBlob": "c03bedfba9577adeb24120b5ef98cb3d82ff33b8"
+          },
+          "fullBodyHashVerified": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2CustodyReadback.ts",
+          "identity": {
+            "bytes": 1559,
+            "sha256": "481ea0e880f991f775cdc69b1fb9b58316b8ab8787e2ba13276cc508838ffe58",
+            "gitBlob": "13e42373819467ed2c472c9ddb600009765013e5"
+          },
+          "fullBodyHashVerified": true
+        }
+      ]
+    },
+    {
+      "name": "Current fixture, oracle and native adapter identities match settled sources",
+      "status": "PASS",
+      "evidence": [
+        {
+          "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+          "commit": "9c9c73190840592963142d36562ea07d2b5d2d71",
+          "identity": {
+            "bytes": 21219,
+            "sha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+            "gitBlob": "19aca56c55a666654b04827b3c2446d2ad03ad8d"
+          },
+          "unchangedFromHistorical": true
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+          "commit": "9c9c73190840592963142d36562ea07d2b5d2d71",
+          "identity": {
+            "bytes": 27709,
+            "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e",
+            "gitBlob": "f1e1d1145898e201723be343fa8768d73332fcb1"
+          },
+          "unchangedFromHistorical": true
+        },
+        {
+          "path": "packages/legacy-agent-host/native/registered-process-darwin.c",
+          "commit": "9c9c73190840592963142d36562ea07d2b5d2d71",
+          "identity": {
+            "bytes": 15524,
+            "sha256": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5",
+            "gitBlob": "4f300228b8f28b870586794564ae63ccf1dee41f"
+          },
+          "unchangedFromHistorical": true
+        }
+      ]
+    },
+    {
+      "name": "Both original POSIX receipts retain ten cases in identical order",
+      "status": "PASS",
+      "evidence": [
+        {
+          "arch": "x64",
+          "labels": [
+            "compiler-default:plain",
+            "compiler-default:baseline",
+            "adhoc-test-only:plain",
+            "adhoc-test-only:baseline",
+            "adhoc-test-only:rename",
+            "adhoc-test-only:inplace",
+            "adhoc-test-only:after-check",
+            "adhoc-test-only:writer-open",
+            "script:plain",
+            "script:script-negative"
+          ]
+        },
+        {
+          "arch": "arm",
+          "labels": [
+            "compiler-default:plain",
+            "compiler-default:baseline",
+            "adhoc-test-only:plain",
+            "adhoc-test-only:baseline",
+            "adhoc-test-only:rename",
+            "adhoc-test-only:inplace",
+            "adhoc-test-only:after-check",
+            "adhoc-test-only:writer-open",
+            "script:plain",
+            "script:script-negative"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "All four signed mutation cases remain write-success/A-markers/normal-exit failures",
+      "status": "PASS",
+      "evidence": [
+        {
+          "arch": "x64",
+          "label": "adhoc-test-only:after-check",
+          "decimal": 570425345,
+          "hex": "0x22000001",
+          "hard": false,
+          "kill": false,
+          "enforcement": false,
+          "write": 0,
+          "markers": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "exit": 0,
+          "signal": 0
+        },
+        {
+          "arch": "x64",
+          "label": "adhoc-test-only:writer-open",
+          "decimal": 570425345,
+          "hex": "0x22000001",
+          "hard": false,
+          "kill": false,
+          "enforcement": false,
+          "write": 0,
+          "markers": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "exit": 0,
+          "signal": 0
+        },
+        {
+          "arch": "arm",
+          "label": "adhoc-test-only:after-check",
+          "decimal": 570425345,
+          "hex": "0x22000001",
+          "hard": false,
+          "kill": false,
+          "enforcement": false,
+          "write": 0,
+          "markers": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "exit": 0,
+          "signal": 0
+        },
+        {
+          "arch": "arm",
+          "label": "adhoc-test-only:writer-open",
+          "decimal": 570425345,
+          "hex": "0x22000001",
+          "hard": false,
+          "kill": false,
+          "enforcement": false,
+          "write": 0,
+          "markers": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "exit": 0,
+          "signal": 0
+        }
+      ]
+    },
+    {
+      "name": "Raw historical signing flags lack HARD, KILL and explicit ENFORCEMENT bits",
+      "status": "PASS",
+      "evidence": [
+        {
+          "arch": "x64",
+          "label": "adhoc-test-only:after-check",
+          "hex": "0x22000001",
+          "hard": false,
+          "kill": false,
+          "enforcement": false
+        },
+        {
+          "arch": "x64",
+          "label": "adhoc-test-only:writer-open",
+          "hex": "0x22000001",
+          "hard": false,
+          "kill": false,
+          "enforcement": false
+        },
+        {
+          "arch": "arm",
+          "label": "adhoc-test-only:after-check",
+          "hex": "0x22000001",
+          "hard": false,
+          "kill": false,
+          "enforcement": false
+        },
+        {
+          "arch": "arm",
+          "label": "adhoc-test-only:writer-open",
+          "hex": "0x22000001",
+          "hard": false,
+          "kill": false,
+          "enforcement": false
+        }
+      ]
+    },
+    {
+      "name": "Unsigned x64 witness failure remains separate",
+      "status": "PASS",
+      "evidence": {
+        "label": "compiler-default:baseline",
+        "expectedSha256": "2f8774269bc3fdc8c7d44013bd150ec31106b910298b4c85d03212ecfd750960",
+        "replacementSha256": "a4f590d15b8128697aa54862b3361f3da824eeb78aa438c62612a070c1d0ee31",
+        "stage": "kernel-image-validity",
+        "errno": 13,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": false,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 0,
+        "codeSigningError": -67062,
+        "originalPid": 15445,
+        "originalBirth": "1284646489071",
+        "originalDev": "16777220",
+        "originalIno": "12888756777",
+        "kernelDev": "0",
+        "kernelIno": "0",
+        "originalSha256": "2f8774269bc3fdc8c7d44013bd150ec31106b910298b4c85d03212ecfd750960",
+        "kernelSha256": "",
+        "exitCode": -1,
+        "exitSignal": 9,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [],
+        "outputBytes": 0,
+        "outputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "controllerInterrupted": false,
+        "result": "INCOMPLETE"
+      }
+    },
+    {
+      "name": "Strict success alternatives are unchanged",
+      "status": "PASS",
+      "evidence": {
+        "sameTenCasesAndOrder": true,
+        "successfulMutationRequiredOutcome": {
+          "rawMutationErrno": 0,
+          "markerLines": [],
+          "exitCode": -1,
+          "exitSignal": "greater than zero"
+        },
+        "refusedMutationRequiredOutcome": {
+          "rawMutationErrno": "actual ETXTBSY",
+          "exitCode": 0,
+          "exactAOutput": true
+        },
+        "otherDenialsNotAccepted": [
+          "EPERM",
+          "EACCES",
+          "EBUSY",
+          "EAGAIN",
+          "EWOULDBLOCK"
+        ],
+        "forbiddenSubstitutes": [
+          "No auto-signing, compiler/signing/workflow change, case drop, skip, or A-output acceptance.",
+          "No raw-error remapping to ETXTBSY.",
+          "No last-moment path/hash/signature check advertised as continuous byte custody.",
+          "No mode-aware kill based on known test-adversary mutation result; that uses test knowledge rather than a product custody primitive.",
+          "No copy/alternate-inode execution, private path, changed writer privileges, or read-only mount presented as preserving the current original-path/writer adversary.",
+          "No increased deadline or original CI retry."
+        ],
+        "limits": {
+          "cControllerMs": 15000,
+          "enclosingMs": 100000,
+          "testTimeoutMs": 120000,
+          "controllerRecordBytes": 4096,
+          "actorOutputBytes": 8192,
+          "receiptBytes": 65536,
+          "cleanupReserveMs": 4000
+        },
+        "lifetime": [
+          "Original PID/birth/audit-token/parent/group/session bindings stay authoritative.",
+          "At most the original one resume; no replacement-process adoption.",
+          "Errors, cancellation, timeout and refusal retain and clean only original owned handles/groups.",
+          "Extra hashing uses the current subprocess mechanism and needs exact invocation/drain accounting within unchanged deadlines."
+        ]
+      }
+    },
+    {
+      "name": "Current actor deliberately does no post-adversary recheck",
+      "status": "PASS",
+      "evidence": "posix-exec-native.c:384-394"
+    },
+    {
+      "name": "Current product adapter has no suspended-launch/retained-byte-guard export",
+      "status": "PASS",
+      "evidence": "registered-process-darwin.c:297-309"
+    },
+    {
+      "name": "Apple source references resolved to exact immutable commits",
+      "status": "PASS",
+      "evidence": {
+        "xnu": "f6217f891ac0bb64f3d375211650a4c1ff8ca1ea",
+        "Security": "db15acbe6a7f257a859ad9a3bb86097bfe0679d9",
+        "historicalKernelBinaryMatchEstablished": false
+      }
+    },
+    {
+      "name": "Ten complete Apple source bodies fetched and independently hashed",
+      "status": "PASS",
+      "evidence": [
+        {
+          "repository": "apple-oss-distributions/xnu",
+          "commit": "f6217f891ac0bb64f3d375211650a4c1ff8ca1ea",
+          "path": "bsd/kern/kern_proc.c",
+          "identity": {
+            "bytes": 152022,
+            "sha256": "34f745a213769ffa47b4edace6e3e158f654075def1b0fe50edf97f9bf53589d",
+            "gitBlob": "a08362b2e777ee607e226d869131efd5e164e526"
+          },
+          "url": "https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/kern/kern_proc.c"
+        },
+        {
+          "repository": "apple-oss-distributions/xnu",
+          "commit": "f6217f891ac0bb64f3d375211650a4c1ff8ca1ea",
+          "path": "osfmk/kern/cs_blobs.h",
+          "identity": {
+            "bytes": 14256,
+            "sha256": "71179676100bab2b321abd888237d4a6eda0088489f9930a77559c517d8c7c80",
+            "gitBlob": "9d36c1af4a00548fd47b1da6d95c0635326a6ff6"
+          },
+          "url": "https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/osfmk/kern/cs_blobs.h"
+        },
+        {
+          "repository": "apple-oss-distributions/Security",
+          "commit": "db15acbe6a7f257a859ad9a3bb86097bfe0679d9",
+          "path": "OSX/libsecurity_codesigning/lib/CSCommon.h",
+          "identity": {
+            "bytes": 22431,
+            "sha256": "f67ea0a42d5bb3fb9812206c421e0942ee54a002bd48a0659fee36a794cf4a4f",
+            "gitBlob": "e58b6a31731e225ed6a4f1c6a48077bdd7ed3e79"
+          },
+          "url": "https://github.com/apple-oss-distributions/Security/blob/db15acbe6a7f257a859ad9a3bb86097bfe0679d9/OSX/libsecurity_codesigning/lib/CSCommon.h"
+        },
+        {
+          "repository": "apple-oss-distributions/Security",
+          "commit": "db15acbe6a7f257a859ad9a3bb86097bfe0679d9",
+          "path": "OSX/libsecurity_codesigning/lib/SecCodePriv.h",
+          "identity": {
+            "bytes": 12358,
+            "sha256": "89b7d9eb39d402cb9297ed16b4de7a6b633500543c9eadae42ca6638e500463e",
+            "gitBlob": "3d5f36ea1d2984b737cb672d176679028c18b216"
+          },
+          "url": "https://github.com/apple-oss-distributions/Security/blob/db15acbe6a7f257a859ad9a3bb86097bfe0679d9/OSX/libsecurity_codesigning/lib/SecCodePriv.h"
+        },
+        {
+          "repository": "apple-oss-distributions/xnu",
+          "commit": "f6217f891ac0bb64f3d375211650a4c1ff8ca1ea",
+          "path": "bsd/kern/kern_cs.c",
+          "identity": {
+            "bytes": 42449,
+            "sha256": "3a75f217f695b911b997aaf995827f0a9fd22cecea1fa0b7124a85a48fe9382a",
+            "gitBlob": "c1c3929fb6505c3f1c74a4da1c565031ebc2949e"
+          },
+          "url": "https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/kern/kern_cs.c"
+        },
+        {
+          "repository": "apple-oss-distributions/xnu",
+          "commit": "f6217f891ac0bb64f3d375211650a4c1ff8ca1ea",
+          "path": "bsd/kern/kern_exec.c",
+          "identity": {
+            "bytes": 251651,
+            "sha256": "89531d33618b8361064236189212c3c96be1b32e098690b17802b6b15d932d1a",
+            "gitBlob": "47420f9f8f620233f112e87a51ed8f576caa3546"
+          },
+          "url": "https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/kern/kern_exec.c"
+        },
+        {
+          "repository": "apple-oss-distributions/Security",
+          "commit": "db15acbe6a7f257a859ad9a3bb86097bfe0679d9",
+          "path": "OSX/libsecurity_codesigning/lib/cskernel.cpp",
+          "identity": {
+            "bytes": 7750,
+            "sha256": "caa29bbc4711f2739ff6a86a68358d38ff7a5d851132fd44b91463353f0baa3b",
+            "gitBlob": "d26ff479f8c8aa4d1568ed55337c00548b34cf61"
+          },
+          "url": "https://github.com/apple-oss-distributions/Security/blob/db15acbe6a7f257a859ad9a3bb86097bfe0679d9/OSX/libsecurity_codesigning/lib/cskernel.cpp"
+        },
+        {
+          "repository": "apple-oss-distributions/Security",
+          "commit": "db15acbe6a7f257a859ad9a3bb86097bfe0679d9",
+          "path": "OSX/libsecurity_codesigning/lib/csprocess.cpp",
+          "identity": {
+            "bytes": 3305,
+            "sha256": "55e223a3b7f78305bead7b24f6f6c881c67e234faa5a53ef31107885d131b3e6",
+            "gitBlob": "0a55a65cc26d01b6aebbb422715428ca3cb7a428"
+          },
+          "url": "https://github.com/apple-oss-distributions/Security/blob/db15acbe6a7f257a859ad9a3bb86097bfe0679d9/OSX/libsecurity_codesigning/lib/csprocess.cpp"
+        },
+        {
+          "repository": "apple-oss-distributions/Security",
+          "commit": "db15acbe6a7f257a859ad9a3bb86097bfe0679d9",
+          "path": "OSX/libsecurity_codesigning/lib/Code.cpp",
+          "identity": {
+            "bytes": 9427,
+            "sha256": "934526c5c9ca668b5204963a6a3e623f23d1f87d7ff1e3f1878bd3b088b334d0",
+            "gitBlob": "da3c6b0522167f8576c11454b30fb827fbf4245b"
+          },
+          "url": "https://github.com/apple-oss-distributions/Security/blob/db15acbe6a7f257a859ad9a3bb86097bfe0679d9/OSX/libsecurity_codesigning/lib/Code.cpp"
+        },
+        {
+          "repository": "apple-oss-distributions/Security",
+          "commit": "db15acbe6a7f257a859ad9a3bb86097bfe0679d9",
+          "path": "OSX/libsecurity_codesigning/lib/SecCode.cpp",
+          "identity": {
+            "bytes": 12998,
+            "sha256": "e66a8e915c9919f0ee07b67d70d5a3a92b3cc3bb0a0ee875ec9b773b680b9854",
+            "gitBlob": "d1caf847426190f4973f710e26dde2af736761c1"
+          },
+          "url": "https://github.com/apple-oss-distributions/Security/blob/db15acbe6a7f257a859ad9a3bb86097bfe0679d9/OSX/libsecurity_codesigning/lib/SecCode.cpp"
+        }
+      ]
+    },
+    {
+      "name": "Security status setter reaches kernel csops without a privilege-bypassing service",
+      "status": "PASS",
+      "evidence": "SecCode.cpp -> Code.cpp -> cskernel.cpp -> csprocess.cpp -> csops_audittoken/csops"
+    },
+    {
+      "name": "Pinned XNU cross-process MARKHARD/MARKKILL/SET_STATUS require root before policy checks",
+      "status": "PASS",
+      "evidence": "kern_proc.c:3538-3620"
+    },
+    {
+      "name": "Pinned XNU MARKKILL is conditional dynamic invalidity enforcement",
+      "status": "PASS",
+      "evidence": "kern_proc.c:3676-3698"
+    },
+    {
+      "name": "Pinned XNU SET_STATUS requires valid state and permits only selected sticky flags",
+      "status": "PASS",
+      "evidence": "kern_proc.c:3838-3871"
+    },
+    {
+      "name": "Pinned XNU invalid-page kill is a fault-path operation",
+      "status": "PASS",
+      "evidence": "kern_cs.c:248-338"
+    },
+    {
+      "name": "Apple Security distinguishes static-file invalidity from immediate kill",
+      "status": "PASS",
+      "evidence": "CSCommon.h:301-354"
+    },
+    {
+      "name": "Inherited exec flags exist but do not by themselves prove original-case compatibility",
+      "status": "PASS",
+      "evidence": "kern_exec.c:1560-1583"
+    },
+    {
+      "name": "Current published XNU writer-count ETXTBSY guard remains compiled out",
+      "status": "PASS",
+      "evidence": "kern_exec.c:6788-6797"
+    },
+    {
+      "name": "Endpoint Security documents write notification, not an AUTH_WRITE hook",
+      "status": "PASS",
+      "evidence": "Apple es_event_type_t documentation complete authorization and notification lists"
+    },
+    {
+      "name": "Original deadlines, raw errno and cleanup constraints preserved",
+      "status": "PASS",
+      "evidence": {
+        "cControllerMs": 15000,
+        "enclosingMs": 100000,
+        "testTimeoutMs": 120000,
+        "controllerRecordBytes": 4096,
+        "actorOutputBytes": 8192,
+        "receiptBytes": 65536,
+        "cleanupReserveMs": 4000
+      }
+    },
+    {
+      "name": "No source, control, runtime, CI, ref or PR action performed",
+      "status": "PASS",
+      "evidence": {
+        "GitReads": true,
+        "primaryDocsResearch": true,
+        "pureDataProcessing": true,
+        "bareAdvisoryOnly": true
+      }
+    }
+  ],
+  "failedIntegrityChecks": [],
+  "remainingNativeProofObligations": [
+    "Continuous same-inode custody against pre-opened writer",
+    "Atomic guard/release-to-no-marker ordering",
+    "Unchanged unsigned x64 initial-image witness",
+    "Actual original tuple/support/authority evidence"
+  ],
+  "conclusion": "No valid source-only production correction is established. The absent hard/kill bits are a concrete diagnostic distinction, but the complete Apple setter path, privilege guard and dynamic-validity semantics prevent presenting those flags as continuous executable-byte custody. Keep strict P09 unqualified; require an actual compatible native guard and discriminating observations before selecting a product patch. This advisory does not block the independently selected fresh CI venue."
+}

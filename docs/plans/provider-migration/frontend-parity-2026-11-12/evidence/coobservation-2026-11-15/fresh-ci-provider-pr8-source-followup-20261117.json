@@ -1,0 +1,473 @@
+{
+  "schema": "c714.extracted-provider-pr8-current-adoption-followup.v1",
+  "schemaVersion": 1,
+  "authorAgent": "/root/producer_r2_guard",
+  "repository": "777genius/agent-teams-ai",
+  "preparedAtUtc": "2026-11-17 03:28:44 UTC",
+  "disposition": "NO_NEW_PR8_SOURCE_INCREMENT_ADOPTION_BOUNDARIES_UNCHANGED",
+  "scope": {
+    "requested": "One current source metadata read for extracted-provider PR8; inspect only any increment from accepted 8d471b51; map concrete compatibility/adoption dependencies with frozen APP9c9 and independently reviewed latest APPPR1192.",
+    "readOnly": true,
+    "rootSoleSourceRuntimeRefPrCiExecutor": true,
+    "actions": [
+      "One GET of provider PR8 source metadata.",
+      "Fetch/re-hash accepted retained audit literal; read only existing source conclusions, test census and adoption/observer limitations.",
+      "Reuse exact frozen current Host package source already read in Windows investigation.",
+      "Read frozen APP root dependency projection and known c930 receipt path existence.",
+      "Fetch/read exact latest APP Host package and selected c930 source receipt by immutable commit.",
+      "Pure in-memory data parsing/hash/comparison; retain this bare advisory."
+    ],
+    "notPerformed": [
+      "No shell/runtime/provider/version/status probe.",
+      "No CI polling, status lookup, dispatch, rerun or workflow action.",
+      "No source, control, runner, workflow, test, ref or PR mutations.",
+      "No archive unpacking, install, build, package release, native execution or adoption.",
+      "No repetition of unchanged 622,743-byte prior semantic audit.",
+      "No modification of selected CI snapshots or new gates."
+    ]
+  },
+  "providerMetadata": {
+    "endpoint": "https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls/8",
+    "readCount": 1,
+    "readPurpose": "Source head/state only; incidental mergeability/status URL fields not used as CI evidence.",
+    "identity": {
+      "bytes": 20112,
+      "sha256": "11fd7496d70e59106b7f327ac9ca329eb3a82cefd5b48cd3fbd71f519fa7c776",
+      "gitBlob": "726a23d018458d61313d2e718e57e8be94ae7a07"
+    },
+    "rawBody": "{\"url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls/8\",\"id\":5284838994,\"node_id\":\"PR_kwDOVVn5tM8AAAABOwA-Ug\",\"html_url\":\"https://github.com/agent-teams-ai/old-provider-implementations/pull/8\",\"diff_url\":\"https://github.com/agent-teams-ai/old-provider-implementations/pull/8.diff\",\"patch_url\":\"https://github.com/agent-teams-ai/old-provider-implementations/pull/8.patch\",\"issue_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/8\",\"commits_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls/8/commits\",\"review_comments_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls/8/comments\",\"review_comment_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls/comments{/number}\",\"comments_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/8/comments\",\"statuses_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/statuses/8d471b51dbb3ae9aeaff4a261f98bf4ef2073a8b\",\"number\":8,\"state\":\"open\",\"locked\":false,\"title\":\"feat(codex): expose native account login for existing frontend workflows\",\"user\":{\"login\":\"777genius\",\"id\":13103045,\"node_id\":\"MDQ6VXNlcjEzMTAzMDQ1\",\"avatar_url\":\"https://avatars.githubusercontent.com/u/13103045?v=4\",\"gravatar_id\":\"\",\"url\":\"https://api.github.com/users/777genius\",\"html_url\":\"https://github.com/777genius\",\"followers_url\":\"https://api.github.com/users/777genius/followers\",\"following_url\":\"https://api.github.com/users/777genius/following{/other_user}\",\"gists_url\":\"https://api.github.com/users/777genius/gists{/gist_id}\",\"starred_url\":\"https://api.github.com/users/777genius/starred{/owner}{/repo}\",\"subscriptions_url\":\"https://api.github.com/users/777genius/subscriptions\",\"organizations_url\":\"https://api.github.com/users/777genius/orgs\",\"repos_url\":\"https://api.github.com/users/777genius/repos\",\"events_url\":\"https://api.github.com/users/777genius/events{/privacy}\",\"received_events_url\":\"https://api.github.com/users/777genius/received_events\",\"type\":\"User\",\"user_view_type\":\"public\",\"site_admin\":false},\"body\":\"## Why\\nThe existing frontend offers browser and device-code Codex login. The extracted app-server client currently exposes account reads/refresh/logout but cannot drive those login workflows through Host custody.\\n\\n## Changes\\nAdd finite typed account/login/start, account/login/cancel and private completion observation. Preserve native login IDs, unknown acceptance and no replay. The consumer keeps browser presentation, early-ID correlation, process custody, credential ownership and account readback. Session SPI and conversation event delivery remain compatible.\\n\\n## Validation\\nNode 24.21.0 / pnpm 11.18.0: pnpm check passed (build, typecheck, 509 source tests and both packed consumers). The subprocess protocol suite covers 7 login cases. Node 26.11.1 / pnpm 11.18.0 also passed the complete check (509 source tests and both packed consumers). The retained packed-consumer artifact has SHA-256 `691a7a62cdd5a92e2edb120f2c409790c9ca16215495cdf9daa099b3b8748bd9`; the Session SPI archive is byte-identical to the frontend's current pin. This is protocol evidence, not vendor authentication or Desktop UI acceptance.\\n\\nFrontend integration: https://github.com/777genius/agent-teams-ai/pull/1186\\nPlan: docs/plans/provider-migration/frontend-parity-2026-11-12/01-codex-login.md in that repository.\\n\\nNo package/release publication or default-branch merge.\",\"labels\":[],\"milestone\":null,\"active_lock_reason\":null,\"created_at\":\"2026-11-12T20:39:58Z\",\"updated_at\":\"2026-11-16T21:32:07Z\",\"closed_at\":null,\"merged_at\":null,\"merge_commit_sha\":\"e4a95f61b6582807285f19dc2a9c71f95ea324de\",\"assignee\":null,\"assignees\":[],\"requested_reviewers\":[],\"requested_teams\":[],\"head\":{\"label\":\"agent-teams-ai:feat/frontend-parity-20261112\",\"ref\":\"feat/frontend-parity-20261112\",\"repo\":{\"id\":1431959988,\"node_id\":\"R_kgDOVVn5tA\",\"name\":\"old-provider-implementations\",\"full_name\":\"agent-teams-ai/old-provider-implementations\",\"owner\":{\"login\":\"agent-teams-ai\",\"id\":280712041,\"node_id\":\"O_kgDOELtTaQ\",\"avatar_url\":\"https://avatars.githubusercontent.com/u/280712041?v=4\",\"gravatar_id\":\"\",\"url\":\"https://api.github.com/users/agent-teams-ai\",\"html_url\":\"https://github.com/agent-teams-ai\",\"followers_url\":\"https://api.github.com/users/agent-teams-ai/followers\",\"following_url\":\"https://api.github.com/users/agent-teams-ai/following{/other_user}\",\"gists_url\":\"https://api.github.com/users/agent-teams-ai/gists{/gist_id}\",\"starred_url\":\"https://api.github.com/users/agent-teams-ai/starred{/owner}{/repo}\",\"subscriptions_url\":\"https://api.github.com/users/agent-teams-ai/subscriptions\",\"organizations_url\":\"https://api.github.com/users/agent-teams-ai/orgs\",\"repos_url\":\"https://api.github.com/users/agent-teams-ai/repos\",\"events_url\":\"https://api.github.com/users/agent-teams-ai/events{/privacy}\",\"received_events_url\":\"https://api.github.com/users/agent-teams-ai/received_events\",\"type\":\"Organization\",\"user_view_type\":\"public\",\"site_admin\":false},\"private\":false,\"fork\":false,\"archived\":false,\"disabled\":false,\"description\":\"Standalone legacy Claude, Codex and OpenCode provider implementations with an engine-independent Session SPI\",\"homepage\":null,\"language\":\"TypeScript\",\"visibility\":\"public\",\"is_template\":false,\"topics\":[],\"forks_count\":0,\"forks\":0,\"stargazers_count\":0,\"watchers_count\":0,\"watchers\":0,\"open_issues_count\":3,\"open_issues\":3,\"size\":1216,\"default_branch\":\"bootstrap\",\"has_issues\":true,\"has_projects\":true,\"has_wiki\":true,\"has_pages\":false,\"has_downloads\":false,\"has_discussions\":false,\"has_pull_requests\":true,\"pushed_at\":\"2026-11-16T21:32:06Z\",\"created_at\":\"2026-10-24T08:08:26Z\",\"updated_at\":\"2026-11-12T04:23:43Z\",\"allow_forking\":true,\"web_commit_signoff_required\":false,\"pull_request_creation_policy\":\"all\",\"license\":{\"key\":\"apache-2.0\",\"name\":\"Apache License 2.0\",\"url\":\"https://api.github.com/licenses/apache-2.0\",\"spdx_id\":\"Apache-2.0\",\"node_id\":\"MDc6TGljZW5zZTI=\"},\"url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations\",\"html_url\":\"https://github.com/agent-teams-ai/old-provider-implementations\",\"archive_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/{archive_format}{/ref}\",\"assignees_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/assignees{/user}\",\"blobs_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs{/sha}\",\"branches_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/branches{/branch}\",\"collaborators_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/collaborators{/collaborator}\",\"comments_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/comments{/number}\",\"commits_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/commits{/sha}\",\"compare_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/compare/{base}...{head}\",\"contents_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/contents/{+path}\",\"contributors_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/contributors\",\"deployments_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/deployments\",\"downloads_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/downloads\",\"events_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/events\",\"forks_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/forks\",\"git_commits_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/commits{/sha}\",\"git_refs_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/refs{/sha}\",\"git_tags_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/tags{/sha}\",\"git_url\":\"git://github.com/agent-teams-ai/old-provider-implementations.git\",\"issue_comment_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/comments{/number}\",\"issue_events_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/events{/number}\",\"issues_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues{/number}\",\"keys_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/keys{/key_id}\",\"labels_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/labels{/name}\",\"languages_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/languages\",\"merges_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/merges\",\"milestones_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/milestones{/number}\",\"notifications_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/notifications{?since,all,participating}\",\"pulls_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls{/number}\",\"releases_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/releases{/id}\",\"ssh_url\":\"git@github.com:agent-teams-ai/old-provider-implementations.git\",\"stargazers_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/stargazers\",\"statuses_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/statuses/{sha}\",\"subscribers_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/subscribers\",\"subscription_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/subscription\",\"tags_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/tags\",\"teams_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/teams\",\"trees_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees{/sha}\",\"clone_url\":\"https://github.com/agent-teams-ai/old-provider-implementations.git\",\"mirror_url\":null,\"hooks_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/hooks\",\"svn_url\":\"https://github.com/agent-teams-ai/old-provider-implementations\"},\"sha\":\"8d471b51dbb3ae9aeaff4a261f98bf4ef2073a8b\",\"user\":{\"login\":\"agent-teams-ai\",\"id\":280712041,\"node_id\":\"O_kgDOELtTaQ\",\"avatar_url\":\"https://avatars.githubusercontent.com/u/280712041?v=4\",\"gravatar_id\":\"\",\"url\":\"https://api.github.com/users/agent-teams-ai\",\"html_url\":\"https://github.com/agent-teams-ai\",\"followers_url\":\"https://api.github.com/users/agent-teams-ai/followers\",\"following_url\":\"https://api.github.com/users/agent-teams-ai/following{/other_user}\",\"gists_url\":\"https://api.github.com/users/agent-teams-ai/gists{/gist_id}\",\"starred_url\":\"https://api.github.com/users/agent-teams-ai/starred{/owner}{/repo}\",\"subscriptions_url\":\"https://api.github.com/users/agent-teams-ai/subscriptions\",\"organizations_url\":\"https://api.github.com/users/agent-teams-ai/orgs\",\"repos_url\":\"https://api.github.com/users/agent-teams-ai/repos\",\"events_url\":\"https://api.github.com/users/agent-teams-ai/events{/privacy}\",\"received_events_url\":\"https://api.github.com/users/agent-teams-ai/received_events\",\"type\":\"Organization\",\"user_view_type\":\"public\",\"site_admin\":false}},\"base\":{\"label\":\"agent-teams-ai:bootstrap\",\"ref\":\"bootstrap\",\"repo\":{\"id\":1431959988,\"node_id\":\"R_kgDOVVn5tA\",\"name\":\"old-provider-implementations\",\"full_name\":\"agent-teams-ai/old-provider-implementations\",\"owner\":{\"login\":\"agent-teams-ai\",\"id\":280712041,\"node_id\":\"O_kgDOELtTaQ\",\"avatar_url\":\"https://avatars.githubusercontent.com/u/280712041?v=4\",\"gravatar_id\":\"\",\"url\":\"https://api.github.com/users/agent-teams-ai\",\"html_url\":\"https://github.com/agent-teams-ai\",\"followers_url\":\"https://api.github.com/users/agent-teams-ai/followers\",\"following_url\":\"https://api.github.com/users/agent-teams-ai/following{/other_user}\",\"gists_url\":\"https://api.github.com/users/agent-teams-ai/gists{/gist_id}\",\"starred_url\":\"https://api.github.com/users/agent-teams-ai/starred{/owner}{/repo}\",\"subscriptions_url\":\"https://api.github.com/users/agent-teams-ai/subscriptions\",\"organizations_url\":\"https://api.github.com/users/agent-teams-ai/orgs\",\"repos_url\":\"https://api.github.com/users/agent-teams-ai/repos\",\"events_url\":\"https://api.github.com/users/agent-teams-ai/events{/privacy}\",\"received_events_url\":\"https://api.github.com/users/agent-teams-ai/received_events\",\"type\":\"Organization\",\"user_view_type\":\"public\",\"site_admin\":false},\"private\":false,\"fork\":false,\"archived\":false,\"disabled\":false,\"description\":\"Standalone legacy Claude, Codex and OpenCode provider implementations with an engine-independent Session SPI\",\"homepage\":null,\"language\":\"TypeScript\",\"visibility\":\"public\",\"is_template\":false,\"topics\":[],\"forks_count\":0,\"forks\":0,\"stargazers_count\":0,\"watchers_count\":0,\"watchers\":0,\"open_issues_count\":3,\"open_issues\":3,\"size\":1216,\"default_branch\":\"bootstrap\",\"has_issues\":true,\"has_projects\":true,\"has_wiki\":true,\"has_pages\":false,\"has_downloads\":false,\"has_discussions\":false,\"has_pull_requests\":true,\"pushed_at\":\"2026-11-16T21:32:06Z\",\"created_at\":\"2026-10-24T08:08:26Z\",\"updated_at\":\"2026-11-12T04:23:43Z\",\"allow_forking\":true,\"web_commit_signoff_required\":false,\"pull_request_creation_policy\":\"all\",\"license\":{\"key\":\"apache-2.0\",\"name\":\"Apache License 2.0\",\"url\":\"https://api.github.com/licenses/apache-2.0\",\"spdx_id\":\"Apache-2.0\",\"node_id\":\"MDc6TGljZW5zZTI=\"},\"url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations\",\"html_url\":\"https://github.com/agent-teams-ai/old-provider-implementations\",\"archive_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/{archive_format}{/ref}\",\"assignees_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/assignees{/user}\",\"blobs_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/blobs{/sha}\",\"branches_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/branches{/branch}\",\"collaborators_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/collaborators{/collaborator}\",\"comments_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/comments{/number}\",\"commits_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/commits{/sha}\",\"compare_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/compare/{base}...{head}\",\"contents_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/contents/{+path}\",\"contributors_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/contributors\",\"deployments_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/deployments\",\"downloads_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/downloads\",\"events_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/events\",\"forks_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/forks\",\"git_commits_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/commits{/sha}\",\"git_refs_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/refs{/sha}\",\"git_tags_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/tags{/sha}\",\"git_url\":\"git://github.com/agent-teams-ai/old-provider-implementations.git\",\"issue_comment_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/comments{/number}\",\"issue_events_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/events{/number}\",\"issues_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues{/number}\",\"keys_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/keys{/key_id}\",\"labels_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/labels{/name}\",\"languages_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/languages\",\"merges_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/merges\",\"milestones_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/milestones{/number}\",\"notifications_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/notifications{?since,all,participating}\",\"pulls_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls{/number}\",\"releases_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/releases{/id}\",\"ssh_url\":\"git@github.com:agent-teams-ai/old-provider-implementations.git\",\"stargazers_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/stargazers\",\"statuses_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/statuses/{sha}\",\"subscribers_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/subscribers\",\"subscription_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/subscription\",\"tags_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/tags\",\"teams_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/teams\",\"trees_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/git/trees{/sha}\",\"clone_url\":\"https://github.com/agent-teams-ai/old-provider-implementations.git\",\"mirror_url\":null,\"hooks_url\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/hooks\",\"svn_url\":\"https://github.com/agent-teams-ai/old-provider-implementations\"},\"sha\":\"d58500bc983e897506e23d7b0bc8da1209864edd\",\"user\":{\"login\":\"agent-teams-ai\",\"id\":280712041,\"node_id\":\"O_kgDOELtTaQ\",\"avatar_url\":\"https://avatars.githubusercontent.com/u/280712041?v=4\",\"gravatar_id\":\"\",\"url\":\"https://api.github.com/users/agent-teams-ai\",\"html_url\":\"https://github.com/agent-teams-ai\",\"followers_url\":\"https://api.github.com/users/agent-teams-ai/followers\",\"following_url\":\"https://api.github.com/users/agent-teams-ai/following{/other_user}\",\"gists_url\":\"https://api.github.com/users/agent-teams-ai/gists{/gist_id}\",\"starred_url\":\"https://api.github.com/users/agent-teams-ai/starred{/owner}{/repo}\",\"subscriptions_url\":\"https://api.github.com/users/agent-teams-ai/subscriptions\",\"organizations_url\":\"https://api.github.com/users/agent-teams-ai/orgs\",\"repos_url\":\"https://api.github.com/users/agent-teams-ai/repos\",\"events_url\":\"https://api.github.com/users/agent-teams-ai/events{/privacy}\",\"received_events_url\":\"https://api.github.com/users/agent-teams-ai/received_events\",\"type\":\"Organization\",\"user_view_type\":\"public\",\"site_admin\":false}},\"_links\":{\"comments\":{\"href\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/8/comments\"},\"commits\":{\"href\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls/8/commits\"},\"statuses\":{\"href\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/statuses/8d471b51dbb3ae9aeaff4a261f98bf4ef2073a8b\"},\"html\":{\"href\":\"https://github.com/agent-teams-ai/old-provider-implementations/pull/8\"},\"issue\":{\"href\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/issues/8\"},\"review_comments\":{\"href\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls/8/comments\"},\"review_comment\":{\"href\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls/comments{/number}\"},\"self\":{\"href\":\"https://api.github.com/repos/agent-teams-ai/old-provider-implementations/pulls/8\"}},\"author_association\":\"MEMBER\",\"auto_merge\":null,\"draft\":true,\"merged\":false,\"mergeable\":true,\"rebaseable\":false,\"mergeable_state\":\"unstable\",\"merged_by\":null,\"comments\":0,\"review_comments\":0,\"maintainer_can_modify\":false,\"commits\":75,\"additions\":6040,\"deletions\":166,\"changed_files\":96}",
+    "selected": {
+      "head": "8d471b51dbb3ae9aeaff4a261f98bf4ef2073a8b",
+      "base": "d58500bc983e897506e23d7b0bc8da1209864edd",
+      "state": "open",
+      "draft": true,
+      "merged": false,
+      "updatedAt": "2026-11-16T21:32:07Z",
+      "commits": 75,
+      "changedFiles": 96
+    },
+    "sameAcceptedHead": true,
+    "newIncrement": null,
+    "noCompareRequestNeeded": "Exact immutable accepted head equals the observed head. No changed-source or tree re-audit was performed.",
+    "prBodyValidationQualification": "Historical validation prose in the PR description is not a new execution or acceptance result for this follow-up."
+  },
+  "acceptedAudit": {
+    "repository": "777genius/agent-teams-ai",
+    "identity": {
+      "bytes": 622743,
+      "sha256": "c42a392f73cce6658fd6e564c0502b084ff76dd69363943128258a2293946bff",
+      "gitBlob": "5ffc7e19909d5374a6b7a1f11318e026fedcaebd"
+    },
+    "literalFullyFetchedAndRehashed": true,
+    "freshReadCoverage": "Selected authority, basis, immutable range, semantic assessment, test census, outstanding boundaries and conclusion. The prior full audit is reused by its exact identity; completeTrees/completeBodies are not semantically re-audited here.",
+    "verdict": "NO_CONCRETE_SOURCE_BLOCKER_WITH_EXPLICIT_DIAGNOSTIC_LIMITS",
+    "blockers": [],
+    "before": {
+      "commit": "c930d3c8b9a213762528d6e28c9ed0172ab1fa27",
+      "tree": "a9ce51413c87bc65b54fe07e45a1dc13b2b4c63a"
+    },
+    "after": {
+      "commit": "8d471b51dbb3ae9aeaff4a261f98bf4ef2073a8b",
+      "tree": "af01fafc8790cc994bc4e595db6058a124df84be"
+    },
+    "selectedSourceConclusions": [
+      {
+        "id": "read-original-capture",
+        "verdict": "SOURCE_CONFIRMED",
+        "finding": "The five original fields stage/reason/elapsedMs/deadlineExpired/aborted and their first capture point remain byte-identical. The publication builds a new frozen six-field scalar record; the original failure record is not mutated.",
+        "proof": [
+          {
+            "blob": "cd75c4ecc97a365e9afd47d5d574058c88735a02",
+            "lines": "29–43, 45–50, 143–159"
+          },
+          {
+            "inverse": {
+              "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.ts",
+              "added": 5,
+              "removed": 3,
+              "inverseIdentity": {
+                "bytes": 16708,
+                "sha256": "4fc5b7050b224c55070d81cc3f5eb0d355226bd5b20f4a8aabbf395c9a4f1a9e",
+                "gitBlob": "c074fa2c2219eab448e1d1276dbab75f2d9ade2e"
+              },
+              "allNonDeltaBytesPreserved": true
+            }
+          }
+        ]
+      },
+      {
+        "id": "read-error-identity",
+        "verdict": "SOURCE_CONFIRMED",
+        "finding": "The outer catch still aborts and throws the same actual error object. No additional rejection replacement or cleanup promotion is introduced. Existing raw injected-error translation remains unchanged.",
+        "proof": [
+          {
+            "blob": "cd75c4ecc97a365e9afd47d5d574058c88735a02",
+            "lines": "227–245, 294–299"
+          },
+          {
+            "blob": "776dd3afbf0e0ddc6156e58e35bff8ee3ee105f9",
+            "lines": "482–501, 800–833"
+          }
+        ]
+      },
+      {
+        "id": "read-first-final-separation",
+        "verdict": "SOURCE_CONFIRMED",
+        "finding": "The first after-session invalid_native_read_response remains the first diagnostic reason; an unknown-cleanup sibling can independently select finalReason native_read_cleanup_unknown. The settled-rejection branch retains the first Error identity.",
+        "proof": [
+          {
+            "blob": "cd75c4ecc97a365e9afd47d5d574058c88735a02",
+            "lines": "277–285"
+          },
+          {
+            "blob": "776dd3afbf0e0ddc6156e58e35bff8ee3ee105f9",
+            "lines": "453–503"
+          }
+        ]
+      },
+      {
+        "id": "read-deadlines",
+        "verdict": "SOURCE_CONFIRMED",
+        "finding": "No additional Date.now, timer, fetch, read, await, abort or cleanup call is added by this delta. The original single 30000 ms read-cut deadline and remaining-time arguments are unchanged, as are the two existing 1000 ms cleanup caps. This is not a claim that cleanup adds no time outside the read budget, or that synchronous observers have a universal latency bound.",
+        "proof": [
+          {
+            "blob": "cd75c4ecc97a365e9afd47d5d574058c88735a02",
+            "lines": "24–26, 75, 95–108, 143, 174–184, 192–200"
+          },
+          {
+            "blob": "86c04808f56a21ecf67d7ae9582e360233f49bde"
+          }
+        ]
+      },
+      {
+        "id": "close-cached-promise",
+        "verdict": "SOURCE_CONFIRMED",
+        "finding": "The same close() cached Promise is returned before/after completion. The change adds no second close operation, confirmation, replay or diagnostic emission on later calls.",
+        "proof": [
+          {
+            "blob": "0e0cef1f5fa11362dda138ed4b5e71a826cce349",
+            "lines": "112–139"
+          },
+          {
+            "blob": "d7b1f0e384e4ad875d7c15b703b743e03fb201b3",
+            "lines": "333–338, 426–430"
+          }
+        ]
+      },
+      {
+        "id": "close-closed-correlation-record",
+        "verdict": "SOURCE_CONFIRMED",
+        "finding": "The event has exactly stage, outcome, trustedBinding. Stage has 3 local literals; outcome has 2 literals; binding must be a primitive lowercase 64-hex own data value and engine must be own data opencode-v2. The binding is a correlation label only; no process or cancellation authority is granted.",
+        "proof": [
+          {
+            "blob": "0e0cef1f5fa11362dda138ed4b5e71a826cce349",
+            "lines": "116–127"
+          },
+          {
+            "blob": "d7b1f0e384e4ad875d7c15b703b743e03fb201b3",
+            "lines": "347–354, 363–403"
+          }
+        ]
+      },
+      {
+        "id": "close-neutral-validation",
+        "verdict": "SOURCE_CONFIRMED",
+        "finding": "No subscribers means no newly observed config descriptor reads. V1, missing/inherited/accessor/malformed fields and throwing descriptor traps skip the event without changing the original close receipt. Producer-owned synchronous validation/publication throws are contained.",
+        "proof": [
+          {
+            "blob": "0e0cef1f5fa11362dda138ed4b5e71a826cce349",
+            "lines": "117–127"
+          },
+          {
+            "blob": "d7b1f0e384e4ad875d7c15b703b743e03fb201b3",
+            "lines": "363–435"
+          }
+        ]
+      },
+      {
+        "id": "subscriber-limits",
+        "verdict": "SOURCE_CONFIRMED",
+        "finding": "No arbitrary-subscriber isolation or latency guarantee is established. The committed plan explicitly preserves synchronous diagnostics_channel semantics and the test labels its mocked publisher throw as distinct from an arbitrary subscriber uncaughtException. A later collector must bound/contain its own callback work.",
+        "proof": [
+          {
+            "blob": "fcedd5d5c3659ccf6fac38ba753e2a485f1e3c75",
+            "section": "Existing shared driver close"
+          },
+          {
+            "blob": "d7b1f0e384e4ad875d7c15b703b743e03fb201b3",
+            "lines": "420–423"
+          }
+        ]
+      },
+      {
+        "id": "shared-owner-and-public-surface",
+        "verdict": "SOURCE_CONFIRMED",
+        "finding": "Only the two implementation modules and two existing suites change. The full tree proves no package/export/dependency/workflow/archive/dist/contract or other source leaf changes. Shared owner changes are guarded to V2 observations; caller lifecycle/custody and product authority remain outside these diagnostics.",
+        "proof": [
+          {
+            "treeBefore": "a9ce51413c87bc65b54fe07e45a1dc13b2b4c63a",
+            "treeAfter": "af01fafc8790cc994bc4e595db6058a124df84be",
+            "delta": [
+              "docs/plans/2026-11-16-v2-final-cleanup-diagnostics.md",
+              "docs/plans/evidence/v2-final-cleanup-diagnostics-2026-11-16/prospective-r2.json",
+              "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/driver-session.ts",
+              "packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.ts",
+              "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-driver-session.test.ts",
+              "packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-native-cut.test.ts"
+            ]
+          },
+          {
+            "blob": "e57b42d71de52315f36fe071f6f1b82fbe041123"
+          }
+        ]
+      }
+    ],
+    "sourceDefinedTestCensus": {
+      "driverBefore": 13,
+      "driverAfter": 16,
+      "nativeCutBefore": 26,
+      "nativeCutAfter": 27,
+      "combined": {
+        "before": 39,
+        "after": 43
+      },
+      "sourceOnly": true,
+      "runtimeQualification": false
+    },
+    "outstandingBoundaries": [
+      "Diagnostic instrumentation identifies existing first/final read reasons and failed close stages; it does not repair the unresolved native I/O/custody cause or convert UNKNOWN into confirmed cleanup.",
+      "A stage names the failing original bounded await. An original-work timeout does not establish underlying promise settlement; final read Promise.allSettled also does not certify physical cleanup of a late/uncooperative operation.",
+      "The source preserves original read and close timeout arguments. Synchronous subscriber work remains synchronous; no universal observer error or latency isolation is claimed.",
+      "A future consumer must treat finalReason as optional: absence or invalidity of the added value must not invalidate a valid original producer event; the original fields remain usable at their original scope. Close trustedBinding is for exact correlation only, and missing/mismatched/ambiguous close telemetry is inconclusive. Consumer code/adoption was not selected or audited here.",
+      "No compiler/test/pnpm check/native/CI result was obtained. AGENTS.md asks for pnpm check before implementation delivery; this narrowly authorized immutable read-only audit is not implementation delivery and executes nothing.",
+      "No APP source adoption or resulting-source runtime is established, and no inference is made about Windows, Darwin P09, packaged Desktop, original Linux credential failure, broader provider parity or E2E completion.",
+      "The historical original combined RED remains REFUSED/SPENT; neither its title mismatch nor any published status is reclassified by this independent D source audit."
+    ]
+  },
+  "appMapping": {
+    "frozen": {
+      "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "package": {
+        "path": "packages/legacy-agent-host/package.json",
+        "identity": {
+          "bytes": 12355,
+          "sha256": "4e567d64af0c5a0d85e155e90fd4eec9a6ca720e89edfe9923d7e4cc9a1b4f81",
+          "gitBlob": "42093f5cb1be431e383a2bbf97223a2bd8d54b49"
+        },
+        "completeBodyPreviouslyRead": true,
+        "selectedDependencies": {
+          "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz",
+          "@agent-teams/provider-session-contracts": "file:../../vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz"
+        }
+      },
+      "rootPackage": {
+        "path": "package.json",
+        "identity": {
+          "bytes": 26839,
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+          "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        "coverage": "Complete Git body fetched, parsed and rehashed; dependency projection read. Unrelated scripts/build metadata not audited.",
+        "providerDependencyPresent": false,
+        "hostWorkspaceDependencyPresent": true
+      },
+      "c930ReceiptAtThisCommit": {
+        "path": "vendor/provider-migration/v2-settled-fetch-c930d3c8/source-receipt.json",
+        "result": "GitHub contents endpoint 404 at exact frozen commit.",
+        "interpretation": "This exact receipt path is absent; not a claim about every repository path or installed filesystem."
+      },
+      "selectionConclusion": "Frozen Host manifest selects c79b81bf implementation/contracts paths. It does not select c930 or 8d471b51 diagnostics."
+    },
+    "latestIncoming": {
+      "head": "5c55a4a2008f4a6131d265344d384b39415ad055",
+      "metadataSource": "Single latest APP PR1192 source metadata observation by /root/producer_r2_semantic; this reviewer did not duplicate that PR metadata query.",
+      "open": true,
+      "draft": true,
+      "base": "301d00f46db3389ff6e3042afd04c5b064a26270",
+      "updatedAt": "2026-11-17T03:09:52Z",
+      "package": {
+        "path": "packages/legacy-agent-host/package.json",
+        "identity": {
+          "bytes": 12374,
+          "sha256": "5086e030c0785c2d76be6c943af2eefc252e2066eec45c1721a96276b1510496",
+          "gitBlob": "0afca52d625a85158f6423c154de007b59554419"
+        },
+        "completeBodyIndependentlyRead": true,
+        "selectedDependencies": {
+          "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/v2-settled-fetch-c930d3c8/agent-teams-provider-implementations-0.0.0.tgz",
+          "@agent-teams/provider-session-contracts": "file:../../vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz"
+        },
+        "sameIdentityAsSemanticIndependentRead": true
+      },
+      "selectedImplementationReceipt": {
+        "path": "vendor/provider-migration/v2-settled-fetch-c930d3c8/source-receipt.json",
+        "identity": {
+          "bytes": 2241,
+          "sha256": "6c79d99ba635d4eca42d060d72f08bb7d2469fbde914ed8f2ff9704403b22879",
+          "gitBlob": "d8caa6bb61936b35ab80d8521b20de4a9764934a"
+        },
+        "completeBodyIndependentlyRead": true,
+        "body": {
+          "schemaVersion": 1,
+          "sourceRepository": "agent-teams-ai/old-provider-implementations",
+          "sourceCommit": "c930d3c8b9a213762528d6e28c9ed0172ab1fa27",
+          "sourceTree": "a9ce51413c87bc65b54fe07e45a1dc13b2b4c63a",
+          "qualification": "source-and-packed-consumer-only",
+          "nativeHostQualified": false,
+          "packagedElectronQualified": false,
+          "fullChecks": [
+            {
+              "node": "24.21.0",
+              "pnpm": "11.18.0",
+              "command": "pnpm check",
+              "result": "PASS",
+              "runId": 43872562100,
+              "jobId": 133317224402,
+              "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43872562100/job/133317224402"
+            },
+            {
+              "node": "26.11.1",
+              "pnpm": "11.18.0",
+              "command": "pnpm check",
+              "result": "PASS",
+              "runId": 43872562100,
+              "jobId": 133317224592,
+              "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43872562100/job/133317224592"
+            }
+          ],
+          "checkedArtifact": {
+            "id": 14228920904,
+            "name": "opencode-v2-spi-consumer-checked-c930d3c8b9a213762528d6e28c9ed0172ab1fa27",
+            "bytes": 193575,
+            "sha256": "6088116cd6df79958c9f0e3024a0df3a0718ab4daf190a3c312fb8118b2ba8e5",
+            "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43872562100/artifacts/14228920904"
+          },
+          "packages": {
+            "provider-implementations": {
+              "file": "agent-teams-provider-implementations-0.0.0.tgz",
+              "oldSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+              "newSha256": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41",
+              "bytes": 186425,
+              "integrity": "sha512-jvBcFBmYZWJ0ASvxlSgyNEpdOcm5CnvXPoUfWnWaFlK6nu/DqUfItdudhyFsnwKHc0ukZbqQk+dIzRuDM4PODw=="
+            },
+            "provider-session-contracts": {
+              "file": "agent-teams-provider-session-contracts-0.0.0.tgz",
+              "retainedPath": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+              "unchanged": true,
+              "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+              "bytes": 6230,
+              "integrity": "sha512-ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g=="
+            }
+          }
+        },
+        "sameReceiptIdentityAsPriorAcceptedProviderAuditBasis": true,
+        "receiptClaimsQualification": "Receipt declares source-and-packed-consumer-only. Its retained CI/packed-artifact claims are not re-executed or independently re-downloaded in this follow-up; nativeHostQualified and packagedElectronQualified remain false."
+      },
+      "selectionConclusion": "Incoming Host manifest still selects c930d3c8 implementation with retained 9423f600 contracts. It does not select accepted PR8 head 8d471b51.",
+      "additionalArchiveQualification": "Semantic reviewer reports native-suggestions archives added in the latest APP increment, but the complete Host package confirms those are not the selected dependency. Archive bodies are not re-audited here."
+    },
+    "selectionIsNotRuntime": "Manifest and source receipt observations identify source dependency selection. No installed-package, packed-build or resulting runtime byte identity is asserted by this review."
+  },
+  "concreteDependencies": [
+    {
+      "id": "select-produced-bytes",
+      "finding": "The new 8d471b51 final-read/close diagnostics cannot be attributed to either observed APP Host manifest: frozen selects c79b81bf; incoming selects c930d3c8.",
+      "implication": "Any later adoption would need an exact archive/provenance/dependency/lock selection containing reviewed 8d source. This is a dependency description, not an authorized adoption or a new gate."
+    },
+    {
+      "id": "preserve-public-contract",
+      "finding": "Accepted c930→8d source audit proves no package/export/dependency/workflow/archive/dist/contract leaf changed in that delta.",
+      "implication": "No Session SPI/contract migration is demanded by this diagnostic delta itself. Do not conflate the separate frozen-c79 versus incoming-c930/9423 APP adoption with a new 8d contract change."
+    },
+    {
+      "id": "optional-final-reason",
+      "finding": "Original read diagnostic fields stage/reason/elapsedMs/deadlineExpired/aborted remain usable; new finalReason describes final error after original sibling cleanup precedence.",
+      "implication": "A later consumer must accept missing or invalid optional finalReason without invalidating a valid original event, distinguish first reason from final reason, and avoid treating diagnostic text as authority. This follow-up has not audited a new APP collector."
+    },
+    {
+      "id": "close-correlation",
+      "finding": "New close payload is exactly stage/outcome/trustedBinding, V2-only, with own-data primitive lowercase 64-hex binding.",
+      "implication": "Use an exact original binding correlation only. Missing, mismatched or ambiguous telemetry is inconclusive; it cannot grant stop/cancellation authority or discharge UNKNOWN cleanup debt."
+    },
+    {
+      "id": "synchronous-subscribers",
+      "finding": "diagnostics_channel publication remains synchronous. Producer-local try/catch and closed payloads do not supply arbitrary subscriber error/latency isolation.",
+      "implication": "Any APP collector must contain and bound its own callback work; no universal no-cost/no-throw claim follows from this source."
+    },
+    {
+      "id": "preserve-custody-deadlines",
+      "finding": "Accepted delta retains original error identity, original 30,000 ms read budget, existing 1,000 ms cleanup caps, original per-stage close timeout arguments, cached close Promise, and no replay.",
+      "implication": "New observations cannot promote cleanup to confirmed, prove underlying promise/physical settlement, reset deadlines, reuse authority, or repair unresolved native I/O."
+    },
+    {
+      "id": "qualification-not-transferable",
+      "finding": "43 expected registrations are source-defined obligations in the accepted source audit, not runtime results from either audit. Incoming c930 receipt explicitly declines native Host and packaged Electron qualification.",
+      "implication": "Neither unchanged PR8 source acceptance nor APP manifest adoption qualifies current Windows readiness, Darwin P09, Desktop, E2E or releases."
+    }
+  ],
+  "checks": [
+    {
+      "id": "P01",
+      "status": "PASS",
+      "claim": "Exactly one provider PR8 source metadata query; observed head exactly equals accepted immutable head."
+    },
+    {
+      "id": "P02",
+      "status": "PASS",
+      "claim": "No new PR8 source increment exists in the observed capture; unchanged full semantic audit was not repeated."
+    },
+    {
+      "id": "P03",
+      "status": "PASS",
+      "claim": "Full retained accepted audit literal rehashes to 5ffc7e19 / 622,743 bytes / supplied SHA256."
+    },
+    {
+      "id": "P04",
+      "status": "PASS",
+      "claim": "Source-defined 39→43 test census and explicit synchronous subscriber limits retained without runtime promotion."
+    },
+    {
+      "id": "A01",
+      "status": "PASS",
+      "claim": "Exact frozen APP Host manifest selects implementation/contracts c79b81bf paths; root package has no direct provider dependency."
+    },
+    {
+      "id": "A02",
+      "status": "PASS",
+      "claim": "Exact current c930 receipt path is absent at frozen APP head; observation is limited to that path."
+    },
+    {
+      "id": "A03",
+      "status": "PASS",
+      "claim": "Exact latest APP Host package full body independently joins semantic package identity and selects implementation c930/contracts9423, not 8d471."
+    },
+    {
+      "id": "A04",
+      "status": "PASS",
+      "claim": "Exact incoming c930 receipt full body matches accepted audit basis receipt identity; sourceCommit/tree and false native/packaged qualification retained."
+    },
+    {
+      "id": "C01",
+      "status": "PASS",
+      "claim": "Optional finalReason backward compatibility, exact close correlation and synchronous callback limitations preserved as adoption dependencies."
+    },
+    {
+      "id": "C02",
+      "status": "PASS",
+      "claim": "No new contract/export/dependency change is attributed to the accepted diagnostics delta, and no unrelated native-suggestions archive is confused with selected Host dependency."
+    },
+    {
+      "id": "S01",
+      "status": "PASS",
+      "claim": "No target runtime/CI/source/ref/PR action, no adopted artifact or runtime proof, and selected CI snapshots remain untouched."
+    }
+  ],
+  "checkMeaning": "Checks concern source metadata, identity joins and preservation of existing advisory limits only; no platform/runtime qualification.",
+  "conclusion": "PR8 remains at already accepted 8d471b51 with zero new source to review. The current and incoming APP manifests remain on older implementation archives. The concrete work needed for eventual diagnostics adoption is exact produced-byte/package selection plus a bounded backward-compatible consumer; neither has been performed or newly selected here. No new source blocker, runtime PASS, CI venue or action is inferred.",
+  "coverageNotes": {
+    "priorAuditReusedNotRepeated": true,
+    "latestAppBroaderDeltaOwnedBy": "/root/producer_r2_semantic",
+    "lockAndArchives": "This follow-up does not freshly read pnpm-lock.yaml or unpack either selected tgz. Exact package selection and source receipt dependencies are stated; complete installed/packed-byte adoption is not asserted.",
+    "metadataOutputHandling": "The initial tool display of raw metadata was truncated because it included tool-wrapped duplicates. The full literal remained stored and parsed; the retained report embeds that exact 20,112-byte metadata body. Only source metadata fields were used."
+  }
+}

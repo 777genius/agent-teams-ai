@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "kind": "external-exact-head-isolated-fresh-ci-mutation-intent",
+  "at": "2026-11-17 03:13:49 UTC",
+  "owner": "/root",
+  "repository": "777genius/agent-teams-ai",
+  "r1": {
+    "bytes": 83960,
+    "sha256": "6ffeef78018e330679aa9a2bc2da5422aca9d2a38fb4c60834959bfd880e6e58",
+    "gitBlob": "7237425e51bda9feb7d0ded4e424fe72745680c1"
+  },
+  "closedActualGate": {
+    "bytes": 3186,
+    "sha256": "ac50077597d03f098f37b864f4d53ae65301c78ee969a823186b610480677a7c",
+    "gitBlob": "082178036bc188dabaeb82d1d2a91e8840f2b13e"
+  },
+  "rootActual": {
+    "bytes": 192606,
+    "sha256": "1dc0a2f36dd3448f190f03b748be9ef2a52c5419b0bf1065097f8b3bf4a85a7f",
+    "gitBlob": "ba7f15a2e0964f00f7b9fbefdcdfcb7593aa733d"
+  },
+  "independentActual": {
+    "bytes": 292888,
+    "sha256": "307b15ae5c8bd2dd6003b3c9caf44c0ce3972f3c1392313402d9125ab4c4d600",
+    "gitBlob": "176dfbe127f3a9f9f81c089dfab445c8d1ce3ff9"
+  },
+  "headCommit": "9c9c73190840592963142d36562ea07d2b5d2d71",
+  "headTree": "ebd6c383f34c6fd4331b6f0a3da5b90597b5cc1f",
+  "headDocsTree": "b69634e8cafeca602c409caf888d9b17de8c13e7",
+  "baseCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+  "baseTree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+  "sourceVector": {
+    "bytes": 2118,
+    "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+    "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+  },
+  "workflowTree": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+  "finalPreflight": {
+    "at": "2026-11-17 03:13:49 UTC",
+    "baseAliasAbsent": {
+      "absent": true,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/ref/heads/ci/frontend-parity-c714-20261117-base"
+    },
+    "headAliasAbsent": {
+      "absent": true,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/ref/heads/ci/frontend-parity-c714-20261117-head"
+    },
+    "workingHead": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "workingOpenPrCount": 0,
+    "ancestorComparison": {
+      "ahead": 4,
+      "behind": 0,
+      "files": 54,
+      "sourceFiles": 3,
+      "docsFiles": 51,
+      "mergeBase": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+    }
+  },
+  "actions": [
+    {
+      "order": 1,
+      "tool": "github_create_branch",
+      "arguments": {
+        "repository_full_name": "777genius/agent-teams-ai",
+        "branch_name": "ci/frontend-parity-c714-20261117-base",
+        "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+      },
+      "executionCount": 1,
+      "readback": "GET exact newly created ref and commit; target must be exact 77993819, tree ada3f27db78fabc17a91e3904d41b8bc547c6dca."
+    },
+    {
+      "order": 2,
+      "tool": "github_create_branch",
+      "arguments": {
+        "repository_full_name": "777genius/agent-teams-ai",
+        "branch_name": "ci/frontend-parity-c714-20261117-head",
+        "sha": "9c9c73190840592963142d36562ea07d2b5d2d71"
+      },
+      "executionCount": 1,
+      "readback": "GET exact newly created ref and commit; target/tree must equal the externally pinned accepted R1 publication."
+    },
+    {
+      "order": 3,
+      "tool": "github_create_pull_request",
+      "arguments": {
+        "repository_full_name": "777genius/agent-teams-ai",
+        "base": "ci/frontend-parity-c714-20261117-base",
+        "head": "ci/frontend-parity-c714-20261117-head",
+        "title": "test: isolated frontend parity producer fixes and emulated E2E",
+        "body": "## Purpose\n\nThis Draft PR is an isolated CI snapshot for the frontend/Host/provider parity work tracked by #982 and #1192. Its ancestor base preserves the actual three producer fixes while keeping ongoing evidence commits on a separate working branch.\n\n## Changes under test\n\n- Enforce the existing live-membership deadline after each observation.\n- Require editable state before the review-cycle correction input is used.\n- Clear provider-management loading state for the current request, including silent refresh.\n\nThe whole 139-case Node file and whole 85-case renderer file remain unchanged. Existing workflow commands, deadlines, filters and provider restrictions remain unchanged.\n\n## Selected evidence\n\nThe opened Draft event selects Host Emulated Acceptance, Electron packaged CI, OpenCode V2 Stage1 preflight, Announcements Content and CI fast feedback. These paths use finite TEST Claude/Codex peers and the declared OpenCode runtimes. No real Claude/Codex CLI run is selected.\n\nCI Full qualification intentionally fails for Draft; CodeQL and OpenCode diagnostics Desktop E2E are expected to skip. Host Process Acceptance is not selected by this diff. Every actual failure, skip, cancellation or unexecuted step will remain explicit.\n\nThe prior local materialization attempt was refused before source-root admission and is spent. This CI snapshot provides separate evidence; it does not repair or replay that attempt.\n\nBoth snapshot refs and this PR's metadata stay fixed while the selected runs are active. This PR is for test evidence; merge, Ready conversion, release and default activation are outside this scope.\n",
+        "draft": true,
+        "maintainer_can_modify": false
+      },
+      "executionCount": 1,
+      "readback": "Capture complete new PR record, head/base refs and SHA, repository IDs, draft/open state, times and eventual synthetic merge commit/tree/parents; head/base must equal the bound snapshots."
+    }
+  ],
+  "requirements": {
+    "readEachRefBeforeNextMutation": true,
+    "actualNewPrAndMergeReadback": true,
+    "oneOpenedDraftEvent": true,
+    "maintainerCanModify": false,
+    "immutableSnapshotsWhileRunsActive": true,
+    "noMetadataEditsWhileRunsActive": true,
+    "noRealClaudeOrCodex": true,
+    "noFrozenOrOldCiActivity": true,
+    "noRerunOrDispatch": true,
+    "noLocalReplay": true,
+    "unknownMutationSpent": true,
+    "noBlindRepeat": true
+  },
+  "qualification": "Exact R1 external final-head substitution only. No new executable code/source/workflow/test change. This intent itself creates no refs/PR/runs and asserts no E2E success."
+}
