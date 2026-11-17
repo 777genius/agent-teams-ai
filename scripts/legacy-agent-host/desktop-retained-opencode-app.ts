@@ -523,6 +523,9 @@ export async function exerciseRetainedDonorHistory(input: {
         await ui.scrollTo(page + ' button', 'custom cwd control visible', 'Custom path');
         await ui.click(page + ' button', 'choose original custom cwd', 'Custom path');
         await fill(page + ' input[aria-label="Custom working directory"]', join(root, 'project'));
+        const clearFilters = '[data-testid="team-model-selector-clear-filters"]';
+        await ui.scrollTo(clearFilters, 'original model source filters visible');
+        await ui.click(clearFilters, 'clear original model source filter');
         const modelSelector = '[data-testid="team-model-selector-model-option"][aria-label^="TEST-model"]';
         await ui.waitRead(`(() => {const rows=[...document.querySelectorAll(${literal(modelSelector)})];
           return rows.length===1&&rows[0].querySelector('[data-testid="team-model-selector-model-name"]')?.textContent.trim()==='TEST-model';})()`, 'one finite project model');
