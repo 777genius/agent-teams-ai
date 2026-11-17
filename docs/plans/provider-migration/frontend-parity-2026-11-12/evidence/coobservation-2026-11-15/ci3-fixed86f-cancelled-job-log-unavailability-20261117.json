@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_FINAL_CANCELLED_JOB_LOG_DELIVERY",
+  "repository": "777genius/agent-teams-ai",
+  "at": "2026-11-17 17:15:19 UTC",
+  "observation": 20,
+  "terminalRunIds": [
+    44092933980,
+    44092933718,
+    44092933835,
+    44092933888,
+    44092934051,
+    44092933827,
+    44092933972,
+    44092933912,
+    44092933873,
+    44092934079,
+    44092933810
+  ],
+  "activeRunIds": [],
+  "deliveries": [
+    {
+      "jobId": 134174813120,
+      "fullLogAvailable": false,
+      "originalOnceIssued": true,
+      "raw": {
+        "content": [
+          {
+            "type": "text",
+            "text": "GitHub API error 404: ﻿<?xml version=\"1.0\" encoding=\"utf-8\"?><Error><Code>BlobNotFound</Code><Message>The specified blob does not exist.\nRequestId:43a54b26-201e-00ba-07b6-76bf61000000\nTime:2026-11-17T17:13:23.5635443Z</Message></Error>"
+          }
+        ],
+        "structuredContent": {
+          "error": "GitHub API error 404: ﻿<?xml version=\"1.0\" encoding=\"utf-8\"?><Error><Code>BlobNotFound</Code><Message>The specified blob does not exist.\nRequestId:43a54b26-201e-00ba-07b6-76bf61000000\nTime:2026-11-17T17:13:23.5635443Z</Message></Error>",
+          "error_code": "NOT_FOUND",
+          "error_data": {
+            "error_str": "GitHub API error 404: ﻿<?xml version=\"1.0\" encoding=\"utf-8\"?><Error><Code>BlobNotFound</Code><Message>The specified blob does not exist.\nRequestId:43a54b26-201e-00ba-07b6-76bf61000000\nTime:2026-11-17T17:13:23.5635443Z</Message></Error>"
+          }
+        },
+        "isError": true
+      },
+      "qualification": "Cancelled original job; original log tool returned error, no complete decoded log. Non-PASS; never reissue."
+    },
+    {
+      "jobId": 134072513036,
+      "fullLogAvailable": false,
+      "originalOnceIssued": true,
+      "raw": {
+        "content": [
+          {
+            "type": "text",
+            "text": "GitHub API error 404: ﻿<?xml version=\"1.0\" encoding=\"utf-8\"?><Error><Code>BlobNotFound</Code><Message>The specified blob does not exist.\nRequestId:fdf7b150-d01e-008a-36b6-767bb3000000\nTime:2026-11-17T17:13:23.5520185Z</Message></Error>"
+          }
+        ],
+        "structuredContent": {
+          "error": "GitHub API error 404: ﻿<?xml version=\"1.0\" encoding=\"utf-8\"?><Error><Code>BlobNotFound</Code><Message>The specified blob does not exist.\nRequestId:fdf7b150-d01e-008a-36b6-767bb3000000\nTime:2026-11-17T17:13:23.5520185Z</Message></Error>",
+          "error_code": "NOT_FOUND",
+          "error_data": {
+            "error_str": "GitHub API error 404: ﻿<?xml version=\"1.0\" encoding=\"utf-8\"?><Error><Code>BlobNotFound</Code><Message>The specified blob does not exist.\nRequestId:fdf7b150-d01e-008a-36b6-767bb3000000\nTime:2026-11-17T17:13:23.5520185Z</Message></Error>"
+          }
+        },
+        "isError": true
+      },
+      "qualification": "Cancelled original job; original log tool returned error, no complete decoded log. Non-PASS; never reissue."
+    },
+    {
+      "jobId": 134203589092,
+      "fullLogAvailable": false,
+      "originalOnceIssued": true,
+      "raw": {
+        "content": [
+          {
+            "type": "text",
+            "text": "GitHub API error 404: ﻿<?xml version=\"1.0\" encoding=\"utf-8\"?><Error><Code>BlobNotFound</Code><Message>The specified blob does not exist.\nRequestId:1f6953be-c01e-0086-06b6-76ecbb000000\nTime:2026-11-17T17:13:23.4499094Z</Message></Error>"
+          }
+        ],
+        "structuredContent": {
+          "error": "GitHub API error 404: ﻿<?xml version=\"1.0\" encoding=\"utf-8\"?><Error><Code>BlobNotFound</Code><Message>The specified blob does not exist.\nRequestId:1f6953be-c01e-0086-06b6-76ecbb000000\nTime:2026-11-17T17:13:23.4499094Z</Message></Error>",
+          "error_code": "NOT_FOUND",
+          "error_data": {
+            "error_str": "GitHub API error 404: ﻿<?xml version=\"1.0\" encoding=\"utf-8\"?><Error><Code>BlobNotFound</Code><Message>The specified blob does not exist.\nRequestId:1f6953be-c01e-0086-06b6-76ecbb000000\nTime:2026-11-17T17:13:23.4499094Z</Message></Error>"
+          }
+        },
+        "isError": true
+      },
+      "qualification": "Cancelled original job; original log tool returned error, no complete decoded log. Non-PASS; never reissue."
+    }
+  ],
+  "rootCancelRerunOrDispatchIssued": false,
+  "noNewRetrievalAuthorized": true
+}

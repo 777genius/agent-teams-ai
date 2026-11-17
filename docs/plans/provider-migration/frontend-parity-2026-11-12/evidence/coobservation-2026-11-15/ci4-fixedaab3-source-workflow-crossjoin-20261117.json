@@ -1,0 +1,2998 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_FIXED_AAB3_BASE86F_COMPLETE_SOURCE_WORKFLOW_COMPARISON",
+  "repository": "777genius/agent-teams-ai",
+  "at": "2026-11-17 17:07:45 UTC",
+  "base": "86f52244b5375834a4040cbc63803d68cc708087",
+  "head": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+  "baseTree": "11ccb7c57cc49af613c62620a1d348bf6de8aa3d",
+  "headTree": "834d86a61218cd70ec92d6f51f17dcd6531b574f",
+  "baseDocsTree": "edf306377d1dcc641455b25367ba73d0dc398f3d",
+  "headDocsTree": "b7ffe445c47bc750723d4afedccc83f9833139b3",
+  "selectionReason": "Use the real previously tested CI3 source ancestor to isolate the three later accepted changes, with a complete143-file comparison. The earlier9d baseline has317 actual tree changes and its comparison response returned only300files; it is not the selected base and its capped file list was never accepted as complete.",
+  "completeComparison": {
+    "bytes": 1297773,
+    "sha256": "837f3c1794f8dcbc33ea21f031ded3f303933feb6cb061fc0b8279fcebac9067",
+    "gitBlob": "f81d1917ca3675e2f8e917b41cf4a9b3ca6aa9f3"
+  },
+  "ancestry": {
+    "status": "ahead",
+    "mergeBase": "86f52244b5375834a4040cbc63803d68cc708087",
+    "aheadBy": 7,
+    "behindBy": 0,
+    "totalCommits": 7,
+    "returnedCommits": 7
+  },
+  "rootEntries": 54,
+  "rootChanged": [
+    ".github",
+    "docs",
+    "packages",
+    "tools"
+  ],
+  "unchangedRootEntries": 50,
+  "subtrees": [
+    {
+      "path": ".github",
+      "before": {
+        "tree": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "entries": 55,
+        "leaves": 52
+      },
+      "after": {
+        "tree": "2d941c6f8d7be58f541f03e61661ad8badd873a5",
+        "entries": 55,
+        "leaves": 52
+      },
+      "complete": true
+    },
+    {
+      "path": "docs",
+      "before": {
+        "tree": "edf306377d1dcc641455b25367ba73d0dc398f3d",
+        "entries": 3800,
+        "leaves": 3394
+      },
+      "after": {
+        "tree": "b7ffe445c47bc750723d4afedccc83f9833139b3",
+        "entries": 3937,
+        "leaves": 3531
+      },
+      "complete": true
+    },
+    {
+      "path": "packages",
+      "before": {
+        "tree": "dc592662ccd8e886de52da21c666ff3ac1d3d6f6",
+        "entries": 1117,
+        "leaves": 1044
+      },
+      "after": {
+        "tree": "7c9c7d065c509e074094e1423b97d96e396c3ae9",
+        "entries": 1117,
+        "leaves": 1044
+      },
+      "complete": true
+    },
+    {
+      "path": "tools",
+      "before": {
+        "tree": "7360460b475db2e174c65f5ba0eeb075f06622b1",
+        "entries": 57,
+        "leaves": 53
+      },
+      "after": {
+        "tree": "86ca8ab7662ad004d1b48efd00bd8eb72bd259dc",
+        "entries": 57,
+        "leaves": 53
+      },
+      "complete": true
+    }
+  ],
+  "completeTreeComparison": {
+    "changed": 143,
+    "docs": 140,
+    "source": 3,
+    "addedDocs": 137,
+    "modifiedDocs": 3,
+    "removed": 0,
+    "wholeComparisonFileListMatchesEveryTreeLeaf": true,
+    "allSubtreesNonTruncated": true
+  },
+  "changedLeaves": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+        "bytes": 96872,
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "gitBlob": "0d54287979a1741519b41b00e1ee521d5cd83046",
+        "bytes": 96896,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "before": {
+        "gitBlob": "e920f84b284945727731966bdbb60862b8047da7",
+        "bytes": 2642411,
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "gitBlob": "70ebf2f7ea5b4cd5384af32454a75e24007c17fa",
+        "bytes": 2667096,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14334909525-complete-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "21641f32e641af9e097a9e88b4356ffa14dbbbe0",
+        "bytes": 239214,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14335005585-complete-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "602b54b272d0a44d0baca819c372f50aa1303c6a",
+        "bytes": 343132,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14335984464-complete-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "662dc63313acb1a503da067ab874df82b5ad671c",
+        "bytes": 2854443,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14336154427-complete-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "363439bb50e4c40a115358af67c806e719bb862b",
+        "bytes": 2869263,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14336782083-complete-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "443c24ae6d62988dd7c3680c7a08e3235a8fe177",
+        "bytes": 3396622,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337206794-complete-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "c8948e51ecfce552fbeaeaf07fffd66cc9dcfc30",
+        "bytes": 3078005,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337338225-complete-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "da62991fb54bee6468be020664cbdfb4e10b5817",
+        "bytes": 5107,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337526955-complete-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "457ac5d91774532f24d741f64de44e4e3d058379",
+        "bytes": 6657340,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337542479-complete-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "a99d4bcc913edb94a7865eb987f8fb3d4508722a",
+        "bytes": 17528,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337577139-complete-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "b2ff3558a86f10dff2878463c4127a9ee4780ea8",
+        "bytes": 146208,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14338246689-complete-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "65a9bca411be67c5e9c12594625e94c8c9dffe42",
+        "bytes": 538158,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14338585452-complete-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "0adb7ae61b260d32f3322a34f97ac28c1cdf16fb",
+        "bytes": 62931,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14339061547-complete-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "0f95c8703a5a6b5731392043785907f551f83e89",
+        "bytes": 3119689,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14343770599-complete-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "af70fca5270a5eac8905eefc16d1f362e7af8db5",
+        "bytes": 3251974,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-delivery-expiry-record-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "8926280627d911c37c39c512e386b2fdf31506c2",
+        "bytes": 5341,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-claude-collaboration-advisory-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "eb4910aecd055982eeb9131c6d0c5f261366670f",
+        "bytes": 26675,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-outcome-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "ea899a12376e09269c59c93142058370cf467632",
+        "bytes": 55817,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-png-byte-proof-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "1a8ecb474b9590bbf55f17099cfe203033c22103",
+        "bytes": 750343,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-visual-read-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "9df53372c878271ca40a08212809931beb4f5f2e",
+        "bytes": 1285,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-actual-source-workflow-crossjoin-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "e0c1d26412717b90226c3fefa0932edbcc27a1fe",
+        "bytes": 48984,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-base-action-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "5039b9ba612b2e934963e9dec85596609241e851",
+        "bytes": 829,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-complete-source-comparison-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "f26308ac78e47a41ff8cd88f983944a8caeeb32e",
+        "bytes": 1157915,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-execution-admission-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "4d024e83678c004961705bec8e1b311507c342f7",
+        "bytes": 49703,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-execution-preflight-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "7be00f3d34a7e27f3abf68dea421e564b72433b2",
+        "bytes": 65129,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-head-action-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "adbd950d31d5061d95c71f796efcec1129512743",
+        "bytes": 865,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet1-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "fe7f162da4a346340a4bd9e49842673cf3cd2ac7",
+        "bytes": 579520,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet2-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "6692074aa2379ec881cf83e24f3e2a5fe502de4b",
+        "bytes": 147211,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet3-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "5dc802f90b7118dbba8deeba3c7bb4aacee1a84e",
+        "bytes": 297085,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-pr-action-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "f78079b6bc680d5aec1e1360482b5c8e340469f7",
+        "bytes": 3092,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "d9da20d5123dd4bfec6c400508e2409e783f346d",
+        "bytes": 88097,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-actual-gate-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "3ac1c92c134848d826d60ea0257fadfe54957b95",
+        "bytes": 9265,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-binding-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "5e3404934c98557891b0abde6dc7ea50cc99cec6",
+        "bytes": 343813,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-guard-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "b6ea038954d943981da7119f3f3c86dc77dfce77",
+        "bytes": 84373,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-independent-actual-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "18c873be55b9e6a83e892e7f3664bbbc3853156e",
+        "bytes": 678736,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-publication-manifest-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "2cc2a167220d306ec68d23aad9bc57e44997b496",
+        "bytes": 12590,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-root-actual-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "8386d8007ed28320dd2c01d6edc0be0f9c087692",
+        "bytes": 538486,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-root-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "e095c058c9e2f02268dd6459083c1a03deb26ed0",
+        "bytes": 71519,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-semantic-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "a6f86825012567b7b3dca65a6cca42e80344d0bd",
+        "bytes": 63139,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511052-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "c2b0fe4bfc9251f382100202daa0fef7ef108114",
+        "bytes": 126553,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511059-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "37eea3261cb229fd43257d2add85cc86e33c1857",
+        "bytes": 213521,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511125-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "73aadf99c73a6f67dfd54e674f68d7e116bb2051",
+        "bytes": 132891,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511268-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "1ea2ba71c70069cc2e2f7af1409cd4f3e568c8c0",
+        "bytes": 137653,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511328-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "647d6e3c248ec6a1870791cc7d9abc3d91959e63",
+        "bytes": 184303,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511476-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "6d75a93b289d9a897f80ccfde425762ce1e1f731",
+        "bytes": 192921,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511484-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "f449481ccefe6d5fe2af2beda18c958d61b3bae0",
+        "bytes": 183391,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511567-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "37fde85de1e380e96854c0930c3fdadbce9de63b",
+        "bytes": 142648,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511597-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "9cdb123201f6edd6d21f94f612c4fce82f25bd87",
+        "bytes": 211492,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511664-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "f6dd9da504cc6f123b7b3a2e8a768b54b08fe033",
+        "bytes": 364157,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511732-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "870cbeae575ce9aa59557fb240a20b6d98bb81d2",
+        "bytes": 403779,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511776-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "8bcc777b520eade66e09a3e79732ce979db5716e",
+        "bytes": 202664,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511865-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "4f082644fe2b77d118fe4f2ecc8b026076cf2355",
+        "bytes": 203573,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511986-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "722df52ca594c136a94bb8fcf2b2f4143e85f706",
+        "bytes": 206513,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512024-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "32d667765fd2fb51fe66ab2ee902d66049154819",
+        "bytes": 133008,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512405-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "e72e7336f6d2c234c306093a2437c8be62d0ac0d",
+        "bytes": 73783,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512849-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "fca9b76b3d0ff372cd046cc7a631fe980a279062",
+        "bytes": 128517,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512912-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "044341f2c0e8c9e39643709c8f591d4efd25b09b",
+        "bytes": 78155,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513026-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "2b5705efd874f6b6f18160733432658a96ca97da",
+        "bytes": 121666,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513174-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "bb2f065c29ce7ffba4a07396cdb28c24d545c7d6",
+        "bytes": 104429,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513245-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "764ee4eff11c5d284d58dbf82fecef5db26b06e9",
+        "bytes": 116761,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072515187-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "6f5c374fa084a075b3bd471a62ede4210be54670",
+        "bytes": 124743,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134098865037-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "e2cd57ace23f93aae797d8d39c2dd53019ba46b2",
+        "bytes": 167675,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134098865077-full-20261117.log",
+      "before": null,
+      "after": {
+        "gitBlob": "6d72a5329cce7073469dabecf65782cc0a6522cb",
+        "bytes": 337630,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-retained-observation-packet-4-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "f31b2fa054caa014d633498efaf14e589dedb2a5",
+        "bytes": 305042,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-retained-observation-packet-5-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "744c8032989ac1665f648fd9ea6d304b3a9fe6b4",
+        "bytes": 1351520,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-stage1-windows-actual-main-lock-proof-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "7446ec6ae4b63c8822a006f89f6ae478b5af5f27",
+        "bytes": 48162,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-static-diagnostic-extraction-advisory-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "42effae91d747256f512dd460a53a8a36f6eedbf",
+        "bytes": 30454,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-v2-management-pending-view-advisory-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "5b1cc71ce7333d2ca41882b193878cdd35af6cd8",
+        "bytes": 49806,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-arm-source-guard-advisory-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "bd130cd9838aaca28c71fef038b112f58ad35843",
+        "bytes": 46544,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-arm-source-semantic-advisory-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "50b4119a9008aebca9c4fe0a21cec90dd3a81b3b",
+        "bytes": 26486,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-catalog-no-reuse-advisory-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "ceda91b9b0cf27d67051a34e0ca8e6411aee1dba",
+        "bytes": 29685,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-embedded-opencode-outcome-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "9b05a63373bf51ed0882730d72d6422621e545be",
+        "bytes": 35466,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-packaged-visual-read-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "c8bb3dea13dc9a73d4c79f6c16e4a8b1f9963b70",
+        "bytes": 1363,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-settlement-readiness-advisory-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "623b68edeca2a6a7d9db08a0907d09cfc8eafa4b",
+        "bytes": 36685,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-actual-gate-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "246e59b55ed2d395524f40f466c1ef7c8362a553",
+        "bytes": 8975,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-independent-actual-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "a55ab6ae84ecd011476cf107dec4a4e871a40845",
+        "bytes": 663489,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-root-actual-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "be4db6e26f2115322786800d67ab6c3570d1b752",
+        "bytes": 529929,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-current-source-proof-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "0abb2f7d4b3c93f13b05de376c32fe4af5347c04",
+        "bytes": 52190,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "203e6dd6e1e124d55339ff890c74d94ce95f1558",
+        "bytes": 11958,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-actual-gate-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "28d0ea99655abe371da7d1b14dab3a1d561b7cf3",
+        "bytes": 5408,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-binding-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "8f1f42155919de6e1e6fffbd068a46c5e361961c",
+        "bytes": 62788,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-guard-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "4c2c7232bc1a4d7538e14eb35d2068a2072052e2",
+        "bytes": 55569,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-independent-actual-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "b325a93d2371042166c4bd6990508fffa1b0b393",
+        "bytes": 669521,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-publication-manifest-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "bbd590a7d42750326d1c6632c455d3a85604cbb7",
+        "bytes": 13481,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-root-actual-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "21a562775a3f363ff5226b8a5f86cc92fa241e9a",
+        "bytes": 756232,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-root-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "f7ffcb2d1b77071a75c013e20925f89b568854c3",
+        "bytes": 26898,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-semantic-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "97a2c9f1147aa6ca6d17d5a4a24f9c4b9bfa9e60",
+        "bytes": 28565,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "778051d3e082b7768437d4437cd11db661531be5",
+        "bytes": 14910,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-binding-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "b8eff623b4e0bab81e3bf2b9be81c0a0ffdc0f6d",
+        "bytes": 74920,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-guard-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "2ad0f4e829ad2b0f5e59f3194596bcbbc8036967",
+        "bytes": 41660,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-publication-manifest-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "193f9badb990a897faba8f60a19d49440c0e2f65",
+        "bytes": 11342,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-root-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "eae08bc8057b29fc63c47202ab31fe698b5cef63",
+        "bytes": 24523,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-semantic-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "2271ae7ac83fc87e5e78dbb4381584c958bb7ff2",
+        "bytes": 35239,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-superseded-citation-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "516bf6e35fed3a81d877fd982b3d54cc7b3fdc24",
+        "bytes": 34273,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-superseded-label-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "3b52dd476aac711aac259bae74831fe10b0a90c1",
+        "bytes": 14155,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-current-source-proof-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "fc20bc9458799881d3e6bcfe97ac9f2352f2fd98",
+        "bytes": 111967,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "3a4c7a35a30dd24594cdfecf45510274598527dc",
+        "bytes": 10289,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-actual-gate-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "e590c53e6f676bd819855e46d36a7d4ec5255c88",
+        "bytes": 6963,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-binding-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "acc5b1081c78285ff3c534eae1adfa982da047ef",
+        "bytes": 49014,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-guard-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "b8a58f44e2c61f4dc46e94a063bd2405c9ded3e4",
+        "bytes": 24590,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-independent-actual-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "1080986575faf274d46963e48ba8083eecb18f30",
+        "bytes": 559229,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-publication-manifest-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "60139f2e029840f0994c178c51106878a4b83f2c",
+        "bytes": 29698,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-root-actual-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "e2d862f0b6d57eaef7373288851e139b510e184f",
+        "bytes": 576683,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-root-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "d3686a86b3c66da48f1982cafabf40d933a75413",
+        "bytes": 16460,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-semantic-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "a50322801ad26ef2d2a1c0c0c96dc76b1868b118",
+        "bytes": 31206,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "438d60e47e1940ffc30b005ef7c97bd26a0ff8d4",
+        "bytes": 9961,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-binding-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "d69e9afa0f3e1a746b6f07f40b3e5f1d2463670b",
+        "bytes": 44512,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-guard-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "3590da2be5d3febf4358a1a8e451255a8678e2ea",
+        "bytes": 28794,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-publication-manifest-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "44c0d07f6f2b9426a899f9484d34f905f3d764d3",
+        "bytes": 11815,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-root-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "d3d6358a0d499ea5365a12d838c898599bb040c7",
+        "bytes": 15985,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-semantic-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "9891f9e967758393fe4fd9dbb63956b569f0149f",
+        "bytes": 19833,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-actual-gate-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "89160b0e4c7dc552a3d4d65714d77cdeac40f84c",
+        "bytes": 6297,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-independent-actual-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "ae8880f423a98c72263de7c652a7c2e897b736a6",
+        "bytes": 447616,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-root-actual-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "837c8ad7376d6dbab2fdb38c8160725444bae65d",
+        "bytes": 554249,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "before": {
+        "gitBlob": "7a365269889a34508dd8d6e0e96ec1c8cbb2e148",
+        "bytes": 119120,
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "gitBlob": "11ec1d332e95b01c3bf36b38c295183e2bc0b90c",
+        "bytes": 143805,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-complete-runtime-capture-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "d7545038ea874fef599d15341f7eedae07104a38",
+        "bytes": 574032,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "47bcc9f514079504369b47a72d9468ddb3bcdab8",
+        "bytes": 31811,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-actual-gate-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "169fc7470c5725e73a1beab947a64f35c00653e6",
+        "bytes": 5032,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-binding-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "d0c5625b3e49a2235cd0240688cbf608abfb24d2",
+        "bytes": 48333,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-guard-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "b89bb7014b353784464fa58abce5d3e46b8c0bd3",
+        "bytes": 22964,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-independent-actual-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "6f2cea2ae65cdce59f4019b240b93d1aeef439ca",
+        "bytes": 285251,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-publication-manifest-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "9eb3400fdc4e32b7b7a238810b9e4be2a2cc216e",
+        "bytes": 19534,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-root-actual-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "50e2be6fce599e665df5f34be0ae7e33ea61e496",
+        "bytes": 413021,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-root-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "934c07a1a9bc8c94fbefd5a9ce4be2292c8f9fb6",
+        "bytes": 21079,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-semantic-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "bf62d0fabf8c9366b578b7d8b81313ba67d231cb",
+        "bytes": 28103,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-external-admission-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "0f94c0437b0a146b4a00d690222133fb490e653c",
+        "bytes": 2212,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-independent-runtime-outcome-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "9a3fa7519f52d5e0be5d9d689792c5903b703e85",
+        "bytes": 48694,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-node-metadata-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "d3351aede3fe4031408d518e48d161aa1d700a4c",
+        "bytes": 3143,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "7f214219f9c757b73c3fad164bf4db04223f9594",
+        "bytes": 23198,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-actual-gate-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "b7ad77e3f8b1d45cba44e862e4728ed40639cc98",
+        "bytes": 10359,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-binding-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "1b411b65745478280691885ddcfbddaa26e60f51",
+        "bytes": 85671,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-guard-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "ac996b33768a1fcb7f73ea4639d2ae6a04a224b7",
+        "bytes": 39019,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-independent-actual-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "548faa37ceb7491afd9a38e837417cc1c33869ac",
+        "bytes": 642238,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-publication-manifest-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "a8592f884d2fa4baa056948aeb092e50f3b1b68a",
+        "bytes": 16658,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-root-actual-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "37339ab5bc478fcd158ad68cd334a880672f86a0",
+        "bytes": 430785,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-root-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "12dd004c9c8e2c8fdd2d1fd7cc6c49f60f38c60b",
+        "bytes": 29870,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-semantic-review-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "d6036fb2dbede32bba75d347076fc50977611902",
+        "bytes": 38457,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-waitread-binding-20261117.json",
+      "before": null,
+      "after": {
+        "gitBlob": "7f69d9936a35f5e3612470076e13d2d9308da40a",
+        "bytes": 107643,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-waitread-supervisor-20261117.cjs",
+      "before": null,
+      "after": {
+        "gitBlob": "72fe3f4f791550c3402d0bae54d154aabe06e63c",
+        "bytes": 25796,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "before": {
+        "gitBlob": "b3c7cbbae3d6067d4b9a38b13dc7745f41944561",
+        "bytes": 761339,
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "gitBlob": "192ebab32b456f5216e5e9e28282acec9971bc96",
+        "bytes": 986739,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "before": {
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b",
+        "bytes": 41559,
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "gitBlob": "8d12ee7a61d13740dbaddfe8177bfe80cb716335",
+        "bytes": 41619,
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "before": {
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+        "bytes": 31223,
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "gitBlob": "c4e356ba85e5f32febb47342610c2f06e27b76bc",
+        "bytes": 31509,
+        "mode": "100644",
+        "type": "blob"
+      }
+    }
+  ],
+  "sourceBodyJoins": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      },
+      "after": {
+        "bytes": 96896,
+        "sha256": "a61c9ae8e2c294c1f284081b946c050c6fd2042a09789fddfd7caec5e6eaf5cb",
+        "gitBlob": "0d54287979a1741519b41b00e1ee521d5cd83046"
+      },
+      "completeBodiesRead": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "before": {
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      },
+      "after": {
+        "bytes": 41619,
+        "sha256": "e1e95d1dcf12408251bde11f4ab679b73de7c8a15b4a49105121b1e8a5a92b36",
+        "gitBlob": "8d12ee7a61d13740dbaddfe8177bfe80cb716335"
+      },
+      "completeBodiesRead": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "before": {
+        "bytes": 31223,
+        "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+      },
+      "after": {
+        "bytes": 31509,
+        "sha256": "32b0abb41931312ebf024791e10a7c88da4b377a000f985137ac01cd8a7a13a8",
+        "gitBlob": "c4e356ba85e5f32febb47342610c2f06e27b76bc"
+      },
+      "completeBodiesRead": true
+    }
+  ],
+  "wholeWorkflowCorpus": {
+    "bytes": 781194,
+    "sha256": "47795e256304bf3a6de595c22ff8a6151c20ac9d3e8d1ed263cc07c0ebac6d4e",
+    "gitBlob": "fd3944d951aab521ccb0aa1d3d7fb5cab2128f7a"
+  },
+  "workflowCount": 42,
+  "workflowBytes": 751454,
+  "unchangedWholeWorkflowBodies": 41,
+  "changedWorkflowOnlyTwoExpectedModelLiterals": true,
+  "eventMap": [
+    {
+      "path": ".github/workflows/announcements-content.yml",
+      "gitBlob": "d7d1c6fde200971f29defe95c2c0436a0318b499",
+      "bytes": 2301,
+      "eligible": true,
+      "event": "pull_request",
+      "opened": true,
+      "paths": null,
+      "sourceHits": [
+        ".github/workflows/host-emulated-acceptance.yml",
+        "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "tools/owned-process-broker/nativeWindowsAppFixture.ts"
+      ],
+      "docsHits": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14334909525-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14335005585-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14335984464-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14336154427-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14336782083-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337206794-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337338225-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337526955-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337542479-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337577139-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14338246689-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14338585452-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14339061547-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14343770599-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-delivery-expiry-record-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-claude-collaboration-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-outcome-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-png-byte-proof-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-visual-read-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-actual-source-workflow-crossjoin-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-base-action-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-complete-source-comparison-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-execution-admission-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-execution-preflight-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-head-action-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet1-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet2-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet3-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-pr-action-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511052-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511059-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511125-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511268-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511328-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511476-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511484-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511567-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511597-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511664-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511732-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511776-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511865-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511986-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512024-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512405-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512849-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512912-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513026-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513174-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513245-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072515187-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134098865037-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134098865077-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-retained-observation-packet-4-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-retained-observation-packet-5-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-stage1-windows-actual-main-lock-proof-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-static-diagnostic-extraction-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-v2-management-pending-view-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-arm-source-guard-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-arm-source-semantic-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-catalog-no-reuse-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-embedded-opencode-outcome-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-packaged-visual-read-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-settlement-readiness-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-current-source-proof-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-superseded-citation-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-superseded-label-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-current-source-proof-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-complete-runtime-capture-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-external-admission-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-independent-runtime-outcome-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-node-metadata-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-waitread-binding-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-waitread-supervisor-20261117.cjs",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json"
+      ],
+      "reason": "Actual changed path(s) or unfiltered event"
+    },
+    {
+      "path": ".github/workflows/anthropic-compatible-status-e2e.yml",
+      "gitBlob": "6ec8f76ef4036fde31daab73db1205cf9f7dfdd2",
+      "bytes": 8602,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        ".github/workflows/anthropic-compatible-status-e2e.yml",
+        "scripts/e2e/anthropic-compatible-status/**",
+        "scripts/e2e/opencode-diagnostics/**",
+        "scripts/electron-builder/afterPack.cjs",
+        "scripts/lib/runtime-payload-cache.mjs",
+        "scripts/stage-opencode-console-wrapper.mjs",
+        "tools/opencode-console-wrapper/**",
+        "src/main/services/runtime/ClaudeMultimodelBridgeService.ts",
+        "src/main/services/runtime/ProviderConnectionService.ts",
+        "src/main/services/runtime/anthropicCompatibleEndpoint.ts",
+        "src/main/services/runtime/buildRuntimeBaseEnv.ts",
+        "src/main/services/runtime/providerRuntimeEnv.ts",
+        "src/main/utils/shellEnv.ts",
+        "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
+        "src/renderer/store/slices/cliInstallerSlice.ts",
+        "src/renderer/store/index.ts",
+        "src/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.tsx",
+        "src/main/services/team/provisioning/TeamProvisioningAnthropicDiagnosticModel.ts",
+        "src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts",
+        "src/renderer/components/runtime/ConnectionMethodCards.tsx",
+        "src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx",
+        "src/renderer/components/runtime/providerAuthModeUiState.ts",
+        "src/renderer/components/runtime/providerConnectionCards.ts",
+        "src/renderer/components/runtime/providerConnectionUi.ts",
+        "src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
+        "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+        "src/renderer/utils/anthropicCompatibleCatalogChecking.ts",
+        "src/renderer/utils/teamProviderRuntimeStatusLoading.ts",
+        "runtime.lock.json"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/anthropic-env-portability.yml",
+      "gitBlob": "d3fa7512b79b79dc64c1580dfdc42d63361ae68a",
+      "bytes": 4713,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        ".github/workflows/anthropic-env-portability.yml",
+        "src/main/utils/shellEnv.ts",
+        "src/main/utils/cliEnv.ts",
+        "src/main/utils/cliPathMerge.ts",
+        "src/main/utils/cliProcessDefaults.ts",
+        "src/main/utils/childProcess.ts",
+        "src/main/utils/pathDecoder.ts",
+        "src/main/services/infrastructure/ConfigManager.ts",
+        "src/main/services/runtime/agentChildProcessPreflight.ts",
+        "src/main/services/runtime/buildRuntimeBaseEnv.ts",
+        "src/main/services/runtime/providerAwareCliEnv.ts",
+        "src/main/services/runtime/providerRuntimeEnv.ts",
+        "src/main/services/runtime/ProviderConnectionService.ts",
+        "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
+        "src/main/services/team/provisioning/__tests__/TeamProvisioningEnvBuilder.test.ts",
+        "src/renderer/store/slices/cliInstallerSlice.ts",
+        "src/renderer/store/slices/__tests__/cliInstallerSlice.test.ts",
+        "src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx",
+        "src/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.tsx",
+        "test/main/utils/shellEnv*.test.ts",
+        "test/main/services/runtime/AnthropicEnvPortability.integration.test.ts",
+        "test/main/services/runtime/providerRuntimeEnv.test.ts",
+        "src/main/services/runtime/providerRuntimeEnv.test.ts",
+        "test/renderer/components/runtime/ProviderRuntimeSettingsDialog.test.ts",
+        "test/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.test.ts",
+        "vitest.config.ts",
+        "test/setup.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        ".node-version"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/build-linux-windows-draft.yml",
+      "gitBlob": "919dc9d816a5f7441783af22a286da9b1e4f6f8a",
+      "bytes": 17033,
+      "eligible": false,
+      "reason": "No pull_request event",
+      "sourceHits": [],
+      "docsHits": []
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "gitBlob": "a93ff6ba1e5656523668694bca24910a468aebc7",
+      "bytes": 175238,
+      "eligible": true,
+      "event": "pull_request",
+      "opened": true,
+      "paths": null,
+      "sourceHits": [
+        ".github/workflows/host-emulated-acceptance.yml",
+        "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "tools/owned-process-broker/nativeWindowsAppFixture.ts"
+      ],
+      "docsHits": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14334909525-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14335005585-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14335984464-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14336154427-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14336782083-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337206794-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337338225-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337526955-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337542479-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337577139-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14338246689-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14338585452-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14339061547-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14343770599-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-delivery-expiry-record-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-claude-collaboration-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-outcome-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-png-byte-proof-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-visual-read-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-actual-source-workflow-crossjoin-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-base-action-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-complete-source-comparison-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-execution-admission-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-execution-preflight-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-head-action-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet1-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet2-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet3-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-pr-action-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511052-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511059-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511125-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511268-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511328-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511476-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511484-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511567-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511597-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511664-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511732-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511776-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511865-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511986-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512024-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512405-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512849-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512912-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513026-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513174-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513245-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072515187-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134098865037-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134098865077-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-retained-observation-packet-4-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-retained-observation-packet-5-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-stage1-windows-actual-main-lock-proof-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-static-diagnostic-extraction-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-v2-management-pending-view-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-arm-source-guard-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-arm-source-semantic-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-catalog-no-reuse-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-embedded-opencode-outcome-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-packaged-visual-read-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-settlement-readiness-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-current-source-proof-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-superseded-citation-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-superseded-label-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-current-source-proof-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-complete-runtime-capture-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-external-admission-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-independent-runtime-outcome-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-node-metadata-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-waitread-binding-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-waitread-supervisor-20261117.cjs",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json"
+      ],
+      "reason": "Actual changed path(s) or unfiltered event"
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "gitBlob": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1",
+      "bytes": 2479,
+      "eligible": true,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        "src/**",
+        "packages/**",
+        "agent-teams-controller/**",
+        "mcp-server/**",
+        "scripts/**",
+        ".github/workflows/**",
+        ".github/codeql/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "tsconfig*.json"
+      ],
+      "sourceHits": [
+        ".github/workflows/host-emulated-acceptance.yml",
+        "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs"
+      ],
+      "docsHits": [],
+      "reason": "Actual changed path(s) or unfiltered event"
+    },
+    {
+      "path": ".github/workflows/codex-runtime-smoke.yml",
+      "gitBlob": "cef44447c47e39a7da678f37e2518952e218da08",
+      "bytes": 3229,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        ".github/workflows/codex-runtime-smoke.yml",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "scripts/smoke/codex-runtime-install.ts",
+        "src/features/codex-runtime-installer/**",
+        "src/main/services/infrastructure/codexAppServer/**",
+        "src/main/services/runtime/providerAwareCliEnv.ts",
+        "src/main/utils/childProcess.ts",
+        "src/main/utils/pathDecoder.ts",
+        "tsconfig*.json",
+        "scripts/tsconfig/**"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/dependency-review.yml",
+      "gitBlob": "4a5f2ab17b3daf4ffdf6992ee85d159adf2c46c6",
+      "bytes": 1527,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        "**/package.json",
+        "**/package-lock.json",
+        "**/pnpm-lock.yaml",
+        "pnpm-workspace.yaml"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+      "gitBlob": "490c2048dfbd9f275f784d7a0f1a6eeba0a9f361",
+      "bytes": 3218,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        "src/main/utils/electronDevPathOverrides.ts",
+        "src/main/utils/electronDevPathOverrides.test.ts",
+        "src/main/utils/electronUserDataMigration.ts",
+        "test/main/utils/electronUserDataMigration.test.ts",
+        "test/main/bootstrapConfigIsolation.test.ts",
+        "src/main/bootstrapUserDataMigration.ts",
+        "src/main/index.ts",
+        ".github/workflows/electron-dev-profile-cross-platform.yml"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+      "bytes": 19532,
+      "eligible": true,
+      "event": "pull_request",
+      "opened": true,
+      "paths": null,
+      "sourceHits": [
+        ".github/workflows/host-emulated-acceptance.yml",
+        "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "tools/owned-process-broker/nativeWindowsAppFixture.ts"
+      ],
+      "docsHits": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14334909525-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14335005585-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14335984464-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14336154427-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14336782083-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337206794-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337338225-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337526955-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337542479-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337577139-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14338246689-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14338585452-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14339061547-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14343770599-complete-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-delivery-expiry-record-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-claude-collaboration-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-outcome-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-png-byte-proof-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-visual-read-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-actual-source-workflow-crossjoin-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-base-action-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-complete-source-comparison-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-execution-admission-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-execution-preflight-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-head-action-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet1-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet2-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet3-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-pr-action-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511052-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511059-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511125-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511268-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511328-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511476-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511484-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511567-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511597-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511664-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511732-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511776-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511865-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511986-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512024-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512405-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512849-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512912-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513026-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513174-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513245-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072515187-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134098865037-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134098865077-full-20261117.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-retained-observation-packet-4-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-retained-observation-packet-5-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-stage1-windows-actual-main-lock-proof-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-static-diagnostic-extraction-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-v2-management-pending-view-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-arm-source-guard-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-arm-source-semantic-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-catalog-no-reuse-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-embedded-opencode-outcome-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-packaged-visual-read-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-settlement-readiness-advisory-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-current-source-proof-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-superseded-citation-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-superseded-label-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-current-source-proof-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-complete-runtime-capture-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-external-admission-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-independent-runtime-outcome-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-node-metadata-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-actual-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-binding-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-guard-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-independent-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-root-actual-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-root-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-semantic-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-waitread-binding-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-waitread-supervisor-20261117.cjs",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json"
+      ],
+      "reason": "Actual changed path(s) or unfiltered event"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "gitBlob": "0d54287979a1741519b41b00e1ee521d5cd83046",
+      "bytes": 96896,
+      "eligible": true,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        ".github/workflows/host-emulated-acceptance.yml",
+        "packages/legacy-agent-host/**",
+        "packages/task-change-ledger/**",
+        "scripts/legacy-agent-host/**",
+        "tools/owned-process-broker/fixtures/**",
+        "tools/linux-node-exec/**",
+        "scripts/build/buildLinuxNodeExec.mjs",
+        "scripts/dev-with-runtime.mjs",
+        "scripts/build/linuxNodeExec.native.test.mjs",
+        "scripts/electron-builder/afterPack.cjs",
+        "scripts/electron-builder/dist.mjs",
+        "scripts/electron-builder/verifyLinuxNodeExec.cjs",
+        "src/features/agent-backend/**",
+        "src/features/runtime-provider-management/**",
+        "src/features/codex-runtime-installer/**",
+        "src/features/opencode-runtime-installer/**",
+        "src/main/**",
+        "src/preload/**",
+        "src/renderer/**",
+        "src/shared/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml"
+      ],
+      "sourceHits": [
+        ".github/workflows/host-emulated-acceptance.yml",
+        "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs"
+      ],
+      "docsHits": [],
+      "reason": "Actual changed path(s) or unfiltered event"
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "gitBlob": "70202d22a5840401a00025cd60b797c514f3e455",
+      "bytes": 34313,
+      "eligible": true,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        ".github/workflows/host-process-acceptance.yml",
+        "agent-teams-controller/**",
+        "packages/legacy-agent-host/**",
+        "packages/task-change-ledger/**",
+        "src/features/agent-backend/**",
+        "src/main/utils/ownedProcess/**",
+        "src/main/utils/childProcess.ts",
+        "src/main/utils/electronNodeLaunch.ts",
+        "src/main/utils/linuxNodeExecArtifact.ts",
+        "src/main/services/team/WorkspaceMcpBundle.ts",
+        "test/main/build/electronBuilderAfterPack.test.ts",
+        "test/features/agent-backend/**",
+        "tools/owned-process-broker/**",
+        "scripts/build/buildOwnedProcessBroker.ts",
+        "tools/linux-node-exec/**",
+        "scripts/build/buildLinuxNodeExec.mjs",
+        "scripts/dev-with-runtime.mjs",
+        "scripts/build/linuxNodeExec.native.test.mjs",
+        "scripts/electron-builder/afterPack.cjs",
+        "scripts/electron-builder/dist.mjs",
+        "scripts/electron-builder/verifyLinuxNodeExec.cjs",
+        "scripts/ci/**",
+        "scripts/ensure-electron-install.cjs",
+        "vendor/provider-migration/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml"
+      ],
+      "sourceHits": [
+        "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "tools/owned-process-broker/nativeWindowsAppFixture.ts"
+      ],
+      "docsHits": [],
+      "reason": "Actual changed path(s) or unfiltered event"
+    },
+    {
+      "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+      "gitBlob": "95d681fe04abd838dd11799d7791fa59444c6e32",
+      "bytes": 3335,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        "src/renderer/components/team/kanban/**",
+        "src/renderer/components/team/TeamDetailView.tsx",
+        "scripts/e2e/task-detail-tabs-desktop.ts",
+        "pnpm-lock.yaml",
+        ".github/workflows/kanban-table-desktop-e2e.yml"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/landing-hetzner-release.yml",
+      "gitBlob": "4b54f229156f9d347e1a33da0d83b3374acc4078",
+      "bytes": 7306,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        "landing/**",
+        "docs/screenshots/**",
+        "scripts/announcements/**",
+        "scripts/ci/transitive-security*",
+        "scripts/ci/audit-dependencies.mjs",
+        "pnpm-workspace.yaml",
+        "package.json",
+        "pnpm-lock.yaml",
+        ".node-version",
+        ".github/workflows/landing-hetzner-release.yml"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/landing.yml",
+      "gitBlob": "4a1ad9ae59ff2e338930a195d54fdff62da1ebc5",
+      "bytes": 5592,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        "landing/**",
+        "scripts/announcements/**",
+        "scripts/ci/transitive-security*",
+        "scripts/ci/audit-dependencies.mjs",
+        "pnpm-workspace.yaml",
+        "package.json",
+        "pnpm-lock.yaml",
+        ".github/workflows/landing.yml",
+        ".gitattributes"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/macos-signing-qualification.yml",
+      "gitBlob": "d63bddd51302a5c0380762bf22171f43c38a39b0",
+      "bytes": 9635,
+      "eligible": false,
+      "reason": "No pull_request event",
+      "sourceHits": [],
+      "docsHits": []
+    },
+    {
+      "path": ".github/workflows/opencode-desktop-e2e.yml",
+      "gitBlob": "3d2a90a0e335155d435bd4eae4f2bd2842425983",
+      "bytes": 6719,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        "scripts/e2e/opencode-diagnostics-desktop.mjs",
+        "src/renderer/store/index.ts",
+        "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts",
+        "src/features/runtime-provider-management/core/application/loadOpenCodeScopedCatalog.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts",
+        "src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts",
+        "scripts/e2e/opencode-diagnostics/**",
+        "test/scripts/opencodeStartupCleanupFixture.test.mjs",
+        ".github/workflows/opencode-desktop-e2e.yml",
+        "src/features/runtime-provider-management/core/domain/openCodeProviderCompatibility.ts",
+        "src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus.tsx",
+        "src/features/runtime-provider-management/renderer/RuntimeProviderManagementPanel.tsx",
+        "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "src/features/runtime-provider-management/renderer/hooks/maskRuntimeProviderStateForScope.ts",
+        "src/features/runtime-provider-management/renderer/hooks/runtimeProviderDirectoryCatalogPolicy.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect.ts",
+        "src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache.ts",
+        "src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx",
+        "src/renderer/components/runtime/openCodeStatusPresentation.ts"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/opencode-native-windows-e2e.yml",
+      "gitBlob": "f5a2a472b752acf37399fc9e11f63f6d45bdb297",
+      "bytes": 29178,
+      "eligible": false,
+      "reason": "No pull_request event",
+      "sourceHits": [],
+      "docsHits": []
+    },
+    {
+      "path": ".github/workflows/opencode-packaged-e2e.yml",
+      "gitBlob": "458e165ef020a1f8b05806b9ae7edc839134e1b4",
+      "bytes": 19616,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        ".github/workflows/opencode-packaged-e2e.yml",
+        "src/main/services/infrastructure/CliInstallerService.ts",
+        "src/features/runtime-provider-management/core/domain/openCodeProviderCompatibility.ts",
+        "src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus.tsx",
+        "scripts/e2e/opencode-diagnostics/packaged*.mjs",
+        "scripts/e2e/opencode-diagnostics/v2-support-repair*.mjs",
+        "scripts/e2e/opencode-diagnostics/stage-candidate*.mjs",
+        "scripts/e2e/opencode-diagnostics/run-packaged.mjs",
+        "scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts",
+        "scripts/e2e/opencode-diagnostics/native-test-pin.mts",
+        "scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.tsconfig.json",
+        "scripts/e2e/opencode-diagnostics-desktop.mjs",
+        "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "scripts/e2e/opencode-diagnostics/catalog.mjs",
+        "runtime.lock.json",
+        "scripts/stage-runtime.mjs",
+        "scripts/lib/github-release-download-error.mjs",
+        "scripts/lib/runtime-archive-checksum.mjs",
+        "scripts/lib/runtime-payload-cache.mjs",
+        "scripts/lib/runtime-payload-inventory.mts",
+        "scripts/lib/runtime-windows-zip-extraction.mts",
+        "scripts/lib/runtime-windows-zip-extraction.test.mts",
+        "scripts/lib/runtime-archive-extraction.mts"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+      "gitBlob": "be6a9ae5a88efadca344773ed4aa962d42823d28",
+      "bytes": 2756,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+        "src/renderer/store/index.ts",
+        "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts",
+        "src/features/runtime-provider-management/core/application/loadOpenCodeScopedCatalog.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts",
+        "src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts",
+        ".github/workflows/opencode-packaged-e2e.yml",
+        "scripts/e2e/opencode-diagnostics/packaged-verify.mjs",
+        "scripts/e2e/opencode-diagnostics/real-runtime.mjs",
+        "scripts/e2e/opencode-diagnostics/real-runtime.test.mjs",
+        "scripts/e2e/opencode-diagnostics/run-packaged.mjs",
+        "scripts/e2e/opencode-diagnostics/packaged.mjs",
+        "scripts/e2e/opencode-diagnostics/v2-support-repair*.mjs",
+        "runtime.lock.json",
+        "src/renderer/components/dashboard/ProviderConnectionCounts.tsx",
+        "src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts",
+        "src/features/runtime-provider-management/renderer/connectedCountObservationPolicy.ts",
+        "src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache.ts",
+        "src/renderer/components/dashboard/DashboardProviderSummary.tsx",
+        "src/features/runtime-provider-management/core/domain/runtimeProviderQuickConnect.ts"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "bytes": 36013,
+      "eligible": true,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        "runtime.lock.json",
+        "pnpm-lock.yaml",
+        "package.json",
+        "pnpm-workspace.yaml",
+        "packages/legacy-agent-host/package.json",
+        "packages/legacy-agent-host/tsconfig*.json",
+        "packages/legacy-agent-host/src/**",
+        "packages/legacy-agent-host/tests/**",
+        "packages/legacy-agent-host/native/**",
+        "packages/legacy-agent-host/scripts/**",
+        "scripts/legacy-agent-host/**",
+        "scripts/stage-runtime.mjs",
+        "scripts/lib/opencode-v2-base-inventory.mts",
+        "scripts/lib/runtime-archive-checksum.mjs",
+        "scripts/lib/runtime-payload-cache.mjs",
+        "src/features/opencode-runtime-installer/**",
+        "src/features/opencode-compatibility/**",
+        "src/main/services/infrastructure/openCode*.ts",
+        "src/main/services/runtime/openCode*.ts",
+        "src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts",
+        "src/main/services/infrastructure/openCodeRuntimePackageMetadata.ts",
+        "test/features/opencode-runtime-installer/**",
+        "test/main/services/infrastructure/OpenCodeRuntimeInstallerService.test.ts",
+        "vendor/provider-migration/**",
+        "scripts/ci/install-dependencies-with-retry.mjs",
+        "test/scripts/installDependenciesWithRetry.test.mjs",
+        ".github/workflows/opencode-v2-stage1-preflight.yml"
+      ],
+      "sourceHits": [
+        "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs"
+      ],
+      "docsHits": [],
+      "reason": "Actual changed path(s) or unfiltered event"
+    },
+    {
+      "path": ".github/workflows/prepare-updater-native-inputs.yml",
+      "gitBlob": "51beb92ade4931fe04336c7d3908bacfc932269e",
+      "bytes": 8825,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        "scripts/e2e/release-updater/windows-plan*.mts",
+        "scripts/e2e/release-updater/native-release-scenario.mts",
+        "scripts/e2e/release-updater/prepared-stage-download*.mts",
+        "scripts/e2e/release-updater/inputs.mts",
+        "scripts/ci/release/contract.ts",
+        ".github/workflows/prepare-updater-native-inputs.yml",
+        "scripts/tsconfig/tsconfig.updater-e2e.json",
+        "tsconfig.json",
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/provider-real-runtime-e2e.yml",
+      "gitBlob": "4ee30807aa18f043fe53d090bfb6211bb5458ce0",
+      "bytes": 8958,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        "scripts/e2e/provider-real-runtime-*.ts",
+        "scripts/e2e/opencode-diagnostics/startup-resources.mjs",
+        "scripts/e2e/opencode-diagnostics/startup-resources.test.mjs",
+        "scripts/e2e/opencode-diagnostics/run.mjs",
+        "scripts/e2e/opencode-diagnostics/real-runtime.mjs",
+        "scripts/e2e/opencode-diagnostics-desktop.mjs",
+        "src/renderer/components/dashboard/DashboardProviderSummary.tsx",
+        "src/renderer/store/index.ts",
+        "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts",
+        "src/features/runtime-provider-management/core/application/loadOpenCodeScopedCatalog.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts",
+        "src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts",
+        ".github/workflows/provider-real-runtime-e2e.yml",
+        "runtime.lock.json"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/publish-carried-release.yml",
+      "gitBlob": "371ed6d3b2cf4e41c012da287a295783c39c426e",
+      "bytes": 3908,
+      "eligible": false,
+      "reason": "No pull_request event",
+      "sourceHits": [],
+      "docsHits": []
+    },
+    {
+      "path": ".github/workflows/recover-existing-draft-payloads.yml",
+      "gitBlob": "eadeedf4381cbf1d7e32cd31105dd88cd2c8eb65",
+      "bytes": 1905,
+      "eligible": false,
+      "reason": "No pull_request event",
+      "sourceHits": [],
+      "docsHits": []
+    },
+    {
+      "path": ".github/workflows/release-publication-guard.yml",
+      "gitBlob": "10b7abd2992cc740084a5c51ace7f3fe025220f9",
+      "bytes": 2706,
+      "eligible": false,
+      "reason": "No pull_request event",
+      "sourceHits": [],
+      "docsHits": []
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "gitBlob": "d28bee6dea87ec191f0d40670f3e68c48251d049",
+      "bytes": 46671,
+      "eligible": false,
+      "reason": "No pull_request event",
+      "sourceHits": [],
+      "docsHits": []
+    },
+    {
+      "path": ".github/workflows/reviewrouter-interaction.yml",
+      "gitBlob": "edb68c51f54ad4a792eb29f1f557aad48e3a6218",
+      "bytes": 4238,
+      "eligible": false,
+      "reason": "No pull_request event",
+      "sourceHits": [],
+      "docsHits": []
+    },
+    {
+      "path": ".github/workflows/reviewrouter-review.yml",
+      "gitBlob": "04964f8ac7beadb3277fb28ec9cc0d61b86ca84b",
+      "bytes": 912,
+      "eligible": false,
+      "reason": "No pull_request event",
+      "sourceHits": [],
+      "docsHits": []
+    },
+    {
+      "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+      "gitBlob": "4020f668ab2a9a7b16fcb0aa7fd2d79a061f1d44",
+      "bytes": 5079,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        "runtime.lock.json",
+        "scripts/dev-with-runtime.mjs",
+        "scripts/ci/verify-public-runtime-bootstrap.mjs",
+        "scripts/ci/verify-runtime-lock.mjs",
+        "scripts/lib/github-release-download-error.mjs",
+        "scripts/lib/runtime-cli-version.mjs",
+        "scripts/lib/runtime-bootstrap-diagnostics.mts",
+        "scripts/lib/runtime-command-capture.mts",
+        "scripts/lib/runtime-archive-checksum.mjs",
+        "scripts/lib/runtime-payload-cache.mjs",
+        "scripts/lib/runtime-payload-cache.test.mjs",
+        "scripts/lib/runtime-payload-cache-async.test.mts",
+        "scripts/lib/runtime-payload-inventory.mts",
+        "scripts/lib/runtime-windows-zip-extraction.mts",
+        "scripts/lib/runtime-windows-zip-extraction.test.mts",
+        "scripts/lib/runtime-archive-extraction.mts",
+        "scripts/lib/runtime-archive-extraction.test.mts",
+        "scripts/lib/runtime-zip.test-fixture.mts",
+        ".github/workflows/runtime-bootstrap-smoke.yml"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/sentry-owned-process-native.yml",
+      "gitBlob": "1188fa5b89d59b739d927082d1b6954a57181819",
+      "bytes": 39878,
+      "eligible": true,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        ".github/workflows/sentry-owned-process-native.yml",
+        "tools/owned-process-broker/**",
+        "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+        "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+        "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+        "src/main/utils/ownedProcess/**",
+        "packages/legacy-agent-host/src/owned-process/**",
+        "packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts",
+        "packages/legacy-agent-host/src/adapters/providers/WindowsCapturedProcess.ts",
+        "packages/legacy-agent-host/src/composition/nativeProcessProfile.ts",
+        "packages/legacy-agent-host/src/composition/processCustody.ts",
+        "packages/legacy-agent-host/src/process/**",
+        "packages/legacy-agent-host/native/registered-process-linux.c",
+        "packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts",
+        "packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts",
+        "packages/legacy-agent-host/scripts/qualifyLinuxProcessAbi.ts",
+        "packages/legacy-agent-host/scripts/qualifyLinuxProcessAbiHost.ts",
+        "tsconfig.legacy-agent-host-scripts.json",
+        "packages/legacy-agent-host/tests/registered-process-linux.native.mjs",
+        "packages/legacy-agent-host/tests/fixtures/registered-process-actor.c",
+        "packages/legacy-agent-host/tests/fixtures/registered-process-parent.ts",
+        "packages/legacy-agent-host/package.json",
+        "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+        "scripts/legacy-agent-host/qualify-linux-process-cold-ui.ts",
+        "scripts/legacy-agent-host/qualify-linux-process-packed.ts",
+        "scripts/legacy-agent-host/candidate-*.ts",
+        "scripts/legacy-agent-host/stage-candidate.ts",
+        "scripts/legacy-agent-host/stage-node.ts",
+        "scripts/legacy-agent-host/desktop-proof-fixture.ts",
+        "scripts/legacy-agent-host/desktop-claude-native-selection.ts",
+        "scripts/legacy-agent-host/desktop-process-root-oracle.ts",
+        "scripts/legacy-agent-host/desktop-controlled-process-fixture.ts",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "scripts/legacy-agent-host/desktop-backend-observations.ts",
+        "scripts/legacy-agent-host/desktop-native-process-*.ts",
+        "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+        "scripts/legacy-agent-host/fixtures/process-foreground-service.ts",
+        "scripts/legacy-agent-host/fixtures/process-controlled-root.ts",
+        "scripts/legacy-agent-host/desktop-proof-management-sources.ts",
+        "scripts/build/buildOwnedProcessBroker.ts",
+        "eslint.config.js"
+      ],
+      "sourceHits": [
+        "tools/owned-process-broker/nativeWindowsAppFixture.ts"
+      ],
+      "docsHits": [],
+      "reason": "Actual changed path(s) or unfiltered event"
+    },
+    {
+      "path": ".github/workflows/stage-existing-partial-draft.yml",
+      "gitBlob": "295dbf212e13b15505696d997ec7c45b4ee3cfa9",
+      "bytes": 5418,
+      "eligible": false,
+      "reason": "No pull_request event",
+      "sourceHits": [],
+      "docsHits": []
+    },
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "gitBlob": "ef939f224a1642cb596906324c8d61441780ccc7",
+      "bytes": 6522,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "scripts/e2e/teams-create-page-desktop.mjs",
+        "src/shared/utils/cliArgsParser.ts",
+        "src/main/services/team/TeamRequestValidation.ts",
+        "src/main/ipc/teams.ts",
+        "src/main/services/infrastructure/CliInstallerService.ts",
+        "src/main/services/runtime/ClaudeMultimodelBridgeService.ts",
+        "src/main/services/runtime/runtimeStatusExecutionContext.ts",
+        "src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts",
+        "src/main/services/team/provisioning/TeamProvisioningProviderPreflight.ts",
+        "scripts/e2e/teams-create-page-owned-processes.mjs",
+        "scripts/e2e/teams-create-page-owned-processes.test.mjs",
+        "src/renderer/components/team/**",
+        "src/features/organizations/**",
+        "src/features/team-templates/**",
+        "src/features/gateway-provider/renderer/**",
+        "src/renderer/hooks/useCreateTeamDraft.ts",
+        "src/renderer/services/createTeamDraftStorage.ts"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/updater-linux-packages.yml",
+      "gitBlob": "60d214756c640b7925cfe11ba45ed4009f27ca3c",
+      "bytes": 21602,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        "scripts/e2e/release-updater/linux-packages*.mts",
+        ".github/workflows/updater-linux-packages.yml",
+        "scripts/e2e/release-updater/archive.mts",
+        "scripts/e2e/release-updater/cdp.mts",
+        "scripts/e2e/release-updater/inputs.mts",
+        "scripts/e2e/release-updater/native-release-scenario.mts",
+        "scripts/e2e/release-updater/native-window.mts",
+        "scripts/e2e/release-updater/transport.mts",
+        "scripts/ci/release/contract.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "scripts/tsconfig/tsconfig.updater-e2e.json"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/updater-mac-manual-migration.yml",
+      "gitBlob": "4aa3a4181259514c5a43fbc7dd4ad98811a3588e",
+      "bytes": 5900,
+      "eligible": false,
+      "reason": "No pull_request event",
+      "sourceHits": [],
+      "docsHits": []
+    },
+    {
+      "path": ".github/workflows/updater-mac-old-updater.yml",
+      "gitBlob": "067a25687f36caefe156b0446c5056d230d27c62",
+      "bytes": 12460,
+      "eligible": false,
+      "reason": "No pull_request event",
+      "sourceHits": [],
+      "docsHits": []
+    },
+    {
+      "path": ".github/workflows/updater-mac-source.yml",
+      "gitBlob": "1196e40faa99e0ab64e329d91f3fea7c6ed47f94",
+      "bytes": 7512,
+      "eligible": false,
+      "reason": "No pull_request event",
+      "sourceHits": [],
+      "docsHits": []
+    },
+    {
+      "path": ".github/workflows/updater-mac-updater.yml",
+      "gitBlob": "950f95892277ae303772ac699915250f0f4f66af",
+      "bytes": 12323,
+      "eligible": false,
+      "reason": "No pull_request event",
+      "sourceHits": [],
+      "docsHits": []
+    },
+    {
+      "path": ".github/workflows/updater-native-feasibility.yml",
+      "gitBlob": "b55e6cbcb4de61e2e8688e1ff4b4529b043a4ada",
+      "bytes": 13476,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        "scripts/e2e/release-updater/**",
+        ".github/workflows/updater-native-feasibility.yml",
+        "scripts/tsconfig/tsconfig.updater-e2e.json",
+        "tsconfig.json",
+        "package.json",
+        "pnpm-lock.yaml",
+        "eslint.fast.config.js"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/updater-windows-ota.yml",
+      "gitBlob": "10ffcd79e48a71346df7545af638208ce039ad83",
+      "bytes": 27610,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        "scripts/e2e/release-updater/windows-*.mts",
+        "scripts/e2e/release-updater/native-release-scenario.mts",
+        "scripts/e2e/release-updater/prepared-stage-download*.mts",
+        "scripts/e2e/release-updater/execution-provenance*.mts",
+        "scripts/e2e/release-updater/archive.mts",
+        "scripts/e2e/release-updater/cdp.mts",
+        "scripts/e2e/release-updater/transport.mts",
+        ".github/workflows/updater-windows-ota.yml",
+        ".github/workflows/updater-windows.yml",
+        "scripts/e2e/release-updater/serialized-function*.mts",
+        "scripts/ci/release/contract.ts",
+        "scripts/tsconfig/tsconfig.updater-e2e.json",
+        "tsconfig.json",
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/updater-windows.yml",
+      "gitBlob": "a4e9375cb95c4129c503f1d7be82de1e3926ea62",
+      "bytes": 11849,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        "scripts/e2e/release-updater/windows-*.mts",
+        "scripts/e2e/release-updater/archive.mts",
+        "scripts/e2e/release-updater/cdp.mts",
+        "scripts/e2e/release-updater/transport.mts",
+        ".github/workflows/updater-windows.yml",
+        "scripts/e2e/release-updater/serialized-function*.mts",
+        "scripts/ci/release/contract.ts",
+        "scripts/tsconfig/tsconfig.updater-e2e.json",
+        "tsconfig.json",
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    },
+    {
+      "path": ".github/workflows/windows-backfill-diagnostic.yml",
+      "gitBlob": "44bec5d82998468d48ac539f3624d0c2de1c6648",
+      "bytes": 14471,
+      "eligible": false,
+      "event": "pull_request",
+      "opened": true,
+      "paths": [
+        "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+        ".github/workflows/windows-backfill-diagnostic.yml",
+        "src/main/services/team/opencode/bridge/**",
+        "src/main/utils/childProcess.ts",
+        "src/main/utils/cliProcessDefaults.ts",
+        "src/main/utils/openCodeNodeModulesJunction.ts",
+        "src/main/services/runtime/openCodeAutoUpdatePolicy.ts",
+        "vitest.config.ts",
+        "test/setup.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        ".node-version"
+      ],
+      "sourceHits": [],
+      "docsHits": [],
+      "reason": "No actual changed path matches"
+    }
+  ],
+  "selectedEventFamilies": 8,
+  "explicitDraftSkipped": [
+    "codeql.yml",
+    "sentry-owned-process-native.yml"
+  ],
+  "prospectiveExecutableWorkflows": 6,
+  "prospectiveJobs": 48,
+  "counts": {
+    "headLeaves": 12330,
+    "docs": 3531,
+    "nonDocs": 8799,
+    "production": 5020,
+    "cap": 800,
+    "exceptions": 141
+  },
+  "evidenceLimits": {
+    "staticSourceAssessmentOnly": true,
+    "githubCompareAloneNotUsedToAssertTreeCompleteness": true,
+    "newRuntime": false,
+    "newGreen": false,
+    "wholeE2E": false
+  }
+}

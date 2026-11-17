@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_COLLABORATION_MODEL_WINDOWS_SETTLEMENT_SOURCE_R2_ACTUAL_GATE",
+  "repository": "777genius/agent-teams-ai",
+  "closedAt": "2026-11-17 17:01:40 UTC",
+  "accepted": true,
+  "decision": "EXISTING_ACTUAL_SOURCE_R2_PUBLICATION_GATE_CLOSED",
+  "commit": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+  "soleParent": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+  "tree": "834d86a61218cd70ec92d6f51f17dcd6531b574f",
+  "docsTree": "b7ffe445c47bc750723d4afedccc83f9833139b3",
+  "githubTree": "2d941c6f8d7be58f541f03e61661ad8badd873a5",
+  "toolsTree": "86ca8ab7662ad004d1b48efd00bd8eb72bd259dc",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "subject": {
+    "bytes": 14910,
+    "sha256": "b487874d966ee11243375f8d94703eeb95890f52ea4af951663d8b410a854bb3",
+    "gitBlob": "778051d3e082b7768437d4437cd11db661531be5"
+  },
+  "manifest": {
+    "bytes": 11342,
+    "sha256": "7afdcb78c3131eb46c5943615a85aae8c97f4b92658f3abbe8aad5321baf0696",
+    "gitBlob": "193f9badb990a897faba8f60a19d49440c0e2f65"
+  },
+  "reviews": [
+    {
+      "role": "root",
+      "pin": {
+        "bytes": 914543,
+        "sha256": "bb8fb81deddf9460ffb86939f56b0b8faab7273bf406738ac3e28ee1141a2082",
+        "gitBlob": "28b362405eeef502c7b98839e6df8a8e6624997c"
+      },
+      "checks": 25,
+      "fullRead": true,
+      "selfReadAt": "2026-11-17 16:52:36 UTC"
+    },
+    {
+      "role": "independent",
+      "pin": {
+        "gitBlob": "57a916f04c06fc620a4ded1dca1d0f2fe08088b1",
+        "bytes": 552676,
+        "sha256": "6e5ab71ed1444cd114364c31c1177eddf96fd032d9afe16012f0ecbe9526274b"
+      },
+      "checks": 33,
+      "fullRead": true,
+      "authorSelfReadConfirmed": true,
+      "authorSelfReadAt": "2026-11-17 16:56:50 UTC"
+    }
+  ],
+  "actualChecks": 58,
+  "staticReviewChecks": 133,
+  "publication": {
+    "changed": 16,
+    "addedDocs": 11,
+    "modifiedDocs": 3,
+    "modifiedSource": 2,
+    "unchangedRootEntries": 51,
+    "currentBodies": 16,
+    "currentBytes": 5608228,
+    "parentBodies": 5,
+    "parentBytes": 3899659,
+    "sourceFiles": 2,
+    "wholeSourceBodies": 4,
+    "wholeSourceBytes": 256500,
+    "wholeInverses": true,
+    "completePrefixes": true,
+    "appendBytes": 3037,
+    "catalogOldValues": 113,
+    "catalogNewKeys": 2,
+    "bundles": 27,
+    "totalsPreserved": true
+  },
+  "pointerClosure": {
+    "complete": 810,
+    "bytes": 156546636,
+    "utf8": 788,
+    "binary": 22,
+    "allIdentitiesAndLocationSetsMatch": true,
+    "contextualReportReferenceResolutions": 28,
+    "mergedAliasTuples": 3,
+    "scopeInterpretation": "28 acceptedReport references to ae8880f423a98c72263de7c652a7c2e897b736a6 resolve to the already fully read 777genius/agent-teams-ai tuple; inherited foreign repository context is not used to fetch or duplicate it.",
+    "unreadMetadataOnly": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "pin": {
+          "gitBlob": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3",
+          "bytes": 186398,
+          "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+        },
+        "locations": [
+          "file:bindingReview.unreadMetadataOnlyReferences.0.pin",
+          "file:precedingR1ActualGate.pointerClosure.unreadMetadataOnly.0.pin",
+          "file:precedingR1IndependentActual.unreadBinaryMetadataReferences.0.pin",
+          "file:precedingR1RootActual.checks.19.evidence.exceptions.0.pin",
+          "file:precedingR1RootActual.unreadBinaryMetadataReferences.0.pin"
+        ],
+        "classification": "Original separate unread TGZ metadata only; no retry/read/qualification"
+      }
+    ],
+    "missing": []
+  },
+  "sourceFiles": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "mode": "100644",
+      "before": {
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      },
+      "after": {
+        "bytes": 96896,
+        "sha256": "a61c9ae8e2c294c1f284081b946c050c6fd2042a09789fddfd7caec5e6eaf5cb",
+        "gitBlob": "0d54287979a1741519b41b00e1ee521d5cd83046"
+      },
+      "beforePhysicalLines": 1248,
+      "afterPhysicalLines": 1248,
+      "inverseExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 31223,
+        "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+      },
+      "after": {
+        "bytes": 31509,
+        "sha256": "32b0abb41931312ebf024791e10a7c88da4b377a000f985137ac01cd8a7a13a8",
+        "gitBlob": "c4e356ba85e5f32febb47342610c2f06e27b76bc"
+      },
+      "beforePhysicalLines": 485,
+      "afterPhysicalLines": 491,
+      "inverseExact": true
+    }
+  ],
+  "preservation": {
+    "production": 5020,
+    "cap": 800,
+    "exceptions": 141,
+    "nonDocLeaves": 8799,
+    "workflows": 42,
+    "dependenciesChanged": 0,
+    "broadWorkflowChanges": 0,
+    "deadlineChanges": 0,
+    "assertionsRemoved": 0,
+    "casesRemoved": 0,
+    "oldAttemptsSpentForever": true,
+    "noRealClaudeOrCodex": true,
+    "noMainMergeReadyReleaseStage2": true,
+    "frozenPrs": [
+      1206,
+      1207,
+      1208,
+      1211,
+      1212,
+      1213
+    ]
+  },
+  "ci3": {
+    "head": "86f52244b5375834a4040cbc63803d68cc708087",
+    "refsAndPrMetadataFrozen": true,
+    "terminalExcludedForever": [
+      44092933980,
+      44092933718,
+      44092933835,
+      44092933888,
+      44092934051,
+      44092933827,
+      44092933972,
+      44092933912
+    ],
+    "activeRunIds": [
+      44092933873,
+      44092934079,
+      44092933810
+    ],
+    "doesNotQualifyNewSource": true
+  },
+  "qualification": {
+    "sourcePublished": true,
+    "sourceRuntimeQualified": false,
+    "actualGreen": false,
+    "wholeE2E": false,
+    "additionalGateIntroduced": false
+  },
+  "next": "Proceed to existing distinct fixed-source GitHub-only CI R1 admission for aab3d84c. Same structured GitHub API sequence requires no new executable R2. No old run is retried and no runtime is admitted by this actual-publication record alone."
+}

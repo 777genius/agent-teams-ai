@@ -1,0 +1,2398 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_FIXED_AAB3_FOURTH_CI_R1",
+  "at": "2026-11-17 17:11:13 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "owner": "root",
+  "state": "EXACT_R1_SELECTED_NOT_YET_REVIEWED_OR_ADMITTED",
+  "objective": "Validate the three later accepted E2E repairs against real prior CI3 source, preserving all complete original contracts and earlier non-PASS outcomes.",
+  "authorization": {
+    "userGoal": "Finish frontend/Host/extracted-provider parity and E2E autonomously in parallel; push every commit immediately.",
+    "providerConstraint": "Never execute real Claude/Codex, including version/status/login probes or fallback. Finite TEST peers only; existing pinned OpenCode localhost/free routes permitted.",
+    "rootSolePublisherExecutor": true
+  },
+  "precedingClosedGate": {
+    "pin": {
+      "bytes": 6196,
+      "sha256": "06f73d718018698225838883cad606c5e2a8924c9e7f90e5ea335735e27a0bc2",
+      "gitBlob": "ca1b9cc4a3666168a8f13ca0fd52aa4fab2abe47"
+    },
+    "closedAt": "2026-11-17 17:01:40 UTC",
+    "checks": 58,
+    "root": {
+      "bytes": 914543,
+      "sha256": "bb8fb81deddf9460ffb86939f56b0b8faab7273bf406738ac3e28ee1141a2082",
+      "gitBlob": "28b362405eeef502c7b98839e6df8a8e6624997c"
+    },
+    "independent": {
+      "gitBlob": "57a916f04c06fc620a4ded1dca1d0f2fe08088b1",
+      "bytes": 552676,
+      "sha256": "6e5ab71ed1444cd114364c31c1177eddf96fd032d9afe16012f0ecbe9526274b"
+    },
+    "staticReviews": 133,
+    "actualSourcePublished": true,
+    "newRuntimeOrGreen": false
+  },
+  "precedingDiagnosticGate": {
+    "pin": {
+      "gitBlob": "89160b0e4c7dc552a3d4d65714d77cdeac40f84c",
+      "bytes": 6297,
+      "sha256": "59372bcee2d74d9e40c788b7758df40ea74aa7ccfa24444cb781fa39f3b2a082"
+    },
+    "closedAt": "2026-11-17 15:47:03 UTC",
+    "commit": "542a7109a819087e90c26330771b45c81c123b60",
+    "noRuntimeClaim": true
+  },
+  "inheritedProcedure": {
+    "precedingCi3R1": {
+      "gitBlob": "d9da20d5123dd4bfec6c400508e2409e783f346d",
+      "bytes": 88097,
+      "sha256": "86e51d82ac055045ce1682afd942f28a4f682be354acf629f7c02dc1929fbebe"
+    },
+    "sequence": [
+      "Current source actual gates closed before this venue selection.",
+      "Root retains exact R1; root, independent guard, semantic and binding full-body reviews.",
+      "Publish accepted R1/evidence as docs only on separate working branch; immediate expected-parent force:false push; existing root+independent full actual readbacks.",
+      "Retain immutable external admission binding actual publication/reports/gate to fixed commits and exact structured arguments.",
+      "Only then root performs one-shot exact-name absence preflight, each new ref creation/readback once, one Draft PR creation/readback, then actual event/run/attempt binding.",
+      "Capture only new bound evidence and separately still-active CI3; terminal runs never polled again."
+    ],
+    "r2Boundary": "Same structured GitHub API sequence; no new executable control/source/workflow/dependency. No additional executable R2 or gate."
+  },
+  "fixedSource": {
+    "base": "86f52244b5375834a4040cbc63803d68cc708087",
+    "head": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+    "baseTree": "11ccb7c57cc49af613c62620a1d348bf6de8aa3d",
+    "headTree": "834d86a61218cd70ec92d6f51f17dcd6531b574f",
+    "headDocs": "b7ffe445c47bc750723d4afedccc83f9833139b3",
+    "realAncestor": true,
+    "aheadBy": 7,
+    "behindBy": 0,
+    "comparison": {
+      "bytes": 1297773,
+      "sha256": "837f3c1794f8dcbc33ea21f031ded3f303933feb6cb061fc0b8279fcebac9067",
+      "gitBlob": "f81d1917ca3675e2f8e917b41cf4a9b3ca6aa9f3"
+    },
+    "completeTreeCrossjoin": {
+      "bytes": 161190,
+      "sha256": "c5e8dddeed9731383a74a8074ccec8f26a49c7bc792011d9806476c2a4492df1",
+      "gitBlob": "fe2808f7b4535d202aa8713b9d7cd639d73d0abd"
+    },
+    "changedFiles": 143,
+    "sourceFiles": 3,
+    "documentationFiles": 140,
+    "sourceRows": [
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "before": {
+          "bytes": 96872,
+          "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+          "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+        },
+        "after": {
+          "bytes": 96896,
+          "sha256": "a61c9ae8e2c294c1f284081b946c050c6fd2042a09789fddfd7caec5e6eaf5cb",
+          "gitBlob": "0d54287979a1741519b41b00e1ee521d5cd83046"
+        },
+        "completeBeforeAfterRead": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "before": {
+          "bytes": 41559,
+          "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+          "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+        },
+        "after": {
+          "bytes": 41619,
+          "sha256": "e1e95d1dcf12408251bde11f4ab679b73de7c8a15b4a49105121b1e8a5a92b36",
+          "gitBlob": "8d12ee7a61d13740dbaddfe8177bfe80cb716335"
+        },
+        "completeBeforeAfterRead": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "before": {
+          "bytes": 31223,
+          "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+          "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+        },
+        "after": {
+          "bytes": 31509,
+          "sha256": "32b0abb41931312ebf024791e10a7c88da4b377a000f985137ac01cd8a7a13a8",
+          "gitBlob": "c4e356ba85e5f32febb47342610c2f06e27b76bc"
+        },
+        "completeBeforeAfterRead": true
+      }
+    ],
+    "selection": "Real prior CI3 source isolates the three later accepted changes. No artificial base, trigger-only edit or omission. All six executable families and complete original contracts remain selected. Entire143-file API list matches the complete nontruncated tree comparison.",
+    "sourceRepairs": [
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "meaning": "Two expected model strings become TEST-claude-sonnet. Complete inverse restores the old workflow; every other byte unchanged."
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "meaning": "unique(pattern,start=0), match.index>=start, and publishEnd search starts at selected publish. Twelve local cases plus one whole14-platform import, six patterns and five comparisons preserved."
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "meaning": "Only strict-undefined nativeSettlement is pending on completed/observed-absent selected receipt; human principal/full capture/original ID checked. Present null/false/malformed data still reaches unchanged final failure. Original10s loop/25ms cadence/all24await sites/final Stop and Quit oracles preserved."
+      }
+    ],
+    "qualification": "Actual source publication only; CI3 fixed86f outcomes cannot qualify these postimages."
+  },
+  "publicationContract": {
+    "workingBranch": "fix/frontend-parity-coobservation-c714-20261115",
+    "parent": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+    "parentRoot": "834d86a61218cd70ec92d6f51f17dcd6531b574f",
+    "parentDocs": "b7ffe445c47bc750723d4afedccc83f9833139b3",
+    "docsOnly": true,
+    "all53NonDocRootEntriesUnchanged": true,
+    "parentTotalLeaves": 12330,
+    "parentDocsLeaves": 3531,
+    "nonDocLeaves": 8799,
+    "workflows": 42,
+    "production": 5020,
+    "sourceCap": 800,
+    "exceptions": 141,
+    "parentCatalogFields": 115,
+    "bundles": 27,
+    "allCatalogValuesAndTotalsPreserved": true,
+    "fullPlanStatusPrefixesPreserved": true,
+    "newCatalogKeys": [
+      "fixedAab3FourthCiR1Stage",
+      "fixedAab3FourthCiR1EvidenceFiles"
+    ],
+    "exactEvidenceManifestRequired": true,
+    "immediateExpectedParentForceFalsePush": true,
+    "fullRootAndIndependentActualReadbacksRequired": true,
+    "lateCi3Evidence": "Retained late CI3 reports/visuals/chunks require a separate durable checkpoint; no new-source execution authority inferred."
+  },
+  "selectedMutationSequence": {
+    "selected": true,
+    "newNamesObservedAbsent": false,
+    "newNameQualification": "Proposed names only; no lookup or creation yet. Later admitted one-shot preflight must confirm absence. Unknown/error is not absence.",
+    "baseRef": "ci/frontend-parity-c714-20261117-4-base",
+    "headRef": "ci/frontend-parity-c714-20261117-4-head",
+    "base": "86f52244b5375834a4040cbc63803d68cc708087",
+    "head": "aab3d84ceb40674abb2139c6cc82a383c0b14df4",
+    "event": "pull_request opened",
+    "sameRepository": true,
+    "draft": true,
+    "maintainerCanModify": false,
+    "headBinding": "Only fixed aab3 is execution head; later docs commits remain external authority.",
+    "proposedStructuredActions": [
+      {
+        "order": 1,
+        "operation": "read-only preflight after external admission",
+        "requirements": [
+          "Four exact R1 reviews, documentation publication, root+independent actual gate and immutable external admission closed.",
+          "Read each proposed exact name once; require confirmed absence. No retry/overwrite/reuse/alternative names.",
+          "Reconfirm fixed commits/ancestry/complete143-file tree comparison and42complete workflow identities; refuse mismatch.",
+          "No frozen or terminal old PR/run mutation or polling."
+        ]
+      },
+      {
+        "order": 2,
+        "tool": "github_create_branch",
+        "arguments": {
+          "repository_full_name": "777genius/agent-teams-ai",
+          "branch_name": "ci/frontend-parity-c714-20261117-4-base",
+          "sha": "86f52244b5375834a4040cbc63803d68cc708087"
+        },
+        "readback": "Exact86f SHA and root11ccb7c57cc49af613c62620a1d348bf6de8aa3d.",
+        "maximumAttempts": 1
+      },
+      {
+        "order": 3,
+        "tool": "github_create_branch",
+        "arguments": {
+          "repository_full_name": "777genius/agent-teams-ai",
+          "branch_name": "ci/frontend-parity-c714-20261117-4-head",
+          "sha": "aab3d84ceb40674abb2139c6cc82a383c0b14df4"
+        },
+        "readback": "Exact aab3 SHA and root834d86a61218cd70ec92d6f51f17dcd6531b574f.",
+        "maximumAttempts": 1
+      },
+      {
+        "order": 4,
+        "tool": "github_create_pull_request",
+        "arguments": {
+          "repository_full_name": "777genius/agent-teams-ai",
+          "base": "ci/frontend-parity-c714-20261117-4-base",
+          "head": "ci/frontend-parity-c714-20261117-4-head",
+          "title": "test: validate diagnostic, collaboration and Windows settlement repairs",
+          "body": "## Purpose\n\nValidate the three published E2E repairs at fixed commit aab3d84ceb40674abb2139c6cc82a383c0b14df4 against the previously tested source commit 86f52244b5375834a4040cbc63803d68cc708087. The real seven-commit ancestor interval contains three source changes and 140 documentation changes.\n\n## Changes\n\nThe native diagnostic test searches for publish-end after the selected publish call. Both collaboration comparisons expect the finite Claude catalog's resolved TEST model ID. The Windows Processes fixture waits for the selected completed stop record's separate native settlement, preserving its original ten-second deadline, capture/identity checks and final native assertions.\n\n## Validation\n\nSix existing executable workflow families select 18 Host Desktop lanes, four whole frontend shards, five Host process platforms, five packaged platforms, nine Stage 1 OpenCode jobs, announcements and CI fast feedback. CodeQL and Sentry retain their explicit Draft guards. Three other previously Draft-skipped families do not match this real source delta.\n\nAll original cases, filters, commands, deadlines and cleanup remain. Workflow edits are limited to two expected-model literals. Whole team-UI149, model-catalog43, provider-management85, settings11, captured-status7, native-UI8 and native-receipt12 plus whole-platform14 remain selected through their existing routes.\n\nClaude and Codex use finite TEST peers only, including metadata/version paths. Actual OpenCode uses existing pinned localhost-model paths. No real Claude/Codex execution is permitted.\n\nThe existing Draft Full qualification failure is expected policy. Other failures, skipped/cancelled/unknown/unreached steps and uncertain cleanup remain non-PASS. Earlier Windows readiness/Retry, Claude target movement, V2 Settings, Darwin installer/P09 and other unresolved evidence are not promoted by these source changes.\n\nBoth snapshot refs and PR metadata stay fixed. Earlier CI and the completed standalone RED/GREEN attempts remain spent. No Ready, merge, release, default activation, Stage2 or broad native/vendor qualification.\n",
+          "draft": true,
+          "maintainer_can_modify": false
+        },
+        "readback": "Capture actual PR/repository IDs, exact refs/SHAs, Draft/open state/timestamps and eventual synthetic merge parents/tree. Never predict identifiers.",
+        "maximumAttempts": 1
+      }
+    ],
+    "status": "ROOT_SELECTED_R1_SCOPE_ONLY_NOT_ADMITTED",
+    "failurePolicy": "Each issued refused/unknown mutation is spent. Resolve uncertainty only with exact new-ref/PR readback. No blind repeat/overwrite/duplicate/name switch/rerun/dispatch.",
+    "freeze": "Both refs and PR metadata fixed while any selected run active. No push/force/rebase/base/title/body/label/Ready/close/reopen/cancel/rerun/dispatch. Separate evidence branch may advance."
+  },
+  "workflowAssessment": {
+    "githubTree": "2d941c6f8d7be58f541f03e61661ad8badd873a5",
+    "full42Corpus": {
+      "bytes": 781194,
+      "sha256": "47795e256304bf3a6de595c22ff8a6151c20ac9d3e8d1ed263cc07c0ebac6d4e",
+      "gitBlob": "fd3944d951aab521ccb0aa1d3d7fb5cab2128f7a"
+    },
+    "workflowCount": 42,
+    "completeWorkflowBytes": 751454,
+    "unchangedWholeBodies": 41,
+    "onlyChangedWorkflow": "host-emulated-acceptance.yml",
+    "workflowChange": "Two expected-model literals only; all trigger/filter/permissions/commands/matrices/deadlines unchanged.",
+    "eventMap": [
+      {
+        "path": ".github/workflows/announcements-content.yml",
+        "gitBlob": "d7d1c6fde200971f29defe95c2c0436a0318b499",
+        "bytes": 2301,
+        "eligible": true,
+        "event": "pull_request",
+        "opened": true,
+        "paths": null,
+        "sourceHits": [
+          ".github/workflows/host-emulated-acceptance.yml",
+          "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+          "tools/owned-process-broker/nativeWindowsAppFixture.ts"
+        ],
+        "docsHits": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14334909525-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14335005585-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14335984464-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14336154427-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14336782083-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337206794-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337338225-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337526955-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337542479-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337577139-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14338246689-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14338585452-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14339061547-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14343770599-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-delivery-expiry-record-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-claude-collaboration-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-outcome-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-png-byte-proof-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-visual-read-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-actual-source-workflow-crossjoin-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-base-action-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-complete-source-comparison-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-execution-admission-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-execution-preflight-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-head-action-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet1-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet2-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet3-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-pr-action-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511052-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511059-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511125-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511268-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511328-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511476-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511484-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511567-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511597-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511664-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511732-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511776-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511865-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511986-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512024-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512405-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512849-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512912-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513026-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513174-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513245-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072515187-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134098865037-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134098865077-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-retained-observation-packet-4-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-retained-observation-packet-5-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-stage1-windows-actual-main-lock-proof-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-static-diagnostic-extraction-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-v2-management-pending-view-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-arm-source-guard-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-arm-source-semantic-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-catalog-no-reuse-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-embedded-opencode-outcome-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-packaged-visual-read-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-settlement-readiness-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-current-source-proof-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-superseded-citation-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-superseded-label-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-current-source-proof-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-complete-runtime-capture-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-external-admission-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-independent-runtime-outcome-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-node-metadata-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-waitread-binding-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-waitread-supervisor-20261117.cjs",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json"
+        ],
+        "reason": "Actual changed path(s) or unfiltered event"
+      },
+      {
+        "path": ".github/workflows/anthropic-compatible-status-e2e.yml",
+        "gitBlob": "6ec8f76ef4036fde31daab73db1205cf9f7dfdd2",
+        "bytes": 8602,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          ".github/workflows/anthropic-compatible-status-e2e.yml",
+          "scripts/e2e/anthropic-compatible-status/**",
+          "scripts/e2e/opencode-diagnostics/**",
+          "scripts/electron-builder/afterPack.cjs",
+          "scripts/lib/runtime-payload-cache.mjs",
+          "scripts/stage-opencode-console-wrapper.mjs",
+          "tools/opencode-console-wrapper/**",
+          "src/main/services/runtime/ClaudeMultimodelBridgeService.ts",
+          "src/main/services/runtime/ProviderConnectionService.ts",
+          "src/main/services/runtime/anthropicCompatibleEndpoint.ts",
+          "src/main/services/runtime/buildRuntimeBaseEnv.ts",
+          "src/main/services/runtime/providerRuntimeEnv.ts",
+          "src/main/utils/shellEnv.ts",
+          "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
+          "src/renderer/store/slices/cliInstallerSlice.ts",
+          "src/renderer/store/index.ts",
+          "src/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.tsx",
+          "src/main/services/team/provisioning/TeamProvisioningAnthropicDiagnosticModel.ts",
+          "src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts",
+          "src/renderer/components/runtime/ConnectionMethodCards.tsx",
+          "src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx",
+          "src/renderer/components/runtime/providerAuthModeUiState.ts",
+          "src/renderer/components/runtime/providerConnectionCards.ts",
+          "src/renderer/components/runtime/providerConnectionUi.ts",
+          "src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
+          "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+          "src/renderer/utils/anthropicCompatibleCatalogChecking.ts",
+          "src/renderer/utils/teamProviderRuntimeStatusLoading.ts",
+          "runtime.lock.json"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/anthropic-env-portability.yml",
+        "gitBlob": "d3fa7512b79b79dc64c1580dfdc42d63361ae68a",
+        "bytes": 4713,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          ".github/workflows/anthropic-env-portability.yml",
+          "src/main/utils/shellEnv.ts",
+          "src/main/utils/cliEnv.ts",
+          "src/main/utils/cliPathMerge.ts",
+          "src/main/utils/cliProcessDefaults.ts",
+          "src/main/utils/childProcess.ts",
+          "src/main/utils/pathDecoder.ts",
+          "src/main/services/infrastructure/ConfigManager.ts",
+          "src/main/services/runtime/agentChildProcessPreflight.ts",
+          "src/main/services/runtime/buildRuntimeBaseEnv.ts",
+          "src/main/services/runtime/providerAwareCliEnv.ts",
+          "src/main/services/runtime/providerRuntimeEnv.ts",
+          "src/main/services/runtime/ProviderConnectionService.ts",
+          "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
+          "src/main/services/team/provisioning/__tests__/TeamProvisioningEnvBuilder.test.ts",
+          "src/renderer/store/slices/cliInstallerSlice.ts",
+          "src/renderer/store/slices/__tests__/cliInstallerSlice.test.ts",
+          "src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx",
+          "src/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.tsx",
+          "test/main/utils/shellEnv*.test.ts",
+          "test/main/services/runtime/AnthropicEnvPortability.integration.test.ts",
+          "test/main/services/runtime/providerRuntimeEnv.test.ts",
+          "src/main/services/runtime/providerRuntimeEnv.test.ts",
+          "test/renderer/components/runtime/ProviderRuntimeSettingsDialog.test.ts",
+          "test/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.test.ts",
+          "vitest.config.ts",
+          "test/setup.ts",
+          "package.json",
+          "pnpm-lock.yaml",
+          "pnpm-workspace.yaml",
+          ".node-version"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/build-linux-windows-draft.yml",
+        "gitBlob": "919dc9d816a5f7441783af22a286da9b1e4f6f8a",
+        "bytes": 17033,
+        "eligible": false,
+        "reason": "No pull_request event",
+        "sourceHits": [],
+        "docsHits": []
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "gitBlob": "a93ff6ba1e5656523668694bca24910a468aebc7",
+        "bytes": 175238,
+        "eligible": true,
+        "event": "pull_request",
+        "opened": true,
+        "paths": null,
+        "sourceHits": [
+          ".github/workflows/host-emulated-acceptance.yml",
+          "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+          "tools/owned-process-broker/nativeWindowsAppFixture.ts"
+        ],
+        "docsHits": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14334909525-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14335005585-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14335984464-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14336154427-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14336782083-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337206794-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337338225-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337526955-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337542479-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337577139-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14338246689-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14338585452-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14339061547-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14343770599-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-delivery-expiry-record-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-claude-collaboration-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-outcome-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-png-byte-proof-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-visual-read-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-actual-source-workflow-crossjoin-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-base-action-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-complete-source-comparison-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-execution-admission-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-execution-preflight-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-head-action-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet1-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet2-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet3-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-pr-action-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511052-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511059-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511125-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511268-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511328-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511476-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511484-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511567-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511597-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511664-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511732-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511776-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511865-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511986-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512024-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512405-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512849-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512912-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513026-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513174-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513245-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072515187-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134098865037-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134098865077-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-retained-observation-packet-4-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-retained-observation-packet-5-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-stage1-windows-actual-main-lock-proof-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-static-diagnostic-extraction-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-v2-management-pending-view-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-arm-source-guard-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-arm-source-semantic-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-catalog-no-reuse-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-embedded-opencode-outcome-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-packaged-visual-read-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-settlement-readiness-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-current-source-proof-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-superseded-citation-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-superseded-label-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-current-source-proof-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-complete-runtime-capture-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-external-admission-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-independent-runtime-outcome-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-node-metadata-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-waitread-binding-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-waitread-supervisor-20261117.cjs",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json"
+        ],
+        "reason": "Actual changed path(s) or unfiltered event"
+      },
+      {
+        "path": ".github/workflows/codeql.yml",
+        "gitBlob": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1",
+        "bytes": 2479,
+        "eligible": true,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          "src/**",
+          "packages/**",
+          "agent-teams-controller/**",
+          "mcp-server/**",
+          "scripts/**",
+          ".github/workflows/**",
+          ".github/codeql/**",
+          "package.json",
+          "pnpm-lock.yaml",
+          "pnpm-workspace.yaml",
+          "tsconfig*.json"
+        ],
+        "sourceHits": [
+          ".github/workflows/host-emulated-acceptance.yml",
+          "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs"
+        ],
+        "docsHits": [],
+        "reason": "Actual changed path(s) or unfiltered event"
+      },
+      {
+        "path": ".github/workflows/codex-runtime-smoke.yml",
+        "gitBlob": "cef44447c47e39a7da678f37e2518952e218da08",
+        "bytes": 3229,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          ".github/workflows/codex-runtime-smoke.yml",
+          "package.json",
+          "pnpm-lock.yaml",
+          "pnpm-workspace.yaml",
+          "scripts/smoke/codex-runtime-install.ts",
+          "src/features/codex-runtime-installer/**",
+          "src/main/services/infrastructure/codexAppServer/**",
+          "src/main/services/runtime/providerAwareCliEnv.ts",
+          "src/main/utils/childProcess.ts",
+          "src/main/utils/pathDecoder.ts",
+          "tsconfig*.json",
+          "scripts/tsconfig/**"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/dependency-review.yml",
+        "gitBlob": "4a5f2ab17b3daf4ffdf6992ee85d159adf2c46c6",
+        "bytes": 1527,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          "**/package.json",
+          "**/package-lock.json",
+          "**/pnpm-lock.yaml",
+          "pnpm-workspace.yaml"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+        "gitBlob": "490c2048dfbd9f275f784d7a0f1a6eeba0a9f361",
+        "bytes": 3218,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          "src/main/utils/electronDevPathOverrides.ts",
+          "src/main/utils/electronDevPathOverrides.test.ts",
+          "src/main/utils/electronUserDataMigration.ts",
+          "test/main/utils/electronUserDataMigration.test.ts",
+          "test/main/bootstrapConfigIsolation.test.ts",
+          "src/main/bootstrapUserDataMigration.ts",
+          "src/main/index.ts",
+          ".github/workflows/electron-dev-profile-cross-platform.yml"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+        "bytes": 19532,
+        "eligible": true,
+        "event": "pull_request",
+        "opened": true,
+        "paths": null,
+        "sourceHits": [
+          ".github/workflows/host-emulated-acceptance.yml",
+          "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+          "tools/owned-process-broker/nativeWindowsAppFixture.ts"
+        ],
+        "docsHits": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14334909525-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14335005585-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14335984464-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14336154427-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14336782083-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337206794-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337338225-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337526955-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337542479-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14337577139-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14338246689-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14338585452-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14339061547-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14343770599-complete-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-delivery-expiry-record-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-claude-collaboration-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-outcome-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-png-byte-proof-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-visual-read-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-actual-source-workflow-crossjoin-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-base-action-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-complete-source-comparison-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-execution-admission-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-execution-preflight-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-head-action-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet1-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet2-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-observation-packet3-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-pr-action-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511052-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511059-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511125-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511268-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511328-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511476-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511484-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511567-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511597-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511664-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511732-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511776-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511865-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511986-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512024-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512405-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512849-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512912-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513026-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513174-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072513245-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072515187-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134098865037-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134098865077-full-20261117.log",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-retained-observation-packet-4-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-retained-observation-packet-5-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-stage1-windows-actual-main-lock-proof-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-static-diagnostic-extraction-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-v2-management-pending-view-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-arm-source-guard-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-arm-source-semantic-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-catalog-no-reuse-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-embedded-opencode-outcome-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-packaged-visual-read-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-settlement-readiness-advisory-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-current-source-proof-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-superseded-citation-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-source-r2-superseded-label-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-current-source-proof-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-complete-runtime-capture-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-control-r2-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-external-admission-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-independent-runtime-outcome-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-node-metadata-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-actual-gate-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-binding-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-guard-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-independent-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-publication-manifest-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-root-actual-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-root-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-recovery-r1-semantic-review-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-waitread-binding-20261117.json",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-standalone-ci3-waitread-supervisor-20261117.cjs",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json"
+        ],
+        "reason": "Actual changed path(s) or unfiltered event"
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "gitBlob": "0d54287979a1741519b41b00e1ee521d5cd83046",
+        "bytes": 96896,
+        "eligible": true,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          ".github/workflows/host-emulated-acceptance.yml",
+          "packages/legacy-agent-host/**",
+          "packages/task-change-ledger/**",
+          "scripts/legacy-agent-host/**",
+          "tools/owned-process-broker/fixtures/**",
+          "tools/linux-node-exec/**",
+          "scripts/build/buildLinuxNodeExec.mjs",
+          "scripts/dev-with-runtime.mjs",
+          "scripts/build/linuxNodeExec.native.test.mjs",
+          "scripts/electron-builder/afterPack.cjs",
+          "scripts/electron-builder/dist.mjs",
+          "scripts/electron-builder/verifyLinuxNodeExec.cjs",
+          "src/features/agent-backend/**",
+          "src/features/runtime-provider-management/**",
+          "src/features/codex-runtime-installer/**",
+          "src/features/opencode-runtime-installer/**",
+          "src/main/**",
+          "src/preload/**",
+          "src/renderer/**",
+          "src/shared/**",
+          "package.json",
+          "pnpm-lock.yaml",
+          "pnpm-workspace.yaml"
+        ],
+        "sourceHits": [
+          ".github/workflows/host-emulated-acceptance.yml",
+          "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs"
+        ],
+        "docsHits": [],
+        "reason": "Actual changed path(s) or unfiltered event"
+      },
+      {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "gitBlob": "70202d22a5840401a00025cd60b797c514f3e455",
+        "bytes": 34313,
+        "eligible": true,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          ".github/workflows/host-process-acceptance.yml",
+          "agent-teams-controller/**",
+          "packages/legacy-agent-host/**",
+          "packages/task-change-ledger/**",
+          "src/features/agent-backend/**",
+          "src/main/utils/ownedProcess/**",
+          "src/main/utils/childProcess.ts",
+          "src/main/utils/electronNodeLaunch.ts",
+          "src/main/utils/linuxNodeExecArtifact.ts",
+          "src/main/services/team/WorkspaceMcpBundle.ts",
+          "test/main/build/electronBuilderAfterPack.test.ts",
+          "test/features/agent-backend/**",
+          "tools/owned-process-broker/**",
+          "scripts/build/buildOwnedProcessBroker.ts",
+          "tools/linux-node-exec/**",
+          "scripts/build/buildLinuxNodeExec.mjs",
+          "scripts/dev-with-runtime.mjs",
+          "scripts/build/linuxNodeExec.native.test.mjs",
+          "scripts/electron-builder/afterPack.cjs",
+          "scripts/electron-builder/dist.mjs",
+          "scripts/electron-builder/verifyLinuxNodeExec.cjs",
+          "scripts/ci/**",
+          "scripts/ensure-electron-install.cjs",
+          "vendor/provider-migration/**",
+          "package.json",
+          "pnpm-lock.yaml",
+          "pnpm-workspace.yaml"
+        ],
+        "sourceHits": [
+          "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+          "tools/owned-process-broker/nativeWindowsAppFixture.ts"
+        ],
+        "docsHits": [],
+        "reason": "Actual changed path(s) or unfiltered event"
+      },
+      {
+        "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+        "gitBlob": "95d681fe04abd838dd11799d7791fa59444c6e32",
+        "bytes": 3335,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          "src/renderer/components/team/kanban/**",
+          "src/renderer/components/team/TeamDetailView.tsx",
+          "scripts/e2e/task-detail-tabs-desktop.ts",
+          "pnpm-lock.yaml",
+          ".github/workflows/kanban-table-desktop-e2e.yml"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/landing-hetzner-release.yml",
+        "gitBlob": "4b54f229156f9d347e1a33da0d83b3374acc4078",
+        "bytes": 7306,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          "landing/**",
+          "docs/screenshots/**",
+          "scripts/announcements/**",
+          "scripts/ci/transitive-security*",
+          "scripts/ci/audit-dependencies.mjs",
+          "pnpm-workspace.yaml",
+          "package.json",
+          "pnpm-lock.yaml",
+          ".node-version",
+          ".github/workflows/landing-hetzner-release.yml"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/landing.yml",
+        "gitBlob": "4a1ad9ae59ff2e338930a195d54fdff62da1ebc5",
+        "bytes": 5592,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          "landing/**",
+          "scripts/announcements/**",
+          "scripts/ci/transitive-security*",
+          "scripts/ci/audit-dependencies.mjs",
+          "pnpm-workspace.yaml",
+          "package.json",
+          "pnpm-lock.yaml",
+          ".github/workflows/landing.yml",
+          ".gitattributes"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/macos-signing-qualification.yml",
+        "gitBlob": "d63bddd51302a5c0380762bf22171f43c38a39b0",
+        "bytes": 9635,
+        "eligible": false,
+        "reason": "No pull_request event",
+        "sourceHits": [],
+        "docsHits": []
+      },
+      {
+        "path": ".github/workflows/opencode-desktop-e2e.yml",
+        "gitBlob": "3d2a90a0e335155d435bd4eae4f2bd2842425983",
+        "bytes": 6719,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          "scripts/e2e/opencode-diagnostics-desktop.mjs",
+          "src/renderer/store/index.ts",
+          "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts",
+          "src/features/runtime-provider-management/core/application/loadOpenCodeScopedCatalog.ts",
+          "src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.ts",
+          "src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts",
+          "src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts",
+          "scripts/e2e/opencode-diagnostics/**",
+          "test/scripts/opencodeStartupCleanupFixture.test.mjs",
+          ".github/workflows/opencode-desktop-e2e.yml",
+          "src/features/runtime-provider-management/core/domain/openCodeProviderCompatibility.ts",
+          "src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus.tsx",
+          "src/features/runtime-provider-management/renderer/RuntimeProviderManagementPanel.tsx",
+          "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+          "src/features/runtime-provider-management/renderer/hooks/maskRuntimeProviderStateForScope.ts",
+          "src/features/runtime-provider-management/renderer/hooks/runtimeProviderDirectoryCatalogPolicy.ts",
+          "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect.ts",
+          "src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache.ts",
+          "src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx",
+          "src/renderer/components/runtime/openCodeStatusPresentation.ts"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/opencode-native-windows-e2e.yml",
+        "gitBlob": "f5a2a472b752acf37399fc9e11f63f6d45bdb297",
+        "bytes": 29178,
+        "eligible": false,
+        "reason": "No pull_request event",
+        "sourceHits": [],
+        "docsHits": []
+      },
+      {
+        "path": ".github/workflows/opencode-packaged-e2e.yml",
+        "gitBlob": "458e165ef020a1f8b05806b9ae7edc839134e1b4",
+        "bytes": 19616,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          ".github/workflows/opencode-packaged-e2e.yml",
+          "src/main/services/infrastructure/CliInstallerService.ts",
+          "src/features/runtime-provider-management/core/domain/openCodeProviderCompatibility.ts",
+          "src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus.tsx",
+          "scripts/e2e/opencode-diagnostics/packaged*.mjs",
+          "scripts/e2e/opencode-diagnostics/v2-support-repair*.mjs",
+          "scripts/e2e/opencode-diagnostics/stage-candidate*.mjs",
+          "scripts/e2e/opencode-diagnostics/run-packaged.mjs",
+          "scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts",
+          "scripts/e2e/opencode-diagnostics/native-test-pin.mts",
+          "scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.tsconfig.json",
+          "scripts/e2e/opencode-diagnostics-desktop.mjs",
+          "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "scripts/e2e/opencode-diagnostics/catalog.mjs",
+          "runtime.lock.json",
+          "scripts/stage-runtime.mjs",
+          "scripts/lib/github-release-download-error.mjs",
+          "scripts/lib/runtime-archive-checksum.mjs",
+          "scripts/lib/runtime-payload-cache.mjs",
+          "scripts/lib/runtime-payload-inventory.mts",
+          "scripts/lib/runtime-windows-zip-extraction.mts",
+          "scripts/lib/runtime-windows-zip-extraction.test.mts",
+          "scripts/lib/runtime-archive-extraction.mts"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+        "gitBlob": "be6a9ae5a88efadca344773ed4aa962d42823d28",
+        "bytes": 2756,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+          "src/renderer/store/index.ts",
+          "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts",
+          "src/features/runtime-provider-management/core/application/loadOpenCodeScopedCatalog.ts",
+          "src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.ts",
+          "src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts",
+          "src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts",
+          ".github/workflows/opencode-packaged-e2e.yml",
+          "scripts/e2e/opencode-diagnostics/packaged-verify.mjs",
+          "scripts/e2e/opencode-diagnostics/real-runtime.mjs",
+          "scripts/e2e/opencode-diagnostics/real-runtime.test.mjs",
+          "scripts/e2e/opencode-diagnostics/run-packaged.mjs",
+          "scripts/e2e/opencode-diagnostics/packaged.mjs",
+          "scripts/e2e/opencode-diagnostics/v2-support-repair*.mjs",
+          "runtime.lock.json",
+          "src/renderer/components/dashboard/ProviderConnectionCounts.tsx",
+          "src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts",
+          "src/features/runtime-provider-management/renderer/connectedCountObservationPolicy.ts",
+          "src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache.ts",
+          "src/renderer/components/dashboard/DashboardProviderSummary.tsx",
+          "src/features/runtime-provider-management/core/domain/runtimeProviderQuickConnect.ts"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+        "bytes": 36013,
+        "eligible": true,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          "runtime.lock.json",
+          "pnpm-lock.yaml",
+          "package.json",
+          "pnpm-workspace.yaml",
+          "packages/legacy-agent-host/package.json",
+          "packages/legacy-agent-host/tsconfig*.json",
+          "packages/legacy-agent-host/src/**",
+          "packages/legacy-agent-host/tests/**",
+          "packages/legacy-agent-host/native/**",
+          "packages/legacy-agent-host/scripts/**",
+          "scripts/legacy-agent-host/**",
+          "scripts/stage-runtime.mjs",
+          "scripts/lib/opencode-v2-base-inventory.mts",
+          "scripts/lib/runtime-archive-checksum.mjs",
+          "scripts/lib/runtime-payload-cache.mjs",
+          "src/features/opencode-runtime-installer/**",
+          "src/features/opencode-compatibility/**",
+          "src/main/services/infrastructure/openCode*.ts",
+          "src/main/services/runtime/openCode*.ts",
+          "src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts",
+          "src/main/services/infrastructure/openCodeRuntimePackageMetadata.ts",
+          "test/features/opencode-runtime-installer/**",
+          "test/main/services/infrastructure/OpenCodeRuntimeInstallerService.test.ts",
+          "vendor/provider-migration/**",
+          "scripts/ci/install-dependencies-with-retry.mjs",
+          "test/scripts/installDependenciesWithRetry.test.mjs",
+          ".github/workflows/opencode-v2-stage1-preflight.yml"
+        ],
+        "sourceHits": [
+          "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs"
+        ],
+        "docsHits": [],
+        "reason": "Actual changed path(s) or unfiltered event"
+      },
+      {
+        "path": ".github/workflows/prepare-updater-native-inputs.yml",
+        "gitBlob": "51beb92ade4931fe04336c7d3908bacfc932269e",
+        "bytes": 8825,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          "scripts/e2e/release-updater/windows-plan*.mts",
+          "scripts/e2e/release-updater/native-release-scenario.mts",
+          "scripts/e2e/release-updater/prepared-stage-download*.mts",
+          "scripts/e2e/release-updater/inputs.mts",
+          "scripts/ci/release/contract.ts",
+          ".github/workflows/prepare-updater-native-inputs.yml",
+          "scripts/tsconfig/tsconfig.updater-e2e.json",
+          "tsconfig.json",
+          "package.json",
+          "pnpm-lock.yaml"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/provider-real-runtime-e2e.yml",
+        "gitBlob": "4ee30807aa18f043fe53d090bfb6211bb5458ce0",
+        "bytes": 8958,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          "scripts/e2e/provider-real-runtime-*.ts",
+          "scripts/e2e/opencode-diagnostics/startup-resources.mjs",
+          "scripts/e2e/opencode-diagnostics/startup-resources.test.mjs",
+          "scripts/e2e/opencode-diagnostics/run.mjs",
+          "scripts/e2e/opencode-diagnostics/real-runtime.mjs",
+          "scripts/e2e/opencode-diagnostics-desktop.mjs",
+          "src/renderer/components/dashboard/DashboardProviderSummary.tsx",
+          "src/renderer/store/index.ts",
+          "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts",
+          "src/features/runtime-provider-management/core/application/loadOpenCodeScopedCatalog.ts",
+          "src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.ts",
+          "src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts",
+          "src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts",
+          "src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts",
+          ".github/workflows/provider-real-runtime-e2e.yml",
+          "runtime.lock.json"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/publish-carried-release.yml",
+        "gitBlob": "371ed6d3b2cf4e41c012da287a295783c39c426e",
+        "bytes": 3908,
+        "eligible": false,
+        "reason": "No pull_request event",
+        "sourceHits": [],
+        "docsHits": []
+      },
+      {
+        "path": ".github/workflows/recover-existing-draft-payloads.yml",
+        "gitBlob": "eadeedf4381cbf1d7e32cd31105dd88cd2c8eb65",
+        "bytes": 1905,
+        "eligible": false,
+        "reason": "No pull_request event",
+        "sourceHits": [],
+        "docsHits": []
+      },
+      {
+        "path": ".github/workflows/release-publication-guard.yml",
+        "gitBlob": "10b7abd2992cc740084a5c51ace7f3fe025220f9",
+        "bytes": 2706,
+        "eligible": false,
+        "reason": "No pull_request event",
+        "sourceHits": [],
+        "docsHits": []
+      },
+      {
+        "path": ".github/workflows/release.yml",
+        "gitBlob": "d28bee6dea87ec191f0d40670f3e68c48251d049",
+        "bytes": 46671,
+        "eligible": false,
+        "reason": "No pull_request event",
+        "sourceHits": [],
+        "docsHits": []
+      },
+      {
+        "path": ".github/workflows/reviewrouter-interaction.yml",
+        "gitBlob": "edb68c51f54ad4a792eb29f1f557aad48e3a6218",
+        "bytes": 4238,
+        "eligible": false,
+        "reason": "No pull_request event",
+        "sourceHits": [],
+        "docsHits": []
+      },
+      {
+        "path": ".github/workflows/reviewrouter-review.yml",
+        "gitBlob": "04964f8ac7beadb3277fb28ec9cc0d61b86ca84b",
+        "bytes": 912,
+        "eligible": false,
+        "reason": "No pull_request event",
+        "sourceHits": [],
+        "docsHits": []
+      },
+      {
+        "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+        "gitBlob": "4020f668ab2a9a7b16fcb0aa7fd2d79a061f1d44",
+        "bytes": 5079,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          "runtime.lock.json",
+          "scripts/dev-with-runtime.mjs",
+          "scripts/ci/verify-public-runtime-bootstrap.mjs",
+          "scripts/ci/verify-runtime-lock.mjs",
+          "scripts/lib/github-release-download-error.mjs",
+          "scripts/lib/runtime-cli-version.mjs",
+          "scripts/lib/runtime-bootstrap-diagnostics.mts",
+          "scripts/lib/runtime-command-capture.mts",
+          "scripts/lib/runtime-archive-checksum.mjs",
+          "scripts/lib/runtime-payload-cache.mjs",
+          "scripts/lib/runtime-payload-cache.test.mjs",
+          "scripts/lib/runtime-payload-cache-async.test.mts",
+          "scripts/lib/runtime-payload-inventory.mts",
+          "scripts/lib/runtime-windows-zip-extraction.mts",
+          "scripts/lib/runtime-windows-zip-extraction.test.mts",
+          "scripts/lib/runtime-archive-extraction.mts",
+          "scripts/lib/runtime-archive-extraction.test.mts",
+          "scripts/lib/runtime-zip.test-fixture.mts",
+          ".github/workflows/runtime-bootstrap-smoke.yml"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/sentry-owned-process-native.yml",
+        "gitBlob": "1188fa5b89d59b739d927082d1b6954a57181819",
+        "bytes": 39878,
+        "eligible": true,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          ".github/workflows/sentry-owned-process-native.yml",
+          "tools/owned-process-broker/**",
+          "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+          "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+          "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+          "src/main/utils/ownedProcess/**",
+          "packages/legacy-agent-host/src/owned-process/**",
+          "packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts",
+          "packages/legacy-agent-host/src/adapters/providers/WindowsCapturedProcess.ts",
+          "packages/legacy-agent-host/src/composition/nativeProcessProfile.ts",
+          "packages/legacy-agent-host/src/composition/processCustody.ts",
+          "packages/legacy-agent-host/src/process/**",
+          "packages/legacy-agent-host/native/registered-process-linux.c",
+          "packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts",
+          "packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts",
+          "packages/legacy-agent-host/scripts/qualifyLinuxProcessAbi.ts",
+          "packages/legacy-agent-host/scripts/qualifyLinuxProcessAbiHost.ts",
+          "tsconfig.legacy-agent-host-scripts.json",
+          "packages/legacy-agent-host/tests/registered-process-linux.native.mjs",
+          "packages/legacy-agent-host/tests/fixtures/registered-process-actor.c",
+          "packages/legacy-agent-host/tests/fixtures/registered-process-parent.ts",
+          "packages/legacy-agent-host/package.json",
+          "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+          "scripts/legacy-agent-host/qualify-linux-process-cold-ui.ts",
+          "scripts/legacy-agent-host/qualify-linux-process-packed.ts",
+          "scripts/legacy-agent-host/candidate-*.ts",
+          "scripts/legacy-agent-host/stage-candidate.ts",
+          "scripts/legacy-agent-host/stage-node.ts",
+          "scripts/legacy-agent-host/desktop-proof-fixture.ts",
+          "scripts/legacy-agent-host/desktop-claude-native-selection.ts",
+          "scripts/legacy-agent-host/desktop-process-root-oracle.ts",
+          "scripts/legacy-agent-host/desktop-controlled-process-fixture.ts",
+          "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+          "scripts/legacy-agent-host/desktop-backend-observations.ts",
+          "scripts/legacy-agent-host/desktop-native-process-*.ts",
+          "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+          "scripts/legacy-agent-host/fixtures/process-foreground-service.ts",
+          "scripts/legacy-agent-host/fixtures/process-controlled-root.ts",
+          "scripts/legacy-agent-host/desktop-proof-management-sources.ts",
+          "scripts/build/buildOwnedProcessBroker.ts",
+          "eslint.config.js"
+        ],
+        "sourceHits": [
+          "tools/owned-process-broker/nativeWindowsAppFixture.ts"
+        ],
+        "docsHits": [],
+        "reason": "Actual changed path(s) or unfiltered event"
+      },
+      {
+        "path": ".github/workflows/stage-existing-partial-draft.yml",
+        "gitBlob": "295dbf212e13b15505696d997ec7c45b4ee3cfa9",
+        "bytes": 5418,
+        "eligible": false,
+        "reason": "No pull_request event",
+        "sourceHits": [],
+        "docsHits": []
+      },
+      {
+        "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "gitBlob": "ef939f224a1642cb596906324c8d61441780ccc7",
+        "bytes": 6522,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          ".github/workflows/teams-create-page-desktop-e2e.yml",
+          "scripts/e2e/teams-create-page-desktop.mjs",
+          "src/shared/utils/cliArgsParser.ts",
+          "src/main/services/team/TeamRequestValidation.ts",
+          "src/main/ipc/teams.ts",
+          "src/main/services/infrastructure/CliInstallerService.ts",
+          "src/main/services/runtime/ClaudeMultimodelBridgeService.ts",
+          "src/main/services/runtime/runtimeStatusExecutionContext.ts",
+          "src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts",
+          "src/main/services/team/provisioning/TeamProvisioningProviderPreflight.ts",
+          "scripts/e2e/teams-create-page-owned-processes.mjs",
+          "scripts/e2e/teams-create-page-owned-processes.test.mjs",
+          "src/renderer/components/team/**",
+          "src/features/organizations/**",
+          "src/features/team-templates/**",
+          "src/features/gateway-provider/renderer/**",
+          "src/renderer/hooks/useCreateTeamDraft.ts",
+          "src/renderer/services/createTeamDraftStorage.ts"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/updater-linux-packages.yml",
+        "gitBlob": "60d214756c640b7925cfe11ba45ed4009f27ca3c",
+        "bytes": 21602,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          "scripts/e2e/release-updater/linux-packages*.mts",
+          ".github/workflows/updater-linux-packages.yml",
+          "scripts/e2e/release-updater/archive.mts",
+          "scripts/e2e/release-updater/cdp.mts",
+          "scripts/e2e/release-updater/inputs.mts",
+          "scripts/e2e/release-updater/native-release-scenario.mts",
+          "scripts/e2e/release-updater/native-window.mts",
+          "scripts/e2e/release-updater/transport.mts",
+          "scripts/ci/release/contract.ts",
+          "package.json",
+          "pnpm-lock.yaml",
+          "scripts/tsconfig/tsconfig.updater-e2e.json"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/updater-mac-manual-migration.yml",
+        "gitBlob": "4aa3a4181259514c5a43fbc7dd4ad98811a3588e",
+        "bytes": 5900,
+        "eligible": false,
+        "reason": "No pull_request event",
+        "sourceHits": [],
+        "docsHits": []
+      },
+      {
+        "path": ".github/workflows/updater-mac-old-updater.yml",
+        "gitBlob": "067a25687f36caefe156b0446c5056d230d27c62",
+        "bytes": 12460,
+        "eligible": false,
+        "reason": "No pull_request event",
+        "sourceHits": [],
+        "docsHits": []
+      },
+      {
+        "path": ".github/workflows/updater-mac-source.yml",
+        "gitBlob": "1196e40faa99e0ab64e329d91f3fea7c6ed47f94",
+        "bytes": 7512,
+        "eligible": false,
+        "reason": "No pull_request event",
+        "sourceHits": [],
+        "docsHits": []
+      },
+      {
+        "path": ".github/workflows/updater-mac-updater.yml",
+        "gitBlob": "950f95892277ae303772ac699915250f0f4f66af",
+        "bytes": 12323,
+        "eligible": false,
+        "reason": "No pull_request event",
+        "sourceHits": [],
+        "docsHits": []
+      },
+      {
+        "path": ".github/workflows/updater-native-feasibility.yml",
+        "gitBlob": "b55e6cbcb4de61e2e8688e1ff4b4529b043a4ada",
+        "bytes": 13476,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          "scripts/e2e/release-updater/**",
+          ".github/workflows/updater-native-feasibility.yml",
+          "scripts/tsconfig/tsconfig.updater-e2e.json",
+          "tsconfig.json",
+          "package.json",
+          "pnpm-lock.yaml",
+          "eslint.fast.config.js"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/updater-windows-ota.yml",
+        "gitBlob": "10ffcd79e48a71346df7545af638208ce039ad83",
+        "bytes": 27610,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          "scripts/e2e/release-updater/windows-*.mts",
+          "scripts/e2e/release-updater/native-release-scenario.mts",
+          "scripts/e2e/release-updater/prepared-stage-download*.mts",
+          "scripts/e2e/release-updater/execution-provenance*.mts",
+          "scripts/e2e/release-updater/archive.mts",
+          "scripts/e2e/release-updater/cdp.mts",
+          "scripts/e2e/release-updater/transport.mts",
+          ".github/workflows/updater-windows-ota.yml",
+          ".github/workflows/updater-windows.yml",
+          "scripts/e2e/release-updater/serialized-function*.mts",
+          "scripts/ci/release/contract.ts",
+          "scripts/tsconfig/tsconfig.updater-e2e.json",
+          "tsconfig.json",
+          "package.json",
+          "pnpm-lock.yaml"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/updater-windows.yml",
+        "gitBlob": "a4e9375cb95c4129c503f1d7be82de1e3926ea62",
+        "bytes": 11849,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          "scripts/e2e/release-updater/windows-*.mts",
+          "scripts/e2e/release-updater/archive.mts",
+          "scripts/e2e/release-updater/cdp.mts",
+          "scripts/e2e/release-updater/transport.mts",
+          ".github/workflows/updater-windows.yml",
+          "scripts/e2e/release-updater/serialized-function*.mts",
+          "scripts/ci/release/contract.ts",
+          "scripts/tsconfig/tsconfig.updater-e2e.json",
+          "tsconfig.json",
+          "package.json",
+          "pnpm-lock.yaml"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      },
+      {
+        "path": ".github/workflows/windows-backfill-diagnostic.yml",
+        "gitBlob": "44bec5d82998468d48ac539f3624d0c2de1c6648",
+        "bytes": 14471,
+        "eligible": false,
+        "event": "pull_request",
+        "opened": true,
+        "paths": [
+          "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+          ".github/workflows/windows-backfill-diagnostic.yml",
+          "src/main/services/team/opencode/bridge/**",
+          "src/main/utils/childProcess.ts",
+          "src/main/utils/cliProcessDefaults.ts",
+          "src/main/utils/openCodeNodeModulesJunction.ts",
+          "src/main/services/runtime/openCodeAutoUpdatePolicy.ts",
+          "vitest.config.ts",
+          "test/setup.ts",
+          "package.json",
+          "pnpm-lock.yaml",
+          "pnpm-workspace.yaml",
+          ".node-version"
+        ],
+        "sourceHits": [],
+        "docsHits": [],
+        "reason": "No actual changed path matches"
+      }
+    ],
+    "jobs": [
+      {
+        "path": ".github/workflows/announcements-content.yml",
+        "pin": {
+          "gitBlob": "d7d1c6fde200971f29defe95c2c0436a0318b499",
+          "bytes": 2301,
+          "sha256": "4380473bf81c1e8762e11d1803bb023e60308c5525c6c409531d9749ec7661d8"
+        },
+        "prospectiveJobs": 1,
+        "draftSkipped": false,
+        "breakdown": "content-check1"
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "pin": {
+          "gitBlob": "a93ff6ba1e5656523668694bca24910a468aebc7",
+          "bytes": 175238,
+          "sha256": "8cac831e00dd87f656a971c6496b8278c7cfddc261f1eb48573a7e2acf83c2d1"
+        },
+        "prospectiveJobs": 3,
+        "draftSkipped": false,
+        "breakdown": "plan1 + Fast feedback1 + Full qualification1"
+      },
+      {
+        "path": ".github/workflows/codeql.yml",
+        "pin": {
+          "gitBlob": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1",
+          "bytes": 2479,
+          "sha256": "d35b6d96c6d3582415b4feaf3144575f5d3a520c6e058c673ec15f95ddae5a7b"
+        },
+        "prospectiveJobs": 0,
+        "draftSkipped": true,
+        "breakdown": "analyze job-level Draft false"
+      },
+      {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "pin": {
+          "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+          "bytes": 19532,
+          "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f"
+        },
+        "prospectiveJobs": 7,
+        "draftSkipped": false,
+        "breakdown": "scope1 + original five platforms + aggregate1"
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "pin": {
+          "gitBlob": "0d54287979a1741519b41b00e1ee521d5cd83046",
+          "bytes": 96896,
+          "sha256": "a61c9ae8e2c294c1f284081b946c050c6fd2042a09789fddfd7caec5e6eaf5cb"
+        },
+        "prospectiveJobs": 23,
+        "draftSkipped": false,
+        "breakdown": "original18 Desktop lanes +4 frontend shards +aggregate1"
+      },
+      {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "pin": {
+          "gitBlob": "70202d22a5840401a00025cd60b797c514f3e455",
+          "bytes": 34313,
+          "sha256": "71b16b1b1fd1f0c88d3cb15a18cdfcce08b2b18908d3a5ce755330b4b2aeedf1"
+        },
+        "prospectiveJobs": 5,
+        "draftSkipped": false,
+        "breakdown": "original five-platform process fixture matrix"
+      },
+      {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "pin": {
+          "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+          "bytes": 36013,
+          "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14"
+        },
+        "prospectiveJobs": 9,
+        "draftSkipped": false,
+        "breakdown": "static2 +native-instructions1 +published-HTTP1 +embedded-Host5"
+      },
+      {
+        "path": ".github/workflows/sentry-owned-process-native.yml",
+        "pin": {
+          "gitBlob": "1188fa5b89d59b739d927082d1b6954a57181819",
+          "bytes": 39878,
+          "sha256": "2d84faae57ad758575935dc760df6561d219f16ee8c0bd615006ca3d88837357"
+        },
+        "prospectiveJobs": 0,
+        "draftSkipped": true,
+        "breakdown": "all three job definitions Draft false"
+      }
+    ],
+    "counts": {
+      "eventEligible": 8,
+      "wholeDraftSkipped": 2,
+      "prospectiveExecutableWorkflows": 6,
+      "prospectiveJobs": 48,
+      "actualJobsObserved": 0
+    },
+    "wholeDraftSkipped": [
+      "codeql.yml",
+      "sentry-owned-process-native.yml"
+    ],
+    "previouslyDraftSkippedNowUnmatched": [
+      "anthropic-compatible-status-e2e.yml",
+      "opencode-desktop-e2e.yml",
+      "opencode-packaged-e2e.yml"
+    ],
+    "pushBranchMap": [
+      {
+        "path": ".github/workflows/announcements-content.yml",
+        "branches": "    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "branches": "    branches:\n      - main\n      - refactor/team-provisioning-round2-reapply\n      - refactor/hosted-web-feature-boundaries"
+      },
+      {
+        "path": ".github/workflows/codeql.yml",
+        "branches": "    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/codex-runtime-smoke.yml",
+        "branches": "    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+        "branches": "    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+        "branches": "    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/landing-hetzner-release.yml",
+        "branches": "    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/landing.yml",
+        "branches": "    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/provider-real-runtime-e2e.yml",
+        "branches": "    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+        "branches": "    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "branches": "    branches: [main]"
+      }
+    ],
+    "newRefConclusion": "No existing push/create/workflow_run selection matches either new alias.",
+    "nativeCiGuards": "ci.yml stage1-desktop and stage1-process-qualification require explicit dispatch inputs or non-Draft special Stage1 PR routes; stage1-process-diagnostic is dispatch-only. Retained coexistence requires full mode/non-Draft special route; Codex login requires non-Draft special frontend-parity refs. Valid same-repository opened Draft on the two proposed ci aliases excludes every such real-Claude/Codex route.",
+    "qualificationPolicy": "Expected Draft policy failure and explicit Draft skips are non-PASS. Every other failure/skip/cancel/unknown/unreached contract remains open."
+  },
+  "testAndProviderScope": {
+    "inheritance": "Detailed venue/provider contracts of preceding complete R1 d9da20 remain by exact source identity, except the three explicitly listed files. Actual143paths and42workflow bodies are re-evaluated here.",
+    "hostEmulated": {
+      "matrix": [
+        {
+          "runner": "ubuntu-latest",
+          "platform": "linux-x64",
+          "kind": "finite peer / offline / controlled process Desktop",
+          "lanes": [
+            "team",
+            "taskboard",
+            "skills",
+            "cross-team",
+            "collaboration",
+            "extensions",
+            "import",
+            "management",
+            "codex-login",
+            "codex",
+            "claude",
+            "claude-lifecycle",
+            "opencode",
+            "review",
+            "selection",
+            "processes"
+          ],
+          "count": 16
+        },
+        {
+          "runner": "macos-15",
+          "platform": "darwin-arm64",
+          "kind": "finite Codex installer Desktop",
+          "lanes": [
+            "installer"
+          ],
+          "count": 1
+        },
+        {
+          "runner": "ubuntu-latest",
+          "platform": "linux-x64",
+          "kind": "actual OpenCode V2 Settings with finite localhost model",
+          "lanes": [
+            "opencode-v2-management"
+          ],
+          "count": 1
+        }
+      ],
+      "totalJobs": 23,
+      "uiJobs": 18,
+      "frontendShards": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "aggregateJobs": 1,
+      "failFast": false,
+      "timeoutMinutes": {
+        "eachUi": 45,
+        "eachFrontendShard": 45,
+        "aggregate": 5
+      },
+      "wholeNodeCommand": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "nodeSelection": "Original unfiltered eight-whole-file command at workflowline103 appears in every18UI job after its install/build prerequisites. Current desktop-team-ui-smoke whole149 is one file within that larger command, not the total multi-file TAP count. No --test-name-pattern or case reduction is introduced.",
+      "additionalWholeNodeTest": "test/scripts/installDependenciesWithRetry.test.mjs remains selected by its original command.",
+      "teamAdditionalHostFiles": [
+        "runtime-activity.test.ts",
+        "runtime-team-host.test.ts",
+        "team-snapshot.test.ts",
+        "team-product-changes.test.ts",
+        "team-activity-read.test.ts",
+        "member-provider-authority.test.ts",
+        "member-process-stderr.test.ts",
+        "codex-member-provider.test.ts",
+        "captured-claude-process.test.ts",
+        "owned-process-facade.test.ts"
+      ],
+      "teamAdditionalChecks": "Original --test-concurrency=1 Host checks plus workspace typechecking and declared fast/main/renderer/features/MCP lint remain; not all these tests are counted in149.",
+      "frontendCommand": "pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\"",
+      "frontendSelection": "All four original shards retain complete discovery and the three existing live/live-e2e/native filename exclusions. Wholecatalog43 and wholerenderer85 match vitest.config.ts includes and none of those exclusions; current shard assignment is not inferred from the original85 shard2.",
+      "prerequisites": [
+        "contents:read checkout; exact source-head and actual platform/architecture assertions; no persisted checkout credentials",
+        "UI Host Node 24.21.0, pnpm 11.22.0 and captured Corepack 0.36.0, Electron 44.10.1; frozen workspace install and Electron better-sqlite3 rebuild",
+        "Existing Host/controller/MCP builds and original admission tests; team lane also runs the declared type/lint checks",
+        "Linux Xvfb/xauth/lsof and Linux child-launch artifacts; macos-15 ARM runner for installer",
+        "Four frontend shards first capture Host Node 24.21.0, then use .node-version 26.12.1 and the original Node sqlite rebuild",
+        "V2 job can obtain the checksum-pinned runtime base/support artifacts and build/verify the exact Bun/embedded engine inputs; github.token is used only as the declared download credential",
+        "Actual runner/service/network/artifact availability and dispatch eligibility are execution prerequisites, not established by source reading"
+      ],
+      "versions": {
+        "hostNode": "24.21.0",
+        "frontendNode": "26.12.1",
+        "pnpm": "11.22.0",
+        "corepack": "0.36.0",
+        "electron": "44.10.1"
+      },
+      "providerPeers": [
+        {
+          "provider": "Claude",
+          "revision": "SDK 0.3.305",
+          "actualExecutable": "captured Node TEST peer",
+          "ui": "Linux runtime, lifecycle and mixed collaboration/extension/import fixture flows"
+        },
+        {
+          "provider": "Codex",
+          "revision": "protocol 0.162.0",
+          "actualExecutable": "captured Node TEST peer",
+          "ui": "Linux runtime, login, selection, mixed collaboration and Darwin ARM finite installer 0.162.0-to-0.169.0"
+        },
+        {
+          "provider": "OpenCode V1",
+          "revision": "1.19.4",
+          "actualExecutable": "captured Node TEST peer",
+          "ui": "Linux runtime and mixed collaboration"
+        }
+      ],
+      "actualOpenCodeV2": {
+        "platform": "linux-x64",
+        "engine": "2.1.4",
+        "bun": "1.3.11",
+        "runtimeConfigured": false,
+        "managementProfiles": 2,
+        "originalFiniteIntents": 5,
+        "scope": "Original Electron Settings key rejection/replacement, model test, global/project defaults, inheritance and renderer reload",
+        "excluded": [
+          "Claude/Codex execution",
+          "vendor authentication/inference",
+          "native V2 OAuth/forget",
+          "release qualification"
+        ]
+      },
+      "finiteAuthority": "Emulation requires explicit LEGACY_DESKTOP_EMULATED_ONLY=1 and its bounded mode allowlist; inherited LEGACY_DESKTOP native/scenario selectors are rejected before fixture/model startup. Private TEST peer recipes and child census restrict execution. The V2 job explicitly unsets the emulation flag and separately rejects Claude/Codex/legacy OpenCode paths and mixed/packed/diagnostic selectors.",
+      "versionProbeAuthority": "The common Desktop fixture writes finite metadata/refusal sentinels, constructs a fresh private HOME/config/PATH environment and selects root/bin/claude-multimodel explicitly. dev-with-runtime's override branch probes this finite sentinel; the automatic real-runtime download/resolve branch is not selected by this environment. This distinction covers version probes as well as conversation invocations.",
+      "newDriverReachability": "The prior accepted reveal step remains in the whole original runtime UI. The new Claude auth/resolved-model fixtures must satisfy their actual original readiness and model-probe gates before the original conversation/lifecycle/collaboration actions; static source correction is not an observed GUI pass.",
+      "aggregate": "Requires both complete UI and frontend matrix success. Any failed lane remains aggregate failure; a passing149 or85 cannot promote the matrix.",
+      "artifactRetentionDays": 14
+    },
+    "wholeTests": {
+      "node149": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "bytes": 165022,
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+        "original139": {
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7"
+        },
+        "suffix": "\nawait import('./desktop-ui-controls-deadline.test.ts');\n",
+        "suffixBytes": 57,
+        "staticExpandedCases": 149,
+        "registration": "Literal top-level awaited import registers the actual ten-case module after the original139 registrations; it does not prove all139 executions complete before the import. Module evaluation adds no global mutation."
+      },
+      "imported10": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+        "tests": [
+          {
+            "number": 1,
+            "title": "generic UI read refuses its first fulfilled value exactly at the original deadline"
+          },
+          {
+            "number": 2,
+            "title": "generic UI read refuses its first fulfilled value after the original deadline"
+          },
+          {
+            "number": 3,
+            "title": "generic UI read refuses a later fulfilled value exactly at the original deadline"
+          },
+          {
+            "number": 4,
+            "title": "generic UI read refuses a later fulfilled value after the original deadline"
+          },
+          {
+            "number": 5,
+            "title": "generic UI read does not admit or poll again after a late false observation"
+          },
+          {
+            "number": 6,
+            "title": "generic UI read preserves a timely first value and its exact identity"
+          },
+          {
+            "number": 7,
+            "title": "generic UI read preserves its original cadence and a timely later value"
+          },
+          {
+            "number": 8,
+            "title": "generic UI read honors a supplied budget at its strict boundary"
+          },
+          {
+            "number": 9,
+            "title": "generic UI hover refuses a third stable point arriving at the original deadline"
+          },
+          {
+            "number": 10,
+            "title": "generic UI hover preserves one movement after three timely stable points"
+          }
+        ],
+        "sourcePrediction": "Static current-fixed expectation is ten PASS; no future CI result asserted. Existing original-control prediction RED7FAIL/3PASS remains confined to its separately reviewed standalone control.",
+        "actualCode": "Imports createDesktopUiControls from the actual complete controls module and node:assert/strict,node:test; no copied predicate or fake test runner. Date mocks and method mocks restore in finally; original100ms timers remain real."
+      },
+      "catalog43": {
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+        "staticCases": 43,
+        "scope": "Accepted40-case prefix plus three appended actual utility regressions; no test discovery or provider/native scope expansion."
+      },
+      "renderer85": {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+        "staticCases": 85,
+        "priorObservedReport": {
+          "gitBlob": "4277afde65b656545ca30e4b1be3f593af862fc8",
+          "bytes": 56658,
+          "sha256": "2a20638c7372fc202d5dc1fbcb364744a8ada038401e6673461ab8147843524e"
+        },
+        "qualification": "Whole85 bytes unchanged at aab3. Historical outcomes do not substitute for new source/event evidence."
+      },
+      "separateStandalone": "Original paired RED/GREEN completed at14:38–14:39: RED7expectedFAIL/3PASS, GREEN10PASS, zero skipped/cancelled/todo, ordinary exits and original PIDs absent. Retained independent outcome9a3fa751 below is bounded to that ten-case attempt. Spent forever; CI does not recreate or replace it."
+    },
+    "additionalOriginalRoutes": {
+      "settings11": {
+        "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+        "publishedBlob": "c1a42df62de987b1632365400f7359f65510dff3",
+        "cases": 11,
+        "route": "Existing HostEmulated whole8-file Node command, Node24.21.0; repeated across original18Desktop lanes, not18different sets of unique cases."
+      },
+      "capturedStatus7": {
+        "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+        "publishedBlob": "bf0a54d585ef1dcd94a2649cebd75cb20da43339",
+        "cases": 7,
+        "route": "Existing complete safe frontend shards; current root Vitest configuration unchanged; exact path does not match live/live-e2e/native exclusions.",
+        "specificShard": "unknown until actual run"
+      },
+      "backend39": {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "route": "Original unfiltered eight-file Node command"
+      },
+      "nativeUi8": {
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+        "unchanged": true
+      },
+      "nativeReceipt26": {
+        "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "pin": {
+          "bytes": 41619,
+          "sha256": "e1e95d1dcf12408251bde11f4ab679b73de7c8a15b4a49105121b1e8a5a92b36",
+          "gitBlob": "8d12ee7a61d13740dbaddfe8177bfe80cb716335"
+        },
+        "localCases": 12,
+        "awaitedWholePlatformImportStatements": 1,
+        "importedPlatformCases": 14,
+        "originalWindowsOnlySkipPreserved": true
+      },
+      "allCaseFiltersDeadlinesAssertionsPreserved": true
+    },
+    "hostProcess": {
+      "workflow": ".github/workflows/host-process-acceptance.yml",
+      "selected": true,
+      "jobs": 5,
+      "timeoutMinutes": 30,
+      "failFast": false,
+      "sourceCheckout": "github.event.pull_request.head.sha || github.sha",
+      "node": "24.21.0",
+      "scope": "Original finite TEST Host process fixture matrix on Linux x64, Darwin ARM64/x64 and Windows x64/ARM64. Exact existing cases, prerequisites, provider guards and cleanup retained. Process fixtures are not all-provider native authentication or full Desktop conversation qualification."
+    },
+    "packaged": {
+      "trigger": "Actual complete143-file base86f/head aab3 delta includes packages/legacy-agent-host/tests and tools/owned-process-broker outside app-only allowlist. Existing exact Git classifier predicts full/run=true only if original prerequisites complete.",
+      "tuples": [
+        "darwin-arm64 (CI_MACOS_ARM_RUNNER or namespace-profile-macos-15)",
+        "darwin-x64 (macos-15-intel)",
+        "win32-x64 (windows-2022)",
+        "win32-arm64 (windows-11-arm)",
+        "linux-x64 (CI_LINUX_RUNNER or ubuntu-latest)"
+      ],
+      "jobs": 7,
+      "timeoutMinutesPerMatrix": 90,
+      "prerequisites": "Frozen install and selected archive integrity; pinned runtime/support downloads; app/Host/terminal builds; exact native inputs; unsigned packaging; selected runner availability. Darwin ARM uses a configurable/custom runner and is not assumed available.",
+      "coverage": [
+        "Native architecture/SQLite/PTY/managed Git, packaged MCP initialize/tools-list and app startup with finite metadata sentinels",
+        "Actual OpenCode V2 Host tools, MCP, Stop and cold Resume across five tuples",
+        "Windows x64/ARM same original Main Retry and original Processes UI Kill with finite Codex peers, zero real vendor executions",
+        "Darwin ARM/x64 automatic packaged app relaunch with finite Claude SDK peer; one original input/Stop and successor app, no real Claude",
+        "Darwin pinned bundled orchestrator OpenCode project-path summary/full/model list and missing-project fail-closed commands"
+      ],
+      "artifactDays": 7,
+      "limits": "This is not full all-provider native conversation/authentication coverage on all OS/architectures. Mac project-path smoke asserts selected-provider JSON and missing-path failure, not that an OpenCode installation, login or model inference succeeded.",
+      "mutableAvailability": "Runner variables, network/downloads, dependency integrity and actual archive execution remain observed prerequisites; custom DarwinARM runner availability is not proved by source."
+    },
+    "stage1": {
+      "trigger": "Changed native-receipt path matches packages/legacy-agent-host/tests/**; no Draft guard or filter alteration.",
+      "jobs": 9,
+      "matrix": "Two static Ubuntu/Windows jobs, one actual OpenCode V2.0.21 Host-instructions job, one V2.0.21 durable HTTP-persist job, five embedded V2.1.4 Host tuple jobs.",
+      "actualRuntime": "Only OpenCode is selected for provider runtime execution. Finite localhost model/service evidence remains distinct from real account authentication.",
+      "prerequisites": "Exact checkout; current runtime lock and read-only main lock comparison; pinned Bun/engine/build dependencies; admitted custody tuple. Darwin candidate build assertions may hold on an unmatched runner.",
+      "limits": "No all-provider Desktop GUI, vendor-authentication, release or Stage2 qualification.",
+      "mutableProductLock": "The static-preflight job checks out main separately at .current-product-lock for runtime.lock.json and records its actual product commit. This is a distinct mutable external input to capture; source assessment does not pin a future main checkout or mutate main."
+    },
+    "ciFastFeedback": {
+      "jobs": "Plan,Fast feedback and original Full qualification; other full/native jobs retain original guards.",
+      "command": "node --test --test-force-exit test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts test/scripts/installDependenciesWithRetry.test.mjs; original install/artifact/source-size/architecture guards, pnpm typecheck:workspace and pnpm lint:fast.",
+      "expectedDraftQualificationFailure": true
+    },
+    "coverageGaps": [
+      "No complete provider conversation/authentication GUI matrix on Windows x64/ARM or Darwin ARM/x64 is selected.",
+      "Host Emulated's Darwin installer is one finite Codex installer lane; it is not Darwin all-provider conversation coverage.",
+      "Packaged five-tuples and Stage1 OpenCode proofs retain their narrower process/MCP/relaunch/custody contracts and actual failures.",
+      "Excluded live/native frontend files remain unqualified.",
+      "No real Claude/Codex executable,version,login or remote inference is allowed or claimed.",
+      "No merge,Ready,release,default activation,Stage2 or native custody waiver is selected."
+    ]
+  },
+  "providerRoute": {
+    "proofUnchangedFrom": {
+      "currentRuntimeLock": {
+        "bytes": 6127,
+        "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87",
+        "gitBlob": "1757d79786da78e739a322e8bba81cd3dc88dcaa"
+      },
+      "runtimeSourceRepository": "777genius/agent_teams_orchestrator",
+      "runtimeSourceCommit": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "entryPreActionReport": {
+        "bytes": 29021,
+        "sha256": "d036879309b4245604eb01d166af7b27079f9602a38005846e43711c716aa62c",
+        "gitBlob": "9acdf46776d8b6ecfe6b75ddbfb4d6738296d027"
+      },
+      "explicitProviderReport": {
+        "bytes": 58110,
+        "sha256": "6a1ba6bdaa3278a041e2687b8588bbda3ae328a48af145a2780ab2b56c493096",
+        "gitBlob": "625192f5fc414e3fe0f646e6cb18db031263cdc2"
+      },
+      "commands": [
+        "runtime status --json --provider opencode --summary --project-path <TEST project>",
+        "runtime status --json --provider opencode --project-path <TEST project>",
+        "model list --json --provider opencode --project-path <TEST project>",
+        "runtime status --json --provider opencode --project-path <absent TEST project> (expected exit 1, no JSON)"
+      ],
+      "handlerAndImportProof": [
+        "runtime.ts:339-391 preserves providerFilter='opencode', normalizes project path before payload, and gives the registry summary/full detail.",
+        "registry.ts:1125-1307 runs Anthropic/Codex/Gemini only under missing or matching filter. Their discovery, status and catalog functions are not invoked for opencode.",
+        "registry.ts:606-665 maps summary to passive metadata only; full to OpenCodeInventoryService. There is no cross-provider recovery branch.",
+        "model.ts:126-172 explicitly constructs providers=[opts.provider]; getProviderModels opencode arm calls only OpenCode inventory/default metadata. Default Anthropic and all-provider selection are not reached.",
+        "OpenCodeBinaryResolver.ts:31-50 selects only OpenCode-specific overrides, PATH opencode, then managed OpenCode packages. Missing/unsupported selection returns an unsupported OpenCode snapshot (InventoryService:1154-1213), not another provider.",
+        "OpenCodeNativeIdentity.ts:86-139 and VersionProbe.ts:101-199 probe only the selected OpenCode executable (or its node/bun loader) with --version in private roots; optional OS CPU/process helpers are separate.",
+        "V1 catalog fallback repeats models on the same captured OpenCode binary (InventoryService:1397-1414). V2 catalog uses verified Bun delivery/server metadata; OpenCodeHostNativeAdapter:28-132 has no vendor fallback, and inventory queries identity/urls/location/ready/integrations/providers/models/agents/config.",
+        "Codex resolver's real login-status probe and model catalog app-server spawn remain lazy function bodies. Module top-level state is constants/null caches; explicit filter excludes those calls.",
+        "Imported OpenCode ExecutionProbe, HostManager, ProvisioningProbe, SessionBridge, InventoryService, ProfileManager and ProviderManagementAdapter initialize only maps/deps/state. SessionStore/HostManager additionally compute pure managed paths/attribution path. Ledger reader/reconstructor/enricher construction does not invoke provider commands."
+      ],
+      "entryProof": "Full report 9acdf46776d8b6ecfe6b75ddbfb4d6738296d027 was fetched, rehashed and read. Native wrapper delegates runtime/model commands to verified bundled Bun/JS; fast paths run before full main and errors cannot fall through. Shared preAction reads MDM/config/safe-env/CA/proxy; optional OS codesign, plutil or security may run. This is source assessment, not compiled-archive execution or binary-to-source attestation.",
+      "currentAppSourceJoin": "Current runtime.lock,stage-runtime,project-path driver,dev-with-runtime,finite fixture and native/packaged fixture bodies match exact previously fully read pins. The source delta introduces no provider launcher or version probe.",
+      "conclusion": "No selected or eager Claude/Codex execution identified in the pinned command path. Program name claude-multimodel alone is not a vendor-execution verdict, and the --provider flag alone was not used as proof.",
+      "limits": "The driver inherits process.env before overriding HOME/XDG/OpenCode config paths; do not claim a universally empty environment or subprocess-free smoke. The static conclusion is for the unchanged declared CI command and locked runtime, not arbitrary hostile overrides, modified artifacts, all CLI commands or unobserved runtime results.",
+      "selectedUpstreamCorePins": [
+        {
+          "path": "src/cli/runtimeStatusCommand.ts",
+          "bytes": 1791,
+          "sha256": "6f8666a5d3f07d11b879191c9296a71a3e75067d541f99b013a6061b4bb67c5d",
+          "gitBlob": "8e5eecc84e5f37e318c34e7bb3a99b6a0876cb33"
+        },
+        {
+          "path": "src/cli/modelListCommand.ts",
+          "bytes": 836,
+          "sha256": "c9cdd88c766193469197e9a8e608eb7fe4c39b5aa2e14cc0fdc90632d2a77986",
+          "gitBlob": "6176d34b77013148700f33c799e53aa637494ea9"
+        },
+        {
+          "path": "src/cli/handlers/runtime.ts",
+          "bytes": 59738,
+          "sha256": "459b181eae06d59122323fae787277fb83fd8166fd876c21958839007efa5080",
+          "gitBlob": "5469d229e6c879a9c007c7681e7dece3766aeadf"
+        },
+        {
+          "path": "src/cli/handlers/model.ts",
+          "bytes": 6982,
+          "sha256": "62de432851ea77c4ef9ab01d6343cc991b0997b4a25baf0baeba8a75549edfbc",
+          "gitBlob": "e488fa67903605b605d245153c57862a167f42ef"
+        },
+        {
+          "path": "src/services/runtimeBackends/registry.ts",
+          "bytes": 44882,
+          "sha256": "1f81a8ce0f182963b04cecfd52acb5f9af0d617d28767907a707fa76c07d2a80",
+          "gitBlob": "57f89dd1d54b7dd5c124933c2290db460ec49209"
+        },
+        {
+          "path": "src/services/opencode/OpenCodeInventoryService.ts",
+          "bytes": 52800,
+          "sha256": "d4ca48398b347a74e273147f69141133d71c8d5d1da0e5c1549aef5e0701f1ac",
+          "gitBlob": "74b83f6dd2eb010beffb6fd0335f0422b84a270b"
+        },
+        {
+          "path": "src/services/opencode/OpenCodeBinaryResolver.ts",
+          "bytes": 4098,
+          "sha256": "836c8d6152ceca0421f8f5eee25893510714cbb6ef4482eb81f5202ffbdfac8a",
+          "gitBlob": "a59f0efe0f15f4c1045d67cd2a54384775a2a8e3"
+        },
+        {
+          "path": "src/services/opencode/compatibility/OpenCodeVersionProbe.ts",
+          "bytes": 33370,
+          "sha256": "c8035baca2014937ae297202eda36a1e504d4036a5c569595b2bc6b0a462472b",
+          "gitBlob": "54b94f1625fab657071d1eecd2990dab1e5a3225"
+        },
+        {
+          "path": "src/services/opencode/host/OpenCodeHostNativeAdapter.ts",
+          "bytes": 7566,
+          "sha256": "551369a6fd8717917850ad67f4ca10f1c17cf743de85f54ca3dc9410eac5f844",
+          "gitBlob": "12c105b10cc532919e01b58b94bcc0154e5bdac6"
+        }
+      ],
+      "allOtherUpstreamPins": "The complete unchanged upstream manifest and full eager/lazy proof remain in625192 and9acdf; no re-resolution of a moving tag or exhaustive arbitrary-configuration audit is claimed.",
+      "scopeClarification": "The e13edcd3 orchestrator repository proof covers only the unchanged bundled runtime CLI OpenCode selection path. Current extracted provider implementation source is separately pinned below; it is not replaced by the orchestrator proof.",
+      "currentExtractedProvider": {
+        "repository": "agent-teams-ai/old-provider-implementations",
+        "commit": "c79b81bf002eaac95436da71c7049d7f309906a9",
+        "claudeModelProbe": {
+          "gitBlob": "57fdf89754d1592511a9acf264859282e9745d4f",
+          "bytes": 9891,
+          "sha256": "f7fd3848b46ea66776dfeeec7307129ec86819c79a158cd8e52a61e36291a89d"
+        },
+        "scope": "Real extracted provider source passes resolved model unchanged, keeps low effort and one-million context beta. The current finite peer regression tests the actual captured auth/metadata/model-probe contracts without any real Claude/Codex binary or fallback."
+      }
+    },
+    "sourceJoin": "All original provider launch/metadata/version/filter implementations and lock bytes are unchanged from fixed86f. Three test/expected-value/fixture postimages introduce no provider runtime invocation or authority change. Extracted c79b implementation and bundled e13 CLI route remain distinct."
+  },
+  "checkoutIdentity": {
+    "explicitHead": [
+      "Announcements content-check",
+      "Host Emulated UI and frontend",
+      "Host Process process-fixtures",
+      "Electron Packaged packaged-smoke matrix",
+      "Stage1 source"
+    ],
+    "syntheticMerge": [
+      "ordinary CI default checkout",
+      "Electron Packaged packaged-scope",
+      "Electron Packaged packaged-full-gate"
+    ],
+    "mergeProof": "Capture actual synthetic merge SHA, both parents and root. Real ancestor86f with head aab3 should have root834d86; verify, never equate merge and head SHAs.",
+    "separateMainLock": "Stage1 static-preflight separately checks out main at .current-product-lock with runtime.lock.json sparse checkout, then logs actual product commit. Retain its actual source/lock bytes independently. This mutable input is neither PRhead nor assumed futuremain.",
+    "perJob": [
+      {
+        "workflow": "announcements-content.yml",
+        "job": "content-check",
+        "count": 1,
+        "checkout": "explicit head"
+      },
+      {
+        "workflow": "electron-packaged-ci.yml",
+        "job": "packaged-scope",
+        "count": 1,
+        "checkout": "default event"
+      },
+      {
+        "workflow": "electron-packaged-ci.yml",
+        "job": "packaged-smoke",
+        "count": 5,
+        "checkout": "explicit head"
+      },
+      {
+        "workflow": "electron-packaged-ci.yml",
+        "job": "packaged-full-gate",
+        "count": 1,
+        "checkout": "default event"
+      },
+      {
+        "workflow": "host-emulated-acceptance.yml",
+        "job": "offline-desktop-scenario",
+        "count": 18,
+        "checkout": "explicit head"
+      },
+      {
+        "workflow": "host-emulated-acceptance.yml",
+        "job": "offline-frontend-tests",
+        "count": 4,
+        "checkout": "explicit head"
+      },
+      {
+        "workflow": "host-emulated-acceptance.yml",
+        "job": "offline-desktop",
+        "count": 1,
+        "checkout": "none; aggregate needs results"
+      },
+      {
+        "workflow": "host-process-acceptance.yml",
+        "job": "process-fixtures",
+        "count": 5,
+        "checkout": "explicit head"
+      },
+      {
+        "workflow": "opencode-v2-stage1-preflight.yml",
+        "job": "static-preflight",
+        "count": 2,
+        "checkout": "explicit head plus separate main runtime.lock"
+      },
+      {
+        "workflow": "opencode-v2-stage1-preflight.yml",
+        "job": "native-host-instructions",
+        "count": 1,
+        "checkout": "explicit head"
+      },
+      {
+        "workflow": "opencode-v2-stage1-preflight.yml",
+        "job": "published-v2-http-persist",
+        "count": 1,
+        "checkout": "explicit head"
+      },
+      {
+        "workflow": "opencode-v2-stage1-preflight.yml",
+        "job": "embedded-v2-native-host",
+        "count": 5,
+        "checkout": "explicit head"
+      },
+      {
+        "workflow": "ci.yml",
+        "job": "plan, feedback, full-qualification",
+        "count": 3,
+        "checkout": "default event"
+      }
+    ],
+    "totals": {
+      "explicitHead": 42,
+      "defaultEvent": 5,
+      "noCheckoutAggregate": 1,
+      "total": 48
+    }
+  },
+  "capture": {
+    "actualOnly": "Bind actual new PR/event/repository/head/base/merge, each new run/attempt1, complete paginated jobs/steps, full logs, artifact metadata/bytes/ZIP CRC/member texts/images/receipt/source/custody/cleanup.",
+    "runDiscovery": "Exactly8event-eligible families expected:2explicitDraft-skipped,6executivefamilies with48prospectivejobs. Actual full inventories and skipped/unreached steps control outcomes.",
+    "logArtifactDedup": "Each log/download-reference once. Pair fresh artifact reference with byte GET immediately. Retain refused/unreached delivery without redelivery. Chunk existing complete bytes if transport requires; never repeat target execution or download.",
+    "terminalRule": "First terminal observation removes run forever. Original9,PR1218/1219all7 and CI3 terminal exclusions never polled.",
+    "sourceIdentity": "Capture explicit-head, synthetic-merge and separate mutable-main runtime.lock inputs independently.",
+    "classification": [
+      "PASS only exact fully observed contract",
+      "Actual FAIL retained",
+      "EXPECTED_POLICY_FAIL only unchanged Draft Full qualification",
+      "EXPECTED_DRAFT_SKIP only explicit Draft guards",
+      "UNKNOWN/UNREACHED/SKIP/CANCELLED/uncertain cleanup remain non-PASS"
+    ],
+    "noBroadQualification": true
+  },
+  "priorAttempts": {
+    "frozenPrs": [
+      1206,
+      1207,
+      1208,
+      1211,
+      1212,
+      1213
+    ],
+    "oldRunsTerminalForever": "Original9 and PR1218/1219all7: never poll or mutate.",
+    "ci3": {
+      "pr": 1223,
+      "head": "86f52244b5375834a4040cbc63803d68cc708087",
+      "base": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "refsAndMetadataFrozen": true,
+      "terminalExcludedForever": [
+        44092933980,
+        44092933718,
+        44092933835,
+        44092933888,
+        44092934051,
+        44092933827,
+        44092933972,
+        44092933912
+      ],
+      "stillActiveAtSnapshot": [
+        44092933873,
+        44092934079,
+        44092933810
+      ],
+      "observationSnapshot": 19,
+      "qualification": "All outcomes fixed86f only. Windows readiness/Retry, original unsettled native Stop, Claude target movement, V2 inheritance wait, Darwin installer ownership/P09 and other actual failures remain non-PASS; no retroactive source-fix claim."
+    },
+    "standalone": {
+      "originalScopeSpentForever": true,
+      "independentOutcome": {
+        "bytes": 48694,
+        "sha256": "506cb2f6d5854e256963d7e0844465ad692d9b6c8539613d8ef117306ae2cd8d",
+        "gitBlob": "9a3fa7519f52d5e0be5d9d689792c5903b703e85"
+      },
+      "scope": "Only original ten-case paired RED/GREEN, no whole149 claim or rerun."
+    }
+  },
+  "externalAdmission": {
+    "state": "NOT_AUTHORED",
+    "requirements": [
+      "All four exact full-body R1 reviews accepted/self-read.",
+      "Documentation immediately pushed; full root+independent actual commit/root/docs/body/prefix/catalog/census/pointer closure.",
+      "Immutable admission joins actual publication/reports/gate and fixedsource to exact three one-shot mutation arguments; no future identifier guessed.",
+      "Only then exact-name absence preflight/creations; issued unknown actions remain spent."
+    ]
+  },
+  "environment": {
+    "rootShell": "/bin/bash",
+    "login": false,
+    "workdir": "/",
+    "localTargetExecutionSelected": false,
+    "artifactByteDataReadsOnly": true,
+    "noCua": true,
+    "retainedRuntimeAttemptsNotRebound": true,
+    "reviewerBoundary": "Immutable Git/source/evidence/pureJS only; bare review/advisory blob allowed. No child filesystem/shell/runtime/source/ref/PR/liveCI actions."
+  },
+  "exclusions": [
+    "No real Claude/Codex, including --version/status/login/fallback",
+    "No Ready/default-main merge/release/default activation/Stage2/custody waiver",
+    "No new workflow trigger/filter/matrix/permission/timeout/source/dependency edits from this venue R1",
+    "No case omission/oracle weakening/deadline increase/guard reduction/hidden runtime retries",
+    "No frozen PR metadata or CI mutations/terminal polls/failed artifact redelivery"
+  ],
+  "completionCriteria": [
+    "Capture actual source-bound new PR/event/run/attempt/job identities.",
+    "Observe selected attempts to terminal; retain full accessible logs/artifacts/member/custody/cleanup evidence.",
+    "Independently qualify only reached original complete contracts; failures/non-PASS remain visible.",
+    "Publish evidence and preserving fixes with immediate push; whole E2E only when every required contract is supported."
+  ],
+  "invoked": false,
+  "newRefsCreated": [],
+  "newPrNumber": null,
+  "newRunIds": [],
+  "qualification": {
+    "staticR1Only": true,
+    "runtimeAdmitted": false,
+    "newTestsExecuted": false,
+    "newGreen": false,
+    "completeE2E": false,
+    "readyMergeReleaseDefaultStage2": false
+  }
+}
