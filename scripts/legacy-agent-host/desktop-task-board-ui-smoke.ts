@@ -8,7 +8,7 @@ import { createTeamController } from '../../packages/legacy-agent-host/dist/adap
 import { readDesktopTaskBoardGroupSnapshot } from './desktop-task-board-group-page-read.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import {
-  desktopTaskBoardAssignmentReadyExpression,
+  desktopTaskBoardAssignmentReadyExpression, desktopTaskBoardClarificationCapture,
   desktopTaskCommentInputExpression,
 } from './desktop-task-comment-input-target.ts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
@@ -450,7 +450,7 @@ export async function runDesktopTaskBoardUiSmoke(
   // settling sample before one physical press. No effect retry.
   await ui.clickExpression(
     `(async()=>{
-      const owner=await ${desktopTaskBoardAssignmentReadyExpression(options.handleId, taskId, { contextId, surfaceId }, 'clarification')};
+      const owner=await ${desktopTaskBoardAssignmentReadyExpression(options.handleId, taskId, desktopTaskBoardClarificationCapture(assignmentOwner, proof.assignmentUiReady), 'clarification')};
       if(!owner)return null;
       return ${pointOf(`
         const dialog=document.getElementById(owner.inputId)?.closest('[role="dialog"]');
