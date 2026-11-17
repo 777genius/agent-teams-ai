@@ -48,10 +48,10 @@ async function fixture(mode?: 'shared' | 'per_project') {
     removeHandler: vi.fn((name: string) => handlers.delete(name)),
   };
   registerTeamProjectContextViewHandler(ipc as never);
-  const resolve = async (projectPath: string | null) => {
+  const resolve = async (projectPath: string | null, teamName = 'builders') => {
     const handler = handlers.get(TEAM_PROJECT_CONTEXT_VIEW_CHANNEL);
     if (!handler) throw new Error('Handler not registered');
-    return handler(null, 'builders', projectPath);
+    return handler(null, teamName, projectPath);
   };
   return { projectA, projectB, resolve };
 }
@@ -127,6 +127,46 @@ describe('project context view IPC (read-only)', () => {
         projectPath: reserved.projectPath,
       },
     });
+  });
+
+  it('opens a verified old project alias after switching its logical team back to shared', async () => {
+    const f = await fixture('per_project');
+    const registry = TeamProjectContextRegistry.fromCurrentApp();
+    const reserved = await registry.reserve('builders', f.projectA);
+    const teamDir = path.join(getTeamsBasePath(), reserved.executionTeamName);
+    await fs.mkdir(teamDir);
+    await fs.mkdir(path.join(getTasksBasePath(), reserved.executionTeamName));
+    await fs.writeFile(path.join(teamDir, 'config.json'), JSON.stringify({
+      name: reserved.executionTeamName,
+    }));
+    await claimTeamForThisProfile({
+      teamName: reserved.executionTeamName,
+      teamsBasePath: getTeamsBasePath(),
+      reason: 'create',
+    });
+    await registry.confirmReady('builders', f.projectA, reserved.executionTeamName);
+    const store = new TeamMetaStore();
+    await store.updateMeta('builders', (meta) => ({
+      ...meta!, projectContextMode: 'shared',
+    }));
+
+    expect(await f.resolve(f.projectA)).toEqual({
+      success: true,
+      data: { mode: 'shared', state: 'ready', executionTeamName: 'builders' },
+    });
+    expect(await f.resolve(null, reserved.executionTeamName)).toEqual({
+      success: true,
+      data: {
+        mode: 'per_project',
+        state: 'retained',
+        logicalTeamName: 'builders',
+        executionTeamName: reserved.executionTeamName,
+        workContextId: reserved.id,
+        projectPath: reserved.projectPath,
+      },
+    });
+    await fs.unlink(path.join(teamDir, '.agent-teams-owner.json'));
+    expect(await f.resolve(null, reserved.executionTeamName)).toMatchObject({ success: false });
   });
 
   it('never reveals an unowned alias even if the manifest says ready', async () => {

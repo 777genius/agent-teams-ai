@@ -39,6 +39,30 @@ async function resolveContextView(
     if (mode === 'shared') {
       const alias = await registry.resolveOwnedExecutionAlias(checked.value!);
       if (alias) {
+        // A history-mode change only changes the destination for NEW work.
+        // A verified old project task must still open its original physical
+        // history, not silently redirect into the new shared workspace.
+        const logicalMeta = await new TeamMetaStore().getMeta(alias.logicalTeamName);
+        if (logicalMeta?.deletedAt) {
+          return { success: false, error: 'TEAM_TRASHED: Restore the team before opening history' };
+        }
+        const logicalMode = await resolver.getMode(alias.logicalTeamName);
+        if (logicalMode === 'shared') {
+          if (alias.context.state !== 'ready') {
+            return { success: false, error: 'Retained project context is not ready' };
+          }
+          return {
+            success: true,
+            data: {
+              mode: 'per_project',
+              state: 'retained',
+              logicalTeamName: alias.logicalTeamName,
+              executionTeamName: checked.value!,
+              workContextId: alias.context.id,
+              projectPath: alias.context.projectPath,
+            },
+          };
+        }
         return {
           success: true,
           data: {

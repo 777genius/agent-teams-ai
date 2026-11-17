@@ -10,6 +10,9 @@ export type { TeamProjectContextMode } from '@shared/types/team';
 export type TeamProjectContextView =
   | { mode: 'shared'; state: 'ready'; executionTeamName: string }
   | { mode: 'per_project'; state: 'redirect'; logicalTeamName: string; projectPath: string }
+  /** Verified former project history remains addressable even if new work uses shared mode. */
+  | { mode: 'per_project'; state: 'retained'; logicalTeamName: string;
+      executionTeamName: string; workContextId: string; projectPath: string }
   | { mode: 'per_project'; state: 'needs_project' | 'empty' | 'pending' }
   | {
       mode: 'per_project';
