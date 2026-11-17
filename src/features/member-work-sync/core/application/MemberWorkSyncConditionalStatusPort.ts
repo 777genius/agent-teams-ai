@@ -14,16 +14,26 @@ export type MemberWorkSyncAuthorityFailureReason =
   | 'unavailable'
   | 'corrupt'
   | 'invalid_token';
+/** Optional finer cause behind a coarse `reason`. Diagnostic only; never changes behaviour. */
+export type MemberWorkSyncAuthorityFailureDetail = 'incarnation_mismatch';
 export type MemberWorkSyncAuthorityReadResult =
   | { ok: true; snapshot: MemberWorkSyncStatusAuthoritySnapshot }
-  | { ok: false; reason: MemberWorkSyncAuthorityFailureReason };
+  | {
+      ok: false;
+      reason: MemberWorkSyncAuthorityFailureReason;
+      detail?: MemberWorkSyncAuthorityFailureDetail;
+    };
 export type MemberWorkSyncAuthorityCommitResult =
   | {
       committed: true;
       snapshot: MemberWorkSyncStatusAuthoritySnapshot;
       projectionDegraded: string[];
     }
-  | { committed: false; reason: MemberWorkSyncAuthorityFailureReason | 'write_failed' }
+  | {
+      committed: false;
+      reason: MemberWorkSyncAuthorityFailureReason | 'write_failed';
+      detail?: MemberWorkSyncAuthorityFailureDetail;
+    }
   | { committed: false; reason: 'conflict'; current: MemberWorkSyncStatusAuthoritySnapshot }
   | { committed: 'unknown'; reason: 'commit_unknown'; mutationId: string };
 
