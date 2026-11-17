@@ -28,7 +28,7 @@ import type {
  * The Electron transport is one of the application boundaries. Keep project
  * routing here rather than rewriting native controller/task/chat internals.
  */
-export async function createProjectContextTeam(
+export async function createTeamWithProjectContext(
   request: TeamCreateRequest,
   onProgress: (progress: TeamProvisioningProgress) => void,
   ports: {
@@ -39,6 +39,9 @@ export async function createProjectContextTeam(
     watchNativeTeam(teamName: string): void;
   }
 ): Promise<TeamCreateResponse> {
+  if (request.projectContextMode !== 'per_project') {
+    return ports.start.createTeam(request, onProgress);
+  }
   const registry = TeamProjectContextRegistry.fromCurrentApp();
   const resolver = new TeamProjectContextRuntimeResolver(ports.data, registry);
   const materializer = new TeamProjectContextDraftMaterializer(resolver, {
