@@ -93,6 +93,14 @@ describe('TeamProjectContextRegistry', () => {
     expect(await f.registry.reserve('logical-team', f.workspaceA)).toEqual(reserved);
   });
 
+  it('lists pending reservations without treating them as ready histories', async () => {
+    const f = await fixture();
+    const reserved = await f.registry.reserve('logical-team', f.workspaceA);
+    expect(await f.registry.list('logical-team')).toEqual([reserved]);
+    await expect(f.registry.find('logical-team', f.workspaceA))
+      .rejects.toBeInstanceOf(TeamProjectContextUnavailableError);
+  });
+
   it('fails closed for a foreign-owned logical team', async () => {
     const f = await fixture();
     const foreign = new TeamProjectContextRegistry({
