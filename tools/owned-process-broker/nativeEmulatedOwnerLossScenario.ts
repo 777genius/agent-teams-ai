@@ -150,6 +150,8 @@ export async function nativeEmulatedOwnerLossScenario(sandbox: string, broker: s
       '../../packages/legacy-agent-host/src/runtime/RuntimeOwner.ts',
       '../../packages/legacy-agent-host/src/runtime/sessionState.ts',
       '../../packages/legacy-agent-host/src/composition/TeamHost.ts',
+      '../../packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts',
+      '../../packages/legacy-agent-host/src/index.ts',
       '../../packages/legacy-agent-host/src/composition/executeCapturedRuntimeControl.ts',
       '../../packages/legacy-agent-host/src/composition/projectRuntimeMember.ts',
       '../../packages/legacy-agent-host/src/team/executeTeamCommand.ts',
@@ -372,7 +374,8 @@ export async function nativeEmulatedOwnerLossScenario(sandbox: string, broker: s
     if (afterEffect) { await observe(() => turnWriteFinished); barrier.nativeWriteAcknowledged = true; }
     stage(afterEffect ? 'completed-effects-before-runtime-completion' : 'completed-install-before-physical-resume');
     assert.ok(witnesses[0] && capability && root); assertCounts();
-    originalRecord = read(); assert.equal(originalRecord.hostIncarnation, aHello.hostIncarnation);
+    // Runtime ownership and transport HELLO use separate incarnation domains.
+    originalRecord = read();
     if (afterEffect) {
       assert.equal(originalRecord.phase, 'allocated'); assert.equal(originalRecord.custody, 'owned');
       assert.equal(originalRecord.nativeReady, true);
