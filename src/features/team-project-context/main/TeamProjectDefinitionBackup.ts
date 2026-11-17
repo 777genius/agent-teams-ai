@@ -114,7 +114,7 @@ export async function backupProjectTeamDefinition(teamName: string): Promise<boo
   if (await readTeamOwnerProfileScope(dir) !== resolveThisAppProfileScope()) return false;
   if (await exists(path.join(dir, 'config.json'))) return false;
 
-  const fileNames = [...FILES];
+  const fileNames: string[] = [...FILES];
   const indexPath = path.join(dir, CONTEXT_INDEX);
   const hasIndex = await exists(indexPath);
   if (hasIndex) fileNames.push(CONTEXT_INDEX);
@@ -165,8 +165,10 @@ export async function recoverMissingProjectTeamDefinition(teamName: string): Pro
   // Never resurrect an intentionally deleted empty team from a stale backup.
   if (!index) return false;
   const parsed = JSON.parse(index.content) as {
+    deleting?: boolean; softDeleting?: boolean;
     contexts: { executionTeamName?: unknown; state?: unknown }[];
   };
+  if (parsed.deleting || parsed.softDeleting) return false;
   if (parsed.contexts.length === 0) return false;
   for (const row of parsed.contexts) {
     const alias = row.executionTeamName;

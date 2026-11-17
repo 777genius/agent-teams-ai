@@ -34,3 +34,9 @@ export {
   registerTeamProjectContextModeHandler,
   unregisterTeamProjectContextModeHandler,
 } from './TeamProjectContextModeIpc';
+
+export {
+  backupProjectTeamDefinition,
+  recoverMissingProjectTeamDefinition,
+  recoverMissingProjectTeamDefinitions,
+} from './TeamProjectDefinitionBackup';
