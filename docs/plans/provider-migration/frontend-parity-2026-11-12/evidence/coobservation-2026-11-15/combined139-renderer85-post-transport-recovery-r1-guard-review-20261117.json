@@ -1,0 +1,868 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-post-transport-recovery-r1-guard-scope-review",
+  "reviewer": "/root/corrected_r2_guard",
+  "at": "2026-11-17 00:10:07 UTC",
+  "verdict": "APPROVED_EXACT_PROSPECTIVE_RECOVERY_R1_SCOPE",
+  "unresolvedBlockers": [],
+  "subject": {
+    "bytes": 139634,
+    "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+    "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+  },
+  "baselineR1": {
+    "bytes": 99012,
+    "sha256": "0efc555482f0088cb2d45a8efd07039ccfcf089b67d5cca7f46ff30cbe71378c",
+    "gitBlob": "2fbac18b3ce8f6703b1e328b266e25954f45ddb8"
+  },
+  "baselineRunner": {
+    "bytes": 94938,
+    "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+    "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+  },
+  "baselineBinding": {
+    "bytes": 5856749,
+    "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+    "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+  },
+  "rootStaticReview": {
+    "bytes": 22893,
+    "sha256": "c69c619dd888465c09a133f6145449b5e8db37b2892ccf954e70c333aef97206",
+    "gitBlob": "569e0fd96a6408d1ada2c5c0894ca2512e7564e1"
+  },
+  "authorshipGate": {
+    "kind": "corrected-incomplete-publication-gate-closed",
+    "at": "2026-11-16 23:58:11 UTC",
+    "commit": "bc357526da9884cda1a76d2e6e6ea1a1b017d740",
+    "tree": "45edcbe0dc0d6471da393f159e4a6871404ffb95",
+    "docsTree": "b2dfd9c749d7c07b026c9670daa6294d7006a5ef",
+    "root": {
+      "bytes": 23920,
+      "sha256": "ac86fb03a9bad33ed0c2555abc7346a3c7e1ec5141b78d24592aeca3cd508938",
+      "gitBlob": "306d9b854656fe560f98620856b4a2e7bc98254c"
+    },
+    "independent": {
+      "bytes": 67084,
+      "sha256": "981e5a19ff9b2f1891010395c47d1bc470e56ef671195bc4e83c7aeabbf9a56c",
+      "gitBlob": "65be34f4b4d7373c3cc18b9c299fca90e8dddabc"
+    },
+    "rootReadFullIndependent": true,
+    "independentReadFullRoot": true,
+    "originalRefused": "64038 observedouter2 REFUSED/SPENT",
+    "correctedIncomplete": "54393 UNKNOWN/INCOMPLETE/SPENT; finalouter and oldcleanup/custody unknown",
+    "allowed": "Select and author only a distinct prospective recovery R1 for independent review. No new control/source postimages, staging, primary execution or producer authority until their separately required R1/R2/publication/actual-readback gates.",
+    "newRecoveryScopeAuthoredBeforeGate": false,
+    "producerPostimagesAuthored": false
+  },
+  "method": {
+    "fullNewAndBaselineR1ReadAndHashed": true,
+    "completeRecursiveDiffGroups": 64,
+    "changedTopLevelGroups": 23,
+    "removedTopLevelFields": 0,
+    "fullNewEvidenceBodiesReadAndHashed": [
+      {
+        "key": "recoveryR1",
+        "bytes": 139634,
+        "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+        "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+      },
+      {
+        "key": "baselineR1",
+        "bytes": 99012,
+        "sha256": "0efc555482f0088cb2d45a8efd07039ccfcf089b67d5cca7f46ff30cbe71378c",
+        "gitBlob": "2fbac18b3ce8f6703b1e328b266e25954f45ddb8"
+      },
+      {
+        "key": "recoveryR1RootReview",
+        "bytes": 22893,
+        "sha256": "c69c619dd888465c09a133f6145449b5e8db37b2892ccf954e70c333aef97206",
+        "gitBlob": "569e0fd96a6408d1ada2c5c0894ca2512e7564e1"
+      },
+      {
+        "key": "incompleteActualRoot",
+        "bytes": 23920,
+        "sha256": "ac86fb03a9bad33ed0c2555abc7346a3c7e1ec5141b78d24592aeca3cd508938",
+        "gitBlob": "306d9b854656fe560f98620856b4a2e7bc98254c"
+      },
+      {
+        "key": "incompleteActualIndependent",
+        "bytes": 67084,
+        "sha256": "981e5a19ff9b2f1891010395c47d1bc470e56ef671195bc4e83c7aeabbf9a56c",
+        "gitBlob": "65be34f4b4d7373c3cc18b9c299fca90e8dddabc"
+      },
+      {
+        "key": "recoveryRecommendations",
+        "bytes": 27997,
+        "sha256": "9e08049327575391ebfaaf8ff4f41877ac43ebfad8d063a16d31cad41316b664",
+        "gitBlob": "10c383ebb2cb5827fd811d6f0e7ad6a950fbae7f"
+      },
+      {
+        "key": "returnedSourceInputProof",
+        "bytes": 13750,
+        "sha256": "7a217af0f942da5789b6d65962f7c8b3ccd830be96e31f6f3965ae162b9e2e6b",
+        "gitBlob": "0988f7b08ae156529fc7cbc9b37c9d82f405164e"
+      },
+      {
+        "key": "returnedPathProof",
+        "bytes": 2135,
+        "sha256": "d3be601285716e140c0ec98b596ae2e59ba1d286cfbedb4c739a526628cd1b53",
+        "gitBlob": "7063e49185bd288bf32ccd9ca6aead6388679c37"
+      },
+      {
+        "key": "toolCacheProof",
+        "bytes": 8115,
+        "sha256": "f30cd2786b3b6c8ec49440f835f16c5ed0367fb73bc6160f09d5d363409bade7",
+        "gitBlob": "75b276dbcd832a2f496c684a4bbe3f6a9b607da1"
+      },
+      {
+        "key": "setupBindingReplica",
+        "bytes": 2790411,
+        "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+        "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+      },
+      {
+        "key": "currentBoundaryReplica",
+        "bytes": 3654,
+        "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+        "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+      },
+      {
+        "key": "providersReplica",
+        "bytes": 789090,
+        "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+        "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+      }
+    ],
+    "allSixReplicaBodiesReadAndHashed": true,
+    "original906dAndF7Bodies": "Previously fully read and rehashed in this reviewer session; rehashed again against exact replica pins for this R1.",
+    "originalF542": "Full literal retained in exact bc872 packet, previously fully read and independently joined; rehashed again for this R1.",
+    "dataOnly": true,
+    "shellOrTargetExecution": false,
+    "sourceOrControlOrReplicaWrites": false,
+    "refOrCiActions": false,
+    "onlyMutation": "Bare review report blob retention."
+  },
+  "completeDifferencePaths": [
+    "kind",
+    "preparedAtUtc",
+    "preparedFromCommit",
+    "preparedFromTree",
+    "supersedes.reason",
+    "supersedes.correctedTitleScope",
+    "supersedes.historicalTitleCorrectionReason",
+    "prerequisites.actualPublicationGate",
+    "prerequisites.historicalPriorActualPublicationGate",
+    "prerequisites.correctedIncompletePublication",
+    "basis.postTransportRecovery",
+    "problem.refusedOutcomeIsNotProducerEvidence",
+    "problem.transportLoss",
+    "execution.outputRoot",
+    "execution.controlRoot",
+    "execution.outputRootCreation",
+    "execution.immutableInputs",
+    "execution.materialization.exactTempPaths.materializeTests",
+    "execution.materialization.exactTempPaths.materializeProducers",
+    "execution.commandVectors.rendererRed",
+    "execution.commandVectors.rendererGreen",
+    "execution.prospectiveSelection",
+    "execution.replicaRoot",
+    "execution.scopeRoot",
+    "execution.oldCustodyLimit",
+    "execution.replicaStaging",
+    "runnerScope.inheritance",
+    "runnerScope.allowedDeltas",
+    "runnerScope.notAllowed",
+    "runnerScope.baselineReviewedCorrected",
+    "runnerScope.historicalCorrectedTitleAllowedDeltas",
+    "runnerScope.readerSelection",
+    "rendererRuntime.environment.inheritedFixedAssignments.TMPDIR",
+    "rendererRuntime.environment.childTempProposal.red",
+    "rendererRuntime.environment.childTempProposal.green",
+    "rendererRuntime.outputOwnershipAndCleanup.proposalOnly.outputRoot",
+    "rendererRuntime.outputOwnershipAndCleanup.proposalOnly.controlRoot",
+    "rendererRuntime.selectedTempPaths.materializeTests",
+    "rendererRuntime.selectedTempPaths.red",
+    "rendererRuntime.selectedTempPaths.materializeProducers",
+    "rendererRuntime.selectedTempPaths.green",
+    "rendererRuntime.selectedTempPaths.validation",
+    "acceptance.producerAuthorshipGate",
+    "scopeNotice",
+    "draftAmendments",
+    "historicalTestMaterialization.receiptPath",
+    "historicalTestMaterialization.originalRunner.path",
+    "historicalTestMaterialization.originalRunner.originalPath",
+    "historicalTestMaterialization.originalRunner.physicalUse",
+    "historicalTestMaterialization.originalBinding.path",
+    "historicalTestMaterialization.originalBinding.originalPath",
+    "historicalTestMaterialization.originalBinding.physicalUse",
+    "historicalTestMaterialization.admission",
+    "historicalTestMaterialization.receiptOriginalPath",
+    "historicalTestMaterialization.receiptPhysicalUse",
+    "historicalTestMaterialization.originalInputFiles",
+    "historicalPriorScopeDraftAmendments",
+    "dataReplicaRecovery",
+    "currentRuntimeScope",
+    "newControlPostimagesAuthored",
+    "newSourcePostimagesAuthored",
+    "newReplicaFilesStaged",
+    "recoveryScopeSelected",
+    "newScopeAuthorshipGate"
+  ],
+  "scopeFindings": [
+    {
+      "id": "chronology",
+      "finding": "Exact139634-byte R1 authored00:04:19.693Z after the fully accepted bc357526 incomplete-outcome publication gate23:58:11UTC. Full root306d9b85 and independent65be34f4 reports rehash, have all checks accepted and name the exact parent commit/tree. This review joins those complete gate reports; it does not claim another live-ref publication audit."
+    },
+    {
+      "id": "old-attempts",
+      "finding": "Original64038 remains observed outer2 REFUSED/SPENT. Corrected54393 remains UNKNOWN/INCOMPLETE/SPENT, with null final outer, old process termination and executor continuity, and no old cleanup qualification. No retrospective primary success, old-custody repair, resume or hidden retry is selected."
+    },
+    {
+      "id": "prospective-selection",
+      "finding": "This is an explicitly selected distinct prospective recovery scope with its own required R1/R2/publication/actual-readback gates. The complete original noReplay wording is byte-for-byte unchanged. New paths alone do not renew attempts. A refused preflight, missing outer or incomplete outcome spends this selected package and grants no automatic rescue."
+    },
+    {
+      "id": "source-runtime-roots",
+      "finding": "Only new control/replica/evidence ownership is selected beneath /workspace/scratch/c714-post-transport-20261117. The existing source and runtime payload root remains /workspace/scratch/c714-fresh-20261116 and is usable only after full fresh physical admission. No source/test restoration, installation, rebuild, cache deletion or payload repair is selected."
+    },
+    {
+      "id": "six-replicas",
+      "finding": "Exactly six immutable retained bodies are selected at unique new replica paths:37bd setup binding,f8dd current-boundary reference,aea9 provider reference,906d old runner,f7 old binding and the complete f542 receipt member of bc872. Every body was fully read/rehashed and matches its selected identity. They are historical data with new ownership, never active old controls or recreated physical continuity."
+    },
+    {
+      "id": "input-maps",
+      "finding": "The complete original eight-input map equals both reviewed old bindings. The complete current map preserves all eight names, every byte/hash/Git pin and every record field except exactly the three setupBinding/currentBoundary/providers paths. The other five whole records are identical. The allowed global gate replacement must verify both complete maps and that precise mapping; blanket deletion of input equality is expressly prohibited."
+    },
+    {
+      "id": "control-census",
+      "finding": "The current RED census remains exactly13 unique controls: two active control files, eight admitted inputs including the three bootstrap replicas, and three historical replicas. All six replicas remain covered by complete before/after byte identity checks; none is an omitted extra input."
+    },
+    {
+      "id": "staging",
+      "finding": "Only after future exact control R2/publication/full actual readbacks may root exclusively create absent0700 nonsymlink current-user roots and exact0600 files with O_EXCL/O_NOFOLLOW, then reread complete bodies and record new ownership. No old temporary path recreation or overwrite is selected. Evidence/phase/TMP creation remains exclusive in the reviewed runner. Incomplete staging is retained/reviewed, not silently reused."
+    },
+    {
+      "id": "unchanged-code",
+      "finding": "The prospective baseline is exact7a79. All52 complete function bodies, imports, both semantic parsers, native metadata program, full readers, capture/signal/cleanup and GREEN/validation algorithms are frozen. Changes are confined to declared global paths/R1/provenance/ownership admission and truthful binding data. The inherited reader paragraph is explicitly historical and confers no new function-edit permission."
+    },
+    {
+      "id": "history-admission",
+      "finding": "Only the physical locations of historical906d/f7/f542 data change. Their complete bytes, original R1/published subject/tests/vector, original source-before/source-after, exact writes, source-only false/null fields, success/error/interruption/cleanup predicates and historical outer0/publication chain remain unchanged. Original paths are retained as history. No replica can serve as a new materialization or cleanup record."
+    },
+    {
+      "id": "full-current-boundary",
+      "finding": "The complete8798 source rows, C5 HEAD/tree/index11567,42 workflows, six physical overlays/all nine bound rows,122773 dependency rows,1454 compiled rows,253D+12SPI archive/installed members, exact toolchain/pnpm/config/env/static/native controls and all seven original cache files remain fresh before/after obligations. Surviving baseline manifests and preliminary facts are expected-data references only."
+    },
+    {
+      "id": "bounded-observations",
+      "finding": "Full retained observations support exact selected9 source bytes, five surviving baseline files, three missing bootstrap files,15 bounded absent paths, four tool-file byte pins and seven cache files totaling2225548B. Tool/cache rows join original bootstrap/current-boundary data. These data-only reads execute no target/version command and make no full current-input or old cleanup claim. The new-root absence is a small embedded path observation, not the14209-byte incident envelope and not a future staging guarantee."
+    },
+    {
+      "id": "tests-semantics",
+      "finding": "Both139/85 whole test identities, sourceScope, all selected case contracts and all corrected names are exact unchanged baseline objects. Test materialization remains forbidden with budget0 before output/source activity. Node and four validation argv vectors are identical; the two renderer vectors differ only in their output-file root."
+    },
+    {
+      "id": "clocks-lifecycle",
+      "finding": "Original180s per-primary and30s metadata clocks, deterministic8-worker/32-pending full reader, Node-before-renderer debt/currentness gate, distinct start/raw/final records, captured-group quiescence, final signal/outer admission and G1–G4 surviving-owned-transient safeguards remain required. No count-only, path-only, cached-input or early-success replacement is permitted."
+    },
+    {
+      "id": "later-gates",
+      "finding": "RED1, producer-materialization1, GREEN1 and validation1 remain prospectively selected, with test-materialization0. New producer postimages require an independently accepted complete new RED with separately observed outer0 and complete publication/readbacks. GREEN still needs current-binding producer materialization and accepted new RED; validation still needs accepted GREEN. Neither spent old attempt satisfies those gates."
+    },
+    {
+      "id": "limits",
+      "finding": "No code/postimage, selected-root creation, staging or runtime is produced by this R1 or this review. Exact descendant implementation still requires full independent R2/inverse review and publication readbacks. Fresh whole physical completeness may still refuse this scope. Native/platform/GUI/canonical typing/build/integration and whole E2E remain open; frozen PR/CI and source-size constraints are unchanged."
+    }
+  ],
+  "replicaIdentities": [
+    {
+      "role": "bootstrapInput",
+      "inputName": "setupBinding",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/bootstrap-binding.json",
+      "originalPath": "/tmp/c714-fresh-bootstrap-review/binding.json",
+      "identity": {
+        "bytes": 2790411,
+        "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+        "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+      }
+    },
+    {
+      "role": "bootstrapInput",
+      "inputName": "currentBoundary",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/fresh-current-input-boundary.json",
+      "originalPath": "/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json",
+      "identity": {
+        "bytes": 3654,
+        "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+        "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+      }
+    },
+    {
+      "role": "bootstrapInput",
+      "inputName": "providers",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/provider-archives-fresh-review.json",
+      "originalPath": "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json",
+      "identity": {
+        "bytes": 789090,
+        "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+        "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+      }
+    },
+    {
+      "role": "originalRunner",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-runner.py",
+      "originalPath": "/tmp/c714-combined139-85-controls/combined-runner.py",
+      "identity": {
+        "bytes": 89953,
+        "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+        "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+      }
+    },
+    {
+      "role": "originalBinding",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-binding.json",
+      "originalPath": "/tmp/c714-combined139-85-controls/red-binding.json",
+      "identity": {
+        "bytes": 4898503,
+        "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+        "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+      }
+    },
+    {
+      "role": "historicalTestMaterializationReceipt",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-test-materialization-receipt.json",
+      "originalPath": "/tmp/c714-combined139-85-evidence/materialize-tests/phase-receipt.json",
+      "identity": {
+        "bytes": 92391,
+        "sha256": "3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d",
+        "gitBlob": "f542dde38b84f533e5658aeafe5a06642c1dcca9"
+      }
+    }
+  ],
+  "inputMapDisposition": {
+    "originalMapExact": true,
+    "currentKeys": 8,
+    "changedPathNames": [
+      "setupBinding",
+      "currentBoundary",
+      "providers"
+    ],
+    "unchangedWholeRecordNames": [
+      "sourceFull",
+      "sourceNonDoc",
+      "dependencies",
+      "compiled",
+      "pnpm"
+    ],
+    "allPayloadIdentitiesPreserved": true,
+    "controlCensus": 13
+  },
+  "checks": [
+    {
+      "name": "Exact full new and baseline R1 identities",
+      "passed": true
+    },
+    {
+      "name": "Complete baseline delta64groups and no field removal",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field author",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field repository",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field branch",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field preservedBaseline",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field nineBoundSourceRows",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field sourceScope",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field nodeTestFirst",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field rendererTestFirst",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field boundaries",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field newPostimagesAuthored",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field controlCorrectionBasis",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field nineBoundSourceRowsScope",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field currentNineSourceRows",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field currentSourceVectorIdentity",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field currentTestIdentities",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field currentSource",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field historicalOriginalDraftAmendments",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field existingTestsAlreadyPublishedAndMaterialized",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field currentRuntimeExecuted",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field producerAuthorshipGateOpen",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field exactSixTitleCorrections",
+      "passed": true
+    },
+    {
+      "name": "Unchanged complete R1 field original80NameSerialization",
+      "passed": true
+    },
+    {
+      "name": "Unchanged exact execution contract rootOwner",
+      "passed": true
+    },
+    {
+      "name": "Unchanged exact execution contract cwd",
+      "passed": true
+    },
+    {
+      "name": "Unchanged exact execution contract attempts",
+      "passed": true
+    },
+    {
+      "name": "Unchanged exact execution contract stages",
+      "passed": true
+    },
+    {
+      "name": "Unchanged exact execution contract sourceVectors",
+      "passed": true
+    },
+    {
+      "name": "Unchanged exact execution contract clocks",
+      "passed": true
+    },
+    {
+      "name": "Unchanged exact execution contract advance",
+      "passed": true
+    },
+    {
+      "name": "Unchanged exact execution contract expected",
+      "passed": true
+    },
+    {
+      "name": "Unchanged exact execution contract packageBoundary",
+      "passed": true
+    },
+    {
+      "name": "Unchanged exact execution contract packageScopedPreservation",
+      "passed": true
+    },
+    {
+      "name": "Unchanged exact execution contract freshReads",
+      "passed": true
+    },
+    {
+      "name": "Unchanged exact execution contract failedPreflight",
+      "passed": true
+    },
+    {
+      "name": "Unchanged exact execution contract noReplay",
+      "passed": true
+    },
+    {
+      "name": "Unchanged exact execution contract validation",
+      "passed": true
+    },
+    {
+      "name": "Unchanged exact execution contract preservationLimits",
+      "passed": true
+    },
+    {
+      "name": "Unchanged exact execution contract nodeTemporaryDebtGate",
+      "passed": true
+    },
+    {
+      "name": "Unchanged exact execution contract newRedStartsWith",
+      "passed": true
+    },
+    {
+      "name": "Unchanged exact execution contract noTestMaterialization",
+      "passed": true
+    },
+    {
+      "name": "No newly authored control/source/replica/runtime evidence",
+      "passed": true
+    },
+    {
+      "name": "Current scope explicitly prospective and distinct",
+      "passed": true
+    },
+    {
+      "name": "NoReplay exact originalwording retained",
+      "passed": true
+    },
+    {
+      "name": "All52complete functions/imports frozen for descendant",
+      "passed": true
+    },
+    {
+      "name": "Reader inherited description constrained as historical",
+      "passed": true
+    },
+    {
+      "name": "Exact complete incomplete-publication root report accepted",
+      "passed": true
+    },
+    {
+      "name": "Exact complete incomplete-publication independent report accepted",
+      "passed": true
+    },
+    {
+      "name": "All repeated closedgate facts equal",
+      "passed": true
+    },
+    {
+      "name": "Authorship after closedgate and based on published commit/tree",
+      "passed": true
+    },
+    {
+      "name": "Previous scope identity retained exactly",
+      "passed": true
+    },
+    {
+      "name": "Complete old8map retained twice and matches both originalbindings",
+      "passed": true
+    },
+    {
+      "name": "Exact same8key census",
+      "passed": true
+    },
+    {
+      "name": "Exact input bytepin unchanged setupBinding",
+      "passed": true
+    },
+    {
+      "name": "No omitted/added input record fields setupBinding",
+      "passed": true
+    },
+    {
+      "name": "Exact input bytepin unchanged sourceFull",
+      "passed": true
+    },
+    {
+      "name": "No omitted/added input record fields sourceFull",
+      "passed": true
+    },
+    {
+      "name": "Exact input bytepin unchanged sourceNonDoc",
+      "passed": true
+    },
+    {
+      "name": "No omitted/added input record fields sourceNonDoc",
+      "passed": true
+    },
+    {
+      "name": "Exact input bytepin unchanged dependencies",
+      "passed": true
+    },
+    {
+      "name": "No omitted/added input record fields dependencies",
+      "passed": true
+    },
+    {
+      "name": "Exact input bytepin unchanged compiled",
+      "passed": true
+    },
+    {
+      "name": "No omitted/added input record fields compiled",
+      "passed": true
+    },
+    {
+      "name": "Exact input bytepin unchanged pnpm",
+      "passed": true
+    },
+    {
+      "name": "No omitted/added input record fields pnpm",
+      "passed": true
+    },
+    {
+      "name": "Exact input bytepin unchanged currentBoundary",
+      "passed": true
+    },
+    {
+      "name": "No omitted/added input record fields currentBoundary",
+      "passed": true
+    },
+    {
+      "name": "Exact input bytepin unchanged providers",
+      "passed": true
+    },
+    {
+      "name": "No omitted/added input record fields providers",
+      "passed": true
+    },
+    {
+      "name": "Only3named pathrelocations",
+      "passed": true
+    },
+    {
+      "name": "Remaining5whole inputrecords unchanged",
+      "passed": true
+    },
+    {
+      "name": "Exactly6uniquely selected replica paths",
+      "passed": true
+    },
+    {
+      "name": "Bootstrap path map setupBinding",
+      "passed": true
+    },
+    {
+      "name": "Full immutable retained replica identity setupBinding",
+      "passed": true
+    },
+    {
+      "name": "Bootstrap path map currentBoundary",
+      "passed": true
+    },
+    {
+      "name": "Full immutable retained replica identity currentBoundary",
+      "passed": true
+    },
+    {
+      "name": "Bootstrap path map providers",
+      "passed": true
+    },
+    {
+      "name": "Full immutable retained replica identity providers",
+      "passed": true
+    },
+    {
+      "name": "Full immutable retained replica identity originalRunner",
+      "passed": true
+    },
+    {
+      "name": "Full immutable retained replica identity originalBinding",
+      "passed": true
+    },
+    {
+      "name": "Full immutable retained replica identity historicalTestMaterializationReceipt",
+      "passed": true
+    },
+    {
+      "name": "Six selected staging files exactly replicas",
+      "passed": true
+    },
+    {
+      "name": "Sixreplicas are data-only sourcefree gatedstaging",
+      "passed": true
+    },
+    {
+      "name": "Current13uniquecontrol census preserved",
+      "passed": true
+    },
+    {
+      "name": "Workspace scope roots are exactnewcontainedchildren",
+      "passed": true
+    },
+    {
+      "name": "Selected absence is boundedembedded pathobservation only",
+      "passed": true
+    },
+    {
+      "name": "Historical materialization fact unchanged receipt",
+      "passed": true
+    },
+    {
+      "name": "Historical materialization fact unchanged originalR1",
+      "passed": true
+    },
+    {
+      "name": "Historical materialization fact unchanged originalPublishedSubject",
+      "passed": true
+    },
+    {
+      "name": "Historical materialization fact unchanged originalTestIdentities",
+      "passed": true
+    },
+    {
+      "name": "Historical materialization fact unchanged originalSourceVectorIdentity",
+      "passed": true
+    },
+    {
+      "name": "Historical materialization fact unchanged sourceBefore",
+      "passed": true
+    },
+    {
+      "name": "Historical materialization fact unchanged sourceAfter",
+      "passed": true
+    },
+    {
+      "name": "Historical materialization fact unchanged writtenPaths",
+      "passed": true
+    },
+    {
+      "name": "Historical materialization fact unchanged acceptedPublication",
+      "passed": true
+    },
+    {
+      "name": "Historical materialization fact unchanged observedOuter",
+      "passed": true
+    },
+    {
+      "name": "Historical materialization fact unchanged observedSupervisorExit",
+      "passed": true
+    },
+    {
+      "name": "Historical materialization fact unchanged packet",
+      "passed": true
+    },
+    {
+      "name": "Historical materialization fact unchanged freshCurrentBoundary",
+      "passed": true
+    },
+    {
+      "name": "Historical materialization fact unchanged greenUnchanged",
+      "passed": true
+    },
+    {
+      "name": "Historical replicas preserve old paths as history",
+      "passed": true
+    },
+    {
+      "name": "All currentpayload admission remains mandatory",
+      "passed": true
+    },
+    {
+      "name": "Old physical continuity/outer/cleanup remain unrecovered",
+      "passed": true
+    },
+    {
+      "name": "Both permanent oldattempt records kept exact status",
+      "passed": true
+    },
+    {
+      "name": "Newproducer gate requires freshaccepted recoveryRED",
+      "passed": true
+    },
+    {
+      "name": "Full root static report exact65checks accepted",
+      "passed": true
+    },
+    {
+      "name": "Full nested original bootstrapR1/amendment identities",
+      "passed": true
+    },
+    {
+      "name": "Four toolfile observations match original byte/realpath pins",
+      "passed": true
+    },
+    {
+      "name": "Complete7observed cache rows equal original retained boundary",
+      "passed": true
+    },
+    {
+      "name": "Tool/cache proof claims limiteddataonly",
+      "passed": true
+    },
+    {
+      "name": "Returned selected9source proof matches exact current9pins",
+      "passed": true
+    },
+    {
+      "name": "Returned8input proof shows exact5survivors3missing only",
+      "passed": true
+    },
+    {
+      "name": "Bounded selectedsource proof makes no wholecurrent/oldcustody claim",
+      "passed": true
+    },
+    {
+      "name": "Exact15 boundedabsences carry no oldcustody/freshboundary claim",
+      "passed": true
+    },
+    {
+      "name": "Unchanged full commandvector node",
+      "passed": true
+    },
+    {
+      "name": "Unchanged full commandvector validation",
+      "passed": true
+    },
+    {
+      "name": "Only renderer output argument relocated rendererRed",
+      "passed": true
+    },
+    {
+      "name": "Only renderer output argument relocated rendererGreen",
+      "passed": true
+    },
+    {
+      "name": "Exactly zero testrematerialization and one of selected phases",
+      "passed": true
+    },
+    {
+      "name": "All four boundeddata provenance pointers exact",
+      "passed": true
+    },
+    {
+      "name": "Rootstatic exact subject/baselines joined",
+      "passed": true
+    },
+    {
+      "name": "Exact23changed top-level groups corroborate rootstatic",
+      "passed": true
+    }
+  ],
+  "checkCount": 123,
+  "failedChecks": [],
+  "disposition": {
+    "prospectiveR1ScopeApproved": true,
+    "newRunnerOrBindingApprovedByThisReport": false,
+    "newControlsAuthored": false,
+    "newSourcePostimagesAuthored": false,
+    "newReplicasStaged": false,
+    "newRuntimeObserved": false,
+    "oldUnknownQualified": false,
+    "producerAuthorshipGateOpened": false,
+    "wholeE2EQualified": false
+  },
+  "next": "Complete independent R1 review and immediate-push publication, then root and independent full actual publication readbacks. Only afterward author the narrowly allowed exact descendant controls for independent R2. Staging or execution remains gated."
+}

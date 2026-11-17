@@ -1,0 +1,1232 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-post-transport-recovery-r1-semantic-review",
+  "reviewer": "/root/corrected_r2_semantic",
+  "at": "2026-11-17 00:10:21 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "verdict": "ACCEPTED exact prospective recovery R1 8ce89328. No semantic or active-scope contradiction blocker found. This is R1 scope acceptance only; complete R1 publication/readbacks and later exact controlR2/publication/readbacks remain mandatory before control/replica staging or the new complete RED.",
+  "accepted": true,
+  "subject": {
+    "bytes": 139634,
+    "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+    "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+  },
+  "baselineR1": {
+    "bytes": 99012,
+    "sha256": "0efc555482f0088cb2d45a8efd07039ccfcf089b67d5cca7f46ff30cbe71378c",
+    "gitBlob": "2fbac18b3ce8f6703b1e328b266e25954f45ddb8"
+  },
+  "baselineControls": {
+    "runner": {
+      "bytes": 94938,
+      "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+      "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+    },
+    "binding": {
+      "bytes": 5856749,
+      "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+      "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+    }
+  },
+  "rootStaticReview": {
+    "bytes": 22893,
+    "sha256": "c69c619dd888465c09a133f6145449b5e8db37b2892ccf954e70c333aef97206",
+    "gitBlob": "569e0fd96a6408d1ada2c5c0894ca2512e7564e1"
+  },
+  "authorshipGate": {
+    "kind": "corrected-incomplete-publication-gate-closed",
+    "at": "2026-11-16 23:58:11 UTC",
+    "commit": "bc357526da9884cda1a76d2e6e6ea1a1b017d740",
+    "tree": "45edcbe0dc0d6471da393f159e4a6871404ffb95",
+    "docsTree": "b2dfd9c749d7c07b026c9670daa6294d7006a5ef",
+    "root": {
+      "bytes": 23920,
+      "sha256": "ac86fb03a9bad33ed0c2555abc7346a3c7e1ec5141b78d24592aeca3cd508938",
+      "gitBlob": "306d9b854656fe560f98620856b4a2e7bc98254c"
+    },
+    "independent": {
+      "bytes": 67084,
+      "sha256": "981e5a19ff9b2f1891010395c47d1bc470e56ef671195bc4e83c7aeabbf9a56c",
+      "gitBlob": "65be34f4b4d7373c3cc18b9c299fca90e8dddabc"
+    },
+    "rootReadFullIndependent": true,
+    "independentReadFullRoot": true,
+    "originalRefused": "64038 observedouter2 REFUSED/SPENT",
+    "correctedIncomplete": "54393 UNKNOWN/INCOMPLETE/SPENT; finalouter and oldcleanup/custody unknown",
+    "allowed": "Select and author only a distinct prospective recovery R1 for independent review. No new control/source postimages, staging, primary execution or producer authority until their separately required R1/R2/publication/actual-readback gates.",
+    "newRecoveryScopeAuthoredBeforeGate": false,
+    "producerPostimagesAuthored": false
+  },
+  "method": {
+    "completeOldNewR1ReadsAndIdentityChecks": true,
+    "complete23TopLevelValueDeltaCompared": true,
+    "complete64ChangedLeafGroupReview": true,
+    "fullBaselineRunnerBindingDataReadAndRehash": true,
+    "completeSixReplicaPayloadRehash": true,
+    "replicaPayloadBytes": 8664002,
+    "completeHistoricalReceiptContainerMemberRead": true,
+    "allThreeNewObservationBodiesRead": true,
+    "completeRecommendationBodyRead": true,
+    "completeIncompletePublicationRootAndIndependentReadbacksRead": true,
+    "targetExecution": false,
+    "shellCommands": 0,
+    "sourceControlPostimageAuthoring": 0,
+    "staging": 0,
+    "sourceRefCiMutations": 0,
+    "allowedMutation": "This retained bare JSON evidence report only."
+  },
+  "fullEvidenceReads": [
+    {
+      "role": "newR1",
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    {
+      "role": "baselineR1",
+      "bytes": 99012,
+      "sha256": "0efc555482f0088cb2d45a8efd07039ccfcf089b67d5cca7f46ff30cbe71378c",
+      "gitBlob": "2fbac18b3ce8f6703b1e328b266e25954f45ddb8"
+    },
+    {
+      "role": "rootStatic",
+      "bytes": 22893,
+      "sha256": "c69c619dd888465c09a133f6145449b5e8db37b2892ccf954e70c333aef97206",
+      "gitBlob": "569e0fd96a6408d1ada2c5c0894ca2512e7564e1"
+    },
+    {
+      "role": "incompletePublicationRootActual",
+      "bytes": 23920,
+      "sha256": "ac86fb03a9bad33ed0c2555abc7346a3c7e1ec5141b78d24592aeca3cd508938",
+      "gitBlob": "306d9b854656fe560f98620856b4a2e7bc98254c"
+    },
+    {
+      "role": "incompletePublicationIndependentActual",
+      "bytes": 67084,
+      "sha256": "981e5a19ff9b2f1891010395c47d1bc470e56ef671195bc4e83c7aeabbf9a56c",
+      "gitBlob": "65be34f4b4d7373c3cc18b9c299fca90e8dddabc"
+    },
+    {
+      "role": "recoveryRecommendations",
+      "bytes": 27997,
+      "sha256": "9e08049327575391ebfaaf8ff4f41877ac43ebfad8d063a16d31cad41316b664",
+      "gitBlob": "10c383ebb2cb5827fd811d6f0e7ad6a950fbae7f"
+    },
+    {
+      "role": "returnedSourceAndInputObservation",
+      "bytes": 13750,
+      "sha256": "7a217af0f942da5789b6d65962f7c8b3ccd830be96e31f6f3965ae162b9e2e6b",
+      "gitBlob": "0988f7b08ae156529fc7cbc9b37c9d82f405164e"
+    },
+    {
+      "role": "returnedPathObservation",
+      "bytes": 2135,
+      "sha256": "d3be601285716e140c0ec98b596ae2e59ba1d286cfbedb4c739a526628cd1b53",
+      "gitBlob": "7063e49185bd288bf32ccd9ca6aead6388679c37"
+    },
+    {
+      "role": "returnedToolAndCacheObservation",
+      "bytes": 8115,
+      "sha256": "f30cd2786b3b6c8ec49440f835f16c5ed0367fb73bc6160f09d5d363409bade7",
+      "gitBlob": "75b276dbcd832a2f496c684a4bbe3f6a9b607da1"
+    }
+  ],
+  "exactReplicaPayloads": [
+    {
+      "role": "bootstrapInput",
+      "inputName": "setupBinding",
+      "originalPath": "/tmp/c714-fresh-bootstrap-review/binding.json",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/bootstrap-binding.json",
+      "identity": {
+        "bytes": 2790411,
+        "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+        "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+      }
+    },
+    {
+      "role": "bootstrapInput",
+      "inputName": "currentBoundary",
+      "originalPath": "/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/fresh-current-input-boundary.json",
+      "identity": {
+        "bytes": 3654,
+        "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+        "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+      }
+    },
+    {
+      "role": "bootstrapInput",
+      "inputName": "providers",
+      "originalPath": "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/provider-archives-fresh-review.json",
+      "identity": {
+        "bytes": 789090,
+        "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+        "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+      }
+    },
+    {
+      "role": "originalRunner",
+      "originalPath": "/tmp/c714-combined139-85-controls/combined-runner.py",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-runner.py",
+      "identity": {
+        "bytes": 89953,
+        "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+        "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+      }
+    },
+    {
+      "role": "originalBinding",
+      "originalPath": "/tmp/c714-combined139-85-controls/red-binding.json",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-binding.json",
+      "identity": {
+        "bytes": 4898503,
+        "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+        "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+      }
+    },
+    {
+      "role": "historicalTestMaterializationReceipt",
+      "originalPath": "/tmp/c714-combined139-85-evidence/materialize-tests/phase-receipt.json",
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-test-materialization-receipt.json",
+      "identity": {
+        "bytes": 92391,
+        "sha256": "3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d",
+        "gitBlob": "f542dde38b84f533e5658aeafe5a06642c1dcca9"
+      }
+    }
+  ],
+  "bindingMap": {
+    "original": {
+      "setupBinding": {
+        "path": "/tmp/c714-fresh-bootstrap-review/binding.json",
+        "bytes": 2790411,
+        "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+        "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+      },
+      "sourceFull": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/source-restore-source-after.json",
+        "bytes": 3451167,
+        "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+        "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+      },
+      "sourceNonDoc": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-source-after.json",
+        "bytes": 2478318,
+        "sha256": "59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751",
+        "gitBlob": "51bf0d0962e07fcc7843fcd65c3202ec9133a607"
+      },
+      "dependencies": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json",
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "compiled": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-compiled-after.json",
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      },
+      "pnpm": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/pnpm-inventory.json",
+        "bytes": 253936,
+        "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+        "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c"
+      },
+      "currentBoundary": {
+        "path": "/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json",
+        "bytes": 3654,
+        "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+        "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+      },
+      "providers": {
+        "path": "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json",
+        "bytes": 789090,
+        "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+        "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+      }
+    },
+    "current": {
+      "setupBinding": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/replicas/bootstrap-binding.json",
+        "bytes": 2790411,
+        "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+        "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+      },
+      "sourceFull": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/source-restore-source-after.json",
+        "bytes": 3451167,
+        "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+        "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+      },
+      "sourceNonDoc": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-source-after.json",
+        "bytes": 2478318,
+        "sha256": "59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751",
+        "gitBlob": "51bf0d0962e07fcc7843fcd65c3202ec9133a607"
+      },
+      "dependencies": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json",
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "compiled": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-compiled-after.json",
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      },
+      "pnpm": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/pnpm-inventory.json",
+        "bytes": 253936,
+        "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+        "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c"
+      },
+      "currentBoundary": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/replicas/fresh-current-input-boundary.json",
+        "bytes": 3654,
+        "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+        "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+      },
+      "providers": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/replicas/provider-archives-fresh-review.json",
+        "bytes": 789090,
+        "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+        "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+      }
+    },
+    "changedInputNames": [
+      "setupBinding",
+      "currentBoundary",
+      "providers"
+    ],
+    "unchangedInputNames": [
+      "sourceFull",
+      "sourceNonDoc",
+      "dependencies",
+      "compiled",
+      "pnpm"
+    ],
+    "allEightFullBytePinsAndOtherFieldsUnchanged": true,
+    "beforeAfterControlCensus": 13
+  },
+  "delta": {
+    "changedTopLevelValues": [
+      {
+        "key": "kind",
+        "prior": {
+          "bytes": 67,
+          "sha256": "2d68f80584366525afb56adf440bee33c62a2369de477eeaf987e94464474be4",
+          "gitBlob": "1fbcf41756fec0fede87d3e21e28608515d88c81"
+        },
+        "current": {
+          "bytes": 75,
+          "sha256": "b7da20e4652be8e48cba9319ee657d53badd7449d06a0c6a3e8da2168cfd9c6e",
+          "gitBlob": "11482458645160b7517cdeb62534068eb57b5eb9"
+        }
+      },
+      {
+        "key": "preparedAtUtc",
+        "prior": {
+          "bytes": 27,
+          "sha256": "7be96c3e551ed4dcffea0b3c7f8b1ae30582a4da0ef45bea9e701cd573c8d9ad",
+          "gitBlob": "8577045227c08f142a9a3feaa7cdc409eeff5d1c"
+        },
+        "current": {
+          "bytes": 27,
+          "sha256": "c62ee9fb985d4358ac665546c3b71f090be588e2c77628c94fc8fff3249fa75b",
+          "gitBlob": "62260fec42306735ffb025da49a5cd8401c1c21f"
+        }
+      },
+      {
+        "key": "preparedFromCommit",
+        "prior": {
+          "bytes": 43,
+          "sha256": "5e4c26ec78aa470e47509a55fdc65a6ff727109ebd57d3accf9566ab7ea8809a",
+          "gitBlob": "1657c5106e2f1267f78c3f1aac4935a9d7fa11a0"
+        },
+        "current": {
+          "bytes": 43,
+          "sha256": "9a942c010ca9407e2b471a4e48330b543bf369a385e283e760299cb56d336049",
+          "gitBlob": "681fc37b694ab671492861360999de67fd0c5ad1"
+        }
+      },
+      {
+        "key": "preparedFromTree",
+        "prior": {
+          "bytes": 43,
+          "sha256": "6d19630ef8598fc4f843b86d6f566ef4be56d3f6bb735204d5cd5368bcbe0148",
+          "gitBlob": "d1a1822e6052b1bae37282b1a024ffdfabc874a4"
+        },
+        "current": {
+          "bytes": 43,
+          "sha256": "b313e7ed77f77adc3da27702138de9a829b7f3719213ba19c962e02b57326b0c",
+          "gitBlob": "11b1734af17e5cdb3e5c988fedfbe5dcd89c5d2e"
+        }
+      },
+      {
+        "key": "supersedes",
+        "prior": {
+          "bytes": 1896,
+          "sha256": "d95724f32b055567574653def058f5bce5cb45d0bf3588cb12a54c6ce6bfcac3",
+          "gitBlob": "74749a756f95cb31687eb06d19efebbdcb72dc1e"
+        },
+        "current": {
+          "bytes": 4723,
+          "sha256": "ae6d4f01927ea35faed15115bc418fa57c076b7e712a67ff6d3b22359b0efd09",
+          "gitBlob": "799c1ad0cb7c02ced59ad7588c0d3c72130322e1"
+        }
+      },
+      {
+        "key": "prerequisites",
+        "prior": {
+          "bytes": 3209,
+          "sha256": "6d446884669536a99821257f6bc858f9fd7b3e1db6c370eca258301c054b77ba",
+          "gitBlob": "5e40a2295d831751a67592bed67acaca2057c76c"
+        },
+        "current": {
+          "bytes": 5670,
+          "sha256": "7fc4787e37b09d7e07f8207213f13606756d66a942ef2f6767843d5c026e19a5",
+          "gitBlob": "b06e7b95269f062717e3ef6d4a1416e53502871c"
+        }
+      },
+      {
+        "key": "basis",
+        "prior": {
+          "bytes": 1169,
+          "sha256": "0e54def7819134bd1f9a29fcb72f54f0b45b3090e3bc0885e5cb13160fa07585",
+          "gitBlob": "fac9b29b69a70bac3de53c6cfff23b79fc858b2b"
+        },
+        "current": {
+          "bytes": 2331,
+          "sha256": "33bbec1c7b025ff4e9377e40ee08fddd16aba6b47cf4df11fa33bf66c00b7c8f",
+          "gitBlob": "af2f3ef2ccbffe8b7731b144b4ceb96a5fdb3826"
+        }
+      },
+      {
+        "key": "problem",
+        "prior": {
+          "bytes": 1929,
+          "sha256": "4cc92f5e6f4cf747269fedb98ceda93d71ec5880ea40456152fb6462e3aaab37",
+          "gitBlob": "814aca117934128a11ac73f73905b07f161d80c5"
+        },
+        "current": {
+          "bytes": 2336,
+          "sha256": "86cb7a515e2621fd405c2bc3237616e92975eabd962122f932a1220a88a4a5a1",
+          "gitBlob": "eacad7468ba49b552e6c885774599e76519ca73e"
+        }
+      },
+      {
+        "key": "execution",
+        "prior": {
+          "bytes": 14513,
+          "sha256": "4a25e8aaae9ee188234a7f74d8efc14c8976065468ea76240933cf2f803947d8",
+          "gitBlob": "c05886a83ed2f28a3a602e6c9e46634fb668c7b3"
+        },
+        "current": {
+          "bytes": 18262,
+          "sha256": "6294201c7282e09bf9a189e441a62258c629301e6556e1f9a72c855a50d095bb",
+          "gitBlob": "404c3311c454aafba798664197620e7e02131c86"
+        }
+      },
+      {
+        "key": "runnerScope",
+        "prior": {
+          "bytes": 8696,
+          "sha256": "738541d397b8b215c698499b5de203cf40c9002adf92651db3e793fdefff66c6",
+          "gitBlob": "edb38716621faa851021df1f00fef225d69c302b"
+        },
+        "current": {
+          "bytes": 12216,
+          "sha256": "f1200ffef683da27548390784f0bfbf3dca2c65b26ca5cf3e6cd53df09746bfe",
+          "gitBlob": "bdbc201a25ba1ae4e3973b10ee7190741c5df872"
+        }
+      },
+      {
+        "key": "rendererRuntime",
+        "prior": {
+          "bytes": 17000,
+          "sha256": "337780f5e6ad2c8743af9e759ab8f5cd91fa9582fa21b5576a012f6835cf1fde",
+          "gitBlob": "d1dcdc5a934f84f4c5f2dc4500208ca5034e5fff"
+        },
+        "current": {
+          "bytes": 17130,
+          "sha256": "776b5819e7ba84d3f7856bbddd4bb663a530197a5be001af376c9160aca1bd04",
+          "gitBlob": "1cd92ea1b85d6755f8224d9ece91b47b55d1b805"
+        }
+      },
+      {
+        "key": "acceptance",
+        "prior": {
+          "bytes": 2241,
+          "sha256": "e1daf11beb231d5d8b31bd9329c05e2afe646c2a4b5b963bdcae40958cf632e0",
+          "gitBlob": "baa1027f920983a9853532190c236e5bb372cc99"
+        },
+        "current": {
+          "bytes": 2294,
+          "sha256": "27d63f880d3bfc6c7ff2ebc8134c2edfada0ebf24297aae64288e8737766553e",
+          "gitBlob": "57e421a05e667457e50c5c956275cb72997cc12b"
+        }
+      },
+      {
+        "key": "scopeNotice",
+        "prior": {
+          "bytes": 407,
+          "sha256": "e3c361ca4d16b74f0fbb5ea487f4fe6e381cc97b440c0066c5b970d35176d997",
+          "gitBlob": "2a9cbe038e3299e858a33c03014cdf163c37d249"
+        },
+        "current": {
+          "bytes": 552,
+          "sha256": "7b4ea6705cb7f43222ffb543c49a1463a78368e4f78263b7f2e246b9ab5fcaf5",
+          "gitBlob": "2ddcf42d1e4445b8a032180629ebbf706e9478fc"
+        }
+      },
+      {
+        "key": "draftAmendments",
+        "prior": {
+          "bytes": 874,
+          "sha256": "99f253d27ba119ab5f9b9c9cee06b93023f771b68dfed56ec9b4784647ff73a9",
+          "gitBlob": "9dba3435ad8b3dc0454c42b4b7b7d3f7a5b89f72"
+        },
+        "current": {
+          "bytes": 3,
+          "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+          "gitBlob": "fe51488c7066f6687ef680d6bfaa4f7768ef205c"
+        }
+      },
+      {
+        "key": "historicalTestMaterialization",
+        "prior": {
+          "bytes": 4193,
+          "sha256": "fbf46173953eefa32a7c853def6ddda67f61e5edd141b13e9dfaaa0cdf2e171a",
+          "gitBlob": "587a89a6ebcd46a7c92fdb8a5d09bce51084d853"
+        },
+        "current": {
+          "bytes": 7162,
+          "sha256": "0d840c4902848dc1eea53b99147821fdd8cacff4d9ca9bc706d3be28559a6381",
+          "gitBlob": "662a88ddf9b9994533fb2303553707d910ce13f1"
+        }
+      },
+      {
+        "key": "historicalPriorScopeDraftAmendments",
+        "prior": null,
+        "current": {
+          "bytes": 874,
+          "sha256": "99f253d27ba119ab5f9b9c9cee06b93023f771b68dfed56ec9b4784647ff73a9",
+          "gitBlob": "9dba3435ad8b3dc0454c42b4b7b7d3f7a5b89f72"
+        }
+      },
+      {
+        "key": "dataReplicaRecovery",
+        "prior": null,
+        "current": {
+          "bytes": 15535,
+          "sha256": "6c3d1589c80c0248099d40407ca147a6bfa1c5f419d2ba19eaddf476e0537f2c",
+          "gitBlob": "23e5b8ea40982e870f0f91cb4e3b47bc253b41ac"
+        }
+      },
+      {
+        "key": "currentRuntimeScope",
+        "prior": null,
+        "current": {
+          "bytes": 104,
+          "sha256": "ceb09cdf2a353e241484ac441845352ec21de29b5cf9028bc8aefe827282b3e1",
+          "gitBlob": "5477fcac35062404b35ccd324029e27d55751ea8"
+        }
+      },
+      {
+        "key": "newControlPostimagesAuthored",
+        "prior": null,
+        "current": {
+          "bytes": 6,
+          "sha256": "2ed27c1421e6928dbe13dbfdb5c59e1045b30341fe7ebe05700006bc5ac572c0",
+          "gitBlob": "c508d5366f70bba37fcc09d128b6537c4adb2c79"
+        }
+      },
+      {
+        "key": "newSourcePostimagesAuthored",
+        "prior": null,
+        "current": {
+          "bytes": 6,
+          "sha256": "2ed27c1421e6928dbe13dbfdb5c59e1045b30341fe7ebe05700006bc5ac572c0",
+          "gitBlob": "c508d5366f70bba37fcc09d128b6537c4adb2c79"
+        }
+      },
+      {
+        "key": "newReplicaFilesStaged",
+        "prior": null,
+        "current": {
+          "bytes": 6,
+          "sha256": "2ed27c1421e6928dbe13dbfdb5c59e1045b30341fe7ebe05700006bc5ac572c0",
+          "gitBlob": "c508d5366f70bba37fcc09d128b6537c4adb2c79"
+        }
+      },
+      {
+        "key": "recoveryScopeSelected",
+        "prior": null,
+        "current": {
+          "bytes": 5,
+          "sha256": "a17fcf0a2f50e2d495e4f90ce263410edc183add6c62699a2facbccf60410f74",
+          "gitBlob": "27ba77ddaf61532f217964734769a42cdabc17dc"
+        }
+      },
+      {
+        "key": "newScopeAuthorshipGate",
+        "prior": null,
+        "current": {
+          "bytes": 1097,
+          "sha256": "f47f64475960b195d6e3ef93dc23131279b6423494577b1df382b723b09a75ee",
+          "gitBlob": "d263d2af49b5cdaaf5e08c8c2553e7d89922cbc2"
+        }
+      }
+    ],
+    "changedValueCodec": "UTF-8 compact JSON.stringify(value) plus one LF; derived identities need not be standalone Git blobs.",
+    "changedLeafPaths": [
+      "R1.kind",
+      "R1.preparedAtUtc",
+      "R1.preparedFromCommit",
+      "R1.preparedFromTree",
+      "R1.supersedes.reason",
+      "R1.supersedes.correctedTitleScope",
+      "R1.supersedes.historicalTitleCorrectionReason",
+      "R1.prerequisites.actualPublicationGate",
+      "R1.prerequisites.historicalPriorActualPublicationGate",
+      "R1.prerequisites.correctedIncompletePublication",
+      "R1.basis.postTransportRecovery",
+      "R1.problem.refusedOutcomeIsNotProducerEvidence",
+      "R1.problem.transportLoss",
+      "R1.execution.outputRoot",
+      "R1.execution.controlRoot",
+      "R1.execution.outputRootCreation",
+      "R1.execution.immutableInputs",
+      "R1.execution.materialization.exactTempPaths.materializeTests",
+      "R1.execution.materialization.exactTempPaths.materializeProducers",
+      "R1.execution.commandVectors.rendererRed",
+      "R1.execution.commandVectors.rendererGreen",
+      "R1.execution.prospectiveSelection",
+      "R1.execution.replicaRoot",
+      "R1.execution.scopeRoot",
+      "R1.execution.oldCustodyLimit",
+      "R1.execution.replicaStaging",
+      "R1.runnerScope.inheritance",
+      "R1.runnerScope.allowedDeltas",
+      "R1.runnerScope.notAllowed",
+      "R1.runnerScope.baselineReviewedCorrected",
+      "R1.runnerScope.historicalCorrectedTitleAllowedDeltas",
+      "R1.runnerScope.readerSelection",
+      "R1.rendererRuntime.environment.inheritedFixedAssignments.TMPDIR",
+      "R1.rendererRuntime.environment.childTempProposal.red",
+      "R1.rendererRuntime.environment.childTempProposal.green",
+      "R1.rendererRuntime.outputOwnershipAndCleanup.proposalOnly.outputRoot",
+      "R1.rendererRuntime.outputOwnershipAndCleanup.proposalOnly.controlRoot",
+      "R1.rendererRuntime.selectedTempPaths.materializeTests",
+      "R1.rendererRuntime.selectedTempPaths.red",
+      "R1.rendererRuntime.selectedTempPaths.materializeProducers",
+      "R1.rendererRuntime.selectedTempPaths.green",
+      "R1.rendererRuntime.selectedTempPaths.validation",
+      "R1.acceptance.producerAuthorshipGate",
+      "R1.scopeNotice",
+      "R1.draftAmendments",
+      "R1.historicalTestMaterialization.receiptPath",
+      "R1.historicalTestMaterialization.originalRunner.path",
+      "R1.historicalTestMaterialization.originalRunner.originalPath",
+      "R1.historicalTestMaterialization.originalRunner.physicalUse",
+      "R1.historicalTestMaterialization.originalBinding.path",
+      "R1.historicalTestMaterialization.originalBinding.originalPath",
+      "R1.historicalTestMaterialization.originalBinding.physicalUse",
+      "R1.historicalTestMaterialization.admission",
+      "R1.historicalTestMaterialization.receiptOriginalPath",
+      "R1.historicalTestMaterialization.receiptPhysicalUse",
+      "R1.historicalTestMaterialization.originalInputFiles",
+      "R1.historicalPriorScopeDraftAmendments",
+      "R1.dataReplicaRecovery",
+      "R1.currentRuntimeScope",
+      "R1.newControlPostimagesAuthored",
+      "R1.newSourcePostimagesAuthored",
+      "R1.newReplicaFilesStaged",
+      "R1.recoveryScopeSelected",
+      "R1.newScopeAuthorshipGate"
+    ],
+    "removedPriorFields": [],
+    "literalUnchangedTopLevelKeys": [
+      "schemaVersion",
+      "author",
+      "repository",
+      "branch",
+      "preservedBaseline",
+      "nineBoundSourceRows",
+      "sourceScope",
+      "nodeTestFirst",
+      "rendererTestFirst",
+      "boundaries",
+      "newPostimagesAuthored",
+      "controlCorrectionBasis",
+      "nineBoundSourceRowsScope",
+      "currentNineSourceRows",
+      "currentSourceVectorIdentity",
+      "currentTestIdentities",
+      "currentSource",
+      "historicalOriginalDraftAmendments",
+      "existingTestsAlreadyPublishedAndMaterialized",
+      "currentRuntimeExecuted",
+      "producerAuthorshipGateOpen",
+      "exactSixTitleCorrections",
+      "original80NameSerialization"
+    ]
+  },
+  "findings": [
+    {
+      "topic": "Immutable semantic target",
+      "finding": "sourceScope, nodeTestFirst, rendererTestFirst, both current test identities, current9 source rows/vector, six corrected display names, old80 name codec, current-source reference, preserved baseline and all boundaries are literal-identical to2fbac. The already reviewed139/85 test bodies remain frozen, with zero test materialization/restoration. All3 future producer preimages remain exact. The R1 adds no source, test, fixture, import or assertion change."
+    },
+    {
+      "topic": "Outcome and clock contract",
+      "finding": "Every primary/package semantic acceptance clause except the strengthened producer-gate history wording is unchanged. All expected139/85 RED/GREEN counts, exactnames/order/multiplicity/failure oracles, original133/80 passing coverage, controls137/84/85, P11 original90-second and Review30-second behavior, per-primary180-second and metadata30-second clocks, Node-before-renderer debt/admission, complete postflight/final outer and noReplay remain unchanged. Unreached assertions and unknown-stage54393 remain unqualified."
+    },
+    {
+      "topic": "Exact replica selection",
+      "finding": "Exactly6 full immutable historical data bodies are selected:37bd/f8dd/aea9 plus906d/f7/f542. I independently rehashed all8,664,002 bytes of these payloads, using the unique original f542 full container member. They are historical data with new physical ownership, never executed old controls or recreated original inode/process custody. The original8-input map equals botha5c9 andf7; the current map changes onlysetupBinding/currentBoundary/providers paths, preserving every payload/nonpath field and the other5 paths."
+    },
+    {
+      "topic": "Admission scope",
+      "finding": "The allowed replacement of historical inputFiles equality is explicitly limited to full original-map equality, full current-map equality, the precise3-path map and equality of all other pin fields. It does not admit arbitrary paths or payload substitution. New before/after controls still contain exactly13 unique paths:2 active controls,8 input files including3 bootstrap replicas,3 historical data replicas. All6 replicas and active controls require exclusive new0700/0600 ownership, full readback and later full control census."
+    },
+    {
+      "topic": "Historical materialization",
+      "finding": "All original f542 receipt facts remain exact: original R1/subject/tests/vector, source-before/source-after, written2testpaths, source-only false/null runtime fields, accepted outer0 and original publication chain. The old complete materialization contract is preserved under previousHistoricalMaterializationContract. Active historicalTestMaterialization instead selects explicit newly owned replica paths and retains originalPath/receiptOriginalPath and interpretation labels. Original-path/no-copy language is historical, not an active demand to recreate disappeared files."
+    },
+    {
+      "topic": "Frozen implementation",
+      "finding": "The exact7a79 runner is the required starting point. All52 existing function bodies, all imports, both semantic parsers, full readers, clocks, signals, G1–G4, native metadata, GREEN and validation algorithms are explicitly frozen. The only selected control changes concern global constants, the precise input relocation, immutable replica/unknown-attempt admission and truthful binding records. Existing reader adaptation wording is explicitly historical and overridden by the active freeze; it grants no new helper/import/function change."
+    },
+    {
+      "topic": "Active text consistency",
+      "finding": "The reserved materialize-tests TMP path is explicitly inactive, zero-budget and rejected before output/source activity; it grants no materialization permission. The inherited child-temp alternative is conditioned on a separately fixed R1, while this exact R1 selects only its single red/green phase TMP paths. All renderer runtime edits reduce exactly to selected output/control-root substitution. All command edits reduce exactly to the two renderer output-file roots; Node and all4 validation commands remain exact. No active text contradiction was found."
+    },
+    {
+      "topic": "Current versus historical evidence",
+      "finding": "The0988 observation supports only9 exact selected source files and5 available input-data files, with3 missing temporary inputs.7063 supports only bounded absent paths.75b276 supports4 tool-file byte/realpath pins and7 original cache records totaling2,225,548 bytes, without target/version invocation. These observations explicitly refuse full current runtime-boundary and old cleanup qualification. R1 still requires complete fresh8798 source/11567 index-tree/42workflow,122773 dependency,1454 compiled,253D+12SPI, tools/pnpm/config/environment/control and7cache admission before and after the new package. No installation/rebuild/source restoration/cache repair is selected."
+    },
+    {
+      "topic": "Two permanently spent attempts",
+      "finding": "Original64038 remains literal REFUSED/SPENT with outer2. Corrected54393 remains UNKNOWN/INCOMPLETE/SPENT with null observed outer, termination and executor continuity; old cleanup is unqualified. Neither is replayed/resumed/reclassified and neither transfers a primary result. The distinct prospective scope is selected only after the accepted incomplete-outcome publication/readback gate. New roots or successful new cleanup cannot repair old custody, and another failure/unknown result grants no automatic rescue."
+    },
+    {
+      "topic": "Producer and future gates",
+      "finding": "The full root306d9b85/independent65be34f4 actual incomplete-publication records match the selected parent/tree and contain passing checks. Authorship00:04:19.693Z follows the closed23:58:11UTC gate. Complete independent R1 review/publication/actual readbacks still precede descendant control authorship; exact controlR2/publication/readbacks precede replicas/staging/runtime. Only a fully accepted fresh new RED with separate outer0 and publication/readbacks may open P11/Review/hook producer authorship. GREEN still requires new actual producer materialization; validation still requires accepted newGREEN."
+    }
+  ],
+  "checks": [
+    {
+      "name": "Exact complete recovery and baseline R1 identities",
+      "passed": true
+    },
+    {
+      "name": "Exact baseline reviewed runner7a79 and bindinga5c9",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged semantic/source contract preservedBaseline",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged semantic/source contract nineBoundSourceRows",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged semantic/source contract sourceScope",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged semantic/source contract nodeTestFirst",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged semantic/source contract rendererTestFirst",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged semantic/source contract boundaries",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged semantic/source contract controlCorrectionBasis",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged semantic/source contract nineBoundSourceRowsScope",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged semantic/source contract currentNineSourceRows",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged semantic/source contract currentSourceVectorIdentity",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged semantic/source contract currentTestIdentities",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged semantic/source contract currentSource",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged semantic/source contract exactSixTitleCorrections",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged semantic/source contract original80NameSerialization",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged execution contract rootOwner",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged execution contract cwd",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged execution contract attempts",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged execution contract stages",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged execution contract sourceVectors",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged execution contract clocks",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged execution contract advance",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged execution contract expected",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged execution contract packageBoundary",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged execution contract packageScopedPreservation",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged execution contract freshReads",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged execution contract failedPreflight",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged execution contract noReplay",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged execution contract validation",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged execution contract preservationLimits",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged execution contract nodeTemporaryDebtGate",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged execution contract newRedStartsWith",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged execution contract noTestMaterialization",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged outcome acceptance perPrimary",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged outcome acceptance nodeSemantics",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged outcome acceptance rendererSemantics",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged outcome acceptance package",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged outcome acceptance oldCoverage",
+      "passed": true
+    },
+    {
+      "name": "Frozen exact whole139/85 tests current scope",
+      "passed": true
+    },
+    {
+      "name": "All85 correct titles preserved against exact binding",
+      "passed": true
+    },
+    {
+      "name": "All139Node names frozen via exact binding and selected6 suffix",
+      "passed": true
+    },
+    {
+      "name": "Correct old80 title serialization/hash intact",
+      "passed": true
+    },
+    {
+      "name": "Canonical current9 source rows and vector remain exact",
+      "passed": true
+    },
+    {
+      "name": "Producer preimages remain exact selected three",
+      "passed": true
+    },
+    {
+      "name": "Zero test materialization and one selected newRED",
+      "passed": true
+    },
+    {
+      "name": "Six data replicas exactly selected and unique",
+      "passed": true
+    },
+    {
+      "name": "New workspace roots agree everywhere",
+      "passed": true
+    },
+    {
+      "name": "Selected scope absent observation before prospective authorship",
+      "passed": true
+    },
+    {
+      "name": "All8 original input records exactly baselinea5c9/f7",
+      "passed": true
+    },
+    {
+      "name": "All8 current input names preserved",
+      "passed": true
+    },
+    {
+      "name": "Unchanged full input identity/nonpath fields setupBinding",
+      "passed": true
+    },
+    {
+      "name": "Unchanged full input identity/nonpath fields sourceFull",
+      "passed": true
+    },
+    {
+      "name": "Unchanged full input identity/nonpath fields sourceNonDoc",
+      "passed": true
+    },
+    {
+      "name": "Unchanged full input identity/nonpath fields dependencies",
+      "passed": true
+    },
+    {
+      "name": "Unchanged full input identity/nonpath fields compiled",
+      "passed": true
+    },
+    {
+      "name": "Unchanged full input identity/nonpath fields pnpm",
+      "passed": true
+    },
+    {
+      "name": "Unchanged full input identity/nonpath fields currentBoundary",
+      "passed": true
+    },
+    {
+      "name": "Unchanged full input identity/nonpath fields providers",
+      "passed": true
+    },
+    {
+      "name": "Exactly3 input path relocations",
+      "passed": true
+    },
+    {
+      "name": "Bootstrap path mapping exact setupBinding",
+      "passed": true
+    },
+    {
+      "name": "Complete retained replica payload bootstrapInput:setupBinding",
+      "passed": true
+    },
+    {
+      "name": "Bootstrap path mapping exact currentBoundary",
+      "passed": true
+    },
+    {
+      "name": "Complete retained replica payload bootstrapInput:currentBoundary",
+      "passed": true
+    },
+    {
+      "name": "Bootstrap path mapping exact providers",
+      "passed": true
+    },
+    {
+      "name": "Complete retained replica payload bootstrapInput:providers",
+      "passed": true
+    },
+    {
+      "name": "Complete retained replica payload originalRunner",
+      "passed": true
+    },
+    {
+      "name": "Complete retained replica payload originalBinding",
+      "passed": true
+    },
+    {
+      "name": "f542 exact full container identity",
+      "passed": true
+    },
+    {
+      "name": "f542 unique full original container member",
+      "passed": true
+    },
+    {
+      "name": "f542 member pin exact",
+      "passed": true
+    },
+    {
+      "name": "Complete retained replica payload historicalTestMaterializationReceipt",
+      "passed": true
+    },
+    {
+      "name": "Six-replica staging list exact R1 map",
+      "passed": true
+    },
+    {
+      "name": "13 complete new control census with unique paths",
+      "passed": true
+    },
+    {
+      "name": "Complete prior materialization contract preserved as history",
+      "passed": true
+    },
+    {
+      "name": "Historical fact unchanged receipt",
+      "passed": true
+    },
+    {
+      "name": "Historical fact unchanged originalR1",
+      "passed": true
+    },
+    {
+      "name": "Historical fact unchanged originalPublishedSubject",
+      "passed": true
+    },
+    {
+      "name": "Historical fact unchanged originalTestIdentities",
+      "passed": true
+    },
+    {
+      "name": "Historical fact unchanged originalSourceVectorIdentity",
+      "passed": true
+    },
+    {
+      "name": "Historical fact unchanged sourceBefore",
+      "passed": true
+    },
+    {
+      "name": "Historical fact unchanged sourceAfter",
+      "passed": true
+    },
+    {
+      "name": "Historical fact unchanged writtenPaths",
+      "passed": true
+    },
+    {
+      "name": "Historical fact unchanged acceptedPublication",
+      "passed": true
+    },
+    {
+      "name": "Historical fact unchanged observedOuter",
+      "passed": true
+    },
+    {
+      "name": "Historical fact unchanged observedSupervisorExit",
+      "passed": true
+    },
+    {
+      "name": "Historical fact unchanged packet",
+      "passed": true
+    },
+    {
+      "name": "Historical fact unchanged freshCurrentBoundary",
+      "passed": true
+    },
+    {
+      "name": "Historical fact unchanged greenUnchanged",
+      "passed": true
+    },
+    {
+      "name": "Explicit historical replica path and identity originalRunner",
+      "passed": true
+    },
+    {
+      "name": "Explicit historical replica path and identity originalBinding",
+      "passed": true
+    },
+    {
+      "name": "Explicit receipt replica/new and original path",
+      "passed": true
+    },
+    {
+      "name": "Original64038 record literally unchanged",
+      "passed": true
+    },
+    {
+      "name": "Corrected54393 remains unknownspent null outer and oldcustody",
+      "passed": true
+    },
+    {
+      "name": "Old continuity/outer/cleanup not repaired",
+      "passed": true
+    },
+    {
+      "name": "No source/test reconstruction; full current admission required",
+      "passed": true
+    },
+    {
+      "name": "All52 functions/imports frozen; reader permission historical only",
+      "passed": true
+    },
+    {
+      "name": "Historical input path equality replaced only by exact two maps",
+      "passed": true
+    },
+    {
+      "name": "Both new R1 and controlR2 publication/readback gates before staging",
+      "passed": true
+    },
+    {
+      "name": "Producer gate still requires accepted new RED",
+      "passed": true
+    },
+    {
+      "name": "All primary/validation commands output-root-only change",
+      "passed": true
+    },
+    {
+      "name": "Complete renderer runtime root-only changes",
+      "passed": true
+    },
+    {
+      "name": "Complete source-only materialization policy root-only change",
+      "passed": true
+    },
+    {
+      "name": "Inactive test path is explicitly reserved never active",
+      "passed": true
+    },
+    {
+      "name": "Historical broad reader instructions explicitly overridden by freeze",
+      "passed": true
+    },
+    {
+      "name": "Alternative child-temp proposal selects no alternative current paths",
+      "passed": true
+    },
+    {
+      "name": "No current postimage/staging/runtime/producer claim",
+      "passed": true
+    },
+    {
+      "name": "Historical draft amendments preserved",
+      "passed": true
+    },
+    {
+      "name": "Gate exact parent/tree and full root/independent identity joins",
+      "passed": true
+    },
+    {
+      "name": "Both actual incomplete publication reports accepted",
+      "passed": true
+    },
+    {
+      "name": "NewR1 authored after closed incomplete-outcome gate",
+      "passed": true
+    },
+    {
+      "name": "Bounded data observation exactly9 selected current source pins",
+      "passed": true
+    },
+    {
+      "name": "Bounded observation preserves exact5available3missing input facts",
+      "passed": true
+    },
+    {
+      "name": "Bounded path observation no execution/cleanup/fullboundary qualification",
+      "passed": true
+    },
+    {
+      "name": "Four exact tool byte/realpath observations without execution",
+      "passed": true
+    },
+    {
+      "name": "Seven complete current cache records join exact original expectation",
+      "passed": true
+    },
+    {
+      "name": "Tool/cache data observation no writes or full boundary/oldcleanup claim",
+      "passed": true
+    },
+    {
+      "name": "New observation pin joined in both R1 locations",
+      "passed": true
+    },
+    {
+      "name": "Root full static65checks subject exact",
+      "passed": true
+    },
+    {
+      "name": "All23 top-level changed value identities reproduce rootstatic",
+      "passed": true
+    },
+    {
+      "name": "No priorR1 fields deleted",
+      "passed": true
+    }
+  ],
+  "checkCount": 121,
+  "failedChecks": [],
+  "blockers": [],
+  "unresolvedScopeContradictions": [],
+  "disposition": {
+    "prospectiveRecoveryR1Accepted": true,
+    "newR1PublicationAndActualReadbacksStillRequired": true,
+    "controlPostimageAuthorshipGateClosedUntilThoseReadbacks": true,
+    "controlR2NotYetReviewed": true,
+    "newControlPostimagesAuthored": false,
+    "newSourcePostimagesAuthored": false,
+    "newReplicaFilesStaged": false,
+    "currentRuntimeExecuted": false,
+    "acceptedCombinedRed": null,
+    "acceptedCombinedGreen": null,
+    "producerAuthorshipGateOpened": false,
+    "oldCustodyOrCleanupRecovered": false,
+    "wholeE2EQualified": false
+  },
+  "next": "Publish exactly this reviewed R1 and its complete independent reports, then finish root and independent full actual readbacks. Only afterward author the minimal selected global control/binding deltas. Their own full R2/publication/readbacks must precede exclusive reconstruction/staging and the one new complete RED. Any actual payload mismatch or missing outer spends the new selected attempt, with no automatic retry or repair.",
+  "limits": [
+    "This review accepts an exact prospective scope, not a nonexistent future runner/binding implementation or any runtime result.",
+    "Historical and returned-environment data reads do not establish complete current physical inputs, old-process quiescence, or a new primary outcome.",
+    "No CI/platform/native/provider/GUI, canonical typecheck/build or whole E2E qualification; all prior boundaries remain exact."
+  ]
+}

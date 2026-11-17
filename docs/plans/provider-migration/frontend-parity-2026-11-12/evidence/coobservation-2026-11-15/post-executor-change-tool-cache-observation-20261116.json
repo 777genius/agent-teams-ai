@@ -1,0 +1,217 @@
+{
+  "kind": "returned-environment-read-only-tool-and-bootstrap-cache-observation",
+  "at": "2026-11-16T23:58:54.191522+00:00",
+  "tools": [
+    {
+      "name": "node",
+      "expected": {
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "version": "v24.22.1",
+        "bytes": 126939688,
+        "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d"
+      },
+      "exists": true,
+      "resolved": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "actual": {
+        "bytes": 126939688,
+        "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+        "gitBlob": "97b7784b737e5bda3ec45af8c65508bd61001d0c"
+      },
+      "matchesBytePin": true,
+      "matchesRealPath": true
+    },
+    {
+      "name": "git",
+      "expected": {
+        "path": "/usr/local/bin/git",
+        "bytes": 19295504,
+        "sha256": "8a2ae22e7898e163330a96319b541f92ed6f90fc87576414f72c5a89aa1dc352"
+      },
+      "exists": true,
+      "resolved": "/usr/local/bin/git",
+      "actual": {
+        "bytes": 19295504,
+        "sha256": "8a2ae22e7898e163330a96319b541f92ed6f90fc87576414f72c5a89aa1dc352",
+        "gitBlob": "d51aaf6e2f66bdf456e2d198085d4d35054433df"
+      },
+      "matchesBytePin": true,
+      "matchesRealPath": true
+    },
+    {
+      "name": "python",
+      "expected": {
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "realPath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12",
+        "bytes": 30894944,
+        "sha256": "fa67443527ed9647f760d807e2a38f26340757123e643c4639cf273ed15d5ea7"
+      },
+      "exists": true,
+      "resolved": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12",
+      "actual": {
+        "bytes": 30894944,
+        "sha256": "fa67443527ed9647f760d807e2a38f26340757123e643c4639cf273ed15d5ea7",
+        "gitBlob": "cdff710ca21bf61260e4c7d7f3818ecd65cba2e7"
+      },
+      "matchesBytePin": true,
+      "matchesRealPath": true
+    },
+    {
+      "name": "scriptShell",
+      "expected": {
+        "path": "/bin/sh",
+        "realPath": "/usr/bin/dash",
+        "bytes": 129736,
+        "sha256": "a6f559e00b69a4aa4d8cb607be18d9386c5aee55c509e2c075549dcf00e00fc7"
+      },
+      "exists": true,
+      "resolved": "/usr/bin/dash",
+      "actual": {
+        "bytes": 129736,
+        "sha256": "a6f559e00b69a4aa4d8cb607be18d9386c5aee55c509e2c075549dcf00e00fc7",
+        "gitBlob": "965067be6aaf758adf88a3ff5539f41b25770579"
+      },
+      "matchesBytePin": true,
+      "matchesRealPath": true
+    }
+  ],
+  "cacheRows": [
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/2c055e6a",
+      "mode": "100644",
+      "regular": true,
+      "symlink": false,
+      "bytes": 1076,
+      "sha256": "81d68862abef75d4cddbf3c9450326b5546534bb5eac1501563f72e46a377818",
+      "gitBlob": "92cc0b39314a692ffaa55077b500ad6eef15aa92"
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/4d7e9989",
+      "mode": "100644",
+      "regular": true,
+      "symlink": false,
+      "bytes": 2780,
+      "sha256": "2d0fab228f904b2c2e1f1e3a4ede1f5868c5d0e4007bbed6984690ccbc07143e",
+      "gitBlob": "0d8fc72131192a4d7dfb7c4f6a4d992e8d48edce"
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/60988b90",
+      "mode": "100644",
+      "regular": true,
+      "symlink": false,
+      "bytes": 2300,
+      "sha256": "d9ea89d372b2eaa86ef5562a02aeb9d5aceb836227436880781b83467afeaa7b",
+      "gitBlob": "4587d24377ed922a99494689c3b742eedf2e56ae"
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/661efec4",
+      "mode": "100644",
+      "regular": true,
+      "symlink": false,
+      "bytes": 2208532,
+      "sha256": "5f137a3b9d2d936472a1b3c7c540309f8fea9eed8b3614b382ee23157a259712",
+      "gitBlob": "feedc7210606667b16d2d0014d4bbb9b198afc00"
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/b6303853",
+      "mode": "100644",
+      "regular": true,
+      "symlink": false,
+      "bytes": 2052,
+      "sha256": "c8f65ca4824827fb20024dad6e8217007163410dceb840170ced910861cccda4",
+      "gitBlob": "256197c92bc42a5921d8207741fc4334aeabbea8"
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/ceabdecc",
+      "mode": "100644",
+      "regular": true,
+      "symlink": false,
+      "bytes": 2652,
+      "sha256": "c753344d313709d91a46d65cccc2f06988c81ceae1b83aefae0f8c34a509c165",
+      "gitBlob": "00b5784700c10e5ef5876c84e308b3b3a56a4009"
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/d8c0d4fb",
+      "mode": "100644",
+      "regular": true,
+      "symlink": false,
+      "bytes": 6156,
+      "sha256": "723856e14196bf1a3caffe7e8bd170efe3f0ed7a398f1f9c5cc672fc59260327",
+      "gitBlob": "3f3238d0c975515b3ef230c3bd61366ab85a1758"
+    }
+  ],
+  "cacheDirectories": [
+    {
+      "path": "tmp",
+      "mode": 493,
+      "symlink": false
+    },
+    {
+      "path": "tmp/node-compile-cache",
+      "mode": 493,
+      "symlink": false
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000",
+      "mode": 493,
+      "symlink": false
+    }
+  ],
+  "expectedCacheRows": [
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/2c055e6a",
+      "mode": "100644",
+      "bytes": 1076,
+      "sha256": "81d68862abef75d4cddbf3c9450326b5546534bb5eac1501563f72e46a377818",
+      "gitBlob": "92cc0b39314a692ffaa55077b500ad6eef15aa92"
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/4d7e9989",
+      "mode": "100644",
+      "bytes": 2780,
+      "sha256": "2d0fab228f904b2c2e1f1e3a4ede1f5868c5d0e4007bbed6984690ccbc07143e",
+      "gitBlob": "0d8fc72131192a4d7dfb7c4f6a4d992e8d48edce"
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/60988b90",
+      "mode": "100644",
+      "bytes": 2300,
+      "sha256": "d9ea89d372b2eaa86ef5562a02aeb9d5aceb836227436880781b83467afeaa7b",
+      "gitBlob": "4587d24377ed922a99494689c3b742eedf2e56ae"
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/661efec4",
+      "mode": "100644",
+      "bytes": 2208532,
+      "sha256": "5f137a3b9d2d936472a1b3c7c540309f8fea9eed8b3614b382ee23157a259712",
+      "gitBlob": "feedc7210606667b16d2d0014d4bbb9b198afc00"
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/b6303853",
+      "mode": "100644",
+      "bytes": 2052,
+      "sha256": "c8f65ca4824827fb20024dad6e8217007163410dceb840170ced910861cccda4",
+      "gitBlob": "256197c92bc42a5921d8207741fc4334aeabbea8"
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/ceabdecc",
+      "mode": "100644",
+      "bytes": 2652,
+      "sha256": "c753344d313709d91a46d65cccc2f06988c81ceae1b83aefae0f8c34a509c165",
+      "gitBlob": "00b5784700c10e5ef5876c84e308b3b3a56a4009"
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/d8c0d4fb",
+      "mode": "100644",
+      "bytes": 6156,
+      "sha256": "723856e14196bf1a3caffe7e8bd170efe3f0ed7a398f1f9c5cc672fc59260327",
+      "gitBlob": "3f3238d0c975515b3ef230c3bd61366ab85a1758"
+    }
+  ],
+  "fullCurrentRootTmpInventoryMatchesBaseline": true,
+  "targetCodeOrVersionCommandsExecuted": false,
+  "sourceOrCacheWrites": 0,
+  "oldProcessOrCleanupQualified": false,
+  "fullRuntimeBoundaryQualified": false,
+  "collectionNote": "An earlier data-only scan request was not collected because its caller treated an asynchronous tool response as completion. No result from that read was retained or used. This complete data read is separately observed; neither request invokes target code or is a selected primary attempt.",
+  "qualification": "Complete data-only byte reads of four pinned executable files and the complete currently visible ROOT/tmp file/link inventory, with read-stability checks and walk errors raised. No package/provider/tool version invocation. This neither repairs the lost attempt nor replaces fresh new package admission."
+}

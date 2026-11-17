@@ -1,0 +1,620 @@
+{
+  "schemaVersion": 1,
+  "kind": "corrected-red-incomplete-actual-root-publication-readback",
+  "reviewer": "root",
+  "at": "2026-11-16 23:55:03 UTC",
+  "verdict": "ACCEPTED exact actual incomplete-outcome publication; corrected attempt remains UNKNOWN/INCOMPLETE/SPENT. Independent actual report required before future prospective recovery authorship.",
+  "actual": {
+    "commit": "bc357526da9884cda1a76d2e6e6ea1a1b017d740",
+    "soleParent": "c9c68e2137ce99ecfa0f3f71922ac055dbc2f5b1",
+    "tree": "45edcbe0dc0d6471da393f159e4a6871404ffb95",
+    "docsTree": "b2dfd9c749d7c07b026c9670daa6294d7006a5ef",
+    "observedBranchHead": "bc357526da9884cda1a76d2e6e6ea1a1b017d740"
+  },
+  "manifest": {
+    "bytes": 9115,
+    "sha256": "befb4c43c31e6382c28e3d4776b3888f4b22784afdf70d37e91b7f7beb4a5c1e",
+    "gitBlob": "23bf7563faeb7b1061f22fc7b95a7ccc8dfa51e6"
+  },
+  "method": "Complete actual commit/ref/root/docs and all13 changed bodies read and rehashed. Entire docs leaf map compared with accepted complete parent map; all53 non-doc root entries exact to accepted parent, inheriting its8798 non-doc/42workflow census. No fresh physical runtime census or lost executor outcome is claimed.",
+  "census": {
+    "leaves": 11857,
+    "docs": 3059,
+    "nonDocs": 8798,
+    "workflows": 42,
+    "docsTreeEntries": 3465,
+    "unchangedNonDocRoots": 53
+  },
+  "delta": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "kind": "modified",
+      "before": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "07be0511a06391e21526a867931f2c7f635a007d"
+      },
+      "after": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bc3959395d9c29659656ede7d3988aa7b8834df0"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "kind": "modified",
+      "before": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "94de4afb89a2eb6aabb3f16dd53507448893ce5a"
+      },
+      "after": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "363be248255780306d0db159a608e67afdc8c6d9"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "kind": "modified",
+      "before": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b3498b6c925a5d6ba473670dd0ca9a904105c563"
+      },
+      "after": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7a5923f73e3c3869c2a88a927cb08f463875b1b6"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-control-actual-independent-publication-20261116.json",
+      "kind": "added",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "56ae76204bfeaa2afd613a2cb41e2ddc1f1f3d16"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-control-actual-root-publication-20261116.json",
+      "kind": "added",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8128188ec78d691fec7d0830ed0276d6cf508a1d"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-red-incomplete-envelope-20261116.json",
+      "kind": "added",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "df4e4caeb8a2602942a5cb95b140101c595c3f47"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-red-incomplete-guard-review-20261116.json",
+      "kind": "added",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "80a17feff65625c696d35aaee26e3614544cff23"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-red-incomplete-publication-manifest-20261116.json",
+      "kind": "added",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "23bf7563faeb7b1061f22fc7b95a7ccc8dfa51e6"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-red-incomplete-root-review-20261116.json",
+      "kind": "added",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e483e532de888e7f3698d5d2310d5ddecd2875ee"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-red-incomplete-semantic-review-20261116.json",
+      "kind": "added",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ff3ed051ca16e886c0d60248294c99c71643d7ad"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-recommendations-20261116.json",
+      "kind": "added",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "10c383ebb2cb5827fd811d6f0e7ad6a950fbae7f"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/post-executor-change-path-observation-20261116.json",
+      "kind": "added",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7063e49185bd288bf32ccd9ca6aead6388679c37"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/post-executor-change-source-input-observation-20261116.json",
+      "kind": "added",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0988f7b08ae156529fc7cbc9b37c9d82f405164e"
+      }
+    }
+  ],
+  "fullBodyReadbacks": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-red-incomplete-envelope-20261116.json",
+      "bytes": 14209,
+      "sha256": "ca765d1710162c77bad581e09b7eb2f7856bec93ee36c77463ce4f7f72266ec4",
+      "gitBlob": "df4e4caeb8a2602942a5cb95b140101c595c3f47"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-red-incomplete-root-review-20261116.json",
+      "bytes": 6076,
+      "sha256": "8cceaba2e0d81fc158541a708f0ae89e0bcbad702db4530b5fa135ce0482e125",
+      "gitBlob": "e483e532de888e7f3698d5d2310d5ddecd2875ee"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-red-incomplete-guard-review-20261116.json",
+      "bytes": 9251,
+      "sha256": "4f902f51c54b9d0a6db2bb99cc6d267bab21e962d13ec30a4c4ef6762384ce34",
+      "gitBlob": "80a17feff65625c696d35aaee26e3614544cff23"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-red-incomplete-semantic-review-20261116.json",
+      "bytes": 10310,
+      "sha256": "fb97e622ad21ff840bc781d4ad23a1a3624d2fc4c71d06e22645ded36da21d09",
+      "gitBlob": "ff3ed051ca16e886c0d60248294c99c71643d7ad"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/post-executor-change-source-input-observation-20261116.json",
+      "bytes": 13750,
+      "sha256": "7a217af0f942da5789b6d65962f7c8b3ccd830be96e31f6f3965ae162b9e2e6b",
+      "gitBlob": "0988f7b08ae156529fc7cbc9b37c9d82f405164e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/post-executor-change-path-observation-20261116.json",
+      "bytes": 2135,
+      "sha256": "d3be601285716e140c0ec98b596ae2e59ba1d286cfbedb4c739a526628cd1b53",
+      "gitBlob": "7063e49185bd288bf32ccd9ca6aead6388679c37"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-recommendations-20261116.json",
+      "bytes": 27997,
+      "sha256": "9e08049327575391ebfaaf8ff4f41877ac43ebfad8d063a16d31cad41316b664",
+      "gitBlob": "10c383ebb2cb5827fd811d6f0e7ad6a950fbae7f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-control-actual-root-publication-20261116.json",
+      "bytes": 27142,
+      "sha256": "9045fcbfa24ab3b7060624445e680c318d2d5cd37a64ed5f29462f57af28773a",
+      "gitBlob": "8128188ec78d691fec7d0830ed0276d6cf508a1d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-control-actual-independent-publication-20261116.json",
+      "bytes": 65662,
+      "sha256": "4f4641cc66df94e83c76f92e8a0f076a6ed0dd5e6bb71bc2905139d0b3405ac0",
+      "gitBlob": "56ae76204bfeaa2afd613a2cb41e2ddc1f1f3d16"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2550063,
+      "sha256": "2cc650e64b9c508a0a8d35d5e683e9618f29783de32beac1b98aede9a477e75f",
+      "gitBlob": "bc3959395d9c29659656ede7d3988aa7b8834df0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 43112,
+      "sha256": "349c02af72df3a2b26d60c58c225993a23c55b41ee8b5f6da67f61603c71bd7c",
+      "gitBlob": "363be248255780306d0db159a608e67afdc8c6d9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 159329,
+      "sha256": "56e92fbcee81cfa6fadecdd3e2596e74eae4b584a6dd8e556830112494dca148",
+      "gitBlob": "7a5923f73e3c3869c2a88a927cb08f463875b1b6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-red-incomplete-publication-manifest-20261116.json",
+      "bytes": 9115,
+      "sha256": "befb4c43c31e6382c28e3d4776b3888f4b22784afdf70d37e91b7f7beb4a5c1e",
+      "gitBlob": "23bf7563faeb7b1061f22fc7b95a7ccc8dfa51e6"
+    }
+  ],
+  "bodyCount": 13,
+  "bodyBytes": 2938151,
+  "completeParentPrefixes": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "prior": {
+        "bytes": 2546907,
+        "sha256": "fcfe4ee7f4eaedef9fffe913a94a151d6208ab813d1242c7832e3f63311eab9e",
+        "gitBlob": "07be0511a06391e21526a867931f2c7f635a007d"
+      },
+      "append": {
+        "bytes": 3156,
+        "sha256": "8dc25a202b49cde93e7126b6b9553440296da4ec1a5294e0ae07dacfe9cdef06",
+        "gitBlob": "9b6c76b6e1af135e0a331c4ba6b8eaaa76a7f3cf"
+      },
+      "actual": {
+        "bytes": 2550063,
+        "sha256": "2cc650e64b9c508a0a8d35d5e683e9618f29783de32beac1b98aede9a477e75f",
+        "gitBlob": "bc3959395d9c29659656ede7d3988aa7b8834df0"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "prior": {
+        "bytes": 41631,
+        "sha256": "cea94d585d3bf91e2cb2811d7f88b5941aa41239e30c7a89f8d599c246d6bb3b",
+        "gitBlob": "94de4afb89a2eb6aabb3f16dd53507448893ce5a"
+      },
+      "append": {
+        "bytes": 1481,
+        "sha256": "80963ceca906ea103ca47d60178a782b3b06942f0ec473722040967a08ecdbcf",
+        "gitBlob": "6834d8e82fbe439b5006b31c49572842ead762d1"
+      },
+      "actual": {
+        "bytes": 43112,
+        "sha256": "349c02af72df3a2b26d60c58c225993a23c55b41ee8b5f6da67f61603c71bd7c",
+        "gitBlob": "363be248255780306d0db159a608e67afdc8c6d9"
+      }
+    }
+  ],
+  "catalogPreservation": {
+    "allOtherPriorFields": true,
+    "completePriorStageArchived": true,
+    "bundles": 27,
+    "totals": {
+      "bundles": 27,
+      "outerBytes": 17894693,
+      "payloadInstances": 219,
+      "payloadBytes": 15911913
+    }
+  },
+  "incompleteOutcome": {
+    "envelope": {
+      "bytes": 14209,
+      "sha256": "ca765d1710162c77bad581e09b7eb2f7856bec93ee36c77463ce4f7f72266ec4",
+      "gitBlob": "df4e4caeb8a2602942a5cb95b140101c595c3f47"
+    },
+    "root": {
+      "bytes": 6076,
+      "sha256": "8cceaba2e0d81fc158541a708f0ae89e0bcbad702db4530b5fa135ce0482e125",
+      "gitBlob": "e483e532de888e7f3698d5d2310d5ddecd2875ee"
+    },
+    "guard": {
+      "bytes": 9251,
+      "sha256": "4f902f51c54b9d0a6db2bb99cc6d267bab21e962d13ec30a4c4ef6762384ce34",
+      "gitBlob": "80a17feff65625c696d35aaee26e3614544cff23"
+    },
+    "semantic": {
+      "bytes": 10310,
+      "sha256": "fb97e622ad21ff840bc781d4ad23a1a3624d2fc4c71d06e22645ded36da21d09",
+      "gitBlob": "ff3ed051ca16e886c0d60248294c99c71643d7ad"
+    },
+    "sourceObservation": {
+      "bytes": 13750,
+      "sha256": "7a217af0f942da5789b6d65962f7c8b3ccd830be96e31f6f3965ae162b9e2e6b",
+      "gitBlob": "0988f7b08ae156529fc7cbc9b37c9d82f405164e"
+    },
+    "pathsObservation": {
+      "bytes": 2135,
+      "sha256": "d3be601285716e140c0ec98b596ae2e59ba1d286cfbedb4c739a526628cd1b53",
+      "gitBlob": "7063e49185bd288bf32ccd9ca6aead6388679c37"
+    },
+    "recommendations": {
+      "bytes": 27997,
+      "sha256": "9e08049327575391ebfaaf8ff4f41877ac43ebfad8d063a16d31cad41316b664",
+      "gitBlob": "10c383ebb2cb5827fd811d6f0e7ad6a950fbae7f"
+    }
+  },
+  "controlPublicationActual": {
+    "root": {
+      "bytes": 27142,
+      "sha256": "9045fcbfa24ab3b7060624445e680c318d2d5cd37a64ed5f29462f57af28773a",
+      "gitBlob": "8128188ec78d691fec7d0830ed0276d6cf508a1d"
+    },
+    "independent": {
+      "bytes": 65662,
+      "sha256": "4f4641cc66df94e83c76f92e8a0f076a6ed0dd5e6bb71bc2905139d0b3405ac0",
+      "gitBlob": "56ae76204bfeaa2afd613a2cb41e2ddc1f1f3d16"
+    }
+  },
+  "currentStage": {
+    "stage": "corrected RED final observation lost on executor transport/key change; UNKNOWN/INCOMPLETE/SPENT; separate recovery not yet selected",
+    "controlPublication": "c9c68e2137ce99ecfa0f3f71922ac055dbc2f5b1",
+    "controlPublicationActual": {
+      "root": {
+        "bytes": 27142,
+        "sha256": "9045fcbfa24ab3b7060624445e680c318d2d5cd37a64ed5f29462f57af28773a",
+        "gitBlob": "8128188ec78d691fec7d0830ed0276d6cf508a1d"
+      },
+      "independent": {
+        "bytes": 65662,
+        "sha256": "4f4641cc66df94e83c76f92e8a0f076a6ed0dd5e6bb71bc2905139d0b3405ac0",
+        "gitBlob": "56ae76204bfeaa2afd613a2cb41e2ddc1f1f3d16"
+      }
+    },
+    "selectedRunner": {
+      "bytes": 94938,
+      "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+      "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+    },
+    "selectedBinding": {
+      "bytes": 5856749,
+      "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+      "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+    },
+    "envelope": {
+      "bytes": 14209,
+      "sha256": "ca765d1710162c77bad581e09b7eb2f7856bec93ee36c77463ce4f7f72266ec4",
+      "gitBlob": "df4e4caeb8a2602942a5cb95b140101c595c3f47"
+    },
+    "rootAccounting": {
+      "bytes": 6076,
+      "sha256": "8cceaba2e0d81fc158541a708f0ae89e0bcbad702db4530b5fa135ce0482e125",
+      "gitBlob": "e483e532de888e7f3698d5d2310d5ddecd2875ee"
+    },
+    "independentGuard": {
+      "bytes": 9251,
+      "sha256": "4f902f51c54b9d0a6db2bb99cc6d267bab21e962d13ec30a4c4ef6762384ce34",
+      "gitBlob": "80a17feff65625c696d35aaee26e3614544cff23"
+    },
+    "independentSemantic": {
+      "bytes": 10310,
+      "sha256": "fb97e622ad21ff840bc781d4ad23a1a3624d2fc4c71d06e22645ded36da21d09",
+      "gitBlob": "ff3ed051ca16e886c0d60248294c99c71643d7ad"
+    },
+    "returnedEnvironmentObservation": {
+      "bytes": 13750,
+      "sha256": "7a217af0f942da5789b6d65962f7c8b3ccd830be96e31f6f3965ae162b9e2e6b",
+      "gitBlob": "0988f7b08ae156529fc7cbc9b37c9d82f405164e"
+    },
+    "returnedPathObservation": {
+      "bytes": 2135,
+      "sha256": "d3be601285716e140c0ec98b596ae2e59ba1d286cfbedb4c739a526628cd1b53",
+      "gitBlob": "7063e49185bd288bf32ccd9ca6aead6388679c37"
+    },
+    "recoveryRecommendations": {
+      "bytes": 27997,
+      "sha256": "9e08049327575391ebfaaf8ff4f41877ac43ebfad8d063a16d31cad41316b664",
+      "gitBlob": "10c383ebb2cb5827fd811d6f0e7ad6a950fbae7f"
+    },
+    "currentTests": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    },
+    "currentSourceVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "sourceObservationQualification": "Allnine selected file bytes match in returned environment; not full source/runtime census or old custody.",
+    "sessionId": 54393,
+    "invocationCount": 1,
+    "classification": "UNKNOWN/INCOMPLETE/SPENT",
+    "observedFinalOuter": null,
+    "finalToolResult": null,
+    "freshPrimaryResultsObserved": [],
+    "freshWholeBoundariesObserved": false,
+    "capturedCleanupObserved": false,
+    "oldProcessTermination": null,
+    "oldExecutorContinuity": null,
+    "attemptSpent": true,
+    "replayed": false,
+    "partialResume": false,
+    "historicalPrimaryTransfer": false,
+    "originalEarlierAttempt": {
+      "outerExit": 2,
+      "classification": "REFUSED/SPENT",
+      "replayed": false,
+      "retrospectivelyAccepted": false
+    },
+    "acceptedCombinedRed": null,
+    "acceptedCombinedGreen": null,
+    "producerAuthorshipGateOpened": false,
+    "producerPostimagesAuthored": false,
+    "newRecoveryScopeSelected": false,
+    "next": "Complete actual incomplete-outcome publication readbacks, then select/review a distinct prospective recovery with explicit immutable data replicas at new paths and full unchanged current-input/139/85/clock/cleanup/outer requirements. No same-attempt replay, old cleanup claim or producer authority."
+  },
+  "checks": [
+    {
+      "name": "Actual pushed commit/ref/soleparent/root exact",
+      "passed": true
+    },
+    {
+      "name": "Complete actual root/docs trees and link exact",
+      "passed": true
+    },
+    {
+      "name": "All53 accepted-parent non-doc root entries unchanged",
+      "passed": true
+    },
+    {
+      "name": "Complete13docdelta10adds3mods0deletions ormodechanges",
+      "passed": true
+    },
+    {
+      "name": "Actual complete3059doc and inherited8798source42workflow census",
+      "passed": true
+    },
+    {
+      "name": "Complete actual body combined139-renderer85-corrected-red-incomplete-envelope-20261116.json",
+      "passed": true
+    },
+    {
+      "name": "Complete actual body combined139-renderer85-corrected-red-incomplete-root-review-20261116.json",
+      "passed": true
+    },
+    {
+      "name": "Complete actual body combined139-renderer85-corrected-red-incomplete-guard-review-20261116.json",
+      "passed": true
+    },
+    {
+      "name": "Complete actual body combined139-renderer85-corrected-red-incomplete-semantic-review-20261116.json",
+      "passed": true
+    },
+    {
+      "name": "Complete actual body post-executor-change-source-input-observation-20261116.json",
+      "passed": true
+    },
+    {
+      "name": "Complete actual body post-executor-change-path-observation-20261116.json",
+      "passed": true
+    },
+    {
+      "name": "Complete actual body combined139-renderer85-post-transport-recovery-recommendations-20261116.json",
+      "passed": true
+    },
+    {
+      "name": "Complete actual body combined139-renderer85-corrected-control-actual-root-publication-20261116.json",
+      "passed": true
+    },
+    {
+      "name": "Complete actual body combined139-renderer85-corrected-control-actual-independent-publication-20261116.json",
+      "passed": true
+    },
+    {
+      "name": "Complete actual body 29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "passed": true
+    },
+    {
+      "name": "Complete actual body continuation-status-20261116.md",
+      "passed": true
+    },
+    {
+      "name": "Complete actual body pr1213-retention-catalog-20261116.json",
+      "passed": true
+    },
+    {
+      "name": "Complete actual body combined139-renderer85-corrected-red-incomplete-publication-manifest-20261116.json",
+      "passed": true
+    },
+    {
+      "name": "All changed paths and manifest entries are exactbijection",
+      "passed": true
+    },
+    {
+      "name": "Entire acceptedparent plan prefix exact",
+      "passed": true
+    },
+    {
+      "name": "Entire acceptedparent status prefix exact",
+      "passed": true
+    },
+    {
+      "name": "Every prior catalogfield exceptcurrentstage preserved",
+      "passed": true
+    },
+    {
+      "name": "Entire prior controlstage archived literally",
+      "passed": true
+    },
+    {
+      "name": "All27 originalbundles and totals unchanged",
+      "passed": true
+    },
+    {
+      "name": "All9 selected evidence rows exactmanifest",
+      "passed": true
+    },
+    {
+      "name": "All current envelope/accounting/review/observation pointers exact",
+      "passed": true
+    },
+    {
+      "name": "Exactselected controls and c9actual chain joined",
+      "passed": true
+    },
+    {
+      "name": "Full root16check incompleteaccounting report exact",
+      "passed": true
+    },
+    {
+      "name": "Fullguard21check envelope report exact",
+      "passed": true
+    },
+    {
+      "name": "Fullsemantic28check envelope report exact",
+      "passed": true
+    },
+    {
+      "name": "Fullrecommendation25check report exact allthree currentdata subjects",
+      "passed": true
+    },
+    {
+      "name": "Both full c9controlactual reports accepted49/50checks",
+      "passed": true
+    },
+    {
+      "name": "One54393invocation and noobservedfinalouter retained",
+      "passed": true
+    },
+    {
+      "name": "PermanentcorrectedUNKNOWN and olderREFUSED statesdistinct",
+      "passed": true
+    },
+    {
+      "name": "No freshstage,fullboundary,cleanup oroldcustody qualification",
+      "passed": true
+    },
+    {
+      "name": "No REDGREEN producer orfuture scope admission",
+      "passed": true
+    },
+    {
+      "name": "Returnedphysicalobservation exactly9sources5existing3missinginputs",
+      "passed": true
+    },
+    {
+      "name": "All15 returnedabsencefacts remainnarrow dataonly",
+      "passed": true
+    },
+    {
+      "name": "Currentfrozen tests/vector preserved fromacceptedparent",
+      "passed": true
+    }
+  ],
+  "checkCount": 39,
+  "failedChecks": [],
+  "newRecoveryScopeSelected": false,
+  "producerPostimagesAuthored": false,
+  "next": "Join independent complete actual publication readback. Only then may a distinct prospective recoveryR1 be selected/authored and independently reviewed. No runtime/source/producer change is authorized by this publication accounting."
+}
