@@ -114,6 +114,20 @@ export class CrossTeamService {
       throw new Error('Message text is required');
     }
 
+    // Direct callers can bypass the filtered recipient directory. A logical
+    // project-scoped team is not a delivery endpoint: target one verified
+    // native project context explicitly, never its old shared inbox.
+    const meta = new TeamMetaStore();
+    for (const name of [fromTeam, toTeam]) {
+      const record = await meta.getMeta(name);
+      if (!record && await meta.metadataFileExists(name)) {
+        throw new Error('Team metadata is unreadable; refusing cross-team delivery');
+      }
+      if (record?.projectContextMode === 'per_project') {
+        throw new Error('Project-scoped cross-team delivery requires an explicit project context');
+      }
+    }
+
     const sourceConfig = await this.configReader.getConfig(fromTeam);
     if (!sourceConfig || sourceConfig.deletedAt) {
       throw new Error(`Source team not found: ${fromTeam}`);

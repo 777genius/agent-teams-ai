@@ -156,6 +156,30 @@ describe('CrossTeamService', () => {
   });
 
   describe('send', () => {
+    it('rejects direct delivery to an isolated logical team before inbox writes', async () => {
+      const directory = path.join(MOCK_TEAMS_BASE_PATH, 'teams', 'team-b');
+      fs.mkdirSync(directory, { recursive: true });
+      fs.writeFileSync(path.join(directory, 'team.meta.json'), JSON.stringify({
+        version: 1, cwd: '/sandbox/project', projectContextMode: 'per_project',
+      }));
+      await expect(service.send(makeRequest())).rejects.toThrow(
+        'Project-scoped cross-team delivery requires an explicit project context'
+      );
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('rejects direct sends FROM a logical team switched to isolated mode', async () => {
+      const directory = path.join(MOCK_TEAMS_BASE_PATH, 'teams', 'team-a');
+      fs.mkdirSync(directory, { recursive: true });
+      fs.writeFileSync(path.join(directory, 'team.meta.json'), JSON.stringify({
+        version: 1, cwd: '/sandbox/project', projectContextMode: 'per_project',
+      }));
+      await expect(service.send(makeRequest())).rejects.toThrow(
+        'Project-scoped cross-team delivery requires an explicit project context'
+      );
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+    });
+
     it('delivers message to inbox via inboxWriter', async () => {
       const result = await service.send(makeRequest());
 
