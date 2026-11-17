@@ -93,6 +93,16 @@ describe('TeamProjectContextRegistry', () => {
     expect(await f.registry.reserve('logical-team', f.workspaceA)).toEqual(reserved);
   });
 
+  it('inspects pending reservations read-only without exposing them as a ready history', async () => {
+    const f = await fixture();
+    const pending = await f.registry.reserve('logical-team', f.workspaceA);
+    expect(await f.registry.inspect('logical-team', f.workspaceA)).toEqual(pending);
+    expect(await f.registry.inspect('logical-team', f.workspaceB)).toBeNull();
+    expect(await f.registry.find('logical-team', f.workspaceB)).toBeNull();
+    await expect(f.registry.find('logical-team', f.workspaceA))
+      .rejects.toBeInstanceOf(TeamProjectContextUnavailableError);
+  });
+
   it('lists pending reservations without treating them as ready histories', async () => {
     const f = await fixture();
     const reserved = await f.registry.reserve('logical-team', f.workspaceA);

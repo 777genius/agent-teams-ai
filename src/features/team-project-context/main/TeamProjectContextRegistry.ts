@@ -204,17 +204,28 @@ export class TeamProjectContextRegistry {
     return contexts;
   }
 
-  /** Read-only queries never create a physical context or mutate a native team. */
-  async find(logicalTeamName: string, projectPath: string): Promise<PersistedTeamWorkContext | null> {
+  /**
+   * Read-only inspection for navigation. Reserved entries are distinct from
+   * ready native contexts and never authorize task or message access.
+   */
+  async inspect(
+    logicalTeamName: string,
+    projectPath: string
+  ): Promise<PersistedTeamWorkContext | null> {
     await this.assertOwnedDirectory(logicalTeamName);
     const projectKey = await canonicalProjectPath(projectPath);
     const index = await this.readIndex(logicalTeamName);
-    const row = index.contexts.find((c) => c.projectKey === projectKey);
-    if (!row) return null;
-    if (row.state !== 'ready') {
+    const row = index.contexts.find((context) => context.projectKey === projectKey);
+    if (row?.state === 'ready') await this.assertOwnedDirectory(row.executionTeamName);
+    return row ?? null;
+  }
+
+  /** Only verified ready contexts qualify for history reads and writes. */
+  async find(logicalTeamName: string, projectPath: string): Promise<PersistedTeamWorkContext | null> {
+    const row = await this.inspect(logicalTeamName, projectPath);
+    if (row?.state === 'reserved') {
       throw new TeamProjectContextUnavailableError('Project context creation is incomplete');
     }
-    await this.assertOwnedDirectory(row.executionTeamName);
     return row;
   }
 
