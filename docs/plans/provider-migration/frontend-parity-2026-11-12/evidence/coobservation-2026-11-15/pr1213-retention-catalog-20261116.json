@@ -20906,5 +20906,536 @@
       "sha256": "af6bb55bbbd783cce51fbda5f2871b11cf66df1a64edf3af1faa2a2055bdde68",
       "gitBlob": "1a8ecb474b9590bbf55f17099cfe203033c22103"
     }
+  },
+  "collaborationModelWindowsSettlementR1Stage": {
+    "schemaVersion": 1,
+    "kind": "C714_COLLABORATION_MODEL_AND_WINDOWS_SETTLEMENT_R1_PUBLICATION",
+    "at": "2026-11-17 16:16:32 UTC",
+    "status": "R1_PLAN_ONLY_SOURCE_POSTIMAGES_NOT_AUTHORED",
+    "subject": {
+      "bytes": 11958,
+      "sha256": "e8f489a0c9902a98a77b3ed897ce5ab91e654294ecbfae68c2baea439ec9de6b",
+      "gitBlob": "203e6dd6e1e124d55339ff890c74d94ce95f1558"
+    },
+    "precedingActualGate": {
+      "bytes": 6297,
+      "sha256": "59372bcee2d74d9e40c788b7758df40ea74aa7ccfa24444cb781fa39f3b2a082",
+      "gitBlob": "89160b0e4c7dc552a3d4d65714d77cdeac40f84c"
+    },
+    "reviews": [
+      {
+        "role": "root",
+        "pin": {
+          "bytes": 26898,
+          "sha256": "c74f05bfd3bded42755d6e815562f353413f0e867e5a894f5f74ec594e340941",
+          "gitBlob": "f7ffcb2d1b77071a75c013e20925f89b568854c3"
+        },
+        "checks": 26,
+        "selfReadConfirmed": true,
+        "selfReadAt": "2026-11-17 15:57:06 UTC"
+      },
+      {
+        "role": "guard",
+        "pin": {
+          "bytes": 55569,
+          "sha256": "8e79594865cd4f647d9db279dfd31d2caab73ed32e8342eba044795036064558",
+          "gitBlob": "4c2c7232bc1a4d7538e14eb35d2068a2072052e2"
+        },
+        "checks": 41,
+        "selfReadConfirmed": true,
+        "selfReadAt": "2026-11-17 16:15:25 UTC"
+      },
+      {
+        "role": "semantic",
+        "pin": {
+          "bytes": 28565,
+          "sha256": "8bfceab347ada58db878c6b551af1f704dcc9839e1a5e6842a88583505186370",
+          "gitBlob": "97a2c9f1147aa6ca6d17d5a4a24f9c4b9bfa9e60"
+        },
+        "checks": 35,
+        "selfReadConfirmed": true,
+        "selfReadAt": "2026-11-17 16:02:28 UTC"
+      },
+      {
+        "role": "binding",
+        "pin": {
+          "bytes": 62788,
+          "sha256": "14e834f8c6bcb982fee55ddb42f873a9d06e4d8ada4dc7c919c6e543046b34e8",
+          "gitBlob": "8f1f42155919de6e1e6fffbd068a46c5e361961c"
+        },
+        "checks": 36,
+        "selfReadConfirmed": true,
+        "selfReadAt": "2026-11-17 16:03:09 UTC"
+      }
+    ],
+    "reviewChecks": 138,
+    "reviewsClosedAt": "2026-11-17 16:15:47 UTC",
+    "sourceAnchor": {
+      "commit": "542a7109a819087e90c26330771b45c81c123b60",
+      "root": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+      "proof": {
+        "bytes": 52190,
+        "sha256": "9f4584f4b8643121bbcbbe0bdc16bfe272479c7ba619f88bee2e8cb89e47ae3b",
+        "gitBlob": "0abb2f7d4b3c93f13b05de376c32fe4af5347c04"
+      },
+      "preimages": [
+        {
+          "path": ".github/workflows/host-emulated-acceptance.yml",
+          "pin": {
+            "bytes": 96872,
+            "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+            "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+          },
+          "physicalLines": 1248
+        },
+        {
+          "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+          "pin": {
+            "bytes": 31223,
+            "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+            "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+          },
+          "physicalLines": 485
+        }
+      ]
+    },
+    "allowedSourcePaths": [
+      ".github/workflows/host-emulated-acceptance.yml",
+      "tools/owned-process-broker/nativeWindowsAppFixture.ts"
+    ],
+    "selectedChanges": [
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "kind": "two-exact-expected-value-corrections",
+        "sites": [
+          {
+            "line": 729,
+            "oldModel": "sonnet",
+            "newModel": "TEST-claude-sonnet",
+            "assertion": "Complete sorted four provider/model tuple equality remains exact."
+          },
+          {
+            "line": 764,
+            "oldModel": "sonnet",
+            "newModel": "TEST-claude-sonnet",
+            "assertion": "Complete sorted initial provider/model/effort equality remains exact; low/undefined and both provider IDs preserved."
+          }
+        ],
+        "basis": "The complete current fixture explicitly persists TEST-claude-sonnet in saved settings/runtime/template/returned savedModel. The first old expectation actually failed; the second was unreached and would retain the same stale expectation.",
+        "preserve": "Every other workflow byte, assertion, count, provider/model tuple, readiness reference/currentness/custody check, and all42 workflow files."
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "kind": "same-original-receipt-missing-settlement-readiness",
+        "site": {
+          "startLine": 424,
+          "endLine": 426
+        },
+        "producer": {
+          "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+          "pin": {
+            "bytes": 29443,
+            "sha256": "4edbb21876753230e69a0c603061dd6493e9c48d4d2014df79150c37f24a772f",
+            "gitBlob": "b41629b7ed483f1ab9f42e2e234933999647e7bd"
+          },
+          "completedPersistence": [
+            225,
+            228
+          ],
+          "settlementIntentPersistence": [
+            248,
+            251
+          ],
+          "unchanged": true
+        },
+        "validator": {
+          "path": "packages/legacy-agent-host/src/process/validateProcessRecords.ts",
+          "pin": {
+            "bytes": 14676,
+            "sha256": "c6b9ebf49e82a17f55683605c0bc1041d530b6c90da3f2774e8c1e3685d035d1",
+            "gitBlob": "dd1a705e054e5fe7df4addf97aa48bf4d0638444"
+          },
+          "unchanged": true,
+          "guarantees": [
+            "Every processReceipts candidate is fully parsed and validated before selection.",
+            "Terminate nativeIntent is a valid stop with exact receipt capture/service source (272–274).",
+            "Original/capture/processRef must exist and original.capturedNative equals capture (217–221).",
+            "Missing nativeSettlement implies nativeSettlementNotDispatched and nativeSettlementConfirmed are undefined; validators reject either flag without a truthy settlement (297–303).",
+            "Truthy settlement is schema-checked as settle, bound to the exact capture/service source and completed observed-absent state (286–295)."
+          ]
+        },
+        "readinessPlan": [
+          "Retain the exact existing for-loop, remaining(stop.deadline), assertPeer(), validated receipt scan, operation=terminate/processRef selection, and <=1 candidate assertion.",
+          "For an already-completed/observed-absent candidate, if nativeSettlement is present (strictly !== undefined), accept the candidate for the unchanged final assertions; do not convert null/false/malformed present values into pending.",
+          "Only when nativeSettlement is strictly undefined, assert the selected human principal, full selected capture and selected original.id immediately, using the same equality kinds as the final block; then remain in the same read loop.",
+          "The three selected-identity guards combine with the unchanged validator guarantees to preserve early rejection of foreign capture/nativeIntent/original identity and unsupported flags.",
+          "For every other candidate state, retain the original !candidate/prepared/held-only assertion, so other terminal states remain rejected.",
+          "Reuse only the existing delay(Math.min(25, remaining(stop.deadline))); no new timer, await, command submission, query/lookup request, native action, UI click, deadline reset or operation retry.",
+          "Keep the complete post-loop assertion block and original witness/peer/pins/runtime/neighbor/Quit/census checks byte-identical."
+        ],
+        "causalQualification": "Source proves that the old observer can break between two durable writes. The failed current receipt is not retained in stops[], so neither a transient missing field versus malformed falsy field nor eventual successful settlement in this run is proved. This plan corrects premature observation without qualifying the failed run.",
+        "expectedValidation": "The next admitted fixed-source CI must execute the original packaged Windows GUI flows with their exact original phase budgets, receipt assertions and cleanup; no pass claimed before that result."
+      }
+    ],
+    "preservedOriginalContract": {
+      "windowsCounts": {
+        "mainStarts": 1,
+        "initialRuntimeOpen": 1,
+        "businessInput": 1,
+        "refreshClicks": 1,
+        "retryClicks": 1,
+        "uiStops": 2,
+        "quit": 1
+      },
+      "actualHostSuccessors": 1,
+      "originalRuntimeGenerations": 1,
+      "modelRequests": 0,
+      "modelProbes": 0,
+      "realVendorExecutions": 0,
+      "primaryAndNeighborStopDeadlineMs": 10000,
+      "receiptPollDelayMaximumMs": 25,
+      "wholeNativeUiTestRegistrations": 8,
+      "existingStaticAndFrontendCaseSets": "All existing complete commands and whole case imports remain unchanged; corrected diagnostic test8d12 from542a is preserved.",
+      "allFinalSettlementAssertions": true,
+      "signalAcceptedUnknown": true,
+      "exactCaptureAndDifferentOperationRefs": true,
+      "originalWitnessAbsenceAndWait": true,
+      "neighborAliveAfterPrimary": true,
+      "finitePeerServiceExitExactlyOnce": true,
+      "afterQuitOriginalThreeWitnessExits": true,
+      "sourceAndInputCustody": true,
+      "noScriptOrHarnessSubstitution": true
+    },
+    "preservation": {
+      "production": 5020,
+      "cap": 800,
+      "exceptions": 141,
+      "nonDocLeaves": 8799,
+      "workflows": 42,
+      "dependenciesChanged": 0,
+      "broadWorkflowChanges": 0,
+      "deadlineChanges": 0,
+      "assertionsRemoved": 0,
+      "casesRemoved": 0,
+      "oldAttemptsSpentForever": true,
+      "noRealClaudeOrCodex": true,
+      "noMainMergeReadyReleaseStage2": true,
+      "frozenPrs": [
+        1206,
+        1207,
+        1208,
+        1211,
+        1212,
+        1213
+      ]
+    },
+    "publication": {
+      "documentationOnly": true,
+      "sourceChanges": 0,
+      "workflowChanges": 0,
+      "immediatePush": true,
+      "force": false,
+      "rootAndIndependentActualReadbacksRequired": true
+    },
+    "ci3": {
+      "pr": 1223,
+      "head": "86f52244b5375834a4040cbc63803d68cc708087",
+      "base": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "refsAndMetadataFrozen": true,
+      "noRerunRetryCancelDispatch": true,
+      "observationAtPlan": 16,
+      "activeRunIds": [
+        44092933873,
+        44092934079,
+        44092933810
+      ],
+      "terminalExcludedForever": [
+        44092933980,
+        44092933718,
+        44092933835,
+        44092933888,
+        44092934051,
+        44092933827,
+        44092933972,
+        44092933912
+      ]
+    },
+    "qualification": {
+      "sourcePostimageAuthored": false,
+      "sourceRuntimeQualified": false,
+      "actualGreen": false,
+      "wholeE2E": false
+    },
+    "next": "Existing root/independent actual R1 readbacks, then only selected sourceR2, its four reviews, publication/immediate push and actual readbacks. Later separate GitHub-only CI admission. No extra gate.",
+    "evidenceFiles": {
+      "r1": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-20261117.json",
+        "mode": "100644",
+        "bytes": 11958,
+        "sha256": "e8f489a0c9902a98a77b3ed897ce5ab91e654294ecbfae68c2baea439ec9de6b",
+        "gitBlob": "203e6dd6e1e124d55339ff890c74d94ce95f1558"
+      },
+      "rootReview": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-root-review-20261117.json",
+        "mode": "100644",
+        "bytes": 26898,
+        "sha256": "c74f05bfd3bded42755d6e815562f353413f0e867e5a894f5f74ec594e340941",
+        "gitBlob": "f7ffcb2d1b77071a75c013e20925f89b568854c3"
+      },
+      "guardReview": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-guard-review-20261117.json",
+        "mode": "100644",
+        "bytes": 55569,
+        "sha256": "8e79594865cd4f647d9db279dfd31d2caab73ed32e8342eba044795036064558",
+        "gitBlob": "4c2c7232bc1a4d7538e14eb35d2068a2072052e2"
+      },
+      "semanticReview": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-semantic-review-20261117.json",
+        "mode": "100644",
+        "bytes": 28565,
+        "sha256": "8bfceab347ada58db878c6b551af1f704dcc9839e1a5e6842a88583505186370",
+        "gitBlob": "97a2c9f1147aa6ca6d17d5a4a24f9c4b9bfa9e60"
+      },
+      "bindingReview": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-binding-review-20261117.json",
+        "mode": "100644",
+        "bytes": 62788,
+        "sha256": "14e834f8c6bcb982fee55ddb42f873a9d06e4d8ada4dc7c919c6e543046b34e8",
+        "gitBlob": "8f1f42155919de6e1e6fffbd068a46c5e361961c"
+      },
+      "currentSourceProof": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-current-source-proof-20261117.json",
+        "mode": "100644",
+        "bytes": 52190,
+        "sha256": "9f4584f4b8643121bbcbbe0bdc16bfe272479c7ba619f88bee2e8cb89e47ae3b",
+        "gitBlob": "0abb2f7d4b3c93f13b05de376c32fe4af5347c04"
+      },
+      "precedingSourceActualGate": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-actual-gate-20261117.json",
+        "mode": "100644",
+        "bytes": 6297,
+        "sha256": "59372bcee2d74d9e40c788b7758df40ea74aa7ccfa24444cb781fa39f3b2a082",
+        "gitBlob": "89160b0e4c7dc552a3d4d65714d77cdeac40f84c"
+      },
+      "precedingSourceRootActual": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-root-actual-20261117.json",
+        "mode": "100644",
+        "bytes": 554249,
+        "sha256": "7e383dcc19929375b1272bf6691f754a018d2f8ff49ae474534c7337f3e45914",
+        "gitBlob": "837c8ad7376d6dbab2fdb38c8160725444bae65d"
+      },
+      "precedingSourceIndependentActual": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-independent-actual-20261117.json",
+        "mode": "100644",
+        "bytes": 447616,
+        "sha256": "2863575d2694007e4d5e5a650d79753ea0e89584153d3294a966d008a2e84cd6",
+        "gitBlob": "ae8880f423a98c72263de7c652a7c2e897b736a6"
+      },
+      "claudeCollaborationAdvisory": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-claude-collaboration-advisory-20261117.json",
+        "mode": "100644",
+        "bytes": 26675,
+        "sha256": "ce530bfaeb56a6b4010261c288637ae78633369913747e891ea67b1942cf0571",
+        "gitBlob": "eb4910aecd055982eeb9131c6d0c5f261366670f"
+      },
+      "windowsSettlementAdvisory": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-settlement-readiness-advisory-20261117.json",
+        "mode": "100644",
+        "bytes": 36685,
+        "sha256": "230e6e07aa463ab9cd5e664c966fbfc7361a09be5845397c5e3fd93530a65cac",
+        "gitBlob": "623b68edeca2a6a7d9db08a0907d09cfc8eafa4b"
+      },
+      "managementAdvisory": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-v2-management-pending-view-advisory-20261117.json",
+        "mode": "100644",
+        "bytes": 49806,
+        "sha256": "7feb4ccef7d67cd8a7ca71de7e919a9643180887f9fd931c39561b229d740e99",
+        "gitBlob": "5b1cc71ce7333d2ca41882b193878cdd35af6cd8"
+      },
+      "collaborationLog": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511865-full-20261117.log",
+        "mode": "100644",
+        "bytes": 203573,
+        "sha256": "370b14dad458393ef6d9ec6c37cefe3c2a812d37350f70899d6199edae8f4971",
+        "gitBlob": "4f082644fe2b77d118fe4f2ecc8b026076cf2355"
+      },
+      "claudeLog": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511986-full-20261117.log",
+        "mode": "100644",
+        "bytes": 206513,
+        "sha256": "65597d1ec42c204cefe466846c08e6b32919a34f9db7b8eacb4326cf3584e8b7",
+        "gitBlob": "722df52ca594c136a94bb8fcf2b2f4143e85f706"
+      },
+      "windowsX64Log": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134098865077-full-20261117.log",
+        "mode": "100644",
+        "bytes": 337630,
+        "sha256": "00131932da1d7a9a363509a786e636ad9f395b22d8a10c2a097156e5514a42cd",
+        "gitBlob": "6d72a5329cce7073469dabecf65782cc0a6522cb"
+      },
+      "managementLog": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512024-full-20261117.log",
+        "mode": "100644",
+        "bytes": 133008,
+        "sha256": "c7bc42330d01884db5bff7f745102db259c385cdc36dee5cfc12525b83d52f11",
+        "gitBlob": "32d667765fd2fb51fe66ab2ee902d66049154819"
+      },
+      "windowsX64Capture": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14343770599-complete-20261117.json",
+        "mode": "100644",
+        "bytes": 3251974,
+        "sha256": "7e99b7025640852a1ab86eeea675144643e039922bd71edd228c72140e3ad151",
+        "gitBlob": "af70fca5270a5eac8905eefc16d1f362e7af8db5"
+      },
+      "windowsX64Visual": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-packaged-visual-read-20261117.json",
+        "mode": "100644",
+        "bytes": 1363,
+        "sha256": "e44302d0682b7855dbfedf8596cd6de048e8cd49d0894d176c6aed36358cb54d",
+        "gitBlob": "c8bb3dea13dc9a73d4c79f6c16e4a8b1f9963b70"
+      },
+      "artifactDeliveryFailure": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-delivery-expiry-record-20261117.json",
+        "mode": "100644",
+        "bytes": 5341,
+        "sha256": "2232d040baf87f9628c84731bb178db2028c8353fbdac87f7d7c6a5d4aaa9281",
+        "gitBlob": "8926280627d911c37c39c512e386b2fdf31506c2"
+      }
+    }
+  },
+  "collaborationModelWindowsSettlementR1EvidenceFiles": {
+    "r1": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-20261117.json",
+      "mode": "100644",
+      "bytes": 11958,
+      "sha256": "e8f489a0c9902a98a77b3ed897ce5ab91e654294ecbfae68c2baea439ec9de6b",
+      "gitBlob": "203e6dd6e1e124d55339ff890c74d94ce95f1558"
+    },
+    "rootReview": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-root-review-20261117.json",
+      "mode": "100644",
+      "bytes": 26898,
+      "sha256": "c74f05bfd3bded42755d6e815562f353413f0e867e5a894f5f74ec594e340941",
+      "gitBlob": "f7ffcb2d1b77071a75c013e20925f89b568854c3"
+    },
+    "guardReview": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-guard-review-20261117.json",
+      "mode": "100644",
+      "bytes": 55569,
+      "sha256": "8e79594865cd4f647d9db279dfd31d2caab73ed32e8342eba044795036064558",
+      "gitBlob": "4c2c7232bc1a4d7538e14eb35d2068a2072052e2"
+    },
+    "semanticReview": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-semantic-review-20261117.json",
+      "mode": "100644",
+      "bytes": 28565,
+      "sha256": "8bfceab347ada58db878c6b551af1f704dcc9839e1a5e6842a88583505186370",
+      "gitBlob": "97a2c9f1147aa6ca6d17d5a4a24f9c4b9bfa9e60"
+    },
+    "bindingReview": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-r1-binding-review-20261117.json",
+      "mode": "100644",
+      "bytes": 62788,
+      "sha256": "14e834f8c6bcb982fee55ddb42f873a9d06e4d8ada4dc7c919c6e543046b34e8",
+      "gitBlob": "8f1f42155919de6e1e6fffbd068a46c5e361961c"
+    },
+    "currentSourceProof": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/collaboration-model-windows-settlement-current-source-proof-20261117.json",
+      "mode": "100644",
+      "bytes": 52190,
+      "sha256": "9f4584f4b8643121bbcbbe0bdc16bfe272479c7ba619f88bee2e8cb89e47ae3b",
+      "gitBlob": "0abb2f7d4b3c93f13b05de376c32fe4af5347c04"
+    },
+    "precedingSourceActualGate": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-actual-gate-20261117.json",
+      "mode": "100644",
+      "bytes": 6297,
+      "sha256": "59372bcee2d74d9e40c788b7758df40ea74aa7ccfa24444cb781fa39f3b2a082",
+      "gitBlob": "89160b0e4c7dc552a3d4d65714d77cdeac40f84c"
+    },
+    "precedingSourceRootActual": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-root-actual-20261117.json",
+      "mode": "100644",
+      "bytes": 554249,
+      "sha256": "7e383dcc19929375b1272bf6691f754a018d2f8ff49ae474534c7337f3e45914",
+      "gitBlob": "837c8ad7376d6dbab2fdb38c8160725444bae65d"
+    },
+    "precedingSourceIndependentActual": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-source-r2-independent-actual-20261117.json",
+      "mode": "100644",
+      "bytes": 447616,
+      "sha256": "2863575d2694007e4d5e5a650d79753ea0e89584153d3294a966d008a2e84cd6",
+      "gitBlob": "ae8880f423a98c72263de7c652a7c2e897b736a6"
+    },
+    "claudeCollaborationAdvisory": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-claude-collaboration-advisory-20261117.json",
+      "mode": "100644",
+      "bytes": 26675,
+      "sha256": "ce530bfaeb56a6b4010261c288637ae78633369913747e891ea67b1942cf0571",
+      "gitBlob": "eb4910aecd055982eeb9131c6d0c5f261366670f"
+    },
+    "windowsSettlementAdvisory": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-settlement-readiness-advisory-20261117.json",
+      "mode": "100644",
+      "bytes": 36685,
+      "sha256": "230e6e07aa463ab9cd5e664c966fbfc7361a09be5845397c5e3fd93530a65cac",
+      "gitBlob": "623b68edeca2a6a7d9db08a0907d09cfc8eafa4b"
+    },
+    "managementAdvisory": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-v2-management-pending-view-advisory-20261117.json",
+      "mode": "100644",
+      "bytes": 49806,
+      "sha256": "7feb4ccef7d67cd8a7ca71de7e919a9643180887f9fd931c39561b229d740e99",
+      "gitBlob": "5b1cc71ce7333d2ca41882b193878cdd35af6cd8"
+    },
+    "collaborationLog": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511865-full-20261117.log",
+      "mode": "100644",
+      "bytes": 203573,
+      "sha256": "370b14dad458393ef6d9ec6c37cefe3c2a812d37350f70899d6199edae8f4971",
+      "gitBlob": "4f082644fe2b77d118fe4f2ecc8b026076cf2355"
+    },
+    "claudeLog": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072511986-full-20261117.log",
+      "mode": "100644",
+      "bytes": 206513,
+      "sha256": "65597d1ec42c204cefe466846c08e6b32919a34f9db7b8eacb4326cf3584e8b7",
+      "gitBlob": "722df52ca594c136a94bb8fcf2b2f4143e85f706"
+    },
+    "windowsX64Log": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134098865077-full-20261117.log",
+      "mode": "100644",
+      "bytes": 337630,
+      "sha256": "00131932da1d7a9a363509a786e636ad9f395b22d8a10c2a097156e5514a42cd",
+      "gitBlob": "6d72a5329cce7073469dabecf65782cc0a6522cb"
+    },
+    "managementLog": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-job-134072512024-full-20261117.log",
+      "mode": "100644",
+      "bytes": 133008,
+      "sha256": "c7bc42330d01884db5bff7f745102db259c385cdc36dee5cfc12525b83d52f11",
+      "gitBlob": "32d667765fd2fb51fe66ab2ee902d66049154819"
+    },
+    "windowsX64Capture": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-14343770599-complete-20261117.json",
+      "mode": "100644",
+      "bytes": 3251974,
+      "sha256": "7e99b7025640852a1ab86eeea675144643e039922bd71edd228c72140e3ad151",
+      "gitBlob": "af70fca5270a5eac8905eefc16d1f362e7af8db5"
+    },
+    "windowsX64Visual": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-windows-x64-packaged-visual-read-20261117.json",
+      "mode": "100644",
+      "bytes": 1363,
+      "sha256": "e44302d0682b7855dbfedf8596cd6de048e8cd49d0894d176c6aed36358cb54d",
+      "gitBlob": "c8bb3dea13dc9a73d4c79f6c16e4a8b1f9963b70"
+    },
+    "artifactDeliveryFailure": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-artifact-delivery-expiry-record-20261117.json",
+      "mode": "100644",
+      "bytes": 5341,
+      "sha256": "2232d040baf87f9628c84731bb178db2028c8353fbdac87f7d7c6a5d4aaa9281",
+      "gitBlob": "8926280627d911c37c39c512e386b2fdf31506c2"
+    }
   }
 }

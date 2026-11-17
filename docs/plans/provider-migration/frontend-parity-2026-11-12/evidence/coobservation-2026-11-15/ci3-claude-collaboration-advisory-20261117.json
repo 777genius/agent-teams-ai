@@ -1,0 +1,570 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_LINUX_CLAUDE_UI_AND_COLLABORATION_LOG_ONLY_SEMANTIC_ADVISORY",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_semantic",
+  "authoredAt": "2026-11-17 15:39:20 UTC",
+  "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+  "decision": "SUPPORTED_TWO_LITERAL_WORKFLOW_CANDIDATE; CLAUDE_CLICK_CAUSE_UNRESOLVED; ADVISORY_ONLY",
+  "scope": "Complete immutable original job logs and seven exact current source bodies. No new venue, gate, postimage or execution is selected.",
+  "inputCount": 11,
+  "inputBytes": 1518866,
+  "inputs": [
+    {
+      "key": "claudeLog",
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 206513,
+      "sha256": "65597d1ec42c204cefe466846c08e6b32919a34f9db7b8eacb4326cf3584e8b7",
+      "gitBlob": "722df52ca594c136a94bb8fcf2b2f4143e85f706"
+    },
+    {
+      "key": "collaborationLog",
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 203573,
+      "sha256": "370b14dad458393ef6d9ec6c37cefe3c2a812d37350f70899d6199edae8f4971",
+      "gitBlob": "4f082644fe2b77d118fe4f2ecc8b026076cf2355"
+    },
+    {
+      "key": "delivery",
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 5341,
+      "sha256": "2232d040baf87f9628c84731bb178db2028c8353fbdac87f7d7c6a5d4aaa9281",
+      "gitBlob": "8926280627d911c37c39c512e386b2fdf31506c2"
+    },
+    {
+      "key": "workflowCorpus",
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 780732,
+      "sha256": "9a83bd5a7425d0674345c607e26b2a1df8bde3556549ac276bfbf860c5c4e3bb",
+      "gitBlob": "6d032754064d4f251a11e8572bb7b476ea5860a8"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 29017,
+      "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+      "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+      "complete": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "bytes": 69370,
+      "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+      "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f",
+      "complete": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 54778,
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "gitBlob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "complete": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 96872,
+      "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+      "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+      "complete": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "bytes": 16591,
+      "sha256": "bd4b8bec56e93cd7c17ec04d5c09b93a8115097af57224d28e954c3f06cdb0c8",
+      "gitBlob": "6d267c1531fd741c4abee8b27ef501f28098d782",
+      "complete": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "bytes": 34086,
+      "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f",
+      "gitBlob": "aff6e19ec4cf492841aa667442c1b7d71541c7c5",
+      "complete": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "bytes": 21993,
+      "sha256": "2f929c1f5cfd1a9a3c9ec16d35f7197856c79a61adf166d30eebb8a1bd086f67",
+      "gitBlob": "adf5b4c418195e0fc4ab38ba7fde2b3436a6b835",
+      "complete": true
+    }
+  ],
+  "readCoverage": {
+    "claude": {
+      "closed": true,
+      "coverage": "complete raw body [0,205939) read in contiguous slices; original bytes/hash verified",
+      "chars": 205939,
+      "physicalBytes": 206513
+    },
+    "collaboration": {
+      "closed": true,
+      "method": "Full body fetched and hashed; every normalized line exactly rejoined to the fully read Claude log or printed in all 372 unique raw lines. Timestamp-only differences preserved in original retained body; not claimed byte-identical to Claude log.",
+      "lines": 2003,
+      "exactNormalizedMatches": 1631,
+      "uniqueLinesRead": 372,
+      "physicalBytes": 203573,
+      "normalization": "Remove only the ISO timestamp prefix and ANSI color escapes for duplicate-line comparison. Raw full body/hash retained separately. All unmatched lines, including test durations and failure evidence, were printed/read. This is not a claim that the raw logs are byte-identical."
+    },
+    "sources": "All seven full bodies read. Full workflow source lines427–1107 also joined literally to both entire printed verifier programs; prefix and suffix read directly. All42 historical/currently accepted workflow corpus row identities rehashed for the bounded literal census.",
+    "verifier": {
+      "sourcePath": ".github/workflows/host-emulated-acceptance.yml",
+      "sourceLines": [
+        427,
+        1107
+      ],
+      "claudeLogLines": [
+        1183,
+        1863
+      ],
+      "collaborationLogLines": [
+        1148,
+        1828
+      ],
+      "literalEqualityAfterYamlIndentAndLogTimestampAnsiRemoval": true,
+      "derivedProgramIdentity": {
+        "bytes": 52353,
+        "sha256": "4f0e7eedbfd261f1e18d06a44e23115ee67931bdaae520cbd713dbbd69716320",
+        "gitBlob": "1b161d36239df270f76ff7bb620b11be96c119d4"
+      },
+      "derivedOnly": true
+    }
+  },
+  "outcomes": {
+    "collaboration": {
+      "runId": 44092933810,
+      "jobId": 134072511865,
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "driverSummary": {
+        "status": "PASS",
+        "at": "2026-11-17T15:12:18.3499936Z",
+        "receipt": "/home/runner/work/_temp/TEST-desktop-backend-ZuEIZM/desktop-backend-receipt.json",
+        "independentlyReadReceipt": false
+      },
+      "workflowFailure": {
+        "at": "2026-11-17T15:12:19.0901550Z",
+        "frame": "[eval1]:302:12",
+        "operator": "deepStrictEqual",
+        "actual": [
+          [
+            "anthropic",
+            "TEST-claude-sonnet"
+          ],
+          [
+            "codex",
+            "TEST-model"
+          ],
+          [
+            "test-provider",
+            "TEST-model"
+          ],
+          [
+            "test-provider",
+            "TEST-model"
+          ]
+        ],
+        "expected": [
+          [
+            "anthropic",
+            "sonnet"
+          ],
+          [
+            "codex",
+            "TEST-model"
+          ],
+          [
+            "test-provider",
+            "TEST-model"
+          ],
+          [
+            "test-provider",
+            "TEST-model"
+          ]
+        ]
+      },
+      "candidate": {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "originalBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+        "boundaries": [
+          {
+            "line": 729,
+            "operand": "four complete provider/model pairs",
+            "oldExpectedModel": "sonnet",
+            "requiredExactModel": "TEST-claude-sonnet"
+          },
+          {
+            "line": 764,
+            "operand": "initial two complete provider/model/effort tuples",
+            "oldExpectedModel": "sonnet",
+            "requiredExactModel": "TEST-claude-sonnet"
+          }
+        ],
+        "postimageAuthored": false,
+        "preservation": "Keep both deepEqual calls, exact four/two counts, providers, TEST-model neighbors, effortlow/undefined, probe phase/ok/resourceHeld and unique command IDs, initial/live distinction, all origin/preparation/scope/consumer assertions, source/executable checks, inputs/custody/cleanup, screenshot checks and final summary. Change neither actual data nor production catalog/launch authority.",
+        "scopeConstraint": "This is an explicit prospective workflow assertion edit, not a source-only fixture workaround. Root may select a narrow existing R1 for it. No workflow trigger/filter/dependency/matrix/budget edit, old-run reinterpretation or additional gate is implied."
+      },
+      "sourceBasis": {
+        "fixturePath": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+        "fixtureLines": [
+          84,
+          94,
+          136
+        ],
+        "savedProvider": "anthropic",
+        "savedModel": "TEST-claude-sonnet",
+        "savedEffort": "low",
+        "runtimeProvider": "claude",
+        "otherModels": "CodexTEST-model and OpenCodetest-provider/TEST-model are unchanged.",
+        "hydrationPredicate": {
+          "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+          "line": 94,
+          "description": "Existing substring includes('sonnet') also admits the selected resolved TEST value. No stale exact model equality was found in this full driver."
+        }
+      },
+      "reachability": "The original verifier passed all statements before line302 before throwing. That includes original PASS summary, source and selected-input checks, common cleanup/census fields and the preceding collaboration/effect/probe-shape assertions. This is a statement about observed control flow, not an independent full-receipt audit. The subsequent live readiness correlation joins, initialProbes triple assertion, reload assertions, PNG checks and final host-emulated-summary.json write were not reached.",
+      "unqualified": "Independent receipt/PNG/physical-custody evidence, later verifier assertions, native/vendor authentication and full end-to-end qualification remain open."
+    },
+    "claude": {
+      "runId": 44092933810,
+      "jobId": 134072511986,
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "preparedAt": "2026-11-17T14:49:40.435Z",
+      "failureSummaryLogLine": 1156,
+      "failureSummary": {
+        "status": "INCOMPLETE",
+        "receipt": "/home/runner/work/_temp/TEST-desktop-backend-SPR0Ie/desktop-backend-receipt.json",
+        "failureSource": {
+          "kind": "assertion",
+          "frames": [
+            "scripts/legacy-agent-host/desktop-ui-controls.ts:327:12",
+            "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts:647:3",
+            "scripts/legacy-agent-host/desktop-backend-smoke.ts:421:12",
+            "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+          ]
+        },
+        "emulatedReadinessFailure": {
+          "schemaVersion": 1,
+          "status": "available",
+          "snapshotRecorded": true,
+          "snapshotUnavailable": null,
+          "storeRecorded": true,
+          "selectedTeamError": {
+            "present": false,
+            "bounded": null,
+            "terms": []
+          },
+          "retainedDialogs": {
+            "source": "retained-post-failure-partial-dialog-sample",
+            "atomicWithFailedWait": false,
+            "completeDom": false,
+            "actualTruncationKnown": false,
+            "count": 0,
+            "atCaptureLimit": false,
+            "overflow": false,
+            "items": []
+          },
+          "importRecorded": false,
+          "hydrationRecorded": false,
+          "hydration": {
+            "text": {
+              "present": false,
+              "bounded": null,
+              "terms": []
+            },
+            "permissions": null
+          },
+          "provisioning": {
+            "count": 1,
+            "overflow": false,
+            "items": [
+              {
+                "recorded": true,
+                "progressRecorded": true,
+                "currentProvisioningRunRecorded": true,
+                "currentRuntimeRunRecorded": true,
+                "state": "ready",
+                "configReady": true,
+                "error": {
+                  "present": false,
+                  "bounded": null,
+                  "terms": []
+                },
+                "progressError": {
+                  "present": false,
+                  "bounded": null,
+                  "terms": []
+                },
+                "message": {
+                  "present": true,
+                  "bounded": true,
+                  "empty": false,
+                  "terms": [
+                    "ready"
+                  ],
+                  "selectedProvidersReady": false,
+                  "runtimeUnavailable": false,
+                  "providerStatusLoading": false,
+                  "modelUnverified": false
+                }
+              }
+            ]
+          },
+          "peerCleanup": {
+            "recorded": true,
+            "absent": true,
+            "observationFailed": null
+          }
+        }
+      },
+      "preciseBoundary": {
+        "controlsPath": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "assertionStartLine": 327,
+        "assertionMessage": "Original UI target moved after ownership check",
+        "driverPath": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "driverLine": 647,
+        "selector": "button[aria-label^=\"alice,\"]",
+        "label": "show original scheduled reply",
+        "expectedLaterVisibleText": "TEST scheduled reply",
+        "thisClickDispatched": false,
+        "hoverAlreadyReached": true,
+        "finalPointValuesAvailable": false
+      },
+      "priorReach": "Source order, joined to the exact failure frame, establishes that preceding awaits/assertions returned: original Launch and conversations, permission/question/native-command routes, Logs/Stats/reload, Claude standalone schedule flow and task-first schedule create/edit/pause/resume/RunNow/task completion. No exact unseen receipt records or screenshots are independently qualified from that inference.",
+      "laterUnreached": "The visible scheduled reply check after the click, schedule screenshot/proof assignment, real automatic cron occurrence, its TaskActivity/Stream proof, held input and final original TeamStop are not reached.",
+      "summaryLimits": "The saved post-failure sample is not atomic with the click and explicitly is not a completeDOM. count0 means no retained dialog items, not global absence. ready/configReady are the captured provisioning fields. peerCleanup.absent is the retained peer absence observation, not an independent app-group/Host exit or whole-cleanup proof.",
+      "repairAssessment": "No exact layout cause or source repair is proved without the compared point values and the saved target context. Do not weaken final geometry/tag equality, append a retry, extend any deadline, change selectors/cases, or infer a recurrence cause from prior lanes.",
+      "existingOptionalSeam": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "lines": [
+          212,
+          216,
+          217,
+          357,
+          358
+        ],
+        "description": "The existing fourth click argument requiredContent is serialized as literal data, checks only the sole eligible target's text before coordinate admission, and is re-read in the unchanged full expression. Scheduledreplyline647 currently does not request it. That seam could be assessed in a separately selected narrow plan if own-row preview readiness is actually the missing condition; these logs do not establish it or promise it cures movement."
+      },
+      "smallestMissingEvidence": "The exact already-observed stablepoint and finalpoint[x,y,tag] pair, original click label/selector and nearby already-retained partial target/step context. The archive bodies are unavailable; no renewal or new sample is requested by this advisory."
+    }
+  },
+  "componentScope": {
+    "command": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "bothLogs": {
+      "tests": 247,
+      "passed": 247,
+      "failed": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "interpretation": "Whole command is retained unfiltered. Existing required-preview and final-movement refusal cases pass, and all ten appended deadline cases register/run through the whole149 path. These component observations do not convert either failed GUI job into PASS, and are distinct from the native-receipt extractor repair and its separate242-case command.",
+    "otherCommand": {
+      "installerTests": 7,
+      "passed": 7,
+      "failed": 0
+    }
+  },
+  "archiveLimits": {
+    "deliveryRecord": {
+      "bytes": 5341,
+      "sha256": "2232d040baf87f9628c84731bb178db2028c8353fbdac87f7d7c6a5d4aaa9281",
+      "gitBlob": "8926280627d911c37c39c512e386b2fdf31506c2"
+    },
+    "collaboration": {
+      "artifactId": 14341306615,
+      "logRecordedZipBytes": 1652980,
+      "logRecordedZipSha256": "5fbf3a5b04b9f91c724d8b98f45828a016cab01f95b020464cca2c5946b44215",
+      "archiveBytesRead": 0,
+      "delivery": "First requestHTTP403 after signed URL expiry; no retry"
+    },
+    "claude": {
+      "artifactId": 14339387616,
+      "logRecordedZipBytes": 3020330,
+      "logRecordedZipSha256": "829f9244a70e6159e5339da317e4928d0c914196cc73c1c5087b3782e48fd999",
+      "archiveBytesRead": 0,
+      "delivery": "Original batch aborted before GET; original URL expired"
+    },
+    "qualification": "Upload log metadata is not verification of ZIP bytes, CRC, member identities, complete receipts or screenshots. None is claimed."
+  },
+  "workflowLiteralCensus": {
+    "corpus": "6d032754064d4f251a11e8572bb7b476ea5860a8",
+    "sourceHeadOfCorpus": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "workflowCount": 42,
+    "totalBodyBytes": 751430,
+    "allRowHashesReverified": true,
+    "currentAffectedWorkflowMatchesCorpus": true,
+    "results": [
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+        "matches": [
+          {
+            "line": 729,
+            "text": "                ['anthropic', 'sonnet'], ['codex', 'TEST-model'], ['test-provider', 'TEST-model'], ['test-provider', 'TEST-model'],"
+          },
+          {
+            "line": 764,
+            "text": "                [['anthropic', 'sonnet', 'low'], ['codex', 'TEST-model', undefined]]);"
+          }
+        ]
+      }
+    ],
+    "limit": "A complete literal census of this retained unchanged workflow basis, not a claim that no other semantic failure remains."
+  },
+  "checks": [
+    {
+      "id": "C01",
+      "status": "PASS_EVIDENCE",
+      "detail": "Both entire retained job-log identities match the requested blobs, byte lengths and SHA256 values; no live CI read was used."
+    },
+    {
+      "id": "C02",
+      "status": "PASS_EVIDENCE",
+      "detail": "Both logs bind the explicit checked-out source86f52244b5375834a4040cbc63803d68cc708087, Linux x64 lane, Node24.21.0 and original workflow commands."
+    },
+    {
+      "id": "C03",
+      "status": "PASS_EVIDENCE",
+      "detail": "Both archive URLs printed by the jobs identify run44092933810; this is Host Emulated Acceptance, not the separate Host Process run44092933972."
+    },
+    {
+      "id": "C04",
+      "status": "PASS_EVIDENCE",
+      "detail": "Whole Claude log was read contiguously; every collaboration log line was read directly or exactly rejoined after timestamp/ANSI normalization to a previously read line, with all372 unique raw lines separately read."
+    },
+    {
+      "id": "C05",
+      "status": "PASS_STATIC",
+      "detail": "Current Host Emulated workflow and both printed verifier programs join literally for all681 JavaScript source lines; the program was not evaluated."
+    },
+    {
+      "id": "C06",
+      "status": "PASS_STATIC",
+      "detail": "All42 retained workflow bodies were rehashed; the complete751430-byte corpus contains exactly two case-insensitive sonnet occurrences, both in this same verifier."
+    },
+    {
+      "id": "C07",
+      "status": "PASS_EVIDENCE",
+      "detail": "Collaboration driver printed its original PASS receipt summary at15:12:18.3499936Z before the independent workflow verifier failed at15:12:19.0901550Z."
+    },
+    {
+      "id": "C08",
+      "status": "PASS_EVIDENCE",
+      "detail": "The failed collaboration array has four pairs; only the Anthropic model differs: actualTEST-claude-sonnet versus expectedsonnet. The other three pairs are identical."
+    },
+    {
+      "id": "C09",
+      "status": "PASS_STATIC",
+      "detail": "Current collaboration fixture saves TEST-claude-sonnet in savedSettings, Claude runtime/template model and returned savedModel; effortlow is retained."
+    },
+    {
+      "id": "C10",
+      "status": "PASS_STATIC",
+      "detail": "The first stale expected literal is workflowline729, verifierline303; the failing assert call starts at workflowline728/verifierline302."
+    },
+    {
+      "id": "C11",
+      "status": "PASS_STATIC",
+      "detail": "The later initialProbes assertion at workflowlines763–764/verifier337–338 also expects sonnet and low. It is unreachable after the observed earlier failure and must not be called a passed assertion."
+    },
+    {
+      "id": "C12",
+      "status": "PASS_STATIC",
+      "detail": "The collaboration driver's text.includes('sonnet') hydration predicate still matches TEST-claude-sonnet; it is not an equality with the stale launch alias and was passed before this log's workflow failure."
+    },
+    {
+      "id": "C13",
+      "status": "SUPPORTED_CANDIDATE",
+      "detail": "A minimal candidate changes only the two expected model strings in the existing workflow verifier to the exact current fixture value, preserving the provider IDs, array cardinalities, ordering, effort and all later assertions."
+    },
+    {
+      "id": "C14",
+      "status": "PASS_STATIC",
+      "detail": "That candidate requires no fixture rollback, production alias acceptance, source-authority widening, filter/job/matrix change, timeout change, retry, or new executable harness."
+    },
+    {
+      "id": "C15",
+      "status": "PASS_EVIDENCE",
+      "detail": "Claude failureSource points to actual controlsline327 and runtime driverline647; this is the scheduled-reply conversation click, not the old enabled Launch preflight."
+    },
+    {
+      "id": "C16",
+      "status": "PASS_STATIC",
+      "detail": "The failed controls assertion compares final[x,y,tag] with the previously stable point after renderer ownership; it precedes step(mouseClick) and physical mousePressed/mouseReleased for this action."
+    },
+    {
+      "id": "C17",
+      "status": "PASS_STATIC",
+      "detail": "Earlier stableSamples, coordinate-type and final-target-unavailable assertions lie before this exact line. The log does not expose the actual compared values or their movement cause."
+    },
+    {
+      "id": "C18",
+      "status": "PASS_STATIC",
+      "detail": "Source order reaches the click after schedule create/edit/pause/resume, oneRunNow, canonical task completion with its finite provider effect and owneralice; later real-cron occurrence, task activity and final TeamStop are unreached."
+    },
+    {
+      "id": "C19",
+      "status": "PASS_EVIDENCE",
+      "detail": "The new retained failure projection is available and reports snapshot/store recorded, one ready/configReady provisioning record and peer absence, while explicitly declaring a partial non-atomic DOM sample."
+    },
+    {
+      "id": "C20",
+      "status": "LIMIT_PRESERVED",
+      "detail": "Zero retained dialog samples and false phrase flags do not prove whole-DOM absence, native/auth readiness, original app/Host ordinary exit or full cleanup. Those unread receipt details stay unknown."
+    },
+    {
+      "id": "C21",
+      "status": "PASS_STATIC",
+      "detail": "Existing controls support an optional requiredContent predicate on the unique target, but the scheduled-reply caller omits it. This is a possible prerequisite seam, not evidence that missing preview caused the actual movement."
+    },
+    {
+      "id": "C22",
+      "status": "LIMIT_PRESERVED",
+      "detail": "No specific Claude layout/scroll/preview repair is proved by these logs. The final equality guard, ownership checks, unique target, hit/disabled guards and one-click rule must remain."
+    },
+    {
+      "id": "C23",
+      "status": "PASS_EVIDENCE",
+      "detail": "Both original eight-file Node commands report247pass/0fail/0skip/0cancel; the whole149 registration path and existing final-movement refusal tests are included. This does not qualify the failed GUI lanes or native receipt242 suite."
+    },
+    {
+      "id": "C24",
+      "status": "LIMIT_PRESERVED",
+      "detail": "The signed delivery record contains one expired403 request with zero archive bytes; the remaining10GETs never ran. No receiptZIP, screenshot, archiveCRC or unseen later verifier result is independently qualified here."
+    },
+    {
+      "id": "C25",
+      "status": "PASS_STATIC",
+      "detail": "Both workflow matrix budgets45minutes, aggregate5minutes,18desktop lanes plus4frontend shards, selectors, filters, prerequisite commands and all component/source deadlines remain part of the unmodified basis."
+    },
+    {
+      "id": "C26",
+      "status": "PASS_AUTHORITY",
+      "detail": "Only immutable Git/evidence reads, pure data comparisons and this bare advisory retention were performed; no source/control postimage, local command, import/compile, runtime, CI polling/download or ref/PR change was issued."
+    }
+  ],
+  "checkCount": 26,
+  "statusCounts": {
+    "PASS_EVIDENCE": 9,
+    "PASS_STATIC": 12,
+    "SUPPORTED_CANDIDATE": 1,
+    "LIMIT_PRESERVED": 3,
+    "PASS_AUTHORITY": 1
+  },
+  "noExecutionClaim": true,
+  "noPostimagesAuthored": true,
+  "rootSoleAuthorExecutor": true
+}

@@ -1,0 +1,572 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_TWO_FILE_COLLABORATION_MODEL_WINDOWS_SETTLEMENT_R1_SEMANTIC_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_semantic",
+  "at": "2026-11-17 16:02:10 UTC",
+  "subject": {
+    "bytes": 11958,
+    "sha256": "e8f489a0c9902a98a77b3ed897ce5ab91e654294ecbfae68c2baea439ec9de6b",
+    "gitBlob": "203e6dd6e1e124d55339ff890c74d94ce95f1558"
+  },
+  "decision": "ACCEPT_SCOPED_R1_PLAN_ONLY",
+  "blockers": [],
+  "statement": "The exact plan is semantically justified within its two existing-file scope. It corrects two stale finite-fixture expectations and an observer that can accept a valid earlier durable receipt stage. This accepts the plan only; no hypothetical source postimage or runtime outcome is approved.",
+  "parent": {
+    "commit": "542a7109a819087e90c26330771b45c81c123b60",
+    "tree": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+    "docsTree": "8ed5c76f4029e20e191e4456a3f9b436df7deb51"
+  },
+  "precedingActualGate": {
+    "bytes": 6297,
+    "sha256": "59372bcee2d74d9e40c788b7758df40ea74aa7ccfa24444cb781fa39f3b2a082",
+    "gitBlob": "89160b0e4c7dc552a3d4d65714d77cdeac40f84c"
+  },
+  "currentSourceProof": {
+    "bytes": 52190,
+    "sha256": "9f4584f4b8643121bbcbbe0bdc16bfe272479c7ba619f88bee2e8cb89e47ae3b",
+    "gitBlob": "0abb2f7d4b3c93f13b05de376c32fe4af5347c04"
+  },
+  "sourceIndex": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "542a7109a819087e90c26330771b45c81c123b60",
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "pin": {
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      },
+      "physicalLines": 1248,
+      "completeRead": true,
+      "mode": "Fresh exact-parent full fetch/hash; previous complete semantic read reused and decisive branches reread"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "542a7109a819087e90c26330771b45c81c123b60",
+      "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "pin": {
+        "bytes": 31223,
+        "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+      },
+      "physicalLines": 485,
+      "completeRead": true,
+      "mode": "Fresh exact-parent full fetch/hash; previous complete semantic read reused and decisive branches reread"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "542a7109a819087e90c26330771b45c81c123b60",
+      "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+      "pin": {
+        "bytes": 29443,
+        "sha256": "4edbb21876753230e69a0c603061dd6493e9c48d4d2014df79150c37f24a772f",
+        "gitBlob": "b41629b7ed483f1ab9f42e2e234933999647e7bd"
+      },
+      "physicalLines": 511,
+      "completeRead": true,
+      "mode": "Fresh exact-parent full fetch/hash; previous complete semantic read reused and decisive branches reread"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "542a7109a819087e90c26330771b45c81c123b60",
+      "path": "packages/legacy-agent-host/src/process/validateProcessRecords.ts",
+      "pin": {
+        "bytes": 14676,
+        "sha256": "c6b9ebf49e82a17f55683605c0bc1041d530b6c90da3f2774e8c1e3685d035d1",
+        "gitBlob": "dd1a705e054e5fe7df4addf97aa48bf4d0638444"
+      },
+      "physicalLines": 304,
+      "completeRead": true,
+      "mode": "Fresh exact-parent full fetch/hash; previous complete semantic read reused and decisive branches reread"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "542a7109a819087e90c26330771b45c81c123b60",
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "pin": {
+        "bytes": 16591,
+        "sha256": "bd4b8bec56e93cd7c17ec04d5c09b93a8115097af57224d28e954c3f06cdb0c8",
+        "gitBlob": "6d267c1531fd741c4abee8b27ef501f28098d782"
+      },
+      "physicalLines": 199,
+      "completeRead": true,
+      "mode": "Fresh exact-parent full fetch/hash; previous complete semantic read reused and decisive branches reread"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "542a7109a819087e90c26330771b45c81c123b60",
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "pin": {
+        "bytes": 34086,
+        "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f",
+        "gitBlob": "aff6e19ec4cf492841aa667442c1b7d71541c7c5"
+      },
+      "physicalLines": 377,
+      "completeRead": true,
+      "mode": "Fresh exact-parent full fetch/hash; previous complete semantic read reused and decisive branches reread"
+    }
+  ],
+  "supportingSources": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/src/process/TeamProcessCommands.ts",
+      "pin": {
+        "bytes": 20767,
+        "sha256": "d90bd81ed7743afdd836225d3944e6b98348697268e8a45963f22201e6a8b0ff",
+        "gitBlob": "e25f31210e8ccd5ed1fb2637b6b45efe49a6f3c3"
+      },
+      "completeRead": true,
+      "usage": "Prior complete source-contract read retained in623b; no change authorized by this plan"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/src/process/registeredProcessContracts.ts",
+      "pin": {
+        "bytes": 6572,
+        "sha256": "6a8250e5f1f82ad39ac223d6f515a336cf4f26daef53a782348737d47e40c8a1",
+        "gitBlob": "83caa9c3f1a2f57eca67b329dd5e8ec7065a1f79"
+      },
+      "completeRead": true,
+      "usage": "Prior complete source-contract read retained in623b; no change authorized by this plan"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/src/owned-process/retainedServiceContracts.ts",
+      "pin": {
+        "bytes": 7160,
+        "sha256": "1bc2aae1bea9690c868512f676e507db6e9bc5fa92d69d981fa556b4ebdbce38",
+        "gitBlob": "690d366bacb01c2ff92c09ea1d5c4d457fb27c93"
+      },
+      "completeRead": true,
+      "usage": "Prior complete source-contract read retained in623b; no change authorized by this plan"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "pin": {
+        "bytes": 50377,
+        "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+        "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+      },
+      "completeRead": true,
+      "usage": "Prior complete source-contract read retained in623b; no change authorized by this plan"
+    }
+  ],
+  "readCoverage": {
+    "fullProposal": true,
+    "fullSourceProof": true,
+    "fullActualGate": true,
+    "freshlyFetchedSourceBodies": 6,
+    "freshSourceBytes": 222891,
+    "allowedPreimageBytes": 128095,
+    "previousCompleteReadJoins": [
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "completePriorReadJoin": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "completePriorReadJoin": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+        "completePriorReadJoin": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/process/validateProcessRecords.ts",
+        "completePriorReadJoin": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+        "completePriorReadJoin": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+        "completePriorReadJoin": true
+      }
+    ],
+    "workflowCorpus": {
+      "pin": {
+        "bytes": 780732,
+        "sha256": "9a83bd5a7425d0674345c607e26b2a1df8bde3556549ac276bfbf860c5c4e3bb",
+        "gitBlob": "6d032754064d4f251a11e8572bb7b476ea5860a8"
+      },
+      "wholeFiles": 42,
+      "wholeBodyBytes": 751430,
+      "currentTree": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+      "allIdentitiesJoin": true
+    },
+    "directEvidence": [
+      {
+        "key": "collaborationAdvisory",
+        "pin": {
+          "bytes": 26675,
+          "sha256": "ce530bfaeb56a6b4010261c288637ae78633369913747e891ea67b1942cf0571",
+          "gitBlob": "eb4910aecd055982eeb9131c6d0c5f261366670f"
+        },
+        "coverage": "Previously complete immutable read, freshly rehashed in memory; exact original evidence reused."
+      },
+      {
+        "key": "collaborationLog",
+        "pin": {
+          "bytes": 203573,
+          "sha256": "370b14dad458393ef6d9ec6c37cefe3c2a812d37350f70899d6199edae8f4971",
+          "gitBlob": "4f082644fe2b77d118fe4f2ecc8b026076cf2355"
+        },
+        "coverage": "Previously complete immutable read, freshly rehashed in memory; exact original evidence reused."
+      },
+      {
+        "key": "claudeLog",
+        "pin": {
+          "bytes": 206513,
+          "sha256": "65597d1ec42c204cefe466846c08e6b32919a34f9db7b8eacb4326cf3584e8b7",
+          "gitBlob": "722df52ca594c136a94bb8fcf2b2f4143e85f706"
+        },
+        "coverage": "Previously complete immutable read, freshly rehashed in memory; exact original evidence reused."
+      },
+      {
+        "key": "windowsX64PackagedLog",
+        "pin": {
+          "bytes": 337630,
+          "sha256": "00131932da1d7a9a363509a786e636ad9f395b22d8a10c2a097156e5514a42cd",
+          "gitBlob": "6d72a5329cce7073469dabecf65782cc0a6522cb"
+        },
+        "coverage": "Previously complete immutable read, freshly rehashed in memory; exact original evidence reused."
+      },
+      {
+        "key": "windowsX64PackagedCapture",
+        "pin": {
+          "bytes": 3251974,
+          "sha256": "7e99b7025640852a1ab86eeea675144643e039922bd71edd228c72140e3ad151",
+          "gitBlob": "af70fca5270a5eac8905eefc16d1f362e7af8db5"
+        },
+        "coverage": "Previously complete immutable read, freshly rehashed in memory; exact original evidence reused."
+      },
+      {
+        "key": "artifactDeliveryFailure",
+        "pin": {
+          "bytes": 5341,
+          "sha256": "2232d040baf87f9628c84731bb178db2028c8353fbdac87f7d7c6a5d4aaa9281",
+          "gitBlob": "8926280627d911c37c39c512e386b2fdf31506c2"
+        },
+        "coverage": "Previously complete immutable read, freshly rehashed in memory; exact original evidence reused."
+      },
+      {
+        "key": "windowsX64VisualRead",
+        "pin": {
+          "bytes": 1363,
+          "sha256": "e44302d0682b7855dbfedf8596cd6de048e8cd49d0894d176c6aed36358cb54d",
+          "gitBlob": "c8bb3dea13dc9a73d4c79f6c16e4a8b1f9963b70"
+        },
+        "coverage": "Complete fresh body hashed and read; observations attributed to its original reviewer"
+      },
+      {
+        "key": "currentManagementAdvisory",
+        "pin": {
+          "bytes": 49806,
+          "sha256": "7feb4ccef7d67cd8a7ca71de7e919a9643180887f9fd931c39561b229d740e99",
+          "gitBlob": "5b1cc71ce7333d2ca41882b193878cdd35af6cd8"
+        },
+        "coverage": "Complete fresh body hashed and read; observations attributed to its original reviewer"
+      }
+    ],
+    "supportingAdvisories": [
+      {
+        "pin": {
+          "bytes": 26675,
+          "sha256": "ce530bfaeb56a6b4010261c288637ae78633369913747e891ea67b1942cf0571",
+          "gitBlob": "eb4910aecd055982eeb9131c6d0c5f261366670f"
+        },
+        "fullSelfReadAt": "2026-11-17 15:39:55 UTC"
+      },
+      {
+        "pin": {
+          "bytes": 36685,
+          "sha256": "230e6e07aa463ab9cd5e664c966fbfc7361a09be5845397c5e3fd93530a65cac",
+          "gitBlob": "623b68edeca2a6a7d9db08a0907d09cfc8eafa4b"
+        },
+        "fullSelfReadAt": "2026-11-17 15:57:03 UTC"
+      }
+    ],
+    "boundary": "Root/independent actual reports nested in the gate are accepted prior publication evidence,not newly re-audited recursively. The complete actual gate/current source proof and all six source-path bodies are independently joined here. No external report's nested source census is relabeled as a new semantic audit."
+  },
+  "workflowSemantics": {
+    "path": ".github/workflows/host-emulated-acceptance.yml",
+    "allowedSites": [
+      {
+        "line": 729,
+        "oldModel": "sonnet",
+        "newModel": "TEST-claude-sonnet",
+        "assertion": "Exact four sorted provider/model pairs"
+      },
+      {
+        "line": 764,
+        "oldModel": "sonnet",
+        "newModel": "TEST-claude-sonnet",
+        "assertion": "Exact two initial provider/model/effort triples"
+      }
+    ],
+    "fixtureEvidence": {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "lines": [
+        84,
+        94,
+        136
+      ],
+      "model": "TEST-claude-sonnet",
+      "effort": "low"
+    },
+    "observation": "First tuple assertion actually failed; second later tuple assertion was not reached. Current fixture and actual first failure prove expected resolved-model mismatch. The plan changes expected values,not model authority or selection.",
+    "invariants": "Every other workflow byte,existing provider tuple,effort,readiness/reference/currentness/command/cleanup assertion and scheduling surface remains unchanged.",
+    "noNewCaseOrAliasAcceptance": true
+  },
+  "settlementSemantics": {
+    "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+    "function": "completeStop(role)",
+    "preimageLines": [
+      415,
+      464
+    ],
+    "producer": "WindowsTeamProcessCommands.completeStop persists original completed absence then result; settle subsequently persists the intent before its native await. These are separately observable durable stages.",
+    "oldBug": "The fixture accepts completed absence and immediately assumes settlement intent exists. A valid earlier stage can therefore be rejected prematurely.",
+    "selectedPendingStage": "Already completed/completed/observed-absent; nativeSettlement strictly undefined; selected human principal,deep-equal capture and original.id checked before waiting.",
+    "validationChain": "Unchanged full process validation binds original capturedNative and Stop intent capture/service source. Missing settlement forbids both settlement flags; valid Team/inventory and original processRef/cardinality remain.",
+    "refusalBoundaries": "Present falsy/malformed settlement,known no-dispatch,foreign selected identities,duplicate candidate and other terminal states do not become pending.",
+    "timing": "Same original stop.deadline and existing25ms maximum delay; no new await callsite,clock,timer,native read/input,operation retry or cutoff reset. Existing prepared/held branch remains separate from the newly tolerated completed intermediate.",
+    "finalAssertions": "Entire429–464 post-loop block and467–478 afterQuit block remain verbatim. Intended readiness only establishes settlement intent presence; original HANDLE witnesses,result,neighbor/provider isolation,service-exit ledger,pins/runtime and cutoff still determine completion.",
+    "confirmationLimit": "Settlement intent is not confirmed settlement. Existing production assertReleased requires nativeSettlementConfirmed separately; no new native qualification follows.",
+    "actualFailureLimit": "Receipt stops[] is empty. Source proves the possible observer defect; current evidence does not prove which missing/falsy record was seen or that settlement eventually appeared. Original INCOMPLETE/cleanup=false remains."
+  },
+  "preservation": {
+    "originalMainStarts": 1,
+    "runtimeOpen": 1,
+    "businessInput": 1,
+    "refresh": 1,
+    "retry": 1,
+    "uiStops": 2,
+    "quit": 1,
+    "modelRequests": 0,
+    "modelProbes": 0,
+    "realVendorExecutions": 0,
+    "perStopDeadlineMs": 10000,
+    "receiptPollMaximumMs": 25,
+    "nativeUiWholeRegistrations": 8,
+    "nativeReceiptOwnRegistrations": 12,
+    "importedPlatformRegistrations": 14,
+    "originalCaseFilesUnchanged": true,
+    "sourcePostimagesAuthored": false,
+    "sourceR2NotYetReviewed": true,
+    "workflowFileCount": 42,
+    "nonDocLeaves": 8799,
+    "production": 5020,
+    "lineCap": 800,
+    "exceptions": 141,
+    "ci3RefsFrozen": true,
+    "oldAttemptsSpentForever": true
+  },
+  "validation": {
+    "noNewTestsClaimed": true,
+    "currentUnitCoverageLimit": "The unchanged native UI8 contains actual-source seams but no specific completeStop publication-race regression; no new unit coverage is claimed.",
+    "selectedOriginalOutcome": "The existing later admitted fixed-source complete Windows GUI must run all original phases/assertions within unchanged deadlines and prove cleanup. No result is predicted as observed.",
+    "procedure": {
+      "currentPhase": "R1 plan only; no source candidate or target execution",
+      "fourReviews": "Root plus independent guard, semantic and binding reviews of this exact plan",
+      "publication": "R1 docs only, immediate push; existing root/independent actual readbacks; then author only selected source R2 and its four reviews, publish/push/actual readbacks.",
+      "execution": "After actual source R2 acceptance, existing separate GitHub-only CI admission for a new fixed source; no local execution or executable control R2 is selected.",
+      "newExtraGate": false
+    },
+    "noExtraGate": true
+  },
+  "limits": [
+    "Plan only; no hypothetical postimage approval,compilation or runtime execution.",
+    "Failed current Windows x64 scenario remains failed and cleanupfalse; app/controller drain is narrower evidence.",
+    "New ARM Retry deadline failure is separate and is not repaired by missing-settlement waiting.",
+    "Claude scheduled-reply geometry,V2-management pending view,Darwin and source readiness failures stay outside scope.",
+    "Expired unread artifact bodies are not reconstructed or promoted.",
+    "No real Claude/Codex/vendor,main/default,Ready,merge,release,Stage2,old replay or CI action authority."
+  ],
+  "checks": [
+    {
+      "id": "R01",
+      "status": "PASS_STATIC_R1",
+      "finding": "The complete exact 11,958-byte R1 body was fetched, hashed, parsed and read; subject is 203e6dd6e1e124d55339ff890c74d94ce95f1558."
+    },
+    {
+      "id": "R02",
+      "status": "PASS_STATIC_R1",
+      "finding": "The complete 52,190-byte current-source proof and 6,297-byte closed actual gate were fetched, hashed and read. Parent542a/root e99/docs8ed join exactly; gate15:47:03 precedes plan15:54:28."
+    },
+    {
+      "id": "R03",
+      "status": "PASS_STATIC_R1",
+      "finding": "All six relevant whole source bodies were freshly fetched at exact parent542a and match the declared identities,222,891 bytes total. Two allowed preimages total128,095 bytes. Earlier complete semantic reads are reused only after exact joins."
+    },
+    {
+      "id": "R04",
+      "status": "PASS_STATIC_R1",
+      "finding": "Complete embedded parent commit/root/.github/tools API bodies are parsed without truncation; current workflow and fixture leaves join their full text identities. Parent has one actual parent0d99."
+    },
+    {
+      "id": "R05",
+      "status": "PASS_STATIC_R1",
+      "finding": "All42 complete prior workflow bodies freshly rehash and join current .github tree d95091ab,total751,430 bytes. Target full workflow equals the earlier fully read source,including the original whole inline verifier."
+    },
+    {
+      "id": "W01",
+      "status": "PASS_STATIC_R1",
+      "finding": "Exactly two stale anthropic/sonnet expected literals occur in the target whole workflow,at729 and764; the plan changes only those expected model values to TEST-claude-sonnet."
+    },
+    {
+      "id": "W02",
+      "status": "PASS_STATIC_R1",
+      "finding": "Actual current collaboration fixture stores the exact resolved model in savedSettings,runtime/provider template and returned savedModel. Original effort low and all other provider/model values remain unchanged."
+    },
+    {
+      "id": "W03",
+      "status": "PASS_STATIC_R1",
+      "finding": "Line729 keeps exact sorted four-tuple equality and count4. Line764 keeps exact initial two provider/model/effort tuples,including low and undefined. No alias widening or weakened assertion."
+    },
+    {
+      "id": "W04",
+      "status": "PASS_STATIC_R1",
+      "finding": "The first stale assertion failed in the original log after the driver reported PASS; the second is a source-supported later stale expectation,not an observed executed failure."
+    },
+    {
+      "id": "W05",
+      "status": "PASS_STATIC_R1",
+      "finding": "All original readiness scope/reference/consumer/probe ownership,retired state,command uniqueness,ordinary close,effect/history and finite provider checks remain. No workflow triggers,matrix,job filter,command,permissions,timeout or artifacts are changed."
+    },
+    {
+      "id": "W06",
+      "status": "PASS_STATIC_R1",
+      "finding": "The correction changes expected fixture values only. It grants no production model authority,auth capability or real Claude/Codex execution and does not change the finite peers."
+    },
+    {
+      "id": "S01",
+      "status": "PASS_STATIC_R1",
+      "finding": "Windows producer completeStop persists completed/observed-absent at225–227 and result separately at228; settle later prepares/persists the same original settlement intent at248–251. The allowed durable intermediate is source-proved."
+    },
+    {
+      "id": "S02",
+      "status": "PASS_STATIC_R1",
+      "finding": "The fixture currently breaks on completed/completed/observed-absent before requiring nativeSettlement.operation=settle. That observer can read an earlier durable stage; correcting eligibility is supported independently of whether this failed run later settled."
+    },
+    {
+      "id": "S03",
+      "status": "PASS_STATIC_R1",
+      "finding": "Plan retains the original loop,remaining(stop.deadline),assertPeer,validated receipt scan,terminate/original processRef selection and at-most-one assertion."
+    },
+    {
+      "id": "S04",
+      "status": "PASS_STATIC_R1",
+      "finding": "Only strict nativeSettlement===undefined on the original validated completed/observed-absent candidate may remain pending. Present null,false or other malformed data is not converted into pending."
+    },
+    {
+      "id": "S05",
+      "status": "PASS_STATIC_R1",
+      "finding": "Before newly tolerating the missing-field candidate,the selected human principal,full selected capture and selected original.id are asserted with original equality kinds. The validator does not supply these selected identities."
+    },
+    {
+      "id": "S06",
+      "status": "PASS_STATIC_R1",
+      "finding": "The unchanged validator guarantees original.capturedNative equals receipt.capture and the Stop intent has exact capture/serviceSource. Together with selected capture equality,this closes the pending-branch identity chain without new reads."
+    },
+    {
+      "id": "S07",
+      "status": "PASS_STATIC_R1",
+      "finding": "Any defined nativeSettlementNotDispatched or nativeSettlementConfirmed requires truthy settlement and valid completed Windows Stop. Missing settlement with either flag fails validation; known no-dispatch is not hidden as readiness waiting."
+    },
+    {
+      "id": "S08",
+      "status": "PASS_STATIC_R1",
+      "finding": "Truthy settlement is validated against exact settle schema/capture/source/terminal state. Present malformed falsy values reach the unchanged final failures rather than waiting."
+    },
+    {
+      "id": "S09",
+      "status": "PASS_STATIC_R1",
+      "finding": "Other states retain the original !candidate/prepared/held-only assertion. Rejected or other terminal states and duplicate candidates remain failures."
+    },
+    {
+      "id": "S10",
+      "status": "PASS_STATIC_R1",
+      "finding": "The pending intermediate reuses the existing single delay(Math.min(25,remaining(stop.deadline))) callsite. No early continue may bypass it; no new timer,await site,deadline,query/native command/UI input or operation retry is selected."
+    },
+    {
+      "id": "S11",
+      "status": "PASS_STATIC_R1",
+      "finding": "Every post-loop assertion at429–464 remains verbatim: selected identity,Stop/settle operations,both sources/captures,distinct operationRefs,no-dispatch undefined,state/result,original HANDLE absence/wait,neighbor/provider,ledger,pins/runtime and final cutoff."
+    },
+    {
+      "id": "S12",
+      "status": "PASS_STATIC_R1",
+      "finding": "Only completion after all original later checks sets stop.completed. Both Stops and original afterQuit three-witness/provider/writer-lock/runtime/input/service-exit requirements remain unchanged."
+    },
+    {
+      "id": "S13",
+      "status": "PASS_STATIC_R1",
+      "finding": "Intent presence is not nativeSettlementConfirmed. The unchanged production assertReleased separately requires confirmation; neither plan nor review adds a native release qualification."
+    },
+    {
+      "id": "S14",
+      "status": "PASS_STATIC_R1",
+      "finding": "Original10-second primary/neighbor deadlines and25ms maximum receipt cadence remain; same cutoff is shared with subsequent witness/ledger/runtime checks. No extra time is granted for delayed settlement."
+    },
+    {
+      "id": "E01",
+      "status": "PASS_STATIC_R1",
+      "finding": "All eight immediate R1 evidence bodies were fully read now or reused after fresh exact full rehash. Current x64 capture members remain embedded/derived,not separate fetched Git objects; screenshot finding is root-attributed."
+    },
+    {
+      "id": "E02",
+      "status": "PASS_STATIC_R1",
+      "finding": "Original x64 remains INCOMPLETE/cleanup=false despite same-Main recovery,app exit0 and controller drain. Failed terminate body is not in stops[],so transient missing versus malformed falsy field and eventual settlement are unproved."
+    },
+    {
+      "id": "E03",
+      "status": "PASS_STATIC_R1",
+      "finding": "Unretained collaboration/Claude archives remain unread; no download renewal or historical outcome substitution. Driver PASS and later workflow failure remain distinct."
+    },
+    {
+      "id": "E04",
+      "status": "PASS_STATIC_R1",
+      "finding": "Separate ARM Retry expiry,Claude scheduled-target refusal,V2-management loading,Darwin and source-readiness failures are outside both selected changes; no blanket GUI/native/E2E PASS."
+    },
+    {
+      "id": "T01",
+      "status": "PASS_STATIC_R1",
+      "finding": "No new test or test deletion is planned. Whole native UI8 and corrected native receipt12+imported14 stay intact,as do all other complete source/test commands. Existing UI8 does not claim coverage of this publication race."
+    },
+    {
+      "id": "T02",
+      "status": "PASS_STATIC_R1",
+      "finding": "The selected validation is the unchanged complete original packaged Windows flow after existing source publication/admission; it must satisfy all original budgets/custody/cleanup. Static plan acceptance does not substitute for that result or claim a future pass."
+    },
+    {
+      "id": "A01",
+      "status": "PASS_STATIC_R1",
+      "finding": "Scope is exactly two existing files,zero production changes/new files/dependencies/filters/runner changes. Fixture485-line preimage is below800; exact future scope/inverse remains for existing sourceR2,not approved here."
+    },
+    {
+      "id": "A02",
+      "status": "PASS_STATIC_R1",
+      "finding": "Existing four R1 reviews→docs publication/immediate push→actual readbacks→selected sourceR2 and its existing publication/actual sequence is preserved. No new execution/control/native gate is added."
+    },
+    {
+      "id": "A03",
+      "status": "PASS_STATIC_R1",
+      "finding": "Root remains sole source/control author/executor. Current CI3 refs/PR metadata remain frozen,old attempts spent,no rerun/retry/cancel/dispatch or real vendor/main/Ready/release/Stage2 authority is granted."
+    },
+    {
+      "id": "A04",
+      "status": "PASS_STATIC_R1",
+      "finding": "This review used immutable Git and pure data only. No source postimage was authored,evaluated,compiled or executed; only the review blob is retained."
+    }
+  ],
+  "checkCount": 35,
+  "authority": "Read-only immutable Git/source/evidence and pure-memory identity/data review; only this bare review is authored. Root remains sole source/control author and executor."
+}

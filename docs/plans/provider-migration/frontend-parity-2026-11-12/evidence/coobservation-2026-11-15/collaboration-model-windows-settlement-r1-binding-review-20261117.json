@@ -1,0 +1,1488 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_COLLABORATION_MODEL_WINDOWS_SETTLEMENT_R1_INDEPENDENT_BINDING_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/red_publication_recovery",
+  "at": "2026-11-17 16:02:50 UTC",
+  "subject": {
+    "gitBlob": "203e6dd6e1e124d55339ff890c74d94ce95f1558",
+    "bytes": 11958,
+    "sha256": "e8f489a0c9902a98a77b3ed897ce5ab91e654294ecbfae68c2baea439ec9de6b"
+  },
+  "accepted": true,
+  "decision": "ACCEPT_EXACT_TWO_FILE_R1_PLAN_ONLY",
+  "parent": {
+    "commit": "542a7109a819087e90c26330771b45c81c123b60",
+    "tree": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+    "docsTree": "8ed5c76f4029e20e191e4456a3f9b436df7deb51"
+  },
+  "workingBranch": "fix/frontend-parity-coobservation-c714-20261115",
+  "authorityJoin": {
+    "actualGate": {
+      "gitBlob": "89160b0e4c7dc552a3d4d65714d77cdeac40f84c",
+      "bytes": 6297,
+      "sha256": "59372bcee2d74d9e40c788b7758df40ea74aa7ccfa24444cb781fa39f3b2a082"
+    },
+    "closedAt": "2026-11-17 15:47:03 UTC",
+    "precedingPublication": {
+      "commit": "542a7109a819087e90c26330771b45c81c123b60",
+      "tree": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+      "docsTree": "8ed5c76f4029e20e191e4456a3f9b436df7deb51"
+    },
+    "rootActual": {
+      "bytes": 554249,
+      "sha256": "7e383dcc19929375b1272bf6691f754a018d2f8ff49ae474534c7337f3e45914",
+      "gitBlob": "837c8ad7376d6dbab2fdb38c8160725444bae65d"
+    },
+    "independentActual": {
+      "bytes": 447616,
+      "sha256": "2863575d2694007e4d5e5a650d79753ea0e89584153d3294a966d008a2e84cd6",
+      "gitBlob": "ae8880f423a98c72263de7c652a7c2e897b736a6"
+    },
+    "priorAcceptedCheckCount": 57,
+    "sourceProofAt": "2026-11-17 15:53:06 UTC",
+    "planAuthoredAt": "2026-11-17 15:54:28 UTC",
+    "sourcePostimagesAuthored": false
+  },
+  "rootReviewJoin": {
+    "pin": {
+      "gitBlob": "f7ffcb2d1b77071a75c013e20925f89b568854c3",
+      "bytes": 26898,
+      "sha256": "c74f05bfd3bded42755d6e815562f353413f0e867e5a894f5f74ec594e340941"
+    },
+    "subject": {
+      "bytes": 11958,
+      "sha256": "e8f489a0c9902a98a77b3ed897ce5ab91e654294ecbfae68c2baea439ec9de6b",
+      "gitBlob": "203e6dd6e1e124d55339ff890c74d94ce95f1558"
+    },
+    "checkCount": 26,
+    "accepted": true,
+    "failedChecks": [],
+    "unresolvedBlockers": [],
+    "fullBodyRead": true
+  },
+  "exactSelectedScope": {
+    "allowedSourcePaths": [
+      ".github/workflows/host-emulated-acceptance.yml",
+      "tools/owned-process-broker/nativeWindowsAppFixture.ts"
+    ],
+    "productSourceChanges": 0,
+    "newSourceFiles": 0,
+    "deletedSourceFiles": 0,
+    "workflowChanges": 1,
+    "workflowChangeBoundary": "Only two exact expected model values inside the existing inline collaboration receipt verifier; no scheduling/filter/matrix/command/permission/timeout/artifact changes.",
+    "fixtureChangeBoundary": "Only completeStop's existing receipt polling eligibility, with selected-identity guards on the missing-settlement intermediate state. Entire final assertion/custody block remains verbatim."
+  },
+  "selectedPreimages": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "pin": {
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      },
+      "physicalLines": 1248
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "pin": {
+        "bytes": 31223,
+        "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+      },
+      "physicalLines": 485
+    }
+  ],
+  "sourceCurrentJoins": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "pin": {
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      },
+      "rootTree": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+      "subtree": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+      "mode": "100644",
+      "completeTreeRead": true,
+      "bodyMethod": "reuse accepted complete immutable body; all identity fields independently rechecked"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "pin": {
+        "bytes": 31223,
+        "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+      },
+      "rootTree": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+      "subtree": "7360460b475db2e174c65f5ba0eeb075f06622b1",
+      "mode": "100644",
+      "completeTreeRead": true,
+      "bodyMethod": "reuse accepted complete immutable body; all identity fields independently rechecked"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+      "pin": {
+        "bytes": 29443,
+        "sha256": "4edbb21876753230e69a0c603061dd6493e9c48d4d2014df79150c37f24a772f",
+        "gitBlob": "b41629b7ed483f1ab9f42e2e234933999647e7bd"
+      },
+      "rootTree": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+      "subtree": "7c9c7d065c509e074094e1423b97d96e396c3ae9",
+      "mode": "100644",
+      "completeTreeRead": true,
+      "bodyMethod": "fresh full retained Git blob read and independent complete identity hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/src/process/validateProcessRecords.ts",
+      "pin": {
+        "bytes": 14676,
+        "sha256": "c6b9ebf49e82a17f55683605c0bc1041d530b6c90da3f2774e8c1e3685d035d1",
+        "gitBlob": "dd1a705e054e5fe7df4addf97aa48bf4d0638444"
+      },
+      "rootTree": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+      "subtree": "7c9c7d065c509e074094e1423b97d96e396c3ae9",
+      "mode": "100644",
+      "completeTreeRead": true,
+      "bodyMethod": "fresh full retained Git blob read and independent complete identity hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "pin": {
+        "bytes": 16591,
+        "sha256": "bd4b8bec56e93cd7c17ec04d5c09b93a8115097af57224d28e954c3f06cdb0c8",
+        "gitBlob": "6d267c1531fd741c4abee8b27ef501f28098d782"
+      },
+      "rootTree": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+      "subtree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+      "mode": "100644",
+      "completeTreeRead": true,
+      "bodyMethod": "reuse accepted complete immutable body; all identity fields independently rechecked"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "pin": {
+        "bytes": 34086,
+        "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f",
+        "gitBlob": "aff6e19ec4cf492841aa667442c1b7d71541c7c5"
+      },
+      "rootTree": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+      "subtree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+      "mode": "100644",
+      "completeTreeRead": true,
+      "bodyMethod": "reuse accepted complete immutable body; all identity fields independently rechecked"
+    }
+  ],
+  "completeInputTuples": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "proposal",
+      "pin": {
+        "gitBlob": "203e6dd6e1e124d55339ff890c74d94ce95f1558",
+        "bytes": 11958,
+        "sha256": "e8f489a0c9902a98a77b3ed897ce5ab91e654294ecbfae68c2baea439ec9de6b"
+      },
+      "encoding": "utf-8",
+      "method": "fresh complete immutable Git blob read and independent complete identity hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "gate",
+      "pin": {
+        "gitBlob": "89160b0e4c7dc552a3d4d65714d77cdeac40f84c",
+        "bytes": 6297,
+        "sha256": "59372bcee2d74d9e40c788b7758df40ea74aa7ccfa24444cb781fa39f3b2a082"
+      },
+      "encoding": "utf-8",
+      "method": "fresh complete immutable Git blob read and independent complete identity hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "sourceProof",
+      "pin": {
+        "gitBlob": "0abb2f7d4b3c93f13b05de376c32fe4af5347c04",
+        "bytes": 52190,
+        "sha256": "9f4584f4b8643121bbcbbe0bdc16bfe272479c7ba619f88bee2e8cb89e47ae3b"
+      },
+      "encoding": "utf-8",
+      "method": "fresh complete immutable Git blob read and independent complete identity hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "rootReview",
+      "pin": {
+        "gitBlob": "f7ffcb2d1b77071a75c013e20925f89b568854c3",
+        "bytes": 26898,
+        "sha256": "c74f05bfd3bded42755d6e815562f353413f0e867e5a894f5f74ec594e340941"
+      },
+      "encoding": "utf-8",
+      "method": "fresh complete immutable Git blob read and independent complete identity hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "source:.github/workflows/host-emulated-acceptance.yml",
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "pin": {
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      },
+      "encoding": "utf-8",
+      "method": "reuse accepted complete immutable body; all identity fields independently rechecked"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "source:tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "pin": {
+        "bytes": 31223,
+        "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+      },
+      "encoding": "utf-8",
+      "method": "reuse accepted complete immutable body; all identity fields independently rechecked"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "source:scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "pin": {
+        "bytes": 16591,
+        "sha256": "bd4b8bec56e93cd7c17ec04d5c09b93a8115097af57224d28e954c3f06cdb0c8",
+        "gitBlob": "6d267c1531fd741c4abee8b27ef501f28098d782"
+      },
+      "encoding": "utf-8",
+      "method": "reuse accepted complete immutable body; all identity fields independently rechecked"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "source:scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "pin": {
+        "bytes": 34086,
+        "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f",
+        "gitBlob": "aff6e19ec4cf492841aa667442c1b7d71541c7c5"
+      },
+      "encoding": "utf-8",
+      "method": "reuse accepted complete immutable body; all identity fields independently rechecked"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "rootActual",
+      "pin": {
+        "bytes": 554249,
+        "sha256": "7e383dcc19929375b1272bf6691f754a018d2f8ff49ae474534c7337f3e45914",
+        "gitBlob": "837c8ad7376d6dbab2fdb38c8160725444bae65d"
+      },
+      "encoding": "utf-8",
+      "method": "reuse accepted complete immutable body; all identity fields independently rechecked"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "independentActual",
+      "pin": {
+        "bytes": 447616,
+        "sha256": "2863575d2694007e4d5e5a650d79753ea0e89584153d3294a966d008a2e84cd6",
+        "gitBlob": "ae8880f423a98c72263de7c652a7c2e897b736a6"
+      },
+      "encoding": "utf-8",
+      "method": "reuse accepted complete immutable body; all identity fields independently rechecked"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "source:packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+      "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+      "pin": {
+        "bytes": 29443,
+        "sha256": "4edbb21876753230e69a0c603061dd6493e9c48d4d2014df79150c37f24a772f",
+        "gitBlob": "b41629b7ed483f1ab9f42e2e234933999647e7bd"
+      },
+      "encoding": "utf-8",
+      "method": "fresh full retained Git blob read and independent complete identity hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "source:packages/legacy-agent-host/src/process/validateProcessRecords.ts",
+      "path": "packages/legacy-agent-host/src/process/validateProcessRecords.ts",
+      "pin": {
+        "bytes": 14676,
+        "sha256": "c6b9ebf49e82a17f55683605c0bc1041d530b6c90da3f2774e8c1e3685d035d1",
+        "gitBlob": "dd1a705e054e5fe7df4addf97aa48bf4d0638444"
+      },
+      "encoding": "utf-8",
+      "method": "fresh full retained Git blob read and independent complete identity hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "evidence:collaborationAdvisory",
+      "pin": {
+        "bytes": 26675,
+        "sha256": "ce530bfaeb56a6b4010261c288637ae78633369913747e891ea67b1942cf0571",
+        "gitBlob": "eb4910aecd055982eeb9131c6d0c5f261366670f"
+      },
+      "encoding": "utf-8",
+      "method": "fresh full retained Git blob read and independent complete identity hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "evidence:collaborationLog",
+      "pin": {
+        "bytes": 203573,
+        "sha256": "370b14dad458393ef6d9ec6c37cefe3c2a812d37350f70899d6199edae8f4971",
+        "gitBlob": "4f082644fe2b77d118fe4f2ecc8b026076cf2355"
+      },
+      "encoding": "utf-8",
+      "method": "fresh full retained Git blob read and independent complete identity hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "evidence:claudeLog",
+      "pin": {
+        "bytes": 206513,
+        "sha256": "65597d1ec42c204cefe466846c08e6b32919a34f9db7b8eacb4326cf3584e8b7",
+        "gitBlob": "722df52ca594c136a94bb8fcf2b2f4143e85f706"
+      },
+      "encoding": "utf-8",
+      "method": "fresh full retained Git blob read and independent complete identity hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "evidence:windowsX64PackagedLog",
+      "pin": {
+        "bytes": 337630,
+        "sha256": "00131932da1d7a9a363509a786e636ad9f395b22d8a10c2a097156e5514a42cd",
+        "gitBlob": "6d72a5329cce7073469dabecf65782cc0a6522cb"
+      },
+      "encoding": "utf-8",
+      "method": "fresh full retained Git blob read and independent complete identity hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "evidence:windowsX64PackagedCapture",
+      "pin": {
+        "bytes": 3251974,
+        "sha256": "7e99b7025640852a1ab86eeea675144643e039922bd71edd228c72140e3ad151",
+        "gitBlob": "af70fca5270a5eac8905eefc16d1f362e7af8db5"
+      },
+      "encoding": "utf-8",
+      "method": "fresh full retained Git blob read and independent complete identity hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "evidence:windowsX64VisualRead",
+      "pin": {
+        "bytes": 1363,
+        "sha256": "e44302d0682b7855dbfedf8596cd6de048e8cd49d0894d176c6aed36358cb54d",
+        "gitBlob": "c8bb3dea13dc9a73d4c79f6c16e4a8b1f9963b70"
+      },
+      "encoding": "utf-8",
+      "method": "fresh full retained Git blob read and independent complete identity hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "evidence:artifactDeliveryFailure",
+      "pin": {
+        "bytes": 5341,
+        "sha256": "2232d040baf87f9628c84731bb178db2028c8353fbdac87f7d7c6a5d4aaa9281",
+        "gitBlob": "8926280627d911c37c39c512e386b2fdf31506c2"
+      },
+      "encoding": "utf-8",
+      "method": "fresh full retained Git blob read and independent complete identity hash"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "role": "evidence:currentManagementAdvisory",
+      "pin": {
+        "bytes": 49806,
+        "sha256": "7feb4ccef7d67cd8a7ca71de7e919a9643180887f9fd931c39561b229d740e99",
+        "gitBlob": "5b1cc71ce7333d2ca41882b193878cdd35af6cd8"
+      },
+      "encoding": "utf-8",
+      "method": "fresh full retained Git blob read and independent complete identity hash"
+    }
+  ],
+  "completeInputCount": 20,
+  "completeInputBytes": 5404974,
+  "additionalPreservedTest": {
+    "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+    "pin": {
+      "bytes": 50377,
+      "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+      "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+    },
+    "method": "accepted complete immutable source body at unchanged current scripts tree; regex registration census only, no execution",
+    "titles": [
+      "post-Stop observer continues past stale original and pending alternate to fresh stopped props",
+      "initial original-ref observation remains exact and cannot select a replacement ref",
+      "background acceptance waits for atomic service publication without masking corrupt readiness",
+      "captured no-provider Processes fixture rejects mixed inputs before allocating and seeds no Runtime",
+      "Windows outage membership requires both original process owners in one renderer sample",
+      "Windows Retry retains same-evaluation operands without changing the original wait",
+      "Windows primary failure is emitted once before cleanup without replacing the original error",
+      "Windows final Retry requires both complete original rows in one current sample"
+    ]
+  },
+  "completeEmbeddedApiBodies": [
+    {
+      "key": "parentCommit",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/542a7109a819087e90c26330771b45c81c123b60",
+      "pin": {
+        "bytes": 1169,
+        "sha256": "30d81249222b6a40f22f15d4117c0b95e950ac3d1c2a1bb601121a95c3f13ad9",
+        "gitBlob": "643f720b47781fb0d56ee61cc854b1a56bf9aee4"
+      },
+      "method": "full literal embedded API body; pure JSON parse and identity hash",
+      "origin": {
+        "sourceProof": {
+          "gitBlob": "0abb2f7d4b3c93f13b05de376c32fe4af5347c04",
+          "bytes": 52190,
+          "sha256": "9f4584f4b8643121bbcbbe0bdc16bfe272479c7ba619f88bee2e8cb89e47ae3b"
+        },
+        "field": "completeApiBodies.parentCommit.body"
+      },
+      "classification": "Derived full literal API-body identity, not a separately stored Git blob; no new live endpoint read"
+    },
+    {
+      "key": "parentRoot",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+      "pin": {
+        "bytes": 12410,
+        "sha256": "7799036c6b2ca1bbbf94d851a5a7a245644077363060922626674b9c3e130cbb",
+        "gitBlob": "e87a53facc3f241ac022ad39efc9ee51bfb70778"
+      },
+      "method": "full literal embedded API body; pure JSON parse and identity hash",
+      "origin": {
+        "sourceProof": {
+          "gitBlob": "0abb2f7d4b3c93f13b05de376c32fe4af5347c04",
+          "bytes": 52190,
+          "sha256": "9f4584f4b8643121bbcbbe0bdc16bfe272479c7ba619f88bee2e8cb89e47ae3b"
+        },
+        "field": "completeApiBodies.parentRoot.body"
+      },
+      "classification": "Derived full literal API-body identity, not a separately stored Git blob; no new live endpoint read"
+    },
+    {
+      "key": ".githubRecursive",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/d95091ab0edb488d6e418ffa789d0f07c447ecda?recursive=1",
+      "pin": {
+        "bytes": 13802,
+        "sha256": "e772a1649a656d4e9f74848d8fbe67afe2d3f19b8edac8827eb2c22179fa106b",
+        "gitBlob": "b7e2e208b1c55ef59c5ff8d5d20cda8f33d69a34"
+      },
+      "method": "full literal embedded API body; pure JSON parse and identity hash",
+      "origin": {
+        "sourceProof": {
+          "gitBlob": "0abb2f7d4b3c93f13b05de376c32fe4af5347c04",
+          "bytes": 52190,
+          "sha256": "9f4584f4b8643121bbcbbe0bdc16bfe272479c7ba619f88bee2e8cb89e47ae3b"
+        },
+        "field": "completeApiBodies..githubRecursive.body"
+      },
+      "classification": "Derived full literal API-body identity, not a separately stored Git blob; no new live endpoint read"
+    },
+    {
+      "key": "toolsRecursive",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/7360460b475db2e174c65f5ba0eeb075f06622b1?recursive=1",
+      "pin": {
+        "bytes": 14873,
+        "sha256": "4e67a3e0246b9e8fd25706218f862534bb4497d51f293cd3dd7a7a2eae87da4f",
+        "gitBlob": "0000cc1a7a6c73b8271bc11dd4995d26f064d1d5"
+      },
+      "method": "full literal embedded API body; pure JSON parse and identity hash",
+      "origin": {
+        "sourceProof": {
+          "gitBlob": "0abb2f7d4b3c93f13b05de376c32fe4af5347c04",
+          "bytes": 52190,
+          "sha256": "9f4584f4b8643121bbcbbe0bdc16bfe272479c7ba619f88bee2e8cb89e47ae3b"
+        },
+        "field": "completeApiBodies.toolsRecursive.body"
+      },
+      "classification": "Derived full literal API-body identity, not a separately stored Git blob; no new live endpoint read"
+    }
+  ],
+  "treeProof": {
+    "actualCommit": "542a7109a819087e90c26330771b45c81c123b60",
+    "actualRoot": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+    "actualDocs": "8ed5c76f4029e20e191e4456a3f9b436df7deb51",
+    "sourceJoins": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "pin": {
+          "bytes": 96872,
+          "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+          "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+        },
+        "rootTree": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+        "subtree": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "mode": "100644",
+        "completeTreeRead": true,
+        "bodyMethod": "reuse accepted complete immutable body; all identity fields independently rechecked"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "pin": {
+          "bytes": 31223,
+          "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+          "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+        },
+        "rootTree": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+        "subtree": "7360460b475db2e174c65f5ba0eeb075f06622b1",
+        "mode": "100644",
+        "completeTreeRead": true,
+        "bodyMethod": "reuse accepted complete immutable body; all identity fields independently rechecked"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+        "pin": {
+          "bytes": 29443,
+          "sha256": "4edbb21876753230e69a0c603061dd6493e9c48d4d2014df79150c37f24a772f",
+          "gitBlob": "b41629b7ed483f1ab9f42e2e234933999647e7bd"
+        },
+        "rootTree": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+        "subtree": "7c9c7d065c509e074094e1423b97d96e396c3ae9",
+        "mode": "100644",
+        "completeTreeRead": true,
+        "bodyMethod": "fresh full retained Git blob read and independent complete identity hash"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "packages/legacy-agent-host/src/process/validateProcessRecords.ts",
+        "pin": {
+          "bytes": 14676,
+          "sha256": "c6b9ebf49e82a17f55683605c0bc1041d530b6c90da3f2774e8c1e3685d035d1",
+          "gitBlob": "dd1a705e054e5fe7df4addf97aa48bf4d0638444"
+        },
+        "rootTree": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+        "subtree": "7c9c7d065c509e074094e1423b97d96e396c3ae9",
+        "mode": "100644",
+        "completeTreeRead": true,
+        "bodyMethod": "fresh full retained Git blob read and independent complete identity hash"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+        "pin": {
+          "bytes": 16591,
+          "sha256": "bd4b8bec56e93cd7c17ec04d5c09b93a8115097af57224d28e954c3f06cdb0c8",
+          "gitBlob": "6d267c1531fd741c4abee8b27ef501f28098d782"
+        },
+        "rootTree": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+        "subtree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "mode": "100644",
+        "completeTreeRead": true,
+        "bodyMethod": "reuse accepted complete immutable body; all identity fields independently rechecked"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+        "pin": {
+          "bytes": 34086,
+          "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f",
+          "gitBlob": "aff6e19ec4cf492841aa667442c1b7d71541c7c5"
+        },
+        "rootTree": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+        "subtree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "mode": "100644",
+        "completeTreeRead": true,
+        "bodyMethod": "reuse accepted complete immutable body; all identity fields independently rechecked"
+      }
+    ],
+    "workflowCount": 42,
+    "fullApiBodies": [
+      {
+        "key": "parentCommit",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/542a7109a819087e90c26330771b45c81c123b60",
+        "pin": {
+          "bytes": 1169,
+          "sha256": "30d81249222b6a40f22f15d4117c0b95e950ac3d1c2a1bb601121a95c3f13ad9",
+          "gitBlob": "643f720b47781fb0d56ee61cc854b1a56bf9aee4"
+        }
+      },
+      {
+        "key": "parentRoot",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+        "pin": {
+          "bytes": 12410,
+          "sha256": "7799036c6b2ca1bbbf94d851a5a7a245644077363060922626674b9c3e130cbb",
+          "gitBlob": "e87a53facc3f241ac022ad39efc9ee51bfb70778"
+        }
+      },
+      {
+        "key": ".githubRecursive",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/d95091ab0edb488d6e418ffa789d0f07c447ecda?recursive=1",
+        "pin": {
+          "bytes": 13802,
+          "sha256": "e772a1649a656d4e9f74848d8fbe67afe2d3f19b8edac8827eb2c22179fa106b",
+          "gitBlob": "b7e2e208b1c55ef59c5ff8d5d20cda8f33d69a34"
+        }
+      },
+      {
+        "key": "toolsRecursive",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/7360460b475db2e174c65f5ba0eeb075f06622b1?recursive=1",
+        "pin": {
+          "bytes": 14873,
+          "sha256": "4e67a3e0246b9e8fd25706218f862534bb4497d51f293cd3dd7a7a2eae87da4f",
+          "gitBlob": "0000cc1a7a6c73b8271bc11dd4995d26f064d1d5"
+        }
+      }
+    ],
+    "acceptedCurrentRootExact": true
+  },
+  "workflowBinding": {
+    "currentWorkflowPin": {
+      "bytes": 96872,
+      "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+      "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+    },
+    "currentPhysicalLines": 1248,
+    "selectedLines": [
+      {
+        "line": 729,
+        "oldModel": "sonnet",
+        "newModel": "TEST-claude-sonnet",
+        "assertion": "Complete sorted four provider/model tuple equality remains exact."
+      },
+      {
+        "line": 764,
+        "oldModel": "sonnet",
+        "newModel": "TEST-claude-sonnet",
+        "assertion": "Complete sorted initial provider/model/effort equality remains exact; low/undefined and both provider IDs preserved."
+      }
+    ],
+    "currentMatchingSource": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+        "pin": {
+          "bytes": 16591,
+          "sha256": "bd4b8bec56e93cd7c17ec04d5c09b93a8115097af57224d28e954c3f06cdb0c8",
+          "gitBlob": "6d267c1531fd741c4abee8b27ef501f28098d782"
+        },
+        "rootTree": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+        "subtree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "mode": "100644",
+        "completeTreeRead": true,
+        "bodyMethod": "reuse accepted complete immutable body; all identity fields independently rechecked"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+        "pin": {
+          "bytes": 34086,
+          "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f",
+          "gitBlob": "aff6e19ec4cf492841aa667442c1b7d71541c7c5"
+        },
+        "rootTree": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+        "subtree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+        "mode": "100644",
+        "completeTreeRead": true,
+        "bodyMethod": "reuse accepted complete immutable body; all identity fields independently rechecked"
+      }
+    ],
+    "actualFirstFailure": {
+      "log": {
+        "bytes": 203573,
+        "sha256": "370b14dad458393ef6d9ec6c37cefe3c2a812d37350f70899d6199edae8f4971",
+        "gitBlob": "4f082644fe2b77d118fe4f2ecc8b026076cf2355"
+      },
+      "verifierLine": 302,
+      "currentWorkflowLine": 728,
+      "actualModel": "TEST-claude-sonnet",
+      "oldExpectedModel": "sonnet",
+      "arrayPairs": 4,
+      "otherThreePairsEqual": true
+    },
+    "laterInitialProbeAssertion": {
+      "workflowLines": [
+        763,
+        764
+      ],
+      "executedAfterFailure": false,
+      "expectedEffort": "low",
+      "codexEffort": "undefined"
+    },
+    "unchangedByPlan": [
+      "Complete array equality and sort",
+      "All provider identities and tuple counts",
+      "Readiness/reference/currentness/custody assertions",
+      "All job/matrix/event/filter/permission/command/timeout/artifact settings",
+      "All 41 other workflows"
+    ]
+  },
+  "windowsBinding": {
+    "currentFixturePin": {
+      "bytes": 31223,
+      "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+      "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+    },
+    "currentPhysicalLines": 485,
+    "oldPollingLines": [
+      419,
+      427
+    ],
+    "protectedFinalBlockLines": [
+      429,
+      478
+    ],
+    "producer": {
+      "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+      "pin": {
+        "bytes": 29443,
+        "sha256": "4edbb21876753230e69a0c603061dd6493e9c48d4d2014df79150c37f24a772f",
+        "gitBlob": "b41629b7ed483f1ab9f42e2e234933999647e7bd"
+      },
+      "completedPersistence": [
+        225,
+        228
+      ],
+      "settlementIntentPersistence": [
+        248,
+        251
+      ],
+      "unchanged": true
+    },
+    "validator": {
+      "path": "packages/legacy-agent-host/src/process/validateProcessRecords.ts",
+      "pin": {
+        "bytes": 14676,
+        "sha256": "c6b9ebf49e82a17f55683605c0bc1041d530b6c90da3f2774e8c1e3685d035d1",
+        "gitBlob": "dd1a705e054e5fe7df4addf97aa48bf4d0638444"
+      },
+      "unchanged": true,
+      "guarantees": [
+        "Every processReceipts candidate is fully parsed and validated before selection.",
+        "Terminate nativeIntent is a valid stop with exact receipt capture/service source (272–274).",
+        "Original/capture/processRef must exist and original.capturedNative equals capture (217–221).",
+        "Missing nativeSettlement implies nativeSettlementNotDispatched and nativeSettlementConfirmed are undefined; validators reject either flag without a truthy settlement (297–303).",
+        "Truthy settlement is schema-checked as settle, bound to the exact capture/service source and completed observed-absent state (286–295)."
+      ]
+    },
+    "stateClassification": [
+      {
+        "state": "No candidate, prepared or held",
+        "decision": "Existing original bounded poll unchanged"
+      },
+      {
+        "state": "Completed observed-absent with nativeSettlement strictly undefined",
+        "decision": "Assert human principal, deep-equal selected capture and exact selected original id immediately; keep polling within original deadline"
+      },
+      {
+        "state": "Completed observed-absent with nativeSettlement present",
+        "decision": "Retain unchanged final assertions; do not turn present null/false into pending"
+      },
+      {
+        "state": "Truthy malformed settlement or unsupported settlement flags",
+        "decision": "Unchanged validator rejects before selection/final assertions"
+      },
+      {
+        "state": "Any other terminal or unsupported phase",
+        "decision": "Original prepared/held-only fallback assertion still rejects"
+      }
+    ],
+    "cutoffMs": 10000,
+    "existingMaximumPollDelayMs": 25,
+    "newAwaitSites": 0,
+    "newUiClicks": 0,
+    "newOperationSubmissions": 0,
+    "newNativeQueries": 0,
+    "newDeadlineOrReset": false,
+    "unchangedFinalRequirements": [
+      "human principal and exact selected capture",
+      "original capturedNative and selected original id",
+      "stop and settle intent operations with exact capture/service source",
+      "different operationRef values",
+      "nativeSettlementNotDispatched absent",
+      "completed observed absence with signalAccepted unknown",
+      "exact selected result id/pid/absent/nonterminable/stoppedAt/different processRef",
+      "selected witness absent and wait exit0",
+      "neighbor remains alive after primary Stop",
+      "one exact finite peer service exit",
+      "pinned source/runtime/input custody",
+      "all three original witnesses exit after ordinary Quit"
+    ],
+    "originalFailedOutcome": {
+      "capture": {
+        "bytes": 3251974,
+        "sha256": "7e99b7025640852a1ab86eeea675144643e039922bd71edd228c72140e3ad151",
+        "gitBlob": "af70fca5270a5eac8905eefc16d1f362e7af8db5"
+      },
+      "log": {
+        "bytes": 337630,
+        "sha256": "00131932da1d7a9a363509a786e636ad9f395b22d8a10c2a097156e5514a42cd",
+        "gitBlob": "6d72a5329cce7073469dabecf65782cc0a6522cb"
+      },
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "artifactId": 14343770599,
+      "runId": 44092933873,
+      "jobId": 134098865077,
+      "status": "INCOMPLETE",
+      "stops": [],
+      "cleanup": false,
+      "observedUiStops": 1,
+      "originalFailureLine": 432,
+      "missingVersusFalsyUnknown": true,
+      "laterSuccessfulSettlementUnknown": true
+    },
+    "memberByteReadbacks": [
+      {
+        "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+        "pin": {
+          "bytes": 1154517,
+          "sha256": "b69dd32713f17922b8b7c591221d7b9786d044fd25502cdd7a6e1075a51ec723",
+          "gitBlob": "e1757efd52c351208d8e7031ec1aa18ec241cd50"
+        },
+        "encoding": "utf-8",
+        "method": "full embedded literal UTF-8 body, independently hashed",
+        "crc32": "ae3cf892"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-inputs.json",
+        "pin": {
+          "bytes": 780,
+          "sha256": "067af37f13bf4125000a4e9ed9b0ca5cd1fbc0769f7d51833414f1577b7ecb12",
+          "gitBlob": "2876e7d82fa7d1faf86fc2c25244b988a902c231"
+        },
+        "encoding": "utf-8",
+        "method": "full embedded literal UTF-8 body, independently hashed",
+        "crc32": "8548ddb5"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-native.json",
+        "pin": {
+          "bytes": 5383,
+          "sha256": "1288220a07d3fa7cbfcdf4a3b6ee35f5b4be2cc1e4507044f036cc1240a19721",
+          "gitBlob": "720c64d6b12dec8e409430c4f4a0d3c76189581c"
+        },
+        "encoding": "utf-8",
+        "method": "full embedded literal UTF-8 body, independently hashed",
+        "crc32": "f7717b67"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged.json",
+        "pin": {
+          "bytes": 1186,
+          "sha256": "588acf2e11d54d94fcab0bedb6886510979902afbfc99ea7499e09312e66cb0f",
+          "gitBlob": "09aa223d52b1872b0c7a5d1035fae7bbda16125b"
+        },
+        "encoding": "utf-8",
+        "method": "full embedded literal UTF-8 body, independently hashed",
+        "crc32": "336ae40f"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.after-retry.png",
+        "pin": {
+          "bytes": 69765,
+          "sha256": "58a54e1fc0a6af3448e7bb827d68b90a8d3ee2259e20fc69c983ff3c8f25b0f3",
+          "gitBlob": "65426bd7f018af969e1255fa7c4761a89c304141"
+        },
+        "encoding": "base64",
+        "method": "full embedded base64 decoded as data, independently hashed; no visual interpretation",
+        "crc32": "f25df315"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.app.log",
+        "pin": {
+          "bytes": 4766,
+          "sha256": "30fb7cbfe1368590cd0834b7a651aaae9f8c4d1e058a27cc766cee203e595ab3",
+          "gitBlob": "d65d3ca24ddd09f58fec6a05b477c544a9c328a7"
+        },
+        "encoding": "utf-8",
+        "method": "full embedded literal UTF-8 body, independently hashed",
+        "crc32": "d4b7bc57"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.before-crash.png",
+        "pin": {
+          "bytes": 79748,
+          "sha256": "20fba95b1c8cbed7d4e3bf4ff8af86276c3741cff3ba792de568d6769fb0296a",
+          "gitBlob": "f3c32ef3dec74e3333484253873551b36506c55f"
+        },
+        "encoding": "base64",
+        "method": "full embedded base64 decoded as data, independently hashed; no visual interpretation",
+        "crc32": "1351c377"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.controller.log",
+        "pin": {
+          "bytes": 52606,
+          "sha256": "9b3f983096164eedca82a8875a57f4ad61cc15546f5660df24cb5fa636a51a91",
+          "gitBlob": "b979e4e96470240da6fe0b89c908f50390e739f5"
+        },
+        "encoding": "utf-8",
+        "method": "full embedded literal UTF-8 body, independently hashed",
+        "crc32": "0a13826c"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.json",
+        "pin": {
+          "bytes": 756857,
+          "sha256": "1f8f22c2c473ea447e04a201e22ee1f81833c455e399db6a1643dcd82b702d00",
+          "gitBlob": "b1e3f7a2367d47fdf1720835821dd27690bbf5e3"
+        },
+        "encoding": "utf-8",
+        "method": "full embedded literal UTF-8 body, independently hashed",
+        "crc32": "e15ca3b1"
+      }
+    ],
+    "memberReadLimit": "Complete embedded member bytes were independently hashed. Binary images were decoded as data only; the root's separate visual record is retained as its own observation, without a new visual claim here. No additional download or ZIP execution.",
+    "canonicalToWindowsSourceJoins": [
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "canonical": {
+          "bytes": 31223,
+          "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+          "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+        },
+        "receiptSha256": "9be5af55b58539523c03194b62ebb68f5b1b5363c8c3994deee833d91fed7499",
+        "derivation": "complete canonical LF body with every LF replaced by CRLF; no trim or final-LF change",
+        "matches": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/process/validateProcessRecords.ts",
+        "canonical": {
+          "bytes": 14676,
+          "sha256": "c6b9ebf49e82a17f55683605c0bc1041d530b6c90da3f2774e8c1e3685d035d1",
+          "gitBlob": "dd1a705e054e5fe7df4addf97aa48bf4d0638444"
+        },
+        "receiptSha256": "c7b72634ea315db732419bfce3c1c792f2b8b0543a11d73c7d638e019cd396b7",
+        "derivation": "complete canonical LF body with every LF replaced by CRLF; no trim or final-LF change",
+        "matches": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+        "canonical": {
+          "bytes": 16591,
+          "sha256": "bd4b8bec56e93cd7c17ec04d5c09b93a8115097af57224d28e954c3f06cdb0c8",
+          "gitBlob": "6d267c1531fd741c4abee8b27ef501f28098d782"
+        },
+        "receiptSha256": "c0db474f6a9b3685986e0686d81e65578b9e8e8cd04ba39686d07adfeefd4096",
+        "derivation": "complete canonical LF body with every LF replaced by CRLF; no trim or final-LF change",
+        "matches": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+        "canonical": {
+          "bytes": 34086,
+          "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f",
+          "gitBlob": "aff6e19ec4cf492841aa667442c1b7d71541c7c5"
+        },
+        "receiptSha256": "2a0220329def98452f70c4429a9a60c41ce0135a33155cbd4ba6a9b9551947fe",
+        "derivation": "complete canonical LF body with every LF replaced by CRLF; no trim or final-LF change",
+        "matches": true
+      }
+    ]
+  },
+  "preservation": {
+    "production": 5020,
+    "cap": 800,
+    "exceptions": 141,
+    "nonDocLeaves": 8799,
+    "workflows": 42,
+    "dependenciesChanged": 0,
+    "broadWorkflowChanges": 0,
+    "deadlineChanges": 0,
+    "assertionsRemoved": 0,
+    "casesRemoved": 0,
+    "oldAttemptsSpentForever": true,
+    "noRealClaudeOrCodex": true,
+    "noMainMergeReadyReleaseStage2": true,
+    "frozenPrs": [
+      1206,
+      1207,
+      1208,
+      1211,
+      1212,
+      1213
+    ],
+    "originalContract": {
+      "windowsCounts": {
+        "mainStarts": 1,
+        "initialRuntimeOpen": 1,
+        "businessInput": 1,
+        "refreshClicks": 1,
+        "retryClicks": 1,
+        "uiStops": 2,
+        "quit": 1
+      },
+      "actualHostSuccessors": 1,
+      "originalRuntimeGenerations": 1,
+      "modelRequests": 0,
+      "modelProbes": 0,
+      "realVendorExecutions": 0,
+      "primaryAndNeighborStopDeadlineMs": 10000,
+      "receiptPollDelayMaximumMs": 25,
+      "wholeNativeUiTestRegistrations": 8,
+      "existingStaticAndFrontendCaseSets": "All existing complete commands and whole case imports remain unchanged; corrected diagnostic test8d12 from542a is preserved.",
+      "allFinalSettlementAssertions": true,
+      "signalAcceptedUnknown": true,
+      "exactCaptureAndDifferentOperationRefs": true,
+      "originalWitnessAbsenceAndWait": true,
+      "neighborAliveAfterPrimary": true,
+      "finitePeerServiceExitExactlyOnce": true,
+      "afterQuitOriginalThreeWitnessExits": true,
+      "sourceAndInputCustody": true,
+      "noScriptOrHarnessSubstitution": true
+    },
+    "currentCatalogKeys": 111,
+    "currentBundles": 27,
+    "catalogBasis": "Accepted preceding actual publication; this R1 selects two source paths and the existing append-only documentation sequence. The future publication manifest is verified at its already-required actual readback.",
+    "selectedSourceBodyPostimages": 0,
+    "sourceCapsQualification": "Static scope preservation only; exact candidate sizes/bytes belong to later source R2.",
+    "workflowBodyException": "One existing workflow receives only two expected-value changes; workflow count and all execution policy bytes remain fixed."
+  },
+  "ci3HistoricalScope": {
+    "pr": 1223,
+    "head": "86f52244b5375834a4040cbc63803d68cc708087",
+    "base": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "refsAndMetadataFrozen": true,
+    "noRerunRetryCancelDispatch": true,
+    "observationAtPlan": 16,
+    "activeRunIds": [
+      44092933873,
+      44092934079,
+      44092933810
+    ],
+    "terminalExcludedForever": [
+      44092933980,
+      44092933718,
+      44092933835,
+      44092933888,
+      44092934051,
+      44092933827,
+      44092933972,
+      44092933912
+    ]
+  },
+  "outsideScope": [
+    "Windows ARM original same-Main Retry phase deadline failure.",
+    "Darwin installer one-CDP-listener assertion failure.",
+    "Claude scheduled-reply target geometry refusal.",
+    "V2-management original default-inheritance loading timeout.",
+    "Windows source readiness latency/currentness failures and Darwin x64 original P09 write exclusion.",
+    "Any unretained artifact body or binary exception; unknown evidence is not PASS."
+  ],
+  "currentEvidenceLimitations": [
+    "The producer permits an intermediate missing-settlement receipt; the original failed receipt was not saved in stops[], so actual transient absence versus a malformed falsy value and eventual settlement remain unknown.",
+    "The first collaboration verifier equality failed; the later initial-probe equality was not reached and is not relabeled as passed.",
+    "Original Windows GUI cleanup=false and INCOMPLETE remain unchanged.",
+    "Current expired delivery records and the prior separate unread vendor TGZ metadata remain unqualified; no retry or binary metadata promotion.",
+    "Other retained Darwin, Claude, V2 management, Windows ARM/readiness and P09 failures remain outside this exact R1."
+  ],
+  "checks": [
+    {
+      "id": "exact-r1-subject",
+      "status": "PASS_STATIC_R1",
+      "detail": "The entire exact 11,958-byte R1 plan is independently read and hashed.",
+      "evidence": {
+        "gitBlob": "203e6dd6e1e124d55339ff890c74d94ce95f1558",
+        "bytes": 11958,
+        "sha256": "e8f489a0c9902a98a77b3ed897ce5ab91e654294ecbfae68c2baea439ec9de6b"
+      }
+    },
+    {
+      "id": "accepted-current-parent",
+      "status": "PASS_STATIC_R1",
+      "detail": "Current parent is the accepted 542a source publication with both actual reports and 57 actual checks.",
+      "evidence": {
+        "actualGate": {
+          "gitBlob": "89160b0e4c7dc552a3d4d65714d77cdeac40f84c",
+          "bytes": 6297,
+          "sha256": "59372bcee2d74d9e40c788b7758df40ea74aa7ccfa24444cb781fa39f3b2a082"
+        },
+        "closedAt": "2026-11-17 15:47:03 UTC",
+        "precedingPublication": {
+          "commit": "542a7109a819087e90c26330771b45c81c123b60",
+          "tree": "e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+          "docsTree": "8ed5c76f4029e20e191e4456a3f9b436df7deb51"
+        },
+        "rootActual": {
+          "bytes": 554249,
+          "sha256": "7e383dcc19929375b1272bf6691f754a018d2f8ff49ae474534c7337f3e45914",
+          "gitBlob": "837c8ad7376d6dbab2fdb38c8160725444bae65d"
+        },
+        "independentActual": {
+          "bytes": 447616,
+          "sha256": "2863575d2694007e4d5e5a650d79753ea0e89584153d3294a966d008a2e84cd6",
+          "gitBlob": "ae8880f423a98c72263de7c652a7c2e897b736a6"
+        },
+        "priorAcceptedCheckCount": 57,
+        "sourceProofAt": "2026-11-17 15:53:06 UTC",
+        "planAuthoredAt": "2026-11-17 15:54:28 UTC",
+        "sourcePostimagesAuthored": false
+      }
+    },
+    {
+      "id": "chronological-authority",
+      "status": "PASS_STATIC_R1",
+      "detail": "Gate closed 15:47:03, source proof at 15:53:06, plan authored 15:54:28; no source candidate is claimed.",
+      "evidence": {}
+    },
+    {
+      "id": "current-root-and-trees",
+      "status": "PASS_STATIC_R1",
+      "detail": "Complete embedded commit/root/.github/tools API bodies join current accepted root; current scripts and packages subtrees are reused by exact root identity.",
+      "evidence": [
+        {
+          "key": "parentCommit",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/542a7109a819087e90c26330771b45c81c123b60",
+          "pin": {
+            "bytes": 1169,
+            "sha256": "30d81249222b6a40f22f15d4117c0b95e950ac3d1c2a1bb601121a95c3f13ad9",
+            "gitBlob": "643f720b47781fb0d56ee61cc854b1a56bf9aee4"
+          }
+        },
+        {
+          "key": "parentRoot",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e99f1e2d9fee78c876f43ff4fa9d68e2a20a31bf",
+          "pin": {
+            "bytes": 12410,
+            "sha256": "7799036c6b2ca1bbbf94d851a5a7a245644077363060922626674b9c3e130cbb",
+            "gitBlob": "e87a53facc3f241ac022ad39efc9ee51bfb70778"
+          }
+        },
+        {
+          "key": ".githubRecursive",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/d95091ab0edb488d6e418ffa789d0f07c447ecda?recursive=1",
+          "pin": {
+            "bytes": 13802,
+            "sha256": "e772a1649a656d4e9f74848d8fbe67afe2d3f19b8edac8827eb2c22179fa106b",
+            "gitBlob": "b7e2e208b1c55ef59c5ff8d5d20cda8f33d69a34"
+          }
+        },
+        {
+          "key": "toolsRecursive",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/7360460b475db2e174c65f5ba0eeb075f06622b1?recursive=1",
+          "pin": {
+            "bytes": 14873,
+            "sha256": "4e67a3e0246b9e8fd25706218f862534bb4497d51f293cd3dd7a7a2eae87da4f",
+            "gitBlob": "0000cc1a7a6c73b8271bc11dd4995d26f064d1d5"
+          }
+        }
+      ]
+    },
+    {
+      "id": "six-complete-source-bodies",
+      "status": "PASS_STATIC_R1",
+      "detail": "Six whole source bodies total 222,891 bytes and join exact immutable current tree leaves.",
+      "evidence": {}
+    },
+    {
+      "id": "two-preimages",
+      "status": "PASS_STATIC_R1",
+      "detail": "The two selected existing preimages total 128,095 bytes; modes remain 100644.",
+      "evidence": [
+        {
+          "path": ".github/workflows/host-emulated-acceptance.yml",
+          "pin": {
+            "bytes": 96872,
+            "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+            "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+          },
+          "physicalLines": 1248
+        },
+        {
+          "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+          "pin": {
+            "bytes": 31223,
+            "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+            "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+          },
+          "physicalLines": 485
+        }
+      ]
+    },
+    {
+      "id": "exact-two-path-scope",
+      "status": "PASS_STATIC_R1",
+      "detail": "Only one existing workflow assertion body and one existing fixture polling boundary may change.",
+      "evidence": {}
+    },
+    {
+      "id": "exact-workflow-sites",
+      "status": "PASS_STATIC_R1",
+      "detail": "Exactly two existing sonnet literals occur in the complete selected workflow, at the exact planned lines.",
+      "evidence": [
+        {
+          "line": 729,
+          "text": "                ['anthropic', 'sonnet'], ['codex', 'TEST-model'], ['test-provider', 'TEST-model'], ['test-provider', 'TEST-model'],"
+        },
+        {
+          "line": 764,
+          "text": "                [['anthropic', 'sonnet', 'low'], ['codex', 'TEST-model', undefined]]);"
+        }
+      ]
+    },
+    {
+      "id": "model-source-join",
+      "status": "PASS_STATIC_R1",
+      "detail": "Current saved settings, runtime/provider templates and savedModel use the same finite Claude model; low effort remains unchanged.",
+      "evidence": {}
+    },
+    {
+      "id": "actual-versus-unreached-verifier",
+      "status": "PASS_STATIC_R1",
+      "detail": "Complete original log proves the first four-pair equality failed; later initial-probe equality is source-supported but was unreached.",
+      "evidence": {}
+    },
+    {
+      "id": "whole-tuple-oracles",
+      "status": "PASS_STATIC_R1",
+      "detail": "Plan preserves complete array equality, provider identities, counts, sorting and effort values, changing only the two expected model strings.",
+      "evidence": {}
+    },
+    {
+      "id": "workflow-policy-preservation",
+      "status": "PASS_STATIC_R1",
+      "detail": "The selected exception is only two expected values; workflow count stays 42 and scheduling, commands, permissions, budgets, matrices and artifacts remain outside modification scope.",
+      "evidence": {}
+    },
+    {
+      "id": "old-stop-boundary",
+      "status": "PASS_STATIC_R1",
+      "detail": "Old polling exits on completed observed absence before the final settlement-intent assertion.",
+      "evidence": {}
+    },
+    {
+      "id": "two-durable-producer-stages",
+      "status": "PASS_STATIC_R1",
+      "detail": "Unchanged producer durably publishes completed absence before it persists the settle intent; the source permits an intermediate missing field.",
+      "evidence": {
+        "completedPersistence": [
+          225,
+          228
+        ],
+        "settlementIntentPersistence": [
+          248,
+          251
+        ]
+      }
+    },
+    {
+      "id": "whole-validator-before-selection",
+      "status": "PASS_STATIC_R1",
+      "detail": "Every candidate is validated before exact terminate/processRef selection and the existing at-most-one assertion.",
+      "evidence": {}
+    },
+    {
+      "id": "validator-selected-binding",
+      "status": "PASS_STATIC_R1",
+      "detail": "Unchanged validator joins stop command, source/capture and original capture; the planned immediate selected guards preserve the concrete human/capture/original-id authority.",
+      "evidence": {}
+    },
+    {
+      "id": "strict-missing-only",
+      "status": "PASS_STATIC_R1",
+      "detail": "Only strictly undefined nativeSettlement becomes pending; a present null or false value reaches unchanged failure assertions, and truthy malformed values remain validator failures.",
+      "evidence": {}
+    },
+    {
+      "id": "three-immediate-selected-guards",
+      "status": "PASS_STATIC_R1",
+      "detail": "Missing-settlement candidates must immediately pass the same equality kinds for human principal, full capture and original selected id.",
+      "evidence": {}
+    },
+    {
+      "id": "invalid-flags-still-refused",
+      "status": "PASS_STATIC_R1",
+      "detail": "Existing validator refuses unsupported settlement flags without a truthy settlement; missing settlement is not a route around those checks.",
+      "evidence": {}
+    },
+    {
+      "id": "other-states-remain-refused",
+      "status": "PASS_STATIC_R1",
+      "detail": "Outside completed observed-absent handling, only absent/prepared/held candidates retain existing polling eligibility.",
+      "evidence": {}
+    },
+    {
+      "id": "original-cutoff",
+      "status": "PASS_STATIC_R1",
+      "detail": "All reads remain within the original Stop deadline and existing <=25ms delay; no clock reset, new await site, external request or mutation retry is selected.",
+      "evidence": {}
+    },
+    {
+      "id": "final-settlement-oracle-verbatim",
+      "status": "PASS_STATIC_R1",
+      "detail": "Entire original post-loop assertion and custody block remains verbatim, including settle operation, distinct operation refs, not-dispatched absence, exact result and signalAccepted unknown.",
+      "evidence": {
+        "originalSourcePath": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "sourcePin": {
+          "bytes": 31223,
+          "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+          "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+        },
+        "protectedLines": [
+          429,
+          478
+        ]
+      }
+    },
+    {
+      "id": "witness-neighbor-and-quit-preserved",
+      "status": "PASS_STATIC_R1",
+      "detail": "Selected witness observe/wait, neighbor liveness, finite-peer service exit exactly once, pinned runtime/input custody and original three witness exits stay required.",
+      "evidence": {}
+    },
+    {
+      "id": "failed-run-remains-failed",
+      "status": "PASS_STATIC_R1",
+      "detail": "Original Windows capture shows first Stop settlement assertion failure, empty stops[] and cleanup false; it does not distinguish transient missing from malformed falsy value or prove later settlement.",
+      "evidence": {}
+    },
+    {
+      "id": "complete-capture-members",
+      "status": "PASS_STATIC_R1",
+      "detail": "All nine original Windows capture members have complete embedded byte identities joined; seven UTF-8 and two base64 image bodies. No new screenshot visual judgment or ZIP execution is claimed.",
+      "evidence": {}
+    },
+    {
+      "id": "windows-source-custody",
+      "status": "PASS_STATIC_R1",
+      "detail": "Four selected receipt source hashes equal complete canonical source bodies converted LF→CRLF, including the fixture and validator.",
+      "evidence": {}
+    },
+    {
+      "id": "no-extra-actions",
+      "status": "PASS_STATIC_R1",
+      "detail": "Original one Retry, two Stops, one Main/Runtime generation, one business input and one Quit remain the whole intended flow; no added native or provider operation is selected.",
+      "evidence": {}
+    },
+    {
+      "id": "native-tests-preserved",
+      "status": "PASS_STATIC_R1",
+      "detail": "Current complete native UI test body is unchanged and has the original eight registrations; no surrogate/new test file or removed case is selected.",
+      "evidence": {
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+        "pin": {
+          "bytes": 50377,
+          "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+          "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+        },
+        "method": "accepted complete immutable source body at unchanged current scripts tree; regex registration census only, no execution",
+        "titles": [
+          "post-Stop observer continues past stale original and pending alternate to fresh stopped props",
+          "initial original-ref observation remains exact and cannot select a replacement ref",
+          "background acceptance waits for atomic service publication without masking corrupt readiness",
+          "captured no-provider Processes fixture rejects mixed inputs before allocating and seeds no Runtime",
+          "Windows outage membership requires both original process owners in one renderer sample",
+          "Windows Retry retains same-evaluation operands without changing the original wait",
+          "Windows primary failure is emitted once before cleanup without replacing the original error",
+          "Windows final Retry requires both complete original rows in one current sample"
+        ]
+      }
+    },
+    {
+      "id": "other-case-sets-and-product-preserved",
+      "status": "PASS_STATIC_R1",
+      "detail": "Accepted source census/caps remain fixed; whole existing 149/catalog43/runtime85 and corrected diagnostic 8d12 source lie outside both selected paths. This is plan preservation, not a new runtime count.",
+      "evidence": {}
+    },
+    {
+      "id": "unrelated-failures-stay-open",
+      "status": "PASS_STATIC_R1",
+      "detail": "Darwin CDP, Claude click, V2 management, Windows ARM/other readiness and P09 failures are explicitly outside this repair.",
+      "evidence": {}
+    },
+    {
+      "id": "unread-artifacts-not-promoted",
+      "status": "PASS_STATIC_R1",
+      "detail": "Expired delivery evidence remains zero-byte/unread; no unavailable original artifact or prior binary exception is promoted to PASS.",
+      "evidence": {}
+    },
+    {
+      "id": "existing-ordered-process",
+      "status": "PASS_STATIC_R1",
+      "detail": "Exact R1 review → docs publication/immediate push/actual readbacks → selected source R2 review/publication/actual readbacks remains the existing sequence; future fixed CI is separately admitted only afterward.",
+      "evidence": {}
+    },
+    {
+      "id": "noncircular-future-identity",
+      "status": "PASS_STATIC_R1",
+      "detail": "Current known 542a authority is explicit; no unborn publication SHA or future run id is substituted. Actual R1 publication identities become available at the already-required readback stage.",
+      "evidence": {}
+    },
+    {
+      "id": "frozen-ci-and-spent-attempts",
+      "status": "PASS_STATIC_R1",
+      "detail": "Existing CI3 head86f/base9d and terminal exclusions remain historical/frozen; this review performs no live read or mutation and authorizes no real vendor CLI.",
+      "evidence": {}
+    },
+    {
+      "id": "root-full-report-join",
+      "status": "PASS_STATIC_R1",
+      "detail": "Complete exact root R1 report and all 26 current findings join the same subject, scope and limitations.",
+      "evidence": {
+        "pin": {
+          "gitBlob": "f7ffcb2d1b77071a75c013e20925f89b568854c3",
+          "bytes": 26898,
+          "sha256": "c74f05bfd3bded42755d6e815562f353413f0e867e5a894f5f74ec594e340941"
+        },
+        "subject": {
+          "bytes": 11958,
+          "sha256": "e8f489a0c9902a98a77b3ed897ce5ab91e654294ecbfae68c2baea439ec9de6b",
+          "gitBlob": "203e6dd6e1e124d55339ff890c74d94ce95f1558"
+        },
+        "checkCount": 26,
+        "accepted": true,
+        "failedChecks": [],
+        "unresolvedBlockers": [],
+        "fullBodyRead": true
+      }
+    },
+    {
+      "id": "no-source-or-runtime-claim",
+      "status": "PASS_STATIC_R1",
+      "detail": "Static R1 acceptance only; no target source candidate, target evaluation/compile, local runtime, new CI venue or GREEN claim.",
+      "evidence": {}
+    }
+  ],
+  "checkCount": 36,
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "unresolvedBlockers": [],
+  "readMethod": {
+    "directFreshBodies": 14,
+    "directAcceptedFullBodyReuse": 6,
+    "completeIdentityRechecks": true,
+    "additionalNativeTestReusedByExactCompleteBody": true,
+    "noRecursiveHistoricalReaudit": true,
+    "noMetadataOnlyTextSubstitute": true
+  },
+  "nextExistingSequence": {
+    "currentPhase": "R1 plan only; no source candidate or target execution",
+    "fourReviews": "Root plus independent guard, semantic and binding reviews of this exact plan",
+    "publication": "R1 docs only, immediate push; existing root/independent actual readbacks; then author only selected source R2 and its four reviews, publish/push/actual readbacks.",
+    "execution": "After actual source R2 acceptance, existing separate GitHub-only CI admission for a new fixed source; no local execution or executable control R2 is selected.",
+    "newExtraGate": false
+  },
+  "qualification": {
+    "R1StaticAccepted": true,
+    "sourceCandidateAuthored": false,
+    "sourcePublished": false,
+    "targetEvaluatedOrCompiled": false,
+    "localExecution": false,
+    "actualGreen": false,
+    "wholeE2E": false,
+    "newCiVenueSelected": false,
+    "additionalGateIntroduced": false
+  },
+  "actions": {
+    "immutableGitReads": true,
+    "pureInMemoryDataChecks": true,
+    "bareReviewBlobOnly": true,
+    "sourceOrControlAuthorship": false,
+    "filesystemOrShellAccess": false,
+    "targetRuntime": false,
+    "liveCiOrPrOrRefReads": false,
+    "sourceRefPrCiMutations": false
+  },
+  "selfReadbackProtocol": "Pin sent immediately after bare Git retention; complete fresh literal/hash/schema/subject/count self-read follows in a separate read. No self-referential report identity is inserted."
+}
