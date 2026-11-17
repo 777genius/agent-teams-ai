@@ -258,6 +258,7 @@ describe('HTTP team route parsers', () => {
 
     expect(request).toMatchObject({
       teamName: 'draft-team',
+      projectContextMode: 'shared',
       displayName: 'Draft Team',
       description: 'Saved draft',
       color: '#3366ff',
@@ -279,6 +280,12 @@ describe('HTTP team route parsers', () => {
       parseDraftLaunchCreateRequest({ ...savedRequest, allowExperimentalLocalModels: true }, {})
         .allowExperimentalLocalModels
     ).toBeUndefined();
+    expect(parseDraftLaunchCreateRequest({
+      ...savedRequest, projectContextMode: 'per_project',
+    }, {}).projectContextMode).toBe('per_project');
+    expect(parseDraftLaunchCreateRequest({
+      ...savedRequest, projectContextMode: 'shared',
+    }, { projectContextMode: 'per_project' }).projectContextMode).toBe('shared');
 
     expectBadRequest(
       () =>

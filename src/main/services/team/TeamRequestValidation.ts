@@ -499,6 +499,9 @@ export function parseDraftLaunchCreateRequest(
 
   return {
     teamName,
+    // An HTTP draft is an existing persisted team, never a new create request.
+    // Missing legacy mode remains shared and overrides cannot silently migrate it.
+    projectContextMode: savedRequest.projectContextMode ?? 'shared',
     runtimeSelectionVersion: normalizeRuntimeSelectionVersion(savedRequest.runtimeSelectionVersion),
     displayName: savedRequest.displayName,
     description: savedRequest.description,
