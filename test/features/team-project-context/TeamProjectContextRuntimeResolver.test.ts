@@ -14,7 +14,10 @@ const record: PersistedTeamWorkContext = {
 };
 
 function fixture(meta: TeamMetaFile | null, found: PersistedTeamWorkContext | null) {
-  const reader = { getMeta: vi.fn(async () => meta) };
+  const reader = {
+    getMeta: vi.fn(async () => meta),
+    metadataFileExists: vi.fn(async () => false),
+  };
   const registry = {
     find: vi.fn(async () => found),
     reserve: vi.fn(async () => ({ ...record, state: 'reserved' as const })),
@@ -35,6 +38,17 @@ describe('TeamProjectContextRuntimeResolver', () => {
     });
     expect(f.registry.find).not.toHaveBeenCalled();
     expect(f.registry.reserve).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unreadable persisted file rather than silently treating it as shared', async () => {
+    const unreadable = fixture(null, null);
+    const reader = {
+      getMeta: vi.fn(async () => null),
+      metadataFileExists: vi.fn(async () => true),
+    };
+    const resolver = new TeamProjectContextRuntimeResolver(reader, unreadable.registry);
+    await expect(resolver.forRead({ logicalTeamName: 'opaque-team' }))
+      .rejects.toThrow('refusing shared-history fallback');
   });
 
   it('never creates a context during a read-only team selection', async () => {

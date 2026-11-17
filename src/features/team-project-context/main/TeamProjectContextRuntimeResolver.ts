@@ -23,6 +23,7 @@ export interface ResolvedTeamWorkContext {
 
 interface TeamMetaReader {
   getMeta(teamName: string): Promise<TeamMetaFile | null>;
+  metadataFileExists(teamName: string): Promise<boolean>;
 }
 
 type ContextRegistry = Pick<TeamProjectContextRegistry, 'find' | 'reserve' | 'confirmReady' | 'releaseUnusedReservation'>;
@@ -50,6 +51,9 @@ export class TeamProjectContextRuntimeResolver {
 
   private async getMode(teamName: string): Promise<TeamProjectContextMode> {
     const meta = await this.metaReader.getMeta(teamName);
+    if (meta === null && await this.metaReader.metadataFileExists(teamName)) {
+      throw new Error('Team metadata is unreadable; refusing shared-history fallback');
+    }
     return parsePersistedTeamProjectContextMode(
       meta?.projectContextMode,
       meta !== null && Object.hasOwn(meta, 'projectContextMode')

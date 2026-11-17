@@ -167,6 +167,20 @@ async function assertExistingMetadataWasReadable(metaPath: string, current: Team
 }
 
 export class TeamMetaStore {
+  /** Fail closed when a persisted metadata file exists but cannot be parsed. */
+  async metadataFileExists(
+    teamName: string,
+    teamsBasePath = getTeamsBasePath()
+  ): Promise<boolean> {
+    try {
+      await fs.promises.lstat(this.getMetaPath(teamName, teamsBasePath));
+      return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+      throw error;
+    }
+  }
+
   private getMetaPath(teamName: string, teamsBasePath = getTeamsBasePath()): string {
     return path.join(teamsBasePath, teamName, 'team.meta.json');
   }

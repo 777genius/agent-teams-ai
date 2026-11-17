@@ -10,6 +10,7 @@ import {
   resolveThisAppProfileScope,
 } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import * as path from 'node:path';
 
 import type { TeamDataService } from '@main/services/team/TeamDataService';
@@ -43,7 +44,7 @@ export async function createTeamWithProjectContext(
     return ports.start.createTeam(request, onProgress);
   }
   const registry = TeamProjectContextRegistry.fromCurrentApp();
-  const resolver = new TeamProjectContextRuntimeResolver(ports.data, registry);
+  const resolver = new TeamProjectContextRuntimeResolver(new TeamMetaStore(), registry);
   const materializer = new TeamProjectContextDraftMaterializer(resolver, {
     getSavedRequest: (teamName) => ports.data.getSavedRequest(teamName),
     createTeamConfig: (config) => ports.data.createTeamConfig(config),
