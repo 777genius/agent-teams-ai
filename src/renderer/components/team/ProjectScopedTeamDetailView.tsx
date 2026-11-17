@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
@@ -73,24 +73,48 @@ export function ProjectScopedTeamDetailView({
   );
   const key = `${teamName}\u0000${selectedProjectPath ?? ''}`;
   const [result, setResult] = useState<ViewResult | null>(null);
-  const [launching, setLaunching] = useState(false);
+  const [launchingKey, setLaunchingKey] = useState<string | null>(null);
   const [awaitingReadyKey, setAwaitingReadyKey] = useState<string | null>(null);
+  const activeKeyRef = useRef(key);
+  activeKeyRef.current = key;
+  const launchRef = useRef<{ key: string; runId: string | null } | null>(null);
+  const launching = launchingKey === key;
 
   const refresh = useCallback(async (isCurrent: () => boolean): Promise<void> => {
     try {
       const context = await api.teams.getProjectContextView(teamName, selectedProjectPath);
-      if (isCurrent()) {
+      if (isCurrent() && activeKeyRef.current === key) {
         setResult({ key, context });
         if (context.state === 'ready') {
           setAwaitingReadyKey((current) => current === key ? null : current);
         }
       }
     } catch (error) {
-      if (isCurrent()) {
+      if (isCurrent() && activeKeyRef.current === key) {
         setResult({ key, error: error instanceof Error ? error.message : String(error) });
       }
     }
   }, [key, selectedProjectPath, teamName]);
+
+  useEffect(() =>
+    api.teams.onProvisioningProgress((_event, progress) => {
+      const launch = launchRef.current;
+      if (!launch || launch.key !== activeKeyRef.current) return;
+      if (progress.teamName !== teamName) return;
+      if (launch.runId && launch.runId !== progress.runId) return;
+      if (progress.state === 'failed' || progress.state === 'cancelled' ||
+          progress.state === 'disconnected') {
+        setAwaitingReadyKey((current) => current === launch.key ? null : current);
+        setResult({
+          key: launch.key,
+          error: progress.error || progress.message || 'Team provisioning failed',
+        });
+        launchRef.current = null;
+      }
+      if (progress.state === 'ready') {
+        void refresh(() => activeKeyRef.current === launch.key);
+      }
+    }), [teamName, refresh]);
 
   const state = result?.key === key ? result.context?.state : undefined;
   useEffect(() => {
@@ -102,9 +126,25 @@ export function ProjectScopedTeamDetailView({
     const timer = shouldPoll
       ? setInterval(() => { void refresh(() => alive); }, POLL_INTERVAL_MS)
       : null;
+    // Native provisioning may be interrupted without a final progress event.
+    // Allow explicit retry after the bounded wait; runtime admission still
+    // refuses a parallel process or an unowned/incomplete physical context.
+    const timeout = awaitingReadyKey === key
+      ? setTimeout(() => {
+          if (alive && activeKeyRef.current === key) {
+            setAwaitingReadyKey((current) => current === key ? null : current);
+            launchRef.current = null;
+            setResult({
+              key,
+              error: 'Project provisioning has not completed. Check the team status and retry.',
+            });
+          }
+        }, 120_000)
+      : null;
     return () => {
       alive = false;
       if (timer !== null) clearInterval(timer);
+      if (timeout !== null) clearTimeout(timeout);
     };
   }, [isActive, state, awaitingReadyKey, key, refresh]);
 
@@ -112,22 +152,27 @@ export function ProjectScopedTeamDetailView({
   const error = result?.key === key ? result.error : undefined;
 
   const start = useCallback(async (): Promise<void> => {
-    if (!selectedProjectPath || launching) return;
-    setLaunching(true);
+    if (!selectedProjectPath || launchingKey !== null) return;
+    setLaunchingKey(key);
     setAwaitingReadyKey(key);
+    launchRef.current = { key, runId: null };
     try {
-      await api.teams.launchTeam({ teamName, cwd: selectedProjectPath });
-      await refresh(() => true);
+      const outcome = await api.teams.launchTeam({ teamName, cwd: selectedProjectPath });
+      if (launchRef.current?.key === key) launchRef.current.runId = outcome.runId;
+      await refresh(() => activeKeyRef.current === key);
     } catch (reason) {
-      setAwaitingReadyKey(null);
-      setResult({
-        key,
-        error: reason instanceof Error ? reason.message : String(reason),
-      });
+      if (activeKeyRef.current === key) {
+        setAwaitingReadyKey((current) => current === key ? null : current);
+        setResult({
+          key,
+          error: reason instanceof Error ? reason.message : String(reason),
+        });
+      }
+      if (launchRef.current?.key === key) launchRef.current = null;
     } finally {
-      setLaunching(false);
+      setLaunchingKey((current) => current === key ? null : current);
     }
-  }, [key, launching, refresh, selectedProjectPath, teamName]);
+  }, [key, launchingKey, refresh, selectedProjectPath, teamName]);
 
   if (context?.state === 'ready') {
     if (context.mode === 'shared') {
@@ -160,7 +205,7 @@ export function ProjectScopedTeamDetailView({
 
   const canStart =
     Boolean(selectedProjectPath) &&
-    !launching &&
+    launchingKey === null &&
     awaitingReadyKey !== key &&
     !error &&
     (context?.state === 'empty' || context?.state === 'pending');
@@ -177,7 +222,7 @@ export function ProjectScopedTeamDetailView({
         </Button>
       )}
       {error && (
-        <Button variant="outline" onClick={() => { void refresh(() => true); }}>
+        <Button variant="outline" onClick={() => { void refresh(() => activeKeyRef.current === key); }}>
           {t('projectContextView.retry')}
         </Button>
       )}
