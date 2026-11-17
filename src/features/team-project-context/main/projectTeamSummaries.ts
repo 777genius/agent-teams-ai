@@ -7,7 +7,7 @@ interface MetaReader {
   getMeta(teamName: string): Promise<TeamMetaFile | null>;
 }
 
-type RegistryReader = Pick<TeamProjectContextRegistry, 'list'>;
+type RegistryReader = Pick<TeamProjectContextRegistry, 'list' | 'listRetained'>;
 
 const READ_BATCH = 8;
 
@@ -35,13 +35,18 @@ export async function projectTeamSummaries(
         projected[position] = team;
         return;
       }
-      if (saved?.projectContextMode !== 'per_project') {
+      if (!saved) {
         projected[position] = team;
         return;
       }
-      projected[position] = { ...team, projectContextMode: 'per_project' };
+      const mode = saved.projectContextMode ?? 'shared';
+      projected[position] = { ...team, projectContextMode: mode };
       try {
-        const contexts = await registry.list(team.teamName);
+        // The selected mode controls future writes, not historical ownership.
+        // Retained native aliases must remain folded after switching to shared.
+        const contexts = mode === 'per_project'
+          ? await registry.list(team.teamName)
+          : await registry.listRetained(team.teamName);
         const ownedReady = contexts.filter((context) => context.state === 'ready');
         for (const context of ownedReady) {
           // list() proves ownership for ready aliases. A prefix or reserved
@@ -58,7 +63,7 @@ export async function projectTeamSummaries(
             .sort((left, right) => Date.parse(right) - Date.parse(left))[0] ?? null;
           projected[position] = {
             ...team,
-            projectContextMode: 'per_project',
+            projectContextMode: mode,
             // A valid native context means this is no longer just an unlaunched
             // metadata-only draft, even though the logical team has no config.json.
             pendingCreate: false,

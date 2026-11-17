@@ -21,7 +21,7 @@ function fixture() {
   const meta = { getMeta: vi.fn(async (name: string) => name === 'builders'
     ? { version: 1 as const, cwd: '/sandbox/a', createdAt: 1, projectContextMode: 'per_project' as const }
     : null) };
-  const registry = { list: vi.fn(async () => [ctx]) };
+  const registry = { list: vi.fn(async () => [ctx]), listRetained: vi.fn(async () => [ctx]) };
   return { meta, registry };
 }
 
@@ -33,6 +33,17 @@ describe('projectTeamSummaries', () => {
     expect(visible[0]?.projectContextMode).toBe('per_project');
     expect(visible[0]?.pendingCreate).toBe(false);
     expect(visible[0]?.taskCount).toBe(3);
+  });
+
+  it('keeps owned historical native aliases hidden after switching to shared mode', async () => {
+    const f = fixture();
+    f.meta.getMeta.mockImplementation(async (name: string) => name === 'builders'
+      ? { version: 1 as const, cwd: '/sandbox/a', createdAt: 1, projectContextMode: 'shared' as const }
+      : null);
+    const visible = await projectTeamSummaries(teams, f.meta, f.registry);
+    expect(visible.map((v) => v.teamName)).toEqual(['builders', 'ptc-foreign', 'old-team']);
+    expect(visible[0]?.projectContextMode).toBe('shared');
+    expect(f.registry.listRetained).toHaveBeenCalledWith('builders');
   });
 
   it('does not trust a pending reservation as authority to hide a physical team', async () => {
