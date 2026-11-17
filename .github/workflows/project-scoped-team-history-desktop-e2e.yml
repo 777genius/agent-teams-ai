@@ -30,13 +30,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: project-team-history-${{ github.event_name }-${{ github.event.pull_request.number || github.ref }
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }
+  group: project-team-history-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   desktop-history:
-    name: Team history A-B-A (${{ matrix.os })
-    runs-on: ${{ matrix.os }
+    name: Team history A-B-A (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     strategy:
       fail-fast: false
@@ -47,7 +47,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Enable Windows long paths
         if: runner.os == 'Windows'
@@ -70,12 +70,12 @@ jobs:
       - name: Stage pinned terminal runtime on Windows
         if: runner.os == 'Windows'
         env:
-          GH_TOKEN: ${{ github.token }
+          GH_TOKEN: ${{ github.token }}
         run: node ./scripts/ensure-terminal-platform-runtime.mjs
       - name: Exercise real desktop project history isolation
         shell: bash
         env:
-          PROJECT_TEAM_E2E_ARTIFACT_DIR: ${{ runner.temp }/project-team-history-evidence
+          PROJECT_TEAM_E2E_ARTIFACT_DIR: ${{ runner.temp }}/project-team-history-evidence
         run: |
           if [[ "$RUNNER_OS" == "Linux" ]]; then
             xvfb-run -a pnpm exec tsx scripts/e2e/project-scoped-team-history-desktop.ts
@@ -86,9 +86,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: project-team-history-${{ matrix.os }-${{ github.event.pull_request.head.sha || github.sha }
+          name: project-team-history-${{ matrix.os }}-${{ github.event.pull_request.head.sha || github.sha }}
           retention-days: 14
           if-no-files-found: warn
           path: |
-            ${{ runner.temp }/project-team-history-evidence/*.png
-            ${{ runner.temp }/project-team-history-evidence/*.json
+            ${{ runner.temp }}/project-team-history-evidence/*.png
+            ${{ runner.temp }}/project-team-history-evidence/*.json

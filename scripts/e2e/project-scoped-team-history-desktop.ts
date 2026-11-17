@@ -330,8 +330,13 @@ async function run() {
       'Read-only project navigation mutated durable context mapping');
     await verifyUi(f);
     // Even in CI, never launch an actual provider or substitute test credentials.
-    const audit = (await readFile(f.audit, 'utf8')).trim().split('\n').filter(Boolean);
-    assert.equal(audit.length, 0, 'Unexpected native model/provider lifecycle call');
+    const audit = (await readFile(f.audit, 'utf8')).trim().split('\n').filter(Boolean)
+      .map((line) => JSON.parse(line) as string[]);
+    // Startup probes may query runtime read-only capabilities; any provider or
+    // team launch command is forbidden by the synthetic runtime fixture.
+    assert(audit.every((args) =>
+      args[0] === 'runtime' && ['status', 'providers', 'opencode-command'].includes(args[1])
+    ), 'Unexpected native model/provider lifecycle call');
     success = true;
     console.log(JSON.stringify({
       ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload',
