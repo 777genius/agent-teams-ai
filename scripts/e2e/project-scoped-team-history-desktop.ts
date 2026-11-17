@@ -373,9 +373,19 @@ async function verifyRetainedSharedAfterProjectIsolation(f: Fixture) {
   // addressable after the user opts into per-project isolation.
   await json(path.join(teamDir, 'config.json'), {
     name: f.logical, createdAt: joinedAt, projectPath: f.projectA,
+    projectPathHistory: [f.projectA],
+    leadAgentId: 'lead@' + f.logical,
     leadSessionId: 'lead-legacy-shared', members: [
-      { name: 'lead', role: 'Lead', agentType: 'team-lead', joinedAt },
-      { name: 'alice', role: 'Developer', agentType: 'general-purpose', joinedAt },
+      {
+        name: 'lead', agentId: 'lead@' + f.logical, agentType: 'team-lead',
+        role: 'Lead', providerId: 'opencode', providerBackendId: 'opencode-cli',
+        model: 'test-model', joinedAt, cwd: f.projectA,
+      },
+      {
+        name: 'alice', agentId: 'alice@' + f.logical, agentType: 'developer',
+        role: 'Developer', providerId: 'opencode', providerBackendId: 'opencode-cli',
+        model: 'test-model', joinedAt, cwd: f.projectA,
+      },
     ],
   });
   await json(path.join(f.claudeRoot, 'tasks', f.logical, '1.json'), {
