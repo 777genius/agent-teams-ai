@@ -2,7 +2,9 @@ import type { PersistedTeamWorkContext } from './TeamProjectContextRegistry';
 import type { TeamRuntimeState } from '@shared/types';
 
 type ContextRegistry = {
-  list(logicalTeamName: string): Promise<readonly PersistedTeamWorkContext[]>;
+  list(logicalTeamName: string): Promise<readonly Pick<
+    PersistedTeamWorkContext, 'executionTeamName' | 'state'
+  >[]>;
 };
 
 type RuntimeStateReader = {
