@@ -151,13 +151,14 @@ export function ProjectScopedTeamDetailView({
 
   const context = result?.key === key ? result.context : undefined;
   const error = result?.key === key ? result.error : undefined;
-  const redirect = context?.state === 'redirect' ? context : null;
+  const redirectTeam = context?.state === 'redirect' ? context.logicalTeamName : null;
+  const redirectProject = context?.state === 'redirect' ? context.projectPath : null;
   useEffect(() => {
-    if (!isActive || !redirect) return;
+    if (!isActive || !redirectTeam || !redirectProject) return;
     // A deep link may still use the physical alias. Navigate through its
     // verified owner; never mount the alias as an independent team editor.
-    useStore.getState().openTeamTab(redirect.logicalTeamName, redirect.projectPath);
-  }, [isActive, redirect?.logicalTeamName, redirect?.projectPath]);
+    useStore.getState().openTeamTab(redirectTeam, redirectProject);
+  }, [isActive, redirectTeam, redirectProject]);
 
   const start = useCallback(async (): Promise<void> => {
     if (!selectedProjectPath || launchingKey !== null) return;
