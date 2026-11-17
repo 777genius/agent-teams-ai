@@ -58,8 +58,10 @@ describe('TeamProjectContextRegistry', () => {
       .rejects.toThrow('permanent deletion is in progress');
     await expect(f.registry.reserve('logical-team', f.workspaceA))
       .rejects.toThrow('permanent deletion is in progress');
-    expect(await f.registry.listRetained('logical-team')).toEqual([first]);
+    await expect(f.registry.listRetained('logical-team'))
+      .rejects.toThrow('permanent deletion is in progress');
     await f.registry.cancelPermanentDeletion('logical-team');
+    expect(await f.registry.listRetained('logical-team')).toEqual([first]);
     const other = await f.registry.reserve('logical-team', f.workspaceB);
     expect(other.id).not.toBe(first.id);
   });

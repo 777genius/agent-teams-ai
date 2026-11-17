@@ -236,7 +236,11 @@ export class TeamProjectContextRegistry {
    */
   async list(logicalTeamName: string): Promise<readonly PersistedTeamWorkContext[]> {
     await this.assertOwnedDirectory(logicalTeamName);
-    const { contexts } = await this.readIndex(logicalTeamName);
+    const index = await this.readIndex(logicalTeamName);
+    if (index.deleting) {
+      throw new TeamProjectContextUnavailableError('Team permanent deletion is in progress');
+    }
+    const { contexts } = index;
     for (const row of contexts) {
       // Reservations are visible to lifecycle admission but are not readable
       // native histories. Do not suppress the logical team while a launch
@@ -259,6 +263,9 @@ export class TeamProjectContextRegistry {
     await this.assertOwnedDirectory(logicalTeamName);
     const projectKey = await canonicalProjectPath(projectPath);
     const index = await this.readIndex(logicalTeamName);
+    if (index.deleting) {
+      throw new TeamProjectContextUnavailableError('Team permanent deletion is in progress');
+    }
     const row = index.contexts.find((context) => context.projectKey === projectKey);
     if (row?.state === 'ready') await this.assertOwnedDirectory(row.executionTeamName);
     return row ?? null;
