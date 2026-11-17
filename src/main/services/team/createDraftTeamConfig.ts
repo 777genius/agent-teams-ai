@@ -1,3 +1,4 @@
+import { parseNewTeamProjectContextMode } from '@features/team-project-context/core';
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
@@ -61,6 +62,7 @@ export async function createDraftTeamConfig(
     // config.json is CLI territory — created by TeamCreate during provisioning.
     // team.meta.json preserves user's configuration for the Launch flow.
     const metadata: Omit<TeamMetaFile, 'version'> = {
+      projectContextMode: parseNewTeamProjectContextMode(request.projectContextMode),
       runtimeSelectionVersion: request.runtimeSelectionVersion,
       displayName: request.displayName,
       description: request.description,

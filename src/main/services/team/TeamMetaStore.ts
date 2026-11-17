@@ -1,3 +1,4 @@
+import { parsePersistedTeamProjectContextMode } from '@features/team-project-context/core';
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
@@ -10,7 +11,7 @@ import { atomicWriteAsync } from './atomicWrite';
 import { hasCompleteKnownMetadata } from './TeamMetadataReadFidelity';
 import { MAX_TEAM_METADATA_BYTES, serializeTeamMetadata } from './TeamMetadataSerialization';
 
-import type { ProviderModelLaunchIdentity, TeamFastMode, TeamProviderId } from '@shared/types';
+import type { ProviderModelLaunchIdentity, TeamFastMode, TeamProjectContextMode, TeamProviderId } from '@shared/types';
 
 /**
  * Persisted team-level metadata saved by the UI before CLI provisioning.
@@ -20,6 +21,8 @@ import type { ProviderModelLaunchIdentity, TeamFastMode, TeamProviderId } from '
  */
 export interface TeamMetaFile {
   version: 1;
+  /** Missing in persisted legacy teams means shared; explicit invalid values are corruption. */
+  projectContextMode?: TeamProjectContextMode;
   runtimeSelectionVersion?: 1;
   deletedAt?: string;
   displayName?: string;
@@ -206,6 +209,9 @@ export class TeamMetaStore {
     try {
       const normalized: TeamMetaFile = {
         version: 1,
+        ...(Object.hasOwn(file, 'projectContextMode')
+          ? { projectContextMode: parsePersistedTeamProjectContextMode(file.projectContextMode, true) }
+          : {}),
         deletedAt: typeof file.deletedAt === 'string' ? file.deletedAt : undefined,
         runtimeSelectionVersion: normalizeRuntimeSelectionVersion(file.runtimeSelectionVersion),
         displayName:
@@ -256,6 +262,7 @@ export class TeamMetaStore {
         runtimeSelectionVersion:
           normalizeRuntimeSelectionVersion(data.runtimeSelectionVersion) ??
           current?.runtimeSelectionVersion,
+        projectContextMode: data.projectContextMode ?? current?.projectContextMode,
       });
     });
   }
@@ -268,8 +275,12 @@ export class TeamMetaStore {
   ): Promise<void> {
     const metaPath = this.getMetaPath(teamName);
     await withMetaMutationLock(metaPath, async () => {
-      const data = await update(await this.getMeta(teamName));
-      await this.writeMetaUnlocked(metaPath, data);
+      const current = await this.getMeta(teamName);
+      const data = await update(current);
+      await this.writeMetaUnlocked(metaPath, {
+        ...data,
+        projectContextMode: data.projectContextMode ?? current?.projectContextMode,
+      });
     });
   }
 
@@ -283,6 +294,7 @@ export class TeamMetaStore {
   serializeMeta(data: Omit<TeamMetaFile, 'version'>): string {
     return serializeTeamMetadata({
       version: 1,
+      projectContextMode: data.projectContextMode,
       deletedAt: data.deletedAt,
       runtimeSelectionVersion: normalizeRuntimeSelectionVersion(data.runtimeSelectionVersion),
       displayName: data.displayName?.trim() || undefined,

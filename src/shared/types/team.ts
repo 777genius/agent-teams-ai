@@ -23,6 +23,8 @@ export type {
   NativeAttachmentDeliveryEnvelope,
 } from '@features/agent-attachments/contracts';
 
+export type TeamProjectContextMode = 'shared' | 'per_project';
+
 export interface TeamMember {
   name: string;
   agentId?: string;
@@ -85,6 +87,8 @@ export interface TeamSummaryMember {
 
 export interface TeamSummary {
   teamName: string;
+  /** Absent on old/foreign teams; never interpret as an isolated history. */
+  projectContextMode?: TeamProjectContextMode;
   displayName: string;
   description: string;
   color?: string;
@@ -1341,6 +1345,8 @@ export interface TeamWorktreeGitStatus {
 }
 
 export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunchOptions {
+  /** New logical teams default to per-project history; missing legacy stored mode means shared. */
+  projectContextMode?: TeamProjectContextMode;
   /** Read-only saved defaults token returned by getSavedRequest. */
   savedSettingsFingerprint?: string;
   teamName: string;
@@ -1367,6 +1373,7 @@ export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunc
 
 export interface TeamCreateConfigRequest extends TeamProvisioningTypes.RuntimeSelectionVersioned {
   teamName: string;
+  projectContextMode?: TeamProjectContextMode;
   displayName?: string;
   description?: string;
   color?: string;
