@@ -227,19 +227,21 @@ export function capturePreparedModelReference(options: {
 
 function readPreparedModelReference(options: Parameters<typeof capturePreparedModelReference>[0],
   memberInspection = false, accountTiming?: () => () => void): ModelReadinessReference {
-  const original = options.management.probes.readRetainedProbe(options.commandId, options.context);
-  const candidate = { ...teamModelProbeProfile(options.profile),
-    profileId: original.profileId, configRevision: original.configRevision };
-  if (candidate.provider !== 'opencode' || options.profile.provider !== 'opencode' || !options.isCurrent() ||
-      original.providerId !== options.profile.nativeOptions.providerId ||
-      openCodeModelId(original.providerId, original.modelId) !==
-        openCodeModelId(original.providerId, options.profile.model) ||
-      original.effort !== options.profile.nativeOptions.variant ||
-      (options.kind !== 'native' && original.purpose !== nativeLocalReadinessPurpose) ||
-      (original.purpose === undefined && original.readinessScope?.kind !== 'native') ||
-      modelReadinessMechanismDigest(candidate) !== original.readinessScope?.mechanismDigest) held();
   return options.management.probes.captureReadinessReference(options.commandId, options.context, saved => {
     const inspect = () => {
+    // The qualified invocation's fresh receipt also supplies candidate validation.
+    // Its source/authority checks share the account fence before every expiry gate.
+    const original = saved;
+    const candidate = { ...teamModelProbeProfile(options.profile),
+      profileId: original.profileId, configRevision: original.configRevision };
+    if (candidate.provider !== 'opencode' || options.profile.provider !== 'opencode' || !options.isCurrent() ||
+        original.providerId !== options.profile.nativeOptions.providerId ||
+        openCodeModelId(original.providerId, original.modelId) !==
+          openCodeModelId(original.providerId, options.profile.model) ||
+        original.effort !== options.profile.nativeOptions.variant ||
+        (options.kind !== 'native' && original.purpose !== nativeLocalReadinessPurpose) ||
+        (original.purpose === undefined && original.readinessScope?.kind !== 'native') ||
+        modelReadinessMechanismDigest(candidate) !== original.readinessScope?.mechanismDigest) held();
     let inspected: ReturnType<typeof captureOpenCodeProbeAccountInspection> = undefined;
     if (saved.readiness || saved.readinessScope?.accountDigest !== undefined || saved.nativeFileKeyWitness !== undefined) {
       const endAccount = accountTiming?.();

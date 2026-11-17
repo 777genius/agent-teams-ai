@@ -95,6 +95,40 @@ test('offline Desktop admission refuses inherited native selections before prepa
   assert.throws(() => assertDesktopProofEnvironment(true), /explicit provider-emulation admission/);
 });
 
+test('Linux TEST display admission accepts only the original local form or canonical loopback TCP', {
+  skip: process.platform !== 'linux' || process.arch !== 'x64',
+}, (t) => {
+  const original = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.startsWith('LEGACY_DESKTOP_')));
+  for (const key of Object.keys(original)) delete process.env[key];
+  t.after(() => {
+    for (const key of Object.keys(process.env)) if (key.startsWith('LEGACY_DESKTOP_')) delete process.env[key];
+    Object.assign(process.env, original);
+  });
+  Object.assign(process.env, { LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
+    LEGACY_DESKTOP_PROOF_MODE: 'emulated-retained-original-ui', LEGACY_DESKTOP_TEST_XAUTHORITY: '/TEST/Xauthority' });
+  for (const display of [':0', ':97', ':001', ':59536', '127.0.0.1:0', '127.0.0.1:120', '127.0.0.1:59535']) {
+    process.env.LEGACY_DESKTOP_TEST_DISPLAY = display;
+    assert.doesNotThrow(() => assertDesktopProofEnvironment(false), display);
+  }
+  for (const display of ['', 'localhost:120', '127.0.0.2:120', '127.1:120', '0.0.0.0:120', '192.0.2.1:120',
+    'example.test:120', '[::1]:120', '::1:120', 'unix:120', 'tcp/127.0.0.1:120', '127.0.0.1:',
+    '127.0.0.1:-1', '127.0.0.1:+1', '127.0.0.1:001', '127.0.0.1:59536', '127.0.0.1:65535',
+    '127.0.0.1:99999999999999999999', '127.0.0.1:1e2', '127.0.0.1:120.0', '127.0.0.1:120/suffix',
+    '127.0.0.1:120\r', '127.0.0.1:120\n', '127.0.0.1:120 ', ' 127.0.0.1:120', ':97.0', ':97\n', ' :97']) {
+    process.env.LEGACY_DESKTOP_TEST_DISPLAY = display;
+    assert.throws(() => assertDesktopProofEnvironment(false), /explicit isolated TEST X display/, JSON.stringify(display));
+  }
+  process.env.LEGACY_DESKTOP_TEST_DISPLAY = '127.0.0.1:120';
+  delete process.env.LEGACY_DESKTOP_TEST_XAUTHORITY;
+  assert.throws(() => assertDesktopProofEnvironment(false), /explicit TEST display authorization file/);
+  process.env.LEGACY_DESKTOP_TEST_XAUTHORITY = '/TEST/Xauthority';
+  process.env.LEGACY_DESKTOP_BACKEND_GO = '0';
+  assert.throws(() => assertDesktopProofEnvironment(false), /root must authorize/);
+  process.env.LEGACY_DESKTOP_BACKEND_GO = '1';
+  process.env.LEGACY_DESKTOP_CLAUDE_PATH = '/TEST-refused-vendor';
+  assert.throws(() => assertDesktopProofEnvironment(false), /provider-emulation refuses LEGACY_DESKTOP_CLAUDE_PATH/);
+});
+
 test('TEST management admission retains only the exact direct detached Host peer without signaling', (t) => {
   const fixture = { node: '/TEST/node', hostEntry: '/TEST/host.js' };
   const peer = { command: '/TEST/node /TEST/peer.ts serve --hostname 127.0.0.1 --port 12345', observedPeerPids: [] as number[] };

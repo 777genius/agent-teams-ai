@@ -64,7 +64,11 @@ export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
     (process.platform === 'linux' && process.arch === 'x64' && (linuxModeAllowed || emulatedOnly === '1')),
     'Linux Desktop portability requires an explicitly bounded proof mode');
   if (process.platform === 'linux') {
-    assert.match(process.env.LEGACY_DESKTOP_TEST_DISPLAY ?? '', /^:\d+$/u, 'explicit isolated TEST X display');
+    const display = process.env.LEGACY_DESKTOP_TEST_DISPLAY ?? '';
+    const loopbackTcp = /^127\.0\.0\.1:(0|[1-9]\d{0,4})$/u.exec(display);
+    // An inherited loopback listener still uses X11's fixed 6000 + display port.
+    assert.ok(/^:\d+$/u.test(display) || loopbackTcp !== null && 6000 + Number(loopbackTcp[1]) <= 65535,
+      'explicit isolated TEST X display');
     assert.ok(process.env.LEGACY_DESKTOP_TEST_XAUTHORITY, 'explicit TEST display authorization file');
   }
 }
