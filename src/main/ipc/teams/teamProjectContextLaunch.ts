@@ -1,3 +1,4 @@
+import { parseOptionalTeamEffort, parseOptionalTeamFastMode } from '../teamIpcRequestParsers';
 import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 
@@ -96,6 +97,12 @@ export async function withPreparedContextLaunch<T>(
   ports: ProjectTeamRuntimePorts,
   invoke: (request: TeamLaunchRequest, mapper?: ProjectContextProgressMapper) => Promise<T>
 ): Promise<T | null> {
+  // Validate explicit overrides BEFORE reserving native files. The original
+  // IPC handler still validates effective persisted settings before spawn.
+  const effort = parseOptionalTeamEffort(request.effort, request.providerId);
+  if (!effort.valid) throw new Error(effort.error);
+  const fastMode = parseOptionalTeamFastMode(request.fastMode);
+  if (!fastMode.valid) throw new Error(fastMode.error);
   const selected = await prepareTeamContextLaunch(request, ports);
   if (selected.request.teamName === request.teamName) return null;
   return invoke(selected.request, selected.mapProgress);
