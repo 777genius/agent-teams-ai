@@ -1,5 +1,6 @@
 import { readNativeWorkSyncCurrentRuntimeInstanceId } from '@features/member-work-sync/main';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
+import { rejectUnsupportedProjectContextHttpLaunch } from './teamProjectContextLaunchGuard';
 import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
@@ -379,7 +380,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           return reply.status(400).send({ error: validatedTeamName.error });
         }
 
-        const teamName = validatedTeamName.value!;
+        const teamName = await rejectUnsupportedProjectContextHttpLaunch(validatedTeamName.value!);
         const launch = async (): Promise<TeamCreateResponse | TeamLaunchResponse> => {
           const draftSavedRequest = await getDraftSavedRequest(services, teamName);
           let response!: TeamCreateResponse | TeamLaunchResponse;
