@@ -22,6 +22,18 @@ function contextReader(
   return new TeamProjectContextRuntimeResolver(meta, registry);
 }
 
+async function ownedHistoryContexts(
+  teamName: string,
+  meta: LifecycleReader,
+  registry: TeamProjectContextRegistry
+): Promise<readonly { executionTeamName: string; state: 'ready' | 'reserved' }[]> {
+  const mode = await contextReader(meta, registry).getMode(teamName);
+  return mode === 'per_project'
+    ? registry.list(teamName)
+    : registry.listRetained(teamName);
+}
+
+
 /**
  * Stop only verified owned native contexts. Do not kill unknown/foreign aliases
  * merely because their name resembles an internal identifier.
@@ -33,9 +45,8 @@ export async function stopLogicalTeam(
   registry: TeamProjectContextRegistry = TeamProjectContextRegistry.fromCurrentApp()
 ): Promise<IpcResult<void>> {
   try {
-    const mode = await contextReader(meta, registry).getMode(logicalTeamName);
-    if (mode === 'shared') return stopNative(logicalTeamName);
-    const contexts = await registry.list(logicalTeamName);
+    const contexts = await ownedHistoryContexts(logicalTeamName, meta, registry);
+    if (contexts.length === 0) return stopNative(logicalTeamName);
     if (contexts.some((row) => row.state !== 'ready')) {
       throw new Error('Project context is still preparing or requires recovery');
     }
@@ -66,9 +77,8 @@ export async function deleteLogicalTeamWithContexts(
 ): Promise<IpcResult<void>> {
   if (typeof teamName !== 'string' || !teamName.trim()) return deleteLogical();
   try {
-    const mode = await contextReader(meta, registry).getMode(teamName);
-    if (mode === 'shared') return deleteLogical();
-    const contexts = await registry.list(teamName);
+    const contexts = await ownedHistoryContexts(teamName, meta, registry);
+    if (contexts.length === 0) return deleteLogical();
     if (contexts.some((row) => row.state !== 'ready')) {
       throw new Error('Cannot delete a team with an unreconciled project context');
     }
@@ -90,7 +100,7 @@ export async function deleteLogicalTeamWithContexts(
 
 interface PermanentDeleteRegistry extends Pick<
   TeamProjectContextRegistry,
-  'listForPermanentDeletion' | 'forgetPermanentlyDeletedContext'
+  'hasRetainedIndex' | 'listForPermanentDeletion' | 'forgetPermanentlyDeletedContext'
 > {}
 
 export async function permanentlyDeleteLogicalTeam(
@@ -103,6 +113,7 @@ export async function permanentlyDeleteLogicalTeam(
     registry?: PermanentDeleteRegistry;
     isNativePresent?(name: string): Promise<boolean>;
     hasAnySchedules?(names: readonly string[]): Promise<boolean>;
+    isLogicalConfigPresent?(name: string): Promise<boolean>;
   }
 ): Promise<IpcResult<void>> {
   if (typeof logicalTeamName !== 'string' || !logicalTeamName.trim()) {
@@ -114,7 +125,9 @@ export async function permanentlyDeleteLogicalTeam(
     const mode = await contextReader(
       meta, (registry as TeamProjectContextRegistry)
     ).getMode(logicalTeamName);
-    if (mode === 'shared') return ports.deleteLogical(false);
+    if (mode === 'shared' && !(await registry.hasRetainedIndex(logicalTeamName))) {
+      return ports.deleteLogical(false);
+    }
 
     // The logical team remains present until all physical contexts are fully
     // removed, enabling idempotent retries after an interrupted deletion.
@@ -146,7 +159,16 @@ export async function permanentlyDeleteLogicalTeam(
       );
       if (!forgotten) throw new Error('Context mapping changed during permanent deletion');
     }
-    return ports.deleteLogical(true);
+    const configExists = ports.isLogicalConfigPresent
+      ? await ports.isLogicalConfigPresent(logicalTeamName)
+      : await fs.lstat(path.join(getTeamsBasePath(), logicalTeamName, 'config.json')).then(
+          () => true,
+          (error: NodeJS.ErrnoException) => {
+            if (error.code === 'ENOENT') return false;
+            throw error;
+          }
+        );
+    return ports.deleteLogical(!configExists);
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
@@ -171,9 +193,8 @@ export async function restoreLogicalTeamWithContexts(
 ): Promise<IpcResult<void>> {
   if (typeof teamName !== 'string' || !teamName.trim()) return restoreLogical();
   try {
-    const mode = await contextReader(meta, registry).getMode(teamName);
-    if (mode === 'shared') return restoreLogical();
-    const contexts = await registry.list(teamName);
+    const contexts = await ownedHistoryContexts(teamName, meta, registry);
+    if (contexts.length === 0) return restoreLogical();
     if (contexts.some((row) => row.state !== 'ready')) {
       throw new Error('Cannot restore a team with an unreconciled project context');
     }

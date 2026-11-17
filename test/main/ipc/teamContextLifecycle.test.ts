@@ -25,7 +25,10 @@ function fixture(mode?: 'shared' | 'per_project') {
     getMeta: vi.fn(async () => mode === undefined ? null : { ...owner, projectContextMode: mode }),
     metadataFileExists: vi.fn(async () => false),
   };
-  const registry = { list: vi.fn(async () => [entry]) };
+  const registry = {
+    list: vi.fn(async () => [entry]),
+    listRetained: vi.fn(async () => [] as (typeof entry)[]),
+  };
   return { meta, registry };
 }
 
@@ -47,6 +50,18 @@ describe('project team lifecycle projection', () => {
       return { success: true as const, data: undefined };
     });
     const result = await stopLogicalTeam('builders', stop, f.meta, f.registry as never);
+    expect(result.success).toBe(true);
+    expect(stops).toEqual(['ptc-a', 'builders']);
+  });
+
+  it('stops retained project instances even after selecting shared mode', async () => {
+    const f = fixture('shared');
+    f.registry.listRetained.mockResolvedValue([entry]);
+    const stops: string[] = [];
+    const result = await stopLogicalTeam('builders', async (name) => {
+      stops.push(name);
+      return { success: true as const, data: undefined };
+    }, f.meta, f.registry as never);
     expect(result.success).toBe(true);
     expect(stops).toEqual(['ptc-a', 'builders']);
   });
@@ -208,6 +223,49 @@ describe('project team lifecycle projection', () => {
     );
     expect(projected).toContain('builders');
     expect(projected).toContain('other-team');
+  });
+
+  it('does not orphan retained histories when permanently deleting a now-shared team', async () => {
+    const f = fixture('shared');
+    const calls: string[] = [];
+    const result = await permanentlyDeleteLogicalTeam('builders', {
+      meta: f.meta,
+      registry: {
+        hasRetainedIndex: vi.fn(async () => true),
+        listForPermanentDeletion: vi.fn(async () => [entry]),
+        forgetPermanentlyDeletedContext: vi.fn(async () => {
+          calls.push('forget');
+          return true;
+        }),
+      } as never,
+      hasAnySchedules: vi.fn(async () => false),
+      isNativePresent: vi.fn(async () => true),
+      isLogicalConfigPresent: vi.fn(async () => true),
+      stopNative: vi.fn(async () => {
+        calls.push('stop');
+        return { success: true as const, data: undefined };
+      }),
+      deleteNative: vi.fn(async () => { calls.push('delete:ptc-a'); }),
+      deleteLogical: vi.fn(async (draft: boolean) => {
+        calls.push('delete:builders:' + (draft ? 'draft' : 'native'));
+        return { success: true as const, data: undefined };
+      }),
+    });
+    expect(result.success).toBe(true);
+    expect(calls).toEqual(['stop', 'delete:ptc-a', 'forget', 'delete:builders:native']);
+  });
+
+  it('restores retained project histories after switching to shared mode', async () => {
+    const f = fixture('shared');
+    f.registry.listRetained.mockResolvedValue([entry]);
+    const actions: string[] = [];
+    const result = await restoreLogicalTeamWithContexts(
+      'builders', async (name) => { actions.push(name); },
+      async () => ({ success: true as const, data: undefined }),
+      f.meta, f.registry as never
+    );
+    expect(result.success).toBe(true);
+    expect(actions).toEqual(['ptc-a']);
   });
 
   it('projects only verified native aliases to the logical team in the UI alive list', async () => {
