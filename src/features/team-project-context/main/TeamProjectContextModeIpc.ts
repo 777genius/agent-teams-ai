@@ -1,3 +1,7 @@
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+
+import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import {
   readTeamOwnerProfileScope,
   resolveThisAppProfileScope,
@@ -5,17 +9,15 @@ import {
   TEAM_PROFILE_OWNER_MARKER_FILE,
 } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
-import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
 
 import { TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL } from '../contracts';
+
 import { changeTeamProjectContextMode } from './TeamProjectContextModeService';
 import { TeamProjectContextRegistry } from './TeamProjectContextRegistry';
 
-import type { IpcMain } from 'electron';
 import type { TeamProjectContextMode, TeamRuntimeState, IpcResult } from '@shared/types';
+import type { IpcMain } from 'electron';
 
 interface ModeRuntimePorts {
   withLogicalTeamLock<T>(name: string, command: () => Promise<T>): Promise<T>;

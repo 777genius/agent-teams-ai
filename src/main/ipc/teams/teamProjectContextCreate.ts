@@ -1,3 +1,5 @@
+import * as path from 'node:path';
+
 import {
   TeamProjectContextCreateCoordinator,
   TeamProjectContextDraftMaterializer,
@@ -9,16 +11,15 @@ import {
   readTeamOwnerProfileScope,
   resolveThisAppProfileScope,
 } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
-import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
-import * as path from 'node:path';
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
 
-import type { TeamDataService } from '@main/services/team/TeamDataService';
 import type {
   TeamProvisioningRunApi,
   TeamProvisioningStartApi,
   TeamRuntimeApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
+import type { TeamDataService } from '@main/services/team/TeamDataService';
 import type {
   TeamCreateRequest,
   TeamCreateResponse,

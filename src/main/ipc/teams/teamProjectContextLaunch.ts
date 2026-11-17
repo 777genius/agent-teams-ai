@@ -1,6 +1,8 @@
-import { parseOptionalTeamEffort, parseOptionalTeamFastMode } from '../teamIpcRequestParsers';
-import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+
+import { parseOptionalTeamEffort, parseOptionalTeamFastMode } from '../teamIpcRequestParsers';
+
+import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
 
 import type { ProjectTeamRuntimePorts } from './teamProjectContextCreate';
 import type { TeamLaunchRequest, TeamProvisioningProgress } from '@shared/types';

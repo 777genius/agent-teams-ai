@@ -37,13 +37,13 @@ import * as path from 'path';
 
 import { gitIdentityResolver } from '../parsing/GitIdentityResolver';
 
+import { atomicWriteAsync } from './atomicWrite';
 import {
   areLeadSessionFileSignaturesEqual,
   type LeadSessionFileSignature,
   LeadSessionParseCache,
   type LeadSessionParseCacheKey,
 } from './cache/LeadSessionParseCache';
-import { atomicWriteAsync } from './atomicWrite';
 import { createDraftTeamConfig } from './createDraftTeamConfig';
 import { assertDraftRenameDestinationAvailable, renameDraftTeamDirectory } from './draftTeamRename';
 import { extractLeadSessionMessagesFromJsonl } from './leadSessionMessageExtractor';

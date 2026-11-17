@@ -5,17 +5,18 @@ import {
   TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
   type TeamProjectContextView,
 } from '../contracts';
+
+import { registerTeamProjectContextModeHandler, unregisterTeamProjectContextModeHandler } from './TeamProjectContextModeIpc';
 import { TeamProjectContextRegistry } from './TeamProjectContextRegistry';
 import { TeamProjectContextRuntimeResolver } from './TeamProjectContextRuntimeResolver';
-import { registerTeamProjectContextModeHandler, unregisterTeamProjectContextModeHandler } from './TeamProjectContextModeIpc';
 
-import type { IpcMain } from 'electron';
-import type { TeamDataService } from '@main/services/team/TeamDataService';
 import type {
   TeamProvisioningRunApi,
   TeamRuntimeApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
+import type { TeamDataService } from '@main/services/team/TeamDataService';
 import type { IpcResult } from '@shared/types';
+import type { IpcMain } from 'electron';
 
 /** Read-only; no project filesystem or native team is created from navigation. */
 async function resolveContextView(

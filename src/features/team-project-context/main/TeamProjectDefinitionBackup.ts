@@ -1,18 +1,19 @@
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
-import { createLogger } from '@shared/utils/logger';
-import {
-  getBackupsBasePath,
-  getTasksBasePath,
-  getTeamsBasePath,
-} from '@main/utils/pathDecoder';
+import { createHash, randomUUID } from 'node:crypto';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+
 import {
   readTeamOwnerProfileScope,
   resolveThisAppProfileScope,
   TEAM_PROFILE_OWNER_MARKER_FILE,
 } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
-import { createHash, randomUUID } from 'node:crypto';
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
+import {
+  getBackupsBasePath,
+  getTasksBasePath,
+  getTeamsBasePath,
+} from '@main/utils/pathDecoder';
+import { createLogger } from '@shared/utils/logger';
 
 const logger = createLogger('TeamProjectDefinitionBackup');
 const FILES = ['team.meta.json', 'members.meta.json', TEAM_PROFILE_OWNER_MARKER_FILE] as const;

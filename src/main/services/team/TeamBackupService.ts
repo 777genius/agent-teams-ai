@@ -2,6 +2,7 @@ import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+import { backupProjectTeamDefinitionSafely, recoverMissingProjectTeamDefinitions } from '@features/team-project-context/main';
 import {
   atomicWriteAsync,
   atomicWriteSync,
@@ -16,7 +17,6 @@ import {
   getTeamsBasePath,
 } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
-import { backupProjectTeamDefinitionSafely, recoverMissingProjectTeamDefinitions } from '@features/team-project-context/main';
 
 import { TeamPermanentDeletionCoordinator } from './permanent-deletion/TeamPermanentDeletionCoordinator';
 import {

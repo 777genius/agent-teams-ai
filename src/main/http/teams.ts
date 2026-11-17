@@ -1,6 +1,5 @@
 import { readNativeWorkSyncCurrentRuntimeInstanceId } from '@features/member-work-sync/main';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
-import { rejectUnsupportedProjectContextHttpLaunch } from './teamProjectContextLaunchGuard';
 import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
@@ -13,9 +12,8 @@ import { constants as fsConstants } from 'fs';
 import { access } from 'fs/promises';
 import { join } from 'path';
 
-import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
-import { registerTeamManagementRoutes } from './teams/teamManagementRoutes';
 import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
+import { rejectUnsupportedProjectContextHttpLaunch } from './teamProjectContextLaunchGuard';
 import {
   HttpBadRequestError,
   parseCreateTeamRequest,
@@ -24,6 +22,8 @@ import {
   parseTeamConfigurationReadQuery,
   withRuntimeTeamName,
 } from './teamRouteParsers';
+import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
+import { registerTeamManagementRoutes } from './teams/teamManagementRoutes';
 
 import type { HttpServices } from './index';
 import type { AppConnectionContext } from '@features/external-agent-connection/contracts';

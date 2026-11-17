@@ -1,10 +1,11 @@
-import { TeamProjectContextRegistry, TeamProjectContextRuntimeResolver } from '@features/team-project-context/main';
-import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
-import { createLogger } from '@shared/utils/logger';
-import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
-import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
+
+import { TeamProjectContextRegistry, TeamProjectContextRuntimeResolver } from '@features/team-project-context/main';
+import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
+import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { createLogger } from '@shared/utils/logger';
 
 import type { IpcResult, TeamSummary } from '@shared/types';
 

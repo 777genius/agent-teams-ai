@@ -25,11 +25,6 @@ import {
 import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
-import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
-import { stopLogicalTeam, projectAliveTeamNames, deleteLogicalTeamWithContexts, restoreLogicalTeamWithContexts, permanentlyDeleteLogicalTeam } from './teams/teamContextLifecycle';
-import { buildTeamProgressReporter, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
-import { withTeamLaunchAdmission } from './teams/teamLaunchAdmission';
-import type { ProjectContextProgressMapper } from './teams/teamProjectContextLaunch';
 import { OpenCodeRetainedPrimaryRestartError } from '@main/services/team/provisioning/OpenCodeRetainedPrimaryRestartError';
 import {
   getTeamDataWorkerClient,
@@ -209,13 +204,6 @@ import { TeamMetaStore } from '../services/team/TeamMetaStore';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService';
 
-import { waitForOpenCodeRuntimeRelayForUi } from './teams/openCodeRuntimeDeliveryRelayUi';
-import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
-import { createMessagesPageHandler } from './teams/teamMessagesPageHandler';
-import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
-import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
-import { createTeamSoftDeleteRequests } from './teams/teamSoftDeleteFlow';
-import { withTimeoutValue } from './teams/withTimeoutValue';
 import {
   validateFromField,
   validateMemberName,
@@ -234,6 +222,17 @@ import {
   parseOptionalTeamProviderId,
   parseTeamProvisioningBooleanOptions,
 } from './teamIpcRequestParsers';
+import { waitForOpenCodeRuntimeRelayForUi } from './teams/openCodeRuntimeDeliveryRelayUi';
+import { stopLogicalTeam, projectAliveTeamNames, deleteLogicalTeamWithContexts, restoreLogicalTeamWithContexts, permanentlyDeleteLogicalTeam } from './teams/teamContextLifecycle';
+import { withTeamLaunchAdmission } from './teams/teamLaunchAdmission';
+import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
+import { createMessagesPageHandler } from './teams/teamMessagesPageHandler';
+import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
+import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
+import { buildTeamProgressReporter, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
+import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
+import { createTeamSoftDeleteRequests } from './teams/teamSoftDeleteFlow';
+import { withTimeoutValue } from './teams/withTimeoutValue';
 
 import type {
   BoardTaskActivityDetailService,
@@ -264,6 +263,7 @@ import type {
 } from '../services/team/contracts/TeamProvisioningApis';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { TeamMembersMetaFile } from '../services/team/TeamMembersMetaStore';
+import type { ProjectContextProgressMapper } from './teams/teamProjectContextLaunch';
 import type { TeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
 import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
 import type {
