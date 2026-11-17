@@ -125,6 +125,19 @@
       "description": "擴充功能訊息檢視"
     }
   },
+  "projectContextView": {
+    "modeChange": {
+      "title": "要變更團隊歷史紀錄模式嗎？",
+      "description": "請先停止團隊。現有任務、對話和工作階段會保留在原本的位置；歷史紀錄不會合併或刪除。",
+      "confirm": "變更模式"
+    },
+    "loading": "正在載入團隊專案歷史紀錄…",
+    "selectProject": "請在側邊欄選擇專案，以查看該專案的任務與對話。",
+    "empty": "此專案目前沒有任務或對話。啟動團隊即可建立獨立的歷史紀錄。",
+    "pending": "正在準備此專案的工作環境。執行環境就緒後將顯示任務與訊息。",
+    "start": "在此專案啟動團隊",
+    "retry": "重試"
+  },
   "create": {
     "actions": {
       "create": "建立",
@@ -153,6 +166,12 @@
       "description": "說明（選填）",
       "prompt": "提示團隊負責人（選填）",
       "teamName": "團隊名稱"
+    },
+    "projectContextMode": {
+      "label": "團隊歷史紀錄",
+      "perProject": "依專案分開任務與對話（預設）",
+      "shared": "跨專案共用",
+      "description": "現有團隊維持原本的模式。此選項只影響新團隊的工作歷史紀錄。"
     },
     "launchAfterCreate": {
       "description": "使用為團隊設定的代理執行環境立即啟動團隊。",
