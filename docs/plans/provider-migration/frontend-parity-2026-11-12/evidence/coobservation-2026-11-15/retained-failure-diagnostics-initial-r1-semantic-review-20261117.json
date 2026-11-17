@@ -1,0 +1,664 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_RETAINED_GUI_AND_NATIVE_FAILURE_DIAGNOSTICS_R1_SEMANTIC_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_semantic",
+  "preparedAtUtc": "2026-11-17 09:55:38 UTC",
+  "subject": {
+    "bytes": 23006,
+    "sha256": "ac0a112be1dd45b0c219fa09437beb2502e51722c4d058abe9b9570fafe64730",
+    "gitBlob": "5d44942ab4492596cbd6bbb328041a6713b79810"
+  },
+  "decision": "ACCEPT_EXACT_R1_PLAN_ONLY",
+  "blockers": [],
+  "checkCount": 36,
+  "sourceOrRuntimeAcceptance": false,
+  "authority": {
+    "rootSoleAuthorApplierPublisherExecutor": true,
+    "allowedWorkPerformed": [
+      "immutable Git/source/report reads",
+      "pure memory parsing, source inspection and identity/JSON-size arithmetic",
+      "bare report retention"
+    ],
+    "notPerformed": [
+      "source/control/test postimage authorship",
+      "shell/local filesystem/runtime",
+      "target source evaluation/import/compile/test",
+      "new DOM/Host/OS/network/provider observations",
+      "real Claude/Codex including version probes",
+      "ref/PR/CI mutation or polling",
+      "artifact download",
+      "browser/CUA"
+    ],
+    "noNewGate": true
+  },
+  "exactBasis": {
+    "sourceCommit": "1ca9566d70bd624283227a644fa6969eb8bf8f34",
+    "gate": {
+      "bytes": 7149,
+      "sha256": "2aeec2ecdbae9bdf27d8bd6a054655ea6850bc69a2d2544df8c1da245798f005",
+      "gitBlob": "a3ff72947884bc9e9993fa74db71491c3b9e4a61",
+      "closedAt": "2026-11-17 09:17:41 UTC",
+      "completeRead": true,
+      "acceptedSourceOnly": true
+    },
+    "currentGitJoin": {
+      "commit": "1ca9566d70bd624283227a644fa6969eb8bf8f34",
+      "parent": [
+        "d693c62d59c2bc6a6866dcc0293c111380ed88c5"
+      ],
+      "root": "fd6a7a819adc8b68a4b3e1ec1ddfe9c57a48e03c",
+      "selected": {
+        ".github": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "docs": "834eeb86f8ca3f94fec916e6044836bad8cbb348",
+        "packages": "3934729cd387940917b79992f2579bf6269d157c",
+        "scripts": "0fdc55ba22f48cd82c25117fd185aa23ce895d6e",
+        "src": "9ed817aaf1b2959381ea7d9262ed04f538247750",
+        "test": "69d3a76e739605a29aa7a0d04981d24f3918d856",
+        "tools": "b0ffcbc4be600e5edfbc0fbacf312e5b476af6aa"
+      },
+      "rootEntryCount": 54
+    },
+    "selectedPreimages": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+        "mode": "100644",
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+        "lines": 394,
+        "completeRootBodyRead": true,
+        "current1caTreeJoined": true,
+        "completeSemanticRead": true,
+        "independentCurrent1caWholeBodyJoin": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "mode": "100644",
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+        "lines": 182,
+        "completeRootBodyRead": true,
+        "current1caTreeJoined": true,
+        "completeSemanticRead": true,
+        "independentCurrent1caWholeBodyJoin": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "mode": "100644",
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f",
+        "lines": 1191,
+        "completeRootBodyRead": true,
+        "current1caTreeJoined": true,
+        "completeSemanticRead": true,
+        "independentCurrent1caWholeBodyJoin": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+        "mode": "100644",
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05",
+        "lines": 500,
+        "completeRootBodyRead": true,
+        "current1caTreeJoined": true,
+        "completeSemanticRead": true,
+        "independentCurrent1caWholeBodyJoin": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "mode": "100644",
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068",
+        "lines": 565,
+        "completeRootBodyRead": true,
+        "current1caTreeJoined": true,
+        "completeSemanticRead": true,
+        "independentCurrent1caWholeBodyJoin": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "mode": "100644",
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+        "lines": 345,
+        "completeRootBodyRead": true,
+        "current1caTreeJoined": true,
+        "completeSemanticRead": true,
+        "independentCurrent1caWholeBodyJoin": true
+      }
+    ],
+    "selectedPreimageBytes": 184703,
+    "referenceReports": [
+      {
+        "gitBlob": "3fcfd9908119ae67c21d00a8882bf27d55ea56fd",
+        "bytes": 30196,
+        "sha256": "9ba4b7a572a676a703414fa6f41db02729e85a5c2e21cb4ff65c231e4d2d5462",
+        "role": "Own complete feasibility and full self-read reused; exact rehash joined."
+      },
+      {
+        "bytes": 27466,
+        "sha256": "ac5921539071bade6c642696d50eb4fbaf047cbaf83359c00cef37a7e51f4ff2",
+        "gitBlob": "ce2cdcb5524bb248260919c6a2db4c4e248a15b2",
+        "role": "Complete report fetched, rehashed and read in this review."
+      },
+      {
+        "bytes": 49411,
+        "sha256": "cca72f4bf9fbbe4e0ae4fa8ce5aa24efe02a36e530c8e53f24aa7acf90f31a73",
+        "gitBlob": "f41a625fef5db581e0c9ff6c2392d6ff8a7dd87d",
+        "role": "Complete report fetched, rehashed and read. Original log/receipt facts are attributed to this retained independent review; this R1 review does not claim a new complete-log or ZIP audit."
+      },
+      {
+        "bytes": 40070,
+        "sha256": "8e4733e6f5cb1cb252ea222bcbcba7a99124ad5c7136388d833326287bb46236",
+        "gitBlob": "72d1c31fa760449d472d58307da11dde30eba32f",
+        "role": "Own complete prior venue advisory rehashed; it is still unselected."
+      }
+    ],
+    "nativePattern": {
+      "path": "packages/legacy-agent-host/tests/native-host-close.test.ts",
+      "bytes": 36526,
+      "sha256": "42a39d5cfe0a1f0681f3978e2073c1f2ba57e4f47f81a5b9345ea6927a991cce",
+      "gitBlob": "8b045297766cc5a352be923e3d477426411f1f5b",
+      "completeBodyRead": true,
+      "selectedForEdit": false
+    },
+    "acceptedGateLimits": "The98 source actual checks and116-pointer closure are the accepted gate's findings. This review independently verifies the current commit/root and six selected complete source bodies; it does not claim to have independently repeated the full116-pointer actual-publication audit.",
+    "currentCiEvidenceLimits": "The R1's completed-progress and observations7–11 packets remain historical context pointers. They were not re-polled or promoted to new runtime acceptance in this plan review."
+  },
+  "sixFileBoundary": {
+    "files": [
+      "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs"
+    ],
+    "noNewFiles": true,
+    "noDependenciesOrWorkflows": true,
+    "fixedSeventeen": {
+      "fixedPaths": [
+        "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "src/renderer/utils/teamModelAvailability.ts",
+        "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "test/renderer/utils/teamModelAvailability.test.ts",
+        "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "scripts/legacy-agent-host/desktop-native-process-ui.test.ts"
+      ],
+      "selectedPaths": [
+        "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+        "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+        "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs"
+      ],
+      "collisions": [],
+      "all17OutsideSelected": true
+    },
+    "inventories": {
+      "bytes": 3481,
+      "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+      "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+    },
+    "acceptedExistingCounts": {
+      "nonDocs": 8799,
+      "productionFiles": 5020,
+      "cap": 800,
+      "exceptions": 141,
+      "workflows": 42
+    },
+    "productionPreimageLines": {
+      "proofEvidence": 394,
+      "packagedRelaunch": 182,
+      "modelProbe": 500,
+      "passiveDiagnostics": 565
+    },
+    "testPreimageLines": {
+      "observations": 1191,
+      "nativeReceipt": 345
+    },
+    "countLimit": "These are accepted current-source counts and required preservation boundaries, not a fabricated count of unauthored postimages. The already-existing1,191-line observations test is not represented as an under800 production file.",
+    "preservation": "All13 frozen parity bodies, including whole149/catalog43/runtime85, and all4 published Windows postimages remain unmodified by the selected plan."
+  },
+  "guiSemantics": {
+    "acceptedSourceOwner": "Existing projectDesktopEmulatedReadinessFailure and existing final summary entrypoints.",
+    "currentGap": "Current projector reads store provisioning/import hydration/peer cleanup but ignores rendererFailureSnapshot.dialogs; generic routing covers only import/OpenCode runtime, while packaged final summary prints four generic fields.",
+    "parentCaptureUnchanged": {
+      "producer": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts@9aa43a43d6186c62bc92dae60dab4fe57cc63fe6",
+      "captureOwner": "scripts/legacy-agent-host/desktop-captured-app.ts@865494ab5f5e45c5158fbf74ac858987fb322608",
+      "backend": "scripts/legacy-agent-host/desktop-backend-smoke.ts@7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "constraints": "Original owned-CDP guard,4,000ms snapshot,5,000ms screenshot and original cleanup/final receipt ordering remain unchanged; no re-capture is selected."
+    },
+    "retainedSample": {
+      "label": {
+        "source": "retained-post-failure-partial-dialog-sample",
+        "atomicWithFailedWait": false,
+        "completeDom": false,
+        "actualTruncationKnown": false,
+        "producerDialogLimit": 3,
+        "producerButtonLimit": 24,
+        "producerTextTailLimit": 8000,
+        "producerButtonTextPrefixLimit": 160
+      },
+      "facts": "Actual source stores first3 dialogs, last8,000 text characters and last24 buttons with trimmed160-character labels, disabled booleans and rectangles. The selected projection excludes raw labels/text and coordinates.",
+      "completeness": "No original totals or truncation flags exist. Length at a producer cap means at-cap only; oversized supplied arrays can have projection overflow without establishing original DOM truncation. Zero retained matches is not a global no-button assertion.",
+      "timing": "Saved values are observed after failure, not atomically with the last failed read. Disabled/enabled/unknown counts and duplicates describe that sample only; neither an enabled button nor a ready phrase changes the original expired wait."
+    },
+    "fieldsAndPrivacy": {
+      "labelSelection": "Only exact own-data text === Launch team may affect bounded counts. Invalid disabled values are unknown; duplicate matches remain distinguishable.",
+      "textSelection": "Existing textFacts emits fixed vocabulary/phrase-presence facts only, never raw text or an authoritative model/provider/auth result.",
+      "traversal": "Own data descriptors only; no getters, coercion hooks, prototype/cause walk, arbitrary object enumeration or private nested alias.",
+      "caps": "At most3 dialog entries and24 button entries per retained dialog, existing8,000-character text admission and8,192-character final serialization fallback. Test worst combined provisioning/dialog shape as planned.",
+      "unknowns": "Absent/unavailable snapshot, missing/non-array collections, malformed records and throwing descriptor traps have explicit unknown/fixed fallback behavior; no default false that silently asserts readiness."
+    },
+    "routes": {
+      "existing": [
+        "emulated-import-ui",
+        "emulated-opencode-runtime-ui"
+      ],
+      "added": [
+        "emulated-claude-runtime-ui",
+        "emulated-claude-lifecycle-ui",
+        "emulated-collaboration-ui"
+      ],
+      "nonPassOnly": true,
+      "unrelated": [
+        "team-ui",
+        "emulated-extensions-ui"
+      ],
+      "passUnchanged": true
+    },
+    "packaged": "Use the same actual pure projector only in the existing final non-PASS console summary. The current final composition has one literal source occurrence. Preserve kind/status/receipt/root, receipt write, source freeze, cleanup order, original error rethrow and final success assertion.",
+    "outputReachability": "The existing final summary can still be unreached if an earlier existing finally operation fails or the process exits catastrophically. R1 does not promise output on every failure or move/retry those operations.",
+    "originalWaits": "Lifecycle line88, collaboration109 and runtime91 keep the identical90,000ms enabled-Launch expression and all preceding/following original actions. A caller label of model readiness is not evidence of the actual model failure.",
+    "fiveCasePlan": [
+      "Saved disabled/enabled/duplicate Launch button facts and dialog-only readiness terms without provisioning; no readiness inference.",
+      "Missing, unavailable, malformed, at-cap and oversized dialog/button/text inputs; independent traversal bounds and unchanged8192 fallback.",
+      "Private sentinels, no alias/mutation, getter avoidance, throwing descriptor traps and fixed safe failure output.",
+      "Actual exported receipt-summary routing for all five readiness modes, PASS and unrelated existing modes.",
+      "Actual packaged final pure composition from its unique source fragment with real exported projector, preserving original fields and failure-only addition; never import or execute CLI main."
+    ],
+    "testPreservation": {
+      "originalBytes": 66098,
+      "originalRegistrationExpressions": 34,
+      "newTopLevelCases": 5,
+      "plannedRegistrationExpressions": 39,
+      "oldParameterizedCasesPreserved": true,
+      "exactExpandedRuntimeCountClaimed": false,
+      "sourceFragmentPlan": "The packaged fifth case must extract a uniquely anchored actual pure final expression and invoke the real exported projector; importing CLI main or copying the projection would not meet this R1.",
+      "noGlobalClockCensusOrUiMocks": true
+    },
+    "frozen149Compatibility": {
+      "blob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+      "existingCaseLines": [
+        770,
+        806
+      ],
+      "findings": "Existing assertions require the two old routes, no addition for PASS/team-ui/extensions, privacy, no mutation/getters and bounded provisioning. They do not prohibit exactly the three added non-PASS routes. No frozen file change is needed or selected."
+    }
+  },
+  "nativeSemantics": {
+    "originalBoundaries": {
+      "stateDeclarations": "ModelProbe lines91–98",
+      "runCatch": "ModelProbe396–412",
+      "originalClose": "ModelProbe414–496",
+      "existingPublication": "ModelProbe487–493",
+      "childProjection": "passive-diagnostics75–92 and469–474",
+      "parentCapture": "passive-diagnostics94–155"
+    },
+    "originalCatchFinding": "The existing code classifies own data code values held/invalid/conflict/busy and catches descriptor failures, then throws the exact original error. It does not require instanceof ManagementCommandError. The R1's reference to ManagementCommandError logic is read as preserving this actual closed own-code classification.",
+    "additions": {
+      "fields": [
+        "runErrorCode",
+        "runCauseCode"
+      ],
+      "positiveCodes": [
+        "ABORT_ERR",
+        "ECONNRESET",
+        "ECONNREFUSED",
+        "EPIPE",
+        "ETIMEDOUT",
+        "UND_ERR_ABORTED",
+        "UND_ERR_SOCKET",
+        "UND_ERR_HEADERS_TIMEOUT",
+        "UND_ERR_BODY_TIMEOUT"
+      ],
+      "unknown": null,
+      "scope": "Only the original non-coordination run rejection and existing failed-close payload when runState=threw."
+    },
+    "originalError": "The original object remains the rejection even when it is primitive, accessor-backed, cyclic, proxy-backed or has opaque cause data. Only its positive own data code and one own data cause.code can be retained; no names, prototypes, messages, stacks or recursive traversal.",
+    "closeIdentity": "Keep the original first-close-failure ordering and exact stage/reason/outcome/errorClass. A fulfilled driver.close cleanup not equal to confirmed remains driver-close/unconfirmed. The run rejection is not a thrown close exception and is not proof it caused the later close result.",
+    "publication": "No new channel lookup, publication, retry, driver close, native request, input, signal or observation is added. Existing publication remains failure-only, non-coordination and subscriber-conditional.",
+    "doubleProjection": "Child projectHostProbeCloseFailure must retain sanitized optional fields in its emitted line, and parent entry construction must retain the same fields from its independently validated failedClose object. Merely editing one boundary would lose them.",
+    "legacyAndMalformed": {
+      "absent": "When legacy fields are absent, retain the old payload/receipt shape without inventing new null keys.",
+      "unknown": "A present unknown/malformed optional value becomes bounded null/unknown as specified; it never substitutes for stage/reason/errorClass/outcome.",
+      "isolation": "A throwing optional descriptor trap must not reach the existing outer catch and discard an otherwise valid base close record. Both channel-side and parent-side tests must preserve that record. This requirement is already explicit in R1, not an added gate.",
+      "causeLimit": "One own-data cause object and one own-data code only; inherited, recursive or getter-backed causes are not traversed."
+    },
+    "budgets": {
+      "maximumRows": 256,
+      "ordinaryRows": 253,
+      "retainedRowsConvention": 257,
+      "traceBytes": 65536,
+      "lineBytes": 512,
+      "reservedRecordBytes": 513,
+      "receiptEnvelopeBytes": 262144,
+      "diagnosticBackpressureMs": 2000
+    },
+    "independentlyVerifiedDataArithmetic": {
+      "classification": "Conservative longest-enum JSON cross-product; not target execution",
+      "payload": {
+        "probeDigest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "runState": "threw",
+        "outcome": "unobserved",
+        "errorClass": "conflict",
+        "stage": "request-drain",
+        "reason": "unconfirmed",
+        "runErrorCode": "UND_ERR_HEADERS_TIMEOUT",
+        "runCauseCode": "UND_ERR_HEADERS_TIMEOUT"
+      },
+      "emittedWithNewline": 355,
+      "emittedWithoutNewline": 354,
+      "parentNegativeMax": 498,
+      "parentLongFraction": 499,
+      "broaderParserNotStarted": 505
+    },
+    "arithmeticLimit": "These JSON sizes use the conservative longest admitted scalar shapes with unrelated parent fields null, as R1 states. They are data-only bounds, not execution of target code or a promise to admit arbitrary hostile records. Existing line/record/trace guards and envelope omission remain authoritative; exact postimage serialization stays part of existing source R2.",
+    "threeCasePlan": [
+      "Actual original run-catch/failed-close-publisher code fragments preserve rejection identity and close stage/reason for recognized, absent, arbitrary, getter-backed and throwing-proxy inputs; counterfactual old source loses newly selected codes.",
+      "Actual existing finite TEST Node --import passive observer plus exported parent capture carry only sanitized codes through both boundaries, including the existing reserved close slot after ordinary trace exhaustion.",
+      "Actual parent projection retains legacy rows, null/unknown and malformed optional fields without overriding close classification; checks exact maximum selected row/line sizes, original truncation rules and one retained close observation."
+    ],
+    "nativeTestPreservation": {
+      "originalBytes": 19696,
+      "originalLines": 345,
+      "originalCases": 9,
+      "newTopLevelCases": 3,
+      "plannedWholeFileCases": 12,
+      "oldPrefixLiteral": true,
+      "actualSlices": "The current run rejection marker and publisher marker each occur once. Future tests must include the actual required state declarations and catch/publisher fragments with unique anchors; old-source negative observations must be missing selected code facts, not an accidental new-variable ReferenceError.",
+      "actualObserver": "Use the existing finite TEST Node --import observer plus exported parent capture. Both projections and the original reserved close slot after ordinary exhaustion must be exercised; parent-only fabricated JSON is insufficient.",
+      "nativeVendorExecutionAllowed": false,
+      "publicApiExportOrDependencyAdded": false,
+      "patternUse": "The completely read8b045297 native-host-close file demonstrates finite synthetic channel publications plus real observer/capture and pressure cases. It is pattern evidence only, not selected for editing or new workflow inclusion."
+    },
+    "tuple": {
+      "node": "v24.21.0",
+      "allowed": [
+        "linux-x64",
+        "darwin-x64",
+        "darwin-arm64",
+        "win32-x64",
+        "win32-arm64"
+      ],
+      "entry": "Explicit--import argument must match the module URL or physical file path; importing the parent projection alone does not activate observeOriginalHost.",
+      "qualification": "Unsupported tuples remain unexecuted/unqualified or explicit skips, never inferred PASS. No actual child was run in this review."
+    }
+  },
+  "existingRoutes": {
+    "unchangedCurrentGithubTree": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+    "reusedFullCorpus": {
+      "bytes": 780732,
+      "sha256": "9a83bd5a7425d0674345c607e26b2a1df8bde3556549ac276bfbf860c5c4e3bb",
+      "gitBlob": "6d032754064d4f251a11e8572bb7b476ea5860a8",
+      "wholeWorkflowCount": 42
+    },
+    "gui": {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+      "bytes": 96872,
+      "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+      "line": 103,
+      "wholeFile": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "invocation": "Existing unfiltered eight-file Node command",
+      "newWorkflow": false
+    },
+    "native": {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "bytes": 36013,
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+      "line": 106,
+      "wholeFile": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "jobs": [
+        "Static V01 source test (ubuntu-24.04)",
+        "Static V01 source test (windows-2022)"
+      ],
+      "node": "24.21.0",
+      "draftBlanketSkip": false,
+      "prerequisites": [
+        "pinned dependency install",
+        "existing Host build",
+        "existing Host TEST typecheck"
+      ],
+      "newWorkflow": false
+    },
+    "caveats": [
+      "Stage1 also reads a separately recorded current-main runtime lock; its actual commit remains a distinct input.",
+      "A route and whole-file argument establish reachability, not an actual future execution or success if prerequisites fail.",
+      "No dispatch tool, push alias, new PR/ref or execution venue is selected by this source R1.",
+      "Current fixed9d PR1219 cannot qualify the later1ca Windows changes or these unauthored diagnostics."
+    ]
+  },
+  "evidenceQualification": {
+    "sourceEvidenceOnly": true,
+    "guiCommonCauseProven": false,
+    "nativeExactCauseProven": false,
+    "fourthDarwinLane": "Root-reported retained x64 lifecycle wait context is included by the R1; this review does not newly claim a full x64 log or ZIP audit.",
+    "primaryNativeContext": "Fully read f41a and ce2 reports preserve runState=threw/outcome=unobserved/errorClass=unknown and driver-close/unconfirmed after an after-session transport failure. The earlier five completed credential steps and two normal Host exits do not qualify the failed third epoch.",
+    "snapshots": "Actual failed GUI dialog/button values remain unavailable in the retained stdout reviewed previously. New diagnostics cannot retroactively reconstruct them.",
+    "noPromotion": [
+      "UNKNOWN",
+      "UNREACHED",
+      "SKIP",
+      "CANCELLED",
+      "INCOMPLETE",
+      "nonzero close"
+    ],
+    "standalone": "The separate exactNode24.22.1 standalone RED/GREEN attempt remains unresolved; neither these static source plans nor fixed9d CI substitutes for it.",
+    "sourceAndRuntimeR2": "No postimage is authored or approved. Exact future source/tests are reviewed under the already existing source R2/publication/actual sequence; no additional gate is created."
+  },
+  "checks": [
+    {
+      "id": "R01",
+      "status": "PASS_STATIC",
+      "finding": "Exact complete23,006-byte R1 body rehashed to5d44942a/ac0a112b; this decision is confined to that immutable plan."
+    },
+    {
+      "id": "R02",
+      "status": "PASS_STATIC",
+      "finding": "Complete a3ff actual source gate joins source1ca, root/docs/scripts/tools,98 accepted actual checks and source-only qualification; it predates the R1."
+    },
+    {
+      "id": "R03",
+      "status": "PASS_STATIC",
+      "finding": "Fresh immutable Git commit/root reads independently join1ca9566d, parentd693c62d, rootfd6a7a81 and all selected directory pins."
+    },
+    {
+      "id": "R04",
+      "status": "PASS_STATIC",
+      "finding": "All six complete preimage bodies,184,703 bytes, were read and independently matched by byte/Git/SHA identity through exact1ca file reads."
+    },
+    {
+      "id": "R05",
+      "status": "PASS_STATIC",
+      "finding": "Complete GUI feasibility3fcfd990, native feasibilityce2cdcb5 and failure-classificationf41a625f reports were read and joined; current-log facts remain attributed to those retained reviews."
+    },
+    {
+      "id": "R06",
+      "status": "PASS_STATIC",
+      "finding": "Exactly six existing files are selected; zero new files/dependencies/workflows/control files; selected paths are disjoint from all17 fixed parity/Windows paths."
+    },
+    {
+      "id": "R07",
+      "status": "PASS_STATIC",
+      "finding": "The GUI plan consumes the already captured snapshot, preserves post-failure/partial/non-atomic meaning, and adds no DOM/Host/OS/provider observation."
+    },
+    {
+      "id": "R08",
+      "status": "PASS_STATIC",
+      "finding": "First3 dialogs, last24 captured buttons, text tail8,000 and label prefix160 are actual producer bounds; missing totals prohibit a global absence or actual-truncation assertion."
+    },
+    {
+      "id": "R09",
+      "status": "PASS_STATIC",
+      "finding": "Exact Launch team matching and separate enabled/disabled/unknown counts retain duplicates and malformed data rather than choosing an arbitrary button or inferring readiness."
+    },
+    {
+      "id": "R10",
+      "status": "PASS_STATIC",
+      "finding": "The GUI data schema limits output to own-data primitives and existing fixed textFacts; raw labels/text/coordinates/IDs/paths/URLs are excluded."
+    },
+    {
+      "id": "R11",
+      "status": "PASS_STATIC",
+      "finding": "Independent traversal caps, unknown and overflow states, descriptor-failure fallback and existing8,192-character total fallback are expressly preserved."
+    },
+    {
+      "id": "R12",
+      "status": "PASS_STATIC",
+      "finding": "Exact three additional modes match current backend dispatch: emulated-claude-runtime-ui, emulated-claude-lifecycle-ui and emulated-collaboration-ui."
+    },
+    {
+      "id": "R13",
+      "status": "PASS_STATIC",
+      "finding": "Existing import/OpenCode routes, failure-only selection, PASS behavior and unrelated team-ui/extensions behavior stay intact."
+    },
+    {
+      "id": "R14",
+      "status": "PASS_STATIC",
+      "finding": "Packaged final summary has one unique existing source fragment; same actual pure projector can be exercised without importing CLI main while preserving all four original fields and failure propagation."
+    },
+    {
+      "id": "R15",
+      "status": "PASS_STATIC",
+      "finding": "All three90,000ms wait predicates, existing controls, inputs, cleanup and all thirteen frozen parity bodies remain outside the selected change."
+    },
+    {
+      "id": "R16",
+      "status": "PASS_STATIC",
+      "finding": "Whole original observations test is66,098 bytes/34 registration expressions with complete final test; exactly five appended top-level cases preserve its literal prefix and parameterized old cases."
+    },
+    {
+      "id": "R17",
+      "status": "PASS_STATIC",
+      "finding": "Frozen whole149 readiness case explicitly tests old routing/privacy/getters/caps and is compatible with only the three new non-PASS modes; no149/43/85 modification is selected."
+    },
+    {
+      "id": "R18",
+      "status": "PASS_STATIC",
+      "finding": "GUI five-case plan exercises actual functions/composition, privacy/nonmutation, missing/capped/hostile inputs and all route branches without copied logic or new global clock/census/UI mocks."
+    },
+    {
+      "id": "R19",
+      "status": "PASS_STATIC",
+      "finding": "Complete ModelProbe confirms the original non-coordination rejection catch and same-error rethrow; existing held/invalid/conflict/busy errorClass is own-code classification, not a class-instance test."
+    },
+    {
+      "id": "R20",
+      "status": "PASS_STATIC",
+      "finding": "Two new fields are selected only for runState=threw and only from nine positive own-data code values plus one own-data cause.code; unknown values become null."
+    },
+    {
+      "id": "R21",
+      "status": "PASS_STATIC",
+      "finding": "No prototype/name/message/stack/coercion/recursive traversal is selected; reflection failure must preserve exact original rejection."
+    },
+    {
+      "id": "R22",
+      "status": "PASS_STATIC",
+      "finding": "Original first close stage/reason, run outcome, cleanup result and one existing failed-close publication stay authoritative; fulfilled unconfirmed close is not relabeled as thrown."
+    },
+    {
+      "id": "R23",
+      "status": "PASS_STATIC",
+      "finding": "Both actual passive boundaries must carry optional codes: child channel projection/emission and exported parent capture/entry construction."
+    },
+    {
+      "id": "R24",
+      "status": "PASS_STATIC",
+      "finding": "R1 explicitly preserves legacy shape when optional fields are absent and valid original close data when optional metadata is malformed; optional descriptor failures cannot drop the base close record."
+    },
+    {
+      "id": "R25",
+      "status": "PASS_STATIC",
+      "finding": "Original253 ordinary/257 total convention, single reserved close slot,64KiB trace,512-byte line/513-byte record and envelope/backpressure limits remain unchanged."
+    },
+    {
+      "id": "R26",
+      "status": "PASS_STATIC",
+      "finding": "Independent pure JSON arithmetic reproduces355 emitted/354 non-newline,498 extreme-epoch parent and499 longer-finite-epoch parent bytes; conservative broader parser not-started is505."
+    },
+    {
+      "id": "R27",
+      "status": "PASS_STATIC",
+      "finding": "Complete native-receipt prefix is19,696 bytes/345 lines/nine cases; exactly three appended top-level cases preserve every old byte and yield a planned12-case file."
+    },
+    {
+      "id": "R28",
+      "status": "PASS_STATIC",
+      "finding": "Native test plan combines actual uniquely anchored catch/publisher code, finite TEST Node --import observer and actual parent capture; parent-only synthetic rows and copied producer logic are explicitly insufficient."
+    },
+    {
+      "id": "R29",
+      "status": "PASS_STATIC",
+      "finding": "Source-fragment counterfactuals must fail on absent selected code facts, not on a ReferenceError from new state missing in old source; exact executable test behavior remains source R2 work."
+    },
+    {
+      "id": "R30",
+      "status": "PASS_STATIC",
+      "finding": "Actual passive observer admits only Nodev24.21.0 with explicit matching--import on Linuxx64 or Darwin/Windowsx64/ARM64; parent imports alone do not activate it."
+    },
+    {
+      "id": "R31",
+      "status": "PASS_STATIC",
+      "finding": "Unchanged Host whole eight-file route includes observations test; unchanged Stage1 static Ubuntu24.04/Windows2022 jobs use Node24.21.0 and whole native-receipt file after build/typecheck."
+    },
+    {
+      "id": "R32",
+      "status": "PASS_STATIC",
+      "finding": "Current1ca .github tree exactly matches the fully read42-workflow corpus; no workflow/dependency/filter or dispatch capability assumption is introduced."
+    },
+    {
+      "id": "R33",
+      "status": "PASS_STATIC",
+      "finding": "Existing Stage1 moving-main product-lock input and prerequisite failure/skip limits remain; merely appearing in a command is not proof that a future test ran."
+    },
+    {
+      "id": "R34",
+      "status": "PASS_STATIC",
+      "finding": "Current PR1219 fixed9d cannot qualify1ca or future diagnostic output; four GUI lanes have no established shared cause, and native close evidence is a separate failure boundary."
+    },
+    {
+      "id": "R35",
+      "status": "PASS_STATIC",
+      "finding": "Existing R1 publication/actual then root source R2/publication/actual sequence is retained; no extra gate, execution venue, source postimage or runtime acceptance is approved."
+    },
+    {
+      "id": "R36",
+      "status": "PASS_STATIC",
+      "finding": "Read-only authority was observed throughout; only this bare semantic report is retained, with pin-before-full-self-read protocol."
+    }
+  ],
+  "conclusion": "Accept exact5d44942a as a bounded diagnostics R1 plan with no semantic blockers. It adds information from the same retained GUI sample and original native run rejection while keeping original failure decisions, identities, close reason, budgets, test prefixes and frozen paths. This is permission to proceed only through the already selected documentation/source review sequence, not hypothetical postimage acceptance, target execution or E2E qualification.",
+  "selfReadbackProtocol": "Send bare report pin immediately; fetch complete UTF-8 body, verify literal/bytes/SHA/Git/parsed equality and read the entire retained report before final confirmation."
+}

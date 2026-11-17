@@ -456,3 +456,53 @@ At that cutoff, frontend shards1/2/4 reported success with original skips preser
 Ten new artifact transport references are retained with claimed GitHub size/digest metadata. Their ZIP bytes have not been read, independently hashed, CRC-checked or extracted; receipts/screenshots remain unreviewed. Signed transport URLs are omitted. The local execution environment remains unavailable with no new availability notice. No local stage/scope, alternate runtime, target compilation/execution or standalone replay occurred. The old spent attempts remain spent; all terminal original runs and the two initially skipped PR1219 runs remain excluded from polling.
 
 The corrected guard report `3111cea0e195282541272413ca44806dfa702d52` supersedes an unpublished candidate only to describe the old255-byte loop as four physical lines. No source identity or review result changed. This source commit still requires the existing full root/independent actual publication readbacks before a separate exact execution venue is selected. No real Claude/Codex, Ready, main/default merge, release/default activation, Stage2, rerun or blanket E2E/native qualification is authorized or claimed.
+
+
+## Retained failure diagnostics and whole-platform regression route R1 — 2026-11-17
+
+The exact replacement proposal `d226951f5f24dd1a5a7d4742e25edcb3ef043213` (31060 bytes; SHA256 `188bd061a0aa0ed5afe3f8af4919c5ac111ae15d3deb5c92c19645eccab997bc`) selects six existing files for the next bounded source change. Its four complete reviews close **126 static checks** at 2026-11-17 10:19:23 UTC. This checkpoint publishes documentation and retained evidence only. No diagnostic/test postimage has been authored, compiled or executed.
+
+The accepted source remains `1ca9566d70bd624283227a644fa6969eb8bf8f34`, root `fd6a7a819adc8b68a4b3e1ec1ddfe9c57a48e03c`. Its Windows source actual gate `a3ff72947884bc9e9993fa74db71491c3b9e4a61` closed 2026-11-17 09:17:41 UTC with **98 actual checks**. Current PR1219 is independently fixed at `9d79abcf1f5c498687c2e5c443e3edf220070aa6`; its results do not qualify the later Windows fix or this future diagnostics change.
+
+### Exact selected source scope
+
+| Existing file | Next selected change |
+| --- | --- |
+| scripts/legacy-agent-host/desktop-proof-evidence.ts | Project only already-retained partial dialog/button facts; add the three selected non-PASS readiness modes. |
+| scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts | Add that same bounded projection to the existing failure summary; preserve original fields, cleanup, receipt and rethrow. |
+| scripts/legacy-agent-host/desktop-backend-observations.test.ts | Append five actual-implementation regression cases; preserve the complete 66,098-byte original prefix and all original registrations. |
+| packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts | Retain only the original run error's own allowlisted code and one own cause code; preserve exact rejection identity and original close classification. |
+| packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts | Carry the two nullable fields through the existing child and parent projections, preserving valid legacy rows and all existing budgets. |
+| packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs | Preserve its complete 19,696-byte nine-case prefix; append three diagnostics cases and one unconditional awaited import of the unchanged whole platform14 file. |
+
+The GUI addition consumes the existing post-failure sample only. Its first-three-dialog / last-24-button / 8,000-character source limits do not prove completeness or actual truncation. No retained match is not global absence; a saved enabled button does not overturn an expired wait. Only fixed-vocabulary text facts and bounded exact-label button states are permitted. The existing 8,192-character fallback, own-data traversal, missing/malformed/duplicate distinctions, original90s predicates and failure/cleanup authority remain.
+
+The native addition is limited to `runErrorCode` and `runCauseCode` from the nine positive transport-code values and explicit null for unknown/absent. It emits no raw message, stack, name, URL, credential or arbitrary cause. Existing `errorClass`, run state, outcome, first close stage/reason and original thrown object remain authoritative. The observed driver-close/unconfirmed result must remain distinct from the earlier run rejection. Selected data examples fit 355 emitted bytes including newline and499 parent-record bytes with the longer finite epoch; original512/513 byte guards,64KiB trace, row reservations and256KiB envelope remain unchanged.
+
+### Whole existing platform regression route
+
+The unchanged `scripts/e2e/opencode-diagnostics/platform.test.mjs` is pinned to `11c6c2fbd2f76471d0c78e35dea8636b278e6b72` (20,830 bytes). One future awaited import from the already-selected native receipt entry uses `../../../scripts/e2e/opencode-diagnostics/platform.test.mjs`. The existing Stage1 command already lists that entry once and does not list the platform file. No workflow, test-name filter, dependency, new source file or frozen source body is changed.
+
+The prospective native-entry census is **26 registrations =9 original +3 diagnostics +14 unchanged platform cases**. Windows keeps14 eligible platform cases. Linux keeps13 eligible cases and the original Windows-only SKIP. These are prospective registrations, not executed passes. Awaited module evaluation guarantees registration, not completion of the preceding twelve callbacks. Other original command entries keep their existing Node process isolation.
+
+The imported closure retains its original loopback binds, lsof/PowerShell read-only queries, temporary files and owned finite Node fixtures. Those fixtures receive version/status arguments; no real Claude, Codex or OpenCode executable is launched by this closure. No-new-observation scope refers to the application failure flow, not to these explicitly selected component-test effects. Original bounds and cleanup behavior remain; no new aggregate completion guarantee is inferred. The exact recorded Ubuntu image tag returned404, so installed lsof remains unobserved until genuine execution. Missing prerequisites or cleanup debt stay failures; no installation, fallback, retry or budget expansion is selected.
+
+### Retained current CI evidence
+
+Complete observation packets7–9 (`e37311346018c41fc8f622efdd4a576f030af4d7`),10–11 (`dc274635550160f7ea4cae9daa1f951539747e18`) and12–13 (`ce8decc1d92c5d379fbe7a2ecc3ee7d5e9da3892`) retain43 complete API bodies and21 newly completed full job logs totaling6,427,733 bytes. Root observations through 2026-11-17 10:10:37 UTC leave packaged and Host Emulated active/queued. Announcements, Stage1, CI, CodeQL and OpenCode Diagnostics are terminal; none is polled again. Original9 and PR1218 terminal runs remain untouched.
+
+The bounded completed-progress report `45e6e700c5a12db1c86ae4cad4558a81226d4ee5` independently maps all149 selected UI-control cases to unique PASS lines within the Darwin ARM Node24.21.0 eight-file invocation (238 PASS,1 unrelated SKIP,total239). All four frontend shards report25,844 PASS and38 SKIP across2,155 passed and7 skipped files, with no duplicate file paths; the43 catalog and85 runtime-management files pass. Frontend workspace runtime is Node26.12.1/Vitest3.2.6; delegated Host Node24.21.0 is separate. Repeated GUI unit commands are not added to these totals.
+
+Further complete logs report successful Host import, team, selection, processes, cross-team, review/readback, management, skills and Codex emulation jobs. The packaged Linux log reports V2 Host qualification PASS with native cleanup confirmed while explicitly leaving desktopJourneyQualified/vendorAuthQualified/releaseQualified false. The old native process seven-case file passed; the new eighth case is absent from fixed9d.
+
+Four pre-Launch GUI failures retain unknown readiness causes. Native Linux credential execution retains driver-close/unconfirmed and exit1; later credential assertions are unreached. Darwin P09 and cold renderer debt remain unresolved. Old9d Windows phase expiry does not test the1ca query/pair fix. None of these failures is waived, retried or promoted to PASS.
+
+Artifact metadata/transport references now cover29 archives, including16 newly transported references at observation13. No current ZIP bytes have been independently hashed, CRC-checked or extracted here; no new receipt or screenshot is read/qualified. Signed temporary URLs are omitted. No local execution environment or new availability notice has appeared; the separately retained fresh standalone scope remains uncreated and uninvoked.
+
+### Preservation and ordered continuation
+
+The initial unpublished R1 `5d44942ab4492596cbd6bbb328041a6713b79810` and its156 static checks remain retained as superseded evidence. The exact replacement delta has a complete inverse restoring that23,006-byte proposal. It preserves the initial six preimages and5+3 diagnostic requirements while explicitly adding the whole14 route and its I/O/skip scope.
+
+All17 preserved source bodies (13 parity plus4 Windows), whole149/catalog43/runtime85, production5020, cap800, exceptions141, nonDoc8799 and42 workflows remain unchanged. All91 prior catalog values,27 original bundles/totals and complete plan/status prefixes are preserved; two new catalog keys describe this R1/evidence. Frozen PR1206/1207/1208/1211/1212/1213 and current PR1219 snapshots/metadata remain untouched.
+
+Next: complete root plus independent actual readback of this exact documentation publication; only then root authors the selected postimages, followed by exact source R2 review/publication/immediate push and full actual readbacks. A genuine execution venue is selected separately against that new source. No extra executable R2 is introduced for a venue containing only existing structured CI operations. UNKNOWN/UNREACHED/SKIP/CANCELLED remain distinct from PASS. No Ready, main/default merge, release/default activation, Stage2 or blanket native/vendor/all-provider E2E qualification is granted.

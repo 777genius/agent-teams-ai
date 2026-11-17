@@ -1,0 +1,502 @@
+{
+  "schema": "c714.native-error-projection-test-ci-feasibility.guard.v1",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_guard",
+  "preparedAt": "2026-11-17 09:47:27 UTC",
+  "scope": {
+    "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "laterJoin": "Root supplied the full 1ca-tree unchanged-source join for ModelProbe195dabe6/passive625c6ddd and states only four Windows sources changed. This reviewer uses exact 9d pins and does not claim an independent later-tree audit.",
+    "rootSoleAuthorExecutor": true,
+    "sourceAuthored": false,
+    "execution": false,
+    "liveCiRead": false,
+    "newGate": false,
+    "venueSelected": false
+  },
+  "conclusion": {
+    "feasible": true,
+    "concreteBlockers": [],
+    "answer": "The existing nonfrozen opencode-v2-native-receipt.test.mjs can retain its complete original prefix and append tests that exercise the actual original catch/publisher plus both passive projections, using the existing Stage1 whole-file command and finite Node observer-child pattern. No product API export or new file/workflow is needed.",
+    "limits": "Exact future source/test postimages and actual compiled-fragment anchors remain unauthored/unexecuted. This is source-supported feasibility, not acceptance of a hypothetical patch or prediction of native success."
+  },
+  "sources": {
+    "selectedTest": {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "bytes": 19696,
+      "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+      "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+      "physicalLines": 345,
+      "existingCases": 9,
+      "completeBodyRead": true,
+      "raw9dLiteralJoin": true,
+      "existingPrefixPreservedByOption": true
+    },
+    "supportingChildPattern": {
+      "path": "packages/legacy-agent-host/tests/native-host-close.test.ts",
+      "bytes": 36526,
+      "sha256": "42a39d5cfe0a1f0681f3978e2073c1f2ba57e4f47f81a5b9345ea6927a991cce",
+      "gitBlob": "8b045297766cc5a352be923e3d477426411f1f5b",
+      "physicalLines": 510,
+      "completeBodyRead": true,
+      "relevantRanges": [
+        [
+          11,
+          115
+        ],
+        [
+          335,
+          419
+        ]
+      ],
+      "selectedStaticCommandIncludesIt": false
+    },
+    "otherTest": {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-model-probe.test.ts",
+      "bytes": 18500,
+      "sha256": "a69a4f42dec108c5d6f84faf173aa0b419ac63c1da77aa303610c641a12761d6",
+      "gitBlob": "0fa1c24ebc438a601265fa61d3a0c6dc52d1fec4",
+      "completeBodyFetched": true,
+      "completeBodyRead": false,
+      "readScope": "Import/probe/close references inspected only; this file is not selected as an execution route.",
+      "selectedStaticCommandIncludesIt": false
+    },
+    "workflow": {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36013,
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+      "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "completeBodyFetched": true,
+      "completeBodyReadThisTask": false,
+      "readRanges": [
+        [
+          1,
+          125
+        ]
+      ],
+      "wholeBodySamePinnedSource": true
+    },
+    "modelProbe": {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "bytes": 22177,
+      "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+      "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05",
+      "completeBodyReadPreviously": true,
+      "priorAdvisory": "ce2cdcb5524bb248260919c6a2db4c4e248a15b2",
+      "physicalLines": 500
+    },
+    "passive": {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "bytes": 37181,
+      "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+      "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068",
+      "completeBodyReadPreviously": true,
+      "physicalLines": 565
+    },
+    "nativeFixture": {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "bytes": 15303,
+      "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01",
+      "gitBlob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5",
+      "completeBodyReadPreviously": true,
+      "physicalLines": 389
+    }
+  },
+  "ciRoute": {
+    "workflowName": "OpenCode V2 Stage1 static preflight (TEST only)",
+    "job": "static-preflight",
+    "displayName": "Static V01 source test (${{ matrix.os }})",
+    "matrix": [
+      "ubuntu-24.04",
+      "windows-2022"
+    ],
+    "node": "24.21.0",
+    "event": "pull_request types [opened, synchronize, reopened]",
+    "matchingPaths": [
+      "packages/legacy-agent-host/src/**",
+      "packages/legacy-agent-host/tests/**"
+    ],
+    "draftSkip": false,
+    "checkout": "github.event.pull_request.head.sha, persist-credentials false, explicit git rev-parse equality assertion",
+    "preconditions": [
+      "Existing pinned dependency install",
+      "pnpm --filter @agent-teams/legacy-agent-host build",
+      "pnpm --filter @agent-teams/legacy-agent-host typecheck:test"
+    ],
+    "wholeCommand": "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts",
+    "commandLine": 106,
+    "testNameFilter": null,
+    "independentLaterStep": "The unchanged Linux matrix job subsequently invokes its original native V1 baseline step. The proposed diagnostic regression itself requires only finite Node; this report does not relabel the entire static job as native-free.",
+    "noAction": "No workflow/run was read live, started, retried, canceled or changed."
+  },
+  "existingTestPattern": {
+    "testSource": "native-host-close.test.ts:11–115,335–419",
+    "features": [
+      "Creates one finite synthetic Node child and imports the actual passive observer using its existing --import admission.",
+      "Publishes synthetic diagnostics_channel data; the source explicitly invokes no HTTP/provider/Runtime.",
+      "Attempts invalid fields/accessors/proxies before valid late observations, then saturates ordinary events with 300 synthetic request:create publications.",
+      "Verifies first late read/metadata/close records after trace-limit; at most one of each survives.",
+      "Passes received stderr through actual createPassiveNativeDiagnosticCapture, including split lines and byte-pressure/refusal checks.",
+      "Checks every parent record <=513 bytes, aggregate <=64 KiB, count <=257, and absence of secret/path sentinels."
+    ],
+    "reuseBoundary": "Use the existing supported observer-child and parent-capture mechanism, without importing the entire native-host-close test file or selecting its CPU-profile work. An appended finite child may be provided an in-memory --eval program rather than adding a new checked-in fixture file.",
+    "runtimeAdmission": "Exact Node24.21.0 and the current Linux x64 / Windows arm64-or-x64 / Darwin arm64-or-x64 platform guard remain. Static matrix supplies Linux x64 and Windows x64. Unsupported runtime is not a passing substitute."
+  },
+  "extractionFeasibility": {
+    "sourceAnchors": [
+      {
+        "label": "state declarations",
+        "start": "  let runState:",
+        "end": "  let coordinationResult:",
+        "startOccurrences": 1,
+        "endOccurrences": 1,
+        "startLine": 91,
+        "endLine": 99,
+        "ordered": true,
+        "sliceIdentity": {
+          "bytes": 675,
+          "sha256": "7d448640aa8a29d909e7e3952ecfcd9417d78287e835fb07bff63ce7afd14007",
+          "gitBlob": "dba44bbb7d52a911d3b6a261e2984f5082c18765"
+        },
+        "sourceOnly": true,
+        "compiledAnchorVerificationPerformed": false
+      },
+      {
+        "label": "original run method",
+        "start": "    run: (signal, originalDeadline) => {",
+        "end": "    close: originalDeadline => {",
+        "startOccurrences": 1,
+        "endOccurrences": 1,
+        "startLine": 396,
+        "endLine": 414,
+        "ordered": true,
+        "sliceIdentity": {
+          "bytes": 906,
+          "sha256": "c225fad7432f205e57fb1a086c1d84213f30ba900705e11e15c6a5ca0763b13e",
+          "gitBlob": "1409b65f9bdad2fd8bf15841e36d4460acce8204"
+        },
+        "sourceOnly": true,
+        "compiledAnchorVerificationPerformed": false
+      },
+      {
+        "label": "original publisher continuation",
+        "start": "      closing = (purposeBound ? closeCoordinationByDeadline(work, originalDeadline ?? deadline) : work)",
+        "end": "      return closing;",
+        "startOccurrences": 1,
+        "endOccurrences": 1,
+        "startLine": 484,
+        "endLine": 497,
+        "ordered": true,
+        "sliceIdentity": {
+          "bytes": 677,
+          "sha256": "339d052a0a4d205dd1f7c57130386635bf5d04d61c9cd542703f125650dfcc91",
+          "gitBlob": "ded3bd876233b0fb238559d210d76c7edced8eed"
+        },
+        "sourceOnly": true,
+        "compiledAnchorVerificationPerformed": false
+      }
+    ],
+    "compiledAvailability": "The existing Host build already precedes the selected .mjs test and produces dist/adapters/providers/OpenCodeV2ModelProbe.js. The old test itself already imports another compiled Host provider module.",
+    "compiledReadPerformed": false,
+    "targetCodeEvaluated": false,
+    "method": [
+      "Read the actual current compiled ModelProbe body as text inside the future test.",
+      "Require unique, ordered boundaries and take literal slices for the state/helper declarations needed by the run catch, the original run method, and the original failed-close publisher continuation.",
+      "Keep all product classifier/catch/publisher statements literally from those slices. Any future local projection helper must be included from actual source/build text, never reimplemented in the harness.",
+      "Supply only finite lexical fixtures: a run function rejecting the chosen object, running/closing variables, no coordination, a false cleanup-work promise and the captured digest/first close stage. Do not instantiate the full ModelProbe, server, provider or custody paths.",
+      "Inspect the caught rejection by identity, then inspect the published channel payload. Read fields from the payload rather than from newly named lexical variables, so old code produces a meaningful missing-field failure.",
+      "Use the same actual publisher in a finite child with the real passive observer and feed its stderr to the actual parent capture for the end-to-end projection check."
+    ],
+    "scopeBoundary": "This isolates the original diagnostic branches and rethrow identity. It does not execute or qualify native startup, driver.close, server-stop, filesystem cleanup or the full provider factory.",
+    "anchorLimit": "Only current TS source anchor uniqueness is calculated here. Actual compiled anchor uniqueness and slice completeness must be checked by the concrete future test; no emitted build artifact exists or was executed in this review.",
+    "noNewProductApi": true,
+    "noModuleMockFlag": true
+  },
+  "discriminatingChecks": {
+    "producer": [
+      "Every positive direct code and cause code can be exercised through the actual extracted catch with the same rejection object escaping.",
+      "Management errorClass held/invalid/conflict/busy remains unchanged; the new transport fields are separate and nullable.",
+      "Unknown strings, boxed strings, inherited code/cause fields, code/cause accessors, opaque/primitive errors and throwing reflection retain null diagnostics without replacing the original rejection.",
+      "A cause is read at most one own-data level; no name/message/stack/prototype access or recursive cause traversal occurs.",
+      "Actual publisher preserves the original close stage/reason and false cleanup result, with captured run-state/errorClass/outcome identity."
+    ],
+    "bothProjections": [
+      "After synthetic ordinary saturation, an actual channel publication from the extracted producer must produce the expected two code fields in the child line and then the parent entry.",
+      "Malformed/private data must not consume the sole close reservation before a valid publication.",
+      "The first close record survives; later duplicate close observations and changes of epoch do not reset the reservation.",
+      "Check split incoming chunks, fixed UTF8 byte boundaries, total trace bounds and absence of secret sentinels.",
+      "Direct parent-capture negative fixtures are useful additional receiver checks, but cannot replace the actual child projection."
+    ],
+    "counterfactual": "With current old producer and projections, the two fields are absent at publication and discarded by the receiver. A strict positive-field expectation therefore fails. This is a meaningful static counterfactual; it is not a claim that old/new target tests were run here.",
+    "copyRisk": "A test that reconstructs the new classifier, substitutes its own projected payload, merely searches for tokens, or only tests the parent parser would not establish the original catch/publisher and both projections.",
+    "noRuntimeProof": "The test must never infer successful native cleanup or a historical root cause from a retained diagnostic."
+  },
+  "vocabulary": {
+    "proposedByRoot": true,
+    "selectedByReviewer": false,
+    "fields": [
+      "runErrorCode",
+      "runCauseCode"
+    ],
+    "values": [
+      null,
+      "ABORT_ERR",
+      "ECONNRESET",
+      "ECONNREFUSED",
+      "EPIPE",
+      "ETIMEDOUT",
+      "UND_ERR_ABORTED",
+      "UND_ERR_SOCKET",
+      "UND_ERR_HEADERS_TIMEOUT",
+      "UND_ERR_BODY_TIMEOUT"
+    ],
+    "nameField": false,
+    "rawText": false,
+    "prototypeRead": false,
+    "causeDepth": 1,
+    "reason": "These are the nine already-existing positive transport-code strings. Adding a name gives limited signal, creates inherited-name ambiguity and consumes line space. Existing errorClass/runState continue to carry their original semantics.",
+    "unknown": "Anything outside the positive set is null; null is not confirmed absence of a native failure."
+  },
+  "sizeArithmetic": {
+    "codes": [
+      "ABORT_ERR",
+      "ECONNRESET",
+      "ECONNREFUSED",
+      "EPIPE",
+      "ETIMEDOUT",
+      "UND_ERR_ABORTED",
+      "UND_ERR_SOCKET",
+      "UND_ERR_HEADERS_TIMEOUT",
+      "UND_ERR_BODY_TIMEOUT"
+    ],
+    "positiveCodes": 9,
+    "nullableVocabulary": 10,
+    "codeFieldCombinations": 100,
+    "maxCodeCharacters": 23,
+    "longest": "UND_ERR_HEADERS_TIMEOUT",
+    "emittedThrewBytesIncludingNewline": 355,
+    "emittedBroaderNotStartedBytesIncludingNewline": 361,
+    "numericExamples": [
+      {
+        "epoch": 1,
+        "token": "1",
+        "tokenCharacters": 1,
+        "threwBytes": 475,
+        "notStartedBytes": 481
+      },
+      {
+        "epoch": 4,
+        "token": "4",
+        "tokenCharacters": 1,
+        "threwBytes": 475,
+        "notStartedBytes": 481
+      },
+      {
+        "epoch": 9007199254740991,
+        "token": "9007199254740991",
+        "tokenCharacters": 16,
+        "threwBytes": 490,
+        "notStartedBytes": 496
+      },
+      {
+        "epoch": -1.7976931348623157e+308,
+        "token": "-1.7976931348623157e+308",
+        "tokenCharacters": 24,
+        "threwBytes": 498,
+        "notStartedBytes": 504
+      },
+      {
+        "epoch": -0.0000010000000000000002,
+        "token": "-0.0000010000000000000002",
+        "tokenCharacters": 25,
+        "threwBytes": 499,
+        "notStartedBytes": 505
+      }
+    ],
+    "conservativeNumericTokenBytes": 32,
+    "conservativeThrewRecordBytesIncludingNewline": 506,
+    "conservativeBroaderRecordBytesIncludingNewline": 512,
+    "currentCaps": {
+      "lineBytes": 512,
+      "recordBytesWithNewline": 513,
+      "traceBytes": 65536
+    },
+    "correction": "498 bytes is the -Number.MAX_VALUE example only, not a universal numeric-token maximum. The 25-character -0.0000010000000000000002 example yields 499; original positive epochs 1–4 yield 475, and maximum-safe positive integer yields 490.",
+    "scope": "Pure data serialization arithmetic; no target code compiled, imported or executed."
+  },
+  "preservation": {
+    "originalTestPrefix": {
+      "bytes": 19696,
+      "lines": 345,
+      "cases": 9,
+      "appendOnly": true,
+      "lineCap": 800,
+      "availablePhysicalLines": 455
+    },
+    "frozenParityPaths": 13,
+    "parentBaselineSourceFiles": 8799,
+    "newCheckedInFiles": 0,
+    "newDependencies": 0,
+    "newWorkflows": 0,
+    "budgets": [
+      "Original production deadlines/cases and cleanup/custody",
+      "Existing 512-byte emitted line and 513-byte parent record",
+      "64-KiB trace and current row/reservation caps",
+      "Existing failure-envelope guard and backpressure"
+    ],
+    "rootOwns": "Root selects any exact R1, source/test postimages, review/publication procedure and future execution. This advisory adds none."
+  },
+  "checks": [
+    {
+      "number": 1,
+      "id": "selected-test-pin",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Full immutable native-receipt file f274129a read/hash-joined at its canonical 9d path; 19,696 bytes, 345 physical lines, nine existing cases."
+    },
+    {
+      "number": 2,
+      "id": "prefix-preservation",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Append-only tests can leave every original byte and all nine existing cases unchanged; 455 physical lines remain under the 800-line cap. No exact future line or case count is selected."
+    },
+    {
+      "number": 3,
+      "id": "workflow-pin",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Complete workflow body 2f557dd4 fetched/hashed. Relevant event, matrix, checkout, Node/build/typecheck and exact test-command section 1–125 read in full."
+    },
+    {
+      "number": 4,
+      "id": "draft-eligibility",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Opened/synchronize/reopened pull requests and Host src/tests path filters include the candidate paths. The static-preflight job has no Draft exclusion or job-level if condition."
+    },
+    {
+      "number": 5,
+      "id": "both-platforms",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Static V01 source test matrix is ubuntu-24.04 and windows-2022; both explicitly use Node 24.21.0 and the same whole-file test command."
+    },
+    {
+      "number": 6,
+      "id": "build-before-test",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Pinned dependency install precedes Host build and test typecheck; line 106 then includes the whole native-receipt file without a name filter."
+    },
+    {
+      "number": 7,
+      "id": "test-route-gap",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "The selected line-106 command does not include opencode-v2-model-probe.test.ts or native-host-close.test.ts. Their source existence is not counted as selected execution coverage."
+    },
+    {
+      "number": 8,
+      "id": "supporting-pattern-pin",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Complete native-host-close.test.ts 8b045297 read/hash-bound: 36,526 bytes, 510 physical lines. Its finite Node child activates the actual passive observer with --import, without invoking HTTP/provider/Runtime."
+    },
+    {
+      "number": 9,
+      "id": "existing-child-pattern",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "The source pattern publishes synthetic diagnostics, saturates ordinary trace, checks first late close/read/metadata retention, independent parent projection, 257-row/64-KiB bounds and secret exclusion."
+    },
+    {
+      "number": 10,
+      "id": "source-anchor-proof",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Three relevant current TS declaration/run/publisher boundaries are unique and ordered. This is source-text proof; no current or future compiled fragment is claimed executed or fully verified here."
+    },
+    {
+      "number": 11,
+      "id": "actual-code-not-copy",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Feasible appended tests read the Host build output and evaluate only uniquely extracted actual declarations/run rejection/publisher sections with finite stubs. The classifier/catch/publisher logic must not be copied into the test."
+    },
+    {
+      "number": 12,
+      "id": "no-product-export",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "No new product export, module-mock flag, dependency, source file or workflow is needed by this approach. The existing exported TEST capture function may be imported into the parent without activating its observer."
+    },
+    {
+      "number": 13,
+      "id": "native-free-harness",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Only a finite Node observer child is contemplated. Do not import or instantiate the full ModelProbe/provider factory; no model/server/custody/network/OS-probe action is needed."
+    },
+    {
+      "number": 14,
+      "id": "original-error-identity",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "The extracted actual rejection handler can be given a Promise rejection with a known object, then checked for exact identity and unchanged original run/errorClass state while inspecting published diagnostic fields."
+    },
+    {
+      "number": 15,
+      "id": "old-code-failure",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "The current producer lacks runErrorCode/runCauseCode and both current projections discard unknown fields. A strict positive-field expectation fails on that old behavior; a harness referencing absent new lexical variables would instead risk an irrelevant ReferenceError and should be avoided."
+    },
+    {
+      "number": 16,
+      "id": "late-end-to-end",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "A real channel publication from the actual extracted publisher, after synthetic ordinary saturation, can flow through the actual child subscriber and the actual parent capture. Its two code fields must survive both projections and only the first close slot is retained."
+    },
+    {
+      "number": 17,
+      "id": "negative-authority",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Unknown/inherited/accessor-backed codes, opaque errors and arbitrary cause text can be tested without getters/prototype reads. The same original error must escape; original cleanup classification is not inferred from the added codes."
+    },
+    {
+      "number": 18,
+      "id": "nullable-vocabulary",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "The bounded vocabulary can be exactly the nine already-existing positive transport codes plus null. No name field, raw text, new arbitrary string, prototype access or second cause level is necessary."
+    },
+    {
+      "number": 19,
+      "id": "code-combinations",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Pure data enumeration of all 100 nullable two-field combinations confirms the largest positive string is UND_ERR_HEADERS_TIMEOUT at 23 characters."
+    },
+    {
+      "number": 20,
+      "id": "size-correction",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "355-byte emitted line is confirmed. The parent record is 499 bytes for the 25-character decimal epoch example; 498 was only the shorter -Number.MAX_VALUE example."
+    },
+    {
+      "number": 21,
+      "id": "conservative-size",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Allowing a deliberately conservative 32-byte JSON numeric token yields 506 bytes for actual threw state, or 512 for the broader not-started enum combination, within the existing 513-byte parent record ceiling."
+    },
+    {
+      "number": 22,
+      "id": "caps-preserved",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "No increase in 512-byte line, 513-byte record, 64-KiB trace, original row/slot count, envelope cap, execution deadline, native case or custody bounds is needed."
+    },
+    {
+      "number": 23,
+      "id": "runtime-admission",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "The actual child observer only activates on the existing supported platform tuples and exact Node v24.21.0 with the explicit --import argument. The two selected jobs meet that source-level admission; unsupported execution remains unexecuted/unqualified, not PASS."
+    },
+    {
+      "number": 24,
+      "id": "scope-limit",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "The harness tests diagnostic projection/rethrow/publishing, not the entire native run/close, original cleanup success, actual provider exception, or the historical failure's cause."
+    },
+    {
+      "number": 25,
+      "id": "authority",
+      "status": "PASS_BOUNDED_FEASIBILITY",
+      "finding": "Read-only immutable Git/evidence and pure data calculations only, plus this bare report. No executable source/test authored, imported, compiled or run; no live CI/ref/PR/runtime action, new gate or venue selection."
+    }
+  ],
+  "checkCount": 25,
+  "selfReadbackProtocol": "Retain bare report, send exact pin immediately, fetch and fully self-read identical bytes, then confirm."
+}

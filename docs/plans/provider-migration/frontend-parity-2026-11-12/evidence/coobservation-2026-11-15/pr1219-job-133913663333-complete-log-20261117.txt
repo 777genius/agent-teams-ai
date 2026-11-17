@@ -1,0 +1,1369 @@
+﻿2026-11-17T08:54:40.3846631Z Current runner version: '2.338.2'
+2026-11-17T08:54:40.3872692Z ##[group]Runner Image Provisioner
+2026-11-17T08:54:40.3873645Z Hosted Compute Agent
+2026-11-17T08:54:40.3874373Z Version: 20261103.629
+2026-11-17T08:54:40.3875030Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-17T08:54:40.3875872Z Build Date: 2026-11-03T17:26:59Z
+2026-11-17T08:54:40.3876586Z Worker ID: {fcc5e7e9-a191-4c6e-b816-257e56c45cbf}
+2026-11-17T08:54:40.3877355Z Region: westus
+2026-11-17T08:54:40.3877967Z Cloud: Azure
+2026-11-17T08:54:40.3878542Z ##[endgroup]
+2026-11-17T08:54:40.3880475Z ##[group]Operating System
+2026-11-17T08:54:40.3881181Z Ubuntu
+2026-11-17T08:54:40.3881733Z 24.04.5
+2026-11-17T08:54:40.3882468Z LTS
+2026-11-17T08:54:40.3883022Z ##[endgroup]
+2026-11-17T08:54:40.3883670Z ##[group]Runner Image
+2026-11-17T08:54:40.3884326Z Image: ubuntu-24.04
+2026-11-17T08:54:40.3884932Z Version: 20261111.370.1
+2026-11-17T08:54:40.3886579Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261111.370/images/ubuntu/Ubuntu2404-Readme.md
+2026-11-17T08:54:40.3888423Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261111.370
+2026-11-17T08:54:40.3889958Z ##[endgroup]
+2026-11-17T08:54:40.3891444Z ##[group]GITHUB_TOKEN Permissions
+2026-11-17T08:54:40.3893439Z Actions: read
+2026-11-17T08:54:40.3894052Z Contents: read
+2026-11-17T08:54:40.3894749Z Metadata: read
+2026-11-17T08:54:40.3895348Z PullRequests: read
+2026-11-17T08:54:40.3895975Z ##[endgroup]
+2026-11-17T08:54:40.3898164Z Secret source: Actions
+2026-11-17T08:54:40.3899596Z Cache mode: write
+2026-11-17T08:54:40.3900388Z Prepare workflow directory
+2026-11-17T08:54:40.4364289Z Prepare all required actions
+2026-11-17T08:54:40.4414057Z Getting action download info
+2026-11-17T08:54:40.7922456Z Download action repository 'actions/checkout@v6' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-11-17T08:54:40.9219392Z Download action repository 'pnpm/action-setup@v6' (SHA:73e46992e05b19abd31f2f3c20e0e7370d762115)
+2026-11-17T08:54:41.2547971Z Download action repository 'actions/setup-node@v6' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+2026-11-17T08:54:41.4890352Z Complete job name: Fast feedback
+2026-11-17T08:54:41.5779232Z ##[group]Run actions/checkout@v6
+2026-11-17T08:54:41.5780232Z with:
+2026-11-17T08:54:41.5780754Z   repository: 777genius/agent-teams-ai
+2026-11-17T08:54:41.5784473Z   token: ***
+2026-11-17T08:54:41.5784910Z   ssh-strict: true
+2026-11-17T08:54:41.5785344Z   ssh-user: git
+2026-11-17T08:54:41.5785790Z   persist-credentials: true
+2026-11-17T08:54:41.5786282Z   clean: true
+2026-11-17T08:54:41.5786739Z   sparse-checkout-cone-mode: true
+2026-11-17T08:54:41.5787261Z   fetch-depth: 1
+2026-11-17T08:54:41.5787689Z   fetch-tags: false
+2026-11-17T08:54:41.5788127Z   show-progress: true
+2026-11-17T08:54:41.5788573Z   lfs: false
+2026-11-17T08:54:41.5789294Z   submodules: false
+2026-11-17T08:54:41.5789754Z   set-safe-directory: true
+2026-11-17T08:54:41.5790504Z   allow-unsafe-pr-checkout: false
+2026-11-17T08:54:41.5791844Z env:
+2026-11-17T08:54:41.5792627Z   CI_ROOT_TEST_SHARDS: 4
+2026-11-17T08:54:41.5793535Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-17T08:54:41.5794542Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-17T08:54:41.5795433Z ##[endgroup]
+2026-11-17T08:54:41.8622191Z Syncing repository: 777genius/agent-teams-ai
+2026-11-17T08:54:41.8624817Z ##[group]Getting Git version info
+2026-11-17T08:54:41.8625890Z Working directory is '/home/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-17T08:54:41.8627004Z [command]/usr/bin/git version
+2026-11-17T08:54:41.8797075Z git version 2.56.1
+2026-11-17T08:54:41.8831217Z ##[endgroup]
+2026-11-17T08:54:41.8841008Z Temporarily overriding HOME='/home/runner/work/_temp/97daaab1-7658-4441-ad90-5e8c28279389' before making global git config changes
+2026-11-17T08:54:41.8857299Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-17T08:54:41.8859451Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-17T08:54:41.8904417Z Deleting the contents of '/home/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-17T08:54:41.8915414Z ##[group]Determining repository object format
+2026-11-17T08:54:41.8916715Z ##[endgroup]
+2026-11-17T08:54:41.8917728Z ##[group]Initializing the repository
+2026-11-17T08:54:41.8919392Z [command]/usr/bin/git init /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-17T08:54:41.9034113Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-17T08:54:41.9036310Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-17T08:54:41.9038094Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-17T08:54:41.9039735Z hint: call:
+2026-11-17T08:54:41.9040558Z hint:
+2026-11-17T08:54:41.9041265Z hint: 	git config --global init.defaultBranch <name>
+2026-11-17T08:54:41.9042105Z hint:
+2026-11-17T08:54:41.9042928Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-17T08:54:41.9044403Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-17T08:54:41.9045994Z hint:
+2026-11-17T08:54:41.9046887Z hint: 	git branch -m <name>
+2026-11-17T08:54:41.9047870Z hint:
+2026-11-17T08:54:41.9049150Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-17T08:54:41.9050429Z Initialized empty Git repository in /home/runner/work/agent-teams-ai/agent-teams-ai/.git/
+2026-11-17T08:54:41.9058059Z [command]/usr/bin/git remote add origin https://github.com/777genius/agent-teams-ai
+2026-11-17T08:54:41.9114909Z ##[endgroup]
+2026-11-17T08:54:41.9116011Z ##[group]Disabling automatic garbage collection
+2026-11-17T08:54:41.9120123Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-17T08:54:41.9166173Z ##[endgroup]
+2026-11-17T08:54:41.9180422Z ##[group]Setting up auth
+2026-11-17T08:54:41.9181669Z Removing SSH command configuration
+2026-11-17T08:54:41.9183071Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-17T08:54:41.9218131Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-17T08:54:41.9628623Z Removing HTTP extra header
+2026-11-17T08:54:41.9636995Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-17T08:54:41.9689064Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-17T08:54:41.9930328Z Removing includeIf entries pointing to credentials config files
+2026-11-17T08:54:41.9937436Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-17T08:54:41.9984502Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-17T08:54:42.0233834Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-39e39d97-f97c-41c4-8351-456af1b8f98a.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-17T08:54:42.0285990Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path /home/runner/work/_temp/git-credentials-39e39d97-f97c-41c4-8351-456af1b8f98a.config
+2026-11-17T08:54:42.0328136Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-39e39d97-f97c-41c4-8351-456af1b8f98a.config
+2026-11-17T08:54:42.0373561Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-39e39d97-f97c-41c4-8351-456af1b8f98a.config
+2026-11-17T08:54:42.0415023Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-39e39d97-f97c-41c4-8351-456af1b8f98a.config
+2026-11-17T08:54:42.0453076Z ##[endgroup]
+2026-11-17T08:54:42.0454038Z ##[group]Fetching the repository
+2026-11-17T08:54:42.0462146Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +c0e6845650002dfaabf6b1dcc727d13b2f0570f6:refs/remotes/pull/1219/merge
+2026-11-17T08:54:54.4812587Z From https://github.com/777genius/agent-teams-ai
+2026-11-17T08:54:54.4813753Z  * [new ref]         c0e6845650002dfaabf6b1dcc727d13b2f0570f6 -> pull/1219/merge
+2026-11-17T08:54:54.4831274Z ##[endgroup]
+2026-11-17T08:54:54.4832262Z ##[group]Determining the checkout info
+2026-11-17T08:54:54.4833293Z ##[endgroup]
+2026-11-17T08:54:54.4833949Z [command]/usr/bin/git sparse-checkout disable
+2026-11-17T08:54:54.4913470Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-17T08:54:54.4955627Z ##[group]Checking out the ref
+2026-11-17T08:54:54.4959910Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/1219/merge
+2026-11-17T08:54:55.5341903Z Updating files:  21% (2592/12033)
+2026-11-17T08:54:55.5900845Z Updating files:  22% (2648/12033)
+2026-11-17T08:54:55.6266678Z Updating files:  23% (2768/12033)
+2026-11-17T08:54:55.6895953Z Updating files:  24% (2888/12033)
+2026-11-17T08:54:55.7234791Z Updating files:  25% (3009/12033)
+2026-11-17T08:54:55.7700853Z Updating files:  26% (3129/12033)
+2026-11-17T08:54:55.8755299Z Updating files:  27% (3249/12033)
+2026-11-17T08:54:55.8948590Z Updating files:  28% (3370/12033)
+2026-11-17T08:54:55.9058718Z Updating files:  29% (3490/12033)
+2026-11-17T08:54:55.9290354Z Updating files:  30% (3610/12033)
+2026-11-17T08:54:55.9407623Z Updating files:  31% (3731/12033)
+2026-11-17T08:54:55.9489518Z Updating files:  32% (3851/12033)
+2026-11-17T08:54:55.9566291Z Updating files:  33% (3971/12033)
+2026-11-17T08:54:55.9635056Z Updating files:  34% (4092/12033)
+2026-11-17T08:54:55.9743306Z Updating files:  35% (4212/12033)
+2026-11-17T08:54:55.9846565Z Updating files:  36% (4332/12033)
+2026-11-17T08:54:55.9976261Z Updating files:  37% (4453/12033)
+2026-11-17T08:54:56.0129111Z Updating files:  38% (4573/12033)
+2026-11-17T08:54:56.0224047Z Updating files:  39% (4693/12033)
+2026-11-17T08:54:56.0450729Z Updating files:  40% (4814/12033)
+2026-11-17T08:54:56.0598315Z Updating files:  41% (4934/12033)
+2026-11-17T08:54:56.0716579Z Updating files:  42% (5054/12033)
+2026-11-17T08:54:56.0825706Z Updating files:  43% (5175/12033)
+2026-11-17T08:54:56.1000340Z Updating files:  44% (5295/12033)
+2026-11-17T08:54:56.1087823Z Updating files:  45% (5415/12033)
+2026-11-17T08:54:56.1162772Z Updating files:  46% (5536/12033)
+2026-11-17T08:54:56.1245727Z Updating files:  47% (5656/12033)
+2026-11-17T08:54:56.1325568Z Updating files:  48% (5776/12033)
+2026-11-17T08:54:56.1408263Z Updating files:  49% (5897/12033)
+2026-11-17T08:54:56.1648825Z Updating files:  50% (6017/12033)
+2026-11-17T08:54:56.1844948Z Updating files:  51% (6137/12033)
+2026-11-17T08:54:56.1914907Z Updating files:  52% (6258/12033)
+2026-11-17T08:54:56.1982345Z Updating files:  53% (6378/12033)
+2026-11-17T08:54:56.2068443Z Updating files:  54% (6498/12033)
+2026-11-17T08:54:56.2150415Z Updating files:  55% (6619/12033)
+2026-11-17T08:54:56.2224252Z Updating files:  56% (6739/12033)
+2026-11-17T08:54:56.2302257Z Updating files:  57% (6859/12033)
+2026-11-17T08:54:56.2387252Z Updating files:  58% (6980/12033)
+2026-11-17T08:54:56.2472281Z Updating files:  59% (7100/12033)
+2026-11-17T08:54:56.2551619Z Updating files:  60% (7220/12033)
+2026-11-17T08:54:56.2635812Z Updating files:  61% (7341/12033)
+2026-11-17T08:54:56.2729182Z Updating files:  62% (7461/12033)
+2026-11-17T08:54:56.2818871Z Updating files:  63% (7581/12033)
+2026-11-17T08:54:56.2906946Z Updating files:  64% (7702/12033)
+2026-11-17T08:54:56.2986283Z Updating files:  65% (7822/12033)
+2026-11-17T08:54:56.3074436Z Updating files:  66% (7942/12033)
+2026-11-17T08:54:56.3163153Z Updating files:  67% (8063/12033)
+2026-11-17T08:54:56.3246254Z Updating files:  68% (8183/12033)
+2026-11-17T08:54:56.3341901Z Updating files:  69% (8303/12033)
+2026-11-17T08:54:56.3423469Z Updating files:  70% (8424/12033)
+2026-11-17T08:54:56.3499033Z Updating files:  71% (8544/12033)
+2026-11-17T08:54:56.3593428Z Updating files:  72% (8664/12033)
+2026-11-17T08:54:56.3667469Z Updating files:  73% (8785/12033)
+2026-11-17T08:54:56.3745060Z Updating files:  74% (8905/12033)
+2026-11-17T08:54:56.3829757Z Updating files:  75% (9025/12033)
+2026-11-17T08:54:56.3903060Z Updating files:  76% (9146/12033)
+2026-11-17T08:54:56.3976898Z Updating files:  77% (9266/12033)
+2026-11-17T08:54:56.4055065Z Updating files:  78% (9386/12033)
+2026-11-17T08:54:56.4118453Z Updating files:  79% (9507/12033)
+2026-11-17T08:54:56.4188037Z Updating files:  80% (9627/12033)
+2026-11-17T08:54:56.4269825Z Updating files:  81% (9747/12033)
+2026-11-17T08:54:56.4339487Z Updating files:  82% (9868/12033)
+2026-11-17T08:54:56.4429008Z Updating files:  83% (9988/12033)
+2026-11-17T08:54:56.4532742Z Updating files:  84% (10108/12033)
+2026-11-17T08:54:56.4627861Z Updating files:  85% (10229/12033)
+2026-11-17T08:54:56.4726046Z Updating files:  86% (10349/12033)
+2026-11-17T08:54:56.4818321Z Updating files:  87% (10469/12033)
+2026-11-17T08:54:56.4922718Z Updating files:  88% (10590/12033)
+2026-11-17T08:54:56.5020057Z Updating files:  89% (10710/12033)
+2026-11-17T08:54:56.5124335Z Updating files:  90% (10830/12033)
+2026-11-17T08:54:56.5130639Z Updating files:  90% (10943/12033)
+2026-11-17T08:54:56.5273007Z Updating files:  91% (10951/12033)
+2026-11-17T08:54:56.5386987Z Updating files:  92% (11071/12033)
+2026-11-17T08:54:56.5469659Z Updating files:  93% (11191/12033)
+2026-11-17T08:54:56.5570764Z Updating files:  94% (11312/12033)
+2026-11-17T08:54:56.5655032Z Updating files:  95% (11432/12033)
+2026-11-17T08:54:56.5750354Z Updating files:  96% (11552/12033)
+2026-11-17T08:54:56.5832355Z Updating files:  97% (11673/12033)
+2026-11-17T08:54:56.5916959Z Updating files:  98% (11793/12033)
+2026-11-17T08:54:56.6023438Z Updating files:  99% (11913/12033)
+2026-11-17T08:54:56.6024785Z Updating files: 100% (12033/12033)
+2026-11-17T08:54:56.6025415Z Updating files: 100% (12033/12033), done.
+2026-11-17T08:54:56.6159713Z Note: switching to 'refs/remotes/pull/1219/merge'.
+2026-11-17T08:54:56.6160536Z 
+2026-11-17T08:54:56.6160917Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-17T08:54:56.6161974Z changes and commit them, and you can discard any commits you make in this
+2026-11-17T08:54:56.6162826Z state without impacting any branches by switching back to a branch.
+2026-11-17T08:54:56.6163330Z 
+2026-11-17T08:54:56.6163666Z If you want to create a new branch to retain commits you create, you may
+2026-11-17T08:54:56.6164472Z do so (now or later) by using -c with the switch command. Example:
+2026-11-17T08:54:56.6165050Z 
+2026-11-17T08:54:56.6165233Z   git switch -c <new-branch-name>
+2026-11-17T08:54:56.6165551Z 
+2026-11-17T08:54:56.6165720Z Or undo this operation with:
+2026-11-17T08:54:56.6166008Z 
+2026-11-17T08:54:56.6166158Z   git switch -
+2026-11-17T08:54:56.6166366Z 
+2026-11-17T08:54:56.6166780Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-17T08:54:56.6167352Z 
+2026-11-17T08:54:56.6168003Z HEAD is now at c0e6845 Merge 9d79abcf1f5c498687c2e5c443e3edf220070aa6 into 77993819c233737f1e2b4c11c8ca1a5d360bcbe3
+2026-11-17T08:54:56.6293660Z ##[endgroup]
+2026-11-17T08:54:56.6357258Z [command]/usr/bin/git log -1 --format=%H
+2026-11-17T08:54:56.6395398Z c0e6845650002dfaabf6b1dcc727d13b2f0570f6
+2026-11-17T08:54:56.6656183Z ##[group]Run pnpm/action-setup@v6
+2026-11-17T08:54:56.6656494Z with:
+2026-11-17T08:54:56.6656714Z   dest: ~/setup-pnpm
+2026-11-17T08:54:56.6656951Z   run_install: null
+2026-11-17T08:54:56.6657186Z   cache: false
+2026-11-17T08:54:56.6657427Z   cache_dependency_path: pnpm-lock.yaml
+2026-11-17T08:54:56.6657756Z   package_json_file: package.json
+2026-11-17T08:54:56.6658037Z   standalone: false
+2026-11-17T08:54:56.6658260Z env:
+2026-11-17T08:54:56.6658463Z   CI_ROOT_TEST_SHARDS: 4
+2026-11-17T08:54:56.6658733Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-17T08:54:56.6659582Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-17T08:54:56.6659865Z ##[endgroup]
+2026-11-17T08:54:56.8255036Z ##[group]Running self-installer...
+2026-11-17T08:55:00.0495755Z 
+2026-11-17T08:55:00.0496388Z added 1 package, and audited 2 packages in 2s
+2026-11-17T08:55:00.0496787Z 
+2026-11-17T08:55:00.0496967Z 1 package is looking for funding
+2026-11-17T08:55:00.0497435Z   run `npm fund` for details
+2026-11-17T08:55:00.0504634Z 
+2026-11-17T08:55:00.0504818Z found 0 vulnerabilities
+2026-11-17T08:55:00.8429049Z Checking for updates...
+2026-11-17T08:55:01.0027050Z Switching pnpm from v11.28.10 to v11.22.0...
+2026-11-17T08:55:01.4993755Z .../v11/970-1a1e8b77be9-19d131850e975122 | Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-17T08:55:01.5014038Z .../v11/970-1a1e8b77be9-19d131850e975122 |   +1 +
+2026-11-17T08:55:01.8976820Z .../v11/970-1a1e8b77be9-19d131850e975122 | Progress: resolved 1, reused 0, downloaded 1, added 1, done
+2026-11-17T08:55:02.7128353Z [WARN] Detected a pnpm v10 installation layout at PNPM_HOME. The pnpm shims at PNPM_HOME have been refreshed so the new version is active, but pnpm v11 expects bins in PNPM_HOME/bin. Run "pnpm setup" to migrate your PATH to the v11 layout.
+2026-11-17T08:55:02.7217613Z Successfully updated pnpm to v11.22.0
+2026-11-17T08:55:02.7643576Z ##[endgroup]
+2026-11-17T08:55:02.7644140Z Installation Completed!
+2026-11-17T08:55:02.7853585Z ##[group]Run actions/setup-node@v6
+2026-11-17T08:55:02.7853887Z with:
+2026-11-17T08:55:02.7854109Z   node-version-file: .node-version
+2026-11-17T08:55:02.7854373Z   cache: pnpm
+2026-11-17T08:55:02.7854581Z   check-latest: false
+2026-11-17T08:55:02.7857300Z   token: ***
+2026-11-17T08:55:02.7857533Z   package-manager-cache: true
+2026-11-17T08:55:02.7857792Z env:
+2026-11-17T08:55:02.7857983Z   CI_ROOT_TEST_SHARDS: 4
+2026-11-17T08:55:02.7858237Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-17T08:55:02.7858527Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-17T08:55:02.7859061Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-17T08:55:02.7859420Z ##[endgroup]
+2026-11-17T08:55:02.9283969Z Node version file is not JSON file
+2026-11-17T08:55:02.9286424Z Resolved .node-version as 26.12.1
+2026-11-17T08:55:02.9311895Z Attempting to download 26.12.1...
+2026-11-17T08:55:03.6048701Z Acquiring 26.12.1 - x64 from https://github.com/actions/node-versions/releases/download/26.12.1-39618969937/node-26.12.1-linux-x64.tar.gz
+2026-11-17T08:55:04.1355734Z Extracting ...
+2026-11-17T08:55:04.1492369Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/7e5b216a-79b1-4121-b9cc-e94aaf30bb60 -f /home/runner/work/_temp/48b5b64b-b4cc-4bf9-b21a-661ad7daf4ad
+2026-11-17T08:55:05.5224221Z Adding to the cache ...
+2026-11-17T08:55:07.3170435Z ##[group]Environment details
+2026-11-17T08:55:07.5562741Z node: v26.12.1
+2026-11-17T08:55:07.5563051Z npm: 11.20.0
+2026-11-17T08:55:07.5563264Z yarn: 1.22.22
+2026-11-17T08:55:07.5563867Z ##[endgroup]
+2026-11-17T08:55:07.5584475Z [command]/home/runner/setup-pnpm/node_modules/.bin/bin/pnpm store path --silent
+2026-11-17T08:55:08.1686921Z /home/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-11-17T08:55:08.4543297Z Cache hit for: node-cache-Linux-x64-pnpm-33b7283dc3ef217b641b14e26ce1a6d807c9880352847e1b431ffd461cf78c22
+2026-11-17T08:55:09.7285758Z Received 25165824 of 499419853 (5.0%), 24.0 MBs/sec
+2026-11-17T08:55:10.7293536Z Received 130023424 of 499419853 (26.0%), 62.0 MBs/sec
+2026-11-17T08:55:11.7305358Z Received 260046848 of 499419853 (52.1%), 82.6 MBs/sec
+2026-11-17T08:55:12.7309334Z Received 398458880 of 499419853 (79.8%), 95.0 MBs/sec
+2026-11-17T08:55:13.6085652Z Received 499419853 of 499419853 (100.0%), 97.6 MBs/sec
+2026-11-17T08:55:13.6086360Z Cache Size: ~476 MB (499419853 B)
+2026-11-17T08:55:13.6123895Z [command]/usr/bin/tar -xf /home/runner/work/_temp/df8f6af2-849e-4573-9b76-5a8fe25a78c0/cache.tzst -P -C /home/runner/work/agent-teams-ai/agent-teams-ai --use-compress-program unzstd
+2026-11-17T08:55:20.5270793Z Cache restored successfully
+2026-11-17T08:55:20.5505217Z Cache restored from key: node-cache-Linux-x64-pnpm-33b7283dc3ef217b641b14e26ce1a6d807c9880352847e1b431ffd461cf78c22
+2026-11-17T08:55:20.5905062Z ##[group]Run node --test --test-force-exit test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts test/scripts/installDependenciesWithRetry.test.mjs
+2026-11-17T08:55:20.5906731Z [36;1mnode --test --test-force-exit test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts test/scripts/installDependenciesWithRetry.test.mjs[0m
+2026-11-17T08:55:20.5932811Z shell: /usr/bin/bash -e {0}
+2026-11-17T08:55:20.5933135Z env:
+2026-11-17T08:55:20.5933388Z   CI_ROOT_TEST_SHARDS: 4
+2026-11-17T08:55:20.5933714Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-17T08:55:20.5934092Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-17T08:55:20.5934513Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-17T08:55:20.5934930Z ##[endgroup]
+2026-11-17T08:55:21.3166823Z ✔ docs and DMG display edits select bounded tiers (3.245928ms)
+2026-11-17T08:55:21.3181657Z ✔ dependencies, signing, unsafe content paths and unknown edits fail closed (0.795074ms)
+2026-11-17T08:55:21.3210600Z ✔ mixed areas, renames, deletions and malformed paths select full (0.618281ms)
+2026-11-17T08:55:21.3220590Z ✔ gate requires selected checks, successful plan and draft never qualifies (0.657004ms)
+2026-11-17T08:55:21.3222304Z ✔ each uncancelled event reports the required qualification under its static name (1.498555ms)
+2026-11-17T08:55:21.3223891Z ✔ only listed markdown is documentation; legal texts and issue templates run full CI (0.402056ms)
+2026-11-17T08:55:21.3225287Z ✔ DMG qualification cannot pass without its macOS mounted fixture (0.460776ms)
+2026-11-17T08:55:21.3227133Z ✔ classifier binds real git merge parents and rejects altered event, missing commits, labels and symlinks (438.001581ms)
+2026-11-17T08:55:21.8723285Z ✔ draft transitions receive fast feedback; every ready transition receives full qualification (4.639877ms)
+2026-11-17T08:55:21.8730373Z ✔ unknown, contradictory and malformed lifecycle input fails closed (0.526599ms)
+2026-11-17T08:55:21.8732472Z ✔ draft title/body edits keep fast feedback, while base or unknown edits require full CI (0.403207ms)
+2026-11-17T08:55:21.8734496Z ✔ only complete successful full jobs or verified eligible reuse can satisfy the gate (1.477125ms)
+2026-11-17T08:55:21.8736683Z ✔ ordinary squash with exact inputs can reuse after GitHub drops PR links, while validate remains required (7.554051ms)
+2026-11-17T08:55:21.8738758Z ✔ actual GitHub skipped feedback expression preserves authenticated full reuse (1.928684ms)
+2026-11-17T08:55:21.8757293Z ✔ skipped feedback alias cannot hide execution, malformed names or missing full jobs (8.061455ms)
+2026-11-17T08:55:21.8759644Z ✔ metadata result and skipped heavy jobs never qualify through the exact feedback alias (1.536116ms)
+2026-11-17T08:55:21.8761571Z ✔ successful preclassification plan alias can qualify only as a complete canonical full run (9.611336ms)
+2026-11-17T08:55:21.8763550Z ✔ invalid closest full run with a metadata plan alias never falls back to an older pass (17.005084ms)
+2026-11-17T08:55:21.8765502Z ✔ proven metadata edits preserve the closest full qualification, including Windows selection (18.139747ms)
+2026-11-17T08:55:21.8767734Z ✔ only fully proven harmless metadata may precede full reuse (23.268212ms)
+2026-11-17T08:55:21.8769657Z ✔ reruns, changed metadata identity and listing races invalidate the entire reuse proof (11.833793ms)
+2026-11-17T08:55:21.8771685Z ✔ all four successful root shards qualify reuse through Linux and Windows planning (2.635789ms)
+2026-11-17T08:55:21.8773671Z ✔ four-shard reuse denies every missing or unsuccessful shard and skipped root command (12.425623ms)
+2026-11-17T08:55:21.8775542Z ✔ reuse requires the configured shard topology, including the two-shard default (1.244939ms)
+2026-11-17T08:55:21.8794567Z ✔ invalid shard configuration fails closed before API reads and cannot qualify the gate (0.36205ms)
+2026-11-17T08:55:21.8796441Z ✔ reuse fails closed: source image changed with same runner class (0.391596ms)
+2026-11-17T08:55:21.8847001Z ✔ reuse fails closed: source image missing (0.955014ms)
+2026-11-17T08:55:21.8848211Z ✔ reuse fails closed: source image unknown (0.627058ms)
+2026-11-17T08:55:21.8850239Z ✔ reuse fails closed: source image marker malformed (0.551226ms)
+2026-11-17T08:55:21.8851634Z ✔ reuse fails closed: source image proof skipped (0.603213ms)
+2026-11-17T08:55:21.8874812Z ✔ reuse fails closed: source image proof after commands (1.420919ms)
+2026-11-17T08:55:21.8875526Z ✔ reuse fails closed: Windows image missing (2.174816ms)
+2026-11-17T08:55:21.8876192Z ✔ reuse fails closed: squash parent drift with identical tree (0.491523ms)
+2026-11-17T08:55:21.8876955Z ✔ reuse fails closed: multiple merge parents (2.894577ms)
+2026-11-17T08:55:21.8877480Z ✔ reuse fails closed: missing merge parents (0.610947ms)
+2026-11-17T08:55:21.8878042Z ✔ reuse fails closed: missing root-shard workspace commands (0.657605ms)
+2026-11-17T08:55:21.8878630Z ✔ reuse fails closed: missing Windows lock scenario (0.636325ms)
+2026-11-17T08:55:21.8879742Z ✔ reuse fails closed: missing response (1.032129ms)
+2026-11-17T08:55:21.8880645Z ✔ reuse fails closed: foreign repository (0.221356ms)
+2026-11-17T08:55:21.8881154Z ✔ reuse fails closed: foreign workflow (0.825ms)
+2026-11-17T08:55:21.8881989Z ✔ reuse fails closed: workflow bytes mismatch (0.951578ms)
+2026-11-17T08:55:21.8883010Z ✔ reuse fails closed: changed merge tree/lock/toolchain inputs (0.492165ms)
+2026-11-17T08:55:21.8883933Z ✔ reuse fails closed: changed tested base (0.545415ms)
+2026-11-17T08:55:21.8884526Z ✔ reuse fails closed: diverged base (0.455696ms)
+2026-11-17T08:55:21.8885102Z ✔ reuse fails closed: malformed compare status (0.859896ms)
+2026-11-17T08:55:21.8885746Z ✔ reuse fails closed: missing immutable source proof (0.508656ms)
+2026-11-17T08:55:21.8886376Z ✔ reuse fails closed: skipped immutable source proof (0.460576ms)
+2026-11-17T08:55:21.8887043Z ✔ reuse fails closed: ambiguous immutable source proof (0.510148ms)
+2026-11-17T08:55:21.8887692Z ✔ reuse fails closed: source event PR mismatch (0.538051ms)
+2026-11-17T08:55:21.8888294Z ✔ reuse fails closed: source event head mismatch (0.614203ms)
+2026-11-17T08:55:21.8889234Z ✔ reuse fails closed: present source base disagrees (0.574569ms)
+2026-11-17T08:55:21.8889863Z ✔ reuse fails closed: foreign source PR (0.414569ms)
+2026-11-17T08:55:21.8890505Z ✔ reuse fails closed: source was not merged (0.286388ms)
+2026-11-17T08:55:21.8890976Z ✔ reuse fails closed: expired source (0.366629ms)
+2026-11-17T08:55:21.8891424Z ✔ reuse fails closed: future timestamp (0.347763ms)
+2026-11-17T08:55:21.8891912Z ✔ reuse fails closed: partial run pagination (0.336943ms)
+2026-11-17T08:55:21.8892404Z ✔ reuse fails closed: partial job pagination (0.486915ms)
+2026-11-17T08:55:21.8892877Z ✔ reuse fails closed: missing required job (1.662663ms)
+2026-11-17T08:55:21.8893336Z ✔ reuse fails closed: duplicate job name (0.476856ms)
+2026-11-17T08:55:21.8893801Z ✔ reuse fails closed: failed latest attempt (0.369363ms)
+2026-11-17T08:55:21.8894288Z ✔ reuse fails closed: cancelled run (0.373431ms)
+2026-11-17T08:55:21.8894768Z ✔ reuse fails closed: partial rerun old job (1.465082ms)
+2026-11-17T08:55:21.8895235Z ✔ reuse fails closed: job from other head (0.785316ms)
+2026-11-17T08:55:21.8895685Z ✔ reuse fails closed: skipped matrix job (1.377009ms)
+2026-11-17T08:55:21.8896164Z ✔ reuse fails closed: runner class changed (0.725193ms)
+2026-11-17T08:55:21.8896632Z ✔ reuse fails closed: actual OS mismatch (0.646816ms)
+2026-11-17T08:55:21.8897093Z ✔ reuse fails closed: runner proof skipped (0.464753ms)
+2026-11-17T08:55:21.8897584Z ✔ reuse fails closed: Windows commands skipped (0.576503ms)
+2026-11-17T08:55:21.8898095Z ✔ reuse fails closed: unknown command skipped (0.925719ms)
+2026-11-17T08:55:21.8899051Z ✔ newer failed run never falls back to old success and rerun race invalidates collected evidence (2.27252ms)
+2026-11-17T08:55:21.8899976Z ✔ final listing same run newer in_progress/null attempt invalidates reuse (0.653468ms)
+2026-11-17T08:55:21.8901003Z ✔ final listing same run newer completed/failure attempt invalidates reuse (0.627679ms)
+2026-11-17T08:55:21.8901997Z ✔ final listing positively binds workflow, source head and repository as well as attempt (7.509662ms)
+2026-11-17T08:55:21.8902925Z ✔ image identity requires actual standard build facts and never falls back to a class or ImageID (0.288432ms)
+2026-11-17T08:55:21.8903855Z ✔ Windows reuses only the same authoritative source run with both current image identities (4.431245ms)
+2026-11-17T08:55:21.8904756Z ✔ image and ordinary PR Windows CLI decisions expose safe outputs without contacting GitHub (582.027901ms)
+2026-11-17T08:55:21.8905667Z ✔ network failure, malformed event, invalid SHA and non-main pushes select full execution (1.450294ms)
+2026-11-17T08:55:21.8906498Z ✔ CLI writes only literal outputs and fast feedback cannot pass the full CLI gate (245.823757ms)
+2026-11-17T08:55:21.8907302Z ✔ four-shard postmerge reuse crosses only exact same-topology harmless metadata (1.998205ms)
+2026-11-17T08:55:21.8908206Z ✔ postmerge reuse authenticates real metadata Full qualification without accepting its name alone (1.848763ms)
+2026-11-17T08:55:21.8968127Z ✔ unchanged head with an advanced base requires full CI instead of preserving the old producer (14.861439ms)
+2026-11-17T08:55:21.8970209Z ✔ valid title/body edits skip heavy work for ready and draft PRs, including a null old body (17.035721ms)
+2026-11-17T08:55:21.8971868Z ✔ base, unknown or malformed edits conservatively require full qualification (5.62625ms)
+2026-11-17T08:55:21.8973420Z ✔ metadata skips require complete event identity and current metadata (10.422871ms)
+2026-11-17T08:55:21.8975128Z ✔ metadata, missing or failed plan outputs cannot create canonical full qualification success (1.080771ms)
+2026-11-17T08:55:21.8976931Z ✔ CLI without authenticated API access selects literal full execution outputs (212.691225ms)
+2026-11-17T08:55:21.8978605Z ✔ ready metadata preserves completed or running attested producers; legacy producers require full CI (8.636625ms)
+2026-11-17T08:55:21.8980757Z ✔ bad or conflicting event attestations and workflow/repository/PR identity fail closed (20.991495ms)
+2026-11-17T08:55:21.8982366Z ✔ completed full producers require successful exact jobs and matching immutable plan proof, with no fallback past failure (24.096218ms)
+2026-11-17T08:55:21.8983526Z ✔ draft lifecycle continuity preserves fast feedback without allowing failed work or granting full qualification (14.338206ms)
+2026-11-17T08:55:21.8984550Z ✔ pending metadata continuity reaches a canonical producer and never treats itself as qualification (1.75655ms)
+2026-11-17T08:55:21.8985437Z ✔ rerun, listing and current base/head races invalidate metadata proof on final rereads (5.107375ms)
+2026-11-17T08:55:21.8986345Z ✔ successful completed metadata can carry continuity only to an authenticated canonical producer (3.315629ms)
+2026-11-17T08:55:21.8987153Z ✔ canonical producer search stays within eight earlier same-head runs (4.763248ms)
+2026-11-17T08:55:21.8987902Z ✔ real GitHub compact PR-link repositories authenticate without full_name (2.951895ms)
+2026-11-17T08:55:21.8988713Z ✔ missing or conflicting compact linkage ids, names and exact API URLs fail closed (51.887267ms)
+2026-11-17T08:55:21.8990879Z ✔ already listed newer failed or unknown producers never fall back to older green CI (7.108734ms)
+2026-11-17T08:55:21.8991723Z ✔ pending full producer never hides an older failure behind metadata qualification (41.202092ms)
+2026-11-17T08:55:21.8992561Z ✔ newer producers with changed base, draft or malformed attestation still fail closed (3.564667ms)
+2026-11-17T08:55:21.8994482Z ✔ observed successful draft feedback preserves checks when only Node post-cleanup is skipped after the deliberate failed gate (1.467887ms)
+2026-11-17T08:55:21.8996057Z ✔ draft cleanup exceptions never hide failed setup, missing source proof or unknown skipped work (12.625473ms)
+2026-11-17T08:55:21.8997051Z ✔ four-shard metadata preservation authenticates the exact configured full and draft producer topology (6.475705ms)
+2026-11-17T08:55:21.8998655Z ✔ authenticated true-fork linkage waits for the running producer and passes only on its completed full CI (9.482484ms)
+2026-11-17T08:55:21.9000237Z ✔ empty fork linkage never excuses missing attestation, foreign identity or contradictory nonempty links (6.867812ms)
+2026-11-17T08:55:21.9001113Z ✔ fork empty-link decisions still reject final run, listing and current PR races (3.94408ms)
+2026-11-17T08:55:21.9001979Z ✔ same attested actual merge preserves checks even when the PR API base remains an older anchor (3.214709ms)
+2026-11-17T08:55:21.9003146Z ✔ same PR, head and stale base anchor with a different synthetic merge always requires full CI, including equal trees (3.026366ms)
+2026-11-17T08:55:21.9005010Z ✔ legacy anchor-only attestations cannot preserve inputs after an implicit base advance (1.100557ms)
+2026-11-17T08:55:21.9006111Z ✔ missing merge attestations and unauthenticated merge objects fail closed (12.415364ms)
+2026-11-17T08:55:21.9007066Z ✔ an advanced canonical target tip requires full CI even when PR anchor, head and attested merge are unchanged (8.271579ms)
+2026-11-17T08:55:21.9007982Z ✔ target ref identity, commit type and valid tip are required on the initial read (8.798729ms)
+2026-11-17T08:55:21.9009471Z ✔ final target ref advance, deletion or malformed identity invalidates unchanged producer proof (9.494005ms)
+2026-11-17T08:55:21.9010596Z ✔ stale PR anchors preserve ready and deliberate draft producers only when actual merge base is the canonical tip (10.632695ms)
+2026-11-17T08:55:21.9011544Z ✔ slash-containing target refs use an encoded API path and exact unencoded returned ref (3.227563ms)
+2026-11-17T08:55:21.9012434Z ✔ ready metadata never replaces an unfinished full producer with a successful required gate (30.804758ms)
+2026-11-17T08:55:21.9013350Z ✔ ready edits of scoped diffs rerun their scoped checks instead of waiting for a running producer (10.878938ms)
+2026-11-17T08:55:21.9014302Z ✔ the edit gate passes only after the running producer completes its authenticated full qualification (4.366913ms)
+2026-11-17T08:55:21.9015246Z ✔ the edit gate fails closed when the awaited producer fails, is cancelled, or the PR moves (24.945996ms)
+2026-11-17T08:55:21.9016085Z ✔ the edit gate follows a newer same-input producer when the awaited one is superseded (9.233145ms)
+2026-11-17T08:55:21.9016813Z ✔ transient proof failures are retried a bounded number of times (2.259555ms)
+2026-11-17T08:55:21.9017635Z ✔ the gate re-proves after a failed status read and forgives proof failures separated by waiting (11.885408ms)
+2026-11-17T08:55:21.9018401Z ✔ waiting gates pause instead of spending the reserved API budget (10.686682ms)
+2026-11-17T08:55:21.9019463Z ✔ completed real metadata qualification preserves continuity to its completed full producer (5.384225ms)
+2026-11-17T08:55:21.9020410Z ✔ a Full qualification metadata run is crossed only when its gate re-authenticated the producer (6.626689ms)
+2026-11-17T08:55:21.9021462Z ✔ metadata gate reauthenticates completed full evidence and rejects unfinished, missing-attempt and changed-source claims (28.450728ms)
+2026-11-17T08:55:21.9022396Z ✔ full metadata producers permit only authenticated skipped scoped jobs (3.942857ms)
+2026-11-17T08:55:21.9023279Z ✔ original frozen install retains its lockfile and selects only the explicit serial lifecycle option (212.717688ms)
+2026-11-17T08:55:21.9024211Z ✔ unknown or duplicate frozen-install options refuse before any TEST installer is allocated (78.1584ms)
+2026-11-17T08:55:21.9025069Z ✔ long unfinished engine warning does not turn a transient 503 into a terminal failure (1.484919ms)
+2026-11-17T08:55:21.9025769Z ✔ next fatal engine line is not masked by a prior long warning (0.377429ms)
+2026-11-17T08:55:21.9026460Z ✔ 404 marker fragmented across chunks within one stream is terminal (0.251593ms)
+2026-11-17T08:55:21.9027094Z ✔ separate output streams cannot fabricate a 404 marker (0.305083ms)
+2026-11-17T08:55:21.9027783Z ✔ whole-output classifier distinguishes long warning from fatal engine (0.352152ms)
+2026-11-17T08:55:21.9028605Z ℹ tests 133
+2026-11-17T08:55:21.9029047Z ℹ suites 0
+2026-11-17T08:55:21.9029535Z ℹ pass 133
+2026-11-17T08:55:21.9029763Z ℹ fail 0
+2026-11-17T08:55:21.9029980Z ℹ cancelled 0
+2026-11-17T08:55:21.9030216Z ℹ skipped 0
+2026-11-17T08:55:21.9030442Z ℹ todo 0
+2026-11-17T08:55:21.9030695Z ℹ duration_ms 1267.604235
+2026-11-17T08:55:21.9071213Z ##[group]Run node ./scripts/ci/install-dependencies-with-retry.mjs
+2026-11-17T08:55:21.9071764Z [36;1mnode ./scripts/ci/install-dependencies-with-retry.mjs[0m
+2026-11-17T08:55:21.9094593Z shell: /usr/bin/bash -e {0}
+2026-11-17T08:55:21.9094867Z env:
+2026-11-17T08:55:21.9095084Z   CI_ROOT_TEST_SHARDS: 4
+2026-11-17T08:55:21.9095370Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-17T08:55:21.9095685Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-17T08:55:21.9096032Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-17T08:55:21.9096384Z ##[endgroup]
+2026-11-17T08:55:22.4040807Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-17T08:55:22.4045632Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-17T08:55:22.4277450Z Scope: all 7 workspace projects
+2026-11-17T08:55:22.6316942Z ? Verifying lockfile against supply-chain policies (2533 entries)...
+2026-11-17T08:55:22.6987081Z Lockfile is up to date, resolution step is skipped
+2026-11-17T08:55:22.9070217Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-17T08:55:23.1414796Z Packages: +2293
+2026-11-17T08:55:23.1415520Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-11-17T08:55:23.9112843Z Progress: resolved 2293, reused 274, downloaded 0, added 0
+2026-11-17T08:55:24.9108514Z Progress: resolved 2293, reused 767, downloaded 0, added 0
+2026-11-17T08:55:25.9124145Z Progress: resolved 2293, reused 1348, downloaded 0, added 0
+2026-11-17T08:55:26.9129511Z Progress: resolved 2293, reused 2038, downloaded 0, added 0
+2026-11-17T08:55:27.3870565Z Packages are hard linked from the content-addressable store to the virtual store.
+2026-11-17T08:55:27.3871880Z   Content-addressable store is at: /home/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-11-17T08:55:27.3872824Z   Virtual store is at:             node_modules/.pnpm
+2026-11-17T08:55:27.9133895Z Progress: resolved 2293, reused 2278, downloaded 0, added 78
+2026-11-17T08:55:28.9421720Z Progress: resolved 2293, reused 2278, downloaded 0, added 187
+2026-11-17T08:55:29.9470718Z Progress: resolved 2293, reused 2278, downloaded 0, added 445
+2026-11-17T08:55:30.9471794Z Progress: resolved 2293, reused 2278, downloaded 0, added 876
+2026-11-17T08:55:31.1683145Z ✓ Lockfile passes supply-chain policies (2533 entries in 8.5s)
+2026-11-17T08:55:31.9484203Z Progress: resolved 2293, reused 2278, downloaded 0, added 1583
+2026-11-17T08:55:32.4930004Z Progress: resolved 2293, reused 2278, downloaded 0, added 2293, done
+2026-11-17T08:55:34.0215806Z .../node_modules/better-sqlite3 install$ prebuild-install || node-gyp rebuild --release
+2026-11-17T08:55:34.2527546Z .../node-pty@1.1.0/node_modules/node-pty install$ node scripts/prebuild.js || node-gyp rebuild
+2026-11-17T08:55:34.2530340Z .../node_modules/cpu-features install$ node buildcheck.js > buildcheck.gypi && node-gyp rebuild
+2026-11-17T08:55:34.3121965Z .../node_modules/better-sqlite3 install$ prebuild-install || node-gyp rebuild --release
+2026-11-17T08:55:34.3369913Z .../node-pty@1.1.0/node_modules/node-pty install: [32m> Checking prebuilds...[0m
+2026-11-17T08:55:34.3375368Z .../node-pty@1.1.0/node_modules/node-pty install: [33m> Rebuilding because directory /home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty/prebuilds/linux-x64 does not exist[0m
+2026-11-17T08:55:34.3816229Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info it worked if it ends with ok
+2026-11-17T08:55:34.3823049Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info using node-gyp@12.3.0
+2026-11-17T08:55:34.3825379Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info using node@26.12.1 | linux | x64
+2026-11-17T08:55:34.4729647Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info find Python using Python version 3.12.3 found at "/usr/bin/python3"
+2026-11-17T08:55:34.5600494Z .../node-pty@1.1.0/node_modules/node-pty install: gyp http GET https://nodejs.org/download/release/v26.12.1/node-v26.12.1-headers.tar.gz
+2026-11-17T08:55:34.5961216Z .../node_modules/better-sqlite3 install: Done
+2026-11-17T08:55:34.6516760Z .../node-pty@1.1.0/node_modules/node-pty install: gyp http 200 https://nodejs.org/download/release/v26.12.1/node-v26.12.1-headers.tar.gz
+2026-11-17T08:55:34.7760343Z .../node_modules/better-sqlite3 install: Done
+2026-11-17T08:55:35.5946325Z .../node_modules/cpu-features install: gyp info it worked if it ends with ok
+2026-11-17T08:55:35.5947815Z .../node_modules/cpu-features install: gyp info using node-gyp@12.3.0
+2026-11-17T08:55:35.5949299Z .../node_modules/cpu-features install: gyp info using node@26.12.1 | linux | x64
+2026-11-17T08:55:35.6863157Z .../node_modules/cpu-features install: gyp info find Python using Python version 3.12.3 found at "/usr/bin/python3"
+2026-11-17T08:55:35.7819591Z .../node_modules/cpu-features install: gyp http GET https://nodejs.org/download/release/v26.12.1/node-v26.12.1-headers.tar.gz
+2026-11-17T08:55:35.8601818Z .../node_modules/cpu-features install: gyp http 200 https://nodejs.org/download/release/v26.12.1/node-v26.12.1-headers.tar.gz
+2026-11-17T08:55:37.6718252Z .../node-pty@1.1.0/node_modules/node-pty install: gyp http GET https://nodejs.org/download/release/v26.12.1/SHASUMS256.txt
+2026-11-17T08:55:37.6844396Z .../node-pty@1.1.0/node_modules/node-pty install: gyp http 200 https://nodejs.org/download/release/v26.12.1/SHASUMS256.txt
+2026-11-17T08:55:38.4825471Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn /usr/bin/python3
+2026-11-17T08:55:38.4840079Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args [
+2026-11-17T08:55:38.4843253Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '/home/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/dc8d3876d00d043d3555db001e2ba9d24405eb491a94744fe66d252f449eed04/node_modules/pnpm/dist/node_modules/node-gyp/gyp/gyp_main.py',
+2026-11-17T08:55:38.4846196Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args 'binding.gyp',
+2026-11-17T08:55:38.4847491Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-f',
+2026-11-17T08:55:38.4848609Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args 'make',
+2026-11-17T08:55:38.4849987Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-I',
+2026-11-17T08:55:38.4852170Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty/build/config.gypi',
+2026-11-17T08:55:38.4853894Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-I',
+2026-11-17T08:55:38.4856218Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '/home/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/dc8d3876d00d043d3555db001e2ba9d24405eb491a94744fe66d252f449eed04/node_modules/pnpm/dist/node_modules/node-gyp/addon.gypi',
+2026-11-17T08:55:38.4858641Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-I',
+2026-11-17T08:55:38.4860452Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '/home/runner/.cache/node-gyp/26.12.1/include/node/common.gypi',
+2026-11-17T08:55:38.4861961Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dlibrary=shared_library',
+2026-11-17T08:55:38.4863093Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dvisibility=default',
+2026-11-17T08:55:38.4864680Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dnode_root_dir=/home/runner/.cache/node-gyp/26.12.1',
+2026-11-17T08:55:38.4868302Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dnode_gyp_dir=/home/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/dc8d3876d00d043d3555db001e2ba9d24405eb491a94744fe66d252f449eed04/node_modules/pnpm/dist/node_modules/node-gyp',
+2026-11-17T08:55:38.4871395Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dnode_lib_file=/home/runner/.cache/node-gyp/26.12.1/<(target_arch)/node.lib',
+2026-11-17T08:55:38.4873769Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dmodule_root_dir=/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty',
+2026-11-17T08:55:38.4875663Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dnode_engine=v8',
+2026-11-17T08:55:38.4876823Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '--depth=.',
+2026-11-17T08:55:38.4877501Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '--no-parallel',
+2026-11-17T08:55:38.4878699Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '--generator-output',
+2026-11-17T08:55:38.4880143Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args 'build',
+2026-11-17T08:55:38.4881309Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Goutput_dir=.'
+2026-11-17T08:55:38.4882349Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args ]
+2026-11-17T08:55:38.6850945Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn make
+2026-11-17T08:55:38.6851901Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args [ 'BUILDTYPE=Release', '-C', 'build' ]
+2026-11-17T08:55:38.6962849Z .../node-pty@1.1.0/node_modules/node-pty install: make: Entering directory '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty/build'
+2026-11-17T08:55:38.7024204Z .../node-pty@1.1.0/node_modules/node-pty install:   TOUCH Release/obj.target/../../../node-addon-api@7.1.1/node_modules/node-addon-api/node_addon_api_except.stamp
+2026-11-17T08:55:38.7081262Z .../node-pty@1.1.0/node_modules/node-pty install:   CXX(target) Release/obj.target/pty/src/unix/pty.o
+2026-11-17T08:55:38.9243680Z .../node_modules/cpu-features install: gyp http GET https://nodejs.org/download/release/v26.12.1/SHASUMS256.txt
+2026-11-17T08:55:38.9424938Z .../node_modules/cpu-features install: gyp http 200 https://nodejs.org/download/release/v26.12.1/SHASUMS256.txt
+2026-11-17T08:55:39.7447731Z .../node_modules/cpu-features install: gyp info spawn /usr/bin/python3
+2026-11-17T08:55:39.7472762Z .../node_modules/cpu-features install: gyp info spawn args [
+2026-11-17T08:55:39.7475385Z .../node_modules/cpu-features install: gyp info spawn args '/home/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/dc8d3876d00d043d3555db001e2ba9d24405eb491a94744fe66d252f449eed04/node_modules/pnpm/dist/node_modules/node-gyp/gyp/gyp_main.py',
+2026-11-17T08:55:39.7478352Z .../node_modules/cpu-features install: gyp info spawn args 'binding.gyp',
+2026-11-17T08:55:39.7489296Z .../node_modules/cpu-features install: gyp info spawn args '-f',
+2026-11-17T08:55:39.7490322Z .../node_modules/cpu-features install: gyp info spawn args 'make',
+2026-11-17T08:55:39.7491162Z .../node_modules/cpu-features install: gyp info spawn args '-I',
+2026-11-17T08:55:39.7492570Z .../node_modules/cpu-features install: gyp info spawn args '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/cpu-features@0.0.10/node_modules/cpu-features/build/config.gypi',
+2026-11-17T08:55:39.7493823Z .../node_modules/cpu-features install: gyp info spawn args '-I',
+2026-11-17T08:55:39.7495509Z .../node_modules/cpu-features install: gyp info spawn args '/home/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/dc8d3876d00d043d3555db001e2ba9d24405eb491a94744fe66d252f449eed04/node_modules/pnpm/dist/node_modules/node-gyp/addon.gypi',
+2026-11-17T08:55:39.7497595Z .../node_modules/cpu-features install: gyp info spawn args '-I',
+2026-11-17T08:55:39.7498655Z .../node_modules/cpu-features install: gyp info spawn args '/home/runner/.cache/node-gyp/26.12.1/include/node/common.gypi',
+2026-11-17T08:55:39.7500238Z .../node_modules/cpu-features install: gyp info spawn args '-Dlibrary=shared_library',
+2026-11-17T08:55:39.7501351Z .../node_modules/cpu-features install: gyp info spawn args '-Dvisibility=default',
+2026-11-17T08:55:39.7502776Z .../node_modules/cpu-features install: gyp info spawn args '-Dnode_root_dir=/home/runner/.cache/node-gyp/26.12.1',
+2026-11-17T08:55:39.7505504Z .../node_modules/cpu-features install: gyp info spawn args '-Dnode_gyp_dir=/home/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/dc8d3876d00d043d3555db001e2ba9d24405eb491a94744fe66d252f449eed04/node_modules/pnpm/dist/node_modules/node-gyp',
+2026-11-17T08:55:39.7507054Z .../node_modules/cpu-features install: gyp info spawn args '-Dnode_lib_file=/home/runner/.cache/node-gyp/26.12.1/<(target_arch)/node.lib',
+2026-11-17T08:55:39.7508413Z .../node_modules/cpu-features install: gyp info spawn args '-Dmodule_root_dir=/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/cpu-features@0.0.10/node_modules/cpu-features',
+2026-11-17T08:55:39.7509744Z .../node_modules/cpu-features install: gyp info spawn args '-Dnode_engine=v8',
+2026-11-17T08:55:39.7510349Z .../node_modules/cpu-features install: gyp info spawn args '--depth=.',
+2026-11-17T08:55:39.7510932Z .../node_modules/cpu-features install: gyp info spawn args '--no-parallel',
+2026-11-17T08:55:39.7511547Z .../node_modules/cpu-features install: gyp info spawn args '--generator-output',
+2026-11-17T08:55:39.7512119Z .../node_modules/cpu-features install: gyp info spawn args 'build',
+2026-11-17T08:55:39.7512673Z .../node_modules/cpu-features install: gyp info spawn args '-Goutput_dir=.'
+2026-11-17T08:55:39.7513188Z .../node_modules/cpu-features install: gyp info spawn args ]
+2026-11-17T08:55:39.8998074Z .../node_modules/cpu-features install: gyp info spawn make
+2026-11-17T08:55:39.8999800Z .../node_modules/cpu-features install: gyp info spawn args [ 'BUILDTYPE=Release', '-C', 'build' ]
+2026-11-17T08:55:39.9019329Z .../node_modules/cpu-features install: make: Entering directory '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/cpu-features@0.0.10/node_modules/cpu-features/build'
+2026-11-17T08:55:39.9020945Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_aarch64_linux_or_android.o
+2026-11-17T08:55:39.9271575Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_aarch64_macos_or_iphone.o
+2026-11-17T08:55:39.9520357Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_aarch64_windows.o
+2026-11-17T08:55:39.9762819Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_arm_linux_or_android.o
+2026-11-17T08:55:39.9994778Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_mips_linux_or_android.o
+2026-11-17T08:55:40.0224944Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_ppc_linux.o
+2026-11-17T08:55:40.0456363Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_freebsd.o
+2026-11-17T08:55:40.0683504Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_linux_or_android.o
+2026-11-17T08:55:40.9750142Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_macos.o
+2026-11-17T08:55:40.9987463Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_windows.o
+2026-11-17T08:55:41.0229159Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/filesystem.o
+2026-11-17T08:55:41.0728581Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/stack_line_reader.o
+2026-11-17T08:55:41.1274668Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/string_view.o
+2026-11-17T08:55:41.2219464Z .../node_modules/cpu-features install: rm -f Release/obj.target/deps/cpu_features/cpu_features.a Release/obj.target/deps/cpu_features/cpu_features.a.ar-file-list; mkdir -p `dirname Release/obj.target/deps/cpu_features/cpu_features.a`
+2026-11-17T08:55:41.2351742Z .../node_modules/cpu-features install: ar crs Release/obj.target/deps/cpu_features/cpu_features.a @Release/obj.target/deps/cpu_features/cpu_features.a.ar-file-list
+2026-11-17T08:55:42.6548149Z .../node-pty@1.1.0/node_modules/node-pty install:   SOLINK_MODULE(target) Release/obj.target/pty.node
+2026-11-17T08:55:42.7172423Z .../node-pty@1.1.0/node_modules/node-pty install:   COPY Release/pty.node
+2026-11-17T08:55:42.7214711Z .../node-pty@1.1.0/node_modules/node-pty install: make: Leaving directory '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty/build'
+2026-11-17T08:55:42.7223383Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info ok 
+2026-11-17T08:55:42.7364202Z .../node-pty@1.1.0/node_modules/node-pty install: Done
+2026-11-17T08:55:42.7365337Z .../node-pty@1.1.0/node_modules/node-pty postinstall$ node scripts/post-install.js
+2026-11-17T08:55:42.7822572Z .../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Cleaning release folder...[0m
+2026-11-17T08:55:42.7839246Z .../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Moving conpty.dll...[0m
+2026-11-17T08:55:42.7840404Z .../node-pty@1.1.0/node_modules/node-pty postinstall:   SKIPPED (not Windows)
+2026-11-17T08:55:42.7860255Z .../node-pty@1.1.0/node_modules/node-pty postinstall: Done
+2026-11-17T08:55:48.6227727Z .../node_modules/cpu-features install:   COPY Release/cpu_features.a
+2026-11-17T08:55:48.6279127Z .../node_modules/cpu-features install:   CXX(target) Release/obj.target/cpufeatures/src/binding.o
+2026-11-17T08:55:49.8150888Z .../node_modules/cpu-features install: In file included from ../src/binding.cc:1:
+2026-11-17T08:55:49.8160707Z .../node_modules/cpu-features install: /home/runner/.cache/node-gyp/26.12.1/include/node/node.h:1375:7: warning: cast between incompatible function types from ‘void (*)(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE)’ {aka ‘void (*)(v8::Local<v8::Object>)’} to ‘node::addon_register_func’ {aka ‘void (*)(v8::Local<v8::Object>, v8::Local<v8::Value>, void*)’} [-Wcast-function-type]
+2026-11-17T08:55:49.8163130Z .../node_modules/cpu-features install:  1375 |       (node::addon_register_func) (regfunc),                          \
+2026-11-17T08:55:49.8164277Z .../node_modules/cpu-features install:       |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2026-11-17T08:55:49.8165802Z .../node_modules/cpu-features install: /home/runner/.cache/node-gyp/26.12.1/include/node/node.h:1409:3: note: in expansion of macro ‘NODE_MODULE_X’
+2026-11-17T08:55:49.8167312Z .../node_modules/cpu-features install:  1409 |   NODE_MODULE_X(modname, regfunc, NULL, 0)  // NOLINT (readability/null_usage)
+2026-11-17T08:55:49.8168368Z .../node_modules/cpu-features install:       |   ^~~~~~~~~~~~~
+2026-11-17T08:55:49.8169898Z .../node_modules/cpu-features install: ../src/binding.cc:151:1: note: in expansion of macro ‘NODE_MODULE’
+2026-11-17T08:55:49.8170698Z .../node_modules/cpu-features install:   151 | NODE_MODULE(cpufeatures, init)
+2026-11-17T08:55:49.8171224Z .../node_modules/cpu-features install:       | ^~~~~~~~~~~
+2026-11-17T08:55:50.1391800Z .../node_modules/cpu-features install:   SOLINK_MODULE(target) Release/obj.target/cpufeatures.node
+2026-11-17T08:55:50.1902145Z .../node_modules/cpu-features install:   COPY Release/cpufeatures.node
+2026-11-17T08:55:50.1943845Z .../node_modules/cpu-features install: make: Leaving directory '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/cpu-features@0.0.10/node_modules/cpu-features/build'
+2026-11-17T08:55:50.1954636Z .../node_modules/cpu-features install: gyp info ok 
+2026-11-17T08:55:50.2089240Z .../node_modules/cpu-features install: Done
+2026-11-17T08:55:50.3071298Z [WARN] Failed to create bin at /home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js'
+2026-11-17T08:55:50.5107130Z 
+2026-11-17T08:55:50.5107867Z dependencies:
+2026-11-17T08:55:50.5109755Z + @agent-teams/legacy-agent-host 0.1.0 <- packages/legacy-agent-host
+2026-11-17T08:55:50.5110947Z + @agent-teams/task-change-ledger 0.1.0 <- packages/task-change-ledger
+2026-11-17T08:55:50.5111982Z + @claude-teams/agent-graph 0.1.0 <- packages/agent-graph
+2026-11-17T08:55:50.5112726Z + @codemirror/autocomplete 6.20.0
+2026-11-17T08:55:50.5113224Z + @codemirror/commands 6.10.2
+2026-11-17T08:55:50.5113750Z + @codemirror/lang-cpp 6.0.3
+2026-11-17T08:55:50.5114244Z + @codemirror/lang-css 6.3.1
+2026-11-17T08:55:50.5114735Z + @codemirror/lang-go 6.0.1
+2026-11-17T08:55:50.5115250Z + @codemirror/lang-html 6.4.11
+2026-11-17T08:55:50.5115745Z + @codemirror/lang-java 6.0.2
+2026-11-17T08:55:50.5116305Z + @codemirror/lang-javascript 6.2.4
+2026-11-17T08:55:50.5116848Z + @codemirror/lang-json 6.0.2
+2026-11-17T08:55:50.5117335Z + @codemirror/lang-less 6.0.2
+2026-11-17T08:55:50.5117874Z + @codemirror/lang-markdown 6.5.0
+2026-11-17T08:55:50.5118400Z + @codemirror/lang-php 6.0.2
+2026-11-17T08:55:50.5119323Z + @codemirror/lang-python 6.2.1
+2026-11-17T08:55:50.5119849Z + @codemirror/lang-rust 6.0.2
+2026-11-17T08:55:50.5120346Z + @codemirror/lang-sass 6.0.2
+2026-11-17T08:55:50.5120827Z + @codemirror/lang-sql 6.10.0
+2026-11-17T08:55:50.5121302Z + @codemirror/lang-xml 6.1.0
+2026-11-17T08:55:50.5121802Z + @codemirror/lang-yaml 6.1.2
+2026-11-17T08:55:50.5122292Z + @codemirror/language 6.12.1
+2026-11-17T08:55:50.5122831Z + @codemirror/language-data 6.5.2
+2026-11-17T08:55:50.5123367Z + @codemirror/lint 6.9.5
+2026-11-17T08:55:50.5123830Z + @codemirror/merge 6.12.0
+2026-11-17T08:55:50.5124179Z + @codemirror/search 6.6.0
+2026-11-17T08:55:50.5124435Z + @codemirror/state 6.5.4
+2026-11-17T08:55:50.5124736Z + @codemirror/theme-one-dark 6.1.3
+2026-11-17T08:55:50.5125032Z + @codemirror/view 6.39.15
+2026-11-17T08:55:50.5125292Z + @daypicker/react 10.0.1
+2026-11-17T08:55:50.5125547Z + @dnd-kit/core 6.3.1
+2026-11-17T08:55:50.5125854Z + @dnd-kit/sortable 10.0.0
+2026-11-17T08:55:50.5126107Z + @dnd-kit/utilities 3.2.2
+2026-11-17T08:55:50.5126359Z + @fastify/cors 11.2.0
+2026-11-17T08:55:50.5126597Z + @fastify/static 10.1.2
+2026-11-17T08:55:50.5126890Z + @file-viewer/preset-office 3.1.2
+2026-11-17T08:55:50.5127175Z + @file-viewer/react 3.1.2
+2026-11-17T08:55:50.5127417Z + @floating-ui/dom 1.7.6
+2026-11-17T08:55:50.5127668Z + @headless-tree/core 1.7.0
+2026-11-17T08:55:50.5127924Z + @headless-tree/react 1.7.0
+2026-11-17T08:55:50.5128186Z + @openuidev/lang-core 0.3.2
+2026-11-17T08:55:50.5128486Z + @openuidev/react-headless 0.17.0
+2026-11-17T08:55:50.5128777Z + @openuidev/react-lang 0.3.2
+2026-11-17T08:55:50.5129496Z + @openuidev/react-ui 0.17.0
+2026-11-17T08:55:50.5130017Z + @radix-ui/react-alert-dialog 1.1.15
+2026-11-17T08:55:50.5130430Z + @radix-ui/react-checkbox 1.3.3
+2026-11-17T08:55:50.5130774Z + @radix-ui/react-collapsible 1.1.12
+2026-11-17T08:55:50.5131096Z + @radix-ui/react-context-menu 2.2.16
+2026-11-17T08:55:50.5131406Z + @radix-ui/react-dialog 1.1.15
+2026-11-17T08:55:50.5131719Z + @radix-ui/react-dropdown-menu 2.1.16
+2026-11-17T08:55:50.5132041Z + @radix-ui/react-hover-card 1.1.15
+2026-11-17T08:55:50.5132328Z + @radix-ui/react-label 2.1.8
+2026-11-17T08:55:50.5132624Z + @radix-ui/react-popover 1.1.15
+2026-11-17T08:55:50.5132924Z + @radix-ui/react-presence 1.1.5
+2026-11-17T08:55:50.5133215Z + @radix-ui/react-select 2.2.6
+2026-11-17T08:55:50.5133502Z + @radix-ui/react-slot 1.2.4
+2026-11-17T08:55:50.5133777Z + @radix-ui/react-switch 1.3.7
+2026-11-17T08:55:50.5134684Z + @radix-ui/react-tabs 1.1.13
+2026-11-17T08:55:50.5135090Z + @radix-ui/react-tooltip 1.2.8
+2026-11-17T08:55:50.5135487Z + @sentry/electron 7.10.0
+2026-11-17T08:55:50.5135868Z + @sentry/react 10.45.0
+2026-11-17T08:55:50.5136256Z + @tanstack/react-table 9.3.1
+2026-11-17T08:55:50.5136733Z + @tanstack/react-virtual 3.13.24
+2026-11-17T08:55:50.5137516Z + @terminal-platform/design-tokens 0.1.0
+2026-11-17T08:55:50.5138117Z + @terminal-platform/foundation 0.1.0
+2026-11-17T08:55:50.5138719Z + @terminal-platform/runtime-types 0.1.0
+2026-11-17T08:55:50.5139646Z + @terminal-platform/workspace-adapter-websocket 0.1.0
+2026-11-17T08:55:50.5140392Z + @terminal-platform/workspace-contracts 0.1.0
+2026-11-17T08:55:50.5141050Z + @terminal-platform/workspace-core 0.1.0
+2026-11-17T08:55:50.5141711Z + @terminal-platform/workspace-elements 0.1.0
+2026-11-17T08:55:50.5142424Z + @terminal-platform/workspace-gateway-node 0.1.0
+2026-11-17T08:55:50.5143106Z + @terminal-platform/workspace-react 0.1.0
+2026-11-17T08:55:50.5143751Z + @tiptap/extension-placeholder 3.30.5
+2026-11-17T08:55:50.5144282Z + @tiptap/markdown 3.30.5
+2026-11-17T08:55:50.5144721Z + @tiptap/pm 3.30.5
+2026-11-17T08:55:50.5145126Z + @tiptap/react 3.30.5
+2026-11-17T08:55:50.5145562Z + @tiptap/starter-kit 3.30.5
+2026-11-17T08:55:50.5146026Z + @xterm/addon-fit 0.11.0
+2026-11-17T08:55:50.5146678Z + @xterm/addon-web-links 0.12.0
+2026-11-17T08:55:50.5147154Z + @xterm/xterm 6.0.0
+2026-11-17T08:55:50.5147771Z + agent-teams-controller 1.0.0 <- agent-teams-controller
+2026-11-17T08:55:50.5148400Z + better-sqlite3 12.11.1
+2026-11-17T08:55:50.5149033Z + builder-util-runtime 9.7.0
+2026-11-17T08:55:50.5149469Z + chokidar 4.0.3
+2026-11-17T08:55:50.5149930Z + class-variance-authority 0.7.1
+2026-11-17T08:55:50.5150389Z + clsx 2.1.1
+2026-11-17T08:55:50.5150720Z + cmdk 1.0.4
+2026-11-17T08:55:50.5151056Z + croner 10.0.1
+2026-11-17T08:55:50.5151437Z + cronstrue 3.13.0
+2026-11-17T08:55:50.5151820Z + date-fns 3.6.0
+2026-11-17T08:55:50.5152178Z + diff 8.0.3
+2026-11-17T08:55:50.5152555Z + dompurify 3.4.17
+2026-11-17T08:55:50.5152969Z + drizzle-orm 0.45.2
+2026-11-17T08:55:50.5153395Z + electron-updater 6.8.9
+2026-11-17T08:55:50.5153861Z + fast-json-stringify 6.4.0
+2026-11-17T08:55:50.5154291Z + fastify 5.12.5
+2026-11-17T08:55:50.5154688Z + highlight.js 11.11.1
+2026-11-17T08:55:50.5154915Z + i18next 26.2.0
+2026-11-17T08:55:50.5155134Z + idb-keyval 6.2.2
+2026-11-17T08:55:50.5155362Z + isbinaryfile 6.0.0
+2026-11-17T08:55:50.5155628Z + json-schema-ref-resolver 3.0.0
+2026-11-17T08:55:50.5155899Z + jsonc-parser 3.3.1
+2026-11-17T08:55:50.5156137Z + lucide-react 0.577.0
+2026-11-17T08:55:50.5156405Z + mdast-util-to-hast 13.2.1
+2026-11-17T08:55:50.5156657Z + mermaid 11.15.0
+2026-11-17T08:55:50.5156860Z + motion 12.38.0
+2026-11-17T08:55:50.5157080Z + node-diff3 3.2.0
+2026-11-17T08:55:50.5157290Z + node-pty 1.1.0
+2026-11-17T08:55:50.5157489Z + pica 9.0.1
+2026-11-17T08:55:50.5157689Z + pidusage 4.0.1
+2026-11-17T08:55:50.5157906Z + posthog-js 1.396.6
+2026-11-17T08:55:50.5158116Z + react 19.2.4
+2026-11-17T08:55:50.5158339Z + react-dom 19.2.4
+2026-11-17T08:55:50.5158574Z + react-grid-layout 2.2.2
+2026-11-17T08:55:50.5159045Z + react-i18next 17.0.8
+2026-11-17T08:55:50.5159356Z + react-markdown 10.1.0
+2026-11-17T08:55:50.5159618Z + react-modal-sheet 5.6.0
+2026-11-17T08:55:50.5159869Z + react-resizable 3.1.3
+2026-11-17T08:55:50.5160119Z + rehype-highlight 7.0.2
+2026-11-17T08:55:50.5160376Z + rehype-raw 7.0.0
+2026-11-17T08:55:50.5160612Z + rehype-sanitize 6.0.0
+2026-11-17T08:55:50.5160840Z + remark-gfm 4.0.1
+2026-11-17T08:55:50.5161093Z + remark-parse 11.0.0
+2026-11-17T08:55:50.5161328Z + simple-git 4.0.2
+2026-11-17T08:55:50.5161547Z + ssh-config 5.0.4
+2026-11-17T08:55:50.5161754Z + ssh2 1.17.0
+2026-11-17T08:55:50.5161968Z + strip-markdown 6.0.0
+2026-11-17T08:55:50.5162357Z + tailwind-merge 3.5.0
+2026-11-17T08:55:50.5162798Z + tailwindcss-animate 1.0.7
+2026-11-17T08:55:50.5163898Z + terminal-platform-node terminal-platform-node@file:vendor/terminal-platform/terminal-platform-node-stub
+2026-11-17T08:55:50.5165104Z + unified 11.0.5
+2026-11-17T08:55:50.5165457Z + ws 8.21.0
+2026-11-17T08:55:50.5165782Z + yaml 2.9.0
+2026-11-17T08:55:50.5166234Z + yet-another-react-lightbox 3.29.1
+2026-11-17T08:55:50.5166711Z + zod 4.6.7
+2026-11-17T08:55:50.5167036Z + zustand 4.5.7
+2026-11-17T08:55:50.5167233Z 
+2026-11-17T08:55:50.5167387Z devDependencies:
+2026-11-17T08:55:50.5167989Z + @electron/rebuild 4.2.0
+2026-11-17T08:55:50.5168641Z + @eslint-community/eslint-plugin-eslint-comments 4.6.0
+2026-11-17T08:55:50.5169480Z + @eslint/js 9.39.2
+2026-11-17T08:55:50.5170011Z + @file-viewer/vite-plugin 3.1.2
+2026-11-17T08:55:50.5170503Z + @sentry/vite-plugin 5.1.1
+2026-11-17T08:55:50.5171004Z + @tailwindcss/typography 0.5.19
+2026-11-17T08:55:50.5171529Z + @types/better-sqlite3 7.6.13
+2026-11-17T08:55:50.5171975Z + @types/hast 3.0.4
+2026-11-17T08:55:50.5172365Z + @types/mdast 4.0.4
+2026-11-17T08:55:50.5172761Z + @types/node 24.12.4
+2026-11-17T08:55:50.5173166Z + @types/pidusage 2.0.5
+2026-11-17T08:55:50.5173584Z + @types/react 19.2.14
+2026-11-17T08:55:50.5174010Z + @types/react-dom 19.2.3
+2026-11-17T08:55:50.5174420Z + @types/ssh2 1.15.5
+2026-11-17T08:55:50.5174903Z + @typescript/native <- typescript 7.0.2
+2026-11-17T08:55:50.5175442Z + @vitejs/plugin-react 4.7.0
+2026-11-17T08:55:50.5175908Z + @vitest/coverage-v8 3.2.6
+2026-11-17T08:55:50.5176349Z + autoprefixer 10.4.23
+2026-11-17T08:55:50.5176910Z + better-sqlite3-node <- better-sqlite3 12.10.1
+2026-11-17T08:55:50.5177455Z + electron 44.10.1
+2026-11-17T08:55:50.5177865Z + electron-builder 26.17.0
+2026-11-17T08:55:50.5178303Z + electron-vite 5.0.0
+2026-11-17T08:55:50.5178667Z + eslint 9.39.4
+2026-11-17T08:55:50.5179287Z + eslint-config-prettier 10.1.8
+2026-11-17T08:55:50.5179877Z + eslint-import-resolver-typescript 4.4.4
+2026-11-17T08:55:50.5180499Z + eslint-plugin-boundaries 5.3.1
+2026-11-17T08:55:50.5180990Z + eslint-plugin-import 2.32.0
+2026-11-17T08:55:50.5181489Z + eslint-plugin-jsx-a11y 6.10.2
+2026-11-17T08:55:50.5181961Z + eslint-plugin-react 7.37.5
+2026-11-17T08:55:50.5182475Z + eslint-plugin-react-hooks 7.0.1
+2026-11-17T08:55:50.5183053Z + eslint-plugin-react-refresh 0.4.26
+2026-11-17T08:55:50.5183624Z + eslint-plugin-security 3.0.1
+2026-11-17T08:55:50.5184190Z + eslint-plugin-simple-import-sort 12.1.1
+2026-11-17T08:55:50.5184738Z + eslint-plugin-sonarjs 3.0.6
+2026-11-17T08:55:50.5185264Z + eslint-plugin-tailwindcss 3.18.2
+2026-11-17T08:55:50.5185761Z + fake-indexeddb 6.2.5
+2026-11-17T08:55:50.5186133Z + globals 17.2.0
+2026-11-17T08:55:50.5186492Z + happy-dom 21.0.4
+2026-11-17T08:55:50.5186841Z + husky 9.1.7
+2026-11-17T08:55:50.5187187Z + i18next-cli 1.58.0
+2026-11-17T08:55:50.5187532Z + knip 5.82.1
+2026-11-17T08:55:50.5187876Z + lint-staged 16.2.7
+2026-11-17T08:55:50.5188225Z + oxfmt 0.72.0
+2026-11-17T08:55:50.5188549Z + oxlint 1.87.0
+2026-11-17T08:55:50.5189062Z + postcss 8.5.28
+2026-11-17T08:55:50.5189419Z + prettier 3.8.1
+2026-11-17T08:55:50.5189874Z + prettier-plugin-tailwindcss 0.7.2
+2026-11-17T08:55:50.5190357Z + tailwindcss 3.4.19
+2026-11-17T08:55:50.5190715Z + tsx 4.23.15
+2026-11-17T08:55:50.5191066Z + typescript 5.9.3
+2026-11-17T08:55:50.5191460Z + typescript-eslint 8.54.0
+2026-11-17T08:55:50.5191848Z + vite 6.4.4
+2026-11-17T08:55:50.5192168Z + vitest 3.2.6
+2026-11-17T08:55:50.5192360Z 
+2026-11-17T08:55:50.5448363Z landing postinstall$ node ./scripts/patch-minimatch-brace-expansion.mjs && node ../scripts/ci/transitive-security.ts --apply
+2026-11-17T08:55:50.5962535Z landing postinstall: [landing postinstall] skipped npm layout patch; pnpm patchedDependencies handles compatibility
+2026-11-17T08:55:50.8036250Z landing postinstall: Verified braces security backport in 1 package(s)
+2026-11-17T08:55:50.9096618Z landing postinstall: Verified http-cache-semantics security backport in 1 package(s)
+2026-11-17T08:55:50.9180835Z landing postinstall: Done
+2026-11-17T08:55:50.9776116Z [WARN] Failed to create bin at /home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/@agent-teams/legacy-agent-host/dist/cli.js'
+2026-11-17T08:55:50.9821897Z . preinstall$ node ./scripts/ci/enforce-pnpm-install.mjs
+2026-11-17T08:55:51.0273164Z . preinstall: Done
+2026-11-17T08:55:51.0274622Z . postinstall$ node ./scripts/postinstall-electron.cjs
+2026-11-17T08:55:51.0770895Z . postinstall: Done
+2026-11-17T08:55:51.0772139Z . prepare$ husky
+2026-11-17T08:55:51.1394360Z . prepare: Done
+2026-11-17T08:55:51.1703514Z Done in 29.2s using pnpm v11.22.0
+2026-11-17T08:55:51.2679503Z ##[group]Run node ./scripts/ci/forbid-runtime-artifacts.cjs
+2026-11-17T08:55:51.2680123Z [36;1mnode ./scripts/ci/forbid-runtime-artifacts.cjs[0m
+2026-11-17T08:55:51.2701271Z shell: /usr/bin/bash -e {0}
+2026-11-17T08:55:51.2701587Z env:
+2026-11-17T08:55:51.2701838Z   CI_ROOT_TEST_SHARDS: 4
+2026-11-17T08:55:51.2702166Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-17T08:55:51.2702536Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-17T08:55:51.2702951Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-17T08:55:51.2703374Z ##[endgroup]
+2026-11-17T08:55:51.3149603Z Runtime artifact guard passed.
+2026-11-17T08:55:51.3220101Z ##[group]Run node ./scripts/ci/check-source-file-size.mjs
+2026-11-17T08:55:51.3220600Z [36;1mnode ./scripts/ci/check-source-file-size.mjs[0m
+2026-11-17T08:55:51.3241988Z shell: /usr/bin/bash -e {0}
+2026-11-17T08:55:51.3242270Z env:
+2026-11-17T08:55:51.3242482Z   CI_ROOT_TEST_SHARDS: 4
+2026-11-17T08:55:51.3242768Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-17T08:55:51.3243097Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-17T08:55:51.3243446Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-17T08:55:51.3243798Z ##[endgroup]
+2026-11-17T08:55:51.5210420Z Source file size guard passed: 5020 production files checked, 141 frozen legacy exceptions, 800-line limit.
+2026-11-17T08:55:51.5212027Z 86 legacy file(s) are below their frozen caps; lower those caps when committing the refactor.
+2026-11-17T08:55:51.5299426Z ##[group]Run node ./scripts/ci/check-team-provisioning-architecture.mjs
+2026-11-17T08:55:51.5300208Z [36;1mnode ./scripts/ci/check-team-provisioning-architecture.mjs[0m
+2026-11-17T08:55:51.5321030Z shell: /usr/bin/bash -e {0}
+2026-11-17T08:55:51.5321301Z env:
+2026-11-17T08:55:51.5321525Z   CI_ROOT_TEST_SHARDS: 4
+2026-11-17T08:55:51.5321817Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-17T08:55:51.5322138Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-17T08:55:51.5322489Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-17T08:55:51.5322856Z ##[endgroup]
+2026-11-17T08:55:51.6376137Z Team Provisioning architecture guard passed: {"facadeInheritance":22,"serviceHostDeclaration":50,"serviceHostCast":31,"protectedAbstractDependency":62,"createFromServiceFactory":154}.
+2026-11-17T08:55:51.6476397Z ##[group]Run pnpm typecheck:workspace
+2026-11-17T08:55:51.6476795Z [36;1mpnpm typecheck:workspace[0m
+2026-11-17T08:55:51.6498782Z shell: /usr/bin/bash -e {0}
+2026-11-17T08:55:51.6499339Z env:
+2026-11-17T08:55:51.6499567Z   CI_ROOT_TEST_SHARDS: 4
+2026-11-17T08:55:51.6499851Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-17T08:55:51.6500199Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-17T08:55:51.6500572Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-17T08:55:51.6500927Z ##[endgroup]
+2026-11-17T08:55:52.1160686Z $ pnpm typecheck && pnpm typecheck:legacy-host-scripts && pnpm --filter @agent-teams/legacy-agent-host typecheck:test && pnpm --filter agent-teams-mcp typecheck && pnpm --filter agent-teams-mcp typecheck:test
+2026-11-17T08:55:52.5762662Z $ pnpm --filter @agent-teams/legacy-agent-host build
+2026-11-17T08:55:53.0476944Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-17T08:55:53.0484954Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-17T08:55:53.0763788Z $ pnpm --filter @agent-teams/task-change-ledger build
+2026-11-17T08:55:53.5383637Z .                                        | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-17T08:55:53.5391375Z ../task-change-ledger                    | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-17T08:55:53.5673140Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
+2026-11-17T08:55:54.0123590Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
+2026-11-17T08:55:57.2236440Z $ node ./node_modules/@typescript/native/bin/tsc --noEmit && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.updater-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.release-tooling.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-preload.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-renderer.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.desktop-e2e.json
+2026-11-17T08:56:45.6398733Z $ node node_modules/@typescript/native/bin/tsc --project tsconfig.legacy-agent-host-scripts.json
+2026-11-17T08:56:48.1516038Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-17T08:56:48.1524004Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-17T08:56:48.1840741Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json
+2026-11-17T08:56:53.5890242Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-17T08:56:53.5897546Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-17T08:56:53.6173458Z $ tsc --noEmit
+2026-11-17T08:56:55.7380106Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-17T08:56:55.7387151Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-17T08:56:55.7668687Z $ tsc --noEmit -p tsconfig.test.json
+2026-11-17T08:56:58.1716335Z ##[group]Run pnpm lint:fast
+2026-11-17T08:56:58.1716705Z [36;1mpnpm lint:fast[0m
+2026-11-17T08:56:58.1737585Z shell: /usr/bin/bash -e {0}
+2026-11-17T08:56:58.1737876Z env:
+2026-11-17T08:56:58.1738111Z   CI_ROOT_TEST_SHARDS: 4
+2026-11-17T08:56:58.1738403Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-17T08:56:58.1738754Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-17T08:56:58.1739468Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-17T08:56:58.1739861Z ##[endgroup]
+2026-11-17T08:56:58.6584594Z $ eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content src/
+2026-11-17T08:58:56.3934942Z 
+2026-11-17T08:58:56.3936345Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/agent-backend/renderer/HostBackendRetryAction.tsx
+2026-11-17T08:58:56.3973721Z ##[warning]  28:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.3987355Z ##[warning]  39:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.3990831Z ##[warning]  70:8   warning  Function component is not an arrow function                                                                                     react/function-component-definition
+2026-11-17T08:58:56.3992816Z 
+2026-11-17T08:58:56.3993617Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/agent-graph/renderer/hooks/useGraphMemberLogPreviews.ts
+2026-11-17T08:58:56.3996381Z ##[warning]  559:6  warning  React Hook useEffect has a missing dependency: 'memberNames'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.3998025Z 
+2026-11-17T08:58:56.3998741Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/agent-graph/renderer/ui/GraphActivityCard.tsx
+2026-11-17T08:58:56.4002730Z ##[warning]  50:5  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.4006873Z ##[warning]  59:7  warning  `tabIndex` should only be declared on interactive elements                                                                                                                                         jsx-a11y/no-noninteractive-tabindex
+2026-11-17T08:58:56.4008639Z 
+2026-11-17T08:58:56.4009711Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/agent-graph/renderer/ui/GraphMemberLogPreviewHud.tsx
+2026-11-17T08:58:56.4013972Z ##[warning]  339:9   warning  The 'members' logical expression could make the dependencies of useMemo Hook (at line 340) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'members' in its own useMemo() Hook                                                react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4020423Z ##[warning]  378:46  warning  The ref value 'highlightTimersRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'highlightTimersRef.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4026675Z ##[warning]  644:11  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element                                                                                    jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.4029431Z 
+2026-11-17T08:58:56.4030178Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/agent-graph/renderer/ui/GraphTaskCard.tsx
+2026-11-17T08:58:56.4034120Z ##[warning]  89:9  warning  The 'tasks' logical expression could make the dependencies of useMemo Hook (at line 97) change on every render. To fix this, wrap the initialization of 'tasks' in its own useMemo() Hook                                              react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4039866Z ##[warning]  90:9  warning  The 'members' logical expression could make the dependencies of useMemo Hook (at line 105) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'members' in its own useMemo() Hook  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4042278Z 
+2026-11-17T08:58:56.4043075Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/agent-graph/renderer/ui/GraphTransientHandoffHud.tsx
+2026-11-17T08:58:56.4046582Z ##[warning]  149:9  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.4049117Z 
+2026-11-17T08:58:56.4049909Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/appearance/core/domain/appearancePreferences.ts
+2026-11-17T08:58:56.4051969Z ##[warning]  42:28  warning  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+2026-11-17T08:58:56.4053682Z 
+2026-11-17T08:58:56.4054466Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/chat-visualizations/renderer/composition.tsx
+2026-11-17T08:58:56.4057294Z ##[warning]  35:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4061384Z ##[warning]  55:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4063235Z 
+2026-11-17T08:58:56.4064025Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/document-preview/renderer/ui/DocumentPreview.tsx
+2026-11-17T08:58:56.4065971Z ##[warning]  16:8  warning  Function component is not an arrow function  react/function-component-definition
+2026-11-17T08:58:56.4068278Z ##[warning]  30:1  warning  Function component is not an arrow function  react/function-component-definition
+2026-11-17T08:58:56.4069913Z 
+2026-11-17T08:58:56.4070910Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/external-agent-connection/renderer/ExternalAgentConnectionSettings.tsx
+2026-11-17T08:58:56.4073017Z ##[warning]  18:8  warning  Function component is not an arrow function  react/function-component-definition
+2026-11-17T08:58:56.4074426Z 
+2026-11-17T08:58:56.4075391Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/external-agent-connection/renderer/ExternalAgentPromptAction.tsx
+2026-11-17T08:58:56.4077145Z ##[warning]  20:8  warning  Function component is not an arrow function  react/function-component-definition
+2026-11-17T08:58:56.4078533Z 
+2026-11-17T08:58:56.4079714Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/external-agent-connection/renderer/ExternalAgentPromptDialog.tsx
+2026-11-17T08:58:56.4081696Z ##[warning]  230:11  warning  `tabIndex` should only be declared on interactive elements  jsx-a11y/no-noninteractive-tabindex
+2026-11-17T08:58:56.4083168Z 
+2026-11-17T08:58:56.4084054Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/external-agent-connection/renderer/ExternalAgentRunActions.tsx
+2026-11-17T08:58:56.4085764Z ##[warning]  14:8  warning  Function component is not an arrow function  react/function-component-definition
+2026-11-17T08:58:56.4087111Z 
+2026-11-17T08:58:56.4088029Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/external-agent-connection/renderer/TeamTemplateReferences.tsx
+2026-11-17T08:58:56.4090062Z ##[warning]  42:8  warning  Function component is not an arrow function  react/function-component-definition
+2026-11-17T08:58:56.4091489Z 
+2026-11-17T08:58:56.4092726Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/external-agent-connection/renderer/useConnectionInfo.ts
+2026-11-17T08:58:56.4097004Z ##[warning]  66:18  warning  The ref value 'generation.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'generation.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4099798Z 
+2026-11-17T08:58:56.4100689Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/external-agent-connection/renderer/useExternalAgentRun.ts
+2026-11-17T08:58:56.4104899Z ##[warning]  110:16  warning  The ref value 'revision.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'revision.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4107408Z 
+2026-11-17T08:58:56.4108545Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/gateway-provider/renderer/hooks/__tests__/useGatewayMemberBindings.lifecycle.test.tsx
+2026-11-17T08:58:56.4111106Z ##[warning]  55:1  warning  Function component is not an arrow function  react/function-component-definition
+2026-11-17T08:58:56.4133347Z 
+2026-11-17T08:58:56.4134189Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/member-log-reads/renderer/useCompletionRead.ts
+2026-11-17T08:58:56.4137668Z ##[warning]  208:6  warning  React Hook useEffect has missing dependencies: 'key', 'presentationKey', 'scope', 'state.presentationKey', and 'state.value'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4140271Z 
+2026-11-17T08:58:56.4141168Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/member-log-stream/renderer/ui/MemberRuntimeProcessLogsPanel.tsx
+2026-11-17T08:58:56.4147588Z ##[warning]   53:1   warning  Function component is not an arrow function                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             react/function-component-definition
+2026-11-17T08:58:56.4156725Z ##[warning]   80:1   warning  Function component is not an arrow function                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             react/function-component-definition
+2026-11-17T08:58:56.4163420Z    89:26  warning  Compilation Skipped: Use of incompatible library
+2026-11-17T08:58:56.4164146Z 
+2026-11-17T08:58:56.4166086Z This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+2026-11-17T08:58:56.4167799Z 
+2026-11-17T08:58:56.4169155Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/member-log-stream/renderer/ui/MemberRuntimeProcessLogsPanel.tsx:89:26
+2026-11-17T08:58:56.4170439Z   87 |   const parentRef = useRef<HTMLDivElement | null>(null);
+2026-11-17T08:58:56.4171235Z   88 |   const lines = useMemo(() => content.split(/\r?\n/), [content]);
+2026-11-17T08:58:56.4171977Z > 89 |   const rowVirtualizer = useVirtualizer({
+2026-11-17T08:58:56.4172978Z      |                          ^^^^^^^^^^^^^^ TanStack Virtual's `useVirtualizer()` API returns functions that cannot be memoized safely
+2026-11-17T08:58:56.4173863Z   90 |     count: lines.length,
+2026-11-17T08:58:56.4174408Z   91 |     getScrollElement: () => parentRef.current,
+2026-11-17T08:58:56.4175213Z   92 |     estimateSize: () => (wrapLines ? 36 : 20),  react-hooks/incompatible-library
+2026-11-17T08:58:56.4181845Z ##[warning]  126:8   warning  Function component is not an arrow function                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             react/function-component-definition
+2026-11-17T08:58:56.4185452Z 
+2026-11-17T08:58:56.4186348Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/opencode-runtime-installer/core/domain/v2Delivery.ts
+2026-11-17T08:58:56.4188448Z ##[warning]  168:5  warning  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+2026-11-17T08:58:56.4190156Z 
+2026-11-17T08:58:56.4190932Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/organizations/renderer/ui/OrgGraphToolbar.tsx
+2026-11-17T08:58:56.4193016Z ##[warning]  50:8  warning  Function component is not an arrow function  react/function-component-definition
+2026-11-17T08:58:56.4194456Z 
+2026-11-17T08:58:56.4195232Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/organizations/renderer/ui/OrgMapLegendHud.tsx
+2026-11-17T08:58:56.4196982Z ##[warning]  3:8  warning  Function component is not an arrow function  react/function-component-definition
+2026-11-17T08:58:56.4198356Z 
+2026-11-17T08:58:56.4199379Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/organizations/renderer/ui/OrgOverviewHud.tsx
+2026-11-17T08:58:56.4201053Z ##[warning]  18:8  warning  Function component is not an arrow function  react/function-component-definition
+2026-11-17T08:58:56.4202483Z 
+2026-11-17T08:58:56.4203299Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/running-teams/renderer/ui/RunningTeamsSection.tsx
+2026-11-17T08:58:56.4205161Z ##[warning]  19:8  warning  Function component is not an arrow function  react/function-component-definition
+2026-11-17T08:58:56.4206512Z 
+2026-11-17T08:58:56.4207664Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/runtime-provider-management/renderer/hooks/useOpenCodeAttachmentDeclarations.test.tsx
+2026-11-17T08:58:56.4210337Z ##[warning]  66:1  warning  Function component is not an arrow function  react/function-component-definition
+2026-11-17T08:58:56.4211775Z 
+2026-11-17T08:58:56.4212854Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.ts
+2026-11-17T08:58:56.4215507Z ##[warning]  279:6  warning  React Hook useEffect has a missing dependency: 'input'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4217192Z 
+2026-11-17T08:58:56.4218178Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache.ts
+2026-11-17T08:58:56.4221021Z ##[warning]  449:5  warning  React Hook useCallback has a missing dependency: 'projectPath'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4222763Z 
+2026-11-17T08:58:56.4223762Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/runtime-provider-management/renderer/ui/OpenCodeCatalogErrorAlert.tsx
+2026-11-17T08:58:56.4226639Z ##[warning]  20:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4228489Z 
+2026-11-17T08:58:56.4229788Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus.tsx
+2026-11-17T08:58:56.4232558Z ##[warning]   23:8   warning  Function component is not an arrow function                                                                                     react/function-component-definition
+2026-11-17T08:58:56.4236096Z ##[warning]   38:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4240052Z ##[warning]   47:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4243758Z ##[warning]   73:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4247409Z ##[warning]   86:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4250983Z ##[warning]  108:8   warning  Function component is not an arrow function                                                                                     react/function-component-definition
+2026-11-17T08:58:56.4252566Z 
+2026-11-17T08:58:56.4253547Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/runtime-provider-management/renderer/ui/RuntimeProviderErrorAlert.tsx
+2026-11-17T08:58:56.4256412Z ##[warning]   34:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4260013Z ##[warning]  255:18  warning  `tabIndex` should only be declared on interactive elements                                                                      jsx-a11y/no-noninteractive-tabindex
+2026-11-17T08:58:56.4261723Z 
+2026-11-17T08:58:56.4262844Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx
+2026-11-17T08:58:56.4270317Z ##[warning]    33:3   warning  'Check' is defined but never used. Allowed unused vars must match /^_/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+2026-11-17T08:58:56.4280848Z ##[warning]  1118:5   warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.4291233Z ##[warning]  1120:7   warning  `tabIndex` should only be declared on interactive elements                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     jsx-a11y/no-noninteractive-tabindex
+2026-11-17T08:58:56.4302259Z ##[warning]  1269:5   warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.4312473Z ##[warning]  1271:7   warning  `tabIndex` should only be declared on interactive elements                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     jsx-a11y/no-noninteractive-tabindex
+2026-11-17T08:58:56.4316660Z   1831:28  warning  Compilation Skipped: Use of incompatible library
+2026-11-17T08:58:56.4317108Z 
+2026-11-17T08:58:56.4319259Z This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+2026-11-17T08:58:56.4320859Z 
+2026-11-17T08:58:56.4322060Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx:1831:28
+2026-11-17T08:58:56.4323542Z   1829 |   const shouldVirtualize =
+2026-11-17T08:58:56.4324345Z   1830 |     pickerOpen && visibleModels.length > PROVIDER_MODEL_VIRTUALIZATION_THRESHOLD;
+2026-11-17T08:58:56.4325215Z > 1831 |   const modelVirtualizer = useVirtualizer({
+2026-11-17T08:58:56.4326241Z        |                            ^^^^^^^^^^^^^^ TanStack Virtual's `useVirtualizer()` API returns functions that cannot be memoized safely
+2026-11-17T08:58:56.4327211Z   1832 |     count: shouldVirtualize ? visibleModels.length : 0,
+2026-11-17T08:58:56.4327834Z   1833 |     enabled: shouldVirtualize,
+2026-11-17T08:58:56.4328639Z   1834 |     getScrollElement: () => modelListRef.current,  react-hooks/incompatible-library
+2026-11-17T08:58:56.4336619Z ##[warning]  1980:11  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.4348057Z ##[warning]  2001:11  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.4352629Z 
+2026-11-17T08:58:56.4353567Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/runtime-provider-management/renderer/ui/providerBrandIcons.tsx
+2026-11-17T08:58:56.4356430Z ##[warning]  610:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4360102Z ##[warning]  695:8   warning  Function component is not an arrow function                                                                                     react/function-component-definition
+2026-11-17T08:58:56.4361731Z 
+2026-11-17T08:58:56.4362646Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/team-task-detail/renderer/context/TaskDetailFileLinkContext.tsx
+2026-11-17T08:58:56.4365775Z ##[warning]  55:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4367685Z 
+2026-11-17T08:58:56.4368571Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/team-task-detail/renderer/hooks/useTaskDetailSession.ts
+2026-11-17T08:58:56.4373467Z ##[warning]  270:37  warning  The ref value 'clarification.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'clarification.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4376315Z 
+2026-11-17T08:58:56.4377202Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/terminal-workspace/renderer/ui/TerminalWorkspacePanel.tsx
+2026-11-17T08:58:56.4380516Z ##[warning]  3680:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4384375Z ##[warning]  3689:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4388128Z ##[warning]  3744:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4392177Z ##[warning]  3977:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4395945Z ##[warning]  4017:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4399964Z ##[warning]  4063:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4403822Z ##[warning]  4173:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4407589Z ##[warning]  4217:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4411644Z ##[warning]  4483:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4413564Z 
+2026-11-17T08:58:56.4414550Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/tmux-installer/renderer/hooks/__tests__/useTmuxInstallerBanner.test.tsx
+2026-11-17T08:58:56.4416938Z ##[warning]  84:1  warning  Function component is not an arrow function  react/function-component-definition
+2026-11-17T08:58:56.4418374Z 
+2026-11-17T08:58:56.4419439Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/tmux-installer/renderer/ui/TmuxInstallerBannerView.tsx
+2026-11-17T08:58:56.4421270Z ##[warning]  38:8  warning  Function component is not an arrow function  react/function-component-definition
+2026-11-17T08:58:56.4422684Z 
+2026-11-17T08:58:56.4423566Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/token-usage/renderer/ui/TokenUsageDashboard.budget.test.tsx
+2026-11-17T08:58:56.4427986Z ##[warning]  40:11  warning  React Hook useMemo has an unnecessary dependency: 'budget.snapshot'. Either exclude it or remove the dependency array. Outer scope values like 'budget.snapshot' aren't valid dependencies because mutating them doesn't re-render the component  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4430753Z 
+2026-11-17T08:58:56.4431621Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/workspace-trust/core/application/StartupDialogRules.ts
+2026-11-17T08:58:56.4433973Z ##[warning]  23:14  warning  Unexpected control character(s) in regular expression: \x1b, \x07, \x07, \x1b              no-control-regex
+2026-11-17T08:58:56.4436718Z ##[warning]  24:14  warning  Unexpected control character(s) in regular expression: \x1b                                no-control-regex
+2026-11-17T08:58:56.4440012Z ##[warning]  32:14  warning  Unexpected control character(s) in regular expression: \x00, \x08, \x0b, \x0c, \x0e, \x1f  no-control-regex
+2026-11-17T08:58:56.4441520Z 
+2026-11-17T08:58:56.4442397Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/features/workspace-trust/core/domain/CodexWorkspaceTrustSettings.ts
+2026-11-17T08:58:56.4444327Z ##[warning]  10:3  warning  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+2026-11-17T08:58:56.4445711Z 
+2026-11-17T08:58:56.4446431Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/main/services/extensions/apikeys/ApiKeyService.ts
+2026-11-17T08:58:56.4448326Z ##[warning]  369:34  warning  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+2026-11-17T08:58:56.4449932Z 
+2026-11-17T08:58:56.4450594Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/main/services/schedule/SchedulerService.ts
+2026-11-17T08:58:56.4452097Z ##[warning]  663:32  warning  Unsafe usage of ReturnStatement  no-unsafe-finally
+2026-11-17T08:58:56.4454016Z ##[warning]  667:34  warning  Unsafe usage of ReturnStatement  no-unsafe-finally
+2026-11-17T08:58:56.4455320Z 
+2026-11-17T08:58:56.4455965Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/main/services/team/ClaudeDoctorProbe.ts
+2026-11-17T08:58:56.4458039Z ##[warning]  32:14  warning  Unexpected control character(s) in regular expression: \x1b, \x07, \x07, \x1b              no-control-regex
+2026-11-17T08:58:56.4461034Z ##[warning]  33:14  warning  Unexpected control character(s) in regular expression: \x1b                                no-control-regex
+2026-11-17T08:58:56.4463778Z ##[warning]  41:14  warning  Unexpected control character(s) in regular expression: \x00, \x08, \x0b, \x0c, \x0e, \x1f  no-control-regex
+2026-11-17T08:58:56.4465292Z 
+2026-11-17T08:58:56.4465813Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/main/utils/pathDecoder.ts
+2026-11-17T08:58:56.4467478Z ##[warning]  162:7  warning  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+2026-11-17T08:58:56.4470151Z ##[warning]  174:7  warning  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+2026-11-17T08:58:56.4471565Z 
+2026-11-17T08:58:56.4472275Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/chat/viewers/DiffViewer.tsx
+2026-11-17T08:58:56.4475173Z ##[warning]  156:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4477236Z 
+2026-11-17T08:58:56.4478130Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/chat/viewers/FileLink.tsx
+2026-11-17T08:58:56.4480963Z ##[warning]  27:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4484825Z ##[warning]  43:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4488469Z ##[warning]  57:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4490514Z 
+2026-11-17T08:58:56.4491233Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/chat/viewers/MarkdownViewer.tsx
+2026-11-17T08:58:56.4493935Z ##[warning]  324:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4495776Z 
+2026-11-17T08:58:56.4496480Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/dashboard/CliStatusBanner.tsx
+2026-11-17T08:58:56.4500344Z ##[warning]   917:7   warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.4504891Z ##[warning]   929:9   warning  `tabIndex` should only be declared on interactive elements                                                                                                                                         jsx-a11y/no-noninteractive-tabindex
+2026-11-17T08:58:56.4508750Z ##[warning]  1568:14  warning  'settingsT' is assigned a value but never used. Allowed unused vars must match /^_/u                                                                                                               @typescript-eslint/no-unused-vars
+2026-11-17T08:58:56.4513214Z ##[warning]  1875:6   warning  React Hook useCallback has a missing dependency: 'openCodeDashboardCatalog'. Either include it or remove the dependency array                                                                      react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4517608Z ##[warning]  1932:6   warning  React Hook useCallback has a missing dependency: 'openCodeDashboardCatalog'. Either include it or remove the dependency array                                                                      react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4519857Z 
+2026-11-17T08:58:56.4520638Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/extensions/common/InstallButton.tsx
+2026-11-17T08:58:56.4522842Z ##[warning]  130:23  warning  `tabIndex` should only be declared on interactive elements  jsx-a11y/no-noninteractive-tabindex
+2026-11-17T08:58:56.4525467Z ##[warning]  181:19  warning  `tabIndex` should only be declared on interactive elements  jsx-a11y/no-noninteractive-tabindex
+2026-11-17T08:58:56.4526925Z 
+2026-11-17T08:58:56.4527753Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/extensions/mcp/McpServerDetailDialog.tsx
+2026-11-17T08:58:56.4530900Z ##[warning]  161:6  warning  React Hook useEffect has missing dependencies: 'defaultSharedScope' and 'server'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4532761Z 
+2026-11-17T08:58:56.4533506Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/extensions/mcp/McpServersPanel.tsx
+2026-11-17T08:58:56.4537194Z ##[warning]  159:9  warning  The 'installedServers' logical expression could make the dependencies of useMemo Hook (at line 226) change on every render. To fix this, wrap the initialization of 'installedServers' in its own useMemo() Hook  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4542820Z ##[warning]  161:9  warning  The 'mcpDiagnostics' logical expression could make the dependencies of useMemo Hook (at line 258) change on every render. To fix this, wrap the initialization of 'mcpDiagnostics' in its own useMemo() Hook      react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4545059Z 
+2026-11-17T08:58:56.4545874Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/extensions/skills/SkillEditorDialog.tsx
+2026-11-17T08:58:56.4548576Z ##[warning]  682:21  warning  A form label must be associated with a control                                                                                                                                                     jsx-a11y/label-has-associated-control
+2026-11-17T08:58:56.4552378Z ##[warning]  698:21  warning  A form label must be associated with a control                                                                                                                                                     jsx-a11y/label-has-associated-control
+2026-11-17T08:58:56.4555882Z ##[warning]  714:21  warning  A form label must be associated with a control                                                                                                                                                     jsx-a11y/label-has-associated-control
+2026-11-17T08:58:56.4560684Z ##[warning]  840:25  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.4563226Z 
+2026-11-17T08:58:56.4564034Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/extensions/skills/SkillImportDialog.tsx
+2026-11-17T08:58:56.4566148Z ##[warning]  10:3  warning  'DialogFooter' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+2026-11-17T08:58:56.4567708Z 
+2026-11-17T08:58:56.4568504Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/extensions/skills/SkillReviewDialog.tsx
+2026-11-17T08:58:56.4570755Z ##[warning]  9:3  warning  'DialogFooter' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+2026-11-17T08:58:56.4572377Z 
+2026-11-17T08:58:56.4573256Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/extensions/skills/skillFolderNameUtils.ts
+2026-11-17T08:58:56.4575076Z ##[warning]  4:14  warning  Unexpected control character(s) in regular expression: \x00  no-control-regex
+2026-11-17T08:58:56.4576420Z 
+2026-11-17T08:58:56.4577262Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/extensions/skills/skillValidationUtils.ts
+2026-11-17T08:58:56.4579274Z ##[warning]  2:41  warning  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+2026-11-17T08:58:56.4580684Z 
+2026-11-17T08:58:56.4581500Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/layout/GlobalTaskDetailDialogSlot.tsx
+2026-11-17T08:58:56.4584318Z ##[warning]  16:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4586186Z 
+2026-11-17T08:58:56.4586888Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/report/AssessmentBadge.tsx
+2026-11-17T08:58:56.4590630Z ##[warning]  52:7  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.4592989Z 
+2026-11-17T08:58:56.4593661Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/report/ReportSection.tsx
+2026-11-17T08:58:56.4596402Z ##[warning]  58:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4598275Z 
+2026-11-17T08:58:56.4599367Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/runtime/ProviderRuntimeBackendSelector.tsx
+2026-11-17T08:58:56.4602221Z ##[warning]   33:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4605940Z ##[warning]   65:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4609869Z ##[warning]   92:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4613577Z ##[warning]   98:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4617247Z ##[warning]  104:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4621586Z ##[warning]  164:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4623523Z 
+2026-11-17T08:58:56.4624312Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/LiveRuntimeStatusBridge.tsx
+2026-11-17T08:58:56.4627180Z ##[warning]  84:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4629297Z 
+2026-11-17T08:58:56.4629978Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/RoleSelect.tsx
+2026-11-17T08:58:56.4632266Z ##[warning]  129:6  warning  React Hook useMemo has a missing dependency: 'roleOptions'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4633947Z 
+2026-11-17T08:58:56.4634602Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/TeamDetailView.tsx
+2026-11-17T08:58:56.4637054Z ##[warning]  2291:5  warning  React Hook useCallback has a missing dependency: 'setCreateTaskDialog'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4639043Z 
+2026-11-17T08:58:56.4639785Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/activity/ActivityItem.tsx
+2026-11-17T08:58:56.4642761Z ##[warning]   32:3   warning  'getSanitizedInboxMessageText' is defined but never used. Allowed unused vars must match /^_/u                                                                                                 @typescript-eslint/no-unused-vars
+2026-11-17T08:58:56.4647112Z ##[warning]  125:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                 react-refresh/only-export-components
+2026-11-17T08:58:56.4651949Z ##[warning]  126:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                 react-refresh/only-export-components
+2026-11-17T08:58:56.4656290Z ##[warning]  127:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                 react-refresh/only-export-components
+2026-11-17T08:58:56.4661055Z ##[warning]  128:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                 react-refresh/only-export-components
+2026-11-17T08:58:56.4665440Z ##[warning]  129:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                 react-refresh/only-export-components
+2026-11-17T08:58:56.4669984Z ##[warning]  786:8   warning  React Hook useMemo has an unnecessary dependency: 'message.commandOutput'. Either exclude it or remove the dependency array                                                                    react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4674287Z ##[warning]  821:8   warning  React Hook useMemo has an unnecessary dependency: 'message.commandOutput'. Either exclude it or remove the dependency array                                                                    react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4678768Z ##[warning]  955:30  warning  React Hook "useCallback" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+2026-11-17T08:58:56.4683675Z ##[warning]  961:32  warning  React Hook "useCallback" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+2026-11-17T08:58:56.4686111Z 
+2026-11-17T08:58:56.4686903Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/activity/ActivitySenderBadge.tsx
+2026-11-17T08:58:56.4689818Z ##[warning]  61:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4691675Z 
+2026-11-17T08:58:56.4692530Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/activity/ActivityTimeline.tsx
+2026-11-17T08:58:56.4693710Z   503:26  warning  Compilation Skipped: Use of incompatible library
+2026-11-17T08:58:56.4694187Z 
+2026-11-17T08:58:56.4696115Z This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+2026-11-17T08:58:56.4697723Z 
+2026-11-17T08:58:56.4698582Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/activity/ActivityTimeline.tsx:503:26
+2026-11-17T08:58:56.4699832Z   501 |   }, [shouldVirtualize, viewportScrollElement]);
+2026-11-17T08:58:56.4700370Z   502 |
+2026-11-17T08:58:56.4700850Z > 503 |   const rowVirtualizer = useVirtualizer({
+2026-11-17T08:58:56.4701883Z       |                          ^^^^^^^^^^^^^^ TanStack Virtual's `useVirtualizer()` API returns functions that cannot be memoized safely
+2026-11-17T08:58:56.4702887Z   504 |     count: shouldVirtualize ? renderRows.length : 0,
+2026-11-17T08:58:56.4703556Z   505 |     getScrollElement: () => viewportScrollElement,
+2026-11-17T08:58:56.4704692Z   506 |     estimateSize: (index) => ROW_SIZE_ESTIMATES[renderRows[index]?.kind ?? 'message-row'],  react-hooks/incompatible-library
+2026-11-17T08:58:56.4705498Z 
+2026-11-17T08:58:56.4706274Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/activity/LeadThoughtsGroup.tsx
+2026-11-17T08:58:56.4709102Z ##[warning]   50:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4712807Z ##[warning]   50:31  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4716853Z ##[warning]   52:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4720629Z ##[warning]   78:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4723949Z ##[warning]  182:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4726999Z ##[warning]  814:11  warning  `tabIndex` should only be declared on interactive elements                                                                      jsx-a11y/no-noninteractive-tabindex
+2026-11-17T08:58:56.4728483Z 
+2026-11-17T08:58:56.4729406Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/activity/ThoughtBodyContent.tsx
+2026-11-17T08:58:56.4731609Z ##[warning]  52:8  warning  React Hook useMemo has a missing dependency: 'thought'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4733143Z 
+2026-11-17T08:58:56.4733800Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/activity/timelineRows.tsx
+2026-11-17T08:58:56.4736401Z ##[warning]  23:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4740101Z ##[warning]  38:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4741843Z 
+2026-11-17T08:58:56.4742564Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/dialogs/AdvancedCliSection.tsx
+2026-11-17T08:58:56.4744985Z ##[warning]  177:6  warning  React Hook useCallback has a missing dependency: 't'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4746480Z 
+2026-11-17T08:58:56.4747200Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/dialogs/CodexReconnectPrompt.tsx
+2026-11-17T08:58:56.4749820Z ##[warning]  23:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4751534Z 
+2026-11-17T08:58:56.4752226Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/dialogs/CreateTeamDialog.tsx
+2026-11-17T08:58:56.4755552Z ##[warning]   505:6   warning  React Hook useCallback has a missing dependency: 'setLimitContextRaw'. Either include it or remove the dependency array                                                                                                                                                                                react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4760495Z ##[warning]   509:6   warning  React Hook useCallback has a missing dependency: 'setSkipPermissionsRaw'. Either include it or remove the dependency array                                                                                                                                                                             react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4765224Z ##[warning]   513:6   warning  React Hook useCallback has a missing dependency: 'setSelectedEffortRaw'. Either include it or remove the dependency array                                                                                                                                                                              react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4770328Z ##[warning]   517:6   warning  React Hook useCallback has a missing dependency: 'setSelectedFastModeRaw'. Either include it or remove the dependency array                                                                                                                                                                            react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4775110Z ##[warning]   736:5   warning  React Hook useCallback has a missing dependency: 'setSelectedEffortRaw'. Either include it or remove the dependency array                                                                                                                                                                              react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4780125Z ##[warning]   766:5   warning  React Hook useCallback has a missing dependency: 'setSelectedEffortRaw'. Either include it or remove the dependency array                                                                                                                                                                              react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4785881Z ##[warning]   896:41  warning  The ref value 'prepareUnmountGenerationRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'prepareUnmountGenerationRef.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4791600Z ##[warning]  1418:6   warning  React Hook useEffect has missing dependencies: 'setSelectedEffortRaw' and 'setSelectedFastModeRaw'. Either include them or remove the dependency array                                                                                                                                                 react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4794087Z 
+2026-11-17T08:58:56.4794789Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/dialogs/LaunchTeamDialog.tsx
+2026-11-17T08:58:56.4799658Z ##[warning]  604:43  warning  The ref value 'lastPrepareProviderSignatureByIdRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'lastPrepareProviderSignatureByIdRef.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4806346Z ##[warning]  605:40  warning  The ref value 'prepareProviderRequestSeqByIdRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'prepareProviderRequestSeqByIdRef.current' to a variable inside the effect, and use that variable in the cleanup function        react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4813346Z ##[warning]  606:38  warning  The ref value 'prepareWarningsByProviderIdRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'prepareWarningsByProviderIdRef.current' to a variable inside the effect, and use that variable in the cleanup function            react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4819323Z ##[warning]  820:9   warning  The 'closeDialog' function makes the dependencies of useEffect Hook (at line 2183) change on every render. To fix this, wrap the definition of 'closeDialog' in its own useCallback() Hook                                                                                                                             react-hooks/exhaustive-deps
+2026-11-17T08:58:56.4821580Z 
+2026-11-17T08:58:56.4822401Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/dialogs/OpenCodeSourceDirectoryProvider.tsx
+2026-11-17T08:58:56.4824882Z ##[warning]  19:14  warning  Fast refresh only works when a file only exports components. Move your React context(s) to a separate file                      react-refresh/only-export-components
+2026-11-17T08:58:56.4828252Z ##[warning]  21:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4832716Z ##[warning]  26:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4834651Z 
+2026-11-17T08:58:56.4835477Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/dialogs/ProvisioningProviderStatusList.tsx
+2026-11-17T08:58:56.4838030Z ##[warning]    31:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4841734Z ##[warning]    31:40  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4845225Z ##[warning]    35:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4848724Z ##[warning]    39:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4852494Z ##[warning]    50:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4856260Z ##[warning]    62:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4860007Z ##[warning]   134:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4864176Z ##[warning]   659:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4867842Z ##[warning]   757:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4872365Z ##[warning]   805:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4875781Z ##[warning]   864:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4886066Z ##[warning]  1077:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4887345Z 
+2026-11-17T08:58:56.4887873Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/dialogs/ResponsiveModelGrid.tsx
+2026-11-17T08:58:56.4889917Z ##[warning]  8:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4891146Z 
+2026-11-17T08:58:56.4891653Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/dialogs/TaskAttachments.tsx
+2026-11-17T08:58:56.4893897Z ##[warning]  209:5  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.4896888Z ##[warning]  354:5  warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                     jsx-a11y/click-events-have-key-events
+2026-11-17T08:58:56.4899954Z ##[warning]  354:5  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.4901352Z 
+2026-11-17T08:58:56.4901844Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/dialogs/TaskCommentsSection.tsx
+2026-11-17T08:58:56.4903655Z ##[warning]  433:9  warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                     jsx-a11y/click-events-have-key-events
+2026-11-17T08:58:56.4906385Z ##[warning]  433:9  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.4907724Z 
+2026-11-17T08:58:56.4908177Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/dialogs/TeamModelSelector.tsx
+2026-11-17T08:58:56.4910288Z ##[warning]  157:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4912564Z ##[warning]  158:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4914766Z ##[warning]  159:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4916968Z ##[warning]  160:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4919443Z ##[warning]  161:3   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4921777Z ##[warning]  166:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4922876Z 
+2026-11-17T08:58:56.4923388Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/dialogs/WorktreeGitReadinessBanner.tsx
+2026-11-17T08:58:56.4924989Z ##[warning]   20:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4927212Z ##[warning]  117:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4929662Z ##[warning]  136:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4930821Z 
+2026-11-17T08:58:56.4931281Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/editor/EditorContextMenu.tsx
+2026-11-17T08:58:56.4933489Z ##[warning]  96:9  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.4934907Z 
+2026-11-17T08:58:56.4935539Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/editor/EditorSearchPanel.tsx
+2026-11-17T08:58:56.4936983Z ##[warning]  135:7  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file  react-refresh/only-export-components
+2026-11-17T08:58:56.4938020Z 
+2026-11-17T08:58:56.4938437Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/editor/EditorTabBar.tsx
+2026-11-17T08:58:56.4939969Z ##[warning]  239:15  warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener  jsx-a11y/click-events-have-key-events
+2026-11-17T08:58:56.4941003Z 
+2026-11-17T08:58:56.4941486Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/kanban/table/TaskTableColumns.tsx
+2026-11-17T08:58:56.4943018Z ##[warning]  101:17  warning  `tabIndex` should only be declared on interactive elements  jsx-a11y/no-noninteractive-tabindex
+2026-11-17T08:58:56.4944677Z ##[warning]  116:19  warning  `tabIndex` should only be declared on interactive elements  jsx-a11y/no-noninteractive-tabindex
+2026-11-17T08:58:56.4946213Z ##[warning]  182:17  warning  `tabIndex` should only be declared on interactive elements  jsx-a11y/no-noninteractive-tabindex
+2026-11-17T08:58:56.4947096Z 
+2026-11-17T08:58:56.4947559Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/kanban/table/TaskTableView.tsx
+2026-11-17T08:58:56.4948466Z   130:23  warning  Compilation Skipped: Use of incompatible library
+2026-11-17T08:58:56.4948740Z 
+2026-11-17T08:58:56.4950157Z This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+2026-11-17T08:58:56.4951110Z 
+2026-11-17T08:58:56.4951612Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/kanban/table/TaskTableView.tsx:130:23
+2026-11-17T08:58:56.4952170Z   128 |
+2026-11-17T08:58:56.4952460Z   129 |   const tableRows = table.getRowModel().rows;
+2026-11-17T08:58:56.4952900Z > 130 |   const virtualizer = useVirtualizer({
+2026-11-17T08:58:56.4953506Z       |                       ^^^^^^^^^^^^^^ TanStack Virtual's `useVirtualizer()` API returns functions that cannot be memoized safely
+2026-11-17T08:58:56.4954053Z   131 |     count: tableRows.length,
+2026-11-17T08:58:56.4954406Z   132 |     getScrollElement: () => scrollRef.current,
+2026-11-17T08:58:56.4954870Z   133 |     estimateSize: () => rowHeight,  react-hooks/incompatible-library
+2026-11-17T08:58:56.4955167Z 
+2026-11-17T08:58:56.4955625Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/members/HostMemberActivityLog.tsx
+2026-11-17T08:58:56.4957341Z ##[warning]  30:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4959105Z 
+2026-11-17T08:58:56.4959620Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/members/MemberCard.tsx
+2026-11-17T08:58:56.4961752Z ##[warning]  1076:7  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.4963141Z 
+2026-11-17T08:58:56.4963581Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/members/MemberLogsTab.tsx
+2026-11-17T08:58:56.4965425Z ##[warning]   43:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                     react-refresh/only-export-components
+2026-11-17T08:58:56.4968575Z ##[warning]  604:23  warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener                                                                                                     jsx-a11y/click-events-have-key-events
+2026-11-17T08:58:56.4972026Z ##[warning]  604:23  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.4973401Z 
+2026-11-17T08:58:56.4973887Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/members/MembersEditorSection.tsx
+2026-11-17T08:58:56.4975481Z ##[warning]  773:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4977707Z ##[warning]  774:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4980259Z ##[warning]  775:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4982556Z ##[warning]  776:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4984962Z ##[warning]  777:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4987143Z ##[warning]  778:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4989574Z ##[warning]  779:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4991846Z ##[warning]  780:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4994045Z ##[warning]  781:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4996224Z ##[warning]  782:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.4998394Z ##[warning]  783:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.5000910Z ##[warning]  784:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.5002022Z 
+2026-11-17T08:58:56.5002518Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/messages/MessagesThreadPlacement.tsx
+2026-11-17T08:58:56.5004240Z ##[warning]  15:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.5005342Z 
+2026-11-17T08:58:56.5005820Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/schedule/ScheduleRunLogDialog.tsx
+2026-11-17T08:58:56.5007254Z ##[warning]  130:6  warning  React Hook useEffect has a missing dependency: 'run'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.5008251Z 
+2026-11-17T08:58:56.5009010Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/schedule/ScheduleRunRow.tsx
+2026-11-17T08:58:56.5011145Z ##[warning]  57:3  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.5013685Z ##[warning]  63:5  warning  `tabIndex` should only be declared on interactive elements                                                                                                                                         jsx-a11y/no-noninteractive-tabindex
+2026-11-17T08:58:56.5014752Z 
+2026-11-17T08:58:56.5015210Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/schedule/useScheduleActions.ts
+2026-11-17T08:58:56.5016604Z ##[warning]  57:6  warning  React Hook useCallback has a missing dependency: 'tCommon'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.5017628Z 
+2026-11-17T08:58:56.5018056Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/sidebar/TeamSidebarHost.tsx
+2026-11-17T08:58:56.5019922Z ##[warning]  25:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+2026-11-17T08:58:56.5021248Z 
+2026-11-17T08:58:56.5021695Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/components/team/sidebar/TeamSidebarRail.tsx
+2026-11-17T08:58:56.5023755Z ##[warning]  60:5  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.5026682Z ##[warning]  95:7  warning  Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element  jsx-a11y/no-static-element-interactions
+2026-11-17T08:58:56.5027998Z 
+2026-11-17T08:58:56.5028346Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/hooks/useAttachments.ts
+2026-11-17T08:58:56.5031055Z ##[warning]  184:21  warning  The ref value 'generationRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'generationRef.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.5032614Z 
+2026-11-17T08:58:56.5032978Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/hooks/useComposerDraft.ts
+2026-11-17T08:58:56.5035519Z ##[warning]  307:25  warning  The ref value 'loadGenerationRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'loadGenerationRef.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+2026-11-17T08:58:56.5037093Z 
+2026-11-17T08:58:56.5037488Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/utils/idleNotificationSemantics.ts
+2026-11-17T08:58:56.5039171Z ##[warning]  5:33  warning  'SharedClassifiedIdleNotification' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+2026-11-17T08:58:56.5040256Z 
+2026-11-17T08:58:56.5040699Z ✖ 218 problems (0 errors, 218 warnings)
+2026-11-17T08:58:56.5041169Z   0 errors and 21 warnings potentially fixable with the `--fix` option.
+2026-11-17T08:58:56.5041464Z 
+2026-11-17T08:58:57.0397318Z Post job cleanup.
+2026-11-17T08:58:57.1666988Z Cache hit occurred on the primary key node-cache-Linux-x64-pnpm-33b7283dc3ef217b641b14e26ce1a6d807c9880352847e1b431ffd461cf78c22, not saving cache.
+2026-11-17T08:58:57.1789460Z Post job cleanup.
+2026-11-17T08:58:57.3342196Z Pruning is unnecessary.
+2026-11-17T08:58:57.3534012Z Post job cleanup.
+2026-11-17T08:58:57.4608283Z [command]/usr/bin/git version
+2026-11-17T08:58:57.4659756Z git version 2.56.1
+2026-11-17T08:58:57.4708336Z Temporarily overriding HOME='/home/runner/work/_temp/89cee643-c0da-4ff1-9e72-dc91b23bf8db' before making global git config changes
+2026-11-17T08:58:57.4710269Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-17T08:58:57.4711838Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-17T08:58:57.4750192Z Removing SSH command configuration
+2026-11-17T08:58:57.4759154Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-17T08:58:57.4803282Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-17T08:58:57.5100973Z Removing HTTP extra header
+2026-11-17T08:58:57.5106574Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-17T08:58:57.5152501Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-17T08:58:57.5450324Z Removing includeIf entries pointing to credentials config files
+2026-11-17T08:58:57.5460533Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-17T08:58:57.5537580Z includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-17T08:58:57.5542086Z includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-17T08:58:57.5542690Z includeif.gitdir:/github/workspace/.git.path
+2026-11-17T08:58:57.5543159Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-17T08:58:57.5549970Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-17T08:58:57.5585128Z /home/runner/work/_temp/git-credentials-39e39d97-f97c-41c4-8351-456af1b8f98a.config
+2026-11-17T08:58:57.5598036Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path /home/runner/work/_temp/git-credentials-39e39d97-f97c-41c4-8351-456af1b8f98a.config
+2026-11-17T08:58:57.5646112Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-17T08:58:57.5679827Z /home/runner/work/_temp/git-credentials-39e39d97-f97c-41c4-8351-456af1b8f98a.config
+2026-11-17T08:58:57.5694250Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-39e39d97-f97c-41c4-8351-456af1b8f98a.config
+2026-11-17T08:58:57.5739870Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-11-17T08:58:57.5773228Z /github/runner_temp/git-credentials-39e39d97-f97c-41c4-8351-456af1b8f98a.config
+2026-11-17T08:58:57.5785332Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-39e39d97-f97c-41c4-8351-456af1b8f98a.config
+2026-11-17T08:58:57.5830342Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-17T08:58:57.5861859Z /github/runner_temp/git-credentials-39e39d97-f97c-41c4-8351-456af1b8f98a.config
+2026-11-17T08:58:57.5871941Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-39e39d97-f97c-41c4-8351-456af1b8f98a.config
+2026-11-17T08:58:57.5923044Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-17T08:58:57.6184910Z Removing credentials config '/home/runner/work/_temp/git-credentials-39e39d97-f97c-41c4-8351-456af1b8f98a.config'
+2026-11-17T08:58:57.6351006Z Cleaning up orphan processes

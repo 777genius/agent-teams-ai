@@ -1,0 +1,4567 @@
+{
+  "schemaVersion": 1,
+  "kind": "FIXED9D_WHOLE149_AND_FOUR_FRONTEND_SHARDS_COMPLETED_LOG_EVIDENCE",
+  "at": "2026-11-17 09:34:54 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/red_publication_recovery",
+  "decision": "ACCEPT_BOUNDED_COMPLETED_TEST_LOG_EVIDENCE_ONLY",
+  "acceptedEvidenceOnly": true,
+  "newGate": false,
+  "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+  "sourceRoot": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+  "pr": 1219,
+  "run": 44042341273,
+  "attempt": 1,
+  "result": {
+    "whole149": {
+      "exactUniqueSelectedPasses": 149,
+      "original139": 139,
+      "appended10": 10,
+      "selectedFailures": 0,
+      "selectedSkips": 0,
+      "node": "v24.21.0",
+      "platform": "darwin-arm64",
+      "job": 133899668455,
+      "combinedInvocation": {
+        "tests": 239,
+        "pass": 238,
+        "skip": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "todo": 0
+      },
+      "unrelatedSkip": "Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder"
+    },
+    "fourFrontendShards": {
+      "files": {
+        "pass": 2155,
+        "skip": 7,
+        "fail": 0,
+        "total": 2162
+      },
+      "tests": {
+        "pass": 25844,
+        "skip": 38,
+        "fail": 0,
+        "total": 25882
+      },
+      "shards": 4,
+      "distinctFileResultRows": 2162,
+      "duplicatePaths": 0,
+      "workspaceNode": "v26.12.1",
+      "capturedHostNode": "v24.21.0",
+      "pnpm": "11.22.0",
+      "vitest": "3.2.6"
+    },
+    "exactSelectedRendererFiles": {
+      "catalog": {
+        "cases": 43,
+        "pass": 43,
+        "skip": 0,
+        "shard": 1
+      },
+      "runtimeManagement": {
+        "cases": 85,
+        "pass": 85,
+        "skip": 0,
+        "shard": 2
+      }
+    },
+    "totalsNotAddedAcrossScopes": true
+  },
+  "evidence": {
+    "installerFullLog": {
+      "bytes": 196149,
+      "sha256": "8221168833c5317e78a144b1d01059822ebaf8bdfa984a029fe16dee0409ff73",
+      "gitBlob": "27a35a3477f8bd724f277a2ed0d4b1b39e632893"
+    },
+    "frontendFullLogs": [
+      {
+        "shard": 1,
+        "jobId": 133899667994,
+        "pin": {
+          "bytes": 192534,
+          "sha256": "a0f004eeea9672fcd7f1e982ccff7987cd221893c77ff7f755b66500ae785e6d",
+          "gitBlob": "38d366b8d2a945f6103ea6b707c61ab0d40fa79a"
+        }
+      },
+      {
+        "shard": 2,
+        "jobId": 133899667978,
+        "pin": {
+          "bytes": 199252,
+          "sha256": "22fbd4d1dc84ed5a1b8327da641705e1250c0aad6ded28eb523d55998de50196",
+          "gitBlob": "e88e698c36ffd97c6c6f5d702fee5a60789aca98"
+        }
+      },
+      {
+        "shard": 3,
+        "jobId": 133899668112,
+        "pin": {
+          "bytes": 188111,
+          "sha256": "2d0260688809cd9084f42a35e52e07d31e6d43ad84d5c2013fac1dd3e76ec400",
+          "gitBlob": "f56198135d4d1e415815173488dce1730df01e0d"
+        }
+      },
+      {
+        "shard": 4,
+        "jobId": 133899667641,
+        "pin": {
+          "bytes": 213295,
+          "sha256": "9b9ddd4c587827290feb49f2725cc87cc89b2825a53490453d97d2bd2bcd7797",
+          "gitBlob": "036ba534633dc42e46a7a70190791cea9f8a4af9"
+        }
+      }
+    ],
+    "fiveCompleteLogBytes": 989341,
+    "priorAccepted139InventoryReview": {
+      "bytes": 58426,
+      "sha256": "bd1ca451e3826f61eba8e4c5b8dced9fb4ce7a2ae51d5a0fbf3073ca7e229ff6",
+      "gitBlob": "b0d04555b7e8fd542348fe4a6c6ffad97b0773c4"
+    },
+    "complete139SourceInventoryAdvisory": {
+      "bytes": 49935,
+      "sha256": "5b106b029096b02b288db395cdb05c8f367cd16444c2f015e79c9f28098f9134",
+      "gitBlob": "a3660453344deb2c4e91cdc8e951c44f9d501817"
+    },
+    "observation6": {
+      "bytes": 238003,
+      "sha256": "8a2c6291ae6ad16080433039b29d46eda90764b1c2756396fe4759aec45a52d2",
+      "gitBlob": "ca574d34ede27bf8ded9a2caa20d66950acfa4e1"
+    },
+    "observations7To9": {
+      "bytes": 786022,
+      "sha256": "54a156cdb2f3d58d5bfc6a8a3894d5b1b01dad582f323b9ea38e2a0038167afa",
+      "gitBlob": "e37311346018c41fc8f622efdd4a576f030af4d7"
+    },
+    "unchangedWorkflow": {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "pin": {
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      }
+    },
+    "fullOriginalAndSelectedSourceJoins": [
+      {
+        "role": "original139",
+        "expected": {
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        "actual": {
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        "passed": true
+      },
+      {
+        "role": "whole149",
+        "expected": {
+          "bytes": 165022,
+          "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+          "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+        },
+        "actual": {
+          "bytes": 165022,
+          "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+          "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+        },
+        "passed": true
+      },
+      {
+        "role": "fixture10",
+        "expected": {
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        },
+        "actual": {
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        },
+        "passed": true
+      },
+      {
+        "role": "installerLog",
+        "expected": {
+          "bytes": 196149,
+          "sha256": "8221168833c5317e78a144b1d01059822ebaf8bdfa984a029fe16dee0409ff73",
+          "gitBlob": "27a35a3477f8bd724f277a2ed0d4b1b39e632893"
+        },
+        "actual": {
+          "bytes": 196149,
+          "sha256": "8221168833c5317e78a144b1d01059822ebaf8bdfa984a029fe16dee0409ff73",
+          "gitBlob": "27a35a3477f8bd724f277a2ed0d4b1b39e632893"
+        },
+        "passed": true
+      },
+      {
+        "role": "prior139Review",
+        "expected": {
+          "bytes": 58426,
+          "sha256": "bd1ca451e3826f61eba8e4c5b8dced9fb4ce7a2ae51d5a0fbf3073ca7e229ff6",
+          "gitBlob": "b0d04555b7e8fd542348fe4a6c6ffad97b0773c4"
+        },
+        "actual": {
+          "bytes": 58426,
+          "sha256": "bd1ca451e3826f61eba8e4c5b8dced9fb4ce7a2ae51d5a0fbf3073ca7e229ff6",
+          "gitBlob": "b0d04555b7e8fd542348fe4a6c6ffad97b0773c4"
+        },
+        "passed": true
+      }
+    ],
+    "fixed9dLeafJoins": [
+      {
+        "role": "controls",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "pin": {
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        "sourceCommit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "root": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+        "subtree": "c3f4fe5a62dd79a743b6ffc0d07341ac68a25f73",
+        "mode": "100644",
+        "passed": true
+      },
+      {
+        "role": "catalog43",
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "pin": {
+          "bytes": 56775,
+          "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+          "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+        },
+        "sourceCommit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "root": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+        "subtree": "69d3a76e739605a29aa7a0d04981d24f3918d856",
+        "mode": "100644",
+        "passed": true
+      },
+      {
+        "role": "renderer85",
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "pin": {
+          "bytes": 187890,
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+        },
+        "sourceCommit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "root": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+        "subtree": "69d3a76e739605a29aa7a0d04981d24f3918d856",
+        "mode": "100644",
+        "passed": true
+      },
+      {
+        "role": "whole149",
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "pin": {
+          "bytes": 165022,
+          "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+          "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+        },
+        "sourceCommit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "root": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+        "subtree": "c3f4fe5a62dd79a743b6ffc0d07341ac68a25f73",
+        "mode": "100644",
+        "passed": true
+      },
+      {
+        "role": "fixture10",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "pin": {
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        },
+        "sourceCommit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "root": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+        "subtree": "c3f4fe5a62dd79a743b6ffc0d07341ac68a25f73",
+        "mode": "100644",
+        "passed": true
+      }
+    ],
+    "readMethod": "Complete immutable UTF8 bodies, identity hashing, text parsing and integer arithmetic only. No target function invocation, target compilation/import, shell, local runtime, live CI/ref/PR read, mutation, or artifact download."
+  },
+  "original139Inventory": {
+    "sourcePath": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "source": {
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    "completePhysicalLines": 2700,
+    "registrationExpressions": 70,
+    "expandedUniqueTitles": 139,
+    "mappingMethod": "Use the complete139 title list from the exact accepted inventory advisory, match it literally to the previously accepted full139 review inventory, and independently map every title to one exact registration expression in the full original source. Literal concatenation/template/conditional expansion is analyzed as data; no target code executes. The inline P11 registration is included; RegExp.prototype.test is excluded from registration count.",
+    "registrationExpansions": [
+      {
+        "line": 63,
+        "argument": "'captured UI discovery waits for Main admission and actual mount while early diagnostics remain active'",
+        "kind": "literal",
+        "expandedCases": [
+          1
+        ]
+      },
+      {
+        "line": 79,
+        "argument": "'the original remaining startup deadline rejects a pending snapshot without late discovery or a reset'",
+        "kind": "literal",
+        "expandedCases": [
+          2
+        ]
+      },
+      {
+        "line": 124,
+        "argument": "'packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin'",
+        "kind": "literal",
+        "expandedCases": [
+          3
+        ]
+      },
+      {
+        "line": 139,
+        "argument": "'HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted'",
+        "kind": "literal",
+        "expandedCases": [
+          4
+        ]
+      },
+      {
+        "line": 149,
+        "argument": "'isolated shell fixture emits the actual framed environment and refuses shell effects'",
+        "kind": "literal",
+        "expandedCases": [
+          5
+        ]
+      },
+      {
+        "line": 337,
+        "argument": "'original in-progress Task comment prerequisite requires its exact stage without an assignment control'",
+        "kind": "literal",
+        "expandedCases": [
+          6
+        ]
+      },
+      {
+        "line": 372,
+        "argument": "'Task attachment comment waits for its original focused owner after one click before inserting text'",
+        "kind": "literal",
+        "expandedCases": [
+          7
+        ]
+      },
+      {
+        "line": 546,
+        "argument": "'original Task assignment prerequisite refuses receipt-only, pending and stale renderer state'",
+        "kind": "literal",
+        "expandedCases": [
+          8
+        ]
+      },
+      {
+        "line": 583,
+        "argument": "'original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface'",
+        "kind": "literal",
+        "expandedCases": [
+          9
+        ]
+      },
+      {
+        "line": 613,
+        "argument": "'original desktop click waits for stable target geometry, without repeating input'",
+        "kind": "literal",
+        "expandedCases": [
+          10
+        ]
+      },
+      {
+        "line": 641,
+        "argument": "'original Task hover waits through layout and unavailability before its one physical move'",
+        "kind": "literal",
+        "expandedCases": [
+          11
+        ]
+      },
+      {
+        "line": 667,
+        "argument": "'original desktop click refuses a constantly moving target before dispatch'",
+        "kind": "literal",
+        "expandedCases": [
+          12
+        ]
+      },
+      {
+        "line": 685,
+        "argument": "'original owner-qualified click rereads its full expression through unavailability at unchanged coordinates'",
+        "kind": "literal",
+        "expandedCases": [
+          13
+        ]
+      },
+      {
+        "line": 715,
+        "argument": "'login failure facts retain only bounded original attempts and confirmed milestones'",
+        "kind": "literal",
+        "expandedCases": [
+          14
+        ]
+      },
+      {
+        "line": 770,
+        "argument": "'finite readiness failure summaries keep only bounded states and never private snapshot data'",
+        "kind": "literal",
+        "expandedCases": [
+          15
+        ]
+      },
+      {
+        "line": 808,
+        "argument": "'Taskboard failure summaries compare retained identities without exposing private snapshot values'",
+        "kind": "literal",
+        "expandedCases": [
+          16
+        ]
+      },
+      {
+        "line": 896,
+        "argument": "'installer failure summaries preserve original wait sites and attempts without inferring installation effects'",
+        "kind": "literal",
+        "expandedCases": [
+          17
+        ]
+      },
+      {
+        "line": 952,
+        "argument": "'installer failure projection does not invoke input getters and leaves oversized observations unknown'",
+        "kind": "literal",
+        "expandedCases": [
+          18
+        ]
+      },
+      {
+        "line": 985,
+        "argument": "'installer CDP and cleanup projection retains only exact finite observations'",
+        "kind": "literal",
+        "expandedCases": [
+          19
+        ]
+      },
+      {
+        "line": 1038,
+        "argument": "'Selection target summaries retain the exact original phase and six closed facts'",
+        "kind": "literal",
+        "expandedCases": [
+          20
+        ]
+      },
+      {
+        "line": 1073,
+        "argument": "'Selection target projection rejects unknown or malformed facts without exposing text or invoking getters'",
+        "kind": "literal",
+        "expandedCases": [
+          21
+        ]
+      },
+      {
+        "line": 1102,
+        "argument": "'Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input'",
+        "kind": "literal",
+        "expandedCases": [
+          22
+        ]
+      },
+      {
+        "line": 1198,
+        "argument": "`original desktop click refuses a target ${change} during the final ownership check`",
+        "kind": "template expansion",
+        "expandedCases": [
+          23,
+          24
+        ]
+      },
+      {
+        "line": 1228,
+        "argument": "requireCenterHit\n    ? 'original scroll opt-in reveals a covered checkbox with one bounded wheel'\n    : 'original default scroll preserves a disabled control before its readiness wait'",
+        "kind": "two-branch literal",
+        "expandedCases": [
+          25,
+          26
+        ]
+      },
+      {
+        "line": 1280,
+        "argument": "'original desktop click rechecks ' + change + ' after its pending final target read'",
+        "kind": "literal concatenation expansion",
+        "expandedCases": [
+          27,
+          28
+        ]
+      },
+      {
+        "line": 1324,
+        "argument": "'original clarification lookup admits its retained read without completing the assignment prerequisite'",
+        "kind": "literal",
+        "expandedCases": [
+          29
+        ]
+      },
+      {
+        "line": 1347,
+        "argument": "'original clarification lookup refuses changed owner, revision, refresh and retained-read joins'",
+        "kind": "literal",
+        "expandedCases": [
+          30
+        ]
+      },
+      {
+        "line": 1464,
+        "argument": "'original owner availability admits three captured A Teams through its actual first DOM read'",
+        "kind": "literal",
+        "expandedCases": [
+          31
+        ]
+      },
+      {
+        "line": 1480,
+        "argument": "'original owner availability retains singleton, subset and duplicate-row cardinality semantics'",
+        "kind": "literal",
+        "expandedCases": [
+          32
+        ]
+      },
+      {
+        "line": 1494,
+        "argument": "'original owner availability refuses foreign identities and preserves its existing aggregate guards'",
+        "kind": "literal",
+        "expandedCases": [
+          33
+        ]
+      },
+      {
+        "line": 1541,
+        "argument": "'original owner availability refuses invalid captured discovery before navigation'",
+        "kind": "literal",
+        "expandedCases": [
+          34
+        ]
+      },
+      {
+        "line": 1610,
+        "argument": "'owner availability admits every captured A Team through the actual first observation'",
+        "kind": "literal",
+        "expandedCases": [
+          35
+        ]
+      },
+      {
+        "line": 1628,
+        "argument": "'owner availability refuses ' + label + ' in unavailable A rows'",
+        "kind": "literal concatenation expansion",
+        "expandedCases": [
+          36,
+          37,
+          38,
+          39
+        ]
+      },
+      {
+        "line": 1638,
+        "argument": "'owner availability refuses ' + label + ' before original navigation'",
+        "kind": "literal concatenation expansion",
+        "expandedCases": [
+          40,
+          41,
+          42,
+          43,
+          44
+        ]
+      },
+      {
+        "line": 1722,
+        "argument": "'passive input keeps its actual Team target and three separate original navigation samples'",
+        "kind": "literal",
+        "expandedCases": [
+          45
+        ]
+      },
+      {
+        "line": 1747,
+        "argument": "'passive navigation preserves non-card events, the original ring bounds and null or non-Team state'",
+        "kind": "literal",
+        "expandedCases": [
+          46
+        ]
+      },
+      {
+        "line": 1767,
+        "argument": "'passive navigation refuses malformed target and store facts without losing original callbacks'",
+        "kind": "literal",
+        "expandedCases": [
+          47
+        ]
+      },
+      {
+        "line": 1813,
+        "argument": "'passive navigation remains bounded and cannot interrupt original writes on diagnostic failure'",
+        "kind": "literal",
+        "expandedCases": [
+          48
+        ]
+      },
+      {
+        "line": 1835,
+        "argument": "'passive navigation uses only the callable store own method and ignores unrelated card surfaces'",
+        "kind": "literal",
+        "expandedCases": [
+          49
+        ]
+      },
+      {
+        "line": 1853,
+        "argument": "'the selected provider receipt digest matches the actual manifest-selected archive bytes'",
+        "kind": "literal",
+        "expandedCases": [
+          50
+        ]
+      },
+      {
+        "line": 1866,
+        "argument": "'provider receipt legacy, current and equal-dual implementation digests preserve manifest authority'",
+        "kind": "literal",
+        "expandedCases": [
+          51
+        ]
+      },
+      {
+        "line": 1890,
+        "argument": "'every present provider implementation digest must be valid and both recognized fields must agree'",
+        "kind": "literal",
+        "expandedCases": [
+          52
+        ]
+      },
+      {
+        "line": 1916,
+        "argument": "'provider receipt shape, package selection and original file or JSON errors remain strict'",
+        "kind": "literal",
+        "expandedCases": [
+          53
+        ]
+      },
+      {
+        "line": 2042,
+        "argument": "'saved Launch uses three stable actual DOM samples before its original settings action'",
+        "kind": "literal",
+        "expandedCases": [
+          54
+        ]
+      },
+      {
+        "line": 2047,
+        "argument": "'saved Launch resets exact geometry when the original button shifts by a quarter pixel'",
+        "kind": "literal",
+        "expandedCases": [
+          55
+        ]
+      },
+      {
+        "line": 2060,
+        "argument": "'saved Launch restarts its three samples after changed ' + label",
+        "kind": "literal concatenation expansion",
+        "expandedCases": [
+          56,
+          57,
+          58,
+          59,
+          60
+        ]
+      },
+      {
+        "line": 2077,
+        "argument": "'saved Launch resets its original readiness after ' + label",
+        "kind": "literal concatenation expansion",
+        "expandedCases": [
+          61,
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          68,
+          69,
+          70,
+          71,
+          72,
+          73,
+          74
+        ]
+      },
+      {
+        "line": 2083,
+        "argument": "'saved Launch allows ' + playState + ' own animation without inspecting descendant spinners or model status'",
+        "kind": "literal concatenation expansion",
+        "expandedCases": [
+          75,
+          76
+        ]
+      },
+      {
+        "line": 2092,
+        "argument": "'saved Launch exhausts its one original deadline with ' + label + ' and no settings action'",
+        "kind": "literal concatenation expansion",
+        "expandedCases": [
+          77,
+          78
+        ]
+      },
+      {
+        "line": 2146,
+        "argument": "'original conversation waits for its own reply before one click at the hydrated coordinates'",
+        "kind": "literal",
+        "expandedCases": [
+          79
+        ]
+      },
+      {
+        "line": 2158,
+        "argument": "'default conversation click retains its original final geometry refusal without a preview predicate'",
+        "kind": "literal",
+        "expandedCases": [
+          80
+        ]
+      },
+      {
+        "line": 2173,
+        "argument": "'original conversation refuses ' + label + ' within its unchanged first read deadline'",
+        "kind": "literal concatenation expansion",
+        "expandedCases": [
+          81,
+          82,
+          83,
+          84,
+          85,
+          86,
+          87,
+          88,
+          89
+        ]
+      },
+      {
+        "line": 2182,
+        "argument": "'original conversation serializes its required preview as literal data'",
+        "kind": "literal",
+        "expandedCases": [
+          90
+        ]
+      },
+      {
+        "line": 2189,
+        "argument": "'original conversation rereads a revoked preview at unchanged final coordinates before input'",
+        "kind": "literal",
+        "expandedCases": [
+          91
+        ]
+      },
+      {
+        "line": 2200,
+        "argument": "'original conversation still refuses final ' + kind + ' despite a ready preview'",
+        "kind": "literal concatenation expansion",
+        "expandedCases": [
+          92,
+          93
+        ]
+      },
+      {
+        "line": 2219,
+        "argument": "'actual openChat forwards ' + expectedReply + ' for ' + memberName",
+        "kind": "literal concatenation expansion",
+        "expandedCases": [
+          94,
+          95,
+          96,
+          97
+        ]
+      },
+      {
+        "line": 2417,
+        "argument": "'original Cross Close target admits the ready cleared Task when canResolveClarification is false'",
+        "kind": "literal",
+        "expandedCases": [
+          98
+        ]
+      },
+      {
+        "line": 2456,
+        "argument": "'original Cross Close target refuses ' + label",
+        "kind": "literal concatenation expansion",
+        "expandedCases": [
+          99,
+          100,
+          101,
+          102,
+          103,
+          104,
+          105,
+          106,
+          107,
+          108,
+          109,
+          110,
+          111,
+          112,
+          113,
+          114,
+          115,
+          116,
+          117,
+          118,
+          119,
+          120,
+          121,
+          122,
+          123,
+          124,
+          125
+        ]
+      },
+      {
+        "line": 2462,
+        "argument": "'actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates'",
+        "kind": "literal",
+        "expandedCases": [
+          126
+        ]
+      },
+      {
+        "line": 2490,
+        "argument": "'actual original Cross Close retains the first-read deadline while renderer readiness is pending'",
+        "kind": "literal",
+        "expandedCases": [
+          127
+        ]
+      },
+      {
+        "line": 2496,
+        "argument": "'actual original Cross Close cannot use a foreign dialog or an absent ineligible own control'",
+        "kind": "literal",
+        "expandedCases": [
+          128
+        ]
+      },
+      {
+        "line": 2507,
+        "argument": "'actual original Cross Close refuses duplicate eligible controls before disabled or hit narrowing'",
+        "kind": "literal",
+        "expandedCases": [
+          129
+        ]
+      },
+      {
+        "line": 2517,
+        "argument": "'actual original Cross Close refuses disabled covered and absent-hit controls'",
+        "kind": "literal",
+        "expandedCases": [
+          130
+        ]
+      },
+      {
+        "line": 2527,
+        "argument": "'actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates'",
+        "kind": "literal",
+        "expandedCases": [
+          131
+        ]
+      },
+      {
+        "line": 2536,
+        "argument": "'actual original Cross Close preserves final renderer ownership refusal without a press'",
+        "kind": "literal",
+        "expandedCases": [
+          132
+        ]
+      },
+      {
+        "line": 2545,
+        "argument": "'actual original Cross Close preserves final exact geometry refusal without replay'",
+        "kind": "literal",
+        "expandedCases": [
+          133
+        ]
+      },
+      {
+        "line": 2591,
+        "argument": "'P11 keeps the original 90-second cutoff for ' + scenario.name",
+        "kind": "literal concatenation expansion",
+        "expandedCases": [
+          134,
+          135,
+          136
+        ]
+      },
+      {
+        "line": 2597,
+        "argument": "'P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity'",
+        "kind": "literal",
+        "expandedCases": [
+          137
+        ]
+      },
+      {
+        "line": 2678,
+        "argument": "'original review correction refuses missing or false live edit authority before any input action'",
+        "kind": "literal",
+        "expandedCases": [
+          138
+        ]
+      },
+      {
+        "line": 2688,
+        "argument": "'original review correction admits current authority with one original insertion and submit'",
+        "kind": "literal",
+        "expandedCases": [
+          139
+        ]
+      }
+    ],
+    "originalPlusImportInverse": {
+      "original": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "current": {
+        "bytes": 165022,
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+      },
+      "completeOriginalPrefix": true,
+      "suffixLiteral": "\nawait import('./desktop-ui-controls-deadline.test.ts');\n",
+      "suffixIdentity": {
+        "bytes": 57,
+        "sha256": "9fbc3742dd5c829044eab669188fb399343799621bf3f264f6a4219cb7f97683",
+        "gitBlob": "9f66261ff992a66612a6b6baee152e5ca20ab631"
+      },
+      "exactSuffix": true,
+      "inverseLiteralEqual": true,
+      "sourceAnchor": "9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+    }
+  },
+  "selected149": {
+    "originalScope": {
+      "source": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+    },
+    "appendedScope": {
+      "source": {
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+      },
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+    },
+    "currentWholeSource": {
+      "bytes": 165022,
+      "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+      "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+    },
+    "actualControlsSource": {
+      "bytes": 29017,
+      "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+      "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+    },
+    "exactCommand": "2026-11-17T08:34:45.4147370Z node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "commandLine": 711,
+    "summaryLines": [
+      {
+        "line": 978,
+        "text": "2026-11-17T08:35:05.2897440Z ℹ tests 239"
+      },
+      {
+        "line": 979,
+        "text": "2026-11-17T08:35:05.2897870Z ℹ suites 0"
+      },
+      {
+        "line": 980,
+        "text": "2026-11-17T08:35:05.2898240Z ℹ pass 238"
+      },
+      {
+        "line": 981,
+        "text": "2026-11-17T08:35:05.2898710Z ℹ fail 0"
+      },
+      {
+        "line": 982,
+        "text": "2026-11-17T08:35:05.2899170Z ℹ cancelled 0"
+      },
+      {
+        "line": 983,
+        "text": "2026-11-17T08:35:05.2899520Z ℹ skipped 1"
+      },
+      {
+        "line": 984,
+        "text": "2026-11-17T08:35:05.2899980Z ℹ todo 0"
+      },
+      {
+        "line": 985,
+        "text": "2026-11-17T08:35:05.2900370Z ℹ duration_ms 14522.780708"
+      }
+    ],
+    "summary": {
+      "tests": 239,
+      "suites": 0,
+      "pass": 238,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 1,
+      "todo": 0,
+      "duration_ms": 14522.780708
+    },
+    "parsedCombinedResultRows": 239,
+    "parsedCombinedPassRows": 238,
+    "selected149SubsetOf238": true,
+    "caseTitleSourceAndPassMapping": [
+      {
+        "index": 1,
+        "scope": "original139",
+        "title": "captured UI discovery waits for Main admission and actual mount while early diagnostics remain active",
+        "sourceRegistrationLine": 63,
+        "logLine": 821,
+        "observed": "PASS",
+        "durationMs": 205.841833,
+        "exactLogLine": "2026-11-17T08:34:59.8198270Z ✔ captured UI discovery waits for Main admission and actual mount while early diagnostics remain active (205.841833ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 2,
+        "scope": "original139",
+        "title": "the original remaining startup deadline rejects a pending snapshot without late discovery or a reset",
+        "sourceRegistrationLine": 79,
+        "logLine": 822,
+        "observed": "PASS",
+        "durationMs": 499.633083,
+        "exactLogLine": "2026-11-17T08:34:59.8305700Z ✔ the original remaining startup deadline rejects a pending snapshot without late discovery or a reset (499.633083ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 3,
+        "scope": "original139",
+        "title": "packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin",
+        "sourceRegistrationLine": 124,
+        "logLine": 823,
+        "observed": "PASS",
+        "durationMs": 3.93,
+        "exactLogLine": "2026-11-17T08:34:59.8375980Z ✔ packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin (3.93ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 4,
+        "scope": "original139",
+        "title": "HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted",
+        "sourceRegistrationLine": 139,
+        "logLine": 824,
+        "observed": "PASS",
+        "durationMs": 2.038375,
+        "exactLogLine": "2026-11-17T08:34:59.8378350Z ✔ HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted (2.038375ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 5,
+        "scope": "original139",
+        "title": "isolated shell fixture emits the actual framed environment and refuses shell effects",
+        "sourceRegistrationLine": 149,
+        "logLine": 825,
+        "observed": "PASS",
+        "durationMs": 201.311541,
+        "exactLogLine": "2026-11-17T08:34:59.8380000Z ✔ isolated shell fixture emits the actual framed environment and refuses shell effects (201.311541ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 6,
+        "scope": "original139",
+        "title": "original in-progress Task comment prerequisite requires its exact stage without an assignment control",
+        "sourceRegistrationLine": 337,
+        "logLine": 826,
+        "observed": "PASS",
+        "durationMs": 7.517333,
+        "exactLogLine": "2026-11-17T08:34:59.8381500Z ✔ original in-progress Task comment prerequisite requires its exact stage without an assignment control (7.517333ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 7,
+        "scope": "original139",
+        "title": "Task attachment comment waits for its original focused owner after one click before inserting text",
+        "sourceRegistrationLine": 372,
+        "logLine": 827,
+        "observed": "PASS",
+        "durationMs": 212.328459,
+        "exactLogLine": "2026-11-17T08:34:59.8384840Z ✔ Task attachment comment waits for its original focused owner after one click before inserting text (212.328459ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 8,
+        "scope": "original139",
+        "title": "original Task assignment prerequisite refuses receipt-only, pending and stale renderer state",
+        "sourceRegistrationLine": 546,
+        "logLine": 828,
+        "observed": "PASS",
+        "durationMs": 2.478625,
+        "exactLogLine": "2026-11-17T08:34:59.8388460Z ✔ original Task assignment prerequisite refuses receipt-only, pending and stale renderer state (2.478625ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 9,
+        "scope": "original139",
+        "title": "original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface",
+        "sourceRegistrationLine": 583,
+        "logLine": 829,
+        "observed": "PASS",
+        "durationMs": 2.105458,
+        "exactLogLine": "2026-11-17T08:34:59.8403850Z ✔ original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface (2.105458ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 10,
+        "scope": "original139",
+        "title": "original desktop click waits for stable target geometry, without repeating input",
+        "sourceRegistrationLine": 613,
+        "logLine": 830,
+        "observed": "PASS",
+        "durationMs": 305.69375,
+        "exactLogLine": "2026-11-17T08:34:59.8406210Z ✔ original desktop click waits for stable target geometry, without repeating input (305.69375ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 11,
+        "scope": "original139",
+        "title": "original Task hover waits through layout and unavailability before its one physical move",
+        "sourceRegistrationLine": 641,
+        "logLine": 831,
+        "observed": "PASS",
+        "durationMs": 620.550333,
+        "exactLogLine": "2026-11-17T08:34:59.8407240Z ✔ original Task hover waits through layout and unavailability before its one physical move (620.550333ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 12,
+        "scope": "original139",
+        "title": "original desktop click refuses a constantly moving target before dispatch",
+        "sourceRegistrationLine": 667,
+        "logLine": 832,
+        "observed": "PASS",
+        "durationMs": 1521.583125,
+        "exactLogLine": "2026-11-17T08:34:59.8409320Z ✔ original desktop click refuses a constantly moving target before dispatch (1521.583125ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 13,
+        "scope": "original139",
+        "title": "original owner-qualified click rereads its full expression through unavailability at unchanged coordinates",
+        "sourceRegistrationLine": 685,
+        "logLine": 833,
+        "observed": "PASS",
+        "durationMs": 305.331334,
+        "exactLogLine": "2026-11-17T08:35:00.1386070Z ✔ original owner-qualified click rereads its full expression through unavailability at unchanged coordinates (305.331334ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 14,
+        "scope": "original139",
+        "title": "login failure facts retain only bounded original attempts and confirmed milestones",
+        "sourceRegistrationLine": 715,
+        "logLine": 834,
+        "observed": "PASS",
+        "durationMs": 1.985166,
+        "exactLogLine": "2026-11-17T08:35:00.1390710Z ✔ login failure facts retain only bounded original attempts and confirmed milestones (1.985166ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 15,
+        "scope": "original139",
+        "title": "finite readiness failure summaries keep only bounded states and never private snapshot data",
+        "sourceRegistrationLine": 770,
+        "logLine": 835,
+        "observed": "PASS",
+        "durationMs": 1.251833,
+        "exactLogLine": "2026-11-17T08:35:00.1393010Z ✔ finite readiness failure summaries keep only bounded states and never private snapshot data (1.251833ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 16,
+        "scope": "original139",
+        "title": "Taskboard failure summaries compare retained identities without exposing private snapshot values",
+        "sourceRegistrationLine": 808,
+        "logLine": 836,
+        "observed": "PASS",
+        "durationMs": 2.788833,
+        "exactLogLine": "2026-11-17T08:35:00.1400030Z ✔ Taskboard failure summaries compare retained identities without exposing private snapshot values (2.788833ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 17,
+        "scope": "original139",
+        "title": "installer failure summaries preserve original wait sites and attempts without inferring installation effects",
+        "sourceRegistrationLine": 896,
+        "logLine": 837,
+        "observed": "PASS",
+        "durationMs": 3.739542,
+        "exactLogLine": "2026-11-17T08:35:00.1401900Z ✔ installer failure summaries preserve original wait sites and attempts without inferring installation effects (3.739542ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 18,
+        "scope": "original139",
+        "title": "installer failure projection does not invoke input getters and leaves oversized observations unknown",
+        "sourceRegistrationLine": 952,
+        "logLine": 838,
+        "observed": "PASS",
+        "durationMs": 1.094542,
+        "exactLogLine": "2026-11-17T08:35:00.1404020Z ✔ installer failure projection does not invoke input getters and leaves oversized observations unknown (1.094542ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 19,
+        "scope": "original139",
+        "title": "installer CDP and cleanup projection retains only exact finite observations",
+        "sourceRegistrationLine": 985,
+        "logLine": 839,
+        "observed": "PASS",
+        "durationMs": 1.034875,
+        "exactLogLine": "2026-11-17T08:35:00.1405350Z ✔ installer CDP and cleanup projection retains only exact finite observations (1.034875ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 20,
+        "scope": "original139",
+        "title": "Selection target summaries retain the exact original phase and six closed facts",
+        "sourceRegistrationLine": 1038,
+        "logLine": 840,
+        "observed": "PASS",
+        "durationMs": 0.979209,
+        "exactLogLine": "2026-11-17T08:35:00.1406280Z ✔ Selection target summaries retain the exact original phase and six closed facts (0.979209ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 21,
+        "scope": "original139",
+        "title": "Selection target projection rejects unknown or malformed facts without exposing text or invoking getters",
+        "sourceRegistrationLine": 1073,
+        "logLine": 841,
+        "observed": "PASS",
+        "durationMs": 0.45425,
+        "exactLogLine": "2026-11-17T08:35:00.1407430Z ✔ Selection target projection rejects unknown or malformed facts without exposing text or invoking getters (0.45425ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 22,
+        "scope": "original139",
+        "title": "Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input",
+        "sourceRegistrationLine": 1102,
+        "logLine": 842,
+        "observed": "PASS",
+        "durationMs": 1.067459,
+        "exactLogLine": "2026-11-17T08:35:00.1440230Z ✔ Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input (1.067459ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 23,
+        "scope": "original139",
+        "title": "original desktop click refuses a target unavailable during the final ownership check",
+        "sourceRegistrationLine": 1198,
+        "logLine": 843,
+        "observed": "PASS",
+        "durationMs": 205.30175,
+        "exactLogLine": "2026-11-17T08:35:00.3433780Z ✔ original desktop click refuses a target unavailable during the final ownership check (205.30175ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 24,
+        "scope": "original139",
+        "title": "original desktop click refuses a target moved during the final ownership check",
+        "sourceRegistrationLine": 1198,
+        "logLine": 844,
+        "observed": "PASS",
+        "durationMs": 207.396584,
+        "exactLogLine": "2026-11-17T08:35:00.5561120Z ✔ original desktop click refuses a target moved during the final ownership check (207.396584ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 25,
+        "scope": "original139",
+        "title": "original default scroll preserves a disabled control before its readiness wait",
+        "sourceRegistrationLine": 1228,
+        "logLine": 845,
+        "observed": "PASS",
+        "durationMs": 2.593833,
+        "exactLogLine": "2026-11-17T08:35:00.5563250Z ✔ original default scroll preserves a disabled control before its readiness wait (2.593833ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 26,
+        "scope": "original139",
+        "title": "original scroll opt-in reveals a covered checkbox with one bounded wheel",
+        "sourceRegistrationLine": 1228,
+        "logLine": 846,
+        "observed": "PASS",
+        "durationMs": 104.876542,
+        "exactLogLine": "2026-11-17T08:35:00.6688440Z ✔ original scroll opt-in reveals a covered checkbox with one bounded wheel (104.876542ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 27,
+        "scope": "original139",
+        "title": "original desktop click rechecks owner after its pending final target read",
+        "sourceRegistrationLine": 1280,
+        "logLine": 847,
+        "observed": "PASS",
+        "durationMs": 203.560917,
+        "exactLogLine": "2026-11-17T08:35:00.8627680Z ✔ original desktop click rechecks owner after its pending final target read (203.560917ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 28,
+        "scope": "original139",
+        "title": "original desktop click rechecks cutoff after its pending final target read",
+        "sourceRegistrationLine": 1280,
+        "logLine": 848,
+        "observed": "PASS",
+        "durationMs": 215.131125,
+        "exactLogLine": "2026-11-17T08:35:01.1768930Z ✔ original desktop click rechecks cutoff after its pending final target read (215.131125ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 29,
+        "scope": "original139",
+        "title": "original clarification lookup admits its retained read without completing the assignment prerequisite",
+        "sourceRegistrationLine": 1324,
+        "logLine": 849,
+        "observed": "PASS",
+        "durationMs": 6.15725,
+        "exactLogLine": "2026-11-17T08:35:01.1770220Z ✔ original clarification lookup admits its retained read without completing the assignment prerequisite (6.15725ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 30,
+        "scope": "original139",
+        "title": "original clarification lookup refuses changed owner, revision, refresh and retained-read joins",
+        "sourceRegistrationLine": 1347,
+        "logLine": 850,
+        "observed": "PASS",
+        "durationMs": 30.41225,
+        "exactLogLine": "2026-11-17T08:35:01.1771220Z ✔ original clarification lookup refuses changed owner, revision, refresh and retained-read joins (30.41225ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 31,
+        "scope": "original139",
+        "title": "original owner availability admits three captured A Teams through its actual first DOM read",
+        "sourceRegistrationLine": 1464,
+        "logLine": 851,
+        "observed": "PASS",
+        "durationMs": 2.066209,
+        "exactLogLine": "2026-11-17T08:35:01.1772180Z ✔ original owner availability admits three captured A Teams through its actual first DOM read (2.066209ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 32,
+        "scope": "original139",
+        "title": "original owner availability retains singleton, subset and duplicate-row cardinality semantics",
+        "sourceRegistrationLine": 1480,
+        "logLine": 852,
+        "observed": "PASS",
+        "durationMs": 1.930334,
+        "exactLogLine": "2026-11-17T08:35:01.1773110Z ✔ original owner availability retains singleton, subset and duplicate-row cardinality semantics (1.930334ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 33,
+        "scope": "original139",
+        "title": "original owner availability refuses foreign identities and preserves its existing aggregate guards",
+        "sourceRegistrationLine": 1494,
+        "logLine": 853,
+        "observed": "PASS",
+        "durationMs": 24.997083,
+        "exactLogLine": "2026-11-17T08:35:01.1775810Z ✔ original owner availability refuses foreign identities and preserves its existing aggregate guards (24.997083ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 34,
+        "scope": "original139",
+        "title": "original owner availability refuses invalid captured discovery before navigation",
+        "sourceRegistrationLine": 1541,
+        "logLine": 854,
+        "observed": "PASS",
+        "durationMs": 0.664334,
+        "exactLogLine": "2026-11-17T08:35:01.1776790Z ✔ original owner availability refuses invalid captured discovery before navigation (0.664334ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 35,
+        "scope": "original139",
+        "title": "owner availability admits every captured A Team through the actual first observation",
+        "sourceRegistrationLine": 1610,
+        "logLine": 855,
+        "observed": "PASS",
+        "durationMs": 0.646125,
+        "exactLogLine": "2026-11-17T08:35:01.1777840Z ✔ owner availability admits every captured A Team through the actual first observation (0.646125ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 36,
+        "scope": "original139",
+        "title": "owner availability refuses healthy B in unavailable A rows",
+        "sourceRegistrationLine": 1628,
+        "logLine": 856,
+        "observed": "PASS",
+        "durationMs": 0.515875,
+        "exactLogLine": "2026-11-17T08:35:01.1778460Z ✔ owner availability refuses healthy B in unavailable A rows (0.515875ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 37,
+        "scope": "original139",
+        "title": "owner availability refuses captured foreign owner in unavailable A rows",
+        "sourceRegistrationLine": 1628,
+        "logLine": 857,
+        "observed": "PASS",
+        "durationMs": 0.283125,
+        "exactLogLine": "2026-11-17T08:35:01.1779170Z ✔ owner availability refuses captured foreign owner in unavailable A rows (0.283125ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 38,
+        "scope": "original139",
+        "title": "owner availability refuses unknown Team in unavailable A rows",
+        "sourceRegistrationLine": 1628,
+        "logLine": 858,
+        "observed": "PASS",
+        "durationMs": 0.366125,
+        "exactLogLine": "2026-11-17T08:35:01.1780010Z ✔ owner availability refuses unknown Team in unavailable A rows (0.366125ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 39,
+        "scope": "original139",
+        "title": "owner availability refuses malformed Team in unavailable A rows",
+        "sourceRegistrationLine": 1628,
+        "logLine": 859,
+        "observed": "PASS",
+        "durationMs": 0.346125,
+        "exactLogLine": "2026-11-17T08:35:01.1788160Z ✔ owner availability refuses malformed Team in unavailable A rows (0.346125ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 40,
+        "scope": "original139",
+        "title": "owner availability refuses missing selected A before original navigation",
+        "sourceRegistrationLine": 1638,
+        "logLine": 860,
+        "observed": "PASS",
+        "durationMs": 0.252584,
+        "exactLogLine": "2026-11-17T08:35:01.1795900Z ✔ owner availability refuses missing selected A before original navigation (0.252584ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 41,
+        "scope": "original139",
+        "title": "owner availability refuses non-string A handle before original navigation",
+        "sourceRegistrationLine": 1638,
+        "logLine": 861,
+        "observed": "PASS",
+        "durationMs": 0.20525,
+        "exactLogLine": "2026-11-17T08:35:01.1796650Z ✔ owner availability refuses non-string A handle before original navigation (0.20525ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 42,
+        "scope": "original139",
+        "title": "owner availability refuses empty A handle before original navigation",
+        "sourceRegistrationLine": 1638,
+        "logLine": 862,
+        "observed": "PASS",
+        "durationMs": 0.194,
+        "exactLogLine": "2026-11-17T08:35:01.1797320Z ✔ owner availability refuses empty A handle before original navigation (0.194ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 43,
+        "scope": "original139",
+        "title": "owner availability refuses duplicate A handle before original navigation",
+        "sourceRegistrationLine": 1638,
+        "logLine": 863,
+        "observed": "PASS",
+        "durationMs": 0.144667,
+        "exactLogLine": "2026-11-17T08:35:01.1797930Z ✔ owner availability refuses duplicate A handle before original navigation (0.144667ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 44,
+        "scope": "original139",
+        "title": "owner availability refuses over-bound capture before original navigation",
+        "sourceRegistrationLine": 1638,
+        "logLine": 864,
+        "observed": "PASS",
+        "durationMs": 0.187,
+        "exactLogLine": "2026-11-17T08:35:01.1798860Z ✔ owner availability refuses over-bound capture before original navigation (0.187ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 45,
+        "scope": "original139",
+        "title": "passive input keeps its actual Team target and three separate original navigation samples",
+        "sourceRegistrationLine": 1722,
+        "logLine": 865,
+        "observed": "PASS",
+        "durationMs": 2.965083,
+        "exactLogLine": "2026-11-17T08:35:01.1799630Z ✔ passive input keeps its actual Team target and three separate original navigation samples (2.965083ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 46,
+        "scope": "original139",
+        "title": "passive navigation preserves non-card events, the original ring bounds and null or non-Team state",
+        "sourceRegistrationLine": 1747,
+        "logLine": 866,
+        "observed": "PASS",
+        "durationMs": 2.560667,
+        "exactLogLine": "2026-11-17T08:35:01.1800450Z ✔ passive navigation preserves non-card events, the original ring bounds and null or non-Team state (2.560667ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 47,
+        "scope": "original139",
+        "title": "passive navigation refuses malformed target and store facts without losing original callbacks",
+        "sourceRegistrationLine": 1767,
+        "logLine": 867,
+        "observed": "PASS",
+        "durationMs": 19.0205,
+        "exactLogLine": "2026-11-17T08:35:01.1801710Z ✔ passive navigation refuses malformed target and store facts without losing original callbacks (19.0205ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 48,
+        "scope": "original139",
+        "title": "passive navigation remains bounded and cannot interrupt original writes on diagnostic failure",
+        "sourceRegistrationLine": 1813,
+        "logLine": 868,
+        "observed": "PASS",
+        "durationMs": 2.621292,
+        "exactLogLine": "2026-11-17T08:35:01.1802800Z ✔ passive navigation remains bounded and cannot interrupt original writes on diagnostic failure (2.621292ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 49,
+        "scope": "original139",
+        "title": "passive navigation uses only the callable store own method and ignores unrelated card surfaces",
+        "sourceRegistrationLine": 1835,
+        "logLine": 869,
+        "observed": "PASS",
+        "durationMs": 1.819333,
+        "exactLogLine": "2026-11-17T08:35:01.1803640Z ✔ passive navigation uses only the callable store own method and ignores unrelated card surfaces (1.819333ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 50,
+        "scope": "original139",
+        "title": "the selected provider receipt digest matches the actual manifest-selected archive bytes",
+        "sourceRegistrationLine": 1853,
+        "logLine": 870,
+        "observed": "PASS",
+        "durationMs": 6.560584,
+        "exactLogLine": "2026-11-17T08:35:01.1833450Z ✔ the selected provider receipt digest matches the actual manifest-selected archive bytes (6.560584ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 51,
+        "scope": "original139",
+        "title": "provider receipt legacy, current and equal-dual implementation digests preserve manifest authority",
+        "sourceRegistrationLine": 1866,
+        "logLine": 871,
+        "observed": "PASS",
+        "durationMs": 5.236084,
+        "exactLogLine": "2026-11-17T08:35:01.1886740Z ✔ provider receipt legacy, current and equal-dual implementation digests preserve manifest authority (5.236084ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 52,
+        "scope": "original139",
+        "title": "every present provider implementation digest must be valid and both recognized fields must agree",
+        "sourceRegistrationLine": 1890,
+        "logLine": 872,
+        "observed": "PASS",
+        "durationMs": 32.397291,
+        "exactLogLine": "2026-11-17T08:35:01.2211540Z ✔ every present provider implementation digest must be valid and both recognized fields must agree (32.397291ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 53,
+        "scope": "original139",
+        "title": "provider receipt shape, package selection and original file or JSON errors remain strict",
+        "sourceRegistrationLine": 1916,
+        "logLine": 873,
+        "observed": "PASS",
+        "durationMs": 18.383917,
+        "exactLogLine": "2026-11-17T08:35:01.2413950Z ✔ provider receipt shape, package selection and original file or JSON errors remain strict (18.383917ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 54,
+        "scope": "original139",
+        "title": "saved Launch uses three stable actual DOM samples before its original settings action",
+        "sourceRegistrationLine": 2042,
+        "logLine": 874,
+        "observed": "PASS",
+        "durationMs": 5.001041,
+        "exactLogLine": "2026-11-17T08:35:01.2445020Z ✔ saved Launch uses three stable actual DOM samples before its original settings action (5.001041ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 55,
+        "scope": "original139",
+        "title": "saved Launch resets exact geometry when the original button shifts by a quarter pixel",
+        "sourceRegistrationLine": 2047,
+        "logLine": 875,
+        "observed": "PASS",
+        "durationMs": 2.718333,
+        "exactLogLine": "2026-11-17T08:35:01.2473560Z ✔ saved Launch resets exact geometry when the original button shifts by a quarter pixel (2.718333ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 56,
+        "scope": "original139",
+        "title": "saved Launch restarts its three samples after changed identity",
+        "sourceRegistrationLine": 2060,
+        "logLine": 876,
+        "observed": "PASS",
+        "durationMs": 2.714917,
+        "exactLogLine": "2026-11-17T08:35:01.2499140Z ✔ saved Launch restarts its three samples after changed identity (2.714917ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 57,
+        "scope": "original139",
+        "title": "saved Launch restarts its three samples after changed expanded state",
+        "sourceRegistrationLine": 2060,
+        "logLine": 877,
+        "observed": "PASS",
+        "durationMs": 2.597375,
+        "exactLogLine": "2026-11-17T08:35:01.2526800Z ✔ saved Launch restarts its three samples after changed expanded state (2.597375ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 58,
+        "scope": "original139",
+        "title": "saved Launch restarts its three samples after changed horizontal position",
+        "sourceRegistrationLine": 2060,
+        "logLine": 878,
+        "observed": "PASS",
+        "durationMs": 2.821083,
+        "exactLogLine": "2026-11-17T08:35:01.2557160Z ✔ saved Launch restarts its three samples after changed horizontal position (2.821083ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 59,
+        "scope": "original139",
+        "title": "saved Launch restarts its three samples after changed width",
+        "sourceRegistrationLine": 2060,
+        "logLine": 879,
+        "observed": "PASS",
+        "durationMs": 3.439167,
+        "exactLogLine": "2026-11-17T08:35:01.2589830Z ✔ saved Launch restarts its three samples after changed width (3.439167ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 60,
+        "scope": "original139",
+        "title": "saved Launch restarts its three samples after changed height",
+        "sourceRegistrationLine": 2060,
+        "logLine": 880,
+        "observed": "PASS",
+        "durationMs": 2.447958,
+        "exactLogLine": "2026-11-17T08:35:01.2614110Z ✔ saved Launch restarts its three samples after changed height (2.447958ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 61,
+        "scope": "original139",
+        "title": "saved Launch resets its original readiness after absent target",
+        "sourceRegistrationLine": 2077,
+        "logLine": 881,
+        "observed": "PASS",
+        "durationMs": 2.941167,
+        "exactLogLine": "2026-11-17T08:35:01.2644540Z ✔ saved Launch resets its original readiness after absent target (2.941167ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 62,
+        "scope": "original139",
+        "title": "saved Launch resets its original readiness after ambiguous target",
+        "sourceRegistrationLine": 2077,
+        "logLine": 882,
+        "observed": "PASS",
+        "durationMs": 2.8475,
+        "exactLogLine": "2026-11-17T08:35:01.2672460Z ✔ saved Launch resets its original readiness after ambiguous target (2.8475ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 63,
+        "scope": "original139",
+        "title": "saved Launch resets its original readiness after wrong model",
+        "sourceRegistrationLine": 2077,
+        "logLine": 883,
+        "observed": "PASS",
+        "durationMs": 2.520834,
+        "exactLogLine": "2026-11-17T08:35:01.2697790Z ✔ saved Launch resets its original readiness after wrong model (2.520834ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 64,
+        "scope": "original139",
+        "title": "saved Launch resets its original readiness after absent identity",
+        "sourceRegistrationLine": 2077,
+        "logLine": 884,
+        "observed": "PASS",
+        "durationMs": 2.801291,
+        "exactLogLine": "2026-11-17T08:35:01.2741290Z ✔ saved Launch resets its original readiness after absent identity (2.801291ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 65,
+        "scope": "original139",
+        "title": "saved Launch resets its original readiness after empty identity",
+        "sourceRegistrationLine": 2077,
+        "logLine": 885,
+        "observed": "PASS",
+        "durationMs": 4.561417,
+        "exactLogLine": "2026-11-17T08:35:01.2773270Z ✔ saved Launch resets its original readiness after empty identity (4.561417ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 66,
+        "scope": "original139",
+        "title": "saved Launch resets its original readiness after invalid expansion",
+        "sourceRegistrationLine": 2077,
+        "logLine": 886,
+        "observed": "PASS",
+        "durationMs": 3.047416,
+        "exactLogLine": "2026-11-17T08:35:01.2806080Z ✔ saved Launch resets its original readiness after invalid expansion (3.047416ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 67,
+        "scope": "original139",
+        "title": "saved Launch resets its original readiness after missing owning dialog",
+        "sourceRegistrationLine": 2077,
+        "logLine": 887,
+        "observed": "PASS",
+        "durationMs": 2.939083,
+        "exactLogLine": "2026-11-17T08:35:01.2837960Z ✔ saved Launch resets its original readiness after missing owning dialog (2.939083ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 68,
+        "scope": "original139",
+        "title": "saved Launch resets its original readiness after nonfinite x",
+        "sourceRegistrationLine": 2077,
+        "logLine": 888,
+        "observed": "PASS",
+        "durationMs": 3.333792,
+        "exactLogLine": "2026-11-17T08:35:01.2866880Z ✔ saved Launch resets its original readiness after nonfinite x (3.333792ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 69,
+        "scope": "original139",
+        "title": "saved Launch resets its original readiness after nonfinite y",
+        "sourceRegistrationLine": 2077,
+        "logLine": 889,
+        "observed": "PASS",
+        "durationMs": 2.685292,
+        "exactLogLine": "2026-11-17T08:35:01.2894080Z ✔ saved Launch resets its original readiness after nonfinite y (2.685292ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 70,
+        "scope": "original139",
+        "title": "saved Launch resets its original readiness after zero width",
+        "sourceRegistrationLine": 2077,
+        "logLine": 890,
+        "observed": "PASS",
+        "durationMs": 40.456792,
+        "exactLogLine": "2026-11-17T08:35:01.3301290Z ✔ saved Launch resets its original readiness after zero width (40.456792ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 71,
+        "scope": "original139",
+        "title": "saved Launch resets its original readiness after negative height",
+        "sourceRegistrationLine": 2077,
+        "logLine": 891,
+        "observed": "PASS",
+        "durationMs": 3.077292,
+        "exactLogLine": "2026-11-17T08:35:01.3332540Z ✔ saved Launch resets its original readiness after negative height (3.077292ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 72,
+        "scope": "original139",
+        "title": "saved Launch resets its original readiness after running own animation",
+        "sourceRegistrationLine": 2077,
+        "logLine": 892,
+        "observed": "PASS",
+        "durationMs": 3.127708,
+        "exactLogLine": "2026-11-17T08:35:01.3362620Z ✔ saved Launch resets its original readiness after running own animation (3.127708ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 73,
+        "scope": "original139",
+        "title": "saved Launch resets its original readiness after paused own animation",
+        "sourceRegistrationLine": 2077,
+        "logLine": 893,
+        "observed": "PASS",
+        "durationMs": 2.795291,
+        "exactLogLine": "2026-11-17T08:35:01.3391540Z ✔ saved Launch resets its original readiness after paused own animation (2.795291ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 74,
+        "scope": "original139",
+        "title": "saved Launch resets its original readiness after pending own animation",
+        "sourceRegistrationLine": 2077,
+        "logLine": 894,
+        "observed": "PASS",
+        "durationMs": 2.639583,
+        "exactLogLine": "2026-11-17T08:35:01.3419240Z ✔ saved Launch resets its original readiness after pending own animation (2.639583ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 75,
+        "scope": "original139",
+        "title": "saved Launch allows finished own animation without inspecting descendant spinners or model status",
+        "sourceRegistrationLine": 2083,
+        "logLine": 895,
+        "observed": "PASS",
+        "durationMs": 2.306375,
+        "exactLogLine": "2026-11-17T08:35:01.3443070Z ✔ saved Launch allows finished own animation without inspecting descendant spinners or model status (2.306375ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 76,
+        "scope": "original139",
+        "title": "saved Launch allows idle own animation without inspecting descendant spinners or model status",
+        "sourceRegistrationLine": 2083,
+        "logLine": 896,
+        "observed": "PASS",
+        "durationMs": 2.3145,
+        "exactLogLine": "2026-11-17T08:35:01.3467790Z ✔ saved Launch allows idle own animation without inspecting descendant spinners or model status (2.3145ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 77,
+        "scope": "original139",
+        "title": "saved Launch exhausts its one original deadline with no matching model and no settings action",
+        "sourceRegistrationLine": 2092,
+        "logLine": 897,
+        "observed": "PASS",
+        "durationMs": 108.377958,
+        "exactLogLine": "2026-11-17T08:35:01.4550770Z ✔ saved Launch exhausts its one original deadline with no matching model and no settings action (108.377958ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 78,
+        "scope": "original139",
+        "title": "saved Launch exhausts its one original deadline with unsettled own dialog and no settings action",
+        "sourceRegistrationLine": 2092,
+        "logLine": 898,
+        "observed": "PASS",
+        "durationMs": 87.740208,
+        "exactLogLine": "2026-11-17T08:35:02.4365700Z ✔ saved Launch exhausts its one original deadline with unsettled own dialog and no settings action (87.740208ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 79,
+        "scope": "original139",
+        "title": "original conversation waits for its own reply before one click at the hydrated coordinates",
+        "sourceRegistrationLine": 2146,
+        "logLine": 899,
+        "observed": "PASS",
+        "durationMs": 3.215541,
+        "exactLogLine": "2026-11-17T08:35:02.4368400Z ✔ original conversation waits for its own reply before one click at the hydrated coordinates (3.215541ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 80,
+        "scope": "original139",
+        "title": "default conversation click retains its original final geometry refusal without a preview predicate",
+        "sourceRegistrationLine": 2158,
+        "logLine": 900,
+        "observed": "PASS",
+        "durationMs": 1.504875,
+        "exactLogLine": "2026-11-17T08:35:02.4369830Z ✔ default conversation click retains its original final geometry refusal without a preview predicate (1.504875ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 81,
+        "scope": "original139",
+        "title": "original conversation refuses body-only reply within its unchanged first read deadline",
+        "sourceRegistrationLine": 2173,
+        "logLine": 901,
+        "observed": "PASS",
+        "durationMs": 72.000917,
+        "exactLogLine": "2026-11-17T08:35:02.4371450Z ✔ original conversation refuses body-only reply within its unchanged first read deadline (72.000917ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 82,
+        "scope": "original139",
+        "title": "original conversation refuses neighbor-only reply within its unchanged first read deadline",
+        "sourceRegistrationLine": 2173,
+        "logLine": 902,
+        "observed": "PASS",
+        "durationMs": 101.786792,
+        "exactLogLine": "2026-11-17T08:35:02.4375390Z ✔ original conversation refuses neighbor-only reply within its unchanged first read deadline (101.786792ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 83,
+        "scope": "original139",
+        "title": "original conversation refuses different required reply within its unchanged first read deadline",
+        "sourceRegistrationLine": 2173,
+        "logLine": 903,
+        "observed": "PASS",
+        "durationMs": 99.619625,
+        "exactLogLine": "2026-11-17T08:35:02.4376630Z ✔ original conversation refuses different required reply within its unchanged first read deadline (99.619625ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 84,
+        "scope": "original139",
+        "title": "original conversation refuses empty preview within its unchanged first read deadline",
+        "sourceRegistrationLine": 2173,
+        "logLine": 904,
+        "observed": "PASS",
+        "durationMs": 116.222041,
+        "exactLogLine": "2026-11-17T08:35:02.4379400Z ✔ original conversation refuses empty preview within its unchanged first read deadline (116.222041ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 85,
+        "scope": "original139",
+        "title": "original conversation refuses missing target within its unchanged first read deadline",
+        "sourceRegistrationLine": 2173,
+        "logLine": 905,
+        "observed": "PASS",
+        "durationMs": 91.879417,
+        "exactLogLine": "2026-11-17T08:35:02.4381420Z ✔ original conversation refuses missing target within its unchanged first read deadline (91.879417ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 86,
+        "scope": "original139",
+        "title": "original conversation refuses zero-size target within its unchanged first read deadline",
+        "sourceRegistrationLine": 2173,
+        "logLine": 906,
+        "observed": "PASS",
+        "durationMs": 92.2865,
+        "exactLogLine": "2026-11-17T08:35:02.4385040Z ✔ original conversation refuses zero-size target within its unchanged first read deadline (92.2865ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 87,
+        "scope": "original139",
+        "title": "original conversation refuses disabled target within its unchanged first read deadline",
+        "sourceRegistrationLine": 2173,
+        "logLine": 907,
+        "observed": "PASS",
+        "durationMs": 93.093792,
+        "exactLogLine": "2026-11-17T08:35:02.4387720Z ✔ original conversation refuses disabled target within its unchanged first read deadline (93.093792ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 88,
+        "scope": "original139",
+        "title": "original conversation refuses covered target within its unchanged first read deadline",
+        "sourceRegistrationLine": 2173,
+        "logLine": 908,
+        "observed": "PASS",
+        "durationMs": 88.824167,
+        "exactLogLine": "2026-11-17T08:35:02.4390640Z ✔ original conversation refuses covered target within its unchanged first read deadline (88.824167ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 89,
+        "scope": "original139",
+        "title": "original conversation refuses two eligible rows with only the second ready within its unchanged first read deadline",
+        "sourceRegistrationLine": 2173,
+        "logLine": 909,
+        "observed": "PASS",
+        "durationMs": 125.564167,
+        "exactLogLine": "2026-11-17T08:35:02.4392650Z ✔ original conversation refuses two eligible rows with only the second ready within its unchanged first read deadline (125.564167ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 90,
+        "scope": "original139",
+        "title": "original conversation serializes its required preview as literal data",
+        "sourceRegistrationLine": 2182,
+        "logLine": 910,
+        "observed": "PASS",
+        "durationMs": 2.039792,
+        "exactLogLine": "2026-11-17T08:35:02.4398320Z ✔ original conversation serializes its required preview as literal data (2.039792ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 91,
+        "scope": "original139",
+        "title": "original conversation rereads a revoked preview at unchanged final coordinates before input",
+        "sourceRegistrationLine": 2189,
+        "logLine": 911,
+        "observed": "PASS",
+        "durationMs": 1.656,
+        "exactLogLine": "2026-11-17T08:35:02.4409760Z ✔ original conversation rereads a revoked preview at unchanged final coordinates before input (1.656ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 92,
+        "scope": "original139",
+        "title": "original conversation still refuses final owner despite a ready preview",
+        "sourceRegistrationLine": 2200,
+        "logLine": 912,
+        "observed": "PASS",
+        "durationMs": 1.296834,
+        "exactLogLine": "2026-11-17T08:35:02.4410830Z ✔ original conversation still refuses final owner despite a ready preview (1.296834ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 93,
+        "scope": "original139",
+        "title": "original conversation still refuses final movement despite a ready preview",
+        "sourceRegistrationLine": 2200,
+        "logLine": 913,
+        "observed": "PASS",
+        "durationMs": 1.5865,
+        "exactLogLine": "2026-11-17T08:35:02.4412490Z ✔ original conversation still refuses final movement despite a ready preview (1.5865ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 94,
+        "scope": "original139",
+        "title": "actual openChat forwards TEST boot ready for alice",
+        "sourceRegistrationLine": 2219,
+        "logLine": 914,
+        "observed": "PASS",
+        "durationMs": 10.099625,
+        "exactLogLine": "2026-11-17T08:35:02.4466390Z ✔ actual openChat forwards TEST boot ready for alice (10.099625ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 95,
+        "scope": "original139",
+        "title": "actual openChat forwards TEST stream partial for alice",
+        "sourceRegistrationLine": 2219,
+        "logLine": 915,
+        "observed": "PASS",
+        "durationMs": 1.433292,
+        "exactLogLine": "2026-11-17T08:35:02.4503810Z ✔ actual openChat forwards TEST stream partial for alice (1.433292ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 96,
+        "scope": "original139",
+        "title": "actual openChat forwards TEST boot ready for team-lead",
+        "sourceRegistrationLine": 2219,
+        "logLine": 916,
+        "observed": "PASS",
+        "durationMs": 0.785125,
+        "exactLogLine": "2026-11-17T08:35:02.4512380Z ✔ actual openChat forwards TEST boot ready for team-lead (0.785125ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 97,
+        "scope": "original139",
+        "title": "actual openChat forwards TEST stream partial for team-lead",
+        "sourceRegistrationLine": 2219,
+        "logLine": 917,
+        "observed": "PASS",
+        "durationMs": 1.532625,
+        "exactLogLine": "2026-11-17T08:35:02.4652260Z ✔ actual openChat forwards TEST stream partial for team-lead (1.532625ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 98,
+        "scope": "original139",
+        "title": "original Cross Close target admits the ready cleared Task when canResolveClarification is false",
+        "sourceRegistrationLine": 2417,
+        "logLine": 918,
+        "observed": "PASS",
+        "durationMs": 1.985875,
+        "exactLogLine": "2026-11-17T08:35:02.4656180Z ✔ original Cross Close target admits the ready cleared Task when canResolveClarification is false (1.985875ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 99,
+        "scope": "original139",
+        "title": "original Cross Close target refuses retained user clarification",
+        "sourceRegistrationLine": 2456,
+        "logLine": 919,
+        "observed": "PASS",
+        "durationMs": 0.678625,
+        "exactLogLine": "2026-11-17T08:35:02.4668450Z ✔ original Cross Close target refuses retained user clarification (0.678625ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 100,
+        "scope": "original139",
+        "title": "original Cross Close target refuses retained external clarification",
+        "sourceRegistrationLine": 2456,
+        "logLine": 920,
+        "observed": "PASS",
+        "durationMs": 1.559875,
+        "exactLogLine": "2026-11-17T08:35:02.4671400Z ✔ original Cross Close target refuses retained external clarification (1.559875ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 101,
+        "scope": "original139",
+        "title": "original Cross Close target refuses null clarification",
+        "sourceRegistrationLine": 2456,
+        "logLine": 921,
+        "observed": "PASS",
+        "durationMs": 0.677958,
+        "exactLogLine": "2026-11-17T08:35:02.4674020Z ✔ original Cross Close target refuses null clarification (0.677958ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 102,
+        "scope": "original139",
+        "title": "original Cross Close target refuses full-detail refreshPending",
+        "sourceRegistrationLine": 2456,
+        "logLine": 922,
+        "observed": "PASS",
+        "durationMs": 0.506125,
+        "exactLogLine": "2026-11-17T08:35:02.4674920Z ✔ original Cross Close target refuses full-detail refreshPending (0.506125ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 103,
+        "scope": "original139",
+        "title": "original Cross Close target refuses full-detail loading",
+        "sourceRegistrationLine": 2456,
+        "logLine": 923,
+        "observed": "PASS",
+        "durationMs": 0.428291,
+        "exactLogLine": "2026-11-17T08:35:02.4676040Z ✔ original Cross Close target refuses full-detail loading (0.428291ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 104,
+        "scope": "original139",
+        "title": "original Cross Close target refuses current detail error",
+        "sourceRegistrationLine": 2456,
+        "logLine": 924,
+        "observed": "PASS",
+        "durationMs": 0.438416,
+        "exactLogLine": "2026-11-17T08:35:02.4677460Z ✔ original Cross Close target refuses current detail error (0.438416ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 105,
+        "scope": "original139",
+        "title": "original Cross Close target refuses current deletionIntent",
+        "sourceRegistrationLine": 2456,
+        "logLine": 925,
+        "observed": "PASS",
+        "durationMs": 0.37425,
+        "exactLogLine": "2026-11-17T08:35:02.4678220Z ✔ original Cross Close target refuses current deletionIntent (0.37425ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 106,
+        "scope": "original139",
+        "title": "original Cross Close target refuses full Task deletedAt",
+        "sourceRegistrationLine": 2456,
+        "logLine": 926,
+        "observed": "PASS",
+        "durationMs": 0.4015,
+        "exactLogLine": "2026-11-17T08:35:02.4678890Z ✔ original Cross Close target refuses full Task deletedAt (0.4015ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 107,
+        "scope": "original139",
+        "title": "original Cross Close target refuses full Task deleted status",
+        "sourceRegistrationLine": 2456,
+        "logLine": 927,
+        "observed": "PASS",
+        "durationMs": 0.36675,
+        "exactLogLine": "2026-11-17T08:35:02.4679550Z ✔ original Cross Close target refuses full Task deleted status (0.36675ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 108,
+        "scope": "original139",
+        "title": "original Cross Close target refuses non-ready full-detail phase",
+        "sourceRegistrationLine": 2456,
+        "logLine": 928,
+        "observed": "PASS",
+        "durationMs": 0.450334,
+        "exactLogLine": "2026-11-17T08:35:02.4680820Z ✔ original Cross Close target refuses non-ready full-detail phase (0.450334ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 109,
+        "scope": "original139",
+        "title": "original Cross Close target refuses foreign full Task ID",
+        "sourceRegistrationLine": 2456,
+        "logLine": 929,
+        "observed": "PASS",
+        "durationMs": 0.358917,
+        "exactLogLine": "2026-11-17T08:35:02.4684040Z ✔ original Cross Close target refuses foreign full Task ID (0.358917ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 110,
+        "scope": "original139",
+        "title": "original Cross Close target refuses foreign detail identity",
+        "sourceRegistrationLine": 2456,
+        "logLine": 930,
+        "observed": "PASS",
+        "durationMs": 0.401542,
+        "exactLogLine": "2026-11-17T08:35:02.4684740Z ✔ original Cross Close target refuses foreign detail identity (0.401542ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 111,
+        "scope": "original139",
+        "title": "original Cross Close target refuses changed active context",
+        "sourceRegistrationLine": 2456,
+        "logLine": 931,
+        "observed": "PASS",
+        "durationMs": 0.327709,
+        "exactLogLine": "2026-11-17T08:35:02.4685490Z ✔ original Cross Close target refuses changed active context (0.327709ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 112,
+        "scope": "original139",
+        "title": "original Cross Close target refuses different selected Team",
+        "sourceRegistrationLine": 2456,
+        "logLine": 932,
+        "observed": "PASS",
+        "durationMs": 0.335208,
+        "exactLogLine": "2026-11-17T08:35:02.4686090Z ✔ original Cross Close target refuses different selected Team (0.335208ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 113,
+        "scope": "original139",
+        "title": "original Cross Close target refuses rebound controller surface",
+        "sourceRegistrationLine": 2456,
+        "logLine": 933,
+        "observed": "PASS",
+        "durationMs": 0.307667,
+        "exactLogLine": "2026-11-17T08:35:02.4686740Z ✔ original Cross Close target refuses rebound controller surface (0.307667ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 114,
+        "scope": "original139",
+        "title": "original Cross Close target refuses missing stored session",
+        "sourceRegistrationLine": 2456,
+        "logLine": 934,
+        "observed": "PASS",
+        "durationMs": 0.301917,
+        "exactLogLine": "2026-11-17T08:35:02.4687410Z ✔ original Cross Close target refuses missing stored session (0.301917ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 115,
+        "scope": "original139",
+        "title": "original Cross Close target refuses different stored session owner surface",
+        "sourceRegistrationLine": 2456,
+        "logLine": 935,
+        "observed": "PASS",
+        "durationMs": 0.323875,
+        "exactLogLine": "2026-11-17T08:35:02.4688220Z ✔ original Cross Close target refuses different stored session owner surface (0.323875ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 116,
+        "scope": "original139",
+        "title": "original Cross Close target refuses changed stored owner revision",
+        "sourceRegistrationLine": 2456,
+        "logLine": 936,
+        "observed": "PASS",
+        "durationMs": 0.293375,
+        "exactLogLine": "2026-11-17T08:35:02.4689110Z ✔ original Cross Close target refuses changed stored owner revision (0.293375ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 117,
+        "scope": "original139",
+        "title": "original Cross Close target refuses current canEditNow false",
+        "sourceRegistrationLine": 2456,
+        "logLine": 937,
+        "observed": "PASS",
+        "durationMs": 0.29375,
+        "exactLogLine": "2026-11-17T08:35:02.4689810Z ✔ original Cross Close target refuses current canEditNow false (0.29375ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 118,
+        "scope": "original139",
+        "title": "original Cross Close target refuses non-owning controller",
+        "sourceRegistrationLine": 2456,
+        "logLine": 938,
+        "observed": "PASS",
+        "durationMs": 0.3065,
+        "exactLogLine": "2026-11-17T08:35:02.4690490Z ✔ original Cross Close target refuses non-owning controller (0.3065ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 119,
+        "scope": "original139",
+        "title": "original Cross Close target refuses scoped Team refresh",
+        "sourceRegistrationLine": 2456,
+        "logLine": 939,
+        "observed": "PASS",
+        "durationMs": 0.309292,
+        "exactLogLine": "2026-11-17T08:35:02.4691070Z ✔ original Cross Close target refuses scoped Team refresh (0.309292ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 120,
+        "scope": "original139",
+        "title": "original Cross Close target refuses unavailable accepted Team metadata",
+        "sourceRegistrationLine": 2456,
+        "logLine": 940,
+        "observed": "PASS",
+        "durationMs": 0.285916,
+        "exactLogLine": "2026-11-17T08:35:02.4692160Z ✔ original Cross Close target refuses unavailable accepted Team metadata (0.285916ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 121,
+        "scope": "original139",
+        "title": "original Cross Close target refuses disabled assignment control",
+        "sourceRegistrationLine": 2456,
+        "logLine": 941,
+        "observed": "PASS",
+        "durationMs": 0.307166,
+        "exactLogLine": "2026-11-17T08:35:02.4692820Z ✔ original Cross Close target refuses disabled assignment control (0.307166ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 122,
+        "scope": "original139",
+        "title": "original Cross Close target refuses expanded assignment control",
+        "sourceRegistrationLine": 2456,
+        "logLine": 942,
+        "observed": "PASS",
+        "durationMs": 0.30625,
+        "exactLogLine": "2026-11-17T08:35:02.4693600Z ✔ original Cross Close target refuses expanded assignment control (0.30625ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 123,
+        "scope": "original139",
+        "title": "original Cross Close target refuses another assignee",
+        "sourceRegistrationLine": 2456,
+        "logLine": 943,
+        "observed": "PASS",
+        "durationMs": 0.330375,
+        "exactLogLine": "2026-11-17T08:35:02.4694200Z ✔ original Cross Close target refuses another assignee (0.330375ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 124,
+        "scope": "original139",
+        "title": "original Cross Close target refuses missing assignment control",
+        "sourceRegistrationLine": 2456,
+        "logLine": 944,
+        "observed": "PASS",
+        "durationMs": 0.351666,
+        "exactLogLine": "2026-11-17T08:35:02.4694770Z ✔ original Cross Close target refuses missing assignment control (0.351666ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 125,
+        "scope": "original139",
+        "title": "original Cross Close target refuses duplicate assignment controls",
+        "sourceRegistrationLine": 2456,
+        "logLine": 945,
+        "observed": "PASS",
+        "durationMs": 0.382458,
+        "exactLogLine": "2026-11-17T08:35:02.4695430Z ✔ original Cross Close target refuses duplicate assignment controls (0.382458ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 126,
+        "scope": "original139",
+        "title": "actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates",
+        "sourceRegistrationLine": 2462,
+        "logLine": 946,
+        "observed": "PASS",
+        "durationMs": 13.795583,
+        "exactLogLine": "2026-11-17T08:35:02.4787650Z ✔ actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates (13.795583ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 127,
+        "scope": "original139",
+        "title": "actual original Cross Close retains the first-read deadline while renderer readiness is pending",
+        "sourceRegistrationLine": 2490,
+        "logLine": 947,
+        "observed": "PASS",
+        "durationMs": 103.870584,
+        "exactLogLine": "2026-11-17T08:35:02.5830460Z ✔ actual original Cross Close retains the first-read deadline while renderer readiness is pending (103.870584ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 128,
+        "scope": "original139",
+        "title": "actual original Cross Close cannot use a foreign dialog or an absent ineligible own control",
+        "sourceRegistrationLine": 2496,
+        "logLine": 948,
+        "observed": "PASS",
+        "durationMs": 551.618458,
+        "exactLogLine": "2026-11-17T08:35:03.1345910Z ✔ actual original Cross Close cannot use a foreign dialog or an absent ineligible own control (551.618458ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 129,
+        "scope": "original139",
+        "title": "actual original Cross Close refuses duplicate eligible controls before disabled or hit narrowing",
+        "sourceRegistrationLine": 2507,
+        "logLine": 949,
+        "observed": "PASS",
+        "durationMs": 379.246875,
+        "exactLogLine": "2026-11-17T08:35:03.5140060Z ✔ actual original Cross Close refuses duplicate eligible controls before disabled or hit narrowing (379.246875ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 130,
+        "scope": "original139",
+        "title": "actual original Cross Close refuses disabled covered and absent-hit controls",
+        "sourceRegistrationLine": 2517,
+        "logLine": 950,
+        "observed": "PASS",
+        "durationMs": 348.86875,
+        "exactLogLine": "2026-11-17T08:35:03.8629620Z ✔ actual original Cross Close refuses disabled covered and absent-hit controls (348.86875ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 131,
+        "scope": "original139",
+        "title": "actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates",
+        "sourceRegistrationLine": 2527,
+        "logLine": 951,
+        "observed": "PASS",
+        "durationMs": 3.33625,
+        "exactLogLine": "2026-11-17T08:35:03.8659420Z ✔ actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates (3.33625ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 132,
+        "scope": "original139",
+        "title": "actual original Cross Close preserves final renderer ownership refusal without a press",
+        "sourceRegistrationLine": 2536,
+        "logLine": 952,
+        "observed": "PASS",
+        "durationMs": 2.278958,
+        "exactLogLine": "2026-11-17T08:35:03.8681660Z ✔ actual original Cross Close preserves final renderer ownership refusal without a press (2.278958ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 133,
+        "scope": "original139",
+        "title": "actual original Cross Close preserves final exact geometry refusal without replay",
+        "sourceRegistrationLine": 2545,
+        "logLine": 953,
+        "observed": "PASS",
+        "durationMs": 2.873292,
+        "exactLogLine": "2026-11-17T08:35:03.8711710Z ✔ actual original Cross Close preserves final exact geometry refusal without replay (2.873292ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 134,
+        "scope": "original139",
+        "title": "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "sourceRegistrationLine": 2591,
+        "logLine": 956,
+        "observed": "PASS",
+        "durationMs": 4.289333,
+        "exactLogLine": "2026-11-17T08:35:03.8774150Z ✔ P11 keeps the original 90-second cutoff for first result at the exact cutoff (4.289333ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 135,
+        "scope": "original139",
+        "title": "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "sourceRegistrationLine": 2591,
+        "logLine": 957,
+        "observed": "PASS",
+        "durationMs": 2.88375,
+        "exactLogLine": "2026-11-17T08:35:03.8782620Z ✔ P11 keeps the original 90-second cutoff for first result after the cutoff (2.88375ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 136,
+        "scope": "original139",
+        "title": "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+        "sourceRegistrationLine": 2591,
+        "logLine": 958,
+        "observed": "PASS",
+        "durationMs": 0.636625,
+        "exactLogLine": "2026-11-17T08:35:03.8789640Z ✔ P11 keeps the original 90-second cutoff for polled result after the cutoff (0.636625ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 137,
+        "scope": "original139",
+        "title": "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+        "sourceRegistrationLine": 2597,
+        "logLine": 959,
+        "observed": "PASS",
+        "durationMs": 0.78675,
+        "exactLogLine": "2026-11-17T08:35:03.8812910Z ✔ P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity (0.78675ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 138,
+        "scope": "original139",
+        "title": "original review correction refuses missing or false live edit authority before any input action",
+        "sourceRegistrationLine": 2678,
+        "logLine": 960,
+        "observed": "PASS",
+        "durationMs": 526.622916,
+        "exactLogLine": "2026-11-17T08:35:04.4068020Z ✔ original review correction refuses missing or false live edit authority before any input action (526.622916ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 139,
+        "scope": "original139",
+        "title": "original review correction admits current authority with one original insertion and submit",
+        "sourceRegistrationLine": 2688,
+        "logLine": 961,
+        "observed": "PASS",
+        "durationMs": 106.21,
+        "exactLogLine": "2026-11-17T08:35:04.5134230Z ✔ original review correction admits current authority with one original insertion and submit (106.21ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 140,
+        "scope": "appended10",
+        "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+        "sourceRegistrationLine": 110,
+        "sourceLiteralLine": 83,
+        "logLine": 962,
+        "observed": "PASS",
+        "durationMs": 0.479625,
+        "exactLogLine": "2026-11-17T08:35:04.5135130Z ✔ generic UI read refuses its first fulfilled value exactly at the original deadline (0.479625ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 141,
+        "scope": "appended10",
+        "title": "generic UI read refuses its first fulfilled value after the original deadline",
+        "sourceRegistrationLine": 110,
+        "sourceLiteralLine": 88,
+        "logLine": 963,
+        "observed": "PASS",
+        "durationMs": 0.146459,
+        "exactLogLine": "2026-11-17T08:35:04.5151550Z ✔ generic UI read refuses its first fulfilled value after the original deadline (0.146459ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 142,
+        "scope": "appended10",
+        "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+        "sourceRegistrationLine": 110,
+        "sourceLiteralLine": 93,
+        "logLine": 964,
+        "observed": "PASS",
+        "durationMs": 102.011208,
+        "exactLogLine": "2026-11-17T08:35:04.6157030Z ✔ generic UI read refuses a later fulfilled value exactly at the original deadline (102.011208ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 143,
+        "scope": "appended10",
+        "title": "generic UI read refuses a later fulfilled value after the original deadline",
+        "sourceRegistrationLine": 110,
+        "sourceLiteralLine": 98,
+        "logLine": 965,
+        "observed": "PASS",
+        "durationMs": 102.987,
+        "exactLogLine": "2026-11-17T08:35:04.7237200Z ✔ generic UI read refuses a later fulfilled value after the original deadline (102.987ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 144,
+        "scope": "appended10",
+        "title": "generic UI read does not admit or poll again after a late false observation",
+        "sourceRegistrationLine": 110,
+        "sourceLiteralLine": 103,
+        "logLine": 966,
+        "observed": "PASS",
+        "durationMs": 0.686,
+        "exactLogLine": "2026-11-17T08:35:04.7239480Z ✔ generic UI read does not admit or poll again after a late false observation (0.686ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 145,
+        "scope": "appended10",
+        "title": "generic UI read preserves a timely first value and its exact identity",
+        "sourceRegistrationLine": 125,
+        "sourceLiteralLine": 125,
+        "logLine": 967,
+        "observed": "PASS",
+        "durationMs": 0.576125,
+        "exactLogLine": "2026-11-17T08:35:04.7241440Z ✔ generic UI read preserves a timely first value and its exact identity (0.576125ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 146,
+        "scope": "appended10",
+        "title": "generic UI read preserves its original cadence and a timely later value",
+        "sourceRegistrationLine": 137,
+        "sourceLiteralLine": 137,
+        "logLine": 968,
+        "observed": "PASS",
+        "durationMs": 101.232708,
+        "exactLogLine": "2026-11-17T08:35:04.8235880Z ✔ generic UI read preserves its original cadence and a timely later value (101.232708ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 147,
+        "scope": "appended10",
+        "title": "generic UI read honors a supplied budget at its strict boundary",
+        "sourceRegistrationLine": 151,
+        "sourceLiteralLine": 151,
+        "logLine": 969,
+        "observed": "PASS",
+        "durationMs": 1.3245,
+        "exactLogLine": "2026-11-17T08:35:04.8236830Z ✔ generic UI read honors a supplied budget at its strict boundary (1.3245ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 148,
+        "scope": "appended10",
+        "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+        "sourceRegistrationLine": 168,
+        "sourceLiteralLine": 168,
+        "logLine": 970,
+        "observed": "PASS",
+        "durationMs": 204.465625,
+        "exactLogLine": "2026-11-17T08:35:05.0387100Z ✔ generic UI hover refuses a third stable point arriving at the original deadline (204.465625ms)",
+        "uniqueMatch": true
+      },
+      {
+        "index": 149,
+        "scope": "appended10",
+        "title": "generic UI hover preserves one movement after three timely stable points",
+        "sourceRegistrationLine": 185,
+        "sourceLiteralLine": 185,
+        "logLine": 971,
+        "observed": "PASS",
+        "durationMs": 206.427667,
+        "exactLogLine": "2026-11-17T08:35:05.2338870Z ✔ generic UI hover preserves one movement after three timely stable points (206.427667ms)",
+        "uniqueMatch": true
+      }
+    ],
+    "skippedRows": [
+      {
+        "line": 739,
+        "status": "skip",
+        "title": "Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder",
+        "durationMs": 0.072041,
+        "suffix": " # SKIP",
+        "exactLine": "2026-11-17T08:34:51.9361910Z ﹣ Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder (0.072041ms) # SKIP"
+      }
+    ],
+    "selectedCasesHaveNoSkip": true,
+    "allSelectedInSourceOrder": true,
+    "runtime": {
+      "node": "v24.21.0",
+      "npm": "11.19.0",
+      "pnpm": "11.22.0",
+      "platform": "darwin-arm64",
+      "nodeSetupLogLine": 299,
+      "npmSetupLogLine": 300,
+      "pnpmInstallLogLine": 700
+    },
+    "duplicateAvoidance": "Only the exact eight-file command at line711 through its summary at lines978–985 is counted. The subsequent seven-test invocation and repeated unit invocations in other GUI jobs are excluded. Selected149 is a subset of this combined239, not an additional total.",
+    "qualification": "Exact complete title inventory attribution inside the recorded eight-file Node24.21.0 invocation. This is not a separately executed one-file runner receipt, the pending Node24.22.1 standalone RED/GREEN venue, or acceptance of GUI receipt/screenshot/cleanup evidence."
+  },
+  "frontend": {
+    "command": "pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\"",
+    "scope": "The existing four safe frontend shards. Excluded live/native files remain outside these results. Recorded skipped files/cases remain skipped.",
+    "shardResults": [
+      {
+        "shard": 1,
+        "log": {
+          "bytes": 192534,
+          "sha256": "a0f004eeea9672fcd7f1e982ccff7987cd221893c77ff7f755b66500ae785e6d",
+          "gitBlob": "38d366b8d2a945f6103ea6b707c61ab0d40fa79a"
+        },
+        "files": {
+          "pass": 541,
+          "skip": 0,
+          "fail": 0,
+          "total": 541,
+          "line": 1498,
+          "text": "2026-11-17T08:29:56.8971192Z  Test Files  541 passed (541)"
+        },
+        "tests": {
+          "pass": 6225,
+          "skip": 6,
+          "fail": 0,
+          "total": 6231,
+          "line": 1499,
+          "text": "2026-11-17T08:29:56.8993570Z       Tests  6225 passed | 6 skipped (6231)"
+        },
+        "independentlyParsedFileCounts": {
+          "pass": 541,
+          "skip": 0,
+          "fail": 0,
+          "total": 541
+        },
+        "independentlySummedPerFileTests": {
+          "pass": 6225,
+          "skip": 6,
+          "total": 6231
+        },
+        "oneVitestInvocation": true,
+        "duplicatePaths": []
+      },
+      {
+        "shard": 2,
+        "log": {
+          "bytes": 199252,
+          "sha256": "22fbd4d1dc84ed5a1b8327da641705e1250c0aad6ded28eb523d55998de50196",
+          "gitBlob": "e88e698c36ffd97c6c6f5d702fee5a60789aca98"
+        },
+        "files": {
+          "pass": 539,
+          "skip": 2,
+          "fail": 0,
+          "total": 541,
+          "line": 1543,
+          "text": "2026-11-17T08:35:40.4314286Z  Test Files  539 passed | 2 skipped (541)"
+        },
+        "tests": {
+          "pass": 6744,
+          "skip": 18,
+          "fail": 0,
+          "total": 6762,
+          "line": 1544,
+          "text": "2026-11-17T08:35:40.4329851Z       Tests  6744 passed | 18 skipped (6762)"
+        },
+        "independentlyParsedFileCounts": {
+          "pass": 539,
+          "skip": 2,
+          "fail": 0,
+          "total": 541
+        },
+        "independentlySummedPerFileTests": {
+          "pass": 6744,
+          "skip": 18,
+          "total": 6762
+        },
+        "oneVitestInvocation": true,
+        "duplicatePaths": []
+      },
+      {
+        "shard": 3,
+        "log": {
+          "bytes": 188111,
+          "sha256": "2d0260688809cd9084f42a35e52e07d31e6d43ad84d5c2013fac1dd3e76ec400",
+          "gitBlob": "f56198135d4d1e415815173488dce1730df01e0d"
+        },
+        "files": {
+          "pass": 538,
+          "skip": 3,
+          "fail": 0,
+          "total": 541,
+          "line": 1466,
+          "text": "2026-11-17T08:54:29.2608942Z  Test Files  538 passed | 3 skipped (541)"
+        },
+        "tests": {
+          "pass": 6257,
+          "skip": 7,
+          "fail": 0,
+          "total": 6264,
+          "line": 1467,
+          "text": "2026-11-17T08:54:29.2621037Z       Tests  6257 passed | 7 skipped (6264)"
+        },
+        "independentlyParsedFileCounts": {
+          "pass": 538,
+          "skip": 3,
+          "fail": 0,
+          "total": 541
+        },
+        "independentlySummedPerFileTests": {
+          "pass": 6257,
+          "skip": 7,
+          "total": 6264
+        },
+        "oneVitestInvocation": true,
+        "duplicatePaths": []
+      },
+      {
+        "shard": 4,
+        "log": {
+          "bytes": 213295,
+          "sha256": "9b9ddd4c587827290feb49f2725cc87cc89b2825a53490453d97d2bd2bcd7797",
+          "gitBlob": "036ba534633dc42e46a7a70190791cea9f8a4af9"
+        },
+        "files": {
+          "pass": 537,
+          "skip": 2,
+          "fail": 0,
+          "total": 539,
+          "line": 1619,
+          "text": "2026-11-17T08:28:57.9660699Z  Test Files  537 passed | 2 skipped (539)"
+        },
+        "tests": {
+          "pass": 6618,
+          "skip": 7,
+          "fail": 0,
+          "total": 6625,
+          "line": 1620,
+          "text": "2026-11-17T08:28:57.9690805Z       Tests  6618 passed | 7 skipped (6625)"
+        },
+        "independentlyParsedFileCounts": {
+          "pass": 537,
+          "skip": 2,
+          "fail": 0,
+          "total": 539
+        },
+        "independentlySummedPerFileTests": {
+          "pass": 6618,
+          "skip": 7,
+          "total": 6625
+        },
+        "oneVitestInvocation": true,
+        "duplicatePaths": []
+      }
+    ],
+    "total": {
+      "files": {
+        "pass": 2155,
+        "skip": 7,
+        "fail": 0,
+        "total": 2162
+      },
+      "tests": {
+        "pass": 25844,
+        "skip": 38,
+        "fail": 0,
+        "total": 25882
+      }
+    },
+    "versionsAndSourceEvidence": [
+      {
+        "shard": 1,
+        "workspaceNode": "v26.12.1",
+        "capturedHostNode": "v24.21.0",
+        "pnpm": "11.22.0",
+        "vitest": "3.2.6",
+        "versionRows": [
+          {
+            "line": 298,
+            "text": "2026-11-17T08:23:53.6530334Z node: v24.21.0"
+          },
+          {
+            "line": 337,
+            "text": "2026-11-17T08:23:57.7063693Z node: v26.12.1"
+          },
+          {
+            "line": 767,
+            "text": "2026-11-17T08:24:39.9997995Z ../task-change-ledger                    | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+          },
+          {
+            "line": 785,
+            "text": "2026-11-17T08:24:42.8829455Z   AGENT_BACKEND_TEST_NODE: /opt/hostedtoolcache/node/24.21.0/x64/bin/node"
+          }
+        ],
+        "vitestRun": {
+          "line": 788,
+          "text": "2026-11-17T08:24:43.5255802Z  RUN  v3.2.6 /home/runner/work/agent-teams-ai/agent-teams-ai",
+          "content": "RUN  v3.2.6 /home/runner/work/agent-teams-ai/agent-teams-ai"
+        },
+        "sourceCheckout": {
+          "line": 219,
+          "text": "2026-11-17T08:23:45.5722551Z 9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+        },
+        "shardEnvironment": {
+          "line": 783,
+          "text": "2026-11-17T08:24:42.8828885Z   HOST_TEST_SHARD: 1"
+        },
+        "exactCommandLines": [
+          {
+            "line": 774,
+            "text": "2026-11-17T08:24:42.8779658Z pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" \\"
+          },
+          {
+            "line": 775,
+            "text": "2026-11-17T08:24:42.8780101Z   --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' \\"
+          },
+          {
+            "line": 776,
+            "text": "2026-11-17T08:24:42.8780897Z   --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" \\"
+          },
+          {
+            "line": 777,
+            "text": "2026-11-17T08:24:42.8781379Z   2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\""
+          }
+        ],
+        "passed": true
+      },
+      {
+        "shard": 2,
+        "workspaceNode": "v26.12.1",
+        "capturedHostNode": "v24.21.0",
+        "pnpm": "11.22.0",
+        "vitest": "3.2.6",
+        "versionRows": [
+          {
+            "line": 295,
+            "text": "2026-11-17T08:30:14.1141125Z node: v24.21.0"
+          },
+          {
+            "line": 334,
+            "text": "2026-11-17T08:30:18.7360529Z node: v26.12.1"
+          },
+          {
+            "line": 763,
+            "text": "2026-11-17T08:30:58.9767270Z ../task-change-ledger                    | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+          },
+          {
+            "line": 781,
+            "text": "2026-11-17T08:31:01.4306172Z   AGENT_BACKEND_TEST_NODE: /opt/hostedtoolcache/node/24.21.0/x64/bin/node"
+          }
+        ],
+        "vitestRun": {
+          "line": 784,
+          "text": "2026-11-17T08:31:02.0004382Z  RUN  v3.2.6 /home/runner/work/agent-teams-ai/agent-teams-ai",
+          "content": "RUN  v3.2.6 /home/runner/work/agent-teams-ai/agent-teams-ai"
+        },
+        "sourceCheckout": {
+          "line": 216,
+          "text": "2026-11-17T08:30:05.1721648Z 9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+        },
+        "shardEnvironment": {
+          "line": 779,
+          "text": "2026-11-17T08:31:01.4305776Z   HOST_TEST_SHARD: 2"
+        },
+        "exactCommandLines": [
+          {
+            "line": 770,
+            "text": "2026-11-17T08:31:01.4260717Z pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" \\"
+          },
+          {
+            "line": 771,
+            "text": "2026-11-17T08:31:01.4261069Z   --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' \\"
+          },
+          {
+            "line": 772,
+            "text": "2026-11-17T08:31:01.4261511Z   --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" \\"
+          },
+          {
+            "line": 773,
+            "text": "2026-11-17T08:31:01.4262190Z   2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\""
+          }
+        ],
+        "passed": true
+      },
+      {
+        "shard": 3,
+        "workspaceNode": "v26.12.1",
+        "capturedHostNode": "v24.21.0",
+        "pnpm": "11.22.0",
+        "vitest": "3.2.6",
+        "versionRows": [
+          {
+            "line": 297,
+            "text": "2026-11-17T08:48:30.1153141Z node: v24.21.0"
+          },
+          {
+            "line": 336,
+            "text": "2026-11-17T08:48:34.2807303Z node: v26.12.1"
+          },
+          {
+            "line": 765,
+            "text": "2026-11-17T08:49:22.4418514Z ../task-change-ledger                    | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+          },
+          {
+            "line": 783,
+            "text": "2026-11-17T08:49:25.0534969Z   AGENT_BACKEND_TEST_NODE: /opt/hostedtoolcache/node/24.21.0/x64/bin/node"
+          }
+        ],
+        "vitestRun": {
+          "line": 786,
+          "text": "2026-11-17T08:49:25.6697584Z  RUN  v3.2.6 /home/runner/work/agent-teams-ai/agent-teams-ai",
+          "content": "RUN  v3.2.6 /home/runner/work/agent-teams-ai/agent-teams-ai"
+        },
+        "sourceCheckout": {
+          "line": 218,
+          "text": "2026-11-17T08:48:20.2713830Z 9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+        },
+        "shardEnvironment": {
+          "line": 781,
+          "text": "2026-11-17T08:49:25.0534427Z   HOST_TEST_SHARD: 3"
+        },
+        "exactCommandLines": [
+          {
+            "line": 772,
+            "text": "2026-11-17T08:49:25.0485485Z pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" \\"
+          },
+          {
+            "line": 773,
+            "text": "2026-11-17T08:49:25.0485933Z   --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' \\"
+          },
+          {
+            "line": 774,
+            "text": "2026-11-17T08:49:25.0486612Z   --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" \\"
+          },
+          {
+            "line": 775,
+            "text": "2026-11-17T08:49:25.0487317Z   2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\""
+          }
+        ],
+        "passed": true
+      },
+      {
+        "shard": 4,
+        "workspaceNode": "v26.12.1",
+        "capturedHostNode": "v24.21.0",
+        "pnpm": "11.22.0",
+        "vitest": "3.2.6",
+        "versionRows": [
+          {
+            "line": 305,
+            "text": "2026-11-17T08:21:34.3673146Z node: v24.21.0"
+          },
+          {
+            "line": 344,
+            "text": "2026-11-17T08:21:38.9499178Z node: v26.12.1"
+          },
+          {
+            "line": 772,
+            "text": "2026-11-17T08:22:39.0435082Z ../task-change-ledger                    | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+          },
+          {
+            "line": 790,
+            "text": "2026-11-17T08:22:41.9591306Z   AGENT_BACKEND_TEST_NODE: /opt/hostedtoolcache/node/24.21.0/x64/bin/node"
+          }
+        ],
+        "vitestRun": {
+          "line": 793,
+          "text": "2026-11-17T08:22:42.6811301Z  RUN  v3.2.6 /home/runner/work/agent-teams-ai/agent-teams-ai",
+          "content": "RUN  v3.2.6 /home/runner/work/agent-teams-ai/agent-teams-ai"
+        },
+        "sourceCheckout": {
+          "line": 226,
+          "text": "2026-11-17T08:21:21.5286246Z 9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+        },
+        "shardEnvironment": {
+          "line": 788,
+          "text": "2026-11-17T08:22:41.9590197Z   HOST_TEST_SHARD: 4"
+        },
+        "exactCommandLines": [
+          {
+            "line": 779,
+            "text": "2026-11-17T08:22:41.9551907Z pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" \\"
+          },
+          {
+            "line": 780,
+            "text": "2026-11-17T08:22:41.9552578Z   --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' \\"
+          },
+          {
+            "line": 781,
+            "text": "2026-11-17T08:22:41.9553335Z   --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" \\"
+          },
+          {
+            "line": 782,
+            "text": "2026-11-17T08:22:41.9553989Z   2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\""
+          }
+        ],
+        "passed": true
+      }
+    ],
+    "selectedFileOutcomes": [
+      {
+        "shard": 1,
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "status": "pass",
+        "totalTests": 43,
+        "skipTests": 0,
+        "line": 821,
+        "text": "2026-11-17T08:25:17.2043738Z  ✓ test/renderer/utils/teamModelAvailability.test.ts (43 tests) 44ms"
+      },
+      {
+        "shard": 2,
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "status": "pass",
+        "totalTests": 85,
+        "skipTests": 0,
+        "line": 793,
+        "text": "2026-11-17T08:31:19.8673084Z  ✓ test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts (85 tests) 2891ms"
+      }
+    ],
+    "skippedWholeFiles": [
+      {
+        "shard": 2,
+        "path": "test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+        "status": "skip",
+        "totalTests": 2,
+        "skipTests": 2,
+        "line": 1028
+      },
+      {
+        "shard": 2,
+        "path": "test/main/utils/childProcess.windows.test.ts",
+        "status": "skip",
+        "totalTests": 5,
+        "skipTests": 5,
+        "line": 1516
+      },
+      {
+        "shard": 3,
+        "path": "test/main/services/team/OpenCodeReviewPickup.live.tmp.test.ts",
+        "status": "skip",
+        "totalTests": 1,
+        "skipTests": 1,
+        "line": 990
+      },
+      {
+        "shard": 3,
+        "path": "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.ollama-live.test.ts",
+        "status": "skip",
+        "totalTests": 1,
+        "skipTests": 1,
+        "line": 1231
+      },
+      {
+        "shard": 3,
+        "path": "test/main/utils/windowsProcessProbe.integration.test.ts",
+        "status": "skip",
+        "totalTests": 1,
+        "skipTests": 1,
+        "line": 1460
+      },
+      {
+        "shard": 4,
+        "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+        "status": "skip",
+        "totalTests": 6,
+        "skipTests": 6,
+        "line": 1594
+      },
+      {
+        "shard": 4,
+        "path": "test/scripts/fixtures/opencodeProofBoundary.test.ts",
+        "status": "skip",
+        "totalTests": 1,
+        "skipTests": 1,
+        "line": 1612
+      }
+    ],
+    "completeDerivedFileCensus": {
+      "rows": 2162,
+      "uniquePaths": 2162,
+      "serializedBytes": 318072,
+      "sha256": "faf96ad6d0476c5a6b24f1f5bdef4c3529d0c7ead046011105437a6a30edeb50",
+      "derivation": "From all four full logs in shard order and line order, parse each sole Vitest result line into {shard,path,status,totalTests,skipTests,line}; JSON.stringify(array), no trailing LF. This is a derived checksum, not a separately retained Git blob."
+    },
+    "noOverlapProof": "All2162 file-result paths are unique across the four shards. Each log has one Vitest command, one RUN banner and one terminal file/test summary; the complete file rows independently reconcile each summary.",
+    "totalsPolicy": "25,844 passed and38 skipped are computed only from these four shard summaries and independently from their distinct file rows. Neither the149 selected cases nor239 combined installer cases are added to that total."
+  },
+  "retainedMetadata": {
+    "packet": {
+      "bytes": 786022,
+      "sha256": "54a156cdb2f3d58d5bfc6a8a3894d5b1b01dad582f323b9ea38e2a0038167afa",
+      "gitBlob": "e37311346018c41fc8f622efdd4a576f030af4d7"
+    },
+    "packetCompleteReadAndHashVerified": true,
+    "rawApiBodies": 25,
+    "rawApiBytes": 669507,
+    "completeRawIdentityJoins": [
+      {
+        "observation": 7,
+        "kind": "attempt",
+        "runId": 44042341149,
+        "identity": {
+          "bytes": 13829,
+          "sha256": "06806abd5c49853b998898e168799e51463fcebaf90e12c2f28490e420659609",
+          "gitBlob": "78ae54870cab4fbe746644b28afb405ed4eea822"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 7,
+        "kind": "jobs",
+        "runId": 44042341149,
+        "identity": {
+          "bytes": 2995,
+          "sha256": "5167aeaabb01e51af53a93bbdb09a54897efc2607f40d008b560e12c32726d9f",
+          "gitBlob": "38f1f47150e6432c0eeb7ce340e3e6e3a97f2287"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 7,
+        "kind": "attempt",
+        "runId": 44042341284,
+        "identity": {
+          "bytes": 13824,
+          "sha256": "34ab99d1cc28db10cf5125225b6cbe7a9e61fbee808ae416bba9d103d4e00ae3",
+          "gitBlob": "6664b5ac91b7b77bb2ea1fc207b7e62660e8c30e"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 7,
+        "kind": "jobs",
+        "runId": 44042341284,
+        "identity": {
+          "bytes": 43378,
+          "sha256": "449e5b5610c883cb1da724ecd39c5f8e25dafaf8d4ff8efd380f72cf5d4313ae",
+          "gitBlob": "82335774cf673563c4e4f40e2638312269e03fff"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 7,
+        "kind": "attempt",
+        "runId": 44042341120,
+        "identity": {
+          "bytes": 13853,
+          "sha256": "dfea5c1dddb1451a263cfe40e09ba2e19ec6f10b8d193795745e72492403f47a",
+          "gitBlob": "81609f53b60baca57d91e43c273f13406bf2cdf9"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 7,
+        "kind": "jobs",
+        "runId": 44042341120,
+        "identity": {
+          "bytes": 47574,
+          "sha256": "261257818ef5da56301a432e272ac00dd8aa4ff1b3c4355c782f9603e0dd04d1",
+          "gitBlob": "cec859efc7c0164690fab40571e50ab553074824"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 7,
+        "kind": "attempt",
+        "runId": 44042341241,
+        "identity": {
+          "bytes": 14106,
+          "sha256": "b1e036fc85e7368dc7aaba928363f6ebe8effadd18cc471604c6ff8eaae4ca18",
+          "gitBlob": "82698d7c662b0852b47663c584e12c68d3ec0da9"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 7,
+        "kind": "jobs",
+        "runId": 44042341241,
+        "identity": {
+          "bytes": 18708,
+          "sha256": "c7b4266bc095167f09a3af5ba3f0192cf3fae870f85a8c5b0dad6b272e552f0a",
+          "gitBlob": "069f0ce0668f3155c49391d4d139e707fc64b371"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 7,
+        "kind": "attempt",
+        "runId": 44042341273,
+        "identity": {
+          "bytes": 13826,
+          "sha256": "ad2c32f65712b9584b6d7f1ab9f05e3cd8aed18f0e8fdb558738b75d8d4e8921",
+          "gitBlob": "10957625a0237b166ba2ef34b9a114f6016b2147"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 7,
+        "kind": "jobs",
+        "runId": 44042341273,
+        "identity": {
+          "bytes": 55813,
+          "sha256": "02feb521e5600951c3b88230e2d8cd5809bf1f7666ad7f4effb379d9d72b0602",
+          "gitBlob": "7295c5534b75e26a2b69c1ae833f2fd95cb5051a"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 8,
+        "kind": "attempt",
+        "runId": 44042341284,
+        "identity": {
+          "bytes": 13824,
+          "sha256": "34ab99d1cc28db10cf5125225b6cbe7a9e61fbee808ae416bba9d103d4e00ae3",
+          "gitBlob": "6664b5ac91b7b77bb2ea1fc207b7e62660e8c30e"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 8,
+        "kind": "jobs",
+        "runId": 44042341284,
+        "identity": {
+          "bytes": 45609,
+          "sha256": "aed61ac16c128fa635038a7827c1a7c3bd94b62a37051b7edd30b19038b6be6f",
+          "gitBlob": "a3d178289b4da3511191ecd566f4d97bf8a7f7df"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 8,
+        "kind": "attempt",
+        "runId": 44042341120,
+        "identity": {
+          "bytes": 13861,
+          "sha256": "33f7980f0b3d6dd8243b77e17fdbb83ac64bce2447dfcd4441777dc134508e46",
+          "gitBlob": "038804940d5d172d117345ca5641e4475eeef000"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 8,
+        "kind": "jobs",
+        "runId": 44042341120,
+        "identity": {
+          "bytes": 51360,
+          "sha256": "a663d15a785506684ea0444b2e11f643ef52e5984a6d482079e60e248e7b517a",
+          "gitBlob": "021603e8b522ee157599c9aa2f55a635ef6e9426"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 8,
+        "kind": "attempt",
+        "runId": 44042341241,
+        "identity": {
+          "bytes": 14114,
+          "sha256": "5f4f375315ae6e5c27bd15d32c1d229edd9f36ea079cee08c9c802aa84108280",
+          "gitBlob": "55985928f7ae97ba8920061fbdd753260cba0195"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 8,
+        "kind": "jobs",
+        "runId": 44042341241,
+        "identity": {
+          "bytes": 22959,
+          "sha256": "515b3a6954847f39f14a574c8406a1980062925cccbb1ad88db61d8fa2563665",
+          "gitBlob": "e00d6e6075a609b3232529d164097c7aff78f261"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 8,
+        "kind": "attempt",
+        "runId": 44042341273,
+        "identity": {
+          "bytes": 13826,
+          "sha256": "ad2c32f65712b9584b6d7f1ab9f05e3cd8aed18f0e8fdb558738b75d8d4e8921",
+          "gitBlob": "10957625a0237b166ba2ef34b9a114f6016b2147"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 8,
+        "kind": "jobs",
+        "runId": 44042341273,
+        "identity": {
+          "bytes": 82609,
+          "sha256": "268cc94488eecb0ad030ff444be5f344f343170b196a074396c16cd4efb2c249",
+          "gitBlob": "087ced8c978a590a0d5cd4bf3394900c6247550d"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 9,
+        "kind": "attempt",
+        "runId": 44042341284,
+        "identity": {
+          "bytes": 13824,
+          "sha256": "34ab99d1cc28db10cf5125225b6cbe7a9e61fbee808ae416bba9d103d4e00ae3",
+          "gitBlob": "6664b5ac91b7b77bb2ea1fc207b7e62660e8c30e"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 9,
+        "kind": "jobs",
+        "runId": 44042341284,
+        "identity": {
+          "bytes": 47616,
+          "sha256": "ae644ca29d4526ab1e8377f4fd98800d00e7f9b50e910aa41c40f492902fe4f7",
+          "gitBlob": "3fa3ad3689456b8a869f697282907bf3afcfe1ef"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 9,
+        "kind": "attempt",
+        "runId": 44042341273,
+        "identity": {
+          "bytes": 13826,
+          "sha256": "ad2c32f65712b9584b6d7f1ab9f05e3cd8aed18f0e8fdb558738b75d8d4e8921",
+          "gitBlob": "10957625a0237b166ba2ef34b9a114f6016b2147"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "observation": 9,
+        "kind": "jobs",
+        "runId": 44042341273,
+        "identity": {
+          "bytes": 92082,
+          "sha256": "0f1a9456a4b4b07b4cebeddb9520692cfc01234c748725351e412a95af39fc68",
+          "gitBlob": "d6d54b2cf8317881286aa9853a5abff81d679cae"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "kind": "terminal-artifact-index",
+        "runId": 44042341149,
+        "identity": {
+          "bytes": 32,
+          "sha256": "244563f989470892c537c9a4622920af0d228ee4528f7d00c64a06d6cd95856c",
+          "gitBlob": "ccd036f15290ec2e42695f742d9edf63354be932"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "kind": "terminal-artifact-index",
+        "runId": 44042341120,
+        "identity": {
+          "bytes": 6027,
+          "sha256": "d546ce4767a5d559a2e35ee4019208a17ba0ccd0e592852701769b5b4424de09",
+          "gitBlob": "00aae684333485ae40fa2a9a59e44667f14af261"
+        },
+        "passed": true,
+        "complete": true
+      },
+      {
+        "kind": "terminal-artifact-index",
+        "runId": 44042341241,
+        "identity": {
+          "bytes": 32,
+          "sha256": "244563f989470892c537c9a4622920af0d228ee4528f7d00c64a06d6cd95856c",
+          "gitBlob": "ccd036f15290ec2e42695f742d9edf63354be932"
+        },
+        "passed": true,
+        "complete": true
+      }
+    ],
+    "hostAttemptJoins": [
+      {
+        "observation": 7,
+        "run": 44042341273,
+        "attempt": 1,
+        "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "event": "pull_request",
+        "repository": "777genius/agent-teams-ai",
+        "pr": 1219,
+        "prHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "prBase": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "status": "queued",
+        "conclusion": null,
+        "passed": true
+      },
+      {
+        "observation": 8,
+        "run": 44042341273,
+        "attempt": 1,
+        "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "event": "pull_request",
+        "repository": "777genius/agent-teams-ai",
+        "pr": 1219,
+        "prHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "prBase": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "status": "queued",
+        "conclusion": null,
+        "passed": true
+      },
+      {
+        "observation": 9,
+        "run": 44042341273,
+        "attempt": 1,
+        "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "event": "pull_request",
+        "repository": "777genius/agent-teams-ai",
+        "pr": 1219,
+        "prHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "prBase": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "status": "queued",
+        "conclusion": null,
+        "passed": true
+      }
+    ],
+    "selectedCompletedJobs": [
+      {
+        "role": "1",
+        "jobId": 133899667994,
+        "runId": 44042341273,
+        "observations": [
+          {
+            "index": 7,
+            "name": "Offline frontend tests (1/4)",
+            "status": "completed",
+            "conclusion": "success",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "attempt": 1,
+            "startedAt": "2026-11-17T08:23:28Z",
+            "completedAt": "2026-11-17T08:30:03Z",
+            "completePage": true,
+            "selectedSteps": [
+              {
+                "number": 5,
+                "name": "Verify source and capture the original Host test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 6,
+                "name": "Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 7,
+                "name": "Prepare original test prerequisites",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 8,
+                "name": "Run the complete safe frontend shard",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 15,
+                "name": "Post Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ],
+            "passed": true
+          },
+          {
+            "index": 8,
+            "name": "Offline frontend tests (1/4)",
+            "status": "completed",
+            "conclusion": "success",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "attempt": 1,
+            "startedAt": "2026-11-17T08:23:28Z",
+            "completedAt": "2026-11-17T08:30:03Z",
+            "completePage": true,
+            "selectedSteps": [
+              {
+                "number": 5,
+                "name": "Verify source and capture the original Host test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 6,
+                "name": "Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 7,
+                "name": "Prepare original test prerequisites",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 8,
+                "name": "Run the complete safe frontend shard",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 15,
+                "name": "Post Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ],
+            "passed": true
+          },
+          {
+            "index": 9,
+            "name": "Offline frontend tests (1/4)",
+            "status": "completed",
+            "conclusion": "success",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "attempt": 1,
+            "startedAt": "2026-11-17T08:23:28Z",
+            "completedAt": "2026-11-17T08:30:03Z",
+            "completePage": true,
+            "selectedSteps": [
+              {
+                "number": 5,
+                "name": "Verify source and capture the original Host test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 6,
+                "name": "Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 7,
+                "name": "Prepare original test prerequisites",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 8,
+                "name": "Run the complete safe frontend shard",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 15,
+                "name": "Post Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ],
+            "passed": true
+          }
+        ]
+      },
+      {
+        "role": "2",
+        "jobId": 133899667978,
+        "runId": 44042341273,
+        "observations": [
+          {
+            "index": 7,
+            "name": "Offline frontend tests (2/4)",
+            "status": "completed",
+            "conclusion": "success",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "attempt": 1,
+            "startedAt": "2026-11-17T08:29:50Z",
+            "completedAt": "2026-11-17T08:35:46Z",
+            "completePage": true,
+            "selectedSteps": [
+              {
+                "number": 5,
+                "name": "Verify source and capture the original Host test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 6,
+                "name": "Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 7,
+                "name": "Prepare original test prerequisites",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 8,
+                "name": "Run the complete safe frontend shard",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 15,
+                "name": "Post Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ],
+            "passed": true
+          },
+          {
+            "index": 8,
+            "name": "Offline frontend tests (2/4)",
+            "status": "completed",
+            "conclusion": "success",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "attempt": 1,
+            "startedAt": "2026-11-17T08:29:50Z",
+            "completedAt": "2026-11-17T08:35:46Z",
+            "completePage": true,
+            "selectedSteps": [
+              {
+                "number": 5,
+                "name": "Verify source and capture the original Host test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 6,
+                "name": "Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 7,
+                "name": "Prepare original test prerequisites",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 8,
+                "name": "Run the complete safe frontend shard",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 15,
+                "name": "Post Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ],
+            "passed": true
+          },
+          {
+            "index": 9,
+            "name": "Offline frontend tests (2/4)",
+            "status": "completed",
+            "conclusion": "success",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "attempt": 1,
+            "startedAt": "2026-11-17T08:29:50Z",
+            "completedAt": "2026-11-17T08:35:46Z",
+            "completePage": true,
+            "selectedSteps": [
+              {
+                "number": 5,
+                "name": "Verify source and capture the original Host test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 6,
+                "name": "Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 7,
+                "name": "Prepare original test prerequisites",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 8,
+                "name": "Run the complete safe frontend shard",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 15,
+                "name": "Post Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ],
+            "passed": true
+          }
+        ]
+      },
+      {
+        "role": "3",
+        "jobId": 133899668112,
+        "runId": 44042341273,
+        "observations": [
+          {
+            "index": 7,
+            "name": "Offline frontend tests (3/4)",
+            "status": "completed",
+            "conclusion": "success",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "attempt": 1,
+            "startedAt": "2026-11-17T08:48:01Z",
+            "completedAt": "2026-11-17T08:54:36Z",
+            "completePage": true,
+            "selectedSteps": [
+              {
+                "number": 5,
+                "name": "Verify source and capture the original Host test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 6,
+                "name": "Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 7,
+                "name": "Prepare original test prerequisites",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 8,
+                "name": "Run the complete safe frontend shard",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 15,
+                "name": "Post Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ],
+            "passed": true
+          },
+          {
+            "index": 8,
+            "name": "Offline frontend tests (3/4)",
+            "status": "completed",
+            "conclusion": "success",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "attempt": 1,
+            "startedAt": "2026-11-17T08:48:01Z",
+            "completedAt": "2026-11-17T08:54:36Z",
+            "completePage": true,
+            "selectedSteps": [
+              {
+                "number": 5,
+                "name": "Verify source and capture the original Host test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 6,
+                "name": "Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 7,
+                "name": "Prepare original test prerequisites",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 8,
+                "name": "Run the complete safe frontend shard",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 15,
+                "name": "Post Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ],
+            "passed": true
+          },
+          {
+            "index": 9,
+            "name": "Offline frontend tests (3/4)",
+            "status": "completed",
+            "conclusion": "success",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "attempt": 1,
+            "startedAt": "2026-11-17T08:48:01Z",
+            "completedAt": "2026-11-17T08:54:36Z",
+            "completePage": true,
+            "selectedSteps": [
+              {
+                "number": 5,
+                "name": "Verify source and capture the original Host test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 6,
+                "name": "Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 7,
+                "name": "Prepare original test prerequisites",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 8,
+                "name": "Run the complete safe frontend shard",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 15,
+                "name": "Post Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ],
+            "passed": true
+          }
+        ]
+      },
+      {
+        "role": "4",
+        "jobId": 133899667641,
+        "runId": 44042341273,
+        "observations": [
+          {
+            "index": 7,
+            "name": "Offline frontend tests (4/4)",
+            "status": "completed",
+            "conclusion": "success",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "attempt": 1,
+            "startedAt": "2026-11-17T08:21:06Z",
+            "completedAt": "2026-11-17T08:29:03Z",
+            "completePage": true,
+            "selectedSteps": [
+              {
+                "number": 5,
+                "name": "Verify source and capture the original Host test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 6,
+                "name": "Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 7,
+                "name": "Prepare original test prerequisites",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 8,
+                "name": "Run the complete safe frontend shard",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 15,
+                "name": "Post Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ],
+            "passed": true
+          },
+          {
+            "index": 8,
+            "name": "Offline frontend tests (4/4)",
+            "status": "completed",
+            "conclusion": "success",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "attempt": 1,
+            "startedAt": "2026-11-17T08:21:06Z",
+            "completedAt": "2026-11-17T08:29:03Z",
+            "completePage": true,
+            "selectedSteps": [
+              {
+                "number": 5,
+                "name": "Verify source and capture the original Host test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 6,
+                "name": "Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 7,
+                "name": "Prepare original test prerequisites",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 8,
+                "name": "Run the complete safe frontend shard",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 15,
+                "name": "Post Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ],
+            "passed": true
+          },
+          {
+            "index": 9,
+            "name": "Offline frontend tests (4/4)",
+            "status": "completed",
+            "conclusion": "success",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "attempt": 1,
+            "startedAt": "2026-11-17T08:21:06Z",
+            "completedAt": "2026-11-17T08:29:03Z",
+            "completePage": true,
+            "selectedSteps": [
+              {
+                "number": 5,
+                "name": "Verify source and capture the original Host test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 6,
+                "name": "Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 7,
+                "name": "Prepare original test prerequisites",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 8,
+                "name": "Run the complete safe frontend shard",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 15,
+                "name": "Post Setup the original workspace test runtime",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ],
+            "passed": true
+          }
+        ]
+      },
+      {
+        "role": "installer",
+        "jobId": 133899668455,
+        "runId": 44042341273,
+        "observations": [
+          {
+            "index": 7,
+            "name": "Offline Host Desktop (darwin-arm64, installer)",
+            "status": "completed",
+            "conclusion": "success",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "attempt": 1,
+            "startedAt": "2026-11-17T08:32:09Z",
+            "completedAt": "2026-11-17T08:39:42Z",
+            "completePage": true,
+            "selectedSteps": [
+              {
+                "number": 5,
+                "name": "Verify original checkout and runner tuple",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 8,
+                "name": "Build existing Desktop prerequisites and verify admission",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ],
+            "passed": true
+          },
+          {
+            "index": 8,
+            "name": "Offline Host Desktop (darwin-arm64, installer)",
+            "status": "completed",
+            "conclusion": "success",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "attempt": 1,
+            "startedAt": "2026-11-17T08:32:09Z",
+            "completedAt": "2026-11-17T08:39:42Z",
+            "completePage": true,
+            "selectedSteps": [
+              {
+                "number": 5,
+                "name": "Verify original checkout and runner tuple",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 8,
+                "name": "Build existing Desktop prerequisites and verify admission",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ],
+            "passed": true
+          },
+          {
+            "index": 9,
+            "name": "Offline Host Desktop (darwin-arm64, installer)",
+            "status": "completed",
+            "conclusion": "success",
+            "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+            "branch": "ci/frontend-parity-c714-20261117-2-head",
+            "attempt": 1,
+            "startedAt": "2026-11-17T08:32:09Z",
+            "completedAt": "2026-11-17T08:39:42Z",
+            "completePage": true,
+            "selectedSteps": [
+              {
+                "number": 5,
+                "name": "Verify original checkout and runner tuple",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 8,
+                "name": "Build existing Desktop prerequisites and verify admission",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ],
+            "passed": true
+          }
+        ]
+      }
+    ],
+    "firstObservationWithAllFourCompleted": "2026-11-17 08:54:38 UTC",
+    "lastIncludedObservation": "2026-11-17 09:24:52 UTC",
+    "unrelatedPacketJobsAndLogs": "Packet full bytes are read/hash-verified; no qualification is asserted for its other12 new completed-job logs, which are outside this five-log task.",
+    "overallHostRun": "The retained attempt metadata still has status queued and conclusion null. Successful selected jobs do not make the entire Host workflow or all E2E successful.",
+    "liveReadsPerformed": false
+  },
+  "checks": [
+    {
+      "id": "L01",
+      "name": "Five complete selected logs read and rehashed",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "frontendBytes": 793192,
+        "installerBytes": 196149,
+        "totalBytes": 989341
+      }
+    },
+    {
+      "id": "L02",
+      "name": "Fixed9d source leaf identities joined",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "paths": [
+          "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "test/renderer/utils/teamModelAvailability.test.ts",
+          "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+        ]
+      }
+    },
+    {
+      "id": "L03",
+      "name": "Complete original139 inventory source is exact",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "source": {
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        "acceptedInventory": {
+          "bytes": 49935,
+          "sha256": "5b106b029096b02b288db395cdb05c8f367cd16444c2f015e79c9f28098f9134",
+          "gitBlob": "a3660453344deb2c4e91cdc8e951c44f9d501817"
+        }
+      }
+    },
+    {
+      "id": "L04",
+      "name": "Inventory has139 unique names matching prior accepted proof",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "priorProof": {
+          "bytes": 58426,
+          "sha256": "bd1ca451e3826f61eba8e4c5b8dced9fb4ce7a2ae51d5a0fbf3073ca7e229ff6",
+          "gitBlob": "b0d04555b7e8fd542348fe4a6c6ffad97b0773c4"
+        }
+      }
+    },
+    {
+      "id": "L05",
+      "name": "All139 names map to exact source registration expressions",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "registrationExpressions": 70,
+        "method": "Pure string/regular-expression correspondence of literal, concatenated, conditional and template title expressions to the accepted expanded inventory. No target evaluation."
+      }
+    },
+    {
+      "id": "L06",
+      "name": "Whole149 preserves complete original139 prefix",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "originalBytes": 164965,
+        "currentBytes": 165022
+      }
+    },
+    {
+      "id": "L07",
+      "name": "Only exact awaited57-byte import extends the original",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "suffix": "\nawait import('./desktop-ui-controls-deadline.test.ts');\n",
+        "derivedIdentity": {
+          "bytes": 57,
+          "sha256": "9fbc3742dd5c829044eab669188fb399343799621bf3f264f6a4219cb7f97683",
+          "gitBlob": "9f66261ff992a66612a6b6baee152e5ca20ab631"
+        }
+      }
+    },
+    {
+      "id": "L08",
+      "name": "Exact appended fixture inventory has10 names",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "fixture": {
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        },
+        "fiveScenarioCasesPlusFiveDirectCases": true
+      }
+    },
+    {
+      "id": "L09",
+      "name": "Eight-file command boundary identified exactly",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "startLine": 711,
+        "summaryStartLine": 978,
+        "subsequentUnitInvocationsExcluded": true
+      }
+    },
+    {
+      "id": "L10",
+      "name": "All149 selected case names occur once as PASS",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "original139": 139,
+        "appended10": 10,
+        "missing": 0,
+        "duplicate": 0,
+        "failed": 0,
+        "skipped": 0,
+        "firstLine": 821,
+        "lastLine": 971
+      }
+    },
+    {
+      "id": "L11",
+      "name": "Complete combined239 census reconciles",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "summary": {
+          "tests": 239,
+          "suites": 0,
+          "pass": 238,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 1,
+          "todo": 0,
+          "duration_ms": 14522.780708
+        }
+      }
+    },
+    {
+      "id": "L12",
+      "name": "One combined skip is unrelated to selected149",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "skip": {
+          "line": 739,
+          "status": "skip",
+          "title": "Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder",
+          "durationMs": 0.072041,
+          "suffix": " # SKIP",
+          "exactLine": "2026-11-17T08:34:51.9361910Z ﹣ Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder (0.072041ms) # SKIP"
+        }
+      }
+    },
+    {
+      "id": "L13",
+      "name": "Selected149 runtime attribution is Node24.21.0",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "node": "v24.21.0",
+        "platform": "darwin-arm64",
+        "job": 133899668455,
+        "scope": "Exact combined command; no standalone24.22.1 result."
+      }
+    },
+    {
+      "id": "L14",
+      "name": "Exactly four distinct frontend shard invocations",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "shards": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "oneVitestStartCommandAndFinalSummaryPerLog": true
+      }
+    },
+    {
+      "id": "L15",
+      "name": "Every frontend per-file census matches final summary",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "fullFileResultRows": 2162
+      }
+    },
+    {
+      "id": "L16",
+      "name": "No repeated test-file path across four frontend shards",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "uniqueFiles": 2162,
+        "duplicates": []
+      }
+    },
+    {
+      "id": "L17",
+      "name": "Frontend tests total25844pass38skip0fail",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "totals": {
+          "pass": 25844,
+          "skip": 38,
+          "fail": 0,
+          "total": 25882
+        }
+      }
+    },
+    {
+      "id": "L18",
+      "name": "Frontend files total2155pass7skip0fail",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "totals": {
+          "pass": 2155,
+          "skip": 7,
+          "fail": 0,
+          "total": 2162
+        }
+      }
+    },
+    {
+      "id": "L19",
+      "name": "Catalog43 and renderer85 files report exact PASS outcomes",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "files": [
+          {
+            "shard": 1,
+            "path": "test/renderer/utils/teamModelAvailability.test.ts",
+            "status": "pass",
+            "totalTests": 43,
+            "skipTests": 0,
+            "line": 821,
+            "text": "2026-11-17T08:25:17.2043738Z  ✓ test/renderer/utils/teamModelAvailability.test.ts (43 tests) 44ms"
+          },
+          {
+            "shard": 2,
+            "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+            "status": "pass",
+            "totalTests": 85,
+            "skipTests": 0,
+            "line": 793,
+            "text": "2026-11-17T08:31:19.8673084Z  ✓ test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts (85 tests) 2891ms"
+          }
+        ]
+      }
+    },
+    {
+      "id": "L20",
+      "name": "Frontend workspace and captured Host runtimes stay distinct",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "workspaceNode": "v26.12.1",
+        "capturedHostNode": "v24.21.0",
+        "pnpm": "11.22.0",
+        "vitest": "3.2.6",
+        "workflow": {
+          "bytes": 96872,
+          "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+          "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+        }
+      }
+    },
+    {
+      "id": "L21",
+      "name": "Unchanged workflow scope and exclusions retained",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "matrix": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "maxWorkers": 2,
+        "excludedFilesUnqualified": true
+      }
+    },
+    {
+      "id": "L22",
+      "name": "Full observation7–9 packet and25 raw strings verified",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "packet": {
+          "bytes": 786022,
+          "sha256": "54a156cdb2f3d58d5bfc6a8a3894d5b1b01dad582f323b9ea38e2a0038167afa",
+          "gitBlob": "e37311346018c41fc8f622efdd4a576f030af4d7"
+        },
+        "rawBytes": 669507
+      }
+    },
+    {
+      "id": "L23",
+      "name": "Retained Host attempts bind exact PR/head/base",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "run": 44042341273,
+        "pr": 1219,
+        "attempt": 1,
+        "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+      }
+    },
+    {
+      "id": "L24",
+      "name": "All four frontend jobs and installer are completed success",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "observations": [
+          7,
+          8,
+          9
+        ],
+        "jobCensusOnly": true,
+        "hostWorkflowOverallConclusionNotPromoted": true
+      }
+    },
+    {
+      "id": "L25",
+      "name": "Exact shard3 log pin joins completed metadata",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "job": 133899668112,
+        "log": {
+          "bytes": 188111,
+          "sha256": "2d0260688809cd9084f42a35e52e07d31e6d43ad84d5c2013fac1dd3e76ec400",
+          "gitBlob": "f56198135d4d1e415815173488dce1730df01e0d"
+        }
+      }
+    },
+    {
+      "id": "L26",
+      "name": "Combined totals do not double-count selected or repeated GUI tests",
+      "result": "PASS_EVIDENCE",
+      "detail": {
+        "frontendOnlyTotal": 25844,
+        "selected149SubsetOfCombined238": true,
+        "installerCombined239ReportedSeparately": true,
+        "repeatedGuiUnitRunsNotAdded": true,
+        "noGrandTotalAcrossOverlappingScopes": true
+      }
+    }
+  ],
+  "checkCount": 26,
+  "failedChecks": [],
+  "unresolvedBlockers": [],
+  "limits": {
+    "source1ca": "No runtime result for Windows source publication1ca9566d or its new14/8 cases is established; these logs use fixed9d.",
+    "standalone": "Node24.22.1 standalone RED/GREEN remains uninvoked and unqualified by this evidence.",
+    "artifacts": "ZIP bytes, CRC, extraction, JSON report contents, UI receipts, screenshots, physical post-run source hashes and cleanup proofs are not read or qualified here.",
+    "currentFailures": "Other Windows/Darwin/GUI failures and still-active runs retain their original states. This report preserves completed unit-test progress without overriding them.",
+    "providerScope": "No real Claude/Codex CLI or any new executable action is selected or run by this review.",
+    "noGrandTotal": "Selected149, combined239, and frontend25882 are distinct reporting scopes and must not be summed into a unique overall test count."
+  },
+  "selfReadbackProtocol": "Send retained report pin immediately before full self-readback. Fetch the complete retained body, compare literal content and all byte/SHA256/Git identity fields, and confirm separately."
+}
