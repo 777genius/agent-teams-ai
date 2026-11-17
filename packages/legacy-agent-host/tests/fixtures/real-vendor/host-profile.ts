@@ -95,6 +95,12 @@ export async function buildRealRuntimeMember(
         DISABLE_AUTOUPDATER: '1',
         NO_COLOR: '1',
         TERM: 'dumb',
+        // Claude gates suggestions behind an account/time dependent rollout flag. The proof is about our
+        // pipeline, not Anthropic's rollout, so force it on; REAL_CLAUDE_NATURAL_SUGGESTIONS=1 keeps the
+        // vendor's own behaviour (which can legitimately offer nothing).
+        ...(process.env.REAL_CLAUDE_NATURAL_SUGGESTIONS
+          ? {}
+          : { CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION: 'true' }),
       },
       // Suggestions need Claude's prompt cache: full claude_code preset plus at least one tool.
       // Read-only tools keep the account's real config from mutating anything.

@@ -45,10 +45,17 @@ Receipts are written to `~/.cache/agent-teams-real-e2e/` (last 40 kept; UI also 
   probabilistic (roughly 4 of 5 eligible turns), so the runner keeps asking up to `--rounds` turns.
   Each member gets an isolated `CODEX_HOME` with a **copy** of `~/.codex/auth.json`, deleted afterwards.
   Point at a newer binary with `REAL_CODEX_BIN`. A refreshed credential copy is reported as a warning.
-- **The weakest Claude model (Haiku) produced no suggestions** in the Host-level proof (0 of 4 turns, with
-  tools), while Sonnet offered one on its first turn. So on Haiku the composer row never appears; that is
-  the vendor not offering one, not a UI fault. Use Sonnet or stronger to see the feature. (Measured here,
-  not documented by Anthropic; the effort level was not isolated.)
+- **Claude gates suggestions behind its own rollout flag**, which is account- and time-dependent. In one
+  session the same Sonnet setup offered a suggestion on every first turn, then went silent for 20+ minutes;
+  setting `CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=true` made them arrive at once again (direct SDK and Host).
+  The proof tests our pipeline, not Anthropic's rollout, so the runner forces that flag by default.
+  `REAL_CLAUDE_NATURAL_SUGGESTIONS=1` keeps the vendor's own behaviour (it can offer nothing: exit 3).
+  The product's Host cannot set it: a member's process environment is captured by the profile
+  producer, and `CapturedProcess` launches with exactly that environment.
+- **The weakest Claude model (Haiku) offered nothing even with that flag forced** (0 of 7 turns across two
+  runs), while Sonnet offered one on its first turn. So the model matters too: on Haiku the row never
+  appears, which is the vendor not producing a suggestion, not a UI fault. (Measured here, not documented
+  by Anthropic; the effort level was not isolated.)
 - The composer row also needs the member's `hostMemberId`, which the renderer only learns from
   `team.roster.read`. If that read answers `hold`, the notice reaches the renderer but **no row is ever
   drawn**, and the only trace is the warning "Saved launch settings are unavailable". The Desktop proof
@@ -63,6 +70,7 @@ Receipts are written to `~/.cache/agent-teams-real-e2e/` (last 40 kept; UI also 
 | --------------------------------------- | ------------------------------------------------------------------------------ |
 | `REAL_CLAUDE_BIN`, `REAL_CODEX_BIN`     | executable override (default: first on `PATH`)                                 |
 | `REAL_CLAUDE_MODEL`, `REAL_CODEX_MODEL` | model override (defaults: `claude-sonnet-4-6`, your Codex `config.toml` model) |
+| `REAL_CLAUDE_NATURAL_SUGGESTIONS`       | `1` = do not force Claude's suggestion flag                                    |
 | `REAL_RECEIPT_DIR`                      | receipts directory                                                             |
 | `PNPM_ENTRY`                            | Corepack `dist/pnpm.js` for the Desktop proof if not next to the running Node  |
 

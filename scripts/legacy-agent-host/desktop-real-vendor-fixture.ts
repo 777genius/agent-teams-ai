@@ -45,10 +45,21 @@ export const realVendorProfileTransform =
     });
   };
 
-/** The renderer opt-in; Main captures it as the Host startup preference. Not a pinned file. */
-export async function enableNativeNextPromptPreference(root: string): Promise<void> {
+/**
+ * `on`: seed the setting as an explicit true. `default`: remove the key, so the app must apply its own shipped
+ * default (proves the default end to end). Not a pinned file.
+ */
+export async function applyNativeNextPromptPreference(
+  root: string,
+  mode: 'on' | 'default'
+): Promise<void> {
   const configPath = join(root, 'claude/agent-teams-config.json');
-  const config = JSON.parse(await readFile(configPath, 'utf8')) as { general?: object };
-  config.general = { ...config.general, nativeNextPromptSuggestionsEnabled: true };
+  const config = JSON.parse(await readFile(configPath, 'utf8')) as {
+    general?: Record<string, unknown>;
+  };
+  const general = { ...config.general };
+  if (mode === 'on') general.nativeNextPromptSuggestionsEnabled = true;
+  else delete general.nativeNextPromptSuggestionsEnabled;
+  config.general = general;
   await writeFile(configPath, JSON.stringify(config), { mode: 0o600 });
 }

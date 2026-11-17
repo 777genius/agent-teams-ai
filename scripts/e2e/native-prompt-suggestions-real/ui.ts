@@ -1,5 +1,5 @@
 // REAL Claude/Codex composer proof in the live Electron app (`pnpm dev:mcp`, captured Host mode).
-// Usage: node scripts/e2e/native-prompt-suggestions-real/ui.ts [--vendor claude|codex|all] [--turns N]
+// Usage: node scripts/e2e/native-prompt-suggestions-real/ui.ts [--vendor claude|codex|all] [--turns N] [--shipped-default]
 // Exit codes: 0 pass, 1 fail, 3 inconclusive. See README.md.
 import { spawn } from 'node:child_process';
 import {
@@ -26,7 +26,7 @@ import {
 } from '../../../packages/legacy-agent-host/tests/fixtures/real-vendor/discovery.ts';
 import { prepareDesktopBackendFixture } from '../../legacy-agent-host/desktop-backend-fixture.ts';
 import {
-  enableNativeNextPromptPreference,
+  applyNativeNextPromptPreference,
   realVendorProfileTransform,
 } from '../../legacy-agent-host/desktop-real-vendor-fixture.ts';
 import { runUiScenario } from './ui-scenario.ts';
@@ -46,6 +46,8 @@ if (!['claude', 'codex', 'all'].includes(wanted))
   throw new Error('--vendor must be claude, codex or all');
 const vendors: RealVendor[] = wanted === 'all' ? ['claude', 'codex'] : [wanted as RealVendor];
 const maxTurns = Number(option('--turns', '8'));
+// Do not seed the setting at all: the app must apply its own default for the proof to pass.
+const shippedDefault = args.includes('--shipped-default');
 const receiptDir = process.env.REAL_RECEIPT_DIR ?? join(homedir(), '.cache/agent-teams-real-e2e');
 const stamp = new Date().toISOString().replace(/[:.]/gu, '-');
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
@@ -165,7 +167,7 @@ async function runVendor(vendor: RealVendor): Promise<{ status: string; reason?:
         await transform(context);
       },
     });
-    await enableNativeNextPromptPreference(fixture.root);
+    await applyNativeNextPromptPreference(fixture.root, shippedDefault ? 'default' : 'on');
 
     const port = await freePort();
     const logPath = join(fixture.root, 'app.log');
