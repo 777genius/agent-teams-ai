@@ -296,7 +296,9 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   assert.equal(record(saved.savedSettings).providerId, 'anthropic');
   assert.equal(record(saved.savedSettings).model, finite ? 'TEST-claude-sonnet' : 'claude-opus-4-6');
   assert.equal(record(saved.savedSettings).effort, 'medium');
-  assert.equal(record(saved.savedSettings).prompt, '');
+  // parseCreateTeamRequest omits an empty optional prompt; the original UI value
+  // was checked by replace(), and the initial native sessions below must have no inputs.
+  assert.equal(Object.hasOwn(record(saved.savedSettings), 'prompt'), false);
   assert.equal(record(saved.savedSettings).skipPermissions, true);
   assert.equal(record(saved.savedSettings).syncModelsWithLead, false);
   assert.equal(record(rows(saved.members)[1]!.settings).providerId, 'codex');
