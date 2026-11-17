@@ -19,8 +19,10 @@ export function captureRuntimeControlAuthority(options: {
     const current = entry.binding;
     if (options.isSealed() ||
       runtimeDigest(options.restore ? { ...current, generation: original.generation } : current) !== runtimeDigest(original) ||
-      !entry.team.owner.withLaunchAuthority(principalId, 'read', (value) => value === revision) ||
-      !entry.team.owner.authorizeRuntimeAccess(principalId, current, 'control'))
+      !entry.team.owner.withLaunchAuthority(principalId, 'read', (value) =>
+        // Both original read-only checks share the still-held Team lock. The
+        // nested control check still revalidates its namespace and reads fresh state.
+        value === revision && entry.team.owner.authorizeRuntimeAccess(principalId, current, 'control')))
       throw new RuntimeOwnerError('forbidden');
   };
 }

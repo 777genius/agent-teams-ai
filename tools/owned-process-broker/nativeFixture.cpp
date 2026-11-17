@@ -189,7 +189,7 @@ int wmain(int argc,wchar_t** argv) {
   if(mode==L"application-breakpoints"||mode==L"application-breakpoints-root")
     return applicationBreakpoint(EXCEPTION_BREAKPOINT)&&applicationBreakpoint(0x4000001f)?0:61;
   if(mode==L"source-sentinel") {
-    // Only the source gate holds this original pipe inside its existing 120s outer Job.
+    // The provider/source gate holds this original pipe inside its existing 120s outer Job.
     // Ordinary sentinel and vendor actors keep their original lifetime contracts.
     BOOL inJob=FALSE;
     if(argc!=2||!IsProcessInJob(GetCurrentProcess(),nullptr,&inJob)||!inJob) return 58;

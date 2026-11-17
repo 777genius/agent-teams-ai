@@ -1,5 +1,5 @@
 import { revealDesktopTaskReviewCard } from './desktop-task-review-card-readiness.ts';
-import { desktopTaskCommentInputExpression } from './desktop-task-comment-input-target.ts';
+import { desktopTaskBoardAssignmentReadyExpression, desktopTaskCommentInputExpression } from './desktop-task-comment-input-target.ts';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
 import assert from 'node:assert/strict';
 import { readFile, readdir, realpath, writeFile } from 'node:fs/promises';
@@ -423,9 +423,45 @@ export async function runDesktopTaskReviewCycleUiSmoke(
     )
   );
   assert.equal(typeof commentTarget.selector, 'string');
-  await ui.scrollTo(String(commentTarget.selector), 'existing Task comment composer');
-  await ui.click(String(commentTarget.selector), 'focus existing correction comment');
+  const commentInput = String(commentTarget.selector);
+  const commentIdentity = record(commentTarget.identity);
+  const readyComment = desktopTaskBoardAssignmentReadyExpression(options.handleId, taskId, {
+    contextId: String(commentIdentity.contextId),
+    surfaceId: String(commentTarget.surfaceId),
+  }, 'in-progress-comment');
+  const commentObservations: Record<string, unknown> = {};
+  proof.correctionCommentInput = commentObservations;
+  const observeComment = (stage: string, text: string, focused: boolean) => ui.waitRead(
+    `(async()=>{
+      const settled=await ${readyComment},owner=${desktopTaskCommentInputExpression(options.handleId, taskId)};
+      const input=owner?document.querySelector(owner.selector):null;
+      return {owner,settled:Boolean(settled&&owner&&settled.inputId===owner.inputId&&settled.ownerRevision===owner.ownerRevision),
+        domValue:input?.value??null,inputEnabled:input instanceof HTMLTextAreaElement&&!input.disabled&&!input.readOnly,
+        focused:input!==null&&document.activeElement===input,documentFocused:document.hasFocus(),visibility:document.visibilityState};
+    })()`, stage, 30_000, value => {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+      commentObservations[stage] = value;
+      const observed = record(value), owner = observed.owner ? record(observed.owner) : undefined;
+      const identity = owner?.identity && typeof owner.identity === 'object' && !Array.isArray(owner.identity)
+        ? record(owner.identity) : undefined;
+      return observed.settled === true && observed.inputEnabled === true && observed.visibility === 'visible' &&
+        (!focused || observed.focused === true && observed.documentFocused === true) &&
+        observed.domValue === text && owner?.selector === commentInput && owner.commentText === text &&
+        owner.surfaceId === commentTarget.surfaceId && identity?.contextId === commentIdentity.contextId &&
+        identity?.teamName === commentIdentity.teamName && identity?.taskId === commentIdentity.taskId &&
+        owner.submitPending === false && owner.submitError === null && owner.canSubmit === true &&
+        owner.pendingAttachmentCount === 0 && owner.pendingPreparationCount === 0 && owner.attachmentError === null;
+    }
+  );
+  await ui.scrollTo(commentInput, 'existing Task comment composer');
+  await ui.click(commentInput, 'focus existing correction comment');
+  await observeComment('original correction empty owner and document focused after one click', '', true);
+  options.assertOwnedRenderer();
+  step({ action: 'Input.insertText', text: commentText, selector: commentInput, state: 'attempted' });
   await cdp.send('Input.insertText', { text: commentText });
+  await observeComment('original correction insertion reaches DOM and current owner', commentText, true);
+  await ui.scrollTo('[role="dialog"] button.message-composer-send-button', 'original correction Comment viewport', 'Comment');
+  await observeComment('original correction exact draft before single submit', commentText, false);
   await ui.click(
     '[role="dialog"] button.message-composer-send-button',
     'original correction Comment once',

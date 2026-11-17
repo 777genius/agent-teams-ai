@@ -3210,7 +3210,7 @@ test('the actual generated target expression keeps the same eligible click when 
   assert.deepEqual(output, [], 'a successful original click does not emit a failure diagnostic');
 });
 
-async function originalReviewCorrectionStage(observations: unknown[], insertFailure?: Error) {
+async function originalReviewCorrectionStage(observations: unknown[], insertFailure?: Error, settleObservations?: unknown[]) {
   const { stripTypeScriptTypes } = await import('node:module');
   const source = (await readFile(new URL('./desktop-task-review-cycle-ui-smoke.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
   const begin = '  const commentTarget = record(', end = "  await snapshotStage(await newReceipt(commentBefore, 'task.comment'), 'in_progress');";
@@ -3219,10 +3219,29 @@ async function originalReviewCorrectionStage(observations: unknown[], insertFail
   assert.ok(finish > start, 'original source boundaries are ordered');
   const actual = stripTypeScriptTypes(source.slice(start, finish));
   const selector = '[role="dialog"] textarea[id="TEST-original-correction-input"]';
-  const original = { selector, canEditNow: true }, trace: string[] = [], budgets: number[] = [];
-  let reads = 0;
+  const original = { selector, canEditNow: true, inputId: 'TEST-original-correction-input', ownerRevision: 7,
+    identity: { contextId: 'TEST-current-context', teamName: 'TEST-original-correction-owner', taskId: 'TEST-original-correction-task' },
+    surfaceId: 'TEST-current-surface' }, trace: string[] = [], budgets: number[] = [];
+  let reads = 0, settledReads = 0, inserted = false;
+  const ready = () => ({ settled: true, inputEnabled: true, visibility: 'visible', focused: true, documentFocused: true,
+    domValue: inserted ? 'TEST original correction text' : '', owner: { ...original,
+      commentText: inserted ? 'TEST original correction text' : '', submitPending: false, submitError: null,
+      canSubmit: true, pendingAttachmentCount: 0, pendingPreparationCount: 0, attachmentError: null } });
   const cdp = {
     async evaluate(expression: string) {
+      if (expression !== 'TEST-original-current-correction-expression') {
+        assert.ok(expression.includes('const settled=await TEST-original-settled-correction-expression'));
+        assert.ok(expression.includes('owner=TEST-original-current-correction-expression'));
+        trace.push('settled-read');
+        const observation = settleObservations ? settleObservations[settledReads++] : ready();
+        if (observation instanceof Error) throw observation;
+        if (observation && typeof observation === 'object' && !Array.isArray(observation)) {
+          const value = observation as Record<string, unknown>, owner = value.owner as Record<string, unknown> | undefined;
+          return { ...ready(), ...value, ...(owner ? { owner: { ...ready().owner, ...owner,
+            identity: { ...ready().owner.identity, ...(owner.identity as Record<string, unknown> | undefined) } } } : {}) };
+        }
+        return observation === 'ready' ? ready() : observation;
+      }
       assert.equal(expression, 'TEST-original-current-correction-expression');
       assert.ok(reads < observations.length, 'no unplanned currentness observation');
       const value = observations[reads++]; trace.push('read');
@@ -3235,6 +3254,7 @@ async function originalReviewCorrectionStage(observations: unknown[], insertFail
       assert.deepEqual(params, { text: 'TEST original correction text' });
       trace.push('insert');
       if (insertFailure) throw insertFailure;
+      inserted = true;
       return {};
     },
   };
@@ -3242,12 +3262,20 @@ async function originalReviewCorrectionStage(observations: unknown[], insertFail
   const ui = {
     ...controls,
     waitRead: ((expression: string, label: string, timeoutMs = 30_000, accepts?: (value: unknown) => boolean) => {
-      assert.equal(label, 'exact current correction Task/owner/surface');
+      assert.ok(['exact current correction Task/owner/surface',
+        'original correction empty owner and document focused after one click',
+        'original correction insertion reaches DOM and current owner',
+        'original correction exact draft before single submit'].includes(label));
       budgets.push(timeoutMs);
       return controls.waitRead(expression, label, timeoutMs, accepts);
     }) as typeof controls.waitRead,
-    async scrollTo(target: string, label: string) {
-      assert.equal(target, selector); assert.equal(label, 'existing Task comment composer'); trace.push('scroll');
+    async scrollTo(target: string, label: string, text?: string) {
+      if (label === 'existing Task comment composer') {
+        assert.equal(target, selector); assert.equal(text, undefined); trace.push('scroll');
+      } else {
+        assert.equal(target, '[role="dialog"] button.message-composer-send-button');
+        assert.equal(label, 'original correction Comment viewport'); assert.equal(text, 'Comment'); trace.push('submit-scroll');
+      }
     },
     async click(target: string, label: string, text?: string) {
       if (label === 'focus existing correction comment') {
@@ -3259,15 +3287,21 @@ async function originalReviewCorrectionStage(observations: unknown[], insertFail
     },
   };
   const run = Function('environment', `'use strict';
-    const {assert,record,ui,cdp,options,taskId,commentText,desktopTaskCommentInputExpression}=environment;
+    const {assert,record,ui,cdp,options,taskId,commentText,desktopTaskCommentInputExpression,desktopTaskBoardAssignmentReadyExpression,proof,step}=environment;
     return (async()=>{${actual}})();`) as (environment: Record<string, unknown>) => Promise<void>;
   return { trace, budgets, reads: () => reads, run: () => run({ assert, ui, cdp,
     record(value: unknown) { assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value; },
-    options: { handleId: 'TEST-original-correction-owner' }, taskId: 'TEST-original-correction-task',
+    options: { handleId: 'TEST-original-correction-owner', assertOwnedRenderer() {} }, taskId: 'TEST-original-correction-task',
+    proof: {}, step() {},
     commentText: 'TEST original correction text',
     desktopTaskCommentInputExpression(handleId: string, taskId: string) {
       assert.equal(handleId, 'TEST-original-correction-owner'); assert.equal(taskId, 'TEST-original-correction-task');
       return 'TEST-original-current-correction-expression';
+    },
+    desktopTaskBoardAssignmentReadyExpression(handleId: string, taskId: string, captured: unknown, stage: string) {
+      assert.equal(handleId, 'TEST-original-correction-owner'); assert.equal(taskId, 'TEST-original-correction-task');
+      assert.deepEqual(captured, { contextId: 'TEST-current-context', surfaceId: 'TEST-current-surface' });
+      assert.equal(stage, 'in-progress-comment'); return 'TEST-original-settled-correction-expression';
     },
   }) };
 }
@@ -3286,14 +3320,30 @@ test('original review correction admits current authority with one original inse
   for (const observations of [['current'], [{ canEditNow: false }, 'current']]) {
     const f = await originalReviewCorrectionStage(observations);
     await f.run();
-    assert.deepEqual(f.trace, [...observations.map(() => 'read'), 'scroll', 'focus', 'insert', 'submit']);
-    assert.deepEqual(f.budgets, [30_000]); assert.equal(f.reads(), observations.length);
+    assert.deepEqual(f.trace, [...observations.map(() => 'read'), 'scroll', 'focus', 'settled-read', 'insert',
+      'settled-read', 'submit-scroll', 'settled-read', 'submit']);
+    assert.deepEqual(f.budgets, [30_000, 30_000, 30_000, 30_000]); assert.equal(f.reads(), observations.length);
   }
   const failure = new Error('TEST original insertion response failed');
   const refused = await originalReviewCorrectionStage(['current'], failure);
   await assert.rejects(refused.run(), error => error === failure);
-  assert.deepEqual(refused.trace, ['read', 'scroll', 'focus', 'insert']);
-  assert.deepEqual(refused.budgets, [30_000]); assert.equal(refused.reads(), 1);
+  assert.deepEqual(refused.trace, ['read', 'scroll', 'focus', 'settled-read', 'insert']);
+  assert.deepEqual(refused.budgets, [30_000, 30_000]); assert.equal(refused.reads(), 1);
+});
+
+test('original review correction stops on unsettled focus or missing committed text without reinsertion', { timeout: 5000 }, async () => {
+  const failure = new Error('TEST original settled observation failed');
+  for (const observations of [[null, failure], [{ focused: false }, failure], [{ documentFocused: false }, failure],
+    [{ settled: false }, failure], [{ owner: { identity: { contextId: 'TEST-successor-context' } } }, failure],
+    [{ owner: { surfaceId: 'TEST-successor-surface' } }, failure], ['ready', { domValue: 'TEST uncommitted draft' }, failure],
+    ['ready', { owner: { selector: 'TEST other owner' } }, failure], ['ready', 'ready', { inputEnabled: false }, failure]]) {
+    const f = await originalReviewCorrectionStage(['current'], undefined, observations);
+    await assert.rejects(f.run(), error => error === failure);
+    assert.equal(f.trace.filter(value => value === 'focus').length, 1);
+    assert.equal(f.trace.filter(value => value === 'insert').length, observations[0] === 'ready' ? 1 : 0);
+    assert.equal(f.trace.includes('submit'), false);
+    assert.ok(f.budgets.every(value => value === 30_000));
+  }
 });
 
 async function originalEmulatedBootChat(fixture: {
