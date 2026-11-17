@@ -88,6 +88,8 @@ export async function prepareDesktopBackendFixture(
     nativeCodex?: { path: string; sha256: string };
     nativeClaude?: { path: string; sha256: string; modelUrl?: string };
     nativeOpenCodeV2?: DesktopOpenCodeV2Selection;
+    /** Last in-memory profile edit before it is seeded, validated and pinned (real-vendor proof). */
+    profileTransform?: (context: { profile: TeamHostProfile; root: string; node: string }) => Promise<void>;
     nativeOpenCodeSourceSelection?: DesktopOpenCodeSourceSelection;
     capturedMcpNonce?: string;
   }
@@ -543,6 +545,7 @@ export async function prepareDesktopBackendFixture(
     // It receives no runtime binding, provider allocation or principal grant.
     members.push({ memberId: 'TEST-board-peer-id', name: 'board-peer', role: 'member' });
   }
+  await options.profileTransform?.({ profile, root, node });
   if (options.seedUiTask) {
     const lease = acquireProfileWriterLease(owner.storageRoot);
     try {
