@@ -3941,6 +3941,14 @@ export default interface Resources {
       "tooltipContent": "Keeps launches within a 200K-token context window when supported.",
       "tooltipTitle": "Context limit"
     },
+      "projectContextView": {
+        "loading": "Loading team project history…",
+        "selectProject": "Select a project in the sidebar to view this team's tasks and chats.",
+        "empty": "No tasks or conversations in this project yet. Start the team to create a separate history.",
+        "pending": "Preparing this project's team context. Tasks and messages will appear once the runtime is ready.",
+        "start": "Start team in this project",
+        "retry": "Retry"
+      },
     "create": {
       "actions": {
         "backToTeams": "Back to teams",
