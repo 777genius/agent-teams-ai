@@ -21,7 +21,7 @@ export function isOwnedWindowsTeamRuntimeWrapperProcess(child: ChildProcess): bo
 export function spawnWindowsTeamRuntimeCli(
   binaryPath: string,
   args: string[],
-  options: SpawnOptions
+  options: SpawnOptions = {}
 ): ReturnType<typeof spawnCli> {
   const launch = resolveWindowsTeamRuntimeLauncher(binaryPath, {
     requireWrapper: process.env.AGENT_TEAMS_REQUIRE_TEAMMATE_WRAPPER === '1',
