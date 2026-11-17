@@ -1,0 +1,1152 @@
+{
+  "schemaVersion": 1,
+  "kind": "root-fresh-fixed9d-CI-venue-R1-review",
+  "at": "2026-11-17 07:22:16 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root",
+  "subject": {
+    "bytes": 69751,
+    "sha256": "ded423903437131ea288b2d43a20391147f8e4cdb45357b6d92496d4763487bd",
+    "gitBlob": "1bb01907e9a3b9fba7cedb3d34d0d2773a57ca23"
+  },
+  "verdict": "ACCEPT_EXACT_FRESH_CI_R1_STATIC_SCOPE",
+  "accepted": true,
+  "sourceGate": {
+    "bytes": 7050,
+    "sha256": "4a55ae270a3549fd97c712db801cf2378102e7974597c8ed2c3fe3b240e937cb",
+    "gitBlob": "3aa070295059b9e1dd280ee36836712878b0b72c"
+  },
+  "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+  "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+  "completeWorkflowCorpus": {
+    "bytes": 780732,
+    "sha256": "9a83bd5a7425d0674345c607e26b2a1df8bde3556549ac276bfbf860c5c4e3bb",
+    "gitBlob": "6d032754064d4f251a11e8572bb7b476ea5860a8"
+  },
+  "completeComparison": {
+    "bytes": 1316501,
+    "sha256": "b197f33f4fd07ad0afd3443214705152dfc2b6ec544eb6fc014b4d9c3d67137f",
+    "gitBlob": "b22f8e839e41161d124ea665134b2d254ebe8ed0"
+  },
+  "advisory": {
+    "bytes": 89037,
+    "sha256": "fdbf58a4cc6ee03693f5ffc1ab1d9ba2ad40cafcdd419c60f982530a07c9b734",
+    "gitBlob": "ec8af61a7613a4d4f55601f0755e5fd3858a809a"
+  },
+  "advisoryClarification": {
+    "check": "driver_semantics",
+    "quotedPhrase": "798-line cap",
+    "meaning": "798 physical lines under the unchanged800-line cap",
+    "capChanged": false
+  },
+  "rootRecomputedTriggerMap": [
+    {
+      "path": ".github/workflows/announcements-content.yml",
+      "gitBlob": "d7d1c6fde200971f29defe95c2c0436a0318b499",
+      "hasPullRequest": true,
+      "pathPatternCount": 0,
+      "matchedSourceCount": 9,
+      "matchedDocumentationCount": 147,
+      "eventEligible": true
+    },
+    {
+      "path": ".github/workflows/anthropic-compatible-status-e2e.yml",
+      "gitBlob": "6ec8f76ef4036fde31daab73db1205cf9f7dfdd2",
+      "hasPullRequest": true,
+      "pathPatternCount": 29,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/anthropic-env-portability.yml",
+      "gitBlob": "d3fa7512b79b79dc64c1580dfdc42d63361ae68a",
+      "hasPullRequest": true,
+      "pathPatternCount": 31,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/build-linux-windows-draft.yml",
+      "gitBlob": "919dc9d816a5f7441783af22a286da9b1e4f6f8a",
+      "hasPullRequest": false,
+      "pathPatternCount": 0,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "gitBlob": "a93ff6ba1e5656523668694bca24910a468aebc7",
+      "hasPullRequest": true,
+      "pathPatternCount": 0,
+      "matchedSourceCount": 9,
+      "matchedDocumentationCount": 147,
+      "eventEligible": true
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "gitBlob": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1",
+      "hasPullRequest": true,
+      "pathPatternCount": 11,
+      "matchedSourceCount": 8,
+      "matchedDocumentationCount": 0,
+      "eventEligible": true
+    },
+    {
+      "path": ".github/workflows/codex-runtime-smoke.yml",
+      "gitBlob": "cef44447c47e39a7da678f37e2518952e218da08",
+      "hasPullRequest": true,
+      "pathPatternCount": 12,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/dependency-review.yml",
+      "gitBlob": "4a5f2ab17b3daf4ffdf6992ee85d159adf2c46c6",
+      "hasPullRequest": true,
+      "pathPatternCount": 4,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+      "gitBlob": "490c2048dfbd9f275f784d7a0f1a6eeba0a9f361",
+      "hasPullRequest": true,
+      "pathPatternCount": 8,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+      "hasPullRequest": true,
+      "pathPatternCount": 0,
+      "matchedSourceCount": 9,
+      "matchedDocumentationCount": 147,
+      "eventEligible": true
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+      "hasPullRequest": true,
+      "pathPatternCount": 23,
+      "matchedSourceCount": 8,
+      "matchedDocumentationCount": 0,
+      "eventEligible": true
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "gitBlob": "70202d22a5840401a00025cd60b797c514f3e455",
+      "hasPullRequest": true,
+      "pathPatternCount": 27,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+      "gitBlob": "95d681fe04abd838dd11799d7791fa59444c6e32",
+      "hasPullRequest": true,
+      "pathPatternCount": 5,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/landing-hetzner-release.yml",
+      "gitBlob": "4b54f229156f9d347e1a33da0d83b3374acc4078",
+      "hasPullRequest": true,
+      "pathPatternCount": 10,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/landing.yml",
+      "gitBlob": "4a1ad9ae59ff2e338930a195d54fdff62da1ebc5",
+      "hasPullRequest": true,
+      "pathPatternCount": 9,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/macos-signing-qualification.yml",
+      "gitBlob": "d63bddd51302a5c0380762bf22171f43c38a39b0",
+      "hasPullRequest": false,
+      "pathPatternCount": 0,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/opencode-desktop-e2e.yml",
+      "gitBlob": "3d2a90a0e335155d435bd4eae4f2bd2842425983",
+      "hasPullRequest": true,
+      "pathPatternCount": 20,
+      "matchedSourceCount": 1,
+      "matchedDocumentationCount": 0,
+      "eventEligible": true
+    },
+    {
+      "path": ".github/workflows/opencode-native-windows-e2e.yml",
+      "gitBlob": "f5a2a472b752acf37399fc9e11f63f6d45bdb297",
+      "hasPullRequest": false,
+      "pathPatternCount": 0,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/opencode-packaged-e2e.yml",
+      "gitBlob": "458e165ef020a1f8b05806b9ae7edc839134e1b4",
+      "hasPullRequest": true,
+      "pathPatternCount": 23,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+      "gitBlob": "be6a9ae5a88efadca344773ed4aa962d42823d28",
+      "hasPullRequest": true,
+      "pathPatternCount": 21,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "hasPullRequest": true,
+      "pathPatternCount": 27,
+      "matchedSourceCount": 6,
+      "matchedDocumentationCount": 0,
+      "eventEligible": true
+    },
+    {
+      "path": ".github/workflows/prepare-updater-native-inputs.yml",
+      "gitBlob": "51beb92ade4931fe04336c7d3908bacfc932269e",
+      "hasPullRequest": true,
+      "pathPatternCount": 10,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/provider-real-runtime-e2e.yml",
+      "gitBlob": "4ee30807aa18f043fe53d090bfb6211bb5458ce0",
+      "hasPullRequest": true,
+      "pathPatternCount": 16,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/publish-carried-release.yml",
+      "gitBlob": "371ed6d3b2cf4e41c012da287a295783c39c426e",
+      "hasPullRequest": false,
+      "pathPatternCount": 0,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/recover-existing-draft-payloads.yml",
+      "gitBlob": "eadeedf4381cbf1d7e32cd31105dd88cd2c8eb65",
+      "hasPullRequest": false,
+      "pathPatternCount": 0,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/release-publication-guard.yml",
+      "gitBlob": "10b7abd2992cc740084a5c51ace7f3fe025220f9",
+      "hasPullRequest": false,
+      "pathPatternCount": 0,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "gitBlob": "d28bee6dea87ec191f0d40670f3e68c48251d049",
+      "hasPullRequest": false,
+      "pathPatternCount": 0,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/reviewrouter-interaction.yml",
+      "gitBlob": "edb68c51f54ad4a792eb29f1f557aad48e3a6218",
+      "hasPullRequest": false,
+      "pathPatternCount": 0,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/reviewrouter-review.yml",
+      "gitBlob": "04964f8ac7beadb3277fb28ec9cc0d61b86ca84b",
+      "hasPullRequest": false,
+      "pathPatternCount": 0,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+      "gitBlob": "4020f668ab2a9a7b16fcb0aa7fd2d79a061f1d44",
+      "hasPullRequest": true,
+      "pathPatternCount": 19,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/sentry-owned-process-native.yml",
+      "gitBlob": "1188fa5b89d59b739d927082d1b6954a57181819",
+      "hasPullRequest": true,
+      "pathPatternCount": 41,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/stage-existing-partial-draft.yml",
+      "gitBlob": "295dbf212e13b15505696d997ec7c45b4ee3cfa9",
+      "hasPullRequest": false,
+      "pathPatternCount": 0,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "gitBlob": "ef939f224a1642cb596906324c8d61441780ccc7",
+      "hasPullRequest": true,
+      "pathPatternCount": 18,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/updater-linux-packages.yml",
+      "gitBlob": "60d214756c640b7925cfe11ba45ed4009f27ca3c",
+      "hasPullRequest": true,
+      "pathPatternCount": 12,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/updater-mac-manual-migration.yml",
+      "gitBlob": "4aa3a4181259514c5a43fbc7dd4ad98811a3588e",
+      "hasPullRequest": false,
+      "pathPatternCount": 0,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/updater-mac-old-updater.yml",
+      "gitBlob": "067a25687f36caefe156b0446c5056d230d27c62",
+      "hasPullRequest": false,
+      "pathPatternCount": 0,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/updater-mac-source.yml",
+      "gitBlob": "1196e40faa99e0ab64e329d91f3fea7c6ed47f94",
+      "hasPullRequest": false,
+      "pathPatternCount": 0,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/updater-mac-updater.yml",
+      "gitBlob": "950f95892277ae303772ac699915250f0f4f66af",
+      "hasPullRequest": false,
+      "pathPatternCount": 0,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/updater-native-feasibility.yml",
+      "gitBlob": "b55e6cbcb4de61e2e8688e1ff4b4529b043a4ada",
+      "hasPullRequest": true,
+      "pathPatternCount": 7,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/updater-windows-ota.yml",
+      "gitBlob": "10ffcd79e48a71346df7545af638208ce039ad83",
+      "hasPullRequest": true,
+      "pathPatternCount": 15,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/updater-windows.yml",
+      "gitBlob": "a4e9375cb95c4129c503f1d7be82de1e3926ea62",
+      "hasPullRequest": true,
+      "pathPatternCount": 11,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    },
+    {
+      "path": ".github/workflows/windows-backfill-diagnostic.yml",
+      "gitBlob": "44bec5d82998468d48ac539f3624d0c2de1c6648",
+      "hasPullRequest": true,
+      "pathPatternCount": 13,
+      "matchedSourceCount": 0,
+      "matchedDocumentationCount": 0,
+      "eventEligible": false
+    }
+  ],
+  "checks": [
+    {
+      "id": "exact-full-proposal-readback",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 69751,
+        "sha256": "ded423903437131ea288b2d43a20391147f8e4cdb45357b6d92496d4763487bd",
+        "gitBlob": "1bb01907e9a3b9fba7cedb3d34d0d2773a57ca23"
+      }
+    },
+    {
+      "id": "actual-source-publication-gate-closed",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 7050,
+        "sha256": "4a55ae270a3549fd97c712db801cf2378102e7974597c8ed2c3fe3b240e937cb",
+        "gitBlob": "3aa070295059b9e1dd280ee36836712878b0b72c"
+      }
+    },
+    {
+      "id": "known-gate-before-r1-authorship",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "sourceGateAt": "2026-11-17 07:14:06 UTC",
+        "r1At": "2026-11-17 07:19:18 UTC"
+      }
+    },
+    {
+      "id": "fixed9d-head-not-future-docs-tip",
+      "status": "PASS_STATIC",
+      "evidence": "9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+    },
+    {
+      "id": "real-original-ancestor-comparison",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "files": 156,
+        "docs": 147,
+        "source": 9
+      }
+    },
+    {
+      "id": "complete-comparison-original-payload-retained",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 1316501,
+        "sha256": "b197f33f4fd07ad0afd3443214705152dfc2b6ec544eb6fc014b4d9c3d67137f",
+        "gitBlob": "b22f8e839e41161d124ea665134b2d254ebe8ed0"
+      }
+    },
+    {
+      "id": "all9-actual-source-identities-join",
+      "status": "PASS_STATIC",
+      "evidence": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+          "mode": "100644",
+          "bytes": 69370,
+          "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+          "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f",
+          "status": "modified"
+        },
+        {
+          "bytes": 45795,
+          "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+          "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+          "status": "modified"
+        },
+        {
+          "bytes": 33036,
+          "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+          "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+          "status": "modified"
+        },
+        {
+          "bytes": 165022,
+          "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+          "status": "modified"
+        },
+        {
+          "bytes": 7883,
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "status": "added"
+        },
+        {
+          "bytes": 29017,
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "status": "modified"
+        },
+        {
+          "bytes": 74340,
+          "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+          "mode": "100644",
+          "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+          "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+          "status": "modified"
+        },
+        {
+          "bytes": 32077,
+          "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+          "mode": "100644",
+          "path": "src/renderer/utils/teamModelAvailability.ts",
+          "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+          "status": "modified"
+        },
+        {
+          "bytes": 56775,
+          "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+          "mode": "100644",
+          "path": "test/renderer/utils/teamModelAvailability.test.ts",
+          "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+          "status": "modified"
+        }
+      ]
+    },
+    {
+      "id": "whole13-preservation-vector-unchanged",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 3481,
+        "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+        "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+      }
+    },
+    {
+      "id": "complete42-workflow-corpus-read",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 780732,
+        "sha256": "9a83bd5a7425d0674345c607e26b2a1df8bde3556549ac276bfbf860c5c4e3bb",
+        "gitBlob": "6d032754064d4f251a11e8572bb7b476ea5860a8"
+      }
+    },
+    {
+      "id": "all42-trigger-path-maps-independently-recomputed",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "eligible": [
+          ".github/workflows/announcements-content.yml",
+          ".github/workflows/ci.yml",
+          ".github/workflows/codeql.yml",
+          ".github/workflows/electron-packaged-ci.yml",
+          ".github/workflows/host-emulated-acceptance.yml",
+          ".github/workflows/opencode-desktop-e2e.yml",
+          ".github/workflows/opencode-v2-stage1-preflight.yml"
+        ]
+      }
+    },
+    {
+      "id": "same7-event-families-with-explicit-Draft-skips",
+      "status": "PASS_STATIC",
+      "evidence": [
+        {
+          "path": ".github/workflows/announcements-content.yml",
+          "selected": true,
+          "draftBehavior": "Active content-validation job; default opened event, no PR path or base-branch filter.",
+          "qualification": "Observe actual result."
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "selected": true,
+          "draftBehavior": "Plan yields full=false, metadata=false, reuse=false for the valid same-repository opened Draft. Fast feedback runs; Full qualification intentionally fails Draft policy.",
+          "qualification": "EXPECTED_POLICY_FAIL is limited to the original Draft qualification verdict; any other failure remains FAIL."
+        },
+        {
+          "path": ".github/workflows/codeql.yml",
+          "selected": true,
+          "draftBehavior": "Source paths match; job if at line46 excludes Draft.",
+          "qualification": "EXPECTED_DRAFT_SKIP, not PASS."
+        },
+        {
+          "path": ".github/workflows/electron-packaged-ci.yml",
+          "selected": true,
+          "draftBehavior": "Classifier receives complete local Git diff; legacy scripts and evidence docs keep full scope/run=true. Same-repository five-tuple matrix has no Draft skip.",
+          "qualification": "All seven declared jobs/individual steps and artifacts must be accounted."
+        },
+        {
+          "path": ".github/workflows/host-emulated-acceptance.yml",
+          "selected": true,
+          "draftBehavior": "Eight source paths match; same-repository 18 UI jobs plus four frontend shards and aggregate run on Draft.",
+          "qualification": "Complete 23-job inventory; no one-lane selector or subset-to-whole promotion."
+        },
+        {
+          "path": ".github/workflows/opencode-desktop-e2e.yml",
+          "selected": true,
+          "draftBehavior": "Current hook path matches, but job if at line44 excludes Draft.",
+          "qualification": "EXPECTED_DRAFT_SKIP, not OpenCode diagnostics success."
+        },
+        {
+          "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+          "selected": true,
+          "draftBehavior": "Six legacy-host source paths match; opened accepted, no Draft guard. Nine declared jobs.",
+          "qualification": "Strict native custody requirements remain unchanged; prior Darwin P09 failure is not waived."
+        }
+      ]
+    },
+    {
+      "id": "host-process-and-real-vendor-families-unselected",
+      "status": "PASS_STATIC",
+      "evidence": true
+    },
+    {
+      "id": "new-ref-push-filters-remain-unmatched",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "newBase": "ci/frontend-parity-c714-20261117-2-base",
+        "newHead": "ci/frontend-parity-c714-20261117-2-head",
+        "allExistingPushBranches": [
+          {
+            "path": ".github/workflows/announcements-content.yml",
+            "branches": "    branches: [main]"
+          },
+          {
+            "path": ".github/workflows/ci.yml",
+            "branches": "    branches:\n      - main\n      - refactor/team-provisioning-round2-reapply\n      - refactor/hosted-web-feature-boundaries"
+          },
+          {
+            "path": ".github/workflows/codeql.yml",
+            "branches": "    branches: [main]"
+          },
+          {
+            "path": ".github/workflows/codex-runtime-smoke.yml",
+            "branches": "    branches: [main]"
+          },
+          {
+            "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+            "branches": "    branches: [main]"
+          },
+          {
+            "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+            "branches": "    branches: [main]"
+          },
+          {
+            "path": ".github/workflows/landing-hetzner-release.yml",
+            "branches": "    branches: [main]"
+          },
+          {
+            "path": ".github/workflows/landing.yml",
+            "branches": "    branches: [main]"
+          },
+          {
+            "path": ".github/workflows/provider-real-runtime-e2e.yml",
+            "branches": "    branches: [main]"
+          },
+          {
+            "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+            "branches": "    branches: [main]"
+          },
+          {
+            "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+            "branches": "    branches: [main]"
+          }
+        ],
+        "extraCreateOrWorkflowRunEvent": false
+      }
+    },
+    {
+      "id": "same-repo-Draft-and-maintainer-disabled",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "repository_full_name": "777genius/agent-teams-ai",
+        "base": "ci/frontend-parity-c714-20261117-2-base",
+        "head": "ci/frontend-parity-c714-20261117-2-head",
+        "title": "test: validate frontend parity deadlines and member reveal",
+        "body": "## Purpose\n\nThe published deadline fix, three catalog regressions and member reveal step need complete execution on source 9d79abcf1f5c498687c2e5c443e3edf220070aa6. This Draft PR validates that fixed source against its unchanged ancestor 77993819c233737f1e2b4c11c8ca1a5d360bcbe3.\n\n## Changes and coverage\n\nThe snapshot contains the accepted frontend parity fixes, all 139 original Node cases plus ten deadline cases, the full 43-case model catalog file, the unchanged 85-case provider-management file, and one bounded scroll to Alice before the original guarded member click. The driver has 798 lines under the unchanged 800-line limit.\n\nExisting workflows select all 18 Host UI jobs, four frontend shards and their aggregate; the five packaged platform tuples; Stage 1 OpenCode checks; announcements; and CI fast feedback. Claude and Codex use the existing finite TEST peers. Actual OpenCode execution stays within the existing pinned localhost-model paths.\n\nWorkflow bytes, dependencies, filters, original deadlines and strict native assertions are preserved. Full qualification is expected to fail the existing Draft policy. CodeQL and OpenCode diagnostics retain their explicit Draft skips. Every other failure, skipped or unreached step and unavailable artifact remains visible.\n\nCI's ten imported deadline cases run within the whole 149-case module under its existing Node selection. The separately pinned local Node 24.22.1 RED/GREEN attempt remains unexecuted while its environment is unavailable.\n\nBoth snapshot refs and this PR's metadata stay fixed while selected runs are active. The original PR #1218 remains terminal. This evidence scope does not include Ready conversion, merge, release, Stage 2, or a native-custody waiver.\n",
+        "draft": true,
+        "maintainer_can_modify": false
+      }
+    },
+    {
+      "id": "each-issued-mutation-at-most-once",
+      "status": "PASS_STATIC",
+      "evidence": "Retain any refused or transport-unknown mutation as spent as issued. Resolve uncertainty only by exact-new-ref/PR readback; do not blindly repeat, overwrite an unexpected ref, create a duplicate PR, switch names or fall back to dispatch/rerun. Partial creation remains explicit for root's existing process."
+    },
+    {
+      "id": "exact-name-preflight-no-absence-assumption",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "order": 1,
+        "operation": "read-only preflight under root's later accepted plan",
+        "requirements": [
+          "The actual9d source gate3aa070 is already closed; the later exact fresh-CI R1 publication/root+independent actual readbacks and external admission must be closed before any new-name/ref/PR mutation.",
+          "At the admitted preflight, read the two exact proposed new names and require confirmed absence; unknown/error is not absence. No overwrite, reuse, alternative name or artificial base.",
+          "Read immutable9d/779 commit/tree/ancestry plus the complete156-file comparison and compare with this retained exact assessment; source9d remains fixed while later docs commits are external evidence only.",
+          "Recheck complete42workflow/event/filter identities and the fixed Draft/no-real-Claude-Codex selection. Any difference refuses admission; do not compensate by changing filters, workflows, dependencies or runtime budgets.",
+          "No old/frozen PR or original terminal-run action or polling."
+        ]
+      }
+    },
+    {
+      "id": "source-snapshot-and-PR-freeze",
+      "status": "PASS_STATIC",
+      "evidence": "Keep both new refs and new PR metadata fixed while any selected new run is active; no push/force/rebase/base or label/title/body edit, Ready conversion, close/reopen, rerun, cancellation or dispatch. Required documentation pushes may continue only on the separate working evidence branch."
+    },
+    {
+      "id": "all-original7-terminal-and-excluded",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 1470199,
+        "sha256": "4f66346fff2f9f0869fdb5290781037a100c316400ac31d4fd232c350bda211c",
+        "gitBlob": "8d679dba4598084dd3a3ce5ebc84c0b0a78beed9"
+      }
+    },
+    {
+      "id": "whole18-ui-plus4-frontend-plus-gate",
+      "status": "PASS_STATIC",
+      "evidence": [
+        {
+          "runner": "ubuntu-latest",
+          "platform": "linux-x64",
+          "kind": "finite peer / offline / controlled process Desktop",
+          "lanes": [
+            "team",
+            "taskboard",
+            "skills",
+            "cross-team",
+            "collaboration",
+            "extensions",
+            "import",
+            "management",
+            "codex-login",
+            "codex",
+            "claude",
+            "claude-lifecycle",
+            "opencode",
+            "review",
+            "selection",
+            "processes"
+          ],
+          "count": 16
+        },
+        {
+          "runner": "macos-15",
+          "platform": "darwin-arm64",
+          "kind": "finite Codex installer Desktop",
+          "lanes": [
+            "installer"
+          ],
+          "count": 1
+        },
+        {
+          "runner": "ubuntu-latest",
+          "platform": "linux-x64",
+          "kind": "actual OpenCode V2 Settings with finite localhost model",
+          "lanes": [
+            "opencode-v2-management"
+          ],
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "original-unfiltered8-file-Node-command",
+      "status": "PASS_STATIC",
+      "evidence": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts"
+    },
+    {
+      "id": "whole149-43-85-case-authorities-preserved",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "node149": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "bytes": 165022,
+          "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+          "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+          "original139": {
+            "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+            "bytes": 164965,
+            "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7"
+          },
+          "suffix": "\nawait import('./desktop-ui-controls-deadline.test.ts');\n",
+          "suffixBytes": 57,
+          "staticExpandedCases": 149,
+          "registration": "Literal top-level awaited import registers the actual ten-case module after the original139 registrations; it does not prove all139 executions complete before the import. Module evaluation adds no global mutation."
+        },
+        "catalog43": {
+          "path": "test/renderer/utils/teamModelAvailability.test.ts",
+          "bytes": 56775,
+          "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+          "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+          "staticCases": 43,
+          "scope": "Accepted40-case prefix plus three appended actual utility regressions; no test discovery or provider/native scope expansion."
+        },
+        "renderer85": {
+          "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+          "bytes": 187890,
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+          "staticCases": 85,
+          "priorObservedReport": {
+            "gitBlob": "4277afde65b656545ca30e4b1be3f593af862fc8",
+            "bytes": 56658,
+            "sha256": "2a20638c7372fc202d5dc1fbcb364744a8ada038401e6673461ab8147843524e"
+          },
+          "qualification": "Original frozen9c9 whole85 was genuinely observed allpassed; it is unchanged at9d. That historical result is not a new9d run or evidence for149/catalog43/standalone10."
+        }
+      }
+    },
+    {
+      "id": "all10-deadline-titles-retained",
+      "status": "PASS_STATIC",
+      "evidence": [
+        {
+          "number": 1,
+          "title": "generic UI read refuses its first fulfilled value exactly at the original deadline"
+        },
+        {
+          "number": 2,
+          "title": "generic UI read refuses its first fulfilled value after the original deadline"
+        },
+        {
+          "number": 3,
+          "title": "generic UI read refuses a later fulfilled value exactly at the original deadline"
+        },
+        {
+          "number": 4,
+          "title": "generic UI read refuses a later fulfilled value after the original deadline"
+        },
+        {
+          "number": 5,
+          "title": "generic UI read does not admit or poll again after a late false observation"
+        },
+        {
+          "number": 6,
+          "title": "generic UI read preserves a timely first value and its exact identity"
+        },
+        {
+          "number": 7,
+          "title": "generic UI read preserves its original cadence and a timely later value"
+        },
+        {
+          "number": 8,
+          "title": "generic UI read honors a supplied budget at its strict boundary"
+        },
+        {
+          "number": 9,
+          "title": "generic UI hover refuses a third stable point arriving at the original deadline"
+        },
+        {
+          "number": 10,
+          "title": "generic UI hover preserves one movement after three timely stable points"
+        }
+      ]
+    },
+    {
+      "id": "CI-runtimes-distinct-from-unavailable-paired-standalone",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "CI": {
+          "hostNode": "24.21.0",
+          "frontendNode": "26.12.1",
+          "pnpm": "11.22.0",
+          "corepack": "0.36.0",
+          "electron": "44.10.1"
+        },
+        "separate": "CI Node24.21.0 executes imported ten cases with fixed controls only if prerequisites/reachability succeed. It neither supplies RED evidence nor executes the exact Node24.22.1/inode-pinned original paired RED/GREEN supervisor. Its60s phase/135s outer/4s cleanup controls remain separately unexecuted; no old attempt replay, replacement or synthetic PASS."
+      }
+    },
+    {
+      "id": "member-driver-source-cap-and-original-click-preserved",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "driver": {
+          "bytes": 69370,
+          "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+          "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+        },
+        "cap": 800,
+        "originalClick": {
+          "bytes": 649,
+          "sha256": "41c01f7e76509f264fe9337294554e84bc7c22e355558ab000469f9dae086f24",
+          "gitBlob": "0119d9327d234e9eeacb4d68e0422c5a038c79f9"
+        },
+        "noNewMemberTest": true
+      }
+    },
+    {
+      "id": "finite-provider-and-version-probe-authority-preserved",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "finite": "Emulation requires explicit LEGACY_DESKTOP_EMULATED_ONLY=1 and its bounded mode allowlist; inherited LEGACY_DESKTOP native/scenario selectors are rejected before fixture/model startup. Private TEST peer recipes and child census restrict execution. The V2 job explicitly unsets the emulation flag and separately rejects Claude/Codex/legacy OpenCode paths and mixed/packed/diagnostic selectors.",
+        "version": "The common Desktop fixture writes finite metadata/refusal sentinels, constructs a fresh private HOME/config/PATH environment and selects root/bin/claude-multimodel explicitly. dev-with-runtime's override branch probes this finite sentinel; the automatic real-runtime download/resolve branch is not selected by this environment. This distinction covers version probes as well as conversation invocations.",
+        "providerReports": [
+          {
+            "bytes": 29021,
+            "sha256": "d036879309b4245604eb01d166af7b27079f9602a38005846e43711c716aa62c",
+            "gitBlob": "9acdf46776d8b6ecfe6b75ddbfb4d6738296d027"
+          },
+          {
+            "bytes": 58110,
+            "sha256": "6a1ba6bdaa3278a041e2687b8588bbda3ae328a48af145a2780ab2b56c493096",
+            "gitBlob": "625192f5fc414e3fe0f646e6cb18db031263cdc2"
+          }
+        ],
+        "basis": "Unchanged complete source/route reports and all selected workflow bodies; no new executable launcher path."
+      }
+    },
+    {
+      "id": "actual-OpenCode-scope-explicit",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "v2": {
+          "platform": "linux-x64",
+          "engine": "2.1.4",
+          "bun": "1.3.11",
+          "runtimeConfigured": false,
+          "managementProfiles": 2,
+          "originalFiniteIntents": 5,
+          "scope": "Original Electron Settings key rejection/replacement, model test, global/project defaults, inheritance and renderer reload",
+          "excluded": [
+            "Claude/Codex execution",
+            "vendor authentication/inference",
+            "native V2 OAuth/forget",
+            "release qualification"
+          ]
+        },
+        "route": [
+          "runtime status --json --provider opencode --summary --project-path <TEST project>",
+          "runtime status --json --provider opencode --project-path <TEST project>",
+          "model list --json --provider opencode --project-path <TEST project>",
+          "runtime status --json --provider opencode --project-path <absent TEST project> (expected exit 1, no JSON)"
+        ]
+      }
+    },
+    {
+      "id": "all5-packaged-tuples-and9-Stage1-jobs-retained",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "packaged": {
+          "trigger": "Exact current9d156-file ancestor comparison retains legacy-host scripts/evidence docs outside app-only allowlist; original complete local Git classifier selects fullscope/run=true. No path filter or same-repository Draft skip is introduced.",
+          "tuples": [
+            "darwin-arm64 (CI_MACOS_ARM_RUNNER or namespace-profile-macos-15)",
+            "darwin-x64 (macos-15-intel)",
+            "win32-x64 (windows-2022)",
+            "win32-arm64 (windows-11-arm)",
+            "linux-x64 (CI_LINUX_RUNNER or ubuntu-latest)"
+          ],
+          "jobs": 7,
+          "timeoutMinutesPerMatrix": 90,
+          "prerequisites": "Frozen install and selected archive integrity; pinned runtime/support downloads; app/Host/terminal builds; exact native inputs; unsigned packaging; selected runner availability. Darwin ARM uses a configurable/custom runner and is not assumed available.",
+          "coverage": [
+            "Native architecture/SQLite/PTY/managed Git, packaged MCP initialize/tools-list and app startup with finite metadata sentinels",
+            "Actual OpenCode V2 Host tools, MCP, Stop and cold Resume across five tuples",
+            "Windows x64/ARM same original Main Retry and original Processes UI Kill with finite Codex peers, zero real vendor executions",
+            "Darwin ARM/x64 automatic packaged app relaunch with finite Claude SDK peer; one original input/Stop and successor app, no real Claude",
+            "Darwin pinned bundled orchestrator OpenCode project-path summary/full/model list and missing-project fail-closed commands"
+          ],
+          "artifactDays": 7,
+          "limits": "This is not full all-provider native conversation/authentication coverage on all OS/architectures. Mac project-path smoke asserts selected-provider JSON and missing-path failure, not that an OpenCode installation, login or model inference succeeded.",
+          "mutableAvailability": "Runner variables, network/downloads, dependency integrity and actual archive execution remain observed prerequisites; custom DarwinARM runner availability is not proved by source."
+        },
+        "stage1": {
+          "trigger": "pull_request opened/synchronize/reopened, scripts/legacy-agent-host/** matches; no Draft guard.",
+          "jobs": 9,
+          "matrix": "Two static Ubuntu/Windows jobs, one actual OpenCode V2.0.21 Host-instructions job, one V2.0.21 durable HTTP-persist job, five embedded V2.1.4 Host tuple jobs.",
+          "actualRuntime": "Only OpenCode is selected for provider runtime execution. Finite localhost model/service evidence remains distinct from real account authentication.",
+          "prerequisites": "Exact checkout; current runtime lock and read-only main lock comparison; pinned Bun/engine/build dependencies; admitted custody tuple. Darwin candidate build assertions may hold on an unmatched runner.",
+          "limits": "No all-provider Desktop GUI, vendor-authentication, release or Stage2 qualification.",
+          "mutableProductLock": "The static-preflight job checks out main separately at .current-product-lock for runtime.lock.json and records its actual product commit. This is a distinct mutable external input to capture; source assessment does not pin a future main checkout or mutate main."
+        }
+      }
+    },
+    {
+      "id": "existing-strict-native-failures-unwaived",
+      "status": "PASS_STATIC",
+      "evidence": "Original OpenCode member click, cross-team cold renderer, Windows native recovery and Darwin strictP09 remain actual failures/counterexamples; the new source does not relabel them. No rerun of an old run or old source snapshot is selected."
+    },
+    {
+      "id": "Draft-policy-failure-not-general-success",
+      "status": "PASS_STATIC",
+      "evidence": [
+        "PASS only for the exact complete observed contract",
+        "FAIL for actual failure",
+        "EXPECTED_POLICY_FAIL only for unchanged Draft Full qualification",
+        "EXPECTED_DRAFT_SKIP only for explicit Draft job guards",
+        "SKIP, CANCELLED, UNKNOWN and UNREACHED remain non-PASS"
+      ]
+    },
+    {
+      "id": "actual-head-merge-and-separate-main-lock-captured",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "explicitHead": [
+          "Announcements",
+          "Host UI/frontend",
+          "Packaged smoke matrix",
+          "Stage1 source"
+        ],
+        "syntheticMerge": [
+          "CI default checkout",
+          "Packaged scope/gate default checkout"
+        ],
+        "mergeProof": "Capture actual new synthetic merge SHA, both parents and tree. Ancestor779 with head9d should produce the accepted9d tree; verify rather than guessing. The merge commit identity is separate from source9d.",
+        "separateMainLock": "Stage1 static-preflight separately checks out main at .current-product-lock with runtime.lock.json sparse checkout, then logs actual product commit. Retain its actual source/lock bytes independently. This mutable input is neither PRhead nor assumed futuremain."
+      }
+    },
+    {
+      "id": "complete-paginated-new-action-discovery",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "discovery": "Only after a separately admitted single new PR action, enumerate /repos/777genius/agent-teams-ai/actions/runs using event=pull_request, branch=ci/frontend-parity-c714-20261117-2-head, head_sha=9d79abcf1f5c498687c2e5c443e3edf220070aa6, a narrow actual action-time creation window, exclude_pull_requests=false, per_page=100 and page=N. Retain all raw pages. Bind every selected run to the actual newly returned PR number, exact repository/head/base and action window; no guessed PR or run ID.",
+        "pagination": "Preserve total_count and all pages/end, deduplicate IDs and account for all seven event-eligible workflows including Draft skips. If the inherited filtered-search cap is reached, subdivide only the same new-action time window. A first-page or latest-attempt wrapper is not a completeness proof.",
+        "attempt": "Capture /actions/runs/<NEW_ID>/attempts/<EXACT_ATTEMPT> and its paginated jobs. Initial attempt1 is expected but must be observed; no rerun is selected. Preserve all job/step IDs, runner/OS/arch, times, conclusions and source checkout evidence."
+      }
+    },
+    {
+      "id": "full-logs-and-artifacts-no-index-to-receipt-promotion",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "logs": "Read complete decoded new-job logs and hash retained full text. Summaries do not substitute for full logs; transport truncation or unread bodies remain explicit.",
+        "artifacts": "Paginate only new-run artifact indexes. Record artifact IDs/names/digests/sizes/expiry/workflow_run/source identity. Download only actually accessible new archives, then hash full bytes, validate ZIP member inventory/CRC and retain complete required text/image members. Index metadata or an unextracted ZIP is not a receipt/screenshot review. Do not assume a currently available binary decoder or executor.",
+        "gui": "Join complete original receipts, screenshots, action/command identities, provider TEST authority, source/runtime tuples, custody and cleanup. Driver reachability is not observed click success. Each nonempty failure/skip remains visible."
+      }
+    },
+    {
+      "id": "terminal-only-stop-and-no-old-polling",
+      "status": "PASS_STATIC",
+      "evidence": "Observe only admitted new IDs until terminal; stop polling a run when terminal. Keep bounded adaptive cadence and progress updates. No old PR1218/frozen PR/original-run polling and no unfiltered old-head census."
+    },
+    {
+      "id": "new-R1-docs-only-preserves85-fields-and27-bundles",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "workingBranch": "fix/frontend-parity-coobservation-c714-20261115",
+        "parent": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "parentRoot": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+        "parentDocs": "4dd9acfdf6c93a036a81089b166bb13bc08868e9",
+        "docsOnly": true,
+        "allNonDocRootEntriesUnchanged": true,
+        "nonDocLeaves": 8799,
+        "workflows": 42,
+        "production": 5020,
+        "sourceCap": 800,
+        "exceptions": 141,
+        "parentCatalogFields": 85,
+        "bundles": 27,
+        "allCatalogValuesAndTotalsPreserved": true,
+        "fullPlanStatusPrefixesPreserved": true,
+        "newCatalogKeys": [
+          "fresh9dCiR1Stage",
+          "fresh9dCiR1EvidenceFiles"
+        ],
+        "exactEvidenceManifestRequired": true,
+        "immediateExpectedParentForceFalsePush": true,
+        "fullRootAndIndependentActualReadbacksRequired": true
+      }
+    },
+    {
+      "id": "inherited-CI-R1-process-no-new-executable-R2",
+      "status": "PASS_STATIC",
+      "evidence": "No new executable runner, workflow, dependency, source or test postimage is proposed here. Their existing accepted R2 records remain distinct. If root later authors an additional executable control, its existing required R2/actual process applies to that concrete control; no such extra control or gate is invented by this advisory."
+    },
+    {
+      "id": "full-R1-publication-actual-and-external-admission-required",
+      "status": "PASS_STATIC",
+      "evidence": [
+        "Exact R1 root+independent reviews all accepted and fully read/self-read.",
+        "R1 docs publication created and immediately pushed; actual full root+independent readbacks close on its real commit/root/docs/manifest and full body/prefix/census evidence.",
+        "External immutable admission joins that actual R1 publication and reports/gate to fixed9d/779 and the exact structured new names/arguments; no future SHA, PR number, merge SHA, run ID or case result is guessed.",
+        "Then root performs only the admitted one-shot exact-new-name preflight and structured create/readback actions. Each mutation has maximumAttempts1. An unknown/refused return is retained and resolved by read-only exact-name/PR evidence, never automatic replay."
+      ]
+    },
+    {
+      "id": "local-outage-and-unread-archive-boundaries-honest",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "localExecution": {
+          "status": "rejected",
+          "reason": "No usable execution environment is available. Wait for an environment to become available before using this tool."
+        },
+        "localSourceScopeOrNodeState": "UNKNOWN_CURRENT",
+        "standaloneRunner": {
+          "bytes": 25819,
+          "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+          "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+        },
+        "standaloneBinding": {
+          "bytes": 107295,
+          "sha256": "d8626f22a432926350c4d69c657313a61b935764dae972159a1a88fc03163b5b",
+          "gitBlob": "381c51a331b9d03f5aab87835af3dad5a6643d3c"
+        },
+        "standaloneInvoked": false,
+        "separateStandaloneScope": "/workspace/scratch/c714-waitread-inode64-20261117",
+        "separateStandaloneStage": "/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117",
+        "notReplacement": "New GitHub CI uses the unchanged workflow-selected runtimes. It does not execute, replay, replace or qualify the pinned local paired RED/GREEN supervisor.",
+        "artifactAccess": "GitHub metadata and decoded job logs remain available. Full ZIP/member/CRC/receipt/screenshot qualification needs actual accessible archive processing. With current local environment unavailable, unextracted/unread evidence stays UNKNOWN or unqualified; a remote download reference/digest is insufficient."
+      }
+    },
+    {
+      "id": "no-action-or-runtime-pass-issued",
+      "status": "PASS_STATIC",
+      "evidence": "Concrete new-CI selection for R1 review only. All runtime outcomes remain unobserved. Source9d static/actual publication acceptance and prior frozen9c9 renderer85 success retain their distinct scopes."
+    },
+    {
+      "id": "no-default-Ready-release-Stage2-or-scope-expansion",
+      "status": "PASS_STATIC",
+      "evidence": [
+        "No frozen PR1206/1207/1208/1211/1212/1213 mutation and no old PR1218 mutation/poll/rerun.",
+        "No real Claude/Codex executable/version/login/probe or remote paid model inference.",
+        "No source, workflow, dependency, budget, skip/filter, source-cap or exception change.",
+        "No new executable supervisor, browser/CUA, alternate runtime/Node pin or hidden retry.",
+        "No Ready, merge/default activation, release, Stage2 or broad native/vendor qualification.",
+        "No substitution of partial, skipped, cancelled, unknown or unreached outcomes for a complete passing contract."
+      ]
+    }
+  ],
+  "checkCount": 39,
+  "failedChecks": [],
+  "unresolvedBlockers": [],
+  "unresolvedPointers": [],
+  "newRefsCreated": false,
+  "newPrNumber": null,
+  "runtimeExecuted": false,
+  "sourceOrExecutableControlAuthored": false,
+  "qualification": "Static review of the concrete later CI selection only. Full independent R1 reviews, docs publication/full actual readbacks and external admission remain required. No new R2 is needed because no executable/source/workflow postimage is authored.",
+  "selfReadbackProtocol": "Retain exact report, send pin, then full literal and identity self-read."
+}

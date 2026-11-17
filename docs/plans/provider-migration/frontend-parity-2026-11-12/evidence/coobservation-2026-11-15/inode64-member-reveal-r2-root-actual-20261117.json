@@ -1,0 +1,3796 @@
+{
+  "schemaVersion": 1,
+  "kind": "root-exact-member-reveal-inode64-R2-actual-publication-readback",
+  "at": "2026-11-17 07:02:46 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "verdict": "ACCEPT_EXACT_COMBINED_R2_ACTUAL_PUBLICATION_STATIC",
+  "accepted": true,
+  "commit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+  "parent": "6d06207d96ea1c7ae7d9199a552ec776451dc231",
+  "tree": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+  "docsTree": "4dd9acfdf6c93a036a81089b166bb13bc08868e9",
+  "scriptsTree": "c3f4fe5a62dd79a743b6ffc0d07341ac68a25f73",
+  "manifest": {
+    "bytes": 14219,
+    "sha256": "f8edf426d500c6bb9f51d6be642401aea32c73d4930f7545451a67851e5ca023",
+    "gitBlob": "63a56db8844bb4d9c3f25047bee9deaffddee768"
+  },
+  "subject": {
+    "bytes": 29036,
+    "sha256": "0737bd331fb0ac13e8589b75c1aa392a3a428e8ca4b81e3a763bcba4d1bdcdec",
+    "gitBlob": "bb9a1cddc7add50dae7a907e247dd2a5efc61885"
+  },
+  "reviews": {
+    "root": {
+      "bytes": 19572,
+      "sha256": "ef1372b2a3caeae2c819658f8e58c7c3e5a108d84cee7df23904009da634057e",
+      "gitBlob": "473f2ee69b6255c93b30e0a01829400a8d5a3ae1"
+    },
+    "guard": {
+      "bytes": 66330,
+      "sha256": "888631fbeeb6c9140ae47d63feb3dc339305090447366ed0203acff35ba6198a",
+      "gitBlob": "4c0d79aa004a985aa449c087774b661c55b3713b"
+    },
+    "semantic": {
+      "bytes": 62518,
+      "sha256": "442ca3511f3aecf7e04a2d0847c8917ebd6d3f200db7b22250d5a9868705382a",
+      "gitBlob": "f973993d8af12c73d74d0cb62d9e0f970016dfd0"
+    },
+    "binding": {
+      "bytes": 131859,
+      "sha256": "504624f91f149bf5755354087aaf0b4abdf55d925fb0961b13576169515eb9eb",
+      "gitBlob": "844c0b687d2e7c3dbabfe30ccaecb11ba558f845"
+    }
+  },
+  "reviewChecks": 174,
+  "fullReportReadbacks": true,
+  "actualBodyReadbacks": [
+    {
+      "role": "proposal",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-20261117.json",
+      "mode": "100644",
+      "bytes": 29036,
+      "sha256": "0737bd331fb0ac13e8589b75c1aa392a3a428e8ca4b81e3a763bcba4d1bdcdec",
+      "gitBlob": "bb9a1cddc7add50dae7a907e247dd2a5efc61885"
+    },
+    {
+      "role": "rootR2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-root-review-20261117.json",
+      "mode": "100644",
+      "bytes": 19572,
+      "sha256": "ef1372b2a3caeae2c819658f8e58c7c3e5a108d84cee7df23904009da634057e",
+      "gitBlob": "473f2ee69b6255c93b30e0a01829400a8d5a3ae1"
+    },
+    {
+      "role": "guardR2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-guard-review-20261117.json",
+      "mode": "100644",
+      "bytes": 66330,
+      "sha256": "888631fbeeb6c9140ae47d63feb3dc339305090447366ed0203acff35ba6198a",
+      "gitBlob": "4c0d79aa004a985aa449c087774b661c55b3713b"
+    },
+    {
+      "role": "semanticR2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-semantic-review-20261117.json",
+      "mode": "100644",
+      "bytes": 62518,
+      "sha256": "442ca3511f3aecf7e04a2d0847c8917ebd6d3f200db7b22250d5a9868705382a",
+      "gitBlob": "f973993d8af12c73d74d0cb62d9e0f970016dfd0"
+    },
+    {
+      "role": "bindingR2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-binding-review-20261117.json",
+      "mode": "100644",
+      "bytes": 131859,
+      "sha256": "504624f91f149bf5755354087aaf0b4abdf55d925fb0961b13576169515eb9eb",
+      "gitBlob": "844c0b687d2e7c3dbabfe30ccaecb11ba558f845"
+    },
+    {
+      "role": "runner",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-inode64-supervisor-20261117.mjs",
+      "mode": "100644",
+      "bytes": 25819,
+      "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+      "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+    },
+    {
+      "role": "binding",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-inode64-binding-20261117.json",
+      "mode": "100644",
+      "bytes": 107295,
+      "sha256": "d8626f22a432926350c4d69c657313a61b935764dae972159a1a88fc03163b5b",
+      "gitBlob": "381c51a331b9d03f5aab87835af3dad5a6643d3c"
+    },
+    {
+      "role": "beforeVector",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-before-vector-20261117.json",
+      "mode": "100644",
+      "bytes": 3481,
+      "sha256": "075a300c213fcb595ce025c7f9ba3af9dc955ca5ca61f9a0a1b17ebf4f7c938b",
+      "gitBlob": "866c64a6d2c90fc92988c1094cbdd81b469c2c10"
+    },
+    {
+      "role": "afterVector",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-after-vector-20261117.json",
+      "mode": "100644",
+      "bytes": 3481,
+      "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+      "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+    },
+    {
+      "role": "r1RootActual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-root-actual-20261117.json",
+      "mode": "100644",
+      "bytes": 74741,
+      "sha256": "c6eee115daa3d4c205baecfe47bbfc33c02750616790a612eccb71b7a95d23b7",
+      "gitBlob": "987cd165ec38747d8425b0d5984e797a4886b6b1"
+    },
+    {
+      "role": "r1IndependentActual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-independent-actual-20261117.json",
+      "mode": "100644",
+      "bytes": 170762,
+      "sha256": "30270672655a4793b8f568647421a0fd6aa8c911b277fba2a616f373edd62306",
+      "gitBlob": "62e961fcb91218d41557049ac5d43de98eeceaa0"
+    },
+    {
+      "role": "r1ActualGate",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-actual-gate-20261117.json",
+      "mode": "100644",
+      "bytes": 4441,
+      "sha256": "11dd4fe224bb0531f2432fc73f5de4a0f06c7afe9118d09981674d96fe6dfd8c",
+      "gitBlob": "6bbf83caa77cb9eaab9e262f46bed45f03494968"
+    },
+    {
+      "role": "coldRendererAdvisory",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-cross-team-cold-renderer-advisory-20261117.json",
+      "mode": "100644",
+      "bytes": 54283,
+      "sha256": "744032c9d41d9d1f241f27485de185285d1335c81f4631be17780f20bd3fe442",
+      "gitBlob": "18682ee96d929a436190f23e0a3833838ac921b8"
+    },
+    {
+      "role": "windowsAdvisory",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-windows-native-failure-advisory-20261117.json",
+      "mode": "100644",
+      "bytes": 82021,
+      "sha256": "7a6dfd9d48f634d1e5434456ff4e787d0795baa01eecd092b2c6877025f352d3",
+      "gitBlob": "4a8ee1f31e1ce056b06515e842ed0d68fb5ea917"
+    },
+    {
+      "role": "terminalCiObservations",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-terminal-observations15-17-20261117.json",
+      "mode": "100644",
+      "bytes": 1470199,
+      "sha256": "4f66346fff2f9f0869fdb5290781037a100c316400ac31d4fd232c350bda211c",
+      "gitBlob": "8d679dba4598084dd3a3ce5ebc84c0b0a78beed9"
+    },
+    {
+      "role": "packagedGateLog",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-packaged-final-gate-full-job-20261117.log",
+      "mode": "100644",
+      "bytes": 23740,
+      "sha256": "13a59a8965a6136f1c94fcd3ac338f8eca33361b64812f60d599efc8e3eb0412",
+      "gitBlob": "14e9c33c097bee7385730b545db90855523f9889"
+    },
+    {
+      "role": "reviewLog",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-review-full-job-20261117.log",
+      "mode": "100644",
+      "bytes": 206448,
+      "sha256": "4df0ac8b371f527685c5384733f936c6b7bf5cddb3ccc375cd246d33a52d5fe7",
+      "gitBlob": "f400691b2dc86163afc8a7f554b7184572594a5d"
+    },
+    {
+      "role": "hostGateLog",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-host-final-gate-full-job-20261117.log",
+      "mode": "100644",
+      "bytes": 2383,
+      "sha256": "d612d65127338ec14f254874878a98db1ad85ced6885cb25b61290dad911b895",
+      "gitBlob": "366f483c1859ca532955433df20c3407539c1132"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "bytes": 2592749,
+      "sha256": "a815fc06cfa560584169eb06e8b62d7a8a80fc00f0959529788f93bd6282630d",
+      "gitBlob": "3f4de41aa99ca3b6a5444b0c42d72b2f96161a98"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "mode": "100644",
+      "bytes": 69458,
+      "sha256": "9827851fbf81ff903edfd3cbdb46b8c6d1017b538199c589bea9cff7b187ba78",
+      "gitBlob": "d549088ffcc2bbb7fbb9c666c6bc1ec5de632085"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "mode": "100644",
+      "bytes": 501783,
+      "sha256": "e1c79655be7450b1562ae7cf153743e860b6e1bdaa2f18d05ee10fb2a18450f0",
+      "gitBlob": "351526c197dcf58675a3b43d55bb14656421863d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-publication-manifest-20261117.json",
+      "mode": "100644",
+      "bytes": 14219,
+      "sha256": "f8edf426d500c6bb9f51d6be642401aea32c73d4930f7545451a67851e5ca023",
+      "gitBlob": "63a56db8844bb4d9c3f25047bee9deaffddee768"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "mode": "100644",
+      "bytes": 69370,
+      "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+      "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+    }
+  ],
+  "parentBodyReadbacks": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2587834,
+      "sha256": "ab59e0cc3a6b69ce7375584545f2d13dc38ae62450c35a3c04cd3e9ebddb8d5e",
+      "gitBlob": "cad54c1df10b391cd1ed6b11a988d5898ea9ec09"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 64543,
+      "sha256": "bd3d8910193bc7200464b0a8587b7a87889b2d7c15a77229d1a12bdd5fbf6d07",
+      "gitBlob": "e8c8edcd0c365273c02e83c50384ff65f148a38a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 482865,
+      "sha256": "9612b31d139a37b0da96af0f6051076fc6fb60ea66c41896fea41057b2fa07fe",
+      "gitBlob": "a6e33006bb43a011c5dd6283fcf2d15933f6747c"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "bytes": 69194,
+      "sha256": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+      "gitBlob": "43ab487464098fed0425ffd51441a38abc206f3b"
+    }
+  ],
+  "sourceVectorJoined": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "mode": "100644",
+      "bytes": 69370,
+      "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+      "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+    },
+    {
+      "bytes": 24759,
+      "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+      "mode": "100644",
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b"
+    },
+    {
+      "bytes": 45795,
+      "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+      "mode": "100644",
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b"
+    },
+    {
+      "bytes": 36260,
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+      "mode": "100644",
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38"
+    },
+    {
+      "bytes": 8457,
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+      "mode": "100644",
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b"
+    },
+    {
+      "bytes": 33036,
+      "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+      "mode": "100644",
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9"
+    },
+    {
+      "bytes": 165022,
+      "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+      "mode": "100644",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581"
+    },
+    {
+      "bytes": 7883,
+      "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+      "mode": "100644",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda"
+    },
+    {
+      "bytes": 29017,
+      "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+      "mode": "100644",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b"
+    },
+    {
+      "bytes": 74340,
+      "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+      "mode": "100644",
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c"
+    },
+    {
+      "bytes": 32077,
+      "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+      "mode": "100644",
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43"
+    },
+    {
+      "bytes": 187890,
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+      "mode": "100644",
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9"
+    },
+    {
+      "bytes": 56775,
+      "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+      "mode": "100644",
+      "path": "test/renderer/utils/teamModelAvailability.test.ts",
+      "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8"
+    }
+  ],
+  "treeProof": {
+    "rootUnchangedEntries": 52,
+    "docs": {
+      "before": 3215,
+      "after": 3234,
+      "rows": [
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+          "before": {
+            "sha": "cad54c1df10b391cd1ed6b11a988d5898ea9ec09",
+            "mode": "100644",
+            "size": 2587834
+          },
+          "after": {
+            "sha": "3f4de41aa99ca3b6a5444b0c42d72b2f96161a98",
+            "mode": "100644",
+            "size": 2592749
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+          "before": {
+            "sha": "e8c8edcd0c365273c02e83c50384ff65f148a38a",
+            "mode": "100644",
+            "size": 64543
+          },
+          "after": {
+            "sha": "d549088ffcc2bbb7fbb9c666c6bc1ec5de632085",
+            "mode": "100644",
+            "size": 69458
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+          "before": {
+            "sha": "a6e33006bb43a011c5dd6283fcf2d15933f6747c",
+            "mode": "100644",
+            "size": 482865
+          },
+          "after": {
+            "sha": "351526c197dcf58675a3b43d55bb14656421863d",
+            "mode": "100644",
+            "size": 501783
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-actual-gate-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "6bbf83caa77cb9eaab9e262f46bed45f03494968",
+            "mode": "100644",
+            "size": 4441
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-independent-actual-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "62e961fcb91218d41557049ac5d43de98eeceaa0",
+            "mode": "100644",
+            "size": 170762
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-root-actual-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "987cd165ec38747d8425b0d5984e797a4886b6b1",
+            "mode": "100644",
+            "size": 74741
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "bb9a1cddc7add50dae7a907e247dd2a5efc61885",
+            "mode": "100644",
+            "size": 29036
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-after-vector-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "91f190fd22a5be75b65d637083f52636fb02bb8b",
+            "mode": "100644",
+            "size": 3481
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-before-vector-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "866c64a6d2c90fc92988c1094cbdd81b469c2c10",
+            "mode": "100644",
+            "size": 3481
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-binding-review-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "844c0b687d2e7c3dbabfe30ccaecb11ba558f845",
+            "mode": "100644",
+            "size": 131859
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-guard-review-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "4c0d79aa004a985aa449c087774b661c55b3713b",
+            "mode": "100644",
+            "size": 66330
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-publication-manifest-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "63a56db8844bb4d9c3f25047bee9deaffddee768",
+            "mode": "100644",
+            "size": 14219
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-root-review-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "473f2ee69b6255c93b30e0a01829400a8d5a3ae1",
+            "mode": "100644",
+            "size": 19572
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-semantic-review-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "f973993d8af12c73d74d0cb62d9e0f970016dfd0",
+            "mode": "100644",
+            "size": 62518
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-cross-team-cold-renderer-advisory-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "18682ee96d929a436190f23e0a3833838ac921b8",
+            "mode": "100644",
+            "size": 54283
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-host-final-gate-full-job-20261117.log",
+          "before": null,
+          "after": {
+            "sha": "366f483c1859ca532955433df20c3407539c1132",
+            "mode": "100644",
+            "size": 2383
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-packaged-final-gate-full-job-20261117.log",
+          "before": null,
+          "after": {
+            "sha": "14e9c33c097bee7385730b545db90855523f9889",
+            "mode": "100644",
+            "size": 23740
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-review-full-job-20261117.log",
+          "before": null,
+          "after": {
+            "sha": "f400691b2dc86163afc8a7f554b7184572594a5d",
+            "mode": "100644",
+            "size": 206448
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-terminal-observations15-17-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "8d679dba4598084dd3a3ce5ebc84c0b0a78beed9",
+            "mode": "100644",
+            "size": 1470199
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-windows-native-failure-advisory-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "4a8ee1f31e1ce056b06515e842ed0d68fb5ea917",
+            "mode": "100644",
+            "size": 82021
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-inode64-binding-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "381c51a331b9d03f5aab87835af3dad5a6643d3c",
+            "mode": "100644",
+            "size": 107295
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-inode64-supervisor-20261117.mjs",
+          "before": null,
+          "after": {
+            "sha": "19662be9d55c70166c8f2c2e74775e6b03098197",
+            "mode": "100644",
+            "size": 25819
+          }
+        }
+      ]
+    },
+    "scripts": {
+      "before": 601,
+      "after": 601,
+      "rows": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+          "before": {
+            "sha": "43ab487464098fed0425ffd51441a38abc206f3b",
+            "mode": "100644",
+            "size": 69194
+          },
+          "after": {
+            "sha": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f",
+            "mode": "100644",
+            "size": 69370
+          }
+        }
+      ]
+    },
+    "wholeLeaves": 12033,
+    "nonDocLeaves": 8799,
+    "workflowsPreserved": 42,
+    "sourceCap": 800,
+    "sourceAfterLines": 798,
+    "expectedOnly23": true,
+    "passed": true
+  },
+  "currentPointerJoins": [
+    {
+      "gitBlob": "bb9a1cddc7add50dae7a907e247dd2a5efc61885",
+      "sha256": "0737bd331fb0ac13e8589b75c1aa392a3a428e8ca4b81e3a763bcba4d1bdcdec",
+      "bytes": 29036,
+      "locations": [
+        "manifest.subject",
+        "manifest.evidenceFiles.0",
+        "stage.subject",
+        "rootR2.subject",
+        "rootR2.completeRetainedBodyReads.5",
+        "rootR2.checks.1.evidence.5",
+        "guardR2.subjects.proposal",
+        "semanticR2.subject",
+        "bindingR2.subject",
+        "bindingR2.rootReview.subject",
+        "bindingR2.completeRetainedBodyIdentities.0.pin",
+        "bindingR2.checks.0.evidence.0",
+        "bindingR2.checks.43.evidence.subject"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "6bbf83caa77cb9eaab9e262f46bed45f03494968",
+      "sha256": "11dd4fe224bb0531f2432fc73f5de4a0f06c7afe9118d09981674d96fe6dfd8c",
+      "bytes": 4441,
+      "locations": [
+        "manifest.r1ActualGate",
+        "manifest.evidenceFiles.11",
+        "stage.r1ActualGate",
+        "proposal.r1ActualGate",
+        "proposal.completeBodiesRequired.8",
+        "rootR2.authorshipGate",
+        "rootR2.checks.0.evidence.gate",
+        "guardR2.subjects.authorshipGate",
+        "guardR2.checks.2.evidence.gate",
+        "guardR2.checks.15.evidence.sourceGate",
+        "semanticR2.primaryEvidence.r1ActualGate",
+        "bindingR2.authority.closedR1ActualGate",
+        "bindingR2.controls.bindingDifferences.differences.3.after",
+        "bindingR2.controls.bindingDifferences.differences.5.after",
+        "bindingR2.completeRetainedBodyIdentities.1.pin",
+        "bindingR2.currentPointerJoins.5.pin",
+        "bindingR2.currentPointerJoins.35.pin",
+        "bindingR2.currentPointerJoins.48.pin",
+        "bindingR2.currentPointerJoins.50.pin",
+        "bindingR2.checks.0.evidence.1",
+        "bindingR2.checks.3.evidence.gate",
+        "bindingR2.checks.31.evidence.sourceActualGate",
+        "bindingR2.checks.31.evidence.r1ActualGate",
+        "binding.sourceActualGate",
+        "binding.r1ActualGate"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "473f2ee69b6255c93b30e0a01829400a8d5a3ae1",
+      "sha256": "ef1372b2a3caeae2c819658f8e58c7c3e5a108d84cee7df23904009da634057e",
+      "bytes": 19572,
+      "locations": [
+        "manifest.reviews.root",
+        "manifest.evidenceFiles.1",
+        "stage.reviews.root",
+        "bindingR2.rootReview.pin",
+        "bindingR2.completeRetainedBodyIdentities.39.pin",
+        "bindingR2.checks.43.evidence.rootReview"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "4c0d79aa004a985aa449c087774b661c55b3713b",
+      "sha256": "888631fbeeb6c9140ae47d63feb3dc339305090447366ed0203acff35ba6198a",
+      "bytes": 66330,
+      "locations": [
+        "manifest.reviews.guard",
+        "manifest.evidenceFiles.2",
+        "stage.reviews.guard"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "f973993d8af12c73d74d0cb62d9e0f970016dfd0",
+      "sha256": "442ca3511f3aecf7e04a2d0847c8917ebd6d3f200db7b22250d5a9868705382a",
+      "bytes": 62518,
+      "locations": [
+        "manifest.reviews.semantic",
+        "manifest.evidenceFiles.3",
+        "stage.reviews.semantic"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "844c0b687d2e7c3dbabfe30ccaecb11ba558f845",
+      "sha256": "504624f91f149bf5755354087aaf0b4abdf55d925fb0961b13576169515eb9eb",
+      "bytes": 131859,
+      "locations": [
+        "manifest.reviews.binding",
+        "manifest.evidenceFiles.4",
+        "stage.reviews.binding"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "43ab487464098fed0425ffd51441a38abc206f3b",
+      "sha256": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+      "bytes": 69194,
+      "locations": [
+        "manifest.sourceDelta.0.before",
+        "stage.source.before",
+        "proposal.knownSourceAnchor.selectedInputRows.3",
+        "proposal.source.before",
+        "proposal.completeBodiesRequired.0",
+        "rootR2.source.before",
+        "rootR2.checks.2.evidence.before",
+        "rootR2.checks.8.evidence.0",
+        "guardR2.subjects.driverPreimage",
+        "guardR2.exactFacts.sourceAuthority.actualSourceJoins.3",
+        "guardR2.checks.4.evidence.selected.3",
+        "guardR2.checks.36.evidence.inverseIdentity",
+        "semanticR2.primaryEvidence.sourceBefore",
+        "semanticR2.knownAnchor.selectedInputRows.3",
+        "semanticR2.knownAnchor.actualFileJoins.3.identity",
+        "bindingR2.authority.knownSourceAnchor.selectedInputRows.3",
+        "bindingR2.source.before",
+        "bindingR2.source.completeDriverInverse.fullInversePin",
+        "bindingR2.source.beforeVector.completeRows.0",
+        "bindingR2.source.vectorProof.newDriverBeforePin",
+        "bindingR2.completeRetainedBodyIdentities.7.pin",
+        "bindingR2.currentPointerJoins.11.pin",
+        "bindingR2.currentPointerJoins.12.pin",
+        "bindingR2.currentPointerJoins.27.pin",
+        "bindingR2.currentPointerJoins.72.pin",
+        "bindingR2.checks.7.evidence.selectedInputRows.3",
+        "bindingR2.checks.8.evidence",
+        "bindingR2.checks.9.evidence.inverse",
+        "beforeVector.0",
+        "r1RootActual.selectedSourceAnchorRows.3",
+        "r1RootActual.currentPointerJoins.9.pin",
+        "r1RootActual.checks.36.evidence.3",
+        "r1IndependentActual.currentStage.driverBefore",
+        "r1IndependentActual.currentPointerJoins.9.pin",
+        "r1IndependentActual.selectedSourceAnchor.rows.driver.pin",
+        "r1IndependentActual.selectedSourceAnchor.rootCompleteSourceRows.3",
+        "r1IndependentActual.checks.49.evidence.driver.pin",
+        "r1IndependentActual.checks.62.evidence.rootSelectedRows.3",
+        "r1ActualGate.sourceAnchorRows.3"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f",
+      "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+      "bytes": 69370,
+      "locations": [
+        "manifest.sourceDelta.0.after",
+        "stage.source.after",
+        "proposal.source.after",
+        "proposal.completeBodiesRequired.1",
+        "rootR2.source.after",
+        "rootR2.completeRetainedBodyReads.0",
+        "rootR2.checks.1.evidence.0",
+        "rootR2.checks.2.evidence.after",
+        "guardR2.subjects.driver",
+        "guardR2.readMethod.driver.identity",
+        "guardR2.exactFacts.thirteenRowAfterVector.0",
+        "semanticR2.primaryEvidence.sourceAfter",
+        "bindingR2.source.after",
+        "bindingR2.source.afterVector.completeRows.0",
+        "bindingR2.source.vectorProof.newDriverAfterPin",
+        "bindingR2.completeRetainedBodyIdentities.2.pin",
+        "bindingR2.currentPointerJoins.13.pin",
+        "bindingR2.currentPointerJoins.28.pin",
+        "bindingR2.checks.0.evidence.2",
+        "afterVector.0"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "866c64a6d2c90fc92988c1094cbdd81b469c2c10",
+      "sha256": "075a300c213fcb595ce025c7f9ba3af9dc955ca5ca61f9a0a1b17ebf4f7c938b",
+      "bytes": 3481,
+      "locations": [
+        "manifest.beforeVector",
+        "manifest.evidenceFiles.7",
+        "stage.source.beforeVector",
+        "proposal.source.beforeVector.identity",
+        "proposal.completeBodiesRequired.6",
+        "rootR2.source.beforeVector",
+        "rootR2.completeRetainedBodyReads.1",
+        "rootR2.checks.1.evidence.1",
+        "rootR2.checks.7.evidence.before",
+        "guardR2.subjects.beforeVector",
+        "guardR2.checks.40.evidence.beforeVector.identity",
+        "semanticR2.primaryEvidence.beforeVector13",
+        "bindingR2.source.beforeVector.pin",
+        "bindingR2.completeRetainedBodyIdentities.5.pin",
+        "bindingR2.currentPointerJoins.15.pin",
+        "bindingR2.currentPointerJoins.33.pin",
+        "bindingR2.checks.1.evidence.0",
+        "bindingR2.checks.14.evidence.before.identity"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b",
+      "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+      "bytes": 3481,
+      "locations": [
+        "manifest.afterVector",
+        "manifest.evidenceFiles.8",
+        "stage.source.afterVector",
+        "proposal.source.afterVector.identity",
+        "proposal.completeBodiesRequired.7",
+        "rootR2.source.afterVector",
+        "rootR2.completeRetainedBodyReads.2",
+        "rootR2.checks.1.evidence.2",
+        "rootR2.checks.7.evidence.after",
+        "guardR2.subjects.afterVector",
+        "guardR2.checks.40.evidence.afterVector.identity",
+        "semanticR2.primaryEvidence.afterVector13",
+        "bindingR2.source.afterVector.pin",
+        "bindingR2.completeRetainedBodyIdentities.6.pin",
+        "bindingR2.currentPointerJoins.16.pin",
+        "bindingR2.currentPointerJoins.34.pin",
+        "bindingR2.checks.1.evidence.1",
+        "bindingR2.checks.14.evidence.after.identity"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197",
+      "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+      "bytes": 25819,
+      "locations": [
+        "manifest.runner",
+        "manifest.evidenceFiles.5",
+        "stage.runner",
+        "proposal.controls.afterRunner",
+        "proposal.completeBodiesRequired.3",
+        "rootR2.controls.afterRunner",
+        "rootR2.completeRetainedBodyReads.3",
+        "rootR2.checks.1.evidence.3",
+        "rootR2.checks.10.evidence.after",
+        "rootR2.checks.34.evidence.runner",
+        "guardR2.subjects.runner",
+        "semanticR2.primaryEvidence.runnerAfter",
+        "bindingR2.controls.afterRunner",
+        "bindingR2.controls.bindingDifferences.differences.8.after",
+        "bindingR2.completeRetainedBodyIdentities.3.pin",
+        "bindingR2.currentPointerJoins.18.pin",
+        "bindingR2.currentPointerJoins.30.pin",
+        "bindingR2.currentPointerJoins.54.pin",
+        "bindingR2.checks.0.evidence.3",
+        "bindingR2.checks.30.evidence.runner",
+        "binding.runner"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "381c51a331b9d03f5aab87835af3dad5a6643d3c",
+      "sha256": "d8626f22a432926350c4d69c657313a61b935764dae972159a1a88fc03163b5b",
+      "bytes": 107295,
+      "locations": [
+        "manifest.binding",
+        "manifest.evidenceFiles.6",
+        "stage.binding",
+        "proposal.controls.afterBinding",
+        "proposal.completeBodiesRequired.5",
+        "rootR2.controls.afterBinding",
+        "rootR2.completeRetainedBodyReads.4",
+        "rootR2.checks.1.evidence.4",
+        "guardR2.subjects.binding",
+        "semanticR2.primaryEvidence.bindingAfter",
+        "bindingR2.controls.afterBinding",
+        "bindingR2.completeRetainedBodyIdentities.4.pin",
+        "bindingR2.currentPointerJoins.20.pin",
+        "bindingR2.currentPointerJoins.32.pin",
+        "bindingR2.checks.0.evidence.4"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "987cd165ec38747d8425b0d5984e797a4886b6b1",
+      "sha256": "c6eee115daa3d4c205baecfe47bbfc33c02750616790a612eccb71b7a95d23b7",
+      "bytes": 74741,
+      "locations": [
+        "manifest.evidenceFiles.9",
+        "stage.knownSourceAnchor.root",
+        "proposal.r1ActualRoot",
+        "guardR2.checks.16.evidence.actualR1Root",
+        "semanticR2.primaryEvidence.gateRootActual",
+        "semanticR2.standalone.sourceAnchorEvidence.actualR1Root",
+        "bindingR2.authority.rootActual",
+        "bindingR2.controls.bindingDifferences.differences.10.after.actualR1Root",
+        "bindingR2.standalone.sourceAnchorEvidence.actualR1Root",
+        "bindingR2.completeRetainedBodyIdentities.11.pin",
+        "bindingR2.currentPointerJoins.6.pin",
+        "bindingR2.currentPointerJoins.60.pin",
+        "bindingR2.currentPointerJoins.67.pin",
+        "bindingR2.checks.3.evidence.rootActual",
+        "bindingR2.checks.32.evidence.actualR1Root",
+        "binding.sourceAnchorEvidence.actualR1Root",
+        "r1IndependentActual.rootActualReview.pin",
+        "r1IndependentActual.checks.57.evidence.rootActual",
+        "r1IndependentActual.checks.58.evidence.rootActual",
+        "r1ActualGate.rootActual"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "62e961fcb91218d41557049ac5d43de98eeceaa0",
+      "sha256": "30270672655a4793b8f568647421a0fd6aa8c911b277fba2a616f373edd62306",
+      "bytes": 170762,
+      "locations": [
+        "manifest.evidenceFiles.10",
+        "stage.knownSourceAnchor.independent",
+        "proposal.r1ActualIndependent",
+        "guardR2.checks.16.evidence.actualR1Independent",
+        "semanticR2.primaryEvidence.gateIndependentActual",
+        "semanticR2.standalone.sourceAnchorEvidence.actualR1Independent",
+        "bindingR2.authority.independentActual",
+        "bindingR2.controls.bindingDifferences.differences.10.after.actualR1Independent",
+        "bindingR2.standalone.sourceAnchorEvidence.actualR1Independent",
+        "bindingR2.preservation.actualBasis",
+        "bindingR2.completeRetainedBodyIdentities.12.pin",
+        "bindingR2.currentPointerJoins.7.pin",
+        "bindingR2.currentPointerJoins.61.pin",
+        "bindingR2.currentPointerJoins.68.pin",
+        "bindingR2.checks.3.evidence.independentActual",
+        "bindingR2.checks.32.evidence.actualR1Independent",
+        "binding.sourceAnchorEvidence.actualR1Independent",
+        "r1ActualGate.independentActual"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "18682ee96d929a436190f23e0a3833838ac921b8",
+      "sha256": "744032c9d41d9d1f241f27485de185285d1335c81f4631be17780f20bd3fe442",
+      "bytes": 54283,
+      "locations": [
+        "manifest.evidenceFiles.12",
+        "stage.failureAdvisories.coldRenderer"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "4a8ee1f31e1ce056b06515e842ed0d68fb5ea917",
+      "sha256": "7a6dfd9d48f634d1e5434456ff4e787d0795baa01eecd092b2c6877025f352d3",
+      "bytes": 82021,
+      "locations": [
+        "manifest.evidenceFiles.13",
+        "stage.failureAdvisories.windows"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "8d679dba4598084dd3a3ce5ebc84c0b0a78beed9",
+      "sha256": "4f66346fff2f9f0869fdb5290781037a100c316400ac31d4fd232c350bda211c",
+      "bytes": 1470199,
+      "locations": [
+        "manifest.evidenceFiles.14",
+        "stage.ci.terminalObservationPacket"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "14e9c33c097bee7385730b545db90855523f9889",
+      "sha256": "13a59a8965a6136f1c94fcd3ac338f8eca33361b64812f60d599efc8e3eb0412",
+      "bytes": 23740,
+      "locations": [
+        "manifest.evidenceFiles.15",
+        "terminalCiObservations.logs.0"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "f400691b2dc86163afc8a7f554b7184572594a5d",
+      "sha256": "4df0ac8b371f527685c5384733f936c6b7bf5cddb3ccc375cd246d33a52d5fe7",
+      "bytes": 206448,
+      "locations": [
+        "manifest.evidenceFiles.16",
+        "terminalCiObservations.logs.1"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "366f483c1859ca532955433df20c3407539c1132",
+      "sha256": "d612d65127338ec14f254874878a98db1ad85ced6885cb25b61290dad911b895",
+      "bytes": 2383,
+      "locations": [
+        "manifest.evidenceFiles.17",
+        "terminalCiObservations.logs.2"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "cad54c1df10b391cd1ed6b11a988d5898ea9ec09",
+      "sha256": "ab59e0cc3a6b69ce7375584545f2d13dc38ae62450c35a3c04cd3e9ebddb8d5e",
+      "bytes": 2587834,
+      "locations": [
+        "manifest.modifiedDocuments.0.before",
+        "r1RootActual.actualBodyReadbacks.18",
+        "r1RootActual.currentPointerJoins.55.pin",
+        "r1RootActual.checks.24.evidence",
+        "r1RootActual.checks.30.evidence.after",
+        "r1IndependentActual.actualBodyReadbacks.18",
+        "r1IndependentActual.currentPointerJoins.55.pin",
+        "r1IndependentActual.checks.23.evidence.pin",
+        "r1IndependentActual.checks.34.evidence.after"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "3f4de41aa99ca3b6a5444b0c42d72b2f96161a98",
+      "sha256": "a815fc06cfa560584169eb06e8b62d7a8a80fc00f0959529788f93bd6282630d",
+      "bytes": 2592749,
+      "locations": [
+        "manifest.modifiedDocuments.0.after"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "3d2335708fce21ec0107fa100662bc16f3c77860",
+      "sha256": "38e6c7c26068125120382026ff3b384345d52ecbcc16a287ea6116dbe1cf723e",
+      "bytes": 4915,
+      "locations": [
+        "manifest.modifiedDocuments.0.appendIdentity",
+        "manifest.modifiedDocuments.1.appendIdentity",
+        "manifest.appendSectionIdentity"
+      ],
+      "completeBodyRead": true,
+      "method": "Derived as exact suffix of complete literal-prefix-preserved documents; not fetched as a retained blob."
+    },
+    {
+      "gitBlob": "e8c8edcd0c365273c02e83c50384ff65f148a38a",
+      "sha256": "bd3d8910193bc7200464b0a8587b7a87889b2d7c15a77229d1a12bdd5fbf6d07",
+      "bytes": 64543,
+      "locations": [
+        "manifest.modifiedDocuments.1.before",
+        "r1RootActual.actualBodyReadbacks.19",
+        "r1RootActual.currentPointerJoins.57.pin",
+        "r1RootActual.checks.25.evidence",
+        "r1RootActual.checks.31.evidence.after",
+        "r1IndependentActual.actualBodyReadbacks.19",
+        "r1IndependentActual.currentPointerJoins.57.pin",
+        "r1IndependentActual.checks.24.evidence.pin",
+        "r1IndependentActual.checks.35.evidence.after"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "d549088ffcc2bbb7fbb9c666c6bc1ec5de632085",
+      "sha256": "9827851fbf81ff903edfd3cbdb46b8c6d1017b538199c589bea9cff7b187ba78",
+      "bytes": 69458,
+      "locations": [
+        "manifest.modifiedDocuments.1.after"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "a6e33006bb43a011c5dd6283fcf2d15933f6747c",
+      "sha256": "9612b31d139a37b0da96af0f6051076fc6fb60ea66c41896fea41057b2fa07fe",
+      "bytes": 482865,
+      "locations": [
+        "manifest.modifiedDocuments.2.before",
+        "r1RootActual.actualBodyReadbacks.20",
+        "r1RootActual.currentPointerJoins.59.pin",
+        "r1RootActual.checks.26.evidence",
+        "r1IndependentActual.actualBodyReadbacks.20",
+        "r1IndependentActual.currentPointerJoins.59.pin",
+        "r1IndependentActual.checks.25.evidence.pin"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "351526c197dcf58675a3b43d55bb14656421863d",
+      "sha256": "e1c79655be7450b1562ae7cf153743e860b6e1bdaa2f18d05ee10fb2a18450f0",
+      "bytes": 501783,
+      "locations": [
+        "manifest.modifiedDocuments.2.after"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "b16bf54091cfb2fd2756ad7a951d0f9143611d2b",
+      "sha256": "e3a891024d750f7c868a7a253f2ed1f3630b833e92d1698af38b533c8ebc5db7",
+      "bytes": 27869,
+      "locations": [
+        "stage.r1",
+        "proposal.r1",
+        "guardR2.subjects.r1",
+        "guardR2.checks.1.evidence.r1",
+        "semanticR2.primaryEvidence.r1",
+        "bindingR2.authority.r1",
+        "bindingR2.controls.bindingDifferences.differences.4.after",
+        "bindingR2.completeRetainedBodyIdentities.10.pin",
+        "bindingR2.currentPointerJoins.0.pin",
+        "bindingR2.currentPointerJoins.49.pin",
+        "bindingR2.currentPointerJoins.65.pin",
+        "binding.r1",
+        "r1RootActual.subject",
+        "r1RootActual.actualBodyReadbacks.0",
+        "r1RootActual.currentPointerJoins.0.pin",
+        "r1RootActual.currentPointerJoins.14.pin",
+        "r1RootActual.currentPointerJoins.32.pin",
+        "r1RootActual.currentPointerJoins.37.pin",
+        "r1RootActual.checks.6.evidence",
+        "r1IndependentActual.subject",
+        "r1IndependentActual.rootActualReview.subject",
+        "r1IndependentActual.actualR1Reviews.rows.0.subject",
+        "r1IndependentActual.actualR1Reviews.rows.1.subject",
+        "r1IndependentActual.actualR1Reviews.rows.2.subject",
+        "r1IndependentActual.actualR1Reviews.rows.3.subject",
+        "r1IndependentActual.actualBodyReadbacks.0",
+        "r1IndependentActual.currentStage.subject",
+        "r1IndependentActual.currentEvidenceFiles.0",
+        "r1IndependentActual.currentPointerJoins.0.pin",
+        "r1IndependentActual.currentPointerJoins.14.pin",
+        "r1IndependentActual.currentPointerJoins.32.pin",
+        "r1IndependentActual.currentPointerJoins.37.pin",
+        "r1IndependentActual.checks.5.evidence.pin",
+        "r1IndependentActual.checks.30.evidence.subject",
+        "r1IndependentActual.checks.38.evidence.subject",
+        "r1IndependentActual.checks.39.evidence.subject",
+        "r1IndependentActual.checks.40.evidence.subject",
+        "r1IndependentActual.checks.41.evidence.subject",
+        "r1IndependentActual.checks.42.evidence.subject",
+        "r1IndependentActual.checks.58.evidence.subject",
+        "r1ActualGate.r1"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "0119d9327d234e9eeacb4d68e0422c5a038c79f9",
+      "sha256": "41c01f7e76509f264fe9337294554e84bc7c22e355558ab000469f9dae086f24",
+      "bytes": 649,
+      "locations": [
+        "stage.source.originalClick",
+        "proposal.source.unchangedOriginalClick",
+        "rootR2.checks.4.evidence",
+        "guardR2.checks.37.evidence.id",
+        "semanticR2.exactDeltas.driver.clickIdentity",
+        "bindingR2.source.unchangedOriginalClick",
+        "bindingR2.currentPointerJoins.14.pin",
+        "bindingR2.checks.10.evidence.click"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete649-byte literal unique click extracted from full driver pre/postimages."
+    },
+    {
+      "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+      "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+      "bytes": 24759,
+      "locations": [
+        "stage.sourcePreservation.original12SourceRows.0",
+        "proposal.preservation.original12SourceRows.0",
+        "guardR2.exactFacts.thirteenRowAfterVector.1",
+        "bindingR2.source.beforeVector.completeRows.1",
+        "bindingR2.source.afterVector.completeRows.1",
+        "bindingR2.source.twelveFullPreservedSourceReadbacks.0",
+        "bindingR2.completeRetainedBodyIdentities.24.pin",
+        "bindingR2.currentPointerJoins.36.pin",
+        "beforeVector.1",
+        "afterVector.1"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+      "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+      "bytes": 45795,
+      "locations": [
+        "stage.sourcePreservation.original12SourceRows.1",
+        "proposal.preservation.original12SourceRows.1",
+        "guardR2.exactFacts.thirteenRowAfterVector.2",
+        "bindingR2.source.beforeVector.completeRows.2",
+        "bindingR2.source.afterVector.completeRows.2",
+        "bindingR2.source.twelveFullPreservedSourceReadbacks.1",
+        "bindingR2.completeRetainedBodyIdentities.25.pin",
+        "bindingR2.currentPointerJoins.37.pin",
+        "beforeVector.2",
+        "afterVector.2"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+      "bytes": 36260,
+      "locations": [
+        "stage.sourcePreservation.original12SourceRows.2",
+        "proposal.preservation.original12SourceRows.2",
+        "guardR2.exactFacts.thirteenRowAfterVector.3",
+        "bindingR2.source.beforeVector.completeRows.3",
+        "bindingR2.source.afterVector.completeRows.3",
+        "bindingR2.source.twelveFullPreservedSourceReadbacks.2",
+        "bindingR2.completeRetainedBodyIdentities.26.pin",
+        "bindingR2.currentPointerJoins.38.pin",
+        "beforeVector.3",
+        "afterVector.3"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+      "bytes": 8457,
+      "locations": [
+        "stage.sourcePreservation.original12SourceRows.3",
+        "proposal.preservation.original12SourceRows.3",
+        "guardR2.exactFacts.thirteenRowAfterVector.4",
+        "bindingR2.source.beforeVector.completeRows.4",
+        "bindingR2.source.afterVector.completeRows.4",
+        "bindingR2.source.twelveFullPreservedSourceReadbacks.3",
+        "bindingR2.completeRetainedBodyIdentities.27.pin",
+        "bindingR2.currentPointerJoins.39.pin",
+        "beforeVector.4",
+        "afterVector.4"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+      "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+      "bytes": 33036,
+      "locations": [
+        "stage.sourcePreservation.original12SourceRows.4",
+        "proposal.preservation.original12SourceRows.4",
+        "guardR2.exactFacts.thirteenRowAfterVector.5",
+        "bindingR2.source.beforeVector.completeRows.5",
+        "bindingR2.source.afterVector.completeRows.5",
+        "bindingR2.source.twelveFullPreservedSourceReadbacks.4",
+        "bindingR2.completeRetainedBodyIdentities.28.pin",
+        "bindingR2.currentPointerJoins.40.pin",
+        "beforeVector.5",
+        "afterVector.5"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+      "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+      "bytes": 165022,
+      "locations": [
+        "stage.sourcePreservation.original12SourceRows.5",
+        "proposal.preservation.original12SourceRows.5",
+        "guardR2.exactFacts.thirteenRowAfterVector.6",
+        "semanticR2.testAndResultBoundaries.aggregate.aggregateIdentity",
+        "semanticR2.testAndResultBoundaries.whole149",
+        "bindingR2.source.beforeVector.completeRows.6",
+        "bindingR2.source.afterVector.completeRows.6",
+        "bindingR2.source.twelveFullPreservedSourceReadbacks.5",
+        "bindingR2.completeRetainedBodyIdentities.29.pin",
+        "bindingR2.currentPointerJoins.41.pin",
+        "beforeVector.6",
+        "afterVector.6"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+      "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+      "bytes": 7883,
+      "locations": [
+        "stage.sourcePreservation.original12SourceRows.6",
+        "proposal.knownSourceAnchor.selectedInputRows.2",
+        "proposal.standalone.redFiles.1.pin",
+        "proposal.preservation.original12SourceRows.6",
+        "rootR2.checks.20.evidence.1.pin",
+        "guardR2.exactFacts.embeddedInputs.1.id",
+        "guardR2.exactFacts.sourceAuthority.actualSourceJoins.2",
+        "guardR2.exactFacts.thirteenRowAfterVector.7",
+        "guardR2.checks.4.evidence.selected.2",
+        "guardR2.checks.8.evidence.1.id",
+        "guardR2.checks.16.evidence.selectedFixedInputs.2",
+        "guardR2.checks.18.evidence.redFiles.1.pin",
+        "guardR2.checks.31.evidence.fixture",
+        "semanticR2.knownAnchor.selectedInputRows.2",
+        "semanticR2.knownAnchor.actualFileJoins.2.identity",
+        "semanticR2.exactDeltas.binding.bodyRows.1.identity",
+        "semanticR2.testAndResultBoundaries.standalone10",
+        "bindingR2.authority.knownSourceAnchor.selectedInputRows.2",
+        "bindingR2.source.beforeVector.completeRows.7",
+        "bindingR2.source.afterVector.completeRows.7",
+        "bindingR2.source.twelveFullPreservedSourceReadbacks.6",
+        "bindingR2.controls.bindingDifferences.differences.10.after.selectedFixedInputs.2",
+        "bindingR2.standalone.completeEmbeddedBodyJoins.1.pin",
+        "bindingR2.standalone.sourceAnchorEvidence.selectedFixedInputs.2",
+        "bindingR2.completeRetainedBodyIdentities.30.pin",
+        "bindingR2.currentPointerJoins.10.pin",
+        "bindingR2.currentPointerJoins.22.pin",
+        "bindingR2.currentPointerJoins.42.pin",
+        "bindingR2.currentPointerJoins.56.pin",
+        "bindingR2.currentPointerJoins.64.pin",
+        "bindingR2.currentPointerJoins.71.pin",
+        "bindingR2.checks.7.evidence.selectedInputRows.2",
+        "bindingR2.checks.32.evidence.selectedFixedInputs.2",
+        "bindingR2.checks.33.evidence.2",
+        "bindingR2.checks.35.evidence.1.pin",
+        "binding.redFiles.1.pin",
+        "binding.sourceAnchorEvidence.selectedFixedInputs.2",
+        "beforeVector.7",
+        "afterVector.7",
+        "r1RootActual.selectedSourceAnchorRows.2",
+        "r1RootActual.checks.36.evidence.2",
+        "r1IndependentActual.selectedSourceAnchor.rows.selectedInputs.1.pin",
+        "r1IndependentActual.selectedSourceAnchor.rootCompleteSourceRows.2",
+        "r1IndependentActual.checks.49.evidence.selectedActualSourceBodies.1.pin",
+        "r1IndependentActual.checks.62.evidence.rootSelectedRows.2",
+        "r1ActualGate.sourceAnchorRows.2"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+      "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+      "bytes": 29017,
+      "locations": [
+        "stage.sourcePreservation.original12SourceRows.7",
+        "proposal.knownSourceAnchor.selectedInputRows.1",
+        "proposal.standalone.greenControls.pin",
+        "proposal.preservation.original12SourceRows.7",
+        "rootR2.checks.20.evidence.3.pin",
+        "guardR2.exactFacts.embeddedInputs.3.id",
+        "guardR2.exactFacts.sourceAuthority.actualSourceJoins.1",
+        "guardR2.exactFacts.thirteenRowAfterVector.8",
+        "guardR2.checks.4.evidence.selected.1",
+        "guardR2.checks.8.evidence.3.id",
+        "guardR2.checks.16.evidence.selectedFixedInputs.1",
+        "guardR2.checks.34.evidence.green",
+        "guardR2.checks.38.evidence.helper",
+        "semanticR2.knownAnchor.selectedInputRows.1",
+        "semanticR2.knownAnchor.actualFileJoins.1.identity",
+        "semanticR2.exactDeltas.binding.bodyRows.3.identity",
+        "semanticR2.memberReveal.helperPin",
+        "bindingR2.authority.knownSourceAnchor.selectedInputRows.1",
+        "bindingR2.source.beforeVector.completeRows.8",
+        "bindingR2.source.afterVector.completeRows.8",
+        "bindingR2.source.twelveFullPreservedSourceReadbacks.7",
+        "bindingR2.controls.bindingDifferences.differences.10.after.selectedFixedInputs.1",
+        "bindingR2.standalone.completeEmbeddedBodyJoins.3.pin",
+        "bindingR2.standalone.sourceAnchorEvidence.selectedFixedInputs.1",
+        "bindingR2.completeRetainedBodyIdentities.31.pin",
+        "bindingR2.currentPointerJoins.9.pin",
+        "bindingR2.currentPointerJoins.24.pin",
+        "bindingR2.currentPointerJoins.43.pin",
+        "bindingR2.currentPointerJoins.58.pin",
+        "bindingR2.currentPointerJoins.63.pin",
+        "bindingR2.currentPointerJoins.70.pin",
+        "bindingR2.checks.7.evidence.selectedInputRows.1",
+        "bindingR2.checks.32.evidence.selectedFixedInputs.1",
+        "bindingR2.checks.33.evidence.1",
+        "bindingR2.checks.35.evidence.3.pin",
+        "binding.greenControls.pin",
+        "binding.sourceAnchorEvidence.selectedFixedInputs.1",
+        "beforeVector.8",
+        "afterVector.8",
+        "r1RootActual.selectedSourceAnchorRows.1",
+        "r1RootActual.checks.36.evidence.1",
+        "r1IndependentActual.selectedSourceAnchor.rows.selectedInputs.2.pin",
+        "r1IndependentActual.selectedSourceAnchor.rootCompleteSourceRows.1",
+        "r1IndependentActual.checks.49.evidence.selectedActualSourceBodies.2.pin",
+        "r1IndependentActual.checks.62.evidence.rootSelectedRows.1",
+        "r1ActualGate.sourceAnchorRows.1"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+      "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+      "bytes": 74340,
+      "locations": [
+        "stage.sourcePreservation.original12SourceRows.8",
+        "proposal.preservation.original12SourceRows.8",
+        "guardR2.exactFacts.thirteenRowAfterVector.9",
+        "semanticR2.testAndResultBoundaries.rendererHook",
+        "bindingR2.source.beforeVector.completeRows.9",
+        "bindingR2.source.afterVector.completeRows.9",
+        "bindingR2.source.twelveFullPreservedSourceReadbacks.8",
+        "bindingR2.completeRetainedBodyIdentities.32.pin",
+        "bindingR2.currentPointerJoins.44.pin",
+        "beforeVector.9",
+        "afterVector.9"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+      "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+      "bytes": 32077,
+      "locations": [
+        "stage.sourcePreservation.original12SourceRows.9",
+        "proposal.preservation.original12SourceRows.9",
+        "guardR2.exactFacts.thirteenRowAfterVector.10",
+        "bindingR2.source.beforeVector.completeRows.10",
+        "bindingR2.source.afterVector.completeRows.10",
+        "bindingR2.source.twelveFullPreservedSourceReadbacks.9",
+        "bindingR2.completeRetainedBodyIdentities.33.pin",
+        "bindingR2.currentPointerJoins.45.pin",
+        "beforeVector.10",
+        "afterVector.10"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "bytes": 187890,
+      "locations": [
+        "stage.sourcePreservation.original12SourceRows.10",
+        "proposal.preservation.original12SourceRows.10",
+        "guardR2.exactFacts.thirteenRowAfterVector.11",
+        "semanticR2.testAndResultBoundaries.renderer85",
+        "bindingR2.source.beforeVector.completeRows.11",
+        "bindingR2.source.afterVector.completeRows.11",
+        "bindingR2.source.twelveFullPreservedSourceReadbacks.10",
+        "bindingR2.completeRetainedBodyIdentities.34.pin",
+        "bindingR2.currentPointerJoins.46.pin",
+        "beforeVector.11",
+        "afterVector.11"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+      "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+      "bytes": 56775,
+      "locations": [
+        "stage.sourcePreservation.original12SourceRows.11",
+        "proposal.preservation.original12SourceRows.11",
+        "guardR2.exactFacts.thirteenRowAfterVector.12",
+        "semanticR2.testAndResultBoundaries.catalog43",
+        "bindingR2.source.beforeVector.completeRows.12",
+        "bindingR2.source.afterVector.completeRows.12",
+        "bindingR2.source.twelveFullPreservedSourceReadbacks.11",
+        "bindingR2.completeRetainedBodyIdentities.35.pin",
+        "bindingR2.currentPointerJoins.47.pin",
+        "beforeVector.12",
+        "afterVector.12"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "3e38848ca22648dccb8928553b31543d8cb366b6",
+      "sha256": "e9b2a9dc949e9b6ee1eb6c65af0ea52158f64a6e62702f27131e2eb795884156",
+      "bytes": 13214,
+      "locations": [
+        "proposal.r1Reviews.root",
+        "bindingR2.authority.r1Reviews.root",
+        "bindingR2.completeRetainedBodyIdentities.13.pin",
+        "bindingR2.currentPointerJoins.1.pin",
+        "bindingR2.checks.6.evidence.root",
+        "r1RootActual.actualBodyReadbacks.1",
+        "r1RootActual.currentPointerJoins.1.pin",
+        "r1RootActual.currentPointerJoins.15.pin",
+        "r1RootActual.currentPointerJoins.33.pin",
+        "r1RootActual.currentPointerJoins.38.pin",
+        "r1RootActual.checks.7.evidence",
+        "r1IndependentActual.actualR1Reviews.rows.0.pin",
+        "r1IndependentActual.actualBodyReadbacks.1",
+        "r1IndependentActual.currentStage.reviews.root",
+        "r1IndependentActual.currentEvidenceFiles.1",
+        "r1IndependentActual.currentPointerJoins.1.pin",
+        "r1IndependentActual.currentPointerJoins.15.pin",
+        "r1IndependentActual.currentPointerJoins.33.pin",
+        "r1IndependentActual.currentPointerJoins.38.pin",
+        "r1IndependentActual.checks.6.evidence.pin",
+        "r1IndependentActual.checks.39.evidence.pin"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "3e53832bf5fee506849b88202028ae73a50f2ab1",
+      "sha256": "b595b1bf8f385d5ef402cb2e63d78444657ca15d7678139e902645a156aa1c45",
+      "bytes": 60065,
+      "locations": [
+        "proposal.r1Reviews.guard",
+        "guardR2.readMethod.reusedCompleteAcceptedReads.r1Guard",
+        "guardR2.checks.1.evidence.acceptedGuard",
+        "bindingR2.authority.r1Reviews.guard",
+        "bindingR2.completeRetainedBodyIdentities.14.pin",
+        "bindingR2.currentPointerJoins.2.pin",
+        "bindingR2.checks.6.evidence.guard",
+        "r1RootActual.actualBodyReadbacks.2",
+        "r1RootActual.currentPointerJoins.2.pin",
+        "r1RootActual.currentPointerJoins.16.pin",
+        "r1RootActual.currentPointerJoins.34.pin",
+        "r1RootActual.currentPointerJoins.39.pin",
+        "r1RootActual.checks.8.evidence",
+        "r1IndependentActual.actualR1Reviews.rows.1.pin",
+        "r1IndependentActual.actualBodyReadbacks.2",
+        "r1IndependentActual.currentStage.reviews.guard",
+        "r1IndependentActual.currentEvidenceFiles.2",
+        "r1IndependentActual.currentPointerJoins.2.pin",
+        "r1IndependentActual.currentPointerJoins.16.pin",
+        "r1IndependentActual.currentPointerJoins.34.pin",
+        "r1IndependentActual.currentPointerJoins.39.pin",
+        "r1IndependentActual.checks.7.evidence.pin",
+        "r1IndependentActual.checks.40.evidence.pin"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "6f1d57b805792bca13cdda2048c34c59d3565944",
+      "sha256": "8e0f5fa4c848572cb1a08f3ab83c7c630b15954c6f502b11c1483b28390ad17b",
+      "bytes": 48210,
+      "locations": [
+        "proposal.r1Reviews.semantic",
+        "semanticR2.primaryEvidence.priorSemanticR1",
+        "bindingR2.authority.r1Reviews.semantic",
+        "bindingR2.completeRetainedBodyIdentities.15.pin",
+        "bindingR2.currentPointerJoins.3.pin",
+        "bindingR2.checks.6.evidence.semantic",
+        "r1RootActual.actualBodyReadbacks.3",
+        "r1RootActual.currentPointerJoins.3.pin",
+        "r1RootActual.currentPointerJoins.17.pin",
+        "r1RootActual.currentPointerJoins.35.pin",
+        "r1RootActual.currentPointerJoins.40.pin",
+        "r1RootActual.checks.9.evidence",
+        "r1IndependentActual.actualR1Reviews.rows.2.pin",
+        "r1IndependentActual.actualBodyReadbacks.3",
+        "r1IndependentActual.currentStage.reviews.semantic",
+        "r1IndependentActual.currentEvidenceFiles.3",
+        "r1IndependentActual.currentPointerJoins.3.pin",
+        "r1IndependentActual.currentPointerJoins.17.pin",
+        "r1IndependentActual.currentPointerJoins.35.pin",
+        "r1IndependentActual.currentPointerJoins.40.pin",
+        "r1IndependentActual.checks.8.evidence.pin",
+        "r1IndependentActual.checks.41.evidence.pin"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "4edbaba44e16de90ef20d2a1e1baf9350d847a88",
+      "sha256": "097963b5df0cec6cfb91dd4ebb76ac23213c6b0bef460d70083679f19fcb16c4",
+      "bytes": 86401,
+      "locations": [
+        "proposal.r1Reviews.binding",
+        "bindingR2.authority.r1Reviews.binding",
+        "bindingR2.completeRetainedBodyIdentities.16.pin",
+        "bindingR2.currentPointerJoins.4.pin",
+        "bindingR2.checks.6.evidence.binding",
+        "r1RootActual.actualBodyReadbacks.4",
+        "r1RootActual.currentPointerJoins.4.pin",
+        "r1RootActual.currentPointerJoins.18.pin",
+        "r1RootActual.currentPointerJoins.36.pin",
+        "r1RootActual.currentPointerJoins.41.pin",
+        "r1RootActual.checks.10.evidence",
+        "r1IndependentActual.actualR1Reviews.rows.3.pin",
+        "r1IndependentActual.actualBodyReadbacks.4",
+        "r1IndependentActual.currentStage.reviews.binding",
+        "r1IndependentActual.currentEvidenceFiles.4",
+        "r1IndependentActual.currentPointerJoins.4.pin",
+        "r1IndependentActual.currentPointerJoins.18.pin",
+        "r1IndependentActual.currentPointerJoins.36.pin",
+        "r1IndependentActual.currentPointerJoins.41.pin",
+        "r1IndependentActual.checks.9.evidence.pin",
+        "r1IndependentActual.checks.38.evidence.independentR1",
+        "r1IndependentActual.checks.42.evidence.pin"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "bytes": 26839,
+      "locations": [
+        "proposal.knownSourceAnchor.selectedInputRows.0",
+        "proposal.standalone.redFiles.0.pin",
+        "rootR2.checks.20.evidence.0.pin",
+        "guardR2.exactFacts.embeddedInputs.0.id",
+        "guardR2.exactFacts.sourceAuthority.actualSourceJoins.0",
+        "guardR2.checks.4.evidence.selected.0",
+        "guardR2.checks.8.evidence.0.id",
+        "guardR2.checks.16.evidence.selectedFixedInputs.0",
+        "guardR2.checks.18.evidence.redFiles.0.pin",
+        "semanticR2.knownAnchor.selectedInputRows.0",
+        "semanticR2.knownAnchor.actualFileJoins.0.identity",
+        "semanticR2.exactDeltas.binding.bodyRows.0.identity",
+        "bindingR2.authority.knownSourceAnchor.selectedInputRows.0",
+        "bindingR2.controls.bindingDifferences.differences.10.after.selectedFixedInputs.0",
+        "bindingR2.standalone.completeEmbeddedBodyJoins.0.pin",
+        "bindingR2.standalone.sourceAnchorEvidence.selectedFixedInputs.0",
+        "bindingR2.completeRetainedBodyIdentities.36.pin",
+        "bindingR2.currentPointerJoins.8.pin",
+        "bindingR2.currentPointerJoins.21.pin",
+        "bindingR2.currentPointerJoins.55.pin",
+        "bindingR2.currentPointerJoins.62.pin",
+        "bindingR2.currentPointerJoins.69.pin",
+        "bindingR2.checks.7.evidence.selectedInputRows.0",
+        "bindingR2.checks.32.evidence.selectedFixedInputs.0",
+        "bindingR2.checks.33.evidence.0",
+        "bindingR2.checks.35.evidence.0.pin",
+        "binding.redFiles.0.pin",
+        "binding.sourceAnchorEvidence.selectedFixedInputs.0",
+        "r1RootActual.selectedSourceAnchorRows.0",
+        "r1RootActual.checks.36.evidence.0",
+        "r1IndependentActual.selectedSourceAnchor.rows.selectedInputs.0.pin",
+        "r1IndependentActual.selectedSourceAnchor.rootCompleteSourceRows.0",
+        "r1IndependentActual.checks.49.evidence.selectedActualSourceBodies.0.pin",
+        "r1IndependentActual.checks.62.evidence.rootSelectedRows.0",
+        "r1ActualGate.sourceAnchorRows.0"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced",
+      "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+      "bytes": 25389,
+      "locations": [
+        "proposal.controls.beforeRunner",
+        "proposal.completeBodiesRequired.2",
+        "rootR2.controls.beforeRunner",
+        "rootR2.checks.10.evidence.before",
+        "guardR2.readMethod.reusedCompleteAcceptedReads.baselineRunner",
+        "guardR2.exactFacts.runnerInverse.inverseIdentity",
+        "guardR2.checks.6.evidence.inverseIdentity",
+        "semanticR2.primaryEvidence.runnerBefore",
+        "bindingR2.controls.beforeRunner",
+        "bindingR2.controls.wholeRunnerInverse.fullInversePin",
+        "bindingR2.controls.bindingDifferences.differences.8.before",
+        "bindingR2.completeRetainedBodyIdentities.8.pin",
+        "bindingR2.currentPointerJoins.17.pin",
+        "bindingR2.currentPointerJoins.29.pin",
+        "bindingR2.checks.20.evidence.0",
+        "bindingR2.checks.21.evidence.fullInversePin"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "a206a4432f4e9f77f682b91d340c191826b5f25b",
+      "sha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+      "bytes": 105210,
+      "locations": [
+        "proposal.controls.beforeBinding",
+        "proposal.completeBodiesRequired.4",
+        "rootR2.controls.beforeBinding",
+        "guardR2.readMethod.reusedCompleteAcceptedReads.baselineBinding",
+        "semanticR2.primaryEvidence.bindingBefore",
+        "bindingR2.controls.beforeBinding",
+        "bindingR2.controls.fullBindingInverse.beforePin",
+        "bindingR2.completeRetainedBodyIdentities.9.pin",
+        "bindingR2.currentPointerJoins.19.pin",
+        "bindingR2.currentPointerJoins.31.pin",
+        "bindingR2.checks.20.evidence.1",
+        "bindingR2.checks.27.evidence.beforePin"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "bytes": 28974,
+      "locations": [
+        "proposal.standalone.redFiles.2.pin",
+        "rootR2.checks.20.evidence.2.pin",
+        "guardR2.exactFacts.embeddedInputs.2.id",
+        "guardR2.checks.8.evidence.2.id",
+        "guardR2.checks.18.evidence.redFiles.2.pin",
+        "semanticR2.exactDeltas.binding.bodyRows.2.identity",
+        "bindingR2.standalone.completeEmbeddedBodyJoins.2.pin",
+        "bindingR2.completeRetainedBodyIdentities.37.pin",
+        "bindingR2.currentPointerJoins.23.pin",
+        "bindingR2.currentPointerJoins.57.pin",
+        "bindingR2.checks.35.evidence.2.pin",
+        "binding.redFiles.2.pin",
+        "windowsAdvisory.custody.sources.10"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "30bcf16f731650684a275de4ae4be6cd18b41c4e",
+      "sha256": "ab24e85bd89e55d48149f05274176df9fba2e0340b526c1a927242b4ed401bd4",
+      "bytes": 200440,
+      "locations": [
+        "proposal.priorAttempt.refusal",
+        "guardR2.readMethod.reusedCompleteAcceptedReads.priorRefusal",
+        "guardR2.checks.14.evidence.refusal",
+        "guardR2.checks.14.evidence.proposalPriorAttempt.refusal",
+        "semanticR2.primaryEvidence.priorSpentRefusal",
+        "semanticR2.standalone.priorAttempt.refusal",
+        "bindingR2.priorAttempt.refusal",
+        "bindingR2.completeRetainedBodyIdentities.21.pin",
+        "bindingR2.currentPointerJoins.25.pin",
+        "bindingR2.currentPointerJoins.73.pin",
+        "bindingR2.checks.29.evidence.spent.refusal",
+        "r1RootActual.actualBodyReadbacks.6",
+        "r1RootActual.currentPointerJoins.8.pin",
+        "r1RootActual.currentPointerJoins.20.pin",
+        "r1RootActual.currentPointerJoins.43.pin",
+        "r1RootActual.checks.12.evidence",
+        "r1IndependentActual.actualBodyReadbacks.6",
+        "r1IndependentActual.currentStage.spent.refusal",
+        "r1IndependentActual.currentEvidenceFiles.6",
+        "r1IndependentActual.priorAuthorityAndReviewLiteralJoins.1.pin",
+        "r1IndependentActual.currentPointerJoins.8.pin",
+        "r1IndependentActual.currentPointerJoins.20.pin",
+        "r1IndependentActual.currentPointerJoins.43.pin",
+        "r1IndependentActual.checks.11.evidence.pin",
+        "r1IndependentActual.checks.44.evidence.joins.1.pin",
+        "r1IndependentActual.checks.47.evidence.spent.refusal",
+        "r1ActualGate.priorSpentAttempt"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "8c2c7a2a439b1054972f4a52eb8f88b842274dba",
+      "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+      "bytes": 1583,
+      "locations": [
+        "proposal.priorAttempt.admission",
+        "guardR2.checks.14.evidence.proposalPriorAttempt.admission",
+        "semanticR2.standalone.priorAttempt.admission",
+        "bindingR2.priorAttempt.admission",
+        "bindingR2.completeRetainedBodyIdentities.22.pin",
+        "bindingR2.currentPointerJoins.26.pin",
+        "bindingR2.checks.29.evidence.spent.admission",
+        "r1RootActual.actualBodyReadbacks.5",
+        "r1RootActual.currentPointerJoins.7.pin",
+        "r1RootActual.currentPointerJoins.19.pin",
+        "r1RootActual.currentPointerJoins.42.pin",
+        "r1RootActual.checks.11.evidence",
+        "r1IndependentActual.actualBodyReadbacks.5",
+        "r1IndependentActual.currentStage.spent.admission",
+        "r1IndependentActual.currentEvidenceFiles.5",
+        "r1IndependentActual.priorAuthorityAndReviewLiteralJoins.0.pin",
+        "r1IndependentActual.currentPointerJoins.7.pin",
+        "r1IndependentActual.currentPointerJoins.19.pin",
+        "r1IndependentActual.currentPointerJoins.42.pin",
+        "r1IndependentActual.checks.10.evidence.pin",
+        "r1IndependentActual.checks.44.evidence.joins.0.pin",
+        "r1IndependentActual.checks.47.evidence.spent.admission"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "a20184d0e817d8b55488545733684b252426905c",
+      "sha256": "ba8e0c7f6e3ce552c49657131dcaeafba4b86c807e09865a80ffa42892eff303",
+      "bytes": 176,
+      "locations": [
+        "rootR2.checks.2.evidence.insertion",
+        "guardR2.checks.36.evidence.insertionIdentity",
+        "semanticR2.exactDeltas.driver.insertionIdentity",
+        "bindingR2.source.completeDriverInverse.insertionPin",
+        "bindingR2.checks.9.evidence.insertion"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete literal selected insertion from full original/postimage driver inverse."
+    },
+    {
+      "gitBlob": "fff972049718ae5ddaa7000e17341fade490233e",
+      "sha256": "6a212eb715b312ae74c25e58078fd26b1247695d94f5c47536dc2a20aed49ce1",
+      "bytes": 2784,
+      "locations": [
+        "rootR2.checks.9.evidence",
+        "rootR2.checks.32.evidence",
+        "bindingR2.completeRetainedBodyIdentities.20.pin",
+        "bindingR2.currentPointerJoins.53.pin",
+        "binding.sourceAfterVector"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "1318b887473a61e1cbfb3960812fbc84e3b4df13",
+      "sha256": "8bb84de228b570dfc121233893d32209a9389da44aa1747c7924dff936fa4c1a",
+      "bytes": 19187,
+      "locations": [
+        "rootR2.checks.30.evidence",
+        "bindingR2.completeRetainedBodyIdentities.17.pin",
+        "bindingR2.currentPointerJoins.51.pin",
+        "binding.sourceR2"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "ae0aa3e814cb90d9568cef5f35be6a0d8f46a361",
+      "sha256": "647b7a268b8b8921d875327e3394726916d54cc3c10c1bb8d2e2e9538db2d496",
+      "bytes": 2552,
+      "locations": [
+        "rootR2.checks.31.evidence",
+        "bindingR2.completeRetainedBodyIdentities.19.pin",
+        "bindingR2.currentPointerJoins.52.pin",
+        "binding.sourceBeforeVector"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "82799ba22fb1147b90d0ed1df1b4f06ce735a510",
+      "sha256": "5e62b021a9dd3399914296f2b84d5fa73ea1199d59031e9624bd2c912962a839",
+      "bytes": 43121,
+      "locations": [
+        "guardR2.readMethod.reusedCompleteAcceptedReads.baselineControlsGuard"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "0c8a4a63abf24c1510c934990a025ebc99c9e435",
+      "sha256": "9a8bc5d8906292ca6949a3e7c9b969d72061aba020d8064c7e799351084fd8a7",
+      "bytes": 8999,
+      "locations": [
+        "guardR2.exactFacts.sourceRules.0"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "a9a087fa5216ede29c5900b3a10638fc1ec3e2f3",
+      "sha256": "90e009d02b8e4b96ddca344a186f5f145c51c1ab9f7c163e45c0e7f4e24798d3",
+      "bytes": 2236,
+      "locations": [
+        "guardR2.exactFacts.sourceRules.1"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "88df8ee5ef8d951139b2a8eb9b518996babbcb3e",
+      "sha256": "9fa0770dc3cca54f4798567566f208211120693c6f6ba8906a53954ae9738bfa",
+      "bytes": 16756,
+      "locations": [
+        "guardR2.exactFacts.sourceRules.2"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+      "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2",
+      "bytes": 8145,
+      "locations": [
+        "guardR2.exactFacts.sourceRules.3",
+        "bindingR2.checks.12.evidence.guard"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "e827bccf455235b1ff7871e7b93450cdaa53eb54",
+      "sha256": "82080bdf23e0fae3ea087e8aea8c3622fa63a734fa9874e7d07e9d568087f072",
+      "bytes": 9635,
+      "locations": [
+        "guardR2.exactFacts.sourceRules.4"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "be45f8ee4cd349456d196f6cfb1a1038c218c80c",
+      "sha256": "6a7448cf1d88673af3c65741c51e2faf07703a99dfee37bf4fccd5383a943bf7",
+      "bytes": 5512,
+      "locations": [
+        "guardR2.checks.16.evidence.originalSourceActualGate",
+        "semanticR2.standalone.sourceAnchorEvidence.originalSourceActualGate",
+        "bindingR2.controls.bindingDifferences.differences.3.before",
+        "bindingR2.controls.bindingDifferences.differences.10.after.originalSourceActualGate",
+        "bindingR2.standalone.sourceAnchorEvidence.originalSourceActualGate",
+        "bindingR2.completeRetainedBodyIdentities.18.pin",
+        "bindingR2.currentPointerJoins.59.pin",
+        "bindingR2.checks.32.evidence.originalSourceActualGate",
+        "binding.sourceAnchorEvidence.originalSourceActualGate"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8",
+      "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7",
+      "bytes": 3982,
+      "locations": [
+        "semanticR2.authorityAndMethod.identityHelper",
+        "coldRendererAdvisory.method.identityHelper"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "c246bbf66dd628fe6909a1a57cab85bdccf80d58",
+      "sha256": "ccc199a00f3e822961831a05b2e9138076a4843a389b432354aea07093ed1543",
+      "bytes": 27043,
+      "locations": [
+        "semanticR2.primaryEvidence.priorMemberAdvisory",
+        "r1RootActual.actualBodyReadbacks.8",
+        "r1RootActual.currentPointerJoins.22.pin",
+        "r1RootActual.currentPointerJoins.45.pin",
+        "r1RootActual.checks.14.evidence",
+        "r1IndependentActual.actualBodyReadbacks.8",
+        "r1IndependentActual.currentEvidenceFiles.8",
+        "r1IndependentActual.priorAuthorityAndReviewLiteralJoins.3.pin",
+        "r1IndependentActual.currentPointerJoins.22.pin",
+        "r1IndependentActual.currentPointerJoins.45.pin",
+        "r1IndependentActual.checks.13.evidence.pin",
+        "r1IndependentActual.checks.44.evidence.joins.3.pin"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "5af2e1cf8dc14ace23e8cc1f10ddbb25e8ef6d26",
+      "sha256": "9212ceb83645a0f9fb9e2f9b37985c5af6bfe6248014014cac86eead66a7092d",
+      "bytes": 54695,
+      "locations": [
+        "semanticR2.primaryEvidence.priorInodeAdvisory",
+        "bindingR2.controls.inodeAdvisory",
+        "bindingR2.completeRetainedBodyIdentities.23.pin",
+        "r1RootActual.actualBodyReadbacks.7",
+        "r1RootActual.currentPointerJoins.21.pin",
+        "r1RootActual.currentPointerJoins.44.pin",
+        "r1RootActual.checks.13.evidence",
+        "r1IndependentActual.actualBodyReadbacks.7",
+        "r1IndependentActual.currentEvidenceFiles.7",
+        "r1IndependentActual.priorAuthorityAndReviewLiteralJoins.2.pin",
+        "r1IndependentActual.currentPointerJoins.21.pin",
+        "r1IndependentActual.currentPointerJoins.44.pin",
+        "r1IndependentActual.checks.12.evidence.pin",
+        "r1IndependentActual.checks.44.evidence.joins.2.pin"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "4277afde65b656545ca30e4b1be3f593af862fc8",
+      "sha256": "2a20638c7372fc202d5dc1fbcb364744a8ada038401e6673461ab8147843524e",
+      "bytes": 56658,
+      "locations": [
+        "semanticR2.primaryEvidence.actualRenderer85Review",
+        "semanticR2.testAndResultBoundaries.actualRenderer85.review",
+        "r1RootActual.actualBodyReadbacks.9",
+        "r1RootActual.currentPointerJoins.10.pin",
+        "r1RootActual.currentPointerJoins.23.pin",
+        "r1RootActual.currentPointerJoins.46.pin",
+        "r1RootActual.checks.15.evidence",
+        "r1IndependentActual.actualBodyReadbacks.9",
+        "r1IndependentActual.currentStage.runtimeEvidence.renderer85",
+        "r1IndependentActual.currentEvidenceFiles.9",
+        "r1IndependentActual.priorAuthorityAndReviewLiteralJoins.4.pin",
+        "r1IndependentActual.currentPointerJoins.10.pin",
+        "r1IndependentActual.currentPointerJoins.23.pin",
+        "r1IndependentActual.currentPointerJoins.46.pin",
+        "r1IndependentActual.retainedEvidenceScope.renderer85.review",
+        "r1IndependentActual.checks.14.evidence.pin",
+        "r1IndependentActual.checks.44.evidence.joins.4.pin",
+        "r1IndependentActual.checks.52.evidence.review"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "7692ca11da1a679f13361ac24516a4bdb9a2fdf5",
+      "sha256": "220cc53183d32050041d30182ea8dece73445d2c8fac925ea8cee4a25efd6a8d",
+      "bytes": 43,
+      "locations": [
+        "semanticR2.exactDeltas.controlsPhaseDifference.insertionIdentity"
+      ],
+      "completeBodyRead": true,
+      "method": "Exact reviewed insertion atbyte14002 in complete controls postimage, verified by selected identity and full inverse."
+    },
+    {
+      "gitBlob": "35750c1358882851fbd36dfd78f7c026eefe0e95",
+      "sha256": "cbceb4ff668648488f99232506d9b521d732d91ef8c672d3df20146f2efa6382",
+      "bytes": 933199,
+      "locations": [
+        "semanticR2.memberReveal.originalFailure.selectedReceipt"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "9f66261ff992a66612a6b6baee152e5ca20ab631",
+      "sha256": "9fbc3742dd5c829044eab669188fb399343799621bf3f264f6a4219cb7f97683",
+      "bytes": 57,
+      "locations": [
+        "semanticR2.testAndResultBoundaries.aggregate.suffixIdentity"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete unchanged139-case body literal prefix plus exact awaited import suffix."
+    },
+    {
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "bytes": 164965,
+      "locations": [
+        "semanticR2.testAndResultBoundaries.original139"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "d3868b44b99e7ec13d72116a21ba29274427e725",
+      "sha256": "1623bdabac26b56107a0758fb526fa87a1d79b87b9b36c12574372966a39563a",
+      "bytes": 2389600,
+      "locations": [
+        "semanticR2.testAndResultBoundaries.actualRenderer85.wholeJson"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "b34a76fffb93d5216cd689893186376963ef8654",
+      "sha256": "e35155efe24474cfe0ff5d5ab90aa7b9f96bfe56eff99ad8aec10902aecf0016",
+      "bytes": 20973,
+      "locations": [
+        "bindingR2.controls.bindingDifferences.differences.4.before"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "29040a4faa87137bfa070c71651147b2da4f2102",
+      "sha256": "ae46b4e2997a5a5185fada08711e4f291be723b53c1afdd05af2bd89ebcd11fd",
+      "bytes": 3516,
+      "locations": [
+        "bindingR2.controls.bindingDifferences.differences.5.before"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "45c83247c6e946ce2f117cdfb6622cf4b03144e4",
+      "sha256": "9f12a0e71cb2774426acbedaf63623ccf429ba38fe2e143e5c88dff45cda6e8a",
+      "bytes": 65475,
+      "locations": [
+        "bindingR2.controls.inheritedAcceptedControlR2",
+        "bindingR2.checks.38.evidence.inheritedAcceptedControlReview"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "59a0816f4c7399985557df3489b54c94fe50c8d3",
+      "sha256": "a4040d0353f90185d6e56696256a9a15a5f6e3a6529c01cb2bb5f8af8cba7fe9",
+      "bytes": 11667,
+      "locations": [
+        "bindingR2.completeRetainedBodyIdentities.38.pin",
+        "bindingR2.currentPointerJoins.66.pin",
+        "r1RootActual.publication.manifest",
+        "r1RootActual.actualBodyReadbacks.21",
+        "r1RootActual.checks.27.evidence",
+        "r1IndependentActual.manifest",
+        "r1IndependentActual.rootActualReview.publication.manifest",
+        "r1IndependentActual.actualBodyReadbacks.21",
+        "r1IndependentActual.checks.26.evidence.pin",
+        "r1IndependentActual.checks.30.evidence.manifest",
+        "r1IndependentActual.checks.58.evidence.publication.manifest",
+        "r1ActualGate.manifest"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "342a38f823f0d07bd8281fd94022ea1f3ecb3133",
+      "sha256": "04307965e2c3be91b229a6364fa758b468ee177ba3b45392e2a23cbd8946e1e9",
+      "bytes": 101500,
+      "locations": [
+        "r1RootActual.actualBodyReadbacks.10",
+        "r1RootActual.currentPointerJoins.24.pin",
+        "r1RootActual.currentPointerJoins.47.pin",
+        "r1RootActual.checks.16.evidence",
+        "r1IndependentActual.actualBodyReadbacks.10",
+        "r1IndependentActual.currentEvidenceFiles.10",
+        "r1IndependentActual.priorAuthorityAndReviewLiteralJoins.5.pin",
+        "r1IndependentActual.currentPointerJoins.24.pin",
+        "r1IndependentActual.currentPointerJoins.47.pin",
+        "r1IndependentActual.retainedEvidenceScope.codexExtensions.review",
+        "r1IndependentActual.checks.15.evidence.pin",
+        "r1IndependentActual.checks.44.evidence.joins.5.pin"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "14bd6ed652989dde397cce0073e315e269762bcb",
+      "sha256": "3a7b10b970e6fc6f9812c94c1ecb7a5a5cafedd717674642a67aea7db34f5de5",
+      "bytes": 28120,
+      "locations": [
+        "r1RootActual.actualBodyReadbacks.11",
+        "r1RootActual.currentPointerJoins.25.pin",
+        "r1RootActual.currentPointerJoins.48.pin",
+        "r1RootActual.checks.17.evidence",
+        "r1IndependentActual.actualBodyReadbacks.11",
+        "r1IndependentActual.currentEvidenceFiles.11",
+        "r1IndependentActual.priorAuthorityAndReviewLiteralJoins.6.pin",
+        "r1IndependentActual.currentPointerJoins.25.pin",
+        "r1IndependentActual.currentPointerJoins.48.pin",
+        "r1IndependentActual.retainedEvidenceScope.codexExtensions.slice",
+        "r1IndependentActual.checks.16.evidence.pin",
+        "r1IndependentActual.checks.44.evidence.joins.6.pin"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "516017b52445cd7c337878f0754a0e121849b24d",
+      "sha256": "9e0931fb08d50ef3a2c7f3ec24707a791ce479890d26b899b8a073eb822798b4",
+      "bytes": 65482,
+      "locations": [
+        "r1RootActual.actualBodyReadbacks.12",
+        "r1RootActual.currentPointerJoins.5.pin",
+        "r1RootActual.currentPointerJoins.26.pin",
+        "r1RootActual.currentPointerJoins.49.pin",
+        "r1RootActual.checks.18.evidence",
+        "r1IndependentActual.actualBodyReadbacks.12",
+        "r1IndependentActual.currentStage.priorActual.root",
+        "r1IndependentActual.currentEvidenceFiles.12",
+        "r1IndependentActual.priorAuthorityAndReviewLiteralJoins.7.pin",
+        "r1IndependentActual.currentPointerJoins.5.pin",
+        "r1IndependentActual.currentPointerJoins.26.pin",
+        "r1IndependentActual.currentPointerJoins.49.pin",
+        "r1IndependentActual.checks.17.evidence.pin",
+        "r1IndependentActual.checks.44.evidence.joins.7.pin",
+        "r1IndependentActual.checks.47.evidence.priorActual.root"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "f20c0188402a166dce08b6592e06e311edcc9fe9",
+      "sha256": "25f4847a99bf1647b30b782eae9053a6b85cda1013b6b0d28fbae3ff6a7a484a",
+      "bytes": 200533,
+      "locations": [
+        "r1RootActual.actualBodyReadbacks.13",
+        "r1RootActual.currentPointerJoins.6.pin",
+        "r1RootActual.currentPointerJoins.27.pin",
+        "r1RootActual.currentPointerJoins.50.pin",
+        "r1RootActual.checks.19.evidence",
+        "r1IndependentActual.actualBodyReadbacks.13",
+        "r1IndependentActual.nonDocRootPreservation.acceptedParentIndependentActual",
+        "r1IndependentActual.currentStage.priorActual.independent",
+        "r1IndependentActual.currentEvidenceFiles.13",
+        "r1IndependentActual.priorAuthorityAndReviewLiteralJoins.8.pin",
+        "r1IndependentActual.currentPointerJoins.6.pin",
+        "r1IndependentActual.currentPointerJoins.27.pin",
+        "r1IndependentActual.currentPointerJoins.50.pin",
+        "r1IndependentActual.checks.18.evidence.pin",
+        "r1IndependentActual.checks.44.evidence.joins.8.pin",
+        "r1IndependentActual.checks.47.evidence.priorActual.independent"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "e809fefa350f8d7f7e3e4922ac0bba865c19c13e",
+      "sha256": "0e5df724cec747e57ce3f028d3b1f683fd5663c8b67931fa4b9f4c075620236e",
+      "bytes": 573622,
+      "locations": [
+        "r1RootActual.actualBodyReadbacks.14",
+        "r1RootActual.currentPointerJoins.11.pin",
+        "r1RootActual.currentPointerJoins.28.pin",
+        "r1RootActual.currentPointerJoins.51.pin",
+        "r1RootActual.checks.20.evidence",
+        "r1IndependentActual.actualBodyReadbacks.14",
+        "r1IndependentActual.currentStage.runtimeEvidence.observation13",
+        "r1IndependentActual.currentEvidenceFiles.14",
+        "r1IndependentActual.currentPointerJoins.11.pin",
+        "r1IndependentActual.currentPointerJoins.28.pin",
+        "r1IndependentActual.currentPointerJoins.51.pin",
+        "r1IndependentActual.retainedEvidenceScope.observation13.pin",
+        "r1IndependentActual.checks.19.evidence.pin",
+        "r1IndependentActual.checks.50.evidence.observation13.pin"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "99f1a2a1630f25627a9e103f9a58f48c1c87a0ec",
+      "sha256": "d9211667e0c60f4413f36f1003fe321feb2de96918585db1490b971400caf6f1",
+      "bytes": 638122,
+      "locations": [
+        "r1RootActual.actualBodyReadbacks.15",
+        "r1RootActual.currentPointerJoins.12.pin",
+        "r1RootActual.currentPointerJoins.29.pin",
+        "r1RootActual.currentPointerJoins.52.pin",
+        "r1RootActual.checks.21.evidence",
+        "r1IndependentActual.actualBodyReadbacks.15",
+        "r1IndependentActual.currentStage.runtimeEvidence.observation14",
+        "r1IndependentActual.currentEvidenceFiles.15",
+        "r1IndependentActual.currentPointerJoins.12.pin",
+        "r1IndependentActual.currentPointerJoins.29.pin",
+        "r1IndependentActual.currentPointerJoins.52.pin",
+        "r1IndependentActual.retainedEvidenceScope.observation14.pin",
+        "r1IndependentActual.checks.20.evidence.pin",
+        "r1IndependentActual.checks.50.evidence.observation14.pin",
+        "terminalCiObservations.prior"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "88130b0010f8d67e683792e0712b5ce01d7e7e03",
+      "sha256": "7ea1b4b25243970292f504c67cd8dd6ee4a2f38a6cef6508a241923ea54c288d",
+      "bytes": 7711,
+      "locations": [
+        "r1RootActual.actualBodyReadbacks.16",
+        "r1RootActual.currentPointerJoins.30.pin",
+        "r1RootActual.currentPointerJoins.53.pin",
+        "r1RootActual.checks.22.evidence",
+        "r1IndependentActual.actualBodyReadbacks.16",
+        "r1IndependentActual.currentEvidenceFiles.16",
+        "r1IndependentActual.currentPointerJoins.30.pin",
+        "r1IndependentActual.currentPointerJoins.53.pin",
+        "r1IndependentActual.retainedEvidenceScope.renderer85.capture",
+        "r1IndependentActual.checks.21.evidence.pin",
+        "r1IndependentActual.checks.52.evidence.capture"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "33e472d38720bda64a2483041af43405c2eec085",
+      "sha256": "baf4a9f2de58d967366c652bf7cba5d28e7b4d3c3f576f3d359f04516f31c972",
+      "bytes": 43216,
+      "locations": [
+        "r1RootActual.actualBodyReadbacks.17",
+        "r1RootActual.currentPointerJoins.13.pin",
+        "r1RootActual.currentPointerJoins.31.pin",
+        "r1RootActual.currentPointerJoins.54.pin",
+        "r1RootActual.checks.23.evidence",
+        "r1IndependentActual.actualBodyReadbacks.17",
+        "r1IndependentActual.currentStage.runtimeEvidence.completeNewFailureCapture",
+        "r1IndependentActual.currentEvidenceFiles.17",
+        "r1IndependentActual.currentPointerJoins.13.pin",
+        "r1IndependentActual.currentPointerJoins.31.pin",
+        "r1IndependentActual.currentPointerJoins.54.pin",
+        "r1IndependentActual.retainedEvidenceScope.failureCapture.pin",
+        "r1IndependentActual.checks.22.evidence.pin",
+        "r1IndependentActual.checks.53.evidence.capture",
+        "coldRendererAdvisory.subject.packet",
+        "coldRendererAdvisory.evidence.0",
+        "windowsAdvisory.custody.packet"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "5b1fcb255b37e1a260044156e8422e3111634cac",
+      "sha256": "7a471d1286ac1a3378e4eb405b26ebaf4caeef8d850a34e3883560cb93657f4d",
+      "bytes": 2582891,
+      "locations": [
+        "r1RootActual.parentBodyReadbacks.0",
+        "r1RootActual.currentPointerJoins.56.pin",
+        "r1RootActual.checks.30.evidence.before",
+        "r1IndependentActual.parentBodyReadbacks.0",
+        "r1IndependentActual.currentPointerJoins.56.pin",
+        "r1IndependentActual.checks.27.evidence.pin",
+        "r1IndependentActual.checks.34.evidence.before"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "de900e6435a345008041f04ac139ea4601b1c08e",
+      "sha256": "8d63895e7a765b51c293c25df453f2ec5110825d3d89ef3e54d5149a8125a0eb",
+      "bytes": 59600,
+      "locations": [
+        "r1RootActual.parentBodyReadbacks.1",
+        "r1RootActual.currentPointerJoins.58.pin",
+        "r1RootActual.checks.31.evidence.before",
+        "r1IndependentActual.parentBodyReadbacks.1",
+        "r1IndependentActual.currentPointerJoins.58.pin",
+        "r1IndependentActual.checks.28.evidence.pin",
+        "r1IndependentActual.checks.35.evidence.before"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "c6dfa3239593bceba4d27a1ae087be6ffd3e9d18",
+      "sha256": "a2ca7bf0c92868a9efd5b7560dca93b1c7d0d7357d0ee8e26d830b960a165949",
+      "bytes": 469560,
+      "locations": [
+        "r1RootActual.parentBodyReadbacks.2",
+        "r1RootActual.currentPointerJoins.60.pin",
+        "r1IndependentActual.parentBodyReadbacks.2",
+        "r1IndependentActual.currentPointerJoins.60.pin",
+        "r1IndependentActual.checks.29.evidence.pin"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "8e1418ead69e3fe3eda20cd6fbcee9f7e481ed3a",
+      "sha256": "50462da6bf1f8a1c3e4820b21253b45ebd59543c74af2433e85f659ac8906dbf",
+      "bytes": 4943,
+      "locations": [
+        "r1RootActual.currentPointerJoins.61.pin",
+        "r1RootActual.checks.30.evidence.append",
+        "r1RootActual.checks.31.evidence.append",
+        "r1IndependentActual.documentationPrefixes.appendIdentity",
+        "r1IndependentActual.currentPointerJoins.61.pin",
+        "r1IndependentActual.checks.34.evidence.append",
+        "r1IndependentActual.checks.35.evidence.append",
+        "r1IndependentActual.checks.36.evidence.append",
+        "r1IndependentActual.checks.56.evidence.derivedSuffix"
+      ],
+      "completeBodyRead": true,
+      "method": "Derived as exact suffix of complete literal-prefix-preserved documents; not fetched as a retained blob."
+    },
+    {
+      "gitBlob": "26ab0e2ca84fb6b50a092bfa49e30a7c212d856c",
+      "sha256": "8368acfb8c066be5b9498331c50f3e1ef2fdcc3aecc1ced1b13ca4b8fcabd3e5",
+      "bytes": 4433079,
+      "locations": [
+        "coldRendererAdvisory.subject.receipt",
+        "coldRendererAdvisory.evidence.1"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "0b3c2e7f708b1252917ef6de23f975ca9150a22a",
+      "sha256": "d29fae97c2a6ceef0b26833a47b046d0a578ddb38b7ccae7b91bccd4cd352bb9",
+      "bytes": 34373,
+      "locations": [
+        "coldRendererAdvisory.evidence.2"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "69565a8195ede73df37e33c6e1d6057294e7a81d",
+      "sha256": "2835722accd53dda5c668c0e92df45e9fb3829f85a3437b758721c44d2081e51",
+      "bytes": 3626,
+      "locations": [
+        "coldRendererAdvisory.evidence.3"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "7d8d96ddc845584671f99f9f00833da19d9d3319",
+      "sha256": "030518550461d1e92325c726d082f720a440f8224b41b443eaa065d9eafe5d44",
+      "bytes": 205582,
+      "locations": [
+        "coldRendererAdvisory.evidence.4"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "db4d98b333e1fb1103c82cf7851a252c0ecff3a5",
+      "sha256": "4e62a8eee6a03074e05bf75f17c8cdfb2b717cd99f923d188a0ffe7f3db54e6a",
+      "bytes": 8576,
+      "locations": [
+        "coldRendererAdvisory.completeSourceBodies.files.0"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "23aab1f3fbf713eacc2e9741be6513fcc9de18e5",
+      "sha256": "312e42b78ad2975b0a3d1fb83b63c4835eab0aaa89b7831c2e06c5050028ab44",
+      "bytes": 10086,
+      "locations": [
+        "coldRendererAdvisory.completeSourceBodies.files.1"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "bytes": 54778,
+      "locations": [
+        "coldRendererAdvisory.completeSourceBodies.files.2"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "dca0c1710273411656e3284db0302449a00ddaf6",
+      "sha256": "2f98ed35ffb34f090d58b4021f54b1d92938f2ae6263312dd867654b923e80c8",
+      "bytes": 33423,
+      "locations": [
+        "coldRendererAdvisory.completeSourceBodies.files.3"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "9045260aab02891055e324607b83e1bb39c7110a",
+      "sha256": "a0b6a4ee707718251fad2efc26526e0f942e7278aa922cb4bcc2e328c4076bf7",
+      "bytes": 13238,
+      "locations": [
+        "coldRendererAdvisory.completeSourceBodies.files.4"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "0df14ce0092a7e19dd36dbcd17eb3530faee36ff",
+      "sha256": "b00a401b98ddce0ea75905f6cea16f1dd030b692f8a0f6bc6c136a5c801ffe05",
+      "bytes": 10453,
+      "locations": [
+        "coldRendererAdvisory.completeSourceBodies.files.5"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "761d6d1c2bba51d405fcafab526b090a66f75cee",
+      "sha256": "9f93e99a694a7e0c6abf980df00c2250a1e32aebf132c4713f2e0ea55cd31ccf",
+      "bytes": 48941,
+      "locations": [
+        "coldRendererAdvisory.completeSourceBodies.files.6"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "9aa43a43d6186c62bc92dae60dab4fe57cc63fe6",
+      "sha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf",
+      "bytes": 27829,
+      "locations": [
+        "coldRendererAdvisory.completeSourceBodies.files.7"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+      "bytes": 49613,
+      "locations": [
+        "coldRendererAdvisory.completeSourceBodies.files.8"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "d3f6df31536564eb36f24fd92524d1657b41c723",
+      "sha256": "2d899528da666804a821a939f96fc5c42d883f292a92d3f34a8e0d9813e150f7",
+      "bytes": 1557,
+      "locations": [
+        "coldRendererAdvisory.completeSourceBodies.files.9"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "5d3e2fef0dfe5344dc337fdb1c2ffaf509c821a6",
+      "sha256": "6025cb42bc3ffe43ed60a863394584737f6316c8ea2b6abe35f8a9f31a78bb58",
+      "bytes": 1154517,
+      "locations": [
+        "windowsAdvisory.custody.members.0",
+        "windowsAdvisory.tupleJoins.0.manifest"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "49a77c938b22354675c2cdbd333cd10bacfa5f7c",
+      "sha256": "cd8d1ac55a1f41e466b84ead9eabcb3a4d3aaa163c1a9faf7e2dd20b25ce9b96",
+      "bytes": 780,
+      "locations": [
+        "windowsAdvisory.custody.members.1"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "d45fcfbc8b09cc221f6da8d3042c9ab7ac529ede",
+      "sha256": "71c69ab8f10797f7373a7f5ad269ff7df73ae6ecde35ced47e3b874530584583",
+      "bytes": 5382,
+      "locations": [
+        "windowsAdvisory.custody.members.2"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "b3c5e7686cebebabc94ed598c0e10b0392b349b1",
+      "sha256": "02d25a10e65d63659304ba21a4b3a312b61c8066caa1e982adee29f36333593f",
+      "bytes": 1186,
+      "locations": [
+        "windowsAdvisory.custody.members.3"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "1153738d1571aa540be0edaf902bd7c46b0a2441",
+      "sha256": "509cf0e8b1db7b917e07035660f5b3e0976d0756f89857fe81cad1dc6af9a515",
+      "bytes": 4914,
+      "locations": [
+        "windowsAdvisory.custody.members.4"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "b857a9321c2551324f0868fb0157856a2a6b0dc4",
+      "sha256": "ab60976fa70f2a938e7d16b61c23c5458620affd55c6ae2b68c94e815d731c46",
+      "bytes": 42975,
+      "locations": [
+        "windowsAdvisory.custody.members.5",
+        "windowsAdvisory.tupleJoins.0.controller.identity"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "a5032a87abfe9c9a7a91227e31408993d6ee073a",
+      "sha256": "cf9c74713f42fbad360375ff883711a9b8baf8a434b8b39fd4beb412d6b635c9",
+      "bytes": 750631,
+      "locations": [
+        "windowsAdvisory.custody.members.6",
+        "windowsAdvisory.x64.receipt"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "5f2fb46bd6a2a473485966c2265218d76f459440",
+      "sha256": "7477a641cd5890b7c66ddf98ab9871adafb0543546d19b83f76869a075924bcf",
+      "bytes": 1154527,
+      "locations": [
+        "windowsAdvisory.custody.members.7",
+        "windowsAdvisory.tupleJoins.1.manifest"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "4ba8beccd0bfcf09ed7908172ff92a1672e743fe",
+      "sha256": "97708ada5f12409ab0c76616faa862c7ab2c0653dd26d8a8ff07c45a0257970b",
+      "bytes": 782,
+      "locations": [
+        "windowsAdvisory.custody.members.8"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "9d946bd6a94cd36ca6b5dfde00fcd88347b35388",
+      "sha256": "4dfe4c379d39214db299aa1453cba5f30fbe6d4a8aa6cfa4de546eb4fed9bfb4",
+      "bytes": 5389,
+      "locations": [
+        "windowsAdvisory.custody.members.9"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "daa6ff826b3cb9f363382e9de1684b0c64229713",
+      "sha256": "6fb6b8cfa4d83b9a42b69fa1d47f24d7eda5f25a3d009e3b6e92672aea0d405b",
+      "bytes": 1188,
+      "locations": [
+        "windowsAdvisory.custody.members.10"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "35721835473fc579bed733d0b3193b13e0040239",
+      "sha256": "affd5a8be8c702498b827b71a68c4cd2deb399ed261f07ad8c5f2b35c6049251",
+      "bytes": 5358,
+      "locations": [
+        "windowsAdvisory.custody.members.11"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "0819a850ec382082407c303a6696728397284cad",
+      "sha256": "b3700847f600f2e95e363812056a0be2d04f4edf0accb133f18707ef8d93caa9",
+      "bytes": 27140,
+      "locations": [
+        "windowsAdvisory.custody.members.12",
+        "windowsAdvisory.tupleJoins.1.controller.identity"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "9c8644ce67a2d128840ba7d0ead3b502711e9a8d",
+      "sha256": "cda333a227c35c883aaec38d6b1d5abec4fc127d26182f516eeb00f4138fb372",
+      "bytes": 314038,
+      "locations": [
+        "windowsAdvisory.custody.logs.0",
+        "windowsAdvisory.tupleJoins.0.log"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "1f63836439a091bbed19df3b7ad466f0fe1cae1c",
+      "sha256": "8893e4df94f2776532c4a351e12a43abd844df1c2c5a8296300d01042ddba115",
+      "bytes": 302089,
+      "locations": [
+        "windowsAdvisory.custody.logs.1",
+        "windowsAdvisory.tupleJoins.1.log"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+      "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+      "bytes": 37692,
+      "locations": [
+        "windowsAdvisory.custody.sources.0"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "abe77d2e042df9dd2adbea58a8038ee14951c19c",
+      "sha256": "a76135c8e2a09fbcc939c2856f626e1299c6dc9d684fe6fb31458a4f957d167f",
+      "bytes": 38339,
+      "locations": [
+        "windowsAdvisory.custody.sources.0.windowsCRLF"
+      ],
+      "completeBodyRead": true,
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+      "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+      "bytes": 31223,
+      "locations": [
+        "windowsAdvisory.custody.sources.1"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "2ea379d6d92f92310cb586132ec9aeed7a2814ae",
+      "sha256": "9be5af55b58539523c03194b62ebb68f5b1b5363c8c3994deee833d91fed7499",
+      "bytes": 31708,
+      "locations": [
+        "windowsAdvisory.custody.sources.1.windowsCRLF"
+      ],
+      "completeBodyRead": true,
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "gitBlob": "67180ac5c567cbeb089d4ef3248391c792e1ba4d",
+      "sha256": "8cdc9a1bcc80b61998e93813959f53542a85cb5953c93ae1feb2397e37d9080e",
+      "bytes": 7926,
+      "locations": [
+        "windowsAdvisory.custody.sources.2"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "5af36ca5a9819feeec6c6e05ba08020f45cba54f",
+      "sha256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961",
+      "bytes": 8031,
+      "locations": [
+        "windowsAdvisory.custody.sources.2.windowsCRLF"
+      ],
+      "completeBodyRead": true,
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+      "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+      "bytes": 7278,
+      "locations": [
+        "windowsAdvisory.custody.sources.3"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "a63327ce75e28af163f48f480da0b763a1c079bb",
+      "sha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+      "bytes": 7470,
+      "locations": [
+        "windowsAdvisory.custody.sources.3.windowsCRLF"
+      ],
+      "completeBodyRead": true,
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "gitBlob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+      "sha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+      "bytes": 1367,
+      "locations": [
+        "windowsAdvisory.custody.sources.4"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "b66dab301ae13ba0c8fffe4c423a7d26558ff1ab",
+      "sha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+      "bytes": 1406,
+      "locations": [
+        "windowsAdvisory.custody.sources.4.windowsCRLF"
+      ],
+      "completeBodyRead": true,
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "gitBlob": "44c8cba99e4932905da77539a59c904a39da4e36",
+      "sha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd",
+      "bytes": 9569,
+      "locations": [
+        "windowsAdvisory.custody.sources.5"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "0b4bd3fc052d29003ce3b35430473522580aa44d",
+      "sha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+      "bytes": 9722,
+      "locations": [
+        "windowsAdvisory.custody.sources.5.windowsCRLF"
+      ],
+      "completeBodyRead": true,
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+      "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+      "bytes": 5935,
+      "locations": [
+        "windowsAdvisory.custody.sources.6"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "e4ae753ca927a0b7c3a4e325289e143556775069",
+      "sha256": "604a73ce8f1e31c3ee094a1ceb7a866c71270590ba40f94c70d7f0c1a7543518",
+      "bytes": 6043,
+      "locations": [
+        "windowsAdvisory.custody.sources.6.windowsCRLF"
+      ],
+      "completeBodyRead": true,
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+      "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+      "bytes": 12335,
+      "locations": [
+        "windowsAdvisory.custody.sources.7"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "f5f15e0ce99780690da8dcfa361516ca0185863c",
+      "sha256": "8b44f15d068ebda80de79947b58cd41ef0c8e7f86006ca2897d0b046394b9bdf",
+      "bytes": 12647,
+      "locations": [
+        "windowsAdvisory.custody.sources.7.windowsCRLF"
+      ],
+      "completeBodyRead": true,
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "gitBlob": "7da83c7a4e631f7599fc57861f19e14629db6036",
+      "sha256": "5fd9116cb656ce7804dc3253decb3f386e2c17feda57cc40586cc6e0df6fd8d5",
+      "bytes": 27780,
+      "locations": [
+        "windowsAdvisory.custody.sources.8"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "f281a6c128bd753928e8c4e27a0cf71af623b2d6",
+      "sha256": "866967ed1d8d4a15593de409336c09f3154d0907c9d3dab09745a8a0bd0d611a",
+      "bytes": 28529,
+      "locations": [
+        "windowsAdvisory.custody.sources.8.windowsCRLF"
+      ],
+      "completeBodyRead": true,
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "gitBlob": "12f4a7b122843acea95e8c37f876917331842a4a",
+      "sha256": "ebb52ab95cdbf0ddc86ce44b534a3c7255c7e8454e5cadb2cbb83278daa53a0f",
+      "bytes": 22604,
+      "locations": [
+        "windowsAdvisory.custody.sources.9"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "9c02a90dbdbec5718739e4ab4aad66ccf33e8676",
+      "sha256": "7e66f25cba75a9e13940a41175471659231095248113bd7139e07b4a4a7e9e1e",
+      "bytes": 23030,
+      "locations": [
+        "windowsAdvisory.custody.sources.9.windowsCRLF"
+      ],
+      "completeBodyRead": true,
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "gitBlob": "06db8e61441c7e6720d18706adff04976506b565",
+      "sha256": "c61b3b5689773bfd589674cfdd860e46b6d7d0642a211b655374627cff2278f9",
+      "bytes": 29468,
+      "locations": [
+        "windowsAdvisory.custody.sources.10.windowsCRLF"
+      ],
+      "completeBodyRead": true,
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "gitBlob": "a42f7513e9a5d2732c5c9f65fa1cc6cf1c970062",
+      "sha256": "42749224f0194fd70f4b3df50f5fc64fbb2e11c58801c629463387cb4a4a1e25",
+      "bytes": 15038,
+      "locations": [
+        "windowsAdvisory.custody.sources.11"
+      ],
+      "completeBodyRead": true,
+      "method": "Complete retained Git body fetched and hashed; immutable complete read may be reused."
+    },
+    {
+      "gitBlob": "89d0cebeb12ff0e9f5eb42b8854ef3c1506fe043",
+      "sha256": "df6b01e1d7aa64474bfff02174f24874e0792fc5a94f1b4f08cf96ec49914872",
+      "bytes": 15321,
+      "locations": [
+        "windowsAdvisory.custody.sources.11.windowsCRLF"
+      ],
+      "completeBodyRead": true,
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "gitBlob": "6d45d2496ca23e20e83fe80b6292a3a1d64c5d47",
+      "sha256": "a8243076ba46ace8dac88a7a827cf3271652e02da723251f8a2801a7ebb33744",
+      "bytes": 272124,
+      "locations": [
+        "windowsAdvisory.x64.sourceVectorIdentity"
+      ],
+      "completeBodyRead": true,
+      "method": "Exact compact serialization of all1798 original rows from complete retained x64 receipt; original before/after equality separately required."
+    }
+  ],
+  "currentPointerJoinCount": 140,
+  "derivedIdentities": [
+    {
+      "key": "Q2:appendSection",
+      "bytes": 4915,
+      "sha256": "38e6c7c26068125120382026ff3b384345d52ecbcc16a287ea6116dbe1cf723e",
+      "gitBlob": "3d2335708fce21ec0107fa100662bc16f3c77860",
+      "method": "Derived as exact suffix of complete literal-prefix-preserved documents; not fetched as a retained blob."
+    },
+    {
+      "key": "IP:appendSection",
+      "bytes": 4943,
+      "sha256": "50462da6bf1f8a1c3e4820b21253b45ebd59543c74af2433e85f659ac8906dbf",
+      "gitBlob": "8e1418ead69e3fe3eda20cd6fbcee9f7e481ed3a",
+      "method": "Derived as exact suffix of complete literal-prefix-preserved documents; not fetched as a retained blob."
+    },
+    {
+      "key": "originalMemberClick",
+      "bytes": 649,
+      "sha256": "41c01f7e76509f264fe9337294554e84bc7c22e355558ab000469f9dae086f24",
+      "gitBlob": "0119d9327d234e9eeacb4d68e0422c5a038c79f9",
+      "method": "Complete649-byte literal unique click extracted from full driver pre/postimages."
+    },
+    {
+      "key": "exact176ByteInsertion",
+      "bytes": 176,
+      "sha256": "ba8e0c7f6e3ce552c49657131dcaeafba4b86c807e09865a80ffa42892eff303",
+      "gitBlob": "a20184d0e817d8b55488545733684b252426905c",
+      "method": "Complete literal selected insertion from full original/postimage driver inverse."
+    },
+    {
+      "key": "controls43ByteInsertion",
+      "bytes": 43,
+      "sha256": "220cc53183d32050041d30182ea8dece73445d2c8fac925ea8cee4a25efd6a8d",
+      "gitBlob": "7692ca11da1a679f13361ac24516a4bdb9a2fdf5",
+      "method": "Exact reviewed insertion atbyte14002 in complete controls postimage, verified by selected identity and full inverse."
+    },
+    {
+      "key": "aggregate57ByteSuffix",
+      "bytes": 57,
+      "sha256": "9fbc3742dd5c829044eab669188fb399343799621bf3f264f6a4219cb7f97683",
+      "gitBlob": "9f66261ff992a66612a6b6baee152e5ca20ab631",
+      "method": "Complete unchanged139-case body literal prefix plus exact awaited import suffix."
+    },
+    {
+      "key": "windowsCRLF:tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "bytes": 38339,
+      "sha256": "a76135c8e2a09fbcc939c2856f626e1299c6dc9d684fe6fb31458a4f957d167f",
+      "gitBlob": "abe77d2e042df9dd2adbea58a8038ee14951c19c",
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "key": "windowsCRLF:tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "bytes": 31708,
+      "sha256": "9be5af55b58539523c03194b62ebb68f5b1b5363c8c3994deee833d91fed7499",
+      "gitBlob": "2ea379d6d92f92310cb586132ec9aeed7a2814ae",
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "key": "windowsCRLF:tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "bytes": 8031,
+      "sha256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961",
+      "gitBlob": "5af36ca5a9819feeec6c6e05ba08020f45cba54f",
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "key": "windowsCRLF:tools/owned-process-broker/nativeGateContext.ts",
+      "bytes": 7470,
+      "sha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+      "gitBlob": "a63327ce75e28af163f48f480da0b763a1c079bb",
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "key": "windowsCRLF:tools/owned-process-broker/nativeGateEvents.ts",
+      "bytes": 1406,
+      "sha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+      "gitBlob": "b66dab301ae13ba0c8fffe4c423a7d26558ff1ab",
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "key": "windowsCRLF:tools/owned-process-broker/fixtures/providerPeer.mjs",
+      "bytes": 9722,
+      "sha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+      "gitBlob": "0b4bd3fc052d29003ce3b35430473522580aa44d",
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "key": "windowsCRLF:tools/owned-process-broker/gateController.cpp",
+      "bytes": 6043,
+      "sha256": "604a73ce8f1e31c3ee094a1ceb7a866c71270590ba40f94c70d7f0c1a7543518",
+      "gitBlob": "e4ae753ca927a0b7c3a4e325289e143556775069",
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "key": "windowsCRLF:scripts/e2e/opencode-diagnostics/platform.mjs",
+      "bytes": 12647,
+      "sha256": "8b44f15d068ebda80de79947b58cd41ef0c8e7f86006ca2897d0b046394b9bdf",
+      "gitBlob": "f5f15e0ce99780690da8dcfa361516ca0185863c",
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "key": "windowsCRLF:scripts/e2e/opencode-diagnostics/packaged.mjs",
+      "bytes": 28529,
+      "sha256": "866967ed1d8d4a15593de409336c09f3154d0907c9d3dab09745a8a0bd0d611a",
+      "gitBlob": "f281a6c128bd753928e8c4e27a0cf71af623b2d6",
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "key": "windowsCRLF:scripts/legacy-agent-host/desktop-native-process-ui.ts",
+      "bytes": 23030,
+      "sha256": "7e66f25cba75a9e13940a41175471659231095248113bd7139e07b4a4a7e9e1e",
+      "gitBlob": "9c02a90dbdbec5718739e4ab4aad66ccf33e8676",
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "key": "windowsCRLF:scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 29468,
+      "sha256": "c61b3b5689773bfd589674cfdd860e46b6d7d0642a211b655374627cff2278f9",
+      "gitBlob": "06db8e61441c7e6720d18706adff04976506b565",
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "key": "windowsCRLF:tools/owned-process-broker/nativeFixture.cpp",
+      "bytes": 15321,
+      "sha256": "df6b01e1d7aa64474bfff02174f24874e0792fc5a94f1b4f08cf96ec49914872",
+      "gitBlob": "89d0cebeb12ff0e9f5eb42b8854ef3c1506fe043",
+      "method": "LF-to-CRLF rendering of complete immutable Git source; joins retained runtime SHA only as described in advisory, not a fresh physical read."
+    },
+    {
+      "key": "windows1798SourceVector:receipt.selectedSourceHashes",
+      "bytes": 272124,
+      "sha256": "a8243076ba46ace8dac88a7a827cf3271652e02da723251f8a2801a7ebb33744",
+      "gitBlob": "6d45d2496ca23e20e83fe80b6292a3a1d64c5d47",
+      "method": "Exact compact serialization of all1798 original rows from complete retained x64 receipt; original before/after equality separately required."
+    },
+    {
+      "key": "windows1798SourceVector:receipt.selectedSourceHashesAfterFlow",
+      "bytes": 272124,
+      "sha256": "a8243076ba46ace8dac88a7a827cf3271652e02da723251f8a2801a7ebb33744",
+      "gitBlob": "6d45d2496ca23e20e83fe80b6292a3a1d64c5d47",
+      "method": "Exact compact serialization of all1798 original rows from complete retained x64 receipt; original before/after equality separately required."
+    }
+  ],
+  "dataOnlyDerivationCorrection": {
+    "kind": "DERIVED_IDENTITY_BOUNDARY_CORRECTION_NO_BODY_CHANGE",
+    "attempt": "A maximal-common-prefix difference moved the conceptual insertion boundary into shared if-prefix bytes; the43-byte inverse remained valid but did not match the selected derived identity, so it was not accepted.",
+    "corrected": "Use the explicit reviewed byte offset14002 in the complete ASCII-prefix controls postimage, verify selected43-byte identity and full inverse.",
+    "sourceChanged": false,
+    "runtimeExecuted": false,
+    "invalidIdentityAccepted": false
+  },
+  "checks": [
+    {
+      "id": "exact-actual-commit-sole-parent",
+      "status": "PASS",
+      "evidence": {
+        "commit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "parent": "6d06207d96ea1c7ae7d9199a552ec776451dc231",
+        "tree": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295"
+      }
+    },
+    {
+      "id": "immediate-expected-parent-force-false-push",
+      "status": "PASS",
+      "evidence": {
+        "success": true
+      }
+    },
+    {
+      "id": "fresh-current-ref-readback",
+      "status": "PASS",
+      "evidence": {
+        "sha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+      }
+    },
+    {
+      "id": "full-untruncated-actual-root-docs-scripts-src-test-trees",
+      "status": "PASS",
+      "evidence": {
+        "root": {
+          "sha": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+          "entries": 54,
+          "truncated": false
+        },
+        "docs": {
+          "sha": "4dd9acfdf6c93a036a81089b166bb13bc08868e9",
+          "entries": 3640,
+          "truncated": false
+        },
+        "scripts": {
+          "sha": "c3f4fe5a62dd79a743b6ffc0d07341ac68a25f73",
+          "entries": 635,
+          "truncated": false
+        },
+        "src": {
+          "sha": "9ed817aaf1b2959381ea7d9262ed04f538247750",
+          "entries": 5445,
+          "truncated": false
+        },
+        "test": {
+          "sha": "69d3a76e739605a29aa7a0d04981d24f3918d856",
+          "entries": 1980,
+          "truncated": false
+        }
+      }
+    },
+    {
+      "id": "exact23-leaf-delta",
+      "status": "PASS",
+      "evidence": {
+        "changed": 23,
+        "added": 19,
+        "modified": 4,
+        "deleted": 0,
+        "modesChanged": 0,
+        "sourceChanged": 1,
+        "workflowsChanged": 0
+      }
+    },
+    {
+      "id": "exact22-document-leaf-delta",
+      "status": "PASS",
+      "evidence": {
+        "added": 19,
+        "modified": 3,
+        "deleted": 0
+      }
+    },
+    {
+      "id": "single-original-driver-source-delta",
+      "status": "PASS",
+      "evidence": {
+        "before": 601,
+        "after": 601,
+        "rows": [
+          {
+            "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+            "before": {
+              "sha": "43ab487464098fed0425ffd51441a38abc206f3b",
+              "mode": "100644",
+              "size": 69194
+            },
+            "after": {
+              "sha": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f",
+              "mode": "100644",
+              "size": 69370
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "all52-other-root-entries-preserved",
+      "status": "PASS",
+      "evidence": {
+        "exceptions": [
+          "docs",
+          "scripts"
+        ],
+        "unchanged": 52
+      }
+    },
+    {
+      "id": "all-full23-actual-postimages-hashed-and-literal",
+      "status": "PASS",
+      "evidence": {
+        "bodies": 23,
+        "bytes": 5785988
+      }
+    },
+    {
+      "id": "all-full-parent-docs-and-driver-read",
+      "status": "PASS",
+      "evidence": {
+        "bodies": 4,
+        "bytes": 3204436
+      }
+    },
+    {
+      "id": "complete-plan-status-prefixes-preserved",
+      "status": "PASS",
+      "evidence": {
+        "paths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md"
+        ],
+        "appendIdentity": {
+          "bytes": 4915,
+          "sha256": "38e6c7c26068125120382026ff3b384345d52ecbcc16a287ea6116dbe1cf723e",
+          "gitBlob": "3d2335708fce21ec0107fa100662bc16f3c77860"
+        }
+      }
+    },
+    {
+      "id": "all83-old-catalog-values-preserved",
+      "status": "PASS",
+      "evidence": {
+        "old": 83,
+        "current": 85,
+        "newKeys": [
+          "inode64MemberRevealR2Stage",
+          "inode64MemberRevealR2EvidenceFiles"
+        ]
+      }
+    },
+    {
+      "id": "all27-bundles-and-totals-preserved",
+      "status": "PASS",
+      "evidence": {
+        "bundles": 27,
+        "totalsLiteralValueEqual": true
+      }
+    },
+    {
+      "id": "whole-leaf-census-and-nondoc-count",
+      "status": "PASS",
+      "evidence": {
+        "parentLeaves": 12014,
+        "parentDocs": 3215,
+        "parentNonDocs": 8799,
+        "leaves": 12033,
+        "docs": 3234,
+        "nonDocs": 8799,
+        "scripts": 601,
+        "workflows": 42,
+        "production": 5020,
+        "exceptions": 141,
+        "sourceCap": 800
+      }
+    },
+    {
+      "id": "workflows-and-source-rules-unchanged",
+      "status": "PASS",
+      "evidence": {
+        "workflows": 42,
+        "production": 5020,
+        "sourceCap": 800,
+        "exceptions": 141,
+        "basis": "Only one existing source file changes; all other non-doc entries are immutable equals, including complete .github tree and source-rule bodies. No runtime guard pass is inferred."
+      }
+    },
+    {
+      "id": "full-current-pointer-closure",
+      "status": "PASS",
+      "evidence": {
+        "pointers": 140,
+        "uniqueBytes": 28302185,
+        "unresolved": 0,
+        "derivedUnique": 19
+      }
+    },
+    {
+      "id": "derived-identities-join-complete-bodies",
+      "status": "PASS",
+      "evidence": {
+        "derived": [
+          {
+            "key": "Q2:appendSection",
+            "gitBlob": "3d2335708fce21ec0107fa100662bc16f3c77860",
+            "bytes": 4915
+          },
+          {
+            "key": "IP:appendSection",
+            "gitBlob": "8e1418ead69e3fe3eda20cd6fbcee9f7e481ed3a",
+            "bytes": 4943
+          },
+          {
+            "key": "originalMemberClick",
+            "gitBlob": "0119d9327d234e9eeacb4d68e0422c5a038c79f9",
+            "bytes": 649
+          },
+          {
+            "key": "exact176ByteInsertion",
+            "gitBlob": "a20184d0e817d8b55488545733684b252426905c",
+            "bytes": 176
+          },
+          {
+            "key": "controls43ByteInsertion",
+            "gitBlob": "7692ca11da1a679f13361ac24516a4bdb9a2fdf5",
+            "bytes": 43
+          },
+          {
+            "key": "aggregate57ByteSuffix",
+            "gitBlob": "9f66261ff992a66612a6b6baee152e5ca20ab631",
+            "bytes": 57
+          },
+          {
+            "key": "windowsCRLF:tools/owned-process-broker/nativeWindowsAppGate.mjs",
+            "gitBlob": "abe77d2e042df9dd2adbea58a8038ee14951c19c",
+            "bytes": 38339
+          },
+          {
+            "key": "windowsCRLF:tools/owned-process-broker/nativeWindowsAppFixture.ts",
+            "gitBlob": "2ea379d6d92f92310cb586132ec9aeed7a2814ae",
+            "bytes": 31708
+          },
+          {
+            "key": "windowsCRLF:tools/owned-process-broker/nativeEmulatedProfile.ts",
+            "gitBlob": "5af36ca5a9819feeec6c6e05ba08020f45cba54f",
+            "bytes": 8031
+          },
+          {
+            "key": "windowsCRLF:tools/owned-process-broker/nativeGateContext.ts",
+            "gitBlob": "a63327ce75e28af163f48f480da0b763a1c079bb",
+            "bytes": 7470
+          },
+          {
+            "key": "windowsCRLF:tools/owned-process-broker/nativeGateEvents.ts",
+            "gitBlob": "b66dab301ae13ba0c8fffe4c423a7d26558ff1ab",
+            "bytes": 1406
+          },
+          {
+            "key": "windowsCRLF:tools/owned-process-broker/fixtures/providerPeer.mjs",
+            "gitBlob": "0b4bd3fc052d29003ce3b35430473522580aa44d",
+            "bytes": 9722
+          },
+          {
+            "key": "windowsCRLF:tools/owned-process-broker/gateController.cpp",
+            "gitBlob": "e4ae753ca927a0b7c3a4e325289e143556775069",
+            "bytes": 6043
+          },
+          {
+            "key": "windowsCRLF:scripts/e2e/opencode-diagnostics/platform.mjs",
+            "gitBlob": "f5f15e0ce99780690da8dcfa361516ca0185863c",
+            "bytes": 12647
+          },
+          {
+            "key": "windowsCRLF:scripts/e2e/opencode-diagnostics/packaged.mjs",
+            "gitBlob": "f281a6c128bd753928e8c4e27a0cf71af623b2d6",
+            "bytes": 28529
+          },
+          {
+            "key": "windowsCRLF:scripts/legacy-agent-host/desktop-native-process-ui.ts",
+            "gitBlob": "9c02a90dbdbec5718739e4ab4aad66ccf33e8676",
+            "bytes": 23030
+          },
+          {
+            "key": "windowsCRLF:scripts/legacy-agent-host/desktop-ui-controls.ts",
+            "gitBlob": "06db8e61441c7e6720d18706adff04976506b565",
+            "bytes": 29468
+          },
+          {
+            "key": "windowsCRLF:tools/owned-process-broker/nativeFixture.cpp",
+            "gitBlob": "89d0cebeb12ff0e9f5eb42b8854ef3c1506fe043",
+            "bytes": 15321
+          },
+          {
+            "key": "windows1798SourceVector:receipt.selectedSourceHashes",
+            "gitBlob": "6d45d2496ca23e20e83fe80b6292a3a1d64c5d47",
+            "bytes": 272124
+          },
+          {
+            "key": "windows1798SourceVector:receipt.selectedSourceHashesAfterFlow",
+            "gitBlob": "6d45d2496ca23e20e83fe80b6292a3a1d64c5d47",
+            "bytes": 272124
+          }
+        ]
+      }
+    },
+    {
+      "id": "exact-r1-and-actual-authorship-gate",
+      "status": "PASS",
+      "evidence": {
+        "r1": {
+          "bytes": 27869,
+          "sha256": "e3a891024d750f7c868a7a253f2ed1f3630b833e92d1698af38b533c8ebc5db7",
+          "gitBlob": "b16bf54091cfb2fd2756ad7a951d0f9143611d2b"
+        },
+        "gate": {
+          "bytes": 4441,
+          "sha256": "11dd4fe224bb0531f2432fc73f5de4a0f06c7afe9118d09981674d96fe6dfd8c",
+          "gitBlob": "6bbf83caa77cb9eaab9e262f46bed45f03494968"
+        },
+        "sourceAnchor": "6d06207d96ea1c7ae7d9199a552ec776451dc231"
+      }
+    },
+    {
+      "id": "root-authorship-after-r1-actual-gate",
+      "status": "PASS",
+      "evidence": {
+        "at": "2026-11-17 06:34:30 UTC",
+        "afterR1ActualClosedAt": "2026-11-17 06:33:57 UTC",
+        "rootSoleAuthor": true,
+        "physicalStaging": false,
+        "runtimeInvoked": false,
+        "environmentUnavailable": true
+      }
+    },
+    {
+      "id": "all4-r2-subjects-and-report-bodies-join",
+      "status": "PASS",
+      "evidence": {
+        "subject": {
+          "bytes": 29036,
+          "sha256": "0737bd331fb0ac13e8589b75c1aa392a3a428e8ca4b81e3a763bcba4d1bdcdec",
+          "gitBlob": "bb9a1cddc7add50dae7a907e247dd2a5efc61885"
+        },
+        "reviews": {
+          "root": {
+            "bytes": 19572,
+            "sha256": "ef1372b2a3caeae2c819658f8e58c7c3e5a108d84cee7df23904009da634057e",
+            "gitBlob": "473f2ee69b6255c93b30e0a01829400a8d5a3ae1"
+          },
+          "guard": {
+            "bytes": 66330,
+            "sha256": "888631fbeeb6c9140ae47d63feb3dc339305090447366ed0203acff35ba6198a",
+            "gitBlob": "4c0d79aa004a985aa449c087774b661c55b3713b"
+          },
+          "semantic": {
+            "bytes": 62518,
+            "sha256": "442ca3511f3aecf7e04a2d0847c8917ebd6d3f200db7b22250d5a9868705382a",
+            "gitBlob": "f973993d8af12c73d74d0cb62d9e0f970016dfd0"
+          },
+          "binding": {
+            "bytes": 131859,
+            "sha256": "504624f91f149bf5755354087aaf0b4abdf55d925fb0961b13576169515eb9eb",
+            "gitBlob": "844c0b687d2e7c3dbabfe30ccaecb11ba558f845"
+          }
+        },
+        "checks": 174
+      }
+    },
+    {
+      "id": "all4-review-complete-self-readbacks",
+      "status": "PASS",
+      "evidence": {
+        "root": true,
+        "guard": true,
+        "semantic": true,
+        "binding": true
+      }
+    },
+    {
+      "id": "full13-before-and-after-vector-bodies",
+      "status": "PASS",
+      "evidence": {
+        "before": {
+          "bytes": 3481,
+          "sha256": "075a300c213fcb595ce025c7f9ba3af9dc955ca5ca61f9a0a1b17ebf4f7c938b",
+          "gitBlob": "866c64a6d2c90fc92988c1094cbdd81b469c2c10"
+        },
+        "after": {
+          "bytes": 3481,
+          "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+          "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+        },
+        "rows": 13,
+        "onlyDriverChanges": true
+      }
+    },
+    {
+      "id": "all13-source-leaves-match-actual-trees",
+      "status": "PASS",
+      "evidence": {
+        "scripts": 9,
+        "src": 2,
+        "test": 2,
+        "actualTreeJoined": true
+      }
+    },
+    {
+      "id": "all12-preserved-complete-source-bodies",
+      "status": "PASS",
+      "evidence": {
+        "bodies": 12,
+        "bytes": 701311,
+        "literalIdentityRecordsPreserved": true
+      }
+    },
+    {
+      "id": "exact176-byte-driver-insertion-inverse",
+      "status": "PASS",
+      "evidence": {
+        "before": {
+          "bytes": 69194,
+          "sha256": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+          "gitBlob": "43ab487464098fed0425ffd51441a38abc206f3b"
+        },
+        "after": {
+          "bytes": 69370,
+          "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+          "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+        },
+        "insertion": {
+          "bytes": 176,
+          "sha256": "ba8e0c7f6e3ce552c49657131dcaeafba4b86c807e09865a80ffa42892eff303",
+          "gitBlob": "a20184d0e817d8b55488545733684b252426905c"
+        }
+      }
+    },
+    {
+      "id": "driver794-to798-under800",
+      "status": "PASS",
+      "evidence": {
+        "before": 794,
+        "after": 798,
+        "cap": 800,
+        "noExceptionAdded": true
+      }
+    },
+    {
+      "id": "unchanged-original649-byte-click",
+      "status": "PASS",
+      "evidence": {
+        "bytes": 649,
+        "sha256": "41c01f7e76509f264fe9337294554e84bc7c22e355558ab000469f9dae086f24",
+        "gitBlob": "0119d9327d234e9eeacb4d68e0422c5a038c79f9"
+      }
+    },
+    {
+      "id": "existing-helper-call-and-original-click-authority-preserved",
+      "status": "PASS",
+      "evidence": {
+        "maxWheels": 12,
+        "exactText": "alice",
+        "fifthArgument": {
+          "requireCenterHit": true
+        },
+        "timeoutMeaning": "Existing30s per observation, no30s total-reveal claim."
+      }
+    },
+    {
+      "id": "complete-supervisor-and-binding-match-r2",
+      "status": "PASS",
+      "evidence": {
+        "runner": {
+          "bytes": 25819,
+          "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+          "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+        },
+        "binding": {
+          "bytes": 107295,
+          "sha256": "d8626f22a432926350c4d69c657313a61b935764dae972159a1a88fc03163b5b",
+          "gitBlob": "381c51a331b9d03f5aab87835af3dad5a6643d3c"
+        }
+      }
+    },
+    {
+      "id": "complete-runner-inverse-only3-selected-edits",
+      "status": "PASS",
+      "evidence": {
+        "reversedExactNode": true,
+        "reversedPaths": [
+          "scope",
+          "stage"
+        ],
+        "allOtherBytesIdentical": true
+      }
+    },
+    {
+      "id": "complete-binding-inverse-and-field-scope",
+      "status": "PASS",
+      "evidence": {
+        "changed": [
+          "attemptToken",
+          "sourceCommit",
+          "sourceTree",
+          "sourceActualGate",
+          "r1",
+          "r1ActualGate",
+          "scope",
+          "stage",
+          "runner",
+          "classifications"
+        ],
+        "added": [
+          "sourceAnchorEvidence"
+        ],
+        "unchanged": 17
+      }
+    },
+    {
+      "id": "unchanged-source-inputs-and-node-pin",
+      "status": "PASS",
+      "evidence": {
+        "all4EmbeddedBodiesEqual": true,
+        "embeddedBytes": 92713,
+        "nodePin": {
+          "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "bytes": 126939688,
+          "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+          "device": "27",
+          "inode": "9223372036854818252",
+          "uid": "65534",
+          "gid": "65534",
+          "mode": "0o755",
+          "mtimeNs": "1794515386000000000",
+          "ctimeNs": "1794515386000000000",
+          "versionPreviouslyObserved": "v24.22.1"
+        },
+        "threeSelectedRuntimeSources": true,
+        "driverExcluded": true
+      }
+    },
+    {
+      "id": "known-source-anchor-and-external-later-admission",
+      "status": "PASS",
+      "evidence": {
+        "bindingSourceCommit": "6d06207d96ea1c7ae7d9199a552ec776451dc231",
+        "actualPublicationParent": "6d06207d96ea1c7ae7d9199a552ec776451dc231",
+        "actualPublicationCommit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "futureCommitNotGuessed": true,
+        "noAdmissionAuthored": true
+      }
+    },
+    {
+      "id": "original-spent-attempt-not-reopened",
+      "status": "PASS",
+      "evidence": {
+        "state": "REFUSED_BEFORE_SCOPE_ADMISSION_SPENT",
+        "phases": 0,
+        "cases": 0
+      }
+    },
+    {
+      "id": "new-attempt-unstaged-and-uninvoked",
+      "status": "PASS",
+      "evidence": {
+        "scope": "/workspace/scratch/c714-waitread-inode64-20261117",
+        "stage": "/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117",
+        "currentPhysicalState": "UNKNOWN_ENVIRONMENT_UNAVAILABLE",
+        "stageCreatedByContinuation": false,
+        "scopeCreatedByContinuation": false,
+        "invoked": false
+      }
+    },
+    {
+      "id": "standalone-deadline-tap-cleanup-preserved",
+      "status": "PASS",
+      "evidence": {
+        "basis": "Full runner inverse and four exact static R2 reviews; all original lifecycle logic is literal unchanged.",
+        "runtimeResult": null
+      }
+    },
+    {
+      "id": "original139-prefix-and149-awaited-import-preserved",
+      "status": "PASS",
+      "evidence": {
+        "aggregate": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+        "original": "896c587e077da56a98a314a175fb3cba0353d6ee",
+        "exactSuffix": "9f66261ff992a66612a6b6baee152e5ca20ab631",
+        "whole149Executed": false
+      }
+    },
+    {
+      "id": "catalog43-and-renderer85-bodies-preserved",
+      "status": "PASS",
+      "evidence": {
+        "catalog43": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+        "renderer85": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+        "newExecution": false
+      }
+    },
+    {
+      "id": "old-renderer85-success-scope-preserved",
+      "status": "PASS",
+      "evidence": {
+        "review": "4277afde65b656545ca30e4b1be3f593af862fc8",
+        "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "skipsOutside85Preserved": true
+      }
+    },
+    {
+      "id": "original-pr1218-all7-terminal",
+      "status": "PASS",
+      "evidence": {
+        "packet": {
+          "bytes": 1470199,
+          "sha256": "4f66346fff2f9f0869fdb5290781037a100c316400ac31d4fd232c350bda211c",
+          "gitBlob": "8d679dba4598084dd3a3ce5ebc84c0b0a78beed9"
+        },
+        "terminal": [
+          44008782825,
+          44008782932,
+          44008782869,
+          44008782832,
+          44008782909,
+          44008782844,
+          44008782843
+        ],
+        "active": [],
+        "furtherPolling": false
+      }
+    },
+    {
+      "id": "full-final-observation-raw-and3-job-logs-retained",
+      "status": "PASS",
+      "evidence": {
+        "rawRunObservationPairs": 5,
+        "finalArtifactIndexes": 2,
+        "logs": [
+          {
+            "runId": 44008782844,
+            "jobId": 133847243496,
+            "name": "packaged full gate",
+            "status": "completed",
+            "conclusion": "failure",
+            "bytes": 23740,
+            "sha256": "13a59a8965a6136f1c94fcd3ac338f8eca33361b64812f60d599efc8e3eb0412",
+            "gitBlob": "14e9c33c097bee7385730b545db90855523f9889"
+          },
+          {
+            "runId": 44008782843,
+            "jobId": 133790459063,
+            "name": "Offline Host Desktop (linux-x64, review)",
+            "status": "completed",
+            "conclusion": "success",
+            "bytes": 206448,
+            "sha256": "4df0ac8b371f527685c5384733f936c6b7bf5cddb3ccc375cd246d33a52d5fe7",
+            "gitBlob": "f400691b2dc86163afc8a7f554b7184572594a5d"
+          },
+          {
+            "runId": 44008782843,
+            "jobId": 133861122492,
+            "name": "Offline Host Desktop",
+            "status": "completed",
+            "conclusion": "failure",
+            "bytes": 2383,
+            "sha256": "d612d65127338ec14f254874878a98db1ad85ced6885cb25b61290dad911b895",
+            "gitBlob": "366f483c1859ca532955433df20c3407539c1132"
+          }
+        ]
+      }
+    },
+    {
+      "id": "33-verified-archives-and-new-unextracted-review-boundary",
+      "status": "PASS",
+      "evidence": {
+        "captured": 33,
+        "reviewArtifact": 14304826722,
+        "reviewExtracted": false,
+        "reviewHashOrCRCQualified": false,
+        "signedUrlPublished": false
+      }
+    },
+    {
+      "id": "cold-renderer-and-windows-advisories-retain-failures",
+      "status": "PASS",
+      "evidence": {
+        "cold": {
+          "bytes": 54283,
+          "sha256": "744032c9d41d9d1f241f27485de185285d1335c81f4631be17780f20bd3fe442",
+          "gitBlob": "18682ee96d929a436190f23e0a3833838ac921b8"
+        },
+        "windows": {
+          "bytes": 82021,
+          "sha256": "7a6dfd9d48f634d1e5434456ff4e787d0795baa01eecd092b2c6877025f352d3",
+          "gitBlob": "4a8ee1f31e1ce056b06515e842ed0d68fb5ea917"
+        },
+        "coldResourceCause": "UNKNOWN",
+        "windowsLaterOriginalStops": "UNREACHED",
+        "darwinStrictP09": "REMAINS_COUNTEREXAMPLE",
+        "repairOrPassInferred": false
+      }
+    },
+    {
+      "id": "environment-and-runtime-qualification-honest",
+      "status": "PASS",
+      "evidence": {
+        "environment": {
+          "status": "rejected",
+          "reason": "No usable execution environment is available. Wait for an environment to become available before using this tool."
+        },
+        "replacementNodeOrVenueSelected": false,
+        "sourceStaged": false,
+        "controlStaged": false,
+        "executed": false
+      }
+    },
+    {
+      "id": "no-ci-event-or-metadata-action-selected",
+      "status": "PASS",
+      "evidence": {
+        "allOriginalTerminal": true,
+        "newCiEventSelected": false,
+        "workflowOrDependencyDelta": false
+      }
+    },
+    {
+      "id": "no-broad-qualification-inferred",
+      "status": "PASS",
+      "evidence": {
+        "standalone10": false,
+        "whole149": false,
+        "catalog43": false,
+        "newDriverGUI": false,
+        "canonicalTypecheck": false,
+        "packagedNative": false,
+        "fullE2E": false
+      }
+    }
+  ],
+  "checkCount": 46,
+  "passedChecks": 46,
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "unresolvedBlockers": [],
+  "environment": {
+    "status": "rejected",
+    "reason": "No usable execution environment is available. Wait for an environment to become available before using this tool."
+  },
+  "runtimeAuthorized": false,
+  "admissionAuthored": false,
+  "stageCreated": false,
+  "scopeCreated": false,
+  "runtimeExecuted": false,
+  "qualification": "Static exact source/control publication only; no standalone10, whole149, catalog43, new-driverGUI, typecheck, packaged/native or fullE2E pass. Existing renderer85 and prior139 results retain their original frozen-source scope.",
+  "remainingSequence": [
+    "Independent complete actual-publication review and full root report join, retained and fully self-read.",
+    "Root full read of the independent report, then explicit actual-publication gate.",
+    "Any original standalone staging/invocation still requires an available exact matching physical venue and external immutable admission; current environment is unavailable.",
+    "A separate later reviewed plan must select any new CI event; original terminal runs stay terminal and unpolled."
+  ],
+  "selfReadbackProtocol": "The retained report pin is sent immediately; then the whole retained body is fetched and matched literally and by byte/SHA256/Git identity."
+}

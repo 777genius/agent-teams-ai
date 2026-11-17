@@ -1,0 +1,1287 @@
+{
+  "schemaVersion": 1,
+  "kind": "fresh-fixed9d-full-frontend-parity-CI-venue-R1",
+  "at": "2026-11-17 07:19:18 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "owner": "/root",
+  "state": "CONCRETE_R1_FOR_ROOT_AND_INDEPENDENT_REVIEW_NO_ACTION_ISSUED",
+  "objective": "Execute the unchanged complete existing Draft CI surface on exact published9d source to qualify whole149/catalog43/renderer85 and the shared member-reveal GUI path, preserving all remaining platform/provider obligations and observed failures.",
+  "authorization": {
+    "userGoal": "Continue and finish frontend/Host/extracted-provider parity and E2E autonomously, work in parallel, push each commit immediately.",
+    "userProviderConstraint": "No real Claude or Codex execution, including version probes; finite TEST peers only. Existing pinned OpenCode localhost/free-model paths are permitted.",
+    "rootSolePublisherExecutor": true,
+    "existingProcedure": "The already established CI R1/review/publication/full actual readbacks/external admission sequence applies. No extra executable runner/control/workflow is authored; existing source/control R2 remains closed and distinct."
+  },
+  "precedingClosedGate": {
+    "bytes": 7050,
+    "sha256": "4a55ae270a3549fd97c712db801cf2378102e7974597c8ed2c3fe3b240e937cb",
+    "gitBlob": "3aa070295059b9e1dd280ee36836712878b0b72c"
+  },
+  "sourcePublication": {
+    "commit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "parent": "6d06207d96ea1c7ae7d9199a552ec776451dc231",
+    "root": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+    "docs": "4dd9acfdf6c93a036a81089b166bb13bc08868e9",
+    "scripts": "c3f4fe5a62dd79a743b6ffc0d07341ac68a25f73",
+    "manifest": {
+      "bytes": 14219,
+      "sha256": "f8edf426d500c6bb9f51d6be642401aea32c73d4930f7545451a67851e5ca023",
+      "gitBlob": "63a56db8844bb4d9c3f25047bee9deaffddee768"
+    },
+    "rootActual": {
+      "bytes": 159127,
+      "sha256": "1133d67553be7b4b0085cbfbe698842d4839228956e43f9930c456ee50ce4beb",
+      "gitBlob": "64d074f6f878440222347058c0fbc3a559953908"
+    },
+    "independentActual": {
+      "bytes": 432844,
+      "sha256": "995c58b5b1f0c2c765b934c2ee93fdce20940db5b12da9f5a97b2ab5ce747b37",
+      "gitBlob": "4f6feae04f1bc9fe1e6357876481fe14e7fb8cd3"
+    },
+    "actualChecks": 106,
+    "r2": {
+      "bytes": 29036,
+      "sha256": "0737bd331fb0ac13e8589b75c1aa392a3a428e8ca4b81e3a763bcba4d1bdcdec",
+      "gitBlob": "bb9a1cddc7add50dae7a907e247dd2a5efc61885"
+    },
+    "r2Checks": 174
+  },
+  "independentAdvisory": {
+    "bytes": 89037,
+    "sha256": "fdbf58a4cc6ee03693f5ffc1ab1d9ba2ad40cafcdd419c60f982530a07c9b734",
+    "gitBlob": "ec8af61a7613a4d4f55601f0755e5fd3858a809a"
+  },
+  "advisoryClarification": {
+    "check": "driver_semantics",
+    "quotedPhrase": "798-line cap",
+    "meaning": "798 physical lines under the unchanged800-line cap",
+    "capChanged": false
+  },
+  "inheritedProcedure": {
+    "r1": {
+      "bytes": 83960,
+      "sha256": "6ffeef78018e330679aa9a2bc2da5422aca9d2a38fb4c60834959bfd880e6e58",
+      "gitBlob": "7237425e51bda9feb7d0ded4e424fe72745680c1"
+    },
+    "bindingAndCapture": {
+      "bytes": 104799,
+      "sha256": "d995389da8279bdd9edd1af8cbf07604c9bf81d1f3c3ab2f01d3c09cfc8402cc",
+      "gitBlob": "30de518ca496cb3ef079a3420057d8cd8ed32b51"
+    },
+    "sequence": [
+      "Root completes existing combined source/control publication actual readbacks and retains their closed gate.",
+      "Root authors the concrete fresh venue R1 with the exact current head9d, original base779, proposed new names, single-action bounds and complete capture/qualification contract. Root and assigned independent reviewers read its entire exact body.",
+      "Root retains reviews, publishes the R1/evidence docs on the separate working branch and immediately pushes, preserving unrelated source and history. Root and an independent reviewer fully read the actual publication and bind its real commit/root/docs identities.",
+      "The existing external admission record joins that actual R1 publication and accepted reviews to exact source9d and the new structured arguments. Do not replace source9d with the later docs tip.",
+      "Only after root selects and closes that existing admission may root perform the bounded exact-new-name preflight, create each ref once, read each back, and issue the one Draft PR action with its full envelope/readback.",
+      "Retain only the new event/run/attempt/job/artifact evidence under the inherited bounded capture procedure, classify every outcome, and stop polling terminal runs."
+    ],
+    "r2Boundary": "No new executable runner, workflow, dependency, source or test postimage is proposed here. Their existing accepted R2 records remain distinct. If root later authors an additional executable control, its existing required R2/actual process applies to that concrete control; no such extra control or gate is invented by this advisory."
+  },
+  "originalAttempt": {
+    "pr": 1218,
+    "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "terminalPacket": {
+      "bytes": 1470199,
+      "sha256": "4f66346fff2f9f0869fdb5290781037a100c316400ac31d4fd232c350bda211c",
+      "gitBlob": "8d679dba4598084dd3a3ce5ebc84c0b0a78beed9"
+    },
+    "allSevenRunsTerminal": true,
+    "runIds": [
+      44008782825,
+      44008782932,
+      44008782869,
+      44008782832,
+      44008782909,
+      44008782844,
+      44008782843
+    ],
+    "activeRuns": [],
+    "noFurtherPolling": true,
+    "priorActualRenderer85": {
+      "bytes": 56658,
+      "sha256": "2a20638c7372fc202d5dc1fbcb364744a8ada038401e6673461ab8147843524e",
+      "gitBlob": "4277afde65b656545ca30e4b1be3f593af862fc8"
+    },
+    "priorWindowsFailure": {
+      "bytes": 82021,
+      "sha256": "7a6dfd9d48f634d1e5434456ff4e787d0795baa01eecd092b2c6877025f352d3",
+      "gitBlob": "4a8ee1f31e1ce056b06515e842ed0d68fb5ea917"
+    },
+    "priorColdRendererFailure": {
+      "bytes": 54283,
+      "sha256": "744032c9d41d9d1f241f27485de185285d1335c81f4631be17780f20bd3fe442",
+      "gitBlob": "18682ee96d929a436190f23e0a3833838ac921b8"
+    },
+    "failureScope": "Original OpenCode member click, cross-team cold renderer, Windows native recovery and Darwin strictP09 remain actual failures/counterexamples; the new source does not relabel them. No rerun of an old run or old source snapshot is selected."
+  },
+  "fixedSource": {
+    "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "headTree": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+    "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "baseTree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+    "mergeBase": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "ahead": 10,
+    "behind": 0,
+    "completeFiles": 156,
+    "documentationFiles": 147,
+    "sourceRows": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "mode": "100644",
+        "bytes": 69370,
+        "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+        "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f",
+        "status": "modified"
+      },
+      {
+        "bytes": 45795,
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+        "mode": "100644",
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "status": "modified"
+      },
+      {
+        "bytes": 33036,
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+        "mode": "100644",
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "status": "modified"
+      },
+      {
+        "bytes": 165022,
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+        "mode": "100644",
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+        "status": "modified"
+      },
+      {
+        "bytes": 7883,
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+        "mode": "100644",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "status": "added"
+      },
+      {
+        "bytes": 29017,
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+        "mode": "100644",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "status": "modified"
+      },
+      {
+        "bytes": 74340,
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+        "mode": "100644",
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "status": "modified"
+      },
+      {
+        "bytes": 32077,
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+        "mode": "100644",
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+        "status": "modified"
+      },
+      {
+        "bytes": 56775,
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+        "mode": "100644",
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "status": "modified"
+      }
+    ],
+    "comparison": {
+      "bytes": 1316501,
+      "sha256": "b197f33f4fd07ad0afd3443214705152dfc2b6ec544eb6fc014b4d9c3d67137f",
+      "gitBlob": "b22f8e839e41161d124ea665134b2d254ebe8ed0"
+    },
+    "beforeVector": {
+      "bytes": 3481,
+      "sha256": "075a300c213fcb595ce025c7f9ba3af9dc955ca5ca61f9a0a1b17ebf4f7c938b",
+      "gitBlob": "866c64a6d2c90fc92988c1094cbdd81b469c2c10"
+    },
+    "afterVector": {
+      "bytes": 3481,
+      "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+      "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+    },
+    "headRemains9d": "Later R1/evidence publication commits on the working branch are authority evidence only. Never substitute that later tip or a guessed future SHA for this fixed CI source."
+  },
+  "publicationContract": {
+    "workingBranch": "fix/frontend-parity-coobservation-c714-20261115",
+    "parent": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "parentRoot": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+    "parentDocs": "4dd9acfdf6c93a036a81089b166bb13bc08868e9",
+    "docsOnly": true,
+    "allNonDocRootEntriesUnchanged": true,
+    "nonDocLeaves": 8799,
+    "workflows": 42,
+    "production": 5020,
+    "sourceCap": 800,
+    "exceptions": 141,
+    "parentCatalogFields": 85,
+    "bundles": 27,
+    "allCatalogValuesAndTotalsPreserved": true,
+    "fullPlanStatusPrefixesPreserved": true,
+    "newCatalogKeys": [
+      "fresh9dCiR1Stage",
+      "fresh9dCiR1EvidenceFiles"
+    ],
+    "exactEvidenceManifestRequired": true,
+    "immediateExpectedParentForceFalsePush": true,
+    "fullRootAndIndependentActualReadbacksRequired": true
+  },
+  "selectedMutationSequence": {
+    "selected": true,
+    "newNamesObservedAbsent": false,
+    "newNameQualification": "Concrete proposed names only. Root's later admitted preflight must read these exact names once and require absence; no create or availability claim is made here.",
+    "baseRef": "ci/frontend-parity-c714-20261117-2-base",
+    "headRef": "ci/frontend-parity-c714-20261117-2-head",
+    "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "headBinding": "Use actual9d79 as the fixed CI source head. Later R1/review/publication/actual records can be external admission evidence on the working evidence branch; they need not and must not silently replace9d with a guessed future commit or moving branch tip. A different selected head would require its own concrete diff/trigger review under the existing process.",
+    "event": "pull_request opened",
+    "sameRepository": true,
+    "draft": true,
+    "maintainerCanModify": false,
+    "proposedStructuredActions": [
+      {
+        "order": 1,
+        "operation": "read-only preflight under root's later accepted plan",
+        "requirements": [
+          "The actual9d source gate3aa070 is already closed; the later exact fresh-CI R1 publication/root+independent actual readbacks and external admission must be closed before any new-name/ref/PR mutation.",
+          "At the admitted preflight, read the two exact proposed new names and require confirmed absence; unknown/error is not absence. No overwrite, reuse, alternative name or artificial base.",
+          "Read immutable9d/779 commit/tree/ancestry plus the complete156-file comparison and compare with this retained exact assessment; source9d remains fixed while later docs commits are external evidence only.",
+          "Recheck complete42workflow/event/filter identities and the fixed Draft/no-real-Claude-Codex selection. Any difference refuses admission; do not compensate by changing filters, workflows, dependencies or runtime budgets.",
+          "No old/frozen PR or original terminal-run action or polling."
+        ]
+      },
+      {
+        "order": 2,
+        "tool": "github_create_branch",
+        "arguments": {
+          "repository_full_name": "777genius/agent-teams-ai",
+          "branch_name": "ci/frontend-parity-c714-20261117-2-base",
+          "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+        },
+        "readback": "Exact newly named ref must resolve to779 and treeada3f27db78fabc17a91e3904d41b8bc547c6dca.",
+        "maximumAttempts": 1
+      },
+      {
+        "order": 3,
+        "tool": "github_create_branch",
+        "arguments": {
+          "repository_full_name": "777genius/agent-teams-ai",
+          "branch_name": "ci/frontend-parity-c714-20261117-2-head",
+          "sha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+        },
+        "readback": "Exact newly named ref must resolve to9d79 and treeaefd0dfc3ceb7b9e4812cc4e532b128c21c3e295.",
+        "maximumAttempts": 1
+      },
+      {
+        "order": 4,
+        "tool": "github_create_pull_request",
+        "arguments": {
+          "repository_full_name": "777genius/agent-teams-ai",
+          "base": "ci/frontend-parity-c714-20261117-2-base",
+          "head": "ci/frontend-parity-c714-20261117-2-head",
+          "title": "test: validate frontend parity deadlines and member reveal",
+          "body": "## Purpose\n\nThe published deadline fix, three catalog regressions and member reveal step need complete execution on source 9d79abcf1f5c498687c2e5c443e3edf220070aa6. This Draft PR validates that fixed source against its unchanged ancestor 77993819c233737f1e2b4c11c8ca1a5d360bcbe3.\n\n## Changes and coverage\n\nThe snapshot contains the accepted frontend parity fixes, all 139 original Node cases plus ten deadline cases, the full 43-case model catalog file, the unchanged 85-case provider-management file, and one bounded scroll to Alice before the original guarded member click. The driver has 798 lines under the unchanged 800-line limit.\n\nExisting workflows select all 18 Host UI jobs, four frontend shards and their aggregate; the five packaged platform tuples; Stage 1 OpenCode checks; announcements; and CI fast feedback. Claude and Codex use the existing finite TEST peers. Actual OpenCode execution stays within the existing pinned localhost-model paths.\n\nWorkflow bytes, dependencies, filters, original deadlines and strict native assertions are preserved. Full qualification is expected to fail the existing Draft policy. CodeQL and OpenCode diagnostics retain their explicit Draft skips. Every other failure, skipped or unreached step and unavailable artifact remains visible.\n\nCI's ten imported deadline cases run within the whole 149-case module under its existing Node selection. The separately pinned local Node 24.22.1 RED/GREEN attempt remains unexecuted while its environment is unavailable.\n\nBoth snapshot refs and this PR's metadata stay fixed while selected runs are active. The original PR #1218 remains terminal. This evidence scope does not include Ready conversion, merge, release, Stage 2, or a native-custody waiver.\n",
+          "draft": true,
+          "maintainer_can_modify": false
+        },
+        "readback": "Capture actual returned new PR number, repository IDs, exact head/base SHA/refs, Draft/open state, timestamps and eventual synthetic merge commit with both parents/tree. No invented future number or SHA.",
+        "maximumAttempts": 1
+      }
+    ],
+    "status": "ROOT_SELECTED_R1_SCOPE_ONLY_NOT_YET_ADMITTED",
+    "failurePolicy": "Retain any refused or transport-unknown mutation as spent as issued. Resolve uncertainty only by exact-new-ref/PR readback; do not blindly repeat, overwrite an unexpected ref, create a duplicate PR, switch names or fall back to dispatch/rerun. Partial creation remains explicit for root's existing process.",
+    "noArtificialDiff": "Both refs preserve the real ancestor and accepted current source. No test omission, alternative artificial base, workflow edit or path-only trigger manipulation.",
+    "freeze": "Keep both new refs and new PR metadata fixed while any selected new run is active; no push/force/rebase/base or label/title/body edit, Ready conversion, close/reopen, rerun, cancellation or dispatch. Required documentation pushes may continue only on the separate working evidence branch.",
+    "source": "Existing unchanged structured GitHub operations; no executable control source is authored."
+  },
+  "workflowAssessment": {
+    "githubTree": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+    "full42Corpus": {
+      "bytes": 780732,
+      "sha256": "9a83bd5a7425d0674345c607e26b2a1df8bde3556549ac276bfbf860c5c4e3bb",
+      "gitBlob": "6d032754064d4f251a11e8572bb7b476ea5860a8"
+    },
+    "completeWorkflowBytes": 751430,
+    "eventMap": [
+      {
+        "path": ".github/workflows/announcements-content.yml",
+        "gitBlob": "d7d1c6fde200971f29defe95c2c0436a0318b499",
+        "hasPullRequest": true,
+        "pathPatternCount": 0,
+        "matchedSourceCount": 9,
+        "matchedDocumentationCount": 147,
+        "eventEligible": true
+      },
+      {
+        "path": ".github/workflows/anthropic-compatible-status-e2e.yml",
+        "gitBlob": "6ec8f76ef4036fde31daab73db1205cf9f7dfdd2",
+        "hasPullRequest": true,
+        "pathPatternCount": 29,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/anthropic-env-portability.yml",
+        "gitBlob": "d3fa7512b79b79dc64c1580dfdc42d63361ae68a",
+        "hasPullRequest": true,
+        "pathPatternCount": 31,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/build-linux-windows-draft.yml",
+        "gitBlob": "919dc9d816a5f7441783af22a286da9b1e4f6f8a",
+        "hasPullRequest": false,
+        "pathPatternCount": 0,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "gitBlob": "a93ff6ba1e5656523668694bca24910a468aebc7",
+        "hasPullRequest": true,
+        "pathPatternCount": 0,
+        "matchedSourceCount": 9,
+        "matchedDocumentationCount": 147,
+        "eventEligible": true
+      },
+      {
+        "path": ".github/workflows/codeql.yml",
+        "gitBlob": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1",
+        "hasPullRequest": true,
+        "pathPatternCount": 11,
+        "matchedSourceCount": 8,
+        "matchedDocumentationCount": 0,
+        "eventEligible": true
+      },
+      {
+        "path": ".github/workflows/codex-runtime-smoke.yml",
+        "gitBlob": "cef44447c47e39a7da678f37e2518952e218da08",
+        "hasPullRequest": true,
+        "pathPatternCount": 12,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/dependency-review.yml",
+        "gitBlob": "4a5f2ab17b3daf4ffdf6992ee85d159adf2c46c6",
+        "hasPullRequest": true,
+        "pathPatternCount": 4,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+        "gitBlob": "490c2048dfbd9f275f784d7a0f1a6eeba0a9f361",
+        "hasPullRequest": true,
+        "pathPatternCount": 8,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+        "hasPullRequest": true,
+        "pathPatternCount": 0,
+        "matchedSourceCount": 9,
+        "matchedDocumentationCount": 147,
+        "eventEligible": true
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+        "hasPullRequest": true,
+        "pathPatternCount": 23,
+        "matchedSourceCount": 8,
+        "matchedDocumentationCount": 0,
+        "eventEligible": true
+      },
+      {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "gitBlob": "70202d22a5840401a00025cd60b797c514f3e455",
+        "hasPullRequest": true,
+        "pathPatternCount": 27,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+        "gitBlob": "95d681fe04abd838dd11799d7791fa59444c6e32",
+        "hasPullRequest": true,
+        "pathPatternCount": 5,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/landing-hetzner-release.yml",
+        "gitBlob": "4b54f229156f9d347e1a33da0d83b3374acc4078",
+        "hasPullRequest": true,
+        "pathPatternCount": 10,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/landing.yml",
+        "gitBlob": "4a1ad9ae59ff2e338930a195d54fdff62da1ebc5",
+        "hasPullRequest": true,
+        "pathPatternCount": 9,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/macos-signing-qualification.yml",
+        "gitBlob": "d63bddd51302a5c0380762bf22171f43c38a39b0",
+        "hasPullRequest": false,
+        "pathPatternCount": 0,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/opencode-desktop-e2e.yml",
+        "gitBlob": "3d2a90a0e335155d435bd4eae4f2bd2842425983",
+        "hasPullRequest": true,
+        "pathPatternCount": 20,
+        "matchedSourceCount": 1,
+        "matchedDocumentationCount": 0,
+        "eventEligible": true
+      },
+      {
+        "path": ".github/workflows/opencode-native-windows-e2e.yml",
+        "gitBlob": "f5a2a472b752acf37399fc9e11f63f6d45bdb297",
+        "hasPullRequest": false,
+        "pathPatternCount": 0,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/opencode-packaged-e2e.yml",
+        "gitBlob": "458e165ef020a1f8b05806b9ae7edc839134e1b4",
+        "hasPullRequest": true,
+        "pathPatternCount": 23,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+        "gitBlob": "be6a9ae5a88efadca344773ed4aa962d42823d28",
+        "hasPullRequest": true,
+        "pathPatternCount": 21,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+        "hasPullRequest": true,
+        "pathPatternCount": 27,
+        "matchedSourceCount": 6,
+        "matchedDocumentationCount": 0,
+        "eventEligible": true
+      },
+      {
+        "path": ".github/workflows/prepare-updater-native-inputs.yml",
+        "gitBlob": "51beb92ade4931fe04336c7d3908bacfc932269e",
+        "hasPullRequest": true,
+        "pathPatternCount": 10,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/provider-real-runtime-e2e.yml",
+        "gitBlob": "4ee30807aa18f043fe53d090bfb6211bb5458ce0",
+        "hasPullRequest": true,
+        "pathPatternCount": 16,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/publish-carried-release.yml",
+        "gitBlob": "371ed6d3b2cf4e41c012da287a295783c39c426e",
+        "hasPullRequest": false,
+        "pathPatternCount": 0,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/recover-existing-draft-payloads.yml",
+        "gitBlob": "eadeedf4381cbf1d7e32cd31105dd88cd2c8eb65",
+        "hasPullRequest": false,
+        "pathPatternCount": 0,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/release-publication-guard.yml",
+        "gitBlob": "10b7abd2992cc740084a5c51ace7f3fe025220f9",
+        "hasPullRequest": false,
+        "pathPatternCount": 0,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/release.yml",
+        "gitBlob": "d28bee6dea87ec191f0d40670f3e68c48251d049",
+        "hasPullRequest": false,
+        "pathPatternCount": 0,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/reviewrouter-interaction.yml",
+        "gitBlob": "edb68c51f54ad4a792eb29f1f557aad48e3a6218",
+        "hasPullRequest": false,
+        "pathPatternCount": 0,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/reviewrouter-review.yml",
+        "gitBlob": "04964f8ac7beadb3277fb28ec9cc0d61b86ca84b",
+        "hasPullRequest": false,
+        "pathPatternCount": 0,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+        "gitBlob": "4020f668ab2a9a7b16fcb0aa7fd2d79a061f1d44",
+        "hasPullRequest": true,
+        "pathPatternCount": 19,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/sentry-owned-process-native.yml",
+        "gitBlob": "1188fa5b89d59b739d927082d1b6954a57181819",
+        "hasPullRequest": true,
+        "pathPatternCount": 41,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/stage-existing-partial-draft.yml",
+        "gitBlob": "295dbf212e13b15505696d997ec7c45b4ee3cfa9",
+        "hasPullRequest": false,
+        "pathPatternCount": 0,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "gitBlob": "ef939f224a1642cb596906324c8d61441780ccc7",
+        "hasPullRequest": true,
+        "pathPatternCount": 18,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/updater-linux-packages.yml",
+        "gitBlob": "60d214756c640b7925cfe11ba45ed4009f27ca3c",
+        "hasPullRequest": true,
+        "pathPatternCount": 12,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/updater-mac-manual-migration.yml",
+        "gitBlob": "4aa3a4181259514c5a43fbc7dd4ad98811a3588e",
+        "hasPullRequest": false,
+        "pathPatternCount": 0,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/updater-mac-old-updater.yml",
+        "gitBlob": "067a25687f36caefe156b0446c5056d230d27c62",
+        "hasPullRequest": false,
+        "pathPatternCount": 0,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/updater-mac-source.yml",
+        "gitBlob": "1196e40faa99e0ab64e329d91f3fea7c6ed47f94",
+        "hasPullRequest": false,
+        "pathPatternCount": 0,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/updater-mac-updater.yml",
+        "gitBlob": "950f95892277ae303772ac699915250f0f4f66af",
+        "hasPullRequest": false,
+        "pathPatternCount": 0,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/updater-native-feasibility.yml",
+        "gitBlob": "b55e6cbcb4de61e2e8688e1ff4b4529b043a4ada",
+        "hasPullRequest": true,
+        "pathPatternCount": 7,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/updater-windows-ota.yml",
+        "gitBlob": "10ffcd79e48a71346df7545af638208ce039ad83",
+        "hasPullRequest": true,
+        "pathPatternCount": 15,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/updater-windows.yml",
+        "gitBlob": "a4e9375cb95c4129c503f1d7be82de1e3926ea62",
+        "hasPullRequest": true,
+        "pathPatternCount": 11,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      },
+      {
+        "path": ".github/workflows/windows-backfill-diagnostic.yml",
+        "gitBlob": "44bec5d82998468d48ac539f3624d0c2de1c6648",
+        "hasPullRequest": true,
+        "pathPatternCount": 13,
+        "matchedSourceCount": 0,
+        "matchedDocumentationCount": 0,
+        "eventEligible": false
+      }
+    ],
+    "eventCensus": {
+      "pull_request": 28,
+      "push": 11,
+      "workflow_dispatch": 34,
+      "merge_group": 1,
+      "schedule": 1,
+      "workflow_call": 2,
+      "release": 1,
+      "pull_request_review_comment": 1,
+      "issue_comment": 1
+    },
+    "pushBranchMap": [
+      {
+        "path": ".github/workflows/announcements-content.yml",
+        "branches": "    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "branches": "    branches:\n      - main\n      - refactor/team-provisioning-round2-reapply\n      - refactor/hosted-web-feature-boundaries"
+      },
+      {
+        "path": ".github/workflows/codeql.yml",
+        "branches": "    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/codex-runtime-smoke.yml",
+        "branches": "    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+        "branches": "    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+        "branches": "    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/landing-hetzner-release.yml",
+        "branches": "    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/landing.yml",
+        "branches": "    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/provider-real-runtime-e2e.yml",
+        "branches": "    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+        "branches": "    branches: [main]"
+      },
+      {
+        "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "branches": "    branches: [main]"
+      }
+    ],
+    "newRefConclusion": "Neither proposed ci/...-2 alias matches any of the eleven push branch filters. No create,workflow_run or pull_request_target event is declared in the complete42-workflow tree. The no-extra-workflow conclusion does not rely on token recursion suppression or claiming ref creation cannot emit push.",
+    "openedConclusion": "Exactly seven workflow families are event-eligible for the complete156-file current diff; five active families plus two explicit Draft-skipped families. None has a PR base-branch restriction that excludes the new ancestor alias. Actual run discovery must still prove what GitHub emitted.",
+    "selectedDetails": [
+      {
+        "path": ".github/workflows/announcements-content.yml",
+        "selected": true,
+        "draftBehavior": "Active content-validation job; default opened event, no PR path or base-branch filter.",
+        "qualification": "Observe actual result."
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "selected": true,
+        "draftBehavior": "Plan yields full=false, metadata=false, reuse=false for the valid same-repository opened Draft. Fast feedback runs; Full qualification intentionally fails Draft policy.",
+        "qualification": "EXPECTED_POLICY_FAIL is limited to the original Draft qualification verdict; any other failure remains FAIL."
+      },
+      {
+        "path": ".github/workflows/codeql.yml",
+        "selected": true,
+        "draftBehavior": "Source paths match; job if at line46 excludes Draft.",
+        "qualification": "EXPECTED_DRAFT_SKIP, not PASS."
+      },
+      {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "selected": true,
+        "draftBehavior": "Classifier receives complete local Git diff; legacy scripts and evidence docs keep full scope/run=true. Same-repository five-tuple matrix has no Draft skip.",
+        "qualification": "All seven declared jobs/individual steps and artifacts must be accounted."
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "selected": true,
+        "draftBehavior": "Eight source paths match; same-repository 18 UI jobs plus four frontend shards and aggregate run on Draft.",
+        "qualification": "Complete 23-job inventory; no one-lane selector or subset-to-whole promotion."
+      },
+      {
+        "path": ".github/workflows/opencode-desktop-e2e.yml",
+        "selected": true,
+        "draftBehavior": "Current hook path matches, but job if at line44 excludes Draft.",
+        "qualification": "EXPECTED_DRAFT_SKIP, not OpenCode diagnostics success."
+      },
+      {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "selected": true,
+        "draftBehavior": "Six legacy-host source paths match; opened accepted, no Draft guard. Nine declared jobs.",
+        "qualification": "Strict native custody requirements remain unchanged; prior Darwin P09 failure is not waived."
+      }
+    ],
+    "hostProcess": "Not selected: none of the nine actual source paths or147 docs matches its specific PR paths. Its separately declared input-free workflow_dispatch is not invoked or assumed available. No process-only venue substitutes for the missing full Windows/Darwin provider GUI matrix.",
+    "dispatch": "Host Emulated and Host Process expose input-free workflow_dispatch in source, but no dispatch/browser capability or invocation is assumed or selected. Packaged and Stage1 have the relevant PR-only route.",
+    "nativeCiGuards": "ci.yml stage1-desktop and stage1-process-qualification require explicit dispatch inputs or non-Draft special Stage1 PR routes; stage1-process-diagnostic is dispatch-only. Retained coexistence requires full mode/non-Draft special route; Codex login requires non-Draft special frontend-parity refs. Valid same-repository opened Draft on the two proposed ci aliases excludes every such real-Claude/Codex route."
+  },
+  "testAndProviderScope": {
+    "hostEmulated": {
+      "matrix": [
+        {
+          "runner": "ubuntu-latest",
+          "platform": "linux-x64",
+          "kind": "finite peer / offline / controlled process Desktop",
+          "lanes": [
+            "team",
+            "taskboard",
+            "skills",
+            "cross-team",
+            "collaboration",
+            "extensions",
+            "import",
+            "management",
+            "codex-login",
+            "codex",
+            "claude",
+            "claude-lifecycle",
+            "opencode",
+            "review",
+            "selection",
+            "processes"
+          ],
+          "count": 16
+        },
+        {
+          "runner": "macos-15",
+          "platform": "darwin-arm64",
+          "kind": "finite Codex installer Desktop",
+          "lanes": [
+            "installer"
+          ],
+          "count": 1
+        },
+        {
+          "runner": "ubuntu-latest",
+          "platform": "linux-x64",
+          "kind": "actual OpenCode V2 Settings with finite localhost model",
+          "lanes": [
+            "opencode-v2-management"
+          ],
+          "count": 1
+        }
+      ],
+      "totalJobs": 23,
+      "uiJobs": 18,
+      "frontendShards": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "aggregateJobs": 1,
+      "failFast": false,
+      "timeoutMinutes": {
+        "eachUi": 45,
+        "eachFrontendShard": 45,
+        "aggregate": 5
+      },
+      "wholeNodeCommand": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "nodeSelection": "Original unfiltered eight-whole-file command at workflowline103 appears in every18UI job after its install/build prerequisites. Current desktop-team-ui-smoke whole149 is one file within that larger command, not the total multi-file TAP count. No --test-name-pattern or case reduction is introduced.",
+      "additionalWholeNodeTest": "test/scripts/installDependenciesWithRetry.test.mjs remains selected by its original command.",
+      "teamAdditionalHostFiles": [
+        "runtime-activity.test.ts",
+        "runtime-team-host.test.ts",
+        "team-snapshot.test.ts",
+        "team-product-changes.test.ts",
+        "team-activity-read.test.ts",
+        "member-provider-authority.test.ts",
+        "member-process-stderr.test.ts",
+        "codex-member-provider.test.ts",
+        "captured-claude-process.test.ts",
+        "owned-process-facade.test.ts"
+      ],
+      "teamAdditionalChecks": "Original --test-concurrency=1 Host checks plus workspace typechecking and declared fast/main/renderer/features/MCP lint remain; not all these tests are counted in149.",
+      "frontendCommand": "pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\"",
+      "frontendSelection": "All four original shards retain complete discovery and the three existing live/live-e2e/native filename exclusions. Wholecatalog43 and wholerenderer85 match vitest.config.ts includes and none of those exclusions; current shard assignment is not inferred from the original85 shard2.",
+      "prerequisites": [
+        "contents:read checkout; exact source-head and actual platform/architecture assertions; no persisted checkout credentials",
+        "UI Host Node 24.21.0, pnpm 11.22.0 and captured Corepack 0.36.0, Electron 44.10.1; frozen workspace install and Electron better-sqlite3 rebuild",
+        "Existing Host/controller/MCP builds and original admission tests; team lane also runs the declared type/lint checks",
+        "Linux Xvfb/xauth/lsof and Linux child-launch artifacts; macos-15 ARM runner for installer",
+        "Four frontend shards first capture Host Node 24.21.0, then use .node-version 26.12.1 and the original Node sqlite rebuild",
+        "V2 job can obtain the checksum-pinned runtime base/support artifacts and build/verify the exact Bun/embedded engine inputs; github.token is used only as the declared download credential",
+        "Actual runner/service/network/artifact availability and dispatch eligibility are execution prerequisites, not established by source reading"
+      ],
+      "versions": {
+        "hostNode": "24.21.0",
+        "frontendNode": "26.12.1",
+        "pnpm": "11.22.0",
+        "corepack": "0.36.0",
+        "electron": "44.10.1"
+      },
+      "providerPeers": [
+        {
+          "provider": "Claude",
+          "revision": "SDK 0.3.305",
+          "actualExecutable": "captured Node TEST peer",
+          "ui": "Linux runtime, lifecycle and mixed collaboration/extension/import fixture flows"
+        },
+        {
+          "provider": "Codex",
+          "revision": "protocol 0.162.0",
+          "actualExecutable": "captured Node TEST peer",
+          "ui": "Linux runtime, login, selection, mixed collaboration and Darwin ARM finite installer 0.162.0-to-0.169.0"
+        },
+        {
+          "provider": "OpenCode V1",
+          "revision": "1.19.4",
+          "actualExecutable": "captured Node TEST peer",
+          "ui": "Linux runtime and mixed collaboration"
+        }
+      ],
+      "actualOpenCodeV2": {
+        "platform": "linux-x64",
+        "engine": "2.1.4",
+        "bun": "1.3.11",
+        "runtimeConfigured": false,
+        "managementProfiles": 2,
+        "originalFiniteIntents": 5,
+        "scope": "Original Electron Settings key rejection/replacement, model test, global/project defaults, inheritance and renderer reload",
+        "excluded": [
+          "Claude/Codex execution",
+          "vendor authentication/inference",
+          "native V2 OAuth/forget",
+          "release qualification"
+        ]
+      },
+      "finiteAuthority": "Emulation requires explicit LEGACY_DESKTOP_EMULATED_ONLY=1 and its bounded mode allowlist; inherited LEGACY_DESKTOP native/scenario selectors are rejected before fixture/model startup. Private TEST peer recipes and child census restrict execution. The V2 job explicitly unsets the emulation flag and separately rejects Claude/Codex/legacy OpenCode paths and mixed/packed/diagnostic selectors.",
+      "versionProbeAuthority": "The common Desktop fixture writes finite metadata/refusal sentinels, constructs a fresh private HOME/config/PATH environment and selects root/bin/claude-multimodel explicitly. dev-with-runtime's override branch probes this finite sentinel; the automatic real-runtime download/resolve branch is not selected by this environment. This distinction covers version probes as well as conversation invocations.",
+      "newDriverReachability": "Ordinary Linux Claude/Codex/OpenCode conversation paths reach the same runDesktopEmulatedRuntimeUi member-detail stage after prior original checks. Lifecycle, collaboration and selection delegate/return through their existing routes. Only an actual future lane receipt proves the new reveal and unchanged click were reached and succeeded.",
+      "aggregate": "Requires both complete UI and frontend matrix success. Any failed lane remains aggregate failure; a passing149 or85 cannot promote the matrix.",
+      "artifactRetentionDays": 14
+    },
+    "wholeTests": {
+      "node149": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "bytes": 165022,
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+        "original139": {
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7"
+        },
+        "suffix": "\nawait import('./desktop-ui-controls-deadline.test.ts');\n",
+        "suffixBytes": 57,
+        "staticExpandedCases": 149,
+        "registration": "Literal top-level awaited import registers the actual ten-case module after the original139 registrations; it does not prove all139 executions complete before the import. Module evaluation adds no global mutation."
+      },
+      "imported10": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+        "tests": [
+          {
+            "number": 1,
+            "title": "generic UI read refuses its first fulfilled value exactly at the original deadline"
+          },
+          {
+            "number": 2,
+            "title": "generic UI read refuses its first fulfilled value after the original deadline"
+          },
+          {
+            "number": 3,
+            "title": "generic UI read refuses a later fulfilled value exactly at the original deadline"
+          },
+          {
+            "number": 4,
+            "title": "generic UI read refuses a later fulfilled value after the original deadline"
+          },
+          {
+            "number": 5,
+            "title": "generic UI read does not admit or poll again after a late false observation"
+          },
+          {
+            "number": 6,
+            "title": "generic UI read preserves a timely first value and its exact identity"
+          },
+          {
+            "number": 7,
+            "title": "generic UI read preserves its original cadence and a timely later value"
+          },
+          {
+            "number": 8,
+            "title": "generic UI read honors a supplied budget at its strict boundary"
+          },
+          {
+            "number": 9,
+            "title": "generic UI hover refuses a third stable point arriving at the original deadline"
+          },
+          {
+            "number": 10,
+            "title": "generic UI hover preserves one movement after three timely stable points"
+          }
+        ],
+        "sourcePrediction": "Static current-fixed expectation is ten PASS; no future CI result asserted. Existing original-control prediction RED7FAIL/3PASS remains confined to its separately reviewed standalone control.",
+        "actualCode": "Imports createDesktopUiControls from the actual complete controls module and node:assert/strict,node:test; no copied predicate or fake test runner. Date mocks and method mocks restore in finally; original100ms timers remain real."
+      },
+      "catalog43": {
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+        "staticCases": 43,
+        "scope": "Accepted40-case prefix plus three appended actual utility regressions; no test discovery or provider/native scope expansion."
+      },
+      "renderer85": {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+        "staticCases": 85,
+        "priorObservedReport": {
+          "gitBlob": "4277afde65b656545ca30e4b1be3f593af862fc8",
+          "bytes": 56658,
+          "sha256": "2a20638c7372fc202d5dc1fbcb364744a8ada038401e6673461ab8147843524e"
+        },
+        "qualification": "Original frozen9c9 whole85 was genuinely observed allpassed; it is unchanged at9d. That historical result is not a new9d run or evidence for149/catalog43/standalone10."
+      },
+      "separateStandalone": "CI Node24.21.0 executes imported ten cases with fixed controls only if prerequisites/reachability succeed. It neither supplies RED evidence nor executes the exact Node24.22.1/inode-pinned original paired RED/GREEN supervisor. Its60s phase/135s outer/4s cleanup controls remain separately unexecuted; no old attempt replay, replacement or synthetic PASS.",
+      "newMemberTestClaim": "No new member-specific test exists. The accepted driver-only correction relies on the existing actual helper tests and the unchanged full GUI lane. Static reachability and helper semantics do not establish future GUI success."
+    },
+    "packaged": {
+      "trigger": "Exact current9d156-file ancestor comparison retains legacy-host scripts/evidence docs outside app-only allowlist; original complete local Git classifier selects fullscope/run=true. No path filter or same-repository Draft skip is introduced.",
+      "tuples": [
+        "darwin-arm64 (CI_MACOS_ARM_RUNNER or namespace-profile-macos-15)",
+        "darwin-x64 (macos-15-intel)",
+        "win32-x64 (windows-2022)",
+        "win32-arm64 (windows-11-arm)",
+        "linux-x64 (CI_LINUX_RUNNER or ubuntu-latest)"
+      ],
+      "jobs": 7,
+      "timeoutMinutesPerMatrix": 90,
+      "prerequisites": "Frozen install and selected archive integrity; pinned runtime/support downloads; app/Host/terminal builds; exact native inputs; unsigned packaging; selected runner availability. Darwin ARM uses a configurable/custom runner and is not assumed available.",
+      "coverage": [
+        "Native architecture/SQLite/PTY/managed Git, packaged MCP initialize/tools-list and app startup with finite metadata sentinels",
+        "Actual OpenCode V2 Host tools, MCP, Stop and cold Resume across five tuples",
+        "Windows x64/ARM same original Main Retry and original Processes UI Kill with finite Codex peers, zero real vendor executions",
+        "Darwin ARM/x64 automatic packaged app relaunch with finite Claude SDK peer; one original input/Stop and successor app, no real Claude",
+        "Darwin pinned bundled orchestrator OpenCode project-path summary/full/model list and missing-project fail-closed commands"
+      ],
+      "artifactDays": 7,
+      "limits": "This is not full all-provider native conversation/authentication coverage on all OS/architectures. Mac project-path smoke asserts selected-provider JSON and missing-path failure, not that an OpenCode installation, login or model inference succeeded.",
+      "mutableAvailability": "Runner variables, network/downloads, dependency integrity and actual archive execution remain observed prerequisites; custom DarwinARM runner availability is not proved by source."
+    },
+    "stage1": {
+      "trigger": "pull_request opened/synchronize/reopened, scripts/legacy-agent-host/** matches; no Draft guard.",
+      "jobs": 9,
+      "matrix": "Two static Ubuntu/Windows jobs, one actual OpenCode V2.0.21 Host-instructions job, one V2.0.21 durable HTTP-persist job, five embedded V2.1.4 Host tuple jobs.",
+      "actualRuntime": "Only OpenCode is selected for provider runtime execution. Finite localhost model/service evidence remains distinct from real account authentication.",
+      "prerequisites": "Exact checkout; current runtime lock and read-only main lock comparison; pinned Bun/engine/build dependencies; admitted custody tuple. Darwin candidate build assertions may hold on an unmatched runner.",
+      "limits": "No all-provider Desktop GUI, vendor-authentication, release or Stage2 qualification.",
+      "mutableProductLock": "The static-preflight job checks out main separately at .current-product-lock for runtime.lock.json and records its actual product commit. This is a distinct mutable external input to capture; source assessment does not pin a future main checkout or mutate main."
+    },
+    "ciFastFeedback": {
+      "jobs": "Plan,Fast feedback and original Full qualification; other full/native jobs retain original guards.",
+      "command": "node --test --test-force-exit test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts test/scripts/installDependenciesWithRetry.test.mjs; original install/artifact/source-size/architecture guards, pnpm typecheck:workspace and pnpm lint:fast.",
+      "expectedDraftQualificationFailure": true
+    },
+    "coverageGaps": [
+      "No complete provider conversation/authentication GUI matrix on Windows x64/ARM or Darwin ARM/x64 is selected.",
+      "Host Emulated's Darwin installer is one finite Codex installer lane; it is not Darwin all-provider conversation coverage.",
+      "Packaged five-tuples and Stage1 OpenCode proofs retain their narrower process/MCP/relaunch/custody contracts and actual failures.",
+      "Excluded live/native frontend files remain unqualified.",
+      "No real Claude/Codex executable,version,login or remote inference is allowed or claimed.",
+      "No merge,Ready,release,default activation,Stage2 or native custody waiver is selected."
+    ]
+  },
+  "providerRoute": {
+    "currentRuntimeLock": {
+      "bytes": 6127,
+      "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87",
+      "gitBlob": "1757d79786da78e739a322e8bba81cd3dc88dcaa"
+    },
+    "runtimeSourceRepository": "777genius/agent_teams_orchestrator",
+    "runtimeSourceCommit": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+    "entryPreActionReport": {
+      "bytes": 29021,
+      "sha256": "d036879309b4245604eb01d166af7b27079f9602a38005846e43711c716aa62c",
+      "gitBlob": "9acdf46776d8b6ecfe6b75ddbfb4d6738296d027"
+    },
+    "explicitProviderReport": {
+      "bytes": 58110,
+      "sha256": "6a1ba6bdaa3278a041e2687b8588bbda3ae328a48af145a2780ab2b56c493096",
+      "gitBlob": "625192f5fc414e3fe0f646e6cb18db031263cdc2"
+    },
+    "commands": [
+      "runtime status --json --provider opencode --summary --project-path <TEST project>",
+      "runtime status --json --provider opencode --project-path <TEST project>",
+      "model list --json --provider opencode --project-path <TEST project>",
+      "runtime status --json --provider opencode --project-path <absent TEST project> (expected exit 1, no JSON)"
+    ],
+    "handlerAndImportProof": [
+      "runtime.ts:339-391 preserves providerFilter='opencode', normalizes project path before payload, and gives the registry summary/full detail.",
+      "registry.ts:1125-1307 runs Anthropic/Codex/Gemini only under missing or matching filter. Their discovery, status and catalog functions are not invoked for opencode.",
+      "registry.ts:606-665 maps summary to passive metadata only; full to OpenCodeInventoryService. There is no cross-provider recovery branch.",
+      "model.ts:126-172 explicitly constructs providers=[opts.provider]; getProviderModels opencode arm calls only OpenCode inventory/default metadata. Default Anthropic and all-provider selection are not reached.",
+      "OpenCodeBinaryResolver.ts:31-50 selects only OpenCode-specific overrides, PATH opencode, then managed OpenCode packages. Missing/unsupported selection returns an unsupported OpenCode snapshot (InventoryService:1154-1213), not another provider.",
+      "OpenCodeNativeIdentity.ts:86-139 and VersionProbe.ts:101-199 probe only the selected OpenCode executable (or its node/bun loader) with --version in private roots; optional OS CPU/process helpers are separate.",
+      "V1 catalog fallback repeats models on the same captured OpenCode binary (InventoryService:1397-1414). V2 catalog uses verified Bun delivery/server metadata; OpenCodeHostNativeAdapter:28-132 has no vendor fallback, and inventory queries identity/urls/location/ready/integrations/providers/models/agents/config.",
+      "Codex resolver's real login-status probe and model catalog app-server spawn remain lazy function bodies. Module top-level state is constants/null caches; explicit filter excludes those calls.",
+      "Imported OpenCode ExecutionProbe, HostManager, ProvisioningProbe, SessionBridge, InventoryService, ProfileManager and ProviderManagementAdapter initialize only maps/deps/state. SessionStore/HostManager additionally compute pure managed paths/attribution path. Ledger reader/reconstructor/enricher construction does not invoke provider commands."
+    ],
+    "entryProof": "Full report 9acdf46776d8b6ecfe6b75ddbfb4d6738296d027 was fetched, rehashed and read. Native wrapper delegates runtime/model commands to verified bundled Bun/JS; fast paths run before full main and errors cannot fall through. Shared preAction reads MDM/config/safe-env/CA/proxy; optional OS codesign, plutil or security may run. This is source assessment, not compiled-archive execution or binary-to-source attestation.",
+    "currentAppSourceJoin": "Current runtime.lock,stage-runtime,project-path driver,dev-with-runtime,finite fixture and native/packaged fixture bodies match exact previously fully read pins. The source delta introduces no provider launcher or version probe.",
+    "conclusion": "No selected or eager Claude/Codex execution identified in the pinned command path. Program name claude-multimodel alone is not a vendor-execution verdict, and the --provider flag alone was not used as proof.",
+    "limits": "The driver inherits process.env before overriding HOME/XDG/OpenCode config paths; do not claim a universally empty environment or subprocess-free smoke. The static conclusion is for the unchanged declared CI command and locked runtime, not arbitrary hostile overrides, modified artifacts, all CLI commands or unobserved runtime results.",
+    "selectedUpstreamCorePins": [
+      {
+        "path": "src/cli/runtimeStatusCommand.ts",
+        "bytes": 1791,
+        "sha256": "6f8666a5d3f07d11b879191c9296a71a3e75067d541f99b013a6061b4bb67c5d",
+        "gitBlob": "8e5eecc84e5f37e318c34e7bb3a99b6a0876cb33"
+      },
+      {
+        "path": "src/cli/modelListCommand.ts",
+        "bytes": 836,
+        "sha256": "c9cdd88c766193469197e9a8e608eb7fe4c39b5aa2e14cc0fdc90632d2a77986",
+        "gitBlob": "6176d34b77013148700f33c799e53aa637494ea9"
+      },
+      {
+        "path": "src/cli/handlers/runtime.ts",
+        "bytes": 59738,
+        "sha256": "459b181eae06d59122323fae787277fb83fd8166fd876c21958839007efa5080",
+        "gitBlob": "5469d229e6c879a9c007c7681e7dece3766aeadf"
+      },
+      {
+        "path": "src/cli/handlers/model.ts",
+        "bytes": 6982,
+        "sha256": "62de432851ea77c4ef9ab01d6343cc991b0997b4a25baf0baeba8a75549edfbc",
+        "gitBlob": "e488fa67903605b605d245153c57862a167f42ef"
+      },
+      {
+        "path": "src/services/runtimeBackends/registry.ts",
+        "bytes": 44882,
+        "sha256": "1f81a8ce0f182963b04cecfd52acb5f9af0d617d28767907a707fa76c07d2a80",
+        "gitBlob": "57f89dd1d54b7dd5c124933c2290db460ec49209"
+      },
+      {
+        "path": "src/services/opencode/OpenCodeInventoryService.ts",
+        "bytes": 52800,
+        "sha256": "d4ca48398b347a74e273147f69141133d71c8d5d1da0e5c1549aef5e0701f1ac",
+        "gitBlob": "74b83f6dd2eb010beffb6fd0335f0422b84a270b"
+      },
+      {
+        "path": "src/services/opencode/OpenCodeBinaryResolver.ts",
+        "bytes": 4098,
+        "sha256": "836c8d6152ceca0421f8f5eee25893510714cbb6ef4482eb81f5202ffbdfac8a",
+        "gitBlob": "a59f0efe0f15f4c1045d67cd2a54384775a2a8e3"
+      },
+      {
+        "path": "src/services/opencode/compatibility/OpenCodeVersionProbe.ts",
+        "bytes": 33370,
+        "sha256": "c8035baca2014937ae297202eda36a1e504d4036a5c569595b2bc6b0a462472b",
+        "gitBlob": "54b94f1625fab657071d1eecd2990dab1e5a3225"
+      },
+      {
+        "path": "src/services/opencode/host/OpenCodeHostNativeAdapter.ts",
+        "bytes": 7566,
+        "sha256": "551369a6fd8717917850ad67f4ca10f1c17cf743de85f54ca3dc9410eac5f844",
+        "gitBlob": "12c105b10cc532919e01b58b94bcc0154e5bdac6"
+      }
+    ],
+    "allOtherUpstreamPins": "The complete unchanged upstream manifest and full eager/lazy proof remain in625192 and9acdf; no re-resolution of a moving tag or exhaustive arbitrary-configuration audit is claimed."
+  },
+  "checkoutIdentity": {
+    "explicitHead": [
+      "Announcements",
+      "Host UI/frontend",
+      "Packaged smoke matrix",
+      "Stage1 source"
+    ],
+    "syntheticMerge": [
+      "CI default checkout",
+      "Packaged scope/gate default checkout"
+    ],
+    "mergeProof": "Capture actual new synthetic merge SHA, both parents and tree. Ancestor779 with head9d should produce the accepted9d tree; verify rather than guessing. The merge commit identity is separate from source9d.",
+    "separateMainLock": "Stage1 static-preflight separately checks out main at .current-product-lock with runtime.lock.json sparse checkout, then logs actual product commit. Retain its actual source/lock bytes independently. This mutable input is neither PRhead nor assumed futuremain."
+  },
+  "capture": {
+    "discovery": "Only after a separately admitted single new PR action, enumerate /repos/777genius/agent-teams-ai/actions/runs using event=pull_request, branch=ci/frontend-parity-c714-20261117-2-head, head_sha=9d79abcf1f5c498687c2e5c443e3edf220070aa6, a narrow actual action-time creation window, exclude_pull_requests=false, per_page=100 and page=N. Retain all raw pages. Bind every selected run to the actual newly returned PR number, exact repository/head/base and action window; no guessed PR or run ID.",
+    "pagination": "Preserve total_count and all pages/end, deduplicate IDs and account for all seven event-eligible workflows including Draft skips. If the inherited filtered-search cap is reached, subdivide only the same new-action time window. A first-page or latest-attempt wrapper is not a completeness proof.",
+    "runIdentityFields": [
+      "id",
+      "node_id",
+      "workflow_id",
+      "path",
+      "name",
+      "event",
+      "head_branch",
+      "head_sha",
+      "run_number",
+      "run_attempt",
+      "check_suite_id",
+      "check_suite_node_id",
+      "pull_requests including number/head/base",
+      "repository and head_repository IDs/full_names",
+      "display_title",
+      "created_at",
+      "run_started_at",
+      "updated_at",
+      "status",
+      "conclusion",
+      "html_url",
+      "jobs_url",
+      "artifacts_url",
+      "logs_url"
+    ],
+    "attemptIdentity": "Capture /actions/runs/<NEW_ID>/attempts/<EXACT_ATTEMPT> and its paginated jobs. Initial attempt1 is expected but must be observed; no rerun is selected. Preserve all job/step IDs, runner/OS/arch, times, conclusions and source checkout evidence.",
+    "terminal": "Observe only admitted new IDs until terminal; stop polling a run when terminal. Keep bounded adaptive cadence and progress updates. No old PR1218/frozen PR/original-run polling and no unfiltered old-head census.",
+    "logs": "Read complete decoded new-job logs and hash retained full text. Summaries do not substitute for full logs; transport truncation or unread bodies remain explicit.",
+    "artifacts": "Paginate only new-run artifact indexes. Record artifact IDs/names/digests/sizes/expiry/workflow_run/source identity. Download only actually accessible new archives, then hash full bytes, validate ZIP member inventory/CRC and retain complete required text/image members. Index metadata or an unextracted ZIP is not a receipt/screenshot review. Do not assume a currently available binary decoder or executor.",
+    "testEvidence": "For each reached UI Node command, retain the complete multi-file TAP and the149 target case identities/results without treating149 as the global eight-file total. For all four frontend shards retain full JSON/logs, target43 and85 identities/results, all other pass/fail/pending counts and exclusions. Do not assume the old85 file stays on shard2.",
+    "guiEvidence": "Join complete original receipts, screenshots, action/command identities, provider TEST authority, source/runtime tuples, custody and cleanup. Driver reachability is not observed click success. Each nonempty failure/skip remains visible.",
+    "classifications": [
+      "PASS only for the exact complete observed contract",
+      "FAIL for actual failure",
+      "EXPECTED_POLICY_FAIL only for unchanged Draft Full qualification",
+      "EXPECTED_DRAFT_SKIP only for explicit Draft job guards",
+      "SKIP, CANCELLED, UNKNOWN and UNREACHED remain non-PASS"
+    ],
+    "retention": "Preserve exact raw pagination/attempt/job/log/artifact evidence and prior history in the existing append-only publication/readback procedure. No publication status becomes a runtime pass by inference.",
+    "completion": "Account for all seven workflow families, all selected runs terminal and all available required evidence reviewed/retained. This ends the new venue attempt, not every broader native/GUI parity obligation."
+  },
+  "externalAdmission": {
+    "state": "NOT_AUTHORED",
+    "requirements": [
+      "Exact R1 root+independent reviews all accepted and fully read/self-read.",
+      "R1 docs publication created and immediately pushed; actual full root+independent readbacks close on its real commit/root/docs/manifest and full body/prefix/census evidence.",
+      "External immutable admission joins that actual R1 publication and reports/gate to fixed9d/779 and the exact structured new names/arguments; no future SHA, PR number, merge SHA, run ID or case result is guessed.",
+      "Then root performs only the admitted one-shot exact-new-name preflight and structured create/readback actions. Each mutation has maximumAttempts1. An unknown/refused return is retained and resolved by read-only exact-name/PR evidence, never automatic replay."
+    ]
+  },
+  "environment": {
+    "localExecution": {
+      "status": "rejected",
+      "reason": "No usable execution environment is available. Wait for an environment to become available before using this tool."
+    },
+    "localSourceScopeOrNodeState": "UNKNOWN_CURRENT",
+    "standaloneRunner": {
+      "bytes": 25819,
+      "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+      "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+    },
+    "standaloneBinding": {
+      "bytes": 107295,
+      "sha256": "d8626f22a432926350c4d69c657313a61b935764dae972159a1a88fc03163b5b",
+      "gitBlob": "381c51a331b9d03f5aab87835af3dad5a6643d3c"
+    },
+    "standaloneInvoked": false,
+    "separateStandaloneScope": "/workspace/scratch/c714-waitread-inode64-20261117",
+    "separateStandaloneStage": "/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117",
+    "notReplacement": "New GitHub CI uses the unchanged workflow-selected runtimes. It does not execute, replay, replace or qualify the pinned local paired RED/GREEN supervisor.",
+    "artifactAccess": "GitHub metadata and decoded job logs remain available. Full ZIP/member/CRC/receipt/screenshot qualification needs actual accessible archive processing. With current local environment unavailable, unextracted/unread evidence stays UNKNOWN or unqualified; a remote download reference/digest is insufficient."
+  },
+  "exclusions": [
+    "No frozen PR1206/1207/1208/1211/1212/1213 mutation and no old PR1218 mutation/poll/rerun.",
+    "No real Claude/Codex executable/version/login/probe or remote paid model inference.",
+    "No source, workflow, dependency, budget, skip/filter, source-cap or exception change.",
+    "No new executable supervisor, browser/CUA, alternate runtime/Node pin or hidden retry.",
+    "No Ready, merge/default activation, release, Stage2 or broad native/vendor qualification.",
+    "No substitution of partial, skipped, cancelled, unknown or unreached outcomes for a complete passing contract."
+  ],
+  "completionCriteria": [
+    "Capture actual one new PR/event and complete seven-family run/attempt/job inventories with exact repository/head/base/merge/source bindings.",
+    "Observe each admitted original new run only until terminal; preserve all raw metadata/logs and available full artifacts, source/runtime/control identities and ordinary cleanup evidence.",
+    "Independently review reached whole149/catalog43/renderer85 and complete GUI receipts/actions. A successful Node file or job alone cannot qualify a failed matrix or an unread GUI contract.",
+    "Keep Draft policy failure and Draft skips explicit. Keep every other failure and remaining native/cold-renderer/Windows/GUI obligation open until separately resolved under its exact evidence.",
+    "Publish actual execution evidence immediately with any commit; no final fullE2E success claim until its complete contracts are actually supported."
+  ],
+  "invoked": false,
+  "newRefsCreated": false,
+  "newPrNumber": null,
+  "newRunIds": [],
+  "qualification": "Concrete new-CI selection for R1 review only. All runtime outcomes remain unobserved. Source9d static/actual publication acceptance and prior frozen9c9 renderer85 success retain their distinct scopes."
+}

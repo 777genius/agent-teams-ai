@@ -11558,5 +11558,434 @@
       "sha256": "d612d65127338ec14f254874878a98db1ad85ced6885cb25b61290dad911b895",
       "gitBlob": "366f483c1859ca532955433df20c3407539c1132"
     }
+  ],
+  "fresh9dCiR1Stage": {
+    "schemaVersion": 1,
+    "kind": "fresh-fixed9d-ci-R1-publication-stage",
+    "at": "2026-11-17 07:43:36 UTC",
+    "status": "R1_STATIC_REVIEWS_CLOSED_ACTUAL_PUBLICATION_READBACKS_PENDING",
+    "subject": {
+      "bytes": 69751,
+      "sha256": "ded423903437131ea288b2d43a20391147f8e4cdb45357b6d92496d4763487bd",
+      "gitBlob": "1bb01907e9a3b9fba7cedb3d34d0d2773a57ca23"
+    },
+    "reviews": [
+      {
+        "role": "rootReview",
+        "pin": {
+          "bytes": 51861,
+          "sha256": "b056b56f27eb586903c8a3c9c703bb5f0b8337bc628de9460b8de241914e6bfc",
+          "gitBlob": "0b830765cf0ad6e817101dd64ffc8ca6055af8a7"
+        },
+        "checks": 39,
+        "decision": "ACCEPT_EXACT_FRESH_CI_R1_STATIC_SCOPE",
+        "completeBodyRead": true,
+        "selfReadConfirmed": true
+      },
+      {
+        "role": "guardReview",
+        "pin": {
+          "bytes": 68932,
+          "sha256": "5d6d640bbacc7a5b881467f2854cab7bf7b79b2c9a2207d5d3da958c117668fc",
+          "gitBlob": "377658a09518838cc3acd20a93f2a8c20e758bfc"
+        },
+        "checks": 40,
+        "decision": "ACCEPT_EXACT_R1_GUARD_SCOPE_ONLY_NO_ACTION_ADMISSION",
+        "completeBodyRead": true,
+        "selfReadConfirmed": true
+      },
+      {
+        "role": "semanticReview",
+        "pin": {
+          "bytes": 59184,
+          "sha256": "7ae4ecf110439a5bab8e1cf5f4fbf7429604f4ec83cb499b02067af19104df20",
+          "gitBlob": "e65ed2330f6038e58d0f760e41eede7befe535b1"
+        },
+        "checks": 40,
+        "decision": "ACCEPT_EXACT_R1_STATIC_ONLY",
+        "completeBodyRead": true,
+        "selfReadConfirmed": true
+      },
+      {
+        "role": "bindingReview",
+        "pin": {
+          "bytes": 210027,
+          "sha256": "1a1b1e81a621c2e8d29e12b16006cd2d9ebe6f9611ef93d82c67b20fd9d542b2",
+          "gitBlob": "19aeb82a85b885d45000a50f2fbeb9d06a3c9d5e"
+        },
+        "checks": 61,
+        "decision": "ACCEPT_EXACT_FRESH_CI_R1_STATIC_SCOPE",
+        "completeBodyRead": true,
+        "selfReadConfirmed": true
+      }
+    ],
+    "reviewsClosedAt": "2026-11-17 07:42:35 UTC",
+    "reviewChecks": 180,
+    "source": {
+      "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "headRoot": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+      "baseRoot": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+      "actualGate": {
+        "bytes": 7050,
+        "sha256": "4a55ae270a3549fd97c712db801cf2378102e7974597c8ed2c3fe3b240e937cb",
+        "gitBlob": "3aa070295059b9e1dd280ee36836712878b0b72c"
+      },
+      "laterDocsDoNotReplaceFixedHead": true
+    },
+    "scope": {
+      "selected": true,
+      "newNamesObservedAbsent": false,
+      "newNameQualification": "Concrete proposed names only. Root's later admitted preflight must read these exact names once and require absence; no create or availability claim is made here.",
+      "baseRef": "ci/frontend-parity-c714-20261117-2-base",
+      "headRef": "ci/frontend-parity-c714-20261117-2-head",
+      "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "head": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "headBinding": "Use actual9d79 as the fixed CI source head. Later R1/review/publication/actual records can be external admission evidence on the working evidence branch; they need not and must not silently replace9d with a guessed future commit or moving branch tip. A different selected head would require its own concrete diff/trigger review under the existing process.",
+      "event": "pull_request opened",
+      "sameRepository": true,
+      "draft": true,
+      "maintainerCanModify": false,
+      "proposedStructuredActions": [
+        {
+          "order": 1,
+          "operation": "read-only preflight under root's later accepted plan",
+          "requirements": [
+            "The actual9d source gate3aa070 is already closed; the later exact fresh-CI R1 publication/root+independent actual readbacks and external admission must be closed before any new-name/ref/PR mutation.",
+            "At the admitted preflight, read the two exact proposed new names and require confirmed absence; unknown/error is not absence. No overwrite, reuse, alternative name or artificial base.",
+            "Read immutable9d/779 commit/tree/ancestry plus the complete156-file comparison and compare with this retained exact assessment; source9d remains fixed while later docs commits are external evidence only.",
+            "Recheck complete42workflow/event/filter identities and the fixed Draft/no-real-Claude-Codex selection. Any difference refuses admission; do not compensate by changing filters, workflows, dependencies or runtime budgets.",
+            "No old/frozen PR or original terminal-run action or polling."
+          ]
+        },
+        {
+          "order": 2,
+          "tool": "github_create_branch",
+          "arguments": {
+            "repository_full_name": "777genius/agent-teams-ai",
+            "branch_name": "ci/frontend-parity-c714-20261117-2-base",
+            "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+          },
+          "readback": "Exact newly named ref must resolve to779 and treeada3f27db78fabc17a91e3904d41b8bc547c6dca.",
+          "maximumAttempts": 1
+        },
+        {
+          "order": 3,
+          "tool": "github_create_branch",
+          "arguments": {
+            "repository_full_name": "777genius/agent-teams-ai",
+            "branch_name": "ci/frontend-parity-c714-20261117-2-head",
+            "sha": "9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+          },
+          "readback": "Exact newly named ref must resolve to9d79 and treeaefd0dfc3ceb7b9e4812cc4e532b128c21c3e295.",
+          "maximumAttempts": 1
+        },
+        {
+          "order": 4,
+          "tool": "github_create_pull_request",
+          "arguments": {
+            "repository_full_name": "777genius/agent-teams-ai",
+            "base": "ci/frontend-parity-c714-20261117-2-base",
+            "head": "ci/frontend-parity-c714-20261117-2-head",
+            "title": "test: validate frontend parity deadlines and member reveal",
+            "body": "## Purpose\n\nThe published deadline fix, three catalog regressions and member reveal step need complete execution on source 9d79abcf1f5c498687c2e5c443e3edf220070aa6. This Draft PR validates that fixed source against its unchanged ancestor 77993819c233737f1e2b4c11c8ca1a5d360bcbe3.\n\n## Changes and coverage\n\nThe snapshot contains the accepted frontend parity fixes, all 139 original Node cases plus ten deadline cases, the full 43-case model catalog file, the unchanged 85-case provider-management file, and one bounded scroll to Alice before the original guarded member click. The driver has 798 lines under the unchanged 800-line limit.\n\nExisting workflows select all 18 Host UI jobs, four frontend shards and their aggregate; the five packaged platform tuples; Stage 1 OpenCode checks; announcements; and CI fast feedback. Claude and Codex use the existing finite TEST peers. Actual OpenCode execution stays within the existing pinned localhost-model paths.\n\nWorkflow bytes, dependencies, filters, original deadlines and strict native assertions are preserved. Full qualification is expected to fail the existing Draft policy. CodeQL and OpenCode diagnostics retain their explicit Draft skips. Every other failure, skipped or unreached step and unavailable artifact remains visible.\n\nCI's ten imported deadline cases run within the whole 149-case module under its existing Node selection. The separately pinned local Node 24.22.1 RED/GREEN attempt remains unexecuted while its environment is unavailable.\n\nBoth snapshot refs and this PR's metadata stay fixed while selected runs are active. The original PR #1218 remains terminal. This evidence scope does not include Ready conversion, merge, release, Stage 2, or a native-custody waiver.\n",
+            "draft": true,
+            "maintainer_can_modify": false
+          },
+          "readback": "Capture actual returned new PR number, repository IDs, exact head/base SHA/refs, Draft/open state, timestamps and eventual synthetic merge commit with both parents/tree. No invented future number or SHA.",
+          "maximumAttempts": 1
+        }
+      ],
+      "status": "ROOT_SELECTED_R1_SCOPE_ONLY_NOT_YET_ADMITTED",
+      "failurePolicy": "Retain any refused or transport-unknown mutation as spent as issued. Resolve uncertainty only by exact-new-ref/PR readback; do not blindly repeat, overwrite an unexpected ref, create a duplicate PR, switch names or fall back to dispatch/rerun. Partial creation remains explicit for root's existing process.",
+      "noArtificialDiff": "Both refs preserve the real ancestor and accepted current source. No test omission, alternative artificial base, workflow edit or path-only trigger manipulation.",
+      "freeze": "Keep both new refs and new PR metadata fixed while any selected new run is active; no push/force/rebase/base or label/title/body edit, Ready conversion, close/reopen, rerun, cancellation or dispatch. Required documentation pushes may continue only on the separate working evidence branch.",
+      "source": "Existing unchanged structured GitHub operations; no executable control source is authored."
+    },
+    "publication": {
+      "workingBranch": "fix/frontend-parity-coobservation-c714-20261115",
+      "parent": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "parentRoot": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+      "parentDocs": "4dd9acfdf6c93a036a81089b166bb13bc08868e9",
+      "docsOnly": true,
+      "allNonDocRootEntriesUnchanged": true,
+      "nonDocLeaves": 8799,
+      "workflows": 42,
+      "production": 5020,
+      "sourceCap": 800,
+      "exceptions": 141,
+      "parentCatalogFields": 85,
+      "bundles": 27,
+      "allCatalogValuesAndTotalsPreserved": true,
+      "fullPlanStatusPrefixesPreserved": true,
+      "newCatalogKeys": [
+        "fresh9dCiR1Stage",
+        "fresh9dCiR1EvidenceFiles"
+      ],
+      "exactEvidenceManifestRequired": true,
+      "immediateExpectedParentForceFalsePush": true,
+      "fullRootAndIndependentActualReadbacksRequired": true
+    },
+    "workflowAssessment": {
+      "complete42Corpus": {
+        "bytes": 780732,
+        "sha256": "9a83bd5a7425d0674345c607e26b2a1df8bde3556549ac276bfbf860c5c4e3bb",
+        "gitBlob": "6d032754064d4f251a11e8572bb7b476ea5860a8"
+      },
+      "complete156Comparison": {
+        "bytes": 1316501,
+        "sha256": "b197f33f4fd07ad0afd3443214705152dfc2b6ec544eb6fc014b4d9c3d67137f",
+        "gitBlob": "b22f8e839e41161d124ea665134b2d254ebe8ed0"
+      },
+      "eligible": 7,
+      "active": 5,
+      "explicitDraftSkip": 2,
+      "expectedHostJobs": 23,
+      "expectedPackagedJobs": 7,
+      "expectedStage1Jobs": 9,
+      "workflowBytesUnchanged": true,
+      "sourcePatchLimitation": {
+        "fullApiFileRows": 156,
+        "sourceRows": 9,
+        "documentationRows": 147,
+        "sourcePatchFields": "Not supplied by the original API response",
+        "sourceLineStatistics": "Original API reports zero; not used as content/delta proof",
+        "contentProof": "Full exact immutable nine source bodies, complete13-path vectors, prior exact inverse reviews and actual9d tree readbacks",
+        "derivedOriginalApiBody": {
+          "bytes": 1195222,
+          "sha256": "ff2f04cff7a4fae7ae72d95dcc00a6fcb1a2c9336b86109c14369d1c8ec3eaab",
+          "gitBlob": "07bd7f1ffcca3b1f0c473c57519fd548f8103251"
+        }
+      }
+    },
+    "providerScope": "Existing finite TEST Claude/Codex peers, including version surfaces. Only admitted pinned actual OpenCode paths with localhost models. No real Claude/Codex invocation.",
+    "standalone": {
+      "newAttemptInvoked": false,
+      "physicalState": "UNKNOWN_ENVIRONMENT_UNAVAILABLE",
+      "admissionAuthored": false,
+      "ciTenDoesNotQualifyLocalRedGreen": true,
+      "oldAttempt": "REFUSED_BEFORE_SCOPE_ADMISSION_SPENT"
+    },
+    "originalCi": {
+      "pr": 1218,
+      "allSevenTerminal": true,
+      "activeRunIds": [],
+      "furtherPolling": false
+    },
+    "newCI": {
+      "admissionAuthored": false,
+      "namesObservedAbsent": false,
+      "refsCreated": false,
+      "prNumber": null,
+      "runIds": [],
+      "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+    },
+    "qualification": "Static R1 publication only. No new CI, GUI, whole149, catalog43, standalone10, packaged/native or complete E2E PASS is claimed. Renderer85 retains accepted prior-source scope.",
+    "noNewR2Needed": true,
+    "nextSteps": [
+      "Complete root and independent actual readbacks of this docs-only publication.",
+      "Retain external immutable admission joining actual docs publication and fixed 9d/779.",
+      "Perform exactly the selected at-most-once new-name preflight, two snapshot refs and one Draft PR creation, then capture only the new event until each run is terminal."
+    ],
+    "environment": {
+      "status": "rejected",
+      "reason": "No usable execution environment is available. Wait for an environment to become available before using this tool."
+    },
+    "evidenceFiles": [
+      {
+        "role": "proposal",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-r1-20261117.json",
+        "mode": "100644",
+        "bytes": 69751,
+        "sha256": "ded423903437131ea288b2d43a20391147f8e4cdb45357b6d92496d4763487bd",
+        "gitBlob": "1bb01907e9a3b9fba7cedb3d34d0d2773a57ca23"
+      },
+      {
+        "role": "rootR1",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-r1-root-review-20261117.json",
+        "mode": "100644",
+        "bytes": 51861,
+        "sha256": "b056b56f27eb586903c8a3c9c703bb5f0b8337bc628de9460b8de241914e6bfc",
+        "gitBlob": "0b830765cf0ad6e817101dd64ffc8ca6055af8a7"
+      },
+      {
+        "role": "guardR1",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-r1-guard-review-20261117.json",
+        "mode": "100644",
+        "bytes": 68932,
+        "sha256": "5d6d640bbacc7a5b881467f2854cab7bf7b79b2c9a2207d5d3da958c117668fc",
+        "gitBlob": "377658a09518838cc3acd20a93f2a8c20e758bfc"
+      },
+      {
+        "role": "semanticR1",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-r1-semantic-review-20261117.json",
+        "mode": "100644",
+        "bytes": 59184,
+        "sha256": "7ae4ecf110439a5bab8e1cf5f4fbf7429604f4ec83cb499b02067af19104df20",
+        "gitBlob": "e65ed2330f6038e58d0f760e41eede7befe535b1"
+      },
+      {
+        "role": "bindingR1",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-r1-binding-review-20261117.json",
+        "mode": "100644",
+        "bytes": 210027,
+        "sha256": "1a1b1e81a621c2e8d29e12b16006cd2d9ebe6f9611ef93d82c67b20fd9d542b2",
+        "gitBlob": "19aeb82a85b885d45000a50f2fbeb9d06a3c9d5e"
+      },
+      {
+        "role": "venueAdvisory",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-source-venue-advisory-20261117.json",
+        "mode": "100644",
+        "bytes": 89037,
+        "sha256": "fdbf58a4cc6ee03693f5ffc1ab1d9ba2ad40cafcdd419c60f982530a07c9b734",
+        "gitBlob": "ec8af61a7613a4d4f55601f0755e5fd3858a809a"
+      },
+      {
+        "role": "workflowCorpus",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-complete42-workflows-20261117.json",
+        "mode": "100644",
+        "bytes": 780732,
+        "sha256": "9a83bd5a7425d0674345c607e26b2a1df8bde3556549ac276bfbf860c5c4e3bb",
+        "gitBlob": "6d032754064d4f251a11e8572bb7b476ea5860a8"
+      },
+      {
+        "role": "comparisonPacket",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-complete-source-comparison-20261117.json",
+        "mode": "100644",
+        "bytes": 1316501,
+        "sha256": "b197f33f4fd07ad0afd3443214705152dfc2b6ec544eb6fc014b4d9c3d67137f",
+        "gitBlob": "b22f8e839e41161d124ea665134b2d254ebe8ed0"
+      },
+      {
+        "role": "sourceRootActual",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-root-actual-20261117.json",
+        "mode": "100644",
+        "bytes": 159127,
+        "sha256": "1133d67553be7b4b0085cbfbe698842d4839228956e43f9930c456ee50ce4beb",
+        "gitBlob": "64d074f6f878440222347058c0fbc3a559953908"
+      },
+      {
+        "role": "sourceIndependentActual",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-independent-actual-20261117.json",
+        "mode": "100644",
+        "bytes": 432844,
+        "sha256": "995c58b5b1f0c2c765b934c2ee93fdce20940db5b12da9f5a97b2ab5ce747b37",
+        "gitBlob": "4f6feae04f1bc9fe1e6357876481fe14e7fb8cd3"
+      },
+      {
+        "role": "sourceActualGate",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-actual-gate-20261117.json",
+        "mode": "100644",
+        "bytes": 7050,
+        "sha256": "4a55ae270a3549fd97c712db801cf2378102e7974597c8ed2c3fe3b240e937cb",
+        "gitBlob": "3aa070295059b9e1dd280ee36836712878b0b72c"
+      },
+      {
+        "role": "windowsOptimizationAdvisory",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-windows-observation-cost-and-retention-advisory-20261117.json",
+        "mode": "100644",
+        "bytes": 57508,
+        "sha256": "905ca483abf73b19c2efb60180d8f6bbdefc1e8d8e744aa1377f66ecaf212456",
+        "gitBlob": "ba917dc0650ef48acbaf5646059550accb42d237"
+      }
+    ]
+  },
+  "fresh9dCiR1EvidenceFiles": [
+    {
+      "role": "proposal",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-r1-20261117.json",
+      "mode": "100644",
+      "bytes": 69751,
+      "sha256": "ded423903437131ea288b2d43a20391147f8e4cdb45357b6d92496d4763487bd",
+      "gitBlob": "1bb01907e9a3b9fba7cedb3d34d0d2773a57ca23"
+    },
+    {
+      "role": "rootR1",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-r1-root-review-20261117.json",
+      "mode": "100644",
+      "bytes": 51861,
+      "sha256": "b056b56f27eb586903c8a3c9c703bb5f0b8337bc628de9460b8de241914e6bfc",
+      "gitBlob": "0b830765cf0ad6e817101dd64ffc8ca6055af8a7"
+    },
+    {
+      "role": "guardR1",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-r1-guard-review-20261117.json",
+      "mode": "100644",
+      "bytes": 68932,
+      "sha256": "5d6d640bbacc7a5b881467f2854cab7bf7b79b2c9a2207d5d3da958c117668fc",
+      "gitBlob": "377658a09518838cc3acd20a93f2a8c20e758bfc"
+    },
+    {
+      "role": "semanticR1",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-r1-semantic-review-20261117.json",
+      "mode": "100644",
+      "bytes": 59184,
+      "sha256": "7ae4ecf110439a5bab8e1cf5f4fbf7429604f4ec83cb499b02067af19104df20",
+      "gitBlob": "e65ed2330f6038e58d0f760e41eede7befe535b1"
+    },
+    {
+      "role": "bindingR1",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-r1-binding-review-20261117.json",
+      "mode": "100644",
+      "bytes": 210027,
+      "sha256": "1a1b1e81a621c2e8d29e12b16006cd2d9ebe6f9611ef93d82c67b20fd9d542b2",
+      "gitBlob": "19aeb82a85b885d45000a50f2fbeb9d06a3c9d5e"
+    },
+    {
+      "role": "venueAdvisory",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-source-venue-advisory-20261117.json",
+      "mode": "100644",
+      "bytes": 89037,
+      "sha256": "fdbf58a4cc6ee03693f5ffc1ab1d9ba2ad40cafcdd419c60f982530a07c9b734",
+      "gitBlob": "ec8af61a7613a4d4f55601f0755e5fd3858a809a"
+    },
+    {
+      "role": "workflowCorpus",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-complete42-workflows-20261117.json",
+      "mode": "100644",
+      "bytes": 780732,
+      "sha256": "9a83bd5a7425d0674345c607e26b2a1df8bde3556549ac276bfbf860c5c4e3bb",
+      "gitBlob": "6d032754064d4f251a11e8572bb7b476ea5860a8"
+    },
+    {
+      "role": "comparisonPacket",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci2-fixed9d-complete-source-comparison-20261117.json",
+      "mode": "100644",
+      "bytes": 1316501,
+      "sha256": "b197f33f4fd07ad0afd3443214705152dfc2b6ec544eb6fc014b4d9c3d67137f",
+      "gitBlob": "b22f8e839e41161d124ea665134b2d254ebe8ed0"
+    },
+    {
+      "role": "sourceRootActual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-root-actual-20261117.json",
+      "mode": "100644",
+      "bytes": 159127,
+      "sha256": "1133d67553be7b4b0085cbfbe698842d4839228956e43f9930c456ee50ce4beb",
+      "gitBlob": "64d074f6f878440222347058c0fbc3a559953908"
+    },
+    {
+      "role": "sourceIndependentActual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-independent-actual-20261117.json",
+      "mode": "100644",
+      "bytes": 432844,
+      "sha256": "995c58b5b1f0c2c765b934c2ee93fdce20940db5b12da9f5a97b2ab5ce747b37",
+      "gitBlob": "4f6feae04f1bc9fe1e6357876481fe14e7fb8cd3"
+    },
+    {
+      "role": "sourceActualGate",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r2-actual-gate-20261117.json",
+      "mode": "100644",
+      "bytes": 7050,
+      "sha256": "4a55ae270a3549fd97c712db801cf2378102e7974597c8ed2c3fe3b240e937cb",
+      "gitBlob": "3aa070295059b9e1dd280ee36836712878b0b72c"
+    },
+    {
+      "role": "windowsOptimizationAdvisory",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-windows-observation-cost-and-retention-advisory-20261117.json",
+      "mode": "100644",
+      "bytes": 57508,
+      "sha256": "905ca483abf73b19c2efb60180d8f6bbdefc1e8d8e744aa1377f66ecaf212456",
+      "gitBlob": "ba917dc0650ef48acbaf5646059550accb42d237"
+    }
   ]
 }

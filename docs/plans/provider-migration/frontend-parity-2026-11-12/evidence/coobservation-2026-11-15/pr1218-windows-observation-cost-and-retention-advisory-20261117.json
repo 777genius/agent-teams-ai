@@ -1,0 +1,837 @@
+{
+  "schemaVersion": 1,
+  "kind": "read-only-Windows-fresh-census-optimization-and-ARM-retention-options",
+  "at": "2026-11-17 07:12:56 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_guard",
+  "status": "ADVISORY_OPTIONS_ONLY_NO_FIX_SELECTED",
+  "sourceHead": "9c9c73190840592963142d36562ea07d2b5d2d71",
+  "originalRun": {
+    "id": 44008782844,
+    "attempt": 1,
+    "x64Job": 133811711774,
+    "arm64Job": 133811711677,
+    "originalsSpent": true
+  },
+  "basis": {
+    "priorCompleteAdvisory": {
+      "bytes": 82021,
+      "sha256": "7a6dfd9d48f634d1e5434456ff4e787d0795baa01eecd092b2c6877025f352d3",
+      "gitBlob": "4a8ee1f31e1ce056b06515e842ed0d68fb5ea917",
+      "fullSelfReadbackPreviouslyCompleted": true
+    },
+    "capture": {
+      "bytes": 43216,
+      "sha256": "baf4a9f2de58d967366c652bf7cba5d28e7b4d3c3f576f3d359f04516f31c972",
+      "gitBlob": "33e472d38720bda64a2483041af43405c2eec085"
+    },
+    "x64Receipt": {
+      "bytes": 750631,
+      "sha256": "cf9c74713f42fbad360375ff883711a9b8baf8a434b8b39fd4beb412d6b635c9",
+      "gitBlob": "a5032a87abfe9c9a7a91227e31408993d6ee073a"
+    },
+    "controllerAndJobLogs": [
+      {
+        "arch": "x64",
+        "job": 133811711774,
+        "controller": {},
+        "jobLog": {
+          "bytes": 314038,
+          "sha256": "cda333a227c35c883aaec38d6b1d5abec4fc127d26182f516eeb00f4138fb372",
+          "gitBlob": "9c8644ce67a2d128840ba7d0ead3b502711e9a8d"
+        }
+      },
+      {
+        "arch": "arm64",
+        "job": 133811711677,
+        "controller": {},
+        "jobLog": {
+          "bytes": 302089,
+          "sha256": "8893e4df94f2776532c4a351e12a43abd844df1c2c5a8296300d01042ddba115",
+          "gitBlob": "1f63836439a091bbed19df3b7ad466f0fe1cae1c"
+        }
+      }
+    ],
+    "sources": [
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "frozenTree": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+        "originalWindowsCRLF": {
+          "bytes": 38339,
+          "sha256": "a76135c8e2a09fbcc939c2856f626e1299c6dc9d684fe6fb31458a4f957d167f",
+          "gitBlob": "abe77d2e042df9dd2adbea58a8038ee14951c19c"
+        }
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "frozenTree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+        "originalWindowsCRLF": {
+          "bytes": 12647,
+          "sha256": "8b44f15d068ebda80de79947b58cd41ef0c8e7f86006ca2897d0b046394b9bdf",
+          "gitBlob": "f5f15e0ce99780690da8dcfa361516ca0185863c"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.ts",
+        "bytes": 22604,
+        "sha256": "ebb52ab95cdbf0ddc86ce44b534a3c7255c7e8454e5cadb2cbb83278daa53a0f",
+        "gitBlob": "12f4a7b122843acea95e8c37f876917331842a4a",
+        "frozenTree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+        "originalWindowsCRLF": {
+          "bytes": 23030,
+          "sha256": "7e66f25cba75a9e13940a41175471659231095248113bd7139e07b4a4a7e9e1e",
+          "gitBlob": "9c02a90dbdbec5718739e4ab4aad66ccf33e8676"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+        "frozenTree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+        "originalWindowsCRLF": {
+          "bytes": 29468,
+          "sha256": "c61b3b5689773bfd589674cfdd860e46b6d7d0642a211b655374627cff2278f9",
+          "gitBlob": "06db8e61441c7e6720d18706adff04976506b565"
+        }
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "bytes": 31223,
+        "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+        "frozenTree": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+        "originalWindowsCRLF": {
+          "bytes": 31708,
+          "sha256": "9be5af55b58539523c03194b62ebb68f5b1b5363c8c3994deee833d91fed7499",
+          "gitBlob": "2ea379d6d92f92310cb586132ec9aeed7a2814ae"
+        }
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGateContext.ts",
+        "bytes": 7278,
+        "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+        "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+        "frozenTree": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+        "originalWindowsCRLF": {
+          "bytes": 7470,
+          "sha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+          "gitBlob": "a63327ce75e28af163f48f480da0b763a1c079bb"
+        }
+      },
+      {
+        "path": "tools/owned-process-broker/gateController.cpp",
+        "bytes": 5935,
+        "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+        "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+        "frozenTree": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+        "originalWindowsCRLF": {
+          "bytes": 6043,
+          "sha256": "604a73ce8f1e31c3ee094a1ceb7a866c71270590ba40f94c70d7f0c1a7543518",
+          "gitBlob": "e4ae753ca927a0b7c3a4e325289e143556775069"
+        }
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+        "frozenTree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e",
+        "frozenTree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57"
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/packaged.mjs",
+        "bytes": 27780,
+        "sha256": "5fd9116cb656ce7804dc3253decb3f386e2c17feda57cc40586cc6e0df6fd8d5",
+        "gitBlob": "7da83c7a4e631f7599fc57861f19e14629db6036",
+        "frozenTree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+        "readMethod": "Previously full-read exact body reused and rehashed; complete orphan/drain/browser-close functions reread for this follow-up."
+      }
+    ],
+    "readScope": "Complete original source bodies previously read in4a8 were rehashed and reused; the entire gate, both complete test bodies, gateController.cpp and nativeGateContext were additionally read in full here, with exact relevant fixture/helper/query bodies traced. Original full retained x64 timings and ARM log markers were recalculated as data. No source, fixture, query or test was evaluated."
+  },
+  "conclusions": [
+    "The source supports two small ways to combine duplicate observation work: paired post-Retry row reads, and a single fresh census for the adjacent same-Main/screenshot proof.",
+    "The seven click ownership observations protect distinct boundaries and remain necessary in these candidate shapes.",
+    "A final joint ready-UI plus both-row observation can be stronger. An early-only merge loses the final proof after intervening async reads; removing both separate waits is a broader temporal redesign, not another proven call saving.",
+    "Those combinations remove known calls in successful paths but are not demonstrated sufficient for the original whole10s Retry; the failed attempt had unreached final proof work.",
+    "The exact listener closure asks for all owners listening on the selected CDP port9222, not every owned TCP port. Equivalent provider-side LocalPort+Listen selection is therefore within that universe, but empty/error/native semantics and actual speed remain unproved.",
+    "ARM also has an independent retention gap: native120s includes preparation, and full failure evidence is written only after cleanup/rehashing. A separate early incomplete checkpoint can preserve existing facts without changing success or deadline authority."
+  ],
+  "x64": {
+    "facts": {
+      "calls": 12,
+      "processListenerCalls": 11,
+      "processOnlyCalls": 1,
+      "firstSevenMs": 5165.135899999994,
+      "processListenerTotalMs": 8412.4263,
+      "processOnlyTotalMs": 342.1962000000058,
+      "totalMs": 8754.622500000005,
+      "firstClickReturnedMs": 5409,
+      "firstReadyMs": 7948,
+      "lastObservationStartIntoPhase": 9700.178700000004,
+      "lastObservationEndIntoPhase": 10465.460700000003,
+      "ownershipShareOfFailureElapsed": 0.8365252855041538
+    },
+    "callMap": [
+      {
+        "operation": "process-listener-snapshot",
+        "startIntoPhase": 2.569600000002538,
+        "endIntoPhase": 765.8956000000035,
+        "durationMs": 763.3260000000009,
+        "sourceRole": "Retry initial target read",
+        "certainty": "source minimum seven matched exactly by seven observed calls; no extra poll"
+      },
+      {
+        "operation": "process-listener-snapshot",
+        "startIntoPhase": 771.0598000000027,
+        "endIntoPhase": 1513.5956000000006,
+        "durationMs": 742.5357999999978,
+        "sourceRole": "Retry post-read ownership before pointer move",
+        "certainty": "source minimum seven matched exactly by seven observed calls; no extra poll"
+      },
+      {
+        "operation": "process-listener-snapshot",
+        "startIntoPhase": 1523.8219000000026,
+        "endIntoPhase": 2269.1918000000005,
+        "durationMs": 745.3698999999979,
+        "sourceRole": "Retry target read after pointer enter",
+        "certainty": "source minimum seven matched exactly by seven observed calls; no extra poll"
+      },
+      {
+        "operation": "process-listener-snapshot",
+        "startIntoPhase": 2374.4447,
+        "endIntoPhase": 3096.869200000001,
+        "durationMs": 722.424500000001,
+        "sourceRole": "Retry stable target sample 1",
+        "certainty": "source minimum seven matched exactly by seven observed calls; no extra poll"
+      },
+      {
+        "operation": "process-listener-snapshot",
+        "startIntoPhase": 3200.947100000005,
+        "endIntoPhase": 3930.220500000003,
+        "durationMs": 729.2733999999982,
+        "sourceRole": "Retry stable target sample 2",
+        "certainty": "source minimum seven matched exactly by seven observed calls; no extra poll"
+      },
+      {
+        "operation": "process-listener-snapshot",
+        "startIntoPhase": 3934.4639000000025,
+        "endIntoPhase": 4682.7114,
+        "durationMs": 748.2474999999977,
+        "sourceRole": "Retry ownership before final target read",
+        "certainty": "source minimum seven matched exactly by seven observed calls; no extra poll"
+      },
+      {
+        "operation": "process-listener-snapshot",
+        "startIntoPhase": 4686.7532000000065,
+        "endIntoPhase": 5400.712000000007,
+        "durationMs": 713.9588000000003,
+        "sourceRole": "Retry ownership before one physical click",
+        "certainty": "source minimum seven matched exactly by seven observed calls; no extra poll"
+      },
+      {
+        "operation": "process-census",
+        "startIntoPhase": 6735.7572,
+        "endIntoPhase": 7077.953400000006,
+        "durationMs": 342.1962000000058,
+        "sourceRole": "successor Host B PID/birth/parent census",
+        "certainty": "explicit process-census stage timing"
+      },
+      {
+        "operation": "process-listener-snapshot",
+        "startIntoPhase": 7080.326200000003,
+        "endIntoPhase": 7942.019900000007,
+        "durationMs": 861.6937000000034,
+        "sourceRole": "recovery-ready UI observation",
+        "certainty": "sequential source and trace inference"
+      },
+      {
+        "operation": "process-listener-snapshot",
+        "startIntoPhase": 7948.908000000003,
+        "endIntoPhase": 8821.893300000003,
+        "durationMs": 872.9853000000003,
+        "sourceRole": "original public binding observation",
+        "certainty": "sequential source and trace inference"
+      },
+      {
+        "operation": "process-listener-snapshot",
+        "startIntoPhase": 8948.619200000001,
+        "endIntoPhase": 9695.948600000003,
+        "durationMs": 747.3294000000024,
+        "sourceRole": "first original process-row observation",
+        "certainty": "sequential source and trace inference"
+      },
+      {
+        "operation": "process-listener-snapshot",
+        "startIntoPhase": 9700.178700000004,
+        "endIntoPhase": 10465.460700000003,
+        "durationMs": 765.2819999999992,
+        "sourceRole": "second original process-row observation; refuses before DOM evaluation",
+        "certainty": "sequential source and trace inference"
+      }
+    ],
+    "ordinaryClickMinimum": {
+      "firstRead": 1,
+      "preHover": 1,
+      "afterPointerEnterRead": 1,
+      "twoStabilityReads": 2,
+      "beforeFinalPoint": 1,
+      "beforePhysicalClick": 1,
+      "total": 7,
+      "source": "desktop-ui-controls.ts:299-331 plus waitRead:194"
+    },
+    "originalFailureMeaning": "The twelfth observed ownership call returned after the original10s Retry deadline and validateCensus refused before the second row's DOM evaluation. It is not evidence of the second row's value or a failed product Retry.",
+    "unreached": [
+      "sameMainAfterRetry process-only capture",
+      "after-retry ownership-protected screenshot",
+      "both original UI Kill phases",
+      "completed nativeCleanup"
+    ],
+    "measurementLimits": [
+      "Every retained query interval covers the complete synchronous PowerShell invocation, its work and parsing. It does not partition interpreter startup, CIM, NetTCPIP provider/module work, JSON serialization, parsing or scheduler delay.",
+      "The one342.1962ms process-only call and eleven combined calls were different invocations at different times. Their difference is not a measured listener-only cost.",
+      "With both rows immediately ready, paired evaluation removes one process/listener acquisition. Timing cannot be subtracted to manufacture a passing rerun because later Main/screenshot work was not reached.",
+      "Total8754.6225ms is83.65% of the10465.4607ms elapsed at the final returned observation;87.55% of the nominal10000ms phase. Both ratios describe this one original attempt only."
+    ]
+  },
+  "arm64": {
+    "originalRun": "44008782844",
+    "attempt": 1,
+    "job": 133811711677,
+    "controllerSource": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+    "observedController": {
+      "gateController": "emergency-fail",
+      "rootExitCode": 99,
+      "activeProcesses": 0
+    },
+    "logPins": [
+      {
+        "jobId": 133811711677,
+        "bytes": 302089,
+        "sha256": "8893e4df94f2776532c4a351e12a43abd844df1c2c5a8296300d01042ddba115",
+        "gitBlob": "1f63836439a091bbed19df3b7ad466f0fe1cae1c"
+      }
+    ],
+    "controllerLog": {
+      "bytes": 27140,
+      "sha256": "b3700847f600f2e95e363812056a0be2d04f4edf0accb133f18707ef8d93caa9",
+      "gitBlob": "0819a850ec382082407c303a6696728397284cad"
+    },
+    "logMarkers": [
+      {
+        "line": 2068,
+        "text": "2026-11-17T05:42:46.7578502Z gate-owned-sandbox:C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\opg450A.tmp\r"
+      },
+      {
+        "line": 2085,
+        "text": "2026-11-17T05:43:19.8657085Z {\"kind\":\"TEST_WINDOWS_PACKAGED_UI_PHASE\",\"phase\":\"packaged-App-startup\",\"atMs\":0.07660000000032596,\"budgetMs\":120000}\r"
+      },
+      {
+        "line": 2417,
+        "text": "2026-11-17T05:44:21.1183271Z {\"kind\":\"TEST_WINDOWS_PACKAGED_UI_FAILURE\",\"phase\":\"actual-Host-A-exit-and-metadata-Refresh\",\"error\":\"AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: actual-Host-A-exit-and-metadata-Refresh\\n    at remaining (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:123:10)\\n    at validateCensus (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:179:3)\\n    at Object.assertOwnedRenderer (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:207:20)\\n    at Object.waitRead (C:\\\\a\\\\agent-teams-ai\\\\agent-teams-ai\\\\scripts\\\\legacy-agent-host\\\\desktop-ui-controls.ts:194:15)\\n    at file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:451:30\",\"errorTruncated\":false,\"retryUiObservation\":null}\r"
+      },
+      {
+        "line": 2418,
+        "text": "2026-11-17T05:44:21.1186944Z {\"kind\":\"TEST_WINDOWS_PACKAGED_UI_PHASE\",\"phase\":\"original-product-Quit\",\"atMs\":61314.541,\"budgetMs\":30000}\r"
+      },
+      {
+        "line": 2491,
+        "text": "2026-11-17T05:44:46.8091537Z {\"gateController\":\"emergency-fail\",\"rootExitCode\":99,\"activeProcesses\":0}\r"
+      }
+    ],
+    "wallLogIntervalsMs": {
+      "sandboxToStartup": 33107.8583,
+      "sandboxToFailure": 94360.4769,
+      "sandboxToQuit": 94360.8442,
+      "sandboxToEmergency": 120051.3035,
+      "quitToEmergency": 25690.4593
+    },
+    "wallClockCaveat": "These are differences between retained log timestamp strings, preserving their100ns decimal precision. They are not a common native/JavaScript monotonic deadline or exact remaining-time capability; log buffering and distinct clock origins prohibit using them as execution authority.",
+    "primaryFailure": {
+      "kind": "TEST_WINDOWS_PACKAGED_UI_FAILURE",
+      "phase": "actual-Host-A-exit-and-metadata-Refresh",
+      "error": "AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: actual-Host-A-exit-and-metadata-Refresh\n    at remaining (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:123:10)\n    at validateCensus (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:179:3)\n    at Object.assertOwnedRenderer (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:207:20)\n    at Object.waitRead (C:\\a\\agent-teams-ai\\agent-teams-ai\\scripts\\legacy-agent-host\\desktop-ui-controls.ts:194:15)\n    at file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:451:30",
+      "errorTruncated": false,
+      "retryUiObservation": null
+    },
+    "reached": [
+      "gate439 phase admitted",
+      "original HostA positive absence poll returned",
+      "fixture.afterOriginalExit returned",
+      "recovery-surface read returned",
+      "one physical metadata Refresh click returned",
+      "gate451 entered and ownership census validation refused after phase expiry"
+    ],
+    "unreached": [
+      "successful genuine closed-Host marker readError assignment",
+      "retained-row outage validation",
+      "Retry phase",
+      "HostB proof",
+      "after-Retry public rows",
+      "both original UI Stops"
+    ],
+    "unknown": [
+      "detailed census durations/call counts",
+      "final DOM predicate value",
+      "Browser.close command/ack result",
+      "ordinary Main exit status",
+      "ordinary query-witness/native cleanup",
+      "final source/input preservation",
+      "exact final peer/model/vendor counters"
+    ],
+    "mechanism": {
+      "native": "gateController.cpp resumes its original Node child, then waits120000ms on its original process handle. Root completion plus fresh Job zero is required; timeout/accounting failure triggers emergency TerminateJobObject and remains failure.",
+      "js": "nativeWindowsAppGate.mjs performs import/preparation/source hashing/profile and fixture preparation before starting its own300000ms outer clock at350. Its phase deadlines do not inherit the native controller's remaining120s.",
+      "cleanup": "At308-345 Quit selects up to30000ms within the JS outer clock; finally603-621 then waits original fixture closure, app-log closure, verifies original pins/packages/source, and only641 writes the final receipt.",
+      "classification": "The default native root code99 is initialized before waiting; this observed emergency99 cannot be treated as a proved voluntary Node exit99. Final Job zero is emergency cleanup evidence, not proof of ordinary app/witness or original UI success."
+    }
+  },
+  "candidateOptions": [
+    {
+      "id": "A1",
+      "name": "Read both original Retry rows in one guarded renderer evaluation",
+      "status": "CONCRETE_SOURCE_SHAPE_NOT_SELECTED_OR_AUTHORED",
+      "preimages": [
+        "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "076fbd26bac85c4195312a83c1ae78067a8d742e"
+      ],
+      "sourceBoundary": "nativeWindowsAppGate.mjs:546-549, using the existing processOwner wrapper at289-290 and the existing outage composition at457-464 as the pattern. No change to desktopProcessOwnerExpression or the generic UI controls is needed for this shape.",
+      "shape": "Replace the sequential two ui.waitRead calls with one ui.waitRead whose synchronous expression evaluates both unchanged processOwner expressions and returns their ordered pair only when both are present. After return, retain array/count checks and both complete deep-equality assertions against the original row plus observation='same-live' and canTerminate=true. Continue to the unchanged same-Main and screenshot obligations inside the original Retry phase.",
+      "preserved": [
+        "Each polling iteration still acquires a fresh full process/listener observation through the original assertOwnedRenderer before any renderer evaluation.",
+        "Controller/driver/Main PID and birth, controller parent, lineage, orphan, listener-family and original phase cutoff checks are unchanged.",
+        "The renderer URL/preload/backend currentness wrapper, exact selection, original process IDs/references and every field in both expected process records remain checked.",
+        "No cache, TTL, old successful row, PID-only check or second input action can satisfy the paired observation.",
+        "The same existing React-fiber search semantics are retained. A synchronous paired evaluation is not claimed to be an atomic OS/Host/React transaction."
+      ],
+      "provenChange": "For the both-ready single-observation path, two full process/listener acquisitions become one. Sequential original sampling could accept primary in one renderer evaluation and neighbor in a later one; the paired predicate requires both in the same evaluation.",
+      "unproven": "Actual elapsed-time reduction, number of polls under changing UI state, and sufficiency for the whole original 10-second phase remain unmeasured. The failed attempt did not reach its final Main or screenshot acquisitions.",
+      "regression": [
+        "Execute the actual changed gate block in the existing source-slice behavioral harness, using the real desktopProcessOwnerExpression and controlled renderer frames.",
+        "Primary-only then neighbor-only frames must refuse; both valid rows together must pass; a later frame containing both may pass without reissuing Retry.",
+        "Reject missing/duplicate matching IDs in the selected props, foreign selection, changed second processRef, and wrong same-live/canTerminate/full-row values. Preserve original alternate-fiber semantics rather than inventing a different global-uniqueness contract.",
+        "Record one fresh ownership guard for each paired evaluation and no send/input calls; guard refusal or remaining() refusal must prevent evaluation.",
+        "Supply an ownership read that consumes the remaining original phase allowance and verify refusal before renderer acceptance or another input. The original monotonic deadline and error identity must remain unchanged."
+      ],
+      "existingProofBasis": "desktop-native-process-ui.test.ts:169-256 already performs the equivalent outage composition regression, including split-frame rejection, both-frame success, wrong ID/ref/team, duplicate rows, guard failure, cutoff failure and evaluation-error identity.",
+      "coverageLimit": "This candidate addresses the Retry row boundary. ARM failed earlier in Refresh, so A1 cannot explain or repair that specific reached failure by itself. Applying the same pattern to initial rows431-435 would be a separate optional source selection, not part of this minimal boundary."
+    },
+    {
+      "id": "A2",
+      "name": "Use the screenshot's fresh full census for the immediately preceding same-Main proof",
+      "status": "CONCRETE_SOURCE_SHAPE_NOT_SELECTED_OR_AUTHORED",
+      "preimages": [
+        "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+      ],
+      "sourceBoundary": "nativeWindowsAppGate.mjs:550-552; assertOwnedRenderer:204-212; screenshot:280-287.",
+      "shape": "Have the existing screenshot operation expose the full fresh snapshot it has just acquired, and check/retain proof.sameMainAfterRetry from that same snapshot immediately before Page.captureScreenshot. Remove only the separate preceding process-only acquisition. The implementation must keep this an operation-local observation, with no stored lease or reusable historical authority.",
+      "preserved": [
+        "The acquisition remains the full process/listener snapshot, with every validateCensus and listener-family check before CDP access.",
+        "The explicit sameIdentity(main, selectedMain) assertion remains, and proof.sameMainAfterRetry is retained before the screenshot request.",
+        "No await, unrelated action or later screenshot may reuse the observation as authority; every screenshot still obtains its own new full snapshot.",
+        "Screenshot command, file exclusivity, image size/hash, original timing checks, proof row and error behavior remain required."
+      ],
+      "provenChange": "The present source performs a process-only census and then immediately a second process census as part of screenshot ownership. Only pure selection/assertion work lies between them. One new full observation can discharge both proofs in that same operation.",
+      "unproven": "This boundary was not reached in the failed x64 attempt; there is no measured cost for its process-only or screenshot observation. It does not justify subtracting a measured earlier call as guaranteed savings.",
+      "regression": [
+        "Use fresh synthetic full snapshots and record order: acquire once, validate full census/listener/lineage, select/check original Main, then exactly one screenshot request and one image retention.",
+        "Wrong/reused Main birth, changed controller/driver parent, orphan, foreign listener, malformed census, acquisition error or elapsed deadline must prevent screenshot admission and preserve the original refusal.",
+        "Two successive screenshots must perform two acquisitions; changing the second snapshot must refuse even if the first was valid.",
+        "Retain raw returned identities and prove no evidence from the first operation authorizes the second."
+      ],
+      "tradeoff": "This changes a small local helper interface as well as the call site. It is slightly broader than A1 and needs a behavioral test of the actual composed operation, not only a source-text match."
+    },
+    {
+      "id": "A3",
+      "name": "Co-observe ready UI and both original process rows without losing the final read boundary",
+      "status": "TEMPORAL_PROOF_REQUIRED_NOT_A_FREE_EQUIVALENT_MERGE",
+      "preimages": [
+        "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "12f4a7b122843acea95e8c37f876917331842a4a",
+        "076fbd26bac85c4195312a83c1ae78067a8d742e"
+      ],
+      "sourceBoundary": "nativeWindowsAppGate.mjs ready wait506-541, stage542, async/public/native reads543-545 and original row proofs546-549; desktop-native-process-ui.ts packed public read62-82.",
+      "originalOrder": [
+        "Fresh ownership and ready-UI wait.",
+        "originalBinding(): async getConnections with whole binding assertions.",
+        "fixture.afterRetry(): one provider and both original leaf HANDLE observations plus original receipt/pin/runtime identity checks.",
+        "readProcesses(): async getConnections → process.list → getConnections with renderer/preload/backend and whole-binding fences, followed by full public-row assertions.",
+        "Fresh ownership and original renderer-row predicates for both rows.",
+        "Same-Main identity and protected screenshot."
+      ],
+      "safeNarrowVariant": "At the final row boundary, evaluate the unchanged ready-UI predicate and both unchanged processOwner expressions synchronously in one guarded wait, requiring all three outcomes together and retaining both full row comparisons. Keep the earlier ready wait and intervening one-time checks. This is a stronger final observation but removes only the same one row census as A1.",
+      "additionalSavingClaim": "None for the safe narrow variant beyond A1. Its added final readiness predicate is DOM-only inside the same evaluation.",
+      "unsafeShortcut": "Moving both row predicates only into the early ready wait and removing the later row proof is not strictly stronger. The three intervening asynchronous/native/public reads can change the renderer or its props. The original public process rows do not prove current UI props.",
+      "counterexample": "At the early sample the ready UI and both rows are valid; during an intervening async read the second renderer row is replaced or becomes stale while the public process-list result remains unchanged. An early-only joint sample would accept obsolete UI evidence; the original final row proof would refuse. The retained x64 public rows were equal, yet its second final UI row was unobserved, illustrating the evidence distinction without proving that this counterexample occurred.",
+      "oneWaitAlternative": "Eliminating the earlier ready wait as well would require an explicit reordering or redesigned combined observation with currentness checks after the final async read. It must preserve original whole binding validation, exactly one fixture.afterRetry, public process-list before/after connection fences and a final synchronous ready-plus-both-row sample. Readiness handling before those metadata calls and failure semantics would need an actual source proposal and regression proof; this advisory does not approve that hypothetical design.",
+      "specificRisks": [
+        "Calling originalBinding before the original ready barrier can see a not-yet-ready backend and fail where the original flow would wait. Treating such responses as retryable without a closed rule could mask original hard failures.",
+        "fixture.afterRetry changes fixture phase from exited to recovered and uses finite native witness observations. It cannot be placed in a repeated polling body or replayed after an uncertain return.",
+        "The existing ready-value validator accepts exactly six own data fields. Spreading owner rows into that same object would make the current validator refuse. A changed wrapper must preserve the original inner ready predicate and full row predicates explicitly.",
+        "retryUiObservation.last.ready currently describes the original UI predicate, and uiReadyMs records its original completion. A joint condition must not silently relabel those fields as first joint success or conflate UI readiness with row readiness.",
+        "Do not replace final renderer row assertions with the public read's valid rows; these are different observation surfaces."
+      ],
+      "regression": [
+        "Ready UI with one missing/stale/wrong row must fail the joint predicate; both valid rows with unready UI must fail; only all three together may pass.",
+        "An initial all-ready sample followed by an async backend/renderer/row change must refuse at the final observation. Public rows remaining valid must not hide stale UI props.",
+        "Preserve entire ready predicate short-circuit behavior and passive six-field diagnostic semantics, plus complete expected row values and exact original references.",
+        "Prove fixture.afterRetry and each original native witness phase execute once, with no extra business input, Refresh or Retry.",
+        "Retain original full renderer/preload/backend/whole-binding fences around each await, original10s cutoff and error identity. Any altered readiness/retry treatment must be explicit rather than assumed equivalent."
+      ]
+    },
+    {
+      "id": "B",
+      "name": "Reduce work inside each fresh listener query, retaining the complete process census",
+      "status": "FEASIBILITY_CANDIDATE_API_COMPATIBILITY_AND_COST_UNPROVEN",
+      "preimages": [
+        "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+      ],
+      "sourceBoundary": "platform.mjs:8-11,136-149; existing injectable executor tests in platform.test.mjs.",
+      "currentFact": "windowsProcessListenerSnapshot already uses one fresh PowerShell interpreter. It first executes the full Win32_Process query, then Get-NetTCPConnection for all listeners and filters LocalPort in the PowerShell pipeline. A second batching rewrite is not a new optimization. The complete selected listener-closure trace in this report proves that the required listener universe is exactly the selected CDP port; provider-side equivalent filtering need not preserve unrelated listening ports.",
+      "shapes": [
+        "Push the existing selected-port condition into the listener provider/cmdlet query while preserving the same listening-state and complete owning-PID result for that port.",
+        "If considered separately, a raw CIM query for the same TCP-listener class/state/port could avoid the separate high-level NetTCPIP command path while using the existing fresh interpreter. Exact namespace/class/state and empty/error semantics must be established before source selection; this advisory does not supply an approved command."
+      ],
+      "preserved": [
+        "The Win32_Process query remains a full fresh census with PID, parent, exact birth string and optional executable; no owned-PID filter replaces it.",
+        "The returned listener set still includes every owner of the selected CDP port across all addresses/families, including a foreign owner that must force refusal. No owner-PID or loopback-only filter is allowed.",
+        "The ordered observations remain explicitly non-atomic. Existing envelope parsing, malformed-result refusal, executable failure identity and no fallback/no retry semantics remain unchanged.",
+        "Every call launches a new observation. No persistent cached process/listener data, TTL or retained successful ownership is introduced.",
+        "Missing listeners must preserve the caller's original empty/refusal behavior; no blanket error suppression may turn a provider/API failure into an empty result."
+      ],
+      "provenChange": "The present query contains a client-side port filter over the listener query output. Moving that selection into an equivalent provider query can reduce returned/filtering work if the API supports equivalent semantics.",
+      "unproven": [
+        "The retained timings do not identify interpreter startup, CIM enumeration, NetTCPIP module/provider, serialization or scheduling as the dominant subcost.",
+        "An equivalent parameterization may change no-match or access-denied behavior; current repository tests do not establish a new query's actual Windows API semantics.",
+        "Potential speedup may be small or zero. No source-only result proves that either architecture will meet its original 10-second phase.",
+        "The difference between one process-only interval and a different combined interval is not a valid component benchmark."
+      ],
+      "regression": [
+        "Retain and extend the existing injected-executor tests: exact one invocation per call, process query before listener query, different consecutive results actually observed, no cached return, malformed/extra-key envelopes rejected, original executor error identity and no retry.",
+        "Establish equivalent real Windows behavior for no listeners, one/multiple same-port owners, duplicate reported owners, unrelated listening ports, foreign owner, unavailable provider, access errors and malformed/truncated output.",
+        "Preserve all unchanged full-census identity/lineage/orphan/listener checks, including optional executable for unrelated system rows and exact owned executable requirements at their original uses.",
+        "If this candidate is selected later, retain separate original per-query intervals on each architecture and complete whole-flow evidence under unchanged budgets. A synthetic command-string test is not performance or native compatibility proof."
+      ],
+      "coverage": "A per-call query improvement could affect both the seven guarded click boundaries and the earlier ARM Refresh phase. That is a prospective reachability fact, not measured benefit."
+    },
+    {
+      "id": "C",
+      "name": "Retain a separate primary-failure artifact before cleanup and rehashing",
+      "status": "CONCRETE_RETENTION_SHAPE_NOT_SELECTED_OR_AUTHORED",
+      "preimages": [
+        "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "076fbd26bac85c4195312a83c1ae78067a8d742e"
+      ],
+      "sourceBoundary": "nativeWindowsAppGate.mjs:575-587, before the existing finally at588; final qualified receipt remains at641. The existing outside-controller-sandbox path assertion is at62-64.",
+      "shape": "On an already-caught primary failure, make one bounded exclusive write of a separate small diagnostic checkpoint outside the removable controller sandbox before any awaited Quit, witness closure, log closure or final rehash. Preserve the existing bounded stdout failure projection and unchanged primary error. Do not serialize the large full proof, copy full source/package inventories, or repeat a census. The checkpoint is explicitly incomplete and distinct from the final receipt.",
+      "retainAtThatPoint": [
+        "Original source/run identity, reached phase, already established deadline/elapsed observations, primary error and truncation flags.",
+        "Closed bounded projections of already captured controller/driver/Main/Host identities and existing counts; a source/input evidence identity if already available, without new hashing or scanning.",
+        "Selected already-retained bounded census timing diagnostics and retryUiObservation, preserving their non-atomic meaning and explicit limits/omissions.",
+        "Any already observed result included is labeled by its reached stage; no new read, probe, UI action or native witness query is used to fill gaps."
+      ],
+      "mustRemainUnknown": [
+        "Final ordinary app exit/Browser.close acknowledgement unless already observed.",
+        "Final native witness disposal, complete source-after or package/input preservation unless already observed.",
+        "Any final process/listener drain or terminal peer/model/vendor counts not yet read.",
+        "Original UI Stop completion and full qualification that the failed phase never reached."
+      ],
+      "preserved": [
+        "No controller deadline changes or extra cleanup authority.",
+        "No original failure is replaced by a diagnostic serialization/write error; record a bounded retention error if possible and continue the original cleanup path.",
+        "No extra provider/native witness queries are made to populate the checkpoint.",
+        "The checkpoint cannot set PASS or stand in for the final receipt, source-after proof or ordinary cleanup.",
+        "Final write-once receipt and all original PASS conditions remain unchanged."
+      ],
+      "regression": [
+        "Extend the existing actual catch-slice behavioral test so the diagnostic write occurs before any cleanup await and exactly once, preserves primary error identity, and records absent terminal facts as unknown.",
+        "Serialization/write failure, partial sink behavior and bound overflow must not replace the original failure or skip cleanup. File path must remain outside the sandbox and use exclusive creation.",
+        "Model a cleanup promise that never settles: the early checkpoint must already exist while no final receipt or qualification is manufactured.",
+        "A later separately authorized native controller test can exercise termination during pending cleanup and verify artifact survival outside the deleted sandbox. A fake timer or source-slice test alone cannot prove OS flush/durability."
+      ],
+      "limits": "This improves evidence survival for the known reached ARM catch. It does not repair readiness or prove the exact operation pending at native emergency. It cannot guarantee a disk write will complete if the process is terminated before or during that write."
+    },
+    {
+      "id": "D",
+      "name": "Carry the original controller deadline into child admission",
+      "status": "BROADER_SEPARATE_CONTROL_DESIGN_NOT_A_SELECTED_NARROW_FIX",
+      "preimages": [
+        "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+        "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+      ],
+      "sourceBoundary": "gateController.cpp: resume/original120000ms wait; nativeWindowsAppGate.mjs:43-46 argument contract, preparation before350, remaining/begin/within:121-147, Quit:308-345 and finally588-641.",
+      "shape": "If separately selected, expose an authenticated original parent-controlled remaining-time/deadline capability before preparation and cap later child admissions and cleanup to that unchanged absolute controller envelope. Reserve room for already-required evidence and cleanup by refusing new work earlier; do not extend the controller or any original phase.",
+      "preserved": [
+        "The native120s window is one original deadline and never restarts after preparation or failure.",
+        "Refresh/Retry/Stop remain at most their original10s and all original assertions stay inside their phase.",
+        "Cleanup remains original owned-handle/job work; emergency stays failure even after zero membership.",
+        "An exhausted child must classify incomplete/unknown rather than claim it completed obligations it could not admit."
+      ],
+      "requiredBeforeSelection": [
+        "The current six-argument gate contract does not carry a native monotonic deadline. A correct cross-process clock/protocol design is required.",
+        "Node performance.now(), wall timestamps and native GetTickCount64 cannot be treated as an interchangeable origin merely by subtracting observed log times.",
+        "Changing JS300s to120s at its current late start still ignores preparation and is not an alignment fix.",
+        "The diagnostic checkpoint in C is independently useful and does not require claiming that a new deadline protocol exists."
+      ],
+      "regression": [
+        "Use preparation delays and a parent deadline that remains fixed; all child phase/cleanup admissions must use only its original remainder.",
+        "Refuse stale/malformed deadline tokens and clock-origin mismatch without starting work or extending cleanup.",
+        "Prove final receipt/ordinary shutdown paths preserve original qualification and emergency remains unqualified.",
+        "Native handle/Job evidence is required for actual Windows timing qualification; source reasoning cannot supply it."
+      ]
+    }
+  ],
+  "invariants": [
+    "Preserve fresh complete process census and exact PID/birth identity; no PID-only authority.",
+    "Preserve original controller/driver parent, Main family lineage, census bounds and orphan ambiguity refusal.",
+    "Preserve all selected-port listener owners and same original birth joins; no foreign listener omission.",
+    "Preserve original renderer URL, preload and backend currentness before/after async public reads, whole binding equality and both original process row predicates/full values.",
+    "Preserve one physical Refresh, one physical Retry and original stability/ownership checks around input; never replay an uncertain action.",
+    "Preserve both original UI Stop receipts, native absence and changed-ref proofs, neighbor-survival proof and original query-witness limits.",
+    "Preserve original 10s phases,120s controller authority, ordinary Main exit, complete process/listener drain, source/input preservation and terminal receipt requirements.",
+    "Preserve finite TEST peers and zero real Claude/Codex executions; no version/status fallback to real vendors."
+  ],
+  "qualificationPlan": {
+    "selectionBoundary": "Root must choose any future concrete source/control work. This advisory is not an R1/R2 acceptance or authorization to run it.",
+    "sourceRegression": "Use behavior tests against the actual changed query/composition/catch sections. Preserve existing complete test files and their meaningful cases; do not count a textual assertion or duplicate model implementation as regression proof.",
+    "clockRegression": "Use finite controlled observation costs and an unchanged original deadline. Crossing the cutoff must refuse before renderer evaluation or input, including after a slow synchronous ownership acquisition. No TTL, deadline restart or cached proof.",
+    "nativeCompatibility": "For a selected query change, establish exact Windows empty/error/listener-set/process-row semantics using finite owned fixtures before claiming equivalence. Record subprocess/provider/parsing timings if needed to locate actual cost; do not infer them from unrelated aggregate intervals.",
+    "fullFlow": "A later separately selected original full packaged Windows flow must pass on both architectures with one Main, one initial Open/input, exactly one Refresh/Retry, one actual Host successor, both exact UI Stops, ordinary app/witness/Job cleanup, unchanged source/input artifacts and complete final receipts within original budgets.",
+    "noPromotion": "A paired-row unit test, early failure artifact, controller drain or separate preceding packaged OpenCode V2 PASS cannot qualify the original Windows UI journey.",
+    "evidence": "Retain complete raw process/listener observations, call/stage timing, identities, row/currentness evidence, original error, ordinary cleanup and outer controller result separately. A diagnostic failure snapshot remains explicitly incomplete."
+  },
+  "checks": [
+    {
+      "id": "F01",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "The exact frozen source and two full test bodies join the ten listed source identities; the full prior artifact custody report is reused without live CI reads."
+    },
+    {
+      "id": "F02",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "Original x64 contains eleven combined process/listener calls plus one process-only call in Retry, totaling8754.6225ms."
+    },
+    {
+      "id": "F03",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "The first seven acquisitions are the mandatory original click boundaries and total5165.1359ms; treating them as removable duplicates would weaken input authority."
+    },
+    {
+      "id": "F04",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "The final original x64 acquisition crosses the10s deadline; refusal occurs before its second row DOM evaluation."
+    },
+    {
+      "id": "F05",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "Post-Retry rows are currently sequential while outage rows already use one paired synchronous expression."
+    },
+    {
+      "id": "F06",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "The final same-Main census and immediately following screenshot census repeat process acquisition without an intervening application action."
+    },
+    {
+      "id": "F07",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "Current process/listener batching is already one interpreter; the listener port filter is presently client-side."
+    },
+    {
+      "id": "F08",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "Current measurement does not partition query cost or prove speedup for any proposed query replacement."
+    },
+    {
+      "id": "F09",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "Existing platform tests cover freshness, ordering, malformed envelopes and preserved executor failure; they do not prove native performance."
+    },
+    {
+      "id": "F10",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "Existing native-process UI tests contain an actual source-slice paired-row regression and primary-failure-before-cleanup regression."
+    },
+    {
+      "id": "F11",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "ARM reached Refresh failure, not Retry. Retry-only row optimization cannot itself repair that observed earlier phase."
+    },
+    {
+      "id": "F12",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "The native120s clock includes child preparation, while the JS300s outer clock starts after preparation."
+    },
+    {
+      "id": "F13",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "The primary failure projection precedes cleanup, but the only full receipt write follows cleanup and rehashing."
+    },
+    {
+      "id": "F14",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "ARM has no final receipt; pending cleanup operation, ordinary exit, source-after preservation and final counters remain unknown."
+    },
+    {
+      "id": "F15",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "Emergency-fail99 with zero Job membership does not establish voluntary Node99 or ordinary successful cleanup."
+    },
+    {
+      "id": "F16",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "The candidate options preserve the stated original assertions by construction requirements, but no candidate is authored, selected, applied, executed or qualified."
+    },
+    {
+      "id": "F17",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "Every selected gate listener call resolves to the CDP9222 universe; required process/lineage/orphan authority remains all-process and cannot be narrowed."
+    },
+    {
+      "id": "F18",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "Intervening async/native/public reads separate early readiness from final renderer-row proof; an early-only combined sample does not preserve the original final boundary."
+    },
+    {
+      "id": "F19",
+      "result": "SUPPORTED_BY_STATIC_SOURCE_OR_RETAINED_EVIDENCE",
+      "claim": "A joint predicate at the final boundary may strengthen current observations, but preserving the early readiness barrier gives no additional census saving beyond pairing the rows."
+    }
+  ],
+  "unavailableEvidence": [
+    "No current executable venue or original new performance observation was used.",
+    "No ARM full receipt exists, so its census call count/durations and last actual DOM value cannot be reconstructed.",
+    "No sample partitions PowerShell startup, Win32_Process work, listener-provider/module cost, JSON or scheduling.",
+    "No measured cost exists for the x64 final Main/screenshot operations that the failure never reached.",
+    "The exact operation pending when the ARM controller terminated the job is unknown.",
+    "No approved replacement query command or cross-process native deadline protocol exists in this advisory.",
+    "No equivalent one-wait reordering across the existing native/public checks has been authored or proved; such reordering must preserve final currentness and one-time fixture effects."
+  ],
+  "peerCoordination": {
+    "agent": "/root/red_publication_recovery",
+    "kind": "concise independent source slice, not a separately retained peer report",
+    "received": true,
+    "summary": "After full prior advisory/source reads, independently agrees that native120s starts at original resume, full receipt follows cleanup/rehash, a separate small exclusive incomplete checkpoint before cleanup is supported, no new census or large full-proof serialization should occur there, and a parent-derived deadline protocol is a broader separate design. No contrary finding and no executable fix selected.",
+    "authority": "Primary conclusions here remain independently supported by the listed exact sources and retained logs; no runtime result is attributed to this peer message."
+  },
+  "actions": {
+    "bareAdvisoryBlobOnly": true,
+    "executablePostimagesAuthored": false,
+    "fixSelected": false,
+    "shell": false,
+    "localRuntime": false,
+    "vendorProbes": false,
+    "sourceOrControlsMutation": false,
+    "refsOrPRMutation": false,
+    "CIActions": false,
+    "livePolling": false,
+    "originalAttemptReplayed": false
+  },
+  "supersedes": {
+    "bytes": 45353,
+    "sha256": "8703cf2af2458e5b2b81192b64a9203252357529522f0c6d6b12f634d45e5865",
+    "gitBlob": "20049de579930eb7cc7f10437ed3f809c971a69d",
+    "reason": "Expanded before completed self-readback to address root's ready-UI-plus-both-row and exact listener-universe questions, and to include the received independent ARM slice."
+  },
+  "listenerClosure": {
+    "verdict": "The selected gate requires the complete listening-owner universe of CDP port9222, plus a full unfiltered process census. It does not require a TCP listener census over every port owned by the family.",
+    "primarySourceChain": [
+      {
+        "path": "nativeWindowsAppGate.mjs",
+        "lines": [
+          204,
+          211
+        ],
+        "fact": "assertOwnedRenderer invokes windowsProcessListenerSnapshot with no port argument and validates every returned PID against fresh process birth plus retained Main lineage."
+      },
+      {
+        "path": "platform.mjs",
+        "lines": [
+          136,
+          149
+        ],
+        "fact": "windowsProcessListenerSnapshot defaults port9222 and passes that exact selected port to windowsListenerQuery."
+      },
+      {
+        "path": "platform.mjs",
+        "lines": [
+          8,
+          11
+        ],
+        "fact": "Current listener query selects State Listen and then filters LocalPort equal to the selected port before projecting OwningProcess."
+      },
+      {
+        "path": "nativeWindowsAppGate.mjs",
+        "lines": [
+          214,
+          354
+        ],
+        "fact": "HTTP readback is fixed at127.0.0.1:9222 and the original Main starts with --remote-debugging-port=9222."
+      },
+      {
+        "path": "nativeWindowsAppGate.mjs",
+        "lines": [
+          322,
+          334,
+          368
+        ],
+        "fact": "Browser-close ownership, final drain and startup ownership each call listeners() with its9222 default."
+      },
+      {
+        "path": "platform.mjs",
+        "lines": [
+          118,
+          125,
+          157,
+          175
+        ],
+        "fact": "listeners uses the same selected-port query; initial port-availability checks target that port and bind both127.0.0.1 and::1."
+      },
+      {
+        "path": "packaged.mjs",
+        "lines": [
+          537,
+          545
+        ],
+        "fact": "Drain requires no original retained PID/birth still alive AND no PIDs in the caller-supplied selected-port listener set."
+      },
+      {
+        "path": "packaged.mjs",
+        "lines": [
+          549,
+          568
+        ],
+        "fact": "Browser-close endpoint admission explicitly requires ws, port9222, loopback host and original browser endpoint shape, with repeated original ownership checks."
+      },
+      {
+        "path": "nativeWindowsAppFixture.ts",
+        "lines": [
+          345,
+          478
+        ],
+        "fact": "Original provider/leaf service survival and Stop qualification use retained native PID/birth HANDLE witnesses and receipts; they do not turn the CDP listener query into an all-owned-ports census."
+      }
+    ],
+    "equivalenceConditions": [
+      "Retain all Listen records for the selected local port across addresses and address families. Do not restrict to127.0.0.1, a captured PID list or only the expected Main; a foreign owner must still be returned and refused.",
+      "Preserve complete fresh Win32_Process acquisition and every controller/driver/Main/lineage/orphan validation. Filtering the listener universe does not authorize filtering processes.",
+      "Preserve deduplication and empty-set behavior; native query failure, malformed output or access/provider errors must not be silently converted into absence.",
+      "Get-NetTCPConnection provider-side LocalPort+Listen parameters are a concrete candidate selection shape. The current sources prove the required universe, not native command equivalence or measured speed.",
+      "platform.windowsCleanupEvidence has a separate diagnostic query for all connection states on port9222; it is not imported or called by this gate. This advisory does not select changes to it."
+    ]
+  }
+}
