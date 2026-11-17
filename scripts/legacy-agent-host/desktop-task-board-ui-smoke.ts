@@ -459,7 +459,7 @@ export async function runDesktopTaskBoardUiSmoke(
         return buttons.length===1?buttons[0]:null;
       `)};
     })()`,
-    'clear original clarification once'
+    'clear original clarification once', undefined, undefined, { waitForFinalReadiness: true }
   );
   await ui.waitRead(
     `(async()=>Boolean(await ${desktopTaskBoardAssignmentReadyExpression(options.handleId, taskId, { contextId, surfaceId })}) &&

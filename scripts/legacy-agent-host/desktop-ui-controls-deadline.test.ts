@@ -200,3 +200,101 @@ test('generic UI hover preserves one movement after three timely stable points',
     }]);
   });
 });
+
+const readyClickFrames: readonly Frame[] = [
+  { settlesAt: 0, value: point },
+  { settlesAt: 0, value: point },
+  { settlesAt: 100, value: point },
+  { settlesAt: 200, value: point },
+];
+
+test('original final click waits passively for the same pending owner without repeating input', { timeout: 5000 }, async t => {
+  await withReadFixture(t, [
+    ...readyClickFrames,
+    { settlesAt: 200, value: null },
+    { settlesAt: 300, value: point },
+  ], async f => {
+    await f.ui.clickExpression(f.expression, f.label, undefined, undefined, { waitForFinalReadiness: true });
+    assert.equal(f.reads.length, 6, 'only the same exact expression is read after pending ownership');
+    assert.deepEqual(f.ticks, [100, 100, 100], 'one final passive poll uses the existing cadence');
+    assert.deepEqual(f.sends, [
+      { method: 'Page.bringToFront', params: undefined },
+      { method: 'Input.dispatchMouseEvent', params: { type: 'mouseMoved', x: 100, y: 100 } },
+      { method: 'Input.dispatchMouseEvent', params: { type: 'mousePressed', x: 100, y: 100, button: 'left', clickCount: 1 } },
+      { method: 'Input.dispatchMouseEvent', params: { type: 'mouseReleased', x: 100, y: 100, button: 'left', clickCount: 1 } },
+    ], 'one original hover and one original press/release');
+    assert.equal(f.steps.filter(step => step.action === 'mouseClick').length, 1);
+  });
+});
+
+for (const late of [30_000, 30_001]) {
+  test(`original final pending owner refuses a ready result at ${late} without extending its first-read deadline`, { timeout: 5000 }, async t => {
+    await withReadFixture(t, [
+      ...readyClickFrames,
+      { settlesAt: 200, value: null },
+      { settlesAt: late, value: point },
+    ], async f => {
+      await assert.rejects(f.ui.clickExpression(f.expression, f.label, undefined, undefined, { waitForFinalReadiness: true }), {
+        message: 'UI read timed out: ' + f.label + ' final target; no mutation retry',
+      });
+      assert.equal(f.reads.length, 6, 'no extra lookup after the late original response');
+      assert.deepEqual(f.ticks, [100, 100, 100]);
+      assert.equal(f.sends.some(command => command.params?.type === 'mousePressed'), false);
+      assert.equal(f.sends.some(command => command.params?.type === 'mouseReleased'), false);
+      assert.equal(f.steps.some(step => step.action === 'mouseClick'), false);
+    });
+  });
+}
+
+test('original final pending owner stops at its remaining deadline without one more lookup', { timeout: 5000 }, async t => {
+  await withReadFixture(t, [
+    ...readyClickFrames,
+    { settlesAt: 29_950, value: null },
+  ], async f => {
+    await assert.rejects(f.ui.clickExpression(f.expression, f.label, undefined, undefined, { waitForFinalReadiness: true }), {
+      message: 'UI read timed out: ' + f.label + ' final target; no mutation retry',
+    });
+    assert.equal(f.reads.length, 5);
+    assert.deepEqual(f.ticks, [100, 100, 50], 'only the remaining original budget can be consumed');
+    assert.equal(f.sends.some(command => command.params?.type === 'mousePressed'), false);
+    assert.equal(f.steps.some(step => step.action === 'mouseClick'), false);
+  });
+});
+
+test('original click does not reset its first-read deadline for a later stability phase', { timeout: 5000 }, async t => {
+  await withReadFixture(t, [
+    { settlesAt: 29_800, value: point },
+    { settlesAt: 29_800, value: point },
+    { settlesAt: 29_900, value: point },
+  ], async f => {
+    await assert.rejects(f.ui.clickExpression(f.expression, f.label), /UI read timed out/);
+    assert.equal(f.reads.length, 3, 'no second stable lookup after the initial absolute deadline');
+    assert.equal(f.sends.some(command => command.params?.type === 'mousePressed'), false);
+  });
+});
+
+test('original final pending owner cannot poll after its captured renderer is revoked', { timeout: 5000 }, async t => {
+  const refusal = new Error('TEST original renderer ownership revoked');
+  let reads = 0, current = true;
+  const sends: { method: string; params?: Record<string, unknown> }[] = [];
+  const expression = 'TEST_originalOwnerAndHitTestedTarget()';
+  const ui = createDesktopUiControls({
+    async evaluate(actual) {
+      assert.equal(actual, expression);
+      reads++;
+      if (reads === 5) { current = false; return null; }
+      assert.ok(reads < 5, 'no replacement target is observed');
+      return point;
+    },
+    async send(method, params) { sends.push({ method, params }); return {}; },
+  }, {
+    assertOwnedRenderer() { if (!current) throw refusal; },
+    step() {},
+  });
+  await assert.rejects(ui.clickExpression(expression, 'TEST original revoked owner', undefined, undefined,
+    { waitForFinalReadiness: true }), error => error === refusal);
+  assert.equal(reads, 5);
+  assert.equal(sends.some(command => command.params?.type === 'mousePressed'), false);
+  assert.equal(sends.some(command => command.params?.type === 'mouseReleased'), false);
+  t.mock.restoreAll();
+});

@@ -245,9 +245,20 @@ export function createDesktopUiControls(
     expression: string,
     label: string,
     selector?: string,
-    text?: string
+    text?: string,
+    readiness?: { waitForFinalReadiness: true }
   ): Promise<void> => {
     await cdp.send('Page.bringToFront');
+    // Every passive phase spends the original first-read budget, including a
+    // temporarily pending owner at the final lookup. Never reset it after hover.
+    const readDeadline = Date.now() + 30_000;
+    const assertReadDeadline = (): void => {
+      if (Date.now() >= readDeadline) {
+        // Preserve any stricter caller-owned cutoff or renderer refusal.
+        options.assertOwnedRenderer();
+        throw new Error(`UI read timed out: ${label} final target; no mutation retry`);
+      }
+    };
     const geometryTrace: { samples: Record<string, unknown>[]; overflow: boolean } = { samples: [], overflow: false };
     const observeGeometry = (phase: 'initial' | 'after-hover' | 'stable' | 'final', point: Record<string, unknown>): void => {
       try {
@@ -310,7 +321,7 @@ export function createDesktopUiControls(
         : expression;
       let facts: Record<string, boolean | number> | undefined;
       try {
-        const observed = record(await waitRead(readExpression, phase, 30_000, value => {
+        const observed = record(await waitRead(readExpression, phase, readDeadline - Date.now(), value => {
           if (value && typeof value === 'object' && !Array.isArray(value)) {
             const row = value as Record<string, unknown>;
             if (row.unavailableTarget === true) {
@@ -373,7 +384,19 @@ export function createDesktopUiControls(
       assert.equal(typeof point.y, 'number');
       options.assertOwnedRenderer();
       remainingPointSamples--;
-      const finalPoint = record(await cdp.evaluate(expression));
+      assertReadDeadline();
+      let finalValue = await cdp.evaluate(expression);
+      // A null owner observation is still pending, unlike an explicit unavailable
+      // target or transport rejection. Re-read only this original expression.
+      while (readiness?.waitForFinalReadiness && finalValue === null && Date.now() < readDeadline) {
+        options.assertOwnedRenderer();
+        await new Promise<void>((done) => setTimeout(done, Math.min(100, readDeadline - Date.now())));
+        assertReadDeadline();
+        options.assertOwnedRenderer();
+        finalValue = await cdp.evaluate(expression);
+      }
+      assertReadDeadline();
+      const finalPoint = record(finalValue);
       observeGeometry('final', finalPoint);
       let resample = false;
       try {
@@ -403,6 +426,7 @@ export function createDesktopUiControls(
     }
     assert.ok(stableSamples === 2, 'Original UI target did not settle before one click');
     options.assertOwnedRenderer();
+    assertReadDeadline();
     step({
       action: 'mouseClick',
       label,
