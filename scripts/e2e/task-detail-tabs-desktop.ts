@@ -522,15 +522,15 @@ try {
     'fixture kanban file lives under <claudeDir>/teams/<team>'
   );
   const defaultsFile = join(claudeDir, 'review-flow-defaults.json');
-  const saveDefaultFlow = async (flow: 'agent_approval' | 'human_approval'): Promise<void> => {
+  const saveDefaultFlow = async (
+    flow: 'agent_approval' | 'human_approval' | 'lead_then_human'
+  ): Promise<void> => {
     await cdp!.evaluate("window.__agentTeamsDevStore.getState().openSettingsTab('reviewFlow')");
     await until(() => cdp!.evaluate(
       "!!document.querySelector('[data-testid=\"review-flow-settings-page\"] input[type=\"radio\"][data-testid=\"review-flow-settings-human_approval\"]:not(:disabled)')"
     ), 'review flow settings tab loaded with the default scope selected');
     await cdp!.evaluate(
-      flow === 'human_approval'
-        ? "document.querySelector('[data-testid=\"review-flow-settings-human_approval\"]')?.click()"
-        : "document.querySelector('[data-testid=\"review-flow-settings-agent_approval\"]')?.click()"
+      `document.querySelector('[data-testid="review-flow-settings-${flow}"]')?.click()`
     );
     await until(() => cdp!.evaluate(
       "(()=>{const b=document.querySelector('[data-testid=\"review-flow-settings-save\"]');return b instanceof HTMLButtonElement&&!b.disabled;})()"
@@ -574,6 +574,25 @@ try {
   await until(() => cdp!.evaluate(
     "!document.querySelector('[data-testid=\"kanban-review-flow-panel\"]')"
   ), 'review flow panel closes on Escape');
+  // Third flow: the lead signs off after the reviewer. A following team resolves to it too.
+  await saveDefaultFlow('lead_then_human');
+  await navigateToTeam();
+  await openReviewFlowPanel('columns');
+  await until(() => cdp!.evaluate(
+    `(()=>{
+      const sw = document.querySelector('[data-testid="kanban-review-flow-use-default"]');
+      const radio = document.querySelector('[data-testid="kanban-review-flow-lead_then_human"]');
+      return sw?.getAttribute('aria-checked') === 'true' && radio instanceof HTMLInputElement && radio.checked;
+    })()`
+  ), 'a team without an override resolves to the default lead_then_human');
+  for (const type of ['keyDown', 'keyUp'] as const) {
+    await cdp.send('Input.dispatchKeyEvent', {
+      type, key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
+    });
+  }
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"kanban-review-flow-panel\"]')"
+  ), 'review flow panel closes on Escape after the lead sign-off default');
   await saveDefaultFlow('agent_approval');
   await navigateToTeam();
 

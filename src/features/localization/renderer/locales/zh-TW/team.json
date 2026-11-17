@@ -1252,6 +1252,10 @@
       "awaitingLead": "等待團隊負責人的澄清",
       "awaitingUser": "等待您的澄清"
     },
+    "leadSignoff": {
+      "badge": "組長簽核",
+      "hint": "任務在進入「完畢」之前需由組長簽核。"
+    },
     "description": {
       "add": "點選新增描述…",
       "edit": "編輯描述",
@@ -1333,6 +1337,7 @@
       "unassignedFrom": "未分配自",
       "ownerChanged": "所有者已變更",
       "reviewRequested": "已請求審查",
+      "leadSignoffRequested": "已請求組長簽核",
       "reviewStarted": "審查開始",
       "changesRequested": "要求變更",
       "approved": "已核准",
@@ -2745,6 +2750,10 @@
       "human_approval": {
         "label": "由我做最終核准",
         "description": "審查者完成審查後，任務會以「已審查」狀態停留在「完畢」。只有您能將它移至「已核准」。"
+      },
+      "lead_then_human": {
+        "label": "先由組長簽核，最後由我核准",
+        "description": "審查者完成後，組長以第二次審查簽核。之後任務會停留在「完畢」等您。只有您能將它移至「已核准」。"
       }
     },
     "humanApprovalNote": "在此模式下，代理永遠不能將任務移至「已核准」，只有您可以。",

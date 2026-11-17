@@ -1248,6 +1248,10 @@
       "awaitingLead": "Awaiting clarification from team lead",
       "awaitingUser": "Awaiting clarification from you"
     },
+    "leadSignoff": {
+      "badge": "Lead sign-off",
+      "hint": "The team lead signs off on this task before it reaches Done."
+    },
     "description": {
       "add": "Click to add description...",
       "edit": "Edit description",
@@ -1329,6 +1333,7 @@
       "unassignedFrom": "Unassigned from",
       "ownerChanged": "Owner changed",
       "reviewRequested": "Review requested",
+      "leadSignoffRequested": "Lead sign-off requested",
       "reviewStarted": "Review started",
       "reviewCompleted": "AI review completed",
       "humanApproved": "Approved by user",
@@ -2744,6 +2749,10 @@
       "human_approval": {
         "label": "I give final approval",
         "description": "The reviewer finishes the review and the task stays in Done as reviewed. Only you move it to Approved."
+      },
+      "lead_then_human": {
+        "label": "Lead signs off, then I approve",
+        "description": "After the reviewer, the team lead signs off in a second review. Then the task waits in Done for you. Only you move it to Approved."
       }
     },
     "humanApprovalNote": "In this mode agents can never move a task to Approved. Only you can.",

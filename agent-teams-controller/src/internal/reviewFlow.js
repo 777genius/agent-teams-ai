@@ -13,7 +13,12 @@ const { writeJsonFileSync } = require('./atomicFile.js');
 
 const REVIEW_FLOW_AGENT_APPROVAL = 'agent_approval';
 const REVIEW_FLOW_HUMAN_APPROVAL = 'human_approval';
-const REVIEW_FLOWS = Object.freeze([REVIEW_FLOW_AGENT_APPROVAL, REVIEW_FLOW_HUMAN_APPROVAL]);
+const REVIEW_FLOW_LEAD_THEN_HUMAN = 'lead_then_human';
+const REVIEW_FLOWS = Object.freeze([
+  REVIEW_FLOW_AGENT_APPROVAL,
+  REVIEW_FLOW_HUMAN_APPROVAL,
+  REVIEW_FLOW_LEAD_THEN_HUMAN,
+]);
 const DEFAULT_REVIEW_FLOW = REVIEW_FLOW_AGENT_APPROVAL;
 const MAX_REVIEW_FLOW_PROMPT_LENGTH = 1000;
 const REVIEW_FLOW_DEFAULTS_FILE = 'review-flow-defaults.json';
@@ -70,8 +75,18 @@ function resolvePolicy(defaults, override) {
     : { reviewFlow: defaults.reviewFlow, reviewFlowPrompt: defaults.reviewFlowPrompt, source: 'default' };
 }
 
+/** Final acceptance belongs to the human: agents may never move a task to Approved. */
 function isHumanApproval(policy) {
-  return Boolean(policy) && policy.reviewFlow === REVIEW_FLOW_HUMAN_APPROVAL;
+  return (
+    Boolean(policy) &&
+    (policy.reviewFlow === REVIEW_FLOW_HUMAN_APPROVAL ||
+      policy.reviewFlow === REVIEW_FLOW_LEAD_THEN_HUMAN)
+  );
+}
+
+/** The reviewer's completed review is followed by a Lead sign-off cycle before the human. */
+function isLeadSignoff(policy) {
+  return Boolean(policy) && policy.reviewFlow === REVIEW_FLOW_LEAD_THEN_HUMAN;
 }
 
 function getDefaultsPath(claudeDir) {
@@ -118,7 +133,9 @@ module.exports = {
   REVIEW_FLOW_AGENT_APPROVAL,
   REVIEW_FLOW_DEFAULTS_FILE,
   REVIEW_FLOW_HUMAN_APPROVAL,
+  REVIEW_FLOW_LEAD_THEN_HUMAN,
   isHumanApproval,
+  isLeadSignoff,
   isReviewFlow,
   normalizeReviewFlowPrompt,
   parseReviewFlowSettings,

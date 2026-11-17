@@ -203,16 +203,27 @@ const EventContent = ({
       );
     case 'review_requested':
       return (
-        <span className="flex items-center gap-1">
-          <Eye size={10} className="text-purple-400" />
-          {t('taskDetail.workflowTimeline.reviewRequested')}
-          {event.reviewer ? (
-            <MemberBadge
-              name={event.reviewer}
-              color={memberColorMap?.get(event.reviewer)}
-              size="sm"
-              hideAvatar
-            />
+        <span className="flex min-w-0 flex-col gap-1">
+          <span className="inline-flex items-center gap-1">
+            <Eye size={10} className="text-purple-400" />
+            {t(
+              event.stage === 'lead_signoff'
+                ? 'taskDetail.workflowTimeline.leadSignoffRequested'
+                : 'taskDetail.workflowTimeline.reviewRequested'
+            )}
+            {event.reviewer ? (
+              <MemberBadge
+                name={event.reviewer}
+                color={memberColorMap?.get(event.reviewer)}
+                size="sm"
+                hideAvatar
+              />
+            ) : null}
+          </span>
+          {event.stage === 'lead_signoff' && event.note ? (
+            <span className="whitespace-pre-wrap break-words text-[var(--color-text-muted)]">
+              {event.note}
+            </span>
           ) : null}
         </span>
       );

@@ -220,9 +220,10 @@ function getActiveReviewStart(
         : null;
     }
     if (
+      event.type === 'review_requested' ||
       event.type === 'review_approved' ||
-        event.type === 'review_completed' ||
-        event.type === 'human_approved' ||
+      event.type === 'review_completed' ||
+      event.type === 'human_approved' ||
       event.type === 'review_changes_requested' ||
       (event.type === 'status_changed' &&
         (event.to === 'in_progress' || event.to === 'pending' || event.to === 'deleted')) ||
@@ -420,9 +421,7 @@ export class TeamTaskActivityIntervalService {
 
   private evictOldestTaskFileCacheEntry(): boolean {
     const oldestKey = this.taskFileCache.keys().next().value;
-    if (oldestKey === undefined) {
-      return false;
-    }
+    if (oldestKey === undefined) return false;
     this.deleteCachedTaskFile(oldestKey);
     return true;
   }

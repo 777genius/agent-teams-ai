@@ -19,6 +19,7 @@ import {
   displayMemberName,
   REVIEW_STATE_DISPLAY,
 } from '@renderer/utils/memberHelpers';
+import { getCurrentReviewStage } from '@shared/utils/taskHistory';
 import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
   isTeamTaskFinishedForDependency,
@@ -173,6 +174,19 @@ export const TaskDetailHeader = ({
           {formatTaskDisplayLabel(currentTask)}
         </Badge>
         {reviewBadge}
+        {kanbanColumn === 'review' && getCurrentReviewStage(currentTask) === 'lead_signoff' ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                data-testid="task-lead-signoff-chip"
+                className="inline-flex rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400"
+              >
+                {t('taskDetail.leadSignoff.badge')}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{t('taskDetail.leadSignoff.hint')}</TooltipContent>
+          </Tooltip>
+        ) : null}
         {isTeamTaskNeedsFixActionable(currentTask) ? (
           <span
             className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${REVIEW_STATE_DISPLAY.needsFix.bg} ${REVIEW_STATE_DISPLAY.needsFix.text}`}
