@@ -28,6 +28,7 @@ interface TeamProjectContextIndex {
   version: 1;
   logicalTeamName: string;
   deleting?: boolean;
+  softDeleting?: boolean;
   contexts: PersistedTeamWorkContext[];
 }
 
@@ -118,10 +119,14 @@ function validateIndex(value: unknown, logicalTeamName: string): TeamProjectCont
   if (source.deleting !== undefined && typeof source.deleting !== 'boolean') {
     throw new TeamProjectContextUnavailableError('Invalid project-context deletion state');
   }
+  if (source.softDeleting !== undefined && typeof source.softDeleting !== 'boolean') {
+    throw new TeamProjectContextUnavailableError('Invalid project-context trash state');
+  }
   return {
     version: 1,
     logicalTeamName,
     ...(source.deleting ? { deleting: true } : {}),
+    ...(source.softDeleting ? { softDeleting: true } : {}),
     contexts,
   };
 }
@@ -195,6 +200,35 @@ export class TeamProjectContextRegistry {
     });
   }
 
+  /** Serialize project creation against a logical team move to trash. */
+  async beginSoftDelete(logicalTeamName: string): Promise<void> {
+    await this.assertOwnedDirectory(logicalTeamName);
+    await withFileLock(this.indexPath(logicalTeamName), async () => {
+      await this.assertOwnedDirectory(logicalTeamName);
+      const index = await this.readIndex(logicalTeamName);
+      if (index.deleting) {
+        throw new TeamProjectContextUnavailableError('Permanent deletion is already in progress');
+      }
+      index.softDeleting = true;
+      await this.writeIndex(index);
+    }, { preventLiveOwnerTakeover: true });
+  }
+
+  /** Unfreeze the team after successful restore or rejected trash preflight. */
+  async cancelSoftDelete(logicalTeamName: string): Promise<void> {
+    await this.assertOwnedDirectory(logicalTeamName);
+    await withFileLock(this.indexPath(logicalTeamName), async () => {
+      await this.assertOwnedDirectory(logicalTeamName);
+      const index = await this.readIndex(logicalTeamName);
+      if (index.deleting) {
+        throw new TeamProjectContextUnavailableError('Permanent deletion is already in progress');
+      }
+      if (!index.softDeleting) return;
+      delete index.softDeleting;
+      await this.writeIndex(index);
+    }, { preventLiveOwnerTakeover: true });
+  }
+
   /** Block new reservations before a multi-context permanent deletion starts. */
   async beginPermanentDeletion(logicalTeamName: string): Promise<void> {
     await this.assertOwnedDirectory(logicalTeamName);
@@ -263,8 +297,8 @@ export class TeamProjectContextRegistry {
     await this.assertOwnedDirectory(logicalTeamName);
     const projectKey = await canonicalProjectPath(projectPath);
     const index = await this.readIndex(logicalTeamName);
-    if (index.deleting) {
-      throw new TeamProjectContextUnavailableError('Team permanent deletion is in progress');
+    if (index.deleting || index.softDeleting) {
+      throw new TeamProjectContextUnavailableError('Team is being deleted or moved to trash');
     }
     const row = index.contexts.find((context) => context.projectKey === projectKey);
     if (row?.state === 'ready') await this.assertOwnedDirectory(row.executionTeamName);
@@ -352,9 +386,9 @@ export class TeamProjectContextRegistry {
     return withFileLock(this.indexPath(logicalTeamName), async () => {
       await this.assertOwnedDirectory(logicalTeamName);
       const index = await this.readIndex(logicalTeamName);
-      if (index.deleting) {
+      if (index.deleting || index.softDeleting) {
         throw new TeamProjectContextUnavailableError(
-          'Team permanent deletion is in progress; new project contexts are disabled'
+          'Team deletion or trash operation is in progress; new project contexts are disabled'
         );
       }
       const existing = index.contexts.find((c) => c.projectKey === projectKey);
