@@ -25,6 +25,7 @@ import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
 import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
+import { stopLogicalTeam, projectAliveTeamNames } from './teams/teamContextLifecycle';
 import { buildTeamProgressReporter, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
 import { withTeamLaunchAdmission } from './teams/teamLaunchAdmission';
 import type { ProjectContextProgressMapper } from './teams/teamProjectContextLaunch';
@@ -737,7 +738,9 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_PROCESS_SEND, handleProcessSend);
   ipcMain.handle(TEAM_PROCESS_ALIVE, handleProcessAlive);
   ipcMain.handle(TEAM_ALIVE_LIST, handleAliveList);
-  ipcMain.handle(TEAM_STOP, handleStopTeam);
+  ipcMain.handle(TEAM_STOP, (event, name) =>
+    stopLogicalTeam(name, (target) => handleStopTeam(event, target))
+  );
   ipcMain.handle(TEAM_FORCE_STOP, handleForceStopTeam);
   ipcMain.handle(TEAM_GET_QUEUED_USER_MESSAGES, handleGetQueuedUserMessages);
   ipcMain.handle(TEAM_DISCARD_QUEUED_USER_MESSAGES, handleDiscardQueuedUserMessages);
@@ -1107,7 +1110,6 @@ async function handleCreateInitialGitCommit(
     worktreeGitService.createInitialCommit(validated.value)
   );
 }
-
 async function handleListTeams(_event: IpcMainInvokeEvent): Promise<IpcResult<TeamSummary[]>> {
   setCurrentMainOp('team:list');
   const startedAt = Date.now();
@@ -1129,7 +1131,6 @@ async function handleListTeams(_event: IpcMainInvokeEvent): Promise<IpcResult<Te
     setCurrentMainOp(null);
   }
 }
-
 async function handleGetData(
   _event: IpcMainInvokeEvent,
   teamName: unknown,
@@ -3579,7 +3580,6 @@ async function handleProcessAlive(
     getTeamRuntimeApi().isTeamAlive(validatedTeamName.value!)
   );
 }
-
 async function handleCreateConfig(
   _event: IpcMainInvokeEvent,
   request: unknown
@@ -3845,9 +3845,10 @@ async function handleGetMemberStats(
     getMemberStatsComputer().getStats(vTeam.value!, vMember.value!)
   );
 }
-
 async function handleAliveList(_event: IpcMainInvokeEvent): Promise<IpcResult<string[]>> {
-  return wrapTeamHandler('aliveList', async () => getTeamRuntimeApi().getAliveTeams());
+  return wrapTeamHandler('aliveList', async () =>
+    projectAliveTeamNames(getTeamRuntimeApi().getAliveTeams(), await getTeamDataService().listTeams())
+  );
 }
 
 async function handleLeadActivity(
@@ -3979,7 +3980,6 @@ async function handleSkipMemberForLaunch(
     )
   );
 }
-
 async function handleStopTeam(
   _event: IpcMainInvokeEvent,
   teamName: unknown
