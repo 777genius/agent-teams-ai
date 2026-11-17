@@ -1315,12 +1315,15 @@
       "ownerChanged": "Owner changed",
       "reviewRequested": "Review requested",
       "reviewStarted": "Review started",
+      "reviewCompleted": "AI review completed",
+      "humanApproved": "Approved by user",
       "changesRequested": "Changes requested",
       "approved": "Approved",
       "unknownEvent": "Unknown event"
     },
     "reviewStates": {
       "approved": "Approved",
+      "reviewed": "Reviewed",
       "needsFix": "Needs fix",
       "inReview": "In review"
     }
@@ -2615,6 +2618,25 @@
     }
   },
   "kanban": {
+    "approvalSettings": {
+      "cancel": "Cancel",
+      "flowLegend": "Who gives final approval",
+      "flows": {
+        "agent_approval": {
+          "label": "Agents approve",
+          "description": "The reviewer approves and the task moves to Approved."
+        },
+        "human_approval": {
+          "label": "I give final approval",
+          "description": "The reviewer finishes the review and the task stays in Done as reviewed. Only you move it to Approved."
+        }
+      },
+      "promptHint": "Sent to reviewers with each review request and visible to agents on the board. It does not change who may approve.",
+      "promptLabel": "Instructions for agents (optional)",
+      "promptPlaceholder": "For example: run the e2e tests before deciding.",
+      "save": "Save",
+      "title": "Review flow"
+    },
     "taskCard": {
       "cancelTask": "Cancel task {{taskId}}",
       "cancel": "Cancel",

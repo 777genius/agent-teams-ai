@@ -35,6 +35,7 @@ const AGENT_TEAMS_LEAD_TOOL_NAMES = ['lead_briefing'];
 
 const AGENT_TEAMS_REVIEW_TOOL_NAMES = [
   'review_approve',
+  'review_complete',
   'review_request',
   'review_request_changes',
   'review_start',

@@ -1,6 +1,11 @@
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
-import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
+import {
+  DEFAULT_REVIEW_FLOW,
+  isReviewFlow,
+  KANBAN_COLUMN_IDS,
+  MAX_REVIEW_FLOW_PROMPT_LENGTH,
+} from '@shared/constants/kanban';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -17,6 +22,7 @@ function createDefaultState(teamName: string): KanbanState {
     teamName,
     reviewers: [],
     tasks: {},
+    reviewFlow: DEFAULT_REVIEW_FLOW,
   };
 }
 
@@ -59,6 +65,13 @@ function validateSafetyState(value: unknown, teamName: string): void {
     value.reviewers !== undefined &&
     (!Array.isArray(value.reviewers) ||
       value.reviewers.some((name) => typeof name !== 'string' || !name.trim()))
+  )
+    return invalid();
+  if (value.reviewFlow !== undefined && !isReviewFlow(value.reviewFlow)) return invalid();
+  if (
+    value.reviewFlowPrompt !== undefined &&
+    (typeof value.reviewFlowPrompt !== 'string' ||
+      value.reviewFlowPrompt.trim().length > MAX_REVIEW_FLOW_PROMPT_LENGTH)
   )
     return invalid();
   for (const [taskId, task] of Object.entries(value.tasks)) {
@@ -107,6 +120,8 @@ export class TeamKanbanManager {
     }
     if (options.strict) validateSafetyState(parsed, teamName);
     const sanitizedTasks: KanbanState['tasks'] = {};
+    const reviewFlowPrompt =
+      typeof parsed.reviewFlowPrompt === 'string' ? parsed.reviewFlowPrompt.trim() : '';
     if (parsed.tasks && typeof parsed.tasks === 'object') {
       for (const [taskId, value] of Object.entries(parsed.tasks)) {
         if (!value || typeof value !== 'object') {
@@ -137,6 +152,8 @@ export class TeamKanbanManager {
         ? parsed.reviewers.filter((r): r is string => typeof r === 'string' && r.trim().length > 0)
         : [],
       tasks: sanitizedTasks,
+      reviewFlow: isReviewFlow(parsed.reviewFlow) ? parsed.reviewFlow : DEFAULT_REVIEW_FLOW,
+      ...(reviewFlowPrompt ? { reviewFlowPrompt } : {}),
       columnOrder: sanitizeColumnOrder(parsed.columnOrder),
     };
   }
@@ -146,7 +163,7 @@ export class TeamKanbanManager {
     columnId: KanbanColumnId,
     orderedTaskIds: string[]
   ): Promise<void> {
-    const state = await this.getState(teamName);
+    const state = await this.getState(teamName, { strict: true });
     const columnOrder = { ...state.columnOrder };
     if (orderedTaskIds.length > 0) {
       columnOrder[columnId] = orderedTaskIds;
@@ -157,7 +174,7 @@ export class TeamKanbanManager {
   }
 
   async updateTask(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {
-    const state = await this.getState(teamName);
+    const state = await this.getState(teamName, { strict: true });
 
     if (patch.op === 'remove' || patch.op === 'request_changes') {
       delete state.tasks[taskId];
@@ -178,7 +195,7 @@ export class TeamKanbanManager {
   }
 
   async garbageCollect(teamName: string, validTaskIds: Set<string>): Promise<void> {
-    const state = await this.getState(teamName);
+    const state = await this.getState(teamName, { strict: true });
     const before = Object.keys(state.tasks).length;
 
     for (const taskId of Object.keys(state.tasks)) {
@@ -226,6 +243,8 @@ export class TeamKanbanManager {
       teamName,
       reviewers: state.reviewers,
       tasks: state.tasks,
+      reviewFlow: isReviewFlow(state.reviewFlow) ? state.reviewFlow : DEFAULT_REVIEW_FLOW,
+      ...(state.reviewFlowPrompt?.trim() ? { reviewFlowPrompt: state.reviewFlowPrompt.trim() } : {}),
       ...(state.columnOrder && Object.keys(state.columnOrder).length > 0
         ? { columnOrder: state.columnOrder }
         : {}),

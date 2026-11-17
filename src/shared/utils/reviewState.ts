@@ -10,7 +10,7 @@ interface ReviewStateLike {
 }
 
 export function normalizeReviewState(value: unknown): TeamReviewState {
-  return value === 'review' || value === 'needsFix' || value === 'approved' ? value : 'none';
+  return value === 'review' || value === 'needsFix' || value === 'reviewed' || value === 'approved' ? value : 'none';
 }
 
 export function getReviewStateFromTask(task: ReviewStateLike): TeamReviewState {
@@ -26,7 +26,7 @@ export function getReviewStateFromTask(task: ReviewStateLike): TeamReviewState {
       return explicit === 'needsFix' ? 'needsFix' : 'none';
     }
     if (fallbackStatus === 'completed') {
-      return explicit === 'review' || explicit === 'approved' || explicit === 'needsFix'
+      return explicit === 'review' || explicit === 'approved' || explicit === 'reviewed' || explicit === 'needsFix'
         ? explicit
         : 'none';
     }

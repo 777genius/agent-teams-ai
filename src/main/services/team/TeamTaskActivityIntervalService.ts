@@ -127,7 +127,6 @@ function crashRepairCloseIso(startedAt: string, member?: PersistedTeamLaunchMemb
   const boundedCloseMs = Math.max(safeStartedAtMs, Math.min(Date.now(), closeMs));
   return toIso(boundedCloseMs);
 }
-
 function crashRepairIntervalCloseIso(
   interval: { startedAt?: unknown; completedAt?: unknown } | null | undefined,
   member?: PersistedTeamLaunchMemberState
@@ -222,6 +221,8 @@ function getActiveReviewStart(
     }
     if (
       event.type === 'review_approved' ||
+        event.type === 'review_completed' ||
+        event.type === 'human_approved' ||
       event.type === 'review_changes_requested' ||
       (event.type === 'status_changed' &&
         (event.to === 'in_progress' || event.to === 'pending' || event.to === 'deleted')) ||
@@ -621,7 +622,6 @@ export class TeamTaskActivityIntervalService {
       }
       return null;
     }
-
     const parts: string[] = [];
     for (const fileName of entries) {
       try {
