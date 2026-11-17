@@ -7,6 +7,7 @@ import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { claimTeamForThisProfile } from './provisioning/TeamProvisioningProfileOwnership';
 import { TeamConfigReader } from './TeamConfigReader';
 import { parseCreateTeamRequest } from './TeamRequestValidation';
 import { applyDistinctRosterColors } from './teamRosterColors';
@@ -56,6 +57,13 @@ export async function createDraftTeamConfig(
     await fs.promises.mkdir(tasksDir, { mode: 0o700 });
     tasksDirectoryCreated = true;
     await fs.promises.mkdir(path.join(teamDir, 'inboxes'), { mode: 0o700 });
+    // Context manifests are app-owned: claim newly created drafts before any
+    // per-project context can be materialized. Never claim pre-existing teams.
+    await claimTeamForThisProfile({
+      teamsBasePath,
+      teamName: request.teamName,
+      reason: 'create',
+    });
 
     const joinedAt = Date.now();
     // Save team-level metadata to team.meta.json (NOT config.json).
