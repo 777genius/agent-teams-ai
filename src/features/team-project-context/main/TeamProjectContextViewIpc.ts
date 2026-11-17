@@ -37,10 +37,16 @@ async function resolveContextView(
     const resolver = new TeamProjectContextRuntimeResolver(new TeamMetaStore(), registry);
     const mode = await resolver.getMode(checked.value!);
     if (mode === 'shared') {
-      if (await registry.isOwnedExecutionAlias(checked.value!)) {
+      const alias = await registry.resolveOwnedExecutionAlias(checked.value!);
+      if (alias) {
         return {
-          success: false,
-          error: 'Project runtime alias is not a standalone team; open its logical team',
+          success: true,
+          data: {
+            mode: 'per_project',
+            state: 'redirect',
+            logicalTeamName: alias.logicalTeamName,
+            projectPath: alias.context.projectPath,
+          },
         };
       }
       return {

@@ -271,13 +271,17 @@ export class TeamProjectContextRegistry {
    * logical team's manifest explicitly maps to it. Never trust the prefix.
    * This is used only at schedule admission/dispatch, not on hot UI reads.
    */
-  async isOwnedExecutionAlias(executionTeamName: string): Promise<boolean> {
-    if (!executionTeamName.startsWith('ptc-')) return false;
+  async resolveOwnedExecutionAlias(executionTeamName: string): Promise<{
+    logicalTeamName: string;
+    context: PersistedTeamWorkContext;
+  } | null> {
+    if (!executionTeamName.startsWith('ptc-')) return null;
     const entries = await fs.readdir(this.paths.teamsBasePath, { withFileTypes: true })
       .catch((error: NodeJS.ErrnoException) => {
         if (error.code === 'ENOENT') return [];
         throw error;
       });
+    let match: { logicalTeamName: string; context: PersistedTeamWorkContext } | null = null;
     for (const entry of entries) {
       if (!entry.isDirectory() || entry.name === executionTeamName) continue;
       if (!validateTeamName(entry.name).valid) continue;
@@ -285,9 +289,17 @@ export class TeamProjectContextRegistry {
       if (!(await exists(path.join(dir, INDEX_FILE)))) continue;
       if ((await readTeamOwnerProfileScope(dir)) !== this.paths.profileScope) continue;
       const index = await this.readIndex(entry.name);
-      if (index.contexts.some((row) => row.executionTeamName === executionTeamName)) return true;
+      const context = index.contexts.find((row) => row.executionTeamName === executionTeamName);
+      if (!context) continue;
+      if (match) throw new TeamProjectContextUnavailableError('Ambiguous project runtime alias');
+      if (context.state === 'ready') await this.assertOwnedDirectory(executionTeamName);
+      match = { logicalTeamName: entry.name, context };
     }
-    return false;
+    return match;
+  }
+
+  async isOwnedExecutionAlias(executionTeamName: string): Promise<boolean> {
+    return (await this.resolveOwnedExecutionAlias(executionTeamName)) !== null;
   }
 
   /** A retained index may outlive the selected history mode. */

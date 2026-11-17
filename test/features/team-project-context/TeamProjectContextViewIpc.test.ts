@@ -97,6 +97,26 @@ describe('project context view IPC (read-only)', () => {
       reason: 'create',
     });
     await registry.confirmReady('builders', f.projectA, reserved.executionTeamName);
+    const handlerResult = await (() => {
+      const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
+      const ipc = {
+        handle: (channel: string, fn: (...args: unknown[]) => Promise<unknown>) => {
+          handlers.set(channel, fn);
+        },
+        removeHandler: (_channel: string) => undefined,
+      };
+      registerTeamProjectContextViewHandler(ipc as never);
+      return handlers.get(TEAM_PROJECT_CONTEXT_VIEW_CHANNEL)!(null, reserved.executionTeamName, null);
+    })();
+    expect(handlerResult).toEqual({
+      success: true,
+      data: {
+        mode: 'per_project',
+        state: 'redirect',
+        logicalTeamName: 'builders',
+        projectPath: reserved.projectPath,
+      },
+    });
     expect(await f.resolve(f.projectA)).toEqual({
       success: true,
       data: {

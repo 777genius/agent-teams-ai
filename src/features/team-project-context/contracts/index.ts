@@ -9,6 +9,7 @@ export type { TeamProjectContextMode } from '@shared/types/team';
 /** Navigation must not expose a native team alias before its owner is verified. */
 export type TeamProjectContextView =
   | { mode: 'shared'; state: 'ready'; executionTeamName: string }
+  | { mode: 'per_project'; state: 'redirect'; logicalTeamName: string; projectPath: string }
   | { mode: 'per_project'; state: 'needs_project' | 'empty' | 'pending' }
   | {
       mode: 'per_project';
