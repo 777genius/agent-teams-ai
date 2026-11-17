@@ -11,7 +11,11 @@ import {
 } from '@features/agent-attachments/main';
 import { readNativeInboxAttachmentCapability } from '@features/member-work-sync/main';
 import { parseNewTeamProjectContextMode } from '@features/team-project-context/core';
-import { projectTeamSummaries } from '@features/team-project-context/main';
+import {
+  projectTeamSummaries,
+  registerTeamProjectContextViewHandler,
+  unregisterTeamProjectContextViewHandler,
+} from '@features/team-project-context/main';
 import { persistNodeMemberSettingsRelaunch } from '@features/team-provisioning/main';
 import {
   classifyTeamReadWorkerFailure,
@@ -694,6 +698,7 @@ export function initializeTeamHandlers(
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_LIST, handleListTeams);
+  registerTeamProjectContextViewHandler(ipcMain);
   ipcMain.handle(TEAM_GET_DATA, handleGetData);
   ipcMain.handle(TEAM_GET_TASK_CHANGE_PRESENCE, handleGetTaskChangePresence);
   ipcMain.handle(TEAM_SET_CHANGE_PRESENCE_TRACKING, handleSetChangePresenceTracking);
@@ -790,6 +795,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
 
 export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_LIST);
+  unregisterTeamProjectContextViewHandler(ipcMain);
   ipcMain.removeHandler(TEAM_GET_DATA);
   ipcMain.removeHandler(TEAM_GET_TASK_CHANGE_PRESENCE);
   ipcMain.removeHandler(TEAM_SET_CHANGE_PRESENCE_TRACKING);
@@ -875,7 +881,6 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_GET_SAVED_REQUEST);
   ipcMain.removeHandler(TEAM_DELETE_DRAFT);
 }
-
 function getTeamDataService(): TeamDataService {
   if (!teamDataService) {
     throw new Error('Team handlers are not initialized');
@@ -893,7 +898,6 @@ function getPermanentDeletionCoordinator(): TeamPermanentDeletionTransactionCoor
 export async function waitForPendingPermanentDeletionRecoveryForTests(): Promise<void> {
   await permanentDeletionCoordinator?.waitForRecovery();
 }
-
 function getTeamProvisioningStartApi(): TeamProvisioningStartApi {
   if (!teamProvisioningStartApi) {
     throw new Error('Team launch handlers are not initialized');
@@ -914,7 +918,6 @@ function getTeamProvisioningPreflightApi(): TeamProvisioningPreflightApi {
   }
   return teamProvisioningPreflightApi;
 }
-
 function getTeamProvisioningRunApi(): TeamProvisioningRunApi {
   if (!teamProvisioningRunApi) {
     throw new Error('Team provisioning run handlers are not initialized');
@@ -928,7 +931,6 @@ function getTeamTaskActivityRepairApi(): TeamTaskActivityRepairApi {
   }
   return teamTaskActivityRepairApi;
 }
-
 function getTeamRuntimeApi(): TeamRuntimeApi {
   if (!teamRuntimeApi) {
     throw new Error('Team runtime handlers are not initialized');
@@ -2057,7 +2059,6 @@ function noteLaunchIntentFailed(teamName: string, source: string): void {
     updatedAt: now,
   } as TeamProvisioningProgress);
 }
-
 async function handleCreateTeam(
   event: IpcMainInvokeEvent,
   request: unknown
@@ -2099,7 +2100,6 @@ async function handleCreateTeam(
     }
   });
 }
-
 async function handleLaunchTeamUnlocked(
   event: IpcMainInvokeEvent,
   request: unknown,

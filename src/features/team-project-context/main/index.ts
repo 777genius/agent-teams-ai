@@ -23,3 +23,8 @@ export {
 export { projectTeamSummaries } from './projectTeamSummaries';
 
 export { TeamProjectContextCreateCoordinator } from './TeamProjectContextCreateCoordinator';
+
+export {
+  registerTeamProjectContextViewHandler,
+  unregisterTeamProjectContextViewHandler,
+} from './TeamProjectContextViewIpc';
