@@ -85,6 +85,11 @@ for (const [id, status, subject] of [
     id, displayId: id === '2' ? '2'.repeat(100) : id, subject, status, owner: tableTeam.secondOwner,
     blockedBy: id === '2' ? ['1'] : [], blocks: [], related: [],
     createdAt: tableStamp, comments: [],
+    // Task 3 sits in the lead's sign-off stage (lead_then_human second review cycle).
+    ...(id === '3' ? { historyEvents: [
+      { id: 'h1', type: 'review_requested', timestamp: tableStamp, actor: 'dev', from: 'none', to: 'review', reviewer: 'reviewer' },
+      { id: 'h2', type: 'review_requested', timestamp: tableStamp, actor: 'reviewer', from: 'review', to: 'review', reviewer: 'team-lead', stage: 'lead_signoff', afterReviewRequestId: 'h1' },
+    ] } : {}),
   }, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
 }
 const tableKanbanState = JSON.parse(await readFile(tableTeam.kanbanFile, 'utf8'));
@@ -359,6 +364,10 @@ try {
   await until(() => cdp!.evaluate(
     "(()=>{const dialog=document.querySelector('[role=\"dialog\"]');return !!dialog&&dialog.textContent?.includes('TABLE_E2E_REVIEW');})()"
   ), 'existing task detail dialog opens from table');
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[role=\"dialog\"] [data-testid=\"task-lead-signoff-chip\"]')"
+  ), 'a review task in the lead sign-off stage shows the Lead sign-off chip');
+  await cdp.screenshot(join(root, 'task-lead-signoff-chip.png'));
   await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' });
   await until(() => cdp!.evaluate(
     "!document.querySelector('[role=\"dialog\"]')"
