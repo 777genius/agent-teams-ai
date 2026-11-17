@@ -1,3 +1,4 @@
+import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import {
   claimTeamForThisProfile,
@@ -126,9 +127,6 @@ export class TeamProjectContextRegistry {
   constructor(private readonly paths: TeamProjectContextRegistryPaths) {}
 
   static fromCurrentApp(): TeamProjectContextRegistry {
-    // Imported lazily to keep test fixtures independent from the real user HOME.
-    const { getTeamsBasePath, getTasksBasePath } =
-      require('@main/utils/pathDecoder') as typeof import('@main/utils/pathDecoder');
     return new TeamProjectContextRegistry({
       teamsBasePath: getTeamsBasePath(),
       tasksBasePath: getTasksBasePath(),
