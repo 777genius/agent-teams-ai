@@ -1189,3 +1189,164 @@ test('actual Linux owner cleanup keeps final ' + mode + ' as failure after its o
   assert.equal(cleanup.signalAttempted, true); assert.equal(cleanup.hostsAbsent, mode !== 'host-debt');
   assert.deepEqual(cleanup.remaining, mode === 'group-debt' ? f.originalMembers : []);
 });
+
+
+// Read the real pure projection. The packaged CLI main is never imported by these cases.
+const {
+  projectDesktopEmulatedReadinessFailure,
+  projectDesktopProofReceiptSummary,
+} = await import('./desktop-proof-evidence.ts');
+
+function retainedDialogProjection(value: unknown) {
+  const result = projectDesktopEmulatedReadinessFailure(value);
+  assert.equal(result.status, 'available');
+  assert.ok('retainedDialogs' in result);
+  return result;
+}
+
+test('retained dialog readiness distinguishes saved Launch states and duplicate matches without a readiness verdict', () => {
+  const result = retainedDialogProjection({ rendererFailureSnapshot: { dialogs: [
+    { text: 'All selected providers are ready; model could not be verified; permission blocked',
+      buttons: [{ text: 'Launch team', disabled: true }] },
+    { text: 'Runtime environment unavailable; provider status is still loading',
+      buttons: [{ text: 'Launch team', disabled: false }, { text: 'Launch team', disabled: true },
+        { text: 'Launch team' }, { text: 'Launch team', disabled: 'false' },
+        { text: ' Launch team ', disabled: false }, { text: 'Launch teamwork', disabled: false }] },
+    { text: '', buttons: [] },
+  ] } });
+  assert.equal(result.storeRecorded, false);
+  assert.deepEqual(result.provisioning.items, []);
+  const sample = result.retainedDialogs;
+  assert.equal(sample.source, 'retained-post-failure-partial-dialog-sample');
+  assert.deepEqual([sample.atomicWithFailedWait, sample.completeDom, sample.actualTruncationKnown], [false, false, false]);
+  assert.equal(sample.count, 3); assert.equal(sample.atCaptureLimit, true); assert.equal(sample.overflow, false);
+  assert.deepEqual(sample.items[0].buttons.launchTeam, { matches: 1, enabled: 0, disabled: 1, unknown: 0 });
+  assert.deepEqual(sample.items[1].buttons.launchTeam, { matches: 4, enabled: 1, disabled: 1, unknown: 2 });
+  assert.deepEqual(sample.items[2].buttons.launchTeam, { matches: 0, enabled: 0, disabled: 0, unknown: 0 });
+  assert.deepEqual(sample.items[0].text.terms, ['permission', 'model', 'provider', 'ready', 'blocked']);
+  assert.equal(sample.items[0].text.selectedProvidersReady, true);
+  assert.equal(sample.items[0].text.modelUnverified, true);
+  assert.equal(sample.items[1].text.runtimeUnavailable, true);
+  assert.equal(sample.items[1].text.providerStatusLoading, true);
+  assert.equal('ready' in sample, false, 'saved facts do not resolve the original expired wait');
+});
+
+test('retained dialog projection bounds malformed samples independently and preserves the original final overflow fallback', () => {
+  for (const value of [undefined, null, {}, { rendererFailureSnapshot: { unavailable: true } },
+    { rendererFailureSnapshot: { dialogs: {} } }]) {
+    const result = retainedDialogProjection(value);
+    assert.equal(result.retainedDialogs.count, null);
+    assert.equal(result.retainedDialogs.atCaptureLimit, null);
+    assert.deepEqual(result.retainedDialogs.items, []);
+  }
+  const malformed = retainedDialogProjection({ rendererFailureSnapshot: { dialogs: [
+    null, { buttons: {} }, { buttons: [null, {}, { text: 7 }, { text: 'Launch team', disabled: null }] },
+  ] } }).retainedDialogs;
+  assert.equal(malformed.items[0].recorded, false);
+  assert.equal(malformed.items[1].buttons.recorded, false);
+  assert.deepEqual(malformed.items[1].buttons.launchTeam, { matches: null, enabled: null, disabled: null, unknown: null });
+  assert.equal(malformed.items[2].buttons.unknownEntries, 3);
+  assert.deepEqual(malformed.items[2].buttons.launchTeam, { matches: 1, enabled: 0, disabled: 0, unknown: 1 });
+  const atCap = Array.from({ length: 24 }, () => ({ text: 'Launch team', disabled: true }));
+  const cap = retainedDialogProjection({ rendererFailureSnapshot: { dialogs: [{ text: 'm'.repeat(8000), buttons: atCap }] } });
+  assert.equal(cap.retainedDialogs.items[0].buttons.atCaptureLimit, true);
+  assert.equal(cap.retainedDialogs.items[0].buttons.overflow, false);
+  assert.equal(cap.retainedDialogs.items[0].text.bounded, true);
+  const buttons = [...atCap, {}];
+  Object.defineProperty(buttons, '24', { get() { assert.fail('outside retained button traversal'); } });
+  const dialogs = [{ text: 'm'.repeat(8001), buttons }, {}, {}, {}];
+  Object.defineProperty(dialogs, '3', { get() { assert.fail('outside retained dialog traversal'); } });
+  const overflow = retainedDialogProjection({ rendererFailureSnapshot: { dialogs } }).retainedDialogs;
+  assert.equal(overflow.count, 4); assert.equal(overflow.items.length, 3);
+  assert.equal(overflow.overflow, true); assert.equal(overflow.atCaptureLimit, false);
+  assert.equal(overflow.items[0].buttons.count, 25);
+  assert.equal(overflow.items[0].buttons.overflow, true);
+  assert.equal(overflow.items[0].buttons.atCaptureLimit, false);
+  assert.equal(overflow.items[0].buttons.launchTeam.matches, 24);
+  assert.equal(overflow.items[0].text.bounded, false);
+  assert.deepEqual(overflow.items[0].text.terms, []);
+  const terms = 'authentication credential permission model probe runtime source profile owner grant context capture preparation provider ready loading unavailable unsupported missing mismatch changed expired stale busy blocked rejected refused failed invalid timeout timed out cancelled';
+  const large = { rendererFailureSnapshot: { store: { provisioning: Array.from({ length: 8 }, () => ({
+    error: terms, progress: { error: terms, message: terms },
+  })) } } };
+  assert.deepEqual(projectDesktopEmulatedReadinessFailure(large), { schemaVersion: 1, status: 'unavailable', reason: 'overflow' });
+});
+
+test('retained dialog projection avoids getters, aliases, mutations and private values with fixed opaque failure output', () => {
+  const secret = 'TEST_PRIVATE_DIALOG_credential@example.invalid/token';
+  const input = { rendererFailureSnapshot: { dialogs: [{ text: secret, id: secret, rect: { x: 999 },
+    buttons: [{ text: 'Launch team', disabled: false, id: secret, rect: { x: 888 } }, { text: secret }] }] } };
+  const original = JSON.stringify(input);
+  Object.freeze(input.rendererFailureSnapshot.dialogs[0].buttons[0]);
+  Object.freeze(input.rendererFailureSnapshot.dialogs[0].buttons);
+  Object.freeze(input.rendererFailureSnapshot.dialogs[0]);
+  Object.freeze(input.rendererFailureSnapshot.dialogs);
+  Object.freeze(input.rendererFailureSnapshot);
+  Object.freeze(input);
+  const result = retainedDialogProjection(input);
+  assert.doesNotMatch(JSON.stringify(result), /TEST_PRIVATE_DIALOG_|example\.invalid|token|999|888/);
+  result.retainedDialogs.items[0].text.terms.push('TEST-output-only');
+  assert.equal(JSON.stringify(input), original);
+  let getterCalls = 0;
+  const accessor = () => { getterCalls++; throw new Error(secret); };
+  const button = Object.defineProperties({}, { text: { get: accessor }, disabled: { get: accessor } });
+  const dialog = Object.defineProperties({ buttons: [button, Object.defineProperty({ text: 'Launch team' }, 'disabled', { get: accessor })] },
+    { text: { get: accessor } });
+  const retained = retainedDialogProjection({ rendererFailureSnapshot: { dialogs: [dialog] } });
+  assert.equal(retained.retainedDialogs.items[0].buttons.unknownEntries, 1);
+  assert.deepEqual(retained.retainedDialogs.items[0].buttons.launchTeam, { matches: 1, enabled: 0, disabled: 0, unknown: 1 });
+  retainedDialogProjection(Object.defineProperty({}, 'rendererFailureSnapshot', { get: accessor }));
+  retainedDialogProjection({ rendererFailureSnapshot: Object.defineProperty({}, 'dialogs', { get: accessor }) });
+  retainedDialogProjection({ rendererFailureSnapshot: { dialogs: [Object.defineProperty({}, 'buttons', { get: accessor })] } });
+  assert.equal(getterCalls, 0);
+  const noOrdinaryGet = new Proxy({ rendererFailureSnapshot: { dialogs: [] } }, { get: accessor });
+  assert.equal(retainedDialogProjection(noOrdinaryGet).retainedDialogs.count, 0);
+  const opaque = new Proxy({}, { getOwnPropertyDescriptor: accessor });
+  assert.deepEqual(projectDesktopEmulatedReadinessFailure(opaque),
+    { schemaVersion: 1, status: 'unavailable', reason: 'projection-failed' });
+  assert.equal(getterCalls, 1, 'only the explicit descriptor trap ran; no getter or coercion');
+});
+
+test('actual receipt summary routes all five non-PASS readiness modes and preserves PASS and unrelated summaries', () => {
+  const evidence = { status: 'INCOMPLETE', rendererFailureSnapshot: { dialogs: [{ buttons: [{ text: 'Launch team', disabled: true }] }] } };
+  for (const mode of ['emulated-import-ui', 'emulated-opencode-runtime-ui', 'emulated-claude-runtime-ui',
+    'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui']) {
+    for (const status of ['INCOMPLETE', 'FAIL']) {
+      const selected = { ...evidence, status };
+      assert.deepEqual(projectDesktopProofReceiptSummary(selected, { receiptPath: '/TEST/receipt.json', mode, mixedMode: false }),
+        { status, receipt: '/TEST/receipt.json', emulatedReadinessFailure: projectDesktopEmulatedReadinessFailure(selected) });
+    }
+    assert.deepEqual(projectDesktopProofReceiptSummary({ ...evidence, status: 'PASS' },
+      { receiptPath: '/TEST/receipt.json', mode, mixedMode: false }), { status: 'PASS', receipt: '/TEST/receipt.json' });
+  }
+  for (const mode of ['team-ui', 'emulated-extensions-ui']) {
+    assert.deepEqual(projectDesktopProofReceiptSummary(evidence, { receiptPath: '/TEST/receipt.json', mode, mixedMode: false }),
+      { status: 'INCOMPLETE', receipt: '/TEST/receipt.json' });
+  }
+});
+
+test('actual packaged final summary composes the same failure projection without executing its CLI main', () => {
+  const source = fs.readFileSync(new URL('./desktop-packaged-relaunch-smoke.ts', import.meta.url), 'utf8');
+  const start = '    console.log(JSON.stringify({ kind: evidence.kind, status: evidence.status, receipt: receiptPath, root: fixture.root,';
+  const end = '\n  }\n  if (originalFailure) throw originalFailure;';
+  assert.equal(source.split(start).length, 2);
+  assert.equal(source.split(end).length, 2);
+  const from = source.indexOf(start), until = source.indexOf(end, from);
+  assert.ok(until > from);
+  const fragment = source.slice(from, until);
+  assert.ok(source.lastIndexOf('await writeFile(receiptPath,', from) < from);
+  assert.ok(source.lastIndexOf('await writeFile(receiptPath,', from) >= 0);
+  assert.match(source.slice(until), /if \(originalFailure\) throw originalFailure;[\s\S]*assert\.equal\(evidence\.status, 'PASS'/);
+  const compose = new Function('evidence', 'receiptPath', 'fixture', 'projectDesktopEmulatedReadinessFailure', 'console', fragment);
+  for (const status of ['PASS', 'INCOMPLETE', 'FAIL']) {
+    const evidence = { kind: 'TEST_PACKAGED_RELAUNCH', status,
+      rendererFailureSnapshot: { dialogs: [{ text: 'model unavailable', buttons: [{ text: 'Launch team', disabled: true }] }] } };
+    const before = JSON.stringify(evidence), output: string[] = [];
+    compose(evidence, '/TEST/receipt.json', { root: '/TEST/root' }, projectDesktopEmulatedReadinessFailure,
+      { log(value: string) { output.push(value); } });
+    assert.equal(output.length, 1);
+    assert.deepEqual(JSON.parse(output[0]), { kind: evidence.kind, status, receipt: '/TEST/receipt.json', root: '/TEST/root',
+      ...(status !== 'PASS' ? { emulatedReadinessFailure: projectDesktopEmulatedReadinessFailure(evidence) } : {}) });
+    assert.equal(JSON.stringify(evidence), before);
+  }
+});

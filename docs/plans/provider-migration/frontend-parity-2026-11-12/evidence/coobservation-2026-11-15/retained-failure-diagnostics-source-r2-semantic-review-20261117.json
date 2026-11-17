@@ -1,0 +1,757 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_RETAINED_FAILURE_DIAGNOSTICS_SOURCE_R2_INDEPENDENT_SEMANTIC_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "producer_r2_semantic",
+  "at": "2026-11-17 11:08:05 UTC",
+  "subject": {
+    "bytes": 48600,
+    "sha256": "ea41197152f40525912ca3bf8d41b84451f1c306bdb88a5ee051d83e8842891e",
+    "gitBlob": "c356b7f7c7dd7d9ab6e869ad9d3655c74ea8dbea"
+  },
+  "decision": "ACCEPT_EXACT_SIX_SOURCE_POSTIMAGES_STATIC_ONLY",
+  "sourceBlockers": [],
+  "checksCount": 46,
+  "authority": "Root alone authors/applies/publishes source and controls and selects/executes venues. Reviewer used immutable Git/source/evidence reads and pure in-memory strings/JSON/hash arithmetic only. The pinned identity helper alone was evaluated. No target source evaluation/type stripping/compilation/import, shell/local read, runtime, CI polling/download, source/ref/PR/control action. Only this bare review is retained.",
+  "evidence": {
+    "exactR1": {
+      "bytes": 31060,
+      "sha256": "188bd061a0aa0ed5afe3f8af4919c5ac111ae15d3deb5c92c19645eccab997bc",
+      "gitBlob": "d226951f5f24dd1a5a7d4742e25edcb3ef043213"
+    },
+    "priorExactR1SemanticReview": {
+      "bytes": 34292,
+      "sha256": "407344734ca2a82cbf10c5ad70586a89e8510d3cadc8dfd23bba61e41e8d68b3",
+      "gitBlob": "f5bc9112925cf2dbabbb5829491f40ae014763a5",
+      "checks": 32,
+      "fullSelfRead": true
+    },
+    "actualGate": {
+      "bytes": 3366,
+      "sha256": "2ab0cc4d487580e777d7a967ab202e02f84705ab4ff1ca6ada91486a5745af7b",
+      "gitBlob": "7e3c941384be39de462ea32baecf5f2ecc868d4e",
+      "fullBodyRead": true,
+      "closedAt": "2026-11-17 10:42:30 UTC",
+      "publication": "c88b4fe2632f2644bf734293db713fe8288b5139",
+      "actualChecks": 82,
+      "fullPointerAuditNotRepeated": true
+    },
+    "rootRecordedSourceAuthorshipAt": "2026-11-17 10:43:11 UTC",
+    "metadataClarifications": {
+      "bytes": 1782,
+      "sha256": "1c7ef9e7163bbb692a975edc8492f4f55a84a36ffb2eb8b6c5c8baef1c91d7cd",
+      "gitBlob": "72819e1e1daa250e1441ce3ac6d25f857c7477de",
+      "fullBodyRead": true,
+      "sourcePostimagesUnchanged": true
+    },
+    "parent": "c88b4fe2632f2644bf734293db713fe8288b5139",
+    "parentRoot": "b06c85110ab7ea4410f1532509783fd60a6f6cb4",
+    "parentDocs": "1aeddc4cacfc5288f3d6bb03c7bfcf52e24bf9bb",
+    "completeSourceReadStrategy": "All six preimages were completely read in the prior immutable R1 review and freshly fetched/compared literally at exactc88 here. Both GUI core postimages were completely read in the immediate early advisory. Both complete native core postimages were freshly read here. For each test, the entire unchanged already-read prefix is byte-identical and the entire new append was separately read. No selected source section was omitted.",
+    "freshParentJoins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+        "commit": "c88b4fe2632f2644bf734293db713fe8288b5139",
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+        "fullLiteralBeforeEqual": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "commit": "c88b4fe2632f2644bf734293db713fe8288b5139",
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+        "fullLiteralBeforeEqual": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+        "commit": "c88b4fe2632f2644bf734293db713fe8288b5139",
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05",
+        "fullLiteralBeforeEqual": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "commit": "c88b4fe2632f2644bf734293db713fe8288b5139",
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068",
+        "fullLiteralBeforeEqual": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "commit": "c88b4fe2632f2644bf734293db713fe8288b5139",
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f",
+        "fullLiteralBeforeEqual": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "commit": "c88b4fe2632f2644bf734293db713fe8288b5139",
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+        "fullLiteralBeforeEqual": true
+      }
+    ],
+    "beforeBytes": 184703,
+    "afterBytes": 222551,
+    "allSixWholeByteInverses": true
+  },
+  "sourceJoins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "before": {
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+      },
+      "after": {
+        "bytes": 28804,
+        "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4",
+        "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28"
+      },
+      "lines": 431,
+      "wholeByteInverse": true,
+      "edits": [
+        {
+          "kind": "unique literal replacement with exact inverse",
+          "afterOccurrences": 1
+        },
+        {
+          "kind": "unique literal replacement with exact inverse",
+          "afterOccurrences": 1
+        },
+        {
+          "kind": "unique literal replacement with exact inverse",
+          "afterOccurrences": 1
+        }
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "before": {
+        "bytes": 13293,
+        "sha256": "dd1b3e37ceff57c7ec7f56885f68f61de2857cbb0f67ecc4416680a678f0b12b",
+        "gitBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422"
+      },
+      "after": {
+        "bytes": 13466,
+        "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056",
+        "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c"
+      },
+      "lines": 184,
+      "wholeByteInverse": true,
+      "edits": [
+        {
+          "kind": "unique literal replacement with exact inverse",
+          "afterOccurrences": 1
+        },
+        {
+          "kind": "unique literal replacement with exact inverse",
+          "afterOccurrences": 1
+        }
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "before": {
+        "bytes": 22177,
+        "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+        "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05"
+      },
+      "after": {
+        "bytes": 23312,
+        "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+        "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+      },
+      "lines": 514,
+      "wholeByteInverse": true,
+      "edits": [
+        {
+          "kind": "unique literal replacement with exact inverse",
+          "afterOccurrences": 1
+        },
+        {
+          "kind": "unique literal replacement with exact inverse",
+          "afterOccurrences": 1
+        },
+        {
+          "kind": "unique literal replacement with exact inverse",
+          "afterOccurrences": 1
+        }
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "before": {
+        "bytes": 37181,
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "gitBlob": "625c6ddd74357abbdf565bf386388274cebd4068"
+      },
+      "after": {
+        "bytes": 37953,
+        "sha256": "a553197e108b574e9ff1c0e082014d4224baffeba21cec65a1b16f0fa17edbb6",
+        "gitBlob": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa"
+      },
+      "lines": 578,
+      "wholeByteInverse": true,
+      "edits": [
+        {
+          "kind": "unique literal replacement with exact inverse",
+          "afterOccurrences": 1
+        },
+        {
+          "kind": "unique literal replacement with exact inverse",
+          "afterOccurrences": 1
+        }
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "before": {
+        "bytes": 66098,
+        "sha256": "9ece88cc03aa5d9b8c9335b7fcfdad172bcdc478e0bd1afcf203091298343d5b",
+        "gitBlob": "6a147cbf241b98a8bc6cea0e2d7ac45962ed987f"
+      },
+      "after": {
+        "bytes": 77457,
+        "sha256": "af9de97ec8da68ef394c5ce5b08ca7bfbfd4b099178bd6ae3c9c8c20831cbc3b",
+        "gitBlob": "cd74eecf610858412022bbd2c69f62c910465bad"
+      },
+      "lines": 1352,
+      "wholeByteInverse": true,
+      "edits": [
+        {
+          "kind": "literal append after entire unchanged original body",
+          "appendBytes": 11359,
+          "appendSha256": "5c3945f29b07d9716fb9565b12b410cc7a5a4965bab84bb569c880d0f7e794b2",
+          "appendRetainedOnlyInsideWholeTest": true
+        }
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "before": {
+        "bytes": 19696,
+        "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+        "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478"
+      },
+      "after": {
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      },
+      "lines": 647,
+      "wholeByteInverse": true,
+      "edits": [
+        {
+          "kind": "literal append after entire unchanged original body",
+          "appendBytes": 21863,
+          "appendSha256": "70f43a0339c761976bcfc2e97461949031b5013a2aedd55d7348664e193253a8",
+          "appendRetainedOnlyInsideWholeTest": true
+        }
+      ]
+    }
+  ],
+  "metadataScope": {
+    "sparse": "The exact proposal's sparse word is clarified by72819: actual authored GUI fixtures are missing/null/malformed and capped-accessor cases. There is no distinct sparse-array-hole fixture or runtime result; this review does not count one. Static own-data lookup would classify a missing retained index as unknown, which is reasoning rather than test evidence.",
+    "oldFragments": "1409b65f andded3bd87 identify derived source literals embedded in9988 and uniquely present in original195d. Initial repository fetches returned404; root confirmed they are not separately retained objects. They were decoded as JSON data and joined to the complete original source, not executed. No further blob fetch or new retention requirement is imposed.",
+    "supersededNativeTest": "Unpublished da40 is outside this acceptance. Final9988's expected management classes are explicit fixtures, with held/invalid/busy/function/nonrecursive cases added as recorded. No old-prefix or core change is hidden.",
+    "noNewGate": true
+  },
+  "gui": {
+    "core": {
+      "afterProof": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28",
+      "afterPackaged": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c",
+      "inverseScope": "Proof adds31 traversal lines,5 output lines and exactly3 route entries. Packaged changes only its existing named import and final console composition. Every other byte restores to the original bodies.",
+      "savedSample": {
+        "source": "retained-post-failure-partial-dialog-sample",
+        "atomicWithFailedWait": false,
+        "completeDom": false,
+        "actualTruncationKnown": false
+      },
+      "traversal": {
+        "dialogs": 3,
+        "buttonsPerDialog": 24,
+        "dialogCountSentinel": 4,
+        "buttonCountSentinel": 25
+      },
+      "unknowns": "Missing/non-array or invalid lengths produce null counters and bounded empty items. Missing/malformed labels contribute unknownEntries; an exact Launch match with nonboolean disabled contributes unknown. At-limit and supplied-array overflow are distinct; zero retained matches says nothing about global DOM absence.",
+      "duplicates": "Every exact own-data text === Launch team match contributes once; enabled+disabled+unknown equals matches. Neither trim-near-match nor prefix label is accepted, and no arbitrary button is selected.",
+      "text": "Existing fixed vocabulary and phrase-presence facts only. No raw dialog text/labels, coordinates, IDs, paths, URLs or nested object aliases are returned. Saved enabled/ready facts never reverse an expired wait.",
+      "privacy": "Own data descriptors, strict primitive checks and newly constructed output only. Accessors are not invoked; an opaque descriptor trap reaches the existing fixed projection-failed fallback. All outputs remain subject to the unchanged8192-character serialization fallback.",
+      "preservation": "Original provisioning/hydration/cleanup output, other proof functions, all existing inputs/waits, authority and cleanup decisions remain unchanged.",
+      "routes": [
+        "emulated-import-ui",
+        "emulated-opencode-runtime-ui",
+        "emulated-claude-runtime-ui",
+        "emulated-claude-lifecycle-ui",
+        "emulated-collaboration-ui"
+      ],
+      "passAndUnrelated": "Condition remains evidence.status !== PASS. Existing unrelated summaries, including team-ui/extensions, remain unchanged.",
+      "packaged": "Same already imported module supplies the pure projector. Original receipt write precedes final summary; cleanup/source freeze/rethrow and final PASS assertion are unchanged. No new CDP or Host observation is introduced, and earlier-finally failures can still prevent final stdout."
+    },
+    "tests": {
+      "after": "cd74eecf610858412022bbd2c69f62c910465bad",
+      "prefixBytes": 66098,
+      "appendBytes": 11359,
+      "appendSha256": "5c3945f29b07d9716fb9565b12b410cc7a5a4965bab84bb569c880d0f7e794b2",
+      "originalRegistrationExpressions": 34,
+      "newRegistrationExpressions": 5,
+      "totalRegistrationExpressions": 39,
+      "expandedOldRuntimeCountNotInferred": true,
+      "newTitles": [
+        "retained dialog readiness distinguishes saved Launch states and duplicate matches without a readiness verdict",
+        "retained dialog projection bounds malformed samples independently and preserves the original final overflow fallback",
+        "retained dialog projection avoids getters, aliases, mutations and private values with fixed opaque failure output",
+        "actual receipt summary routes all five non-PASS readiness modes and preserves PASS and unrelated summaries",
+        "actual packaged final summary composes the same failure projection without executing its CLI main"
+      ],
+      "actualImport": "Top-level awaited import obtains the real exported projector and summary; no packaged main import. New names have no occurrence in the old prefix, so no duplicate top-level binding is introduced.",
+      "case1": "Explicit hand-specified Launch counts1/4/0, true/false/unknown states, exact-label negatives, phrase facts and absent provisioning. It checks partial flags and absence of a ready verdict.",
+      "case2": "Missing/null/malformed inputs, null counters,3 malformed labels,24 retained buttons,8000/8001 text boundary, and accessor slots beyond caps. The original full-provisioning vocabulary shape reaches the same overflow fallback. No separate sparse-hole test is claimed.",
+      "case3": "Private marker exclusion, frozen complete input, modification of a newly returned terms array without input mutation, no getter/coercion calls and fixed descriptor-trap output. This exercises the actual projection, not a duplicate sanitizer.",
+      "case4": "Five modes times two non-PASS statuses, each mode's PASS path, and team-ui/extensions negatives using actual exported receipt summary.",
+      "case5": "Unique actual packaged final expression is extracted and invoked with the real projector for PASS/INCOMPLETE/FAIL. It verifies original fields, exact one stdout row, no input mutation, preceding receipt write and preserved rethrow/assertion source order; no app/CLI is started.",
+      "discrimination": "The old projector lacks retainedDialogs and fails the new data assertions; old routing omits the three selected modes. The packaged test also enforces a unique actual source composition. These are static predictions and source checks, not observed RED/GREEN."
+    }
+  },
+  "native": {
+    "core": {
+      "afterProducer": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab",
+      "afterPassive": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa",
+      "producerChanges": "One local closed allowlist/type/state/helper block; own direct code plus one own cause.code in the existing rejection catch; conditional two-field spread in the existing failure publication. No new imports or callable product route.",
+      "actualCodeSets": {
+        "producer": [
+          "ABORT_ERR",
+          "ECONNRESET",
+          "ECONNREFUSED",
+          "EPIPE",
+          "ETIMEDOUT",
+          "UND_ERR_ABORTED",
+          "UND_ERR_SOCKET",
+          "UND_ERR_HEADERS_TIMEOUT",
+          "UND_ERR_BODY_TIMEOUT"
+        ],
+        "passive": [
+          "ABORT_ERR",
+          "ECONNRESET",
+          "ECONNREFUSED",
+          "EPIPE",
+          "ETIMEDOUT",
+          "UND_ERR_ABORTED",
+          "UND_ERR_SOCKET",
+          "UND_ERR_HEADERS_TIMEOUT",
+          "UND_ERR_BODY_TIMEOUT",
+          "unknown"
+        ],
+        "positiveSetsEqual": true
+      },
+      "errorIdentity": "Exact original rejection is rethrown, including primitive/function/proxy values. Existing own-data held/invalid/conflict/busy classification remains. Only strict known strings are retained; opaque/unrecognized/missing/accessor values remain null, without names/messages/stacks/coercion/prototypes/recursive causes.",
+      "reflectionNuance": "If a descriptor trap throws after a direct code was retained, that safe code can remain while cause stays null. Catch failure never replaces the original error.",
+      "scope": "The coordination early return bypasses new rejection classification. Publication remains existing !clean && !coordination with hasSubscribers; new fields are spread only when runState===threw. Resolved run states omit them. Successful cleanup and original return clean are unaffected.",
+      "close": "Original firstCloseFailure wins. A fulfilled driver.close with cleanup other than confirmed remains driver-close/unconfirmed, distinct from a thrown close. Run code observations do not establish why cleanup failed.",
+      "unchangedControlFlow": "Source inverse preserves original currentness/identity/directory/custody/request admission, deadlines, abort, request drain, owner disposal, driver/server/namespace cleanup and release witness.",
+      "passive": "Validate all mandatory close fields first. For each optional new key, read its own descriptor in a separate try; absence leaves key absent, bad/accessor/unknown becomes null, and a trap becomes null without discarding the original close record. Parent construction forwards only sanitized fields from that projection.",
+      "parserBreadth": "Actual producer adds fields only on threw. The existing passive parser still admits its broader original runState enum; its optional scalar projection does not manufacture a producer outcome.",
+      "budgets": {
+        "maximumRows": 256,
+        "ordinaryRows": 253,
+        "retainedRowsConvention": 257,
+        "traceBytes": 65536,
+        "lineBytes": 512,
+        "reservedRecordBytes": 513,
+        "receiptEnvelopeBytes": 262144,
+        "diagnosticBackpressureMs": 2000
+      },
+      "reservations": "Original one close observation across the capture's epochs, ordinary253/total257 convention,64KiB trace,512-byte line/513-byte record and existing backpressure/receipt bounds remain unchanged."
+    },
+    "tests": {
+      "after": "9988bebfff4408e81ab63da26fc463e7b8fa618b",
+      "prefixBytes": 19696,
+      "appendBytes": 21863,
+      "appendSha256": "70f43a0339c761976bcfc2e97461949031b5013a2aedd55d7348664e193253a8",
+      "oldCases": 9,
+      "newLocalCases": 3,
+      "localRegistrations": 12,
+      "newTitles": [
+        "actual ModelProbe run rejection keeps original identity and close classification with bounded own error codes",
+        "actual finite Node observer and parent retain producer error codes in the reserved close slot after trace exhaustion",
+        "actual close projection preserves legacy rows and opaque optional fields within original reservation and byte limits"
+      ],
+      "actualCompiledFragments": "Unique anchored current dist ModelProbe state through noteCloseFailure, original returned run wrapper, and original failed-close continuation. Only a finite run function and fulfilled-false work are injected. The tested classification/publication implementation is not copied.",
+      "scopeLimit": "This fragment harness does not construct ModelProbe, run provider/HTTP/server/native-host code or execute real close operations. Full ModelProbe/runtime correctness is not inferred. Existing Host build remains a prerequisite for the actual dist file.",
+      "explicitOracles": "Expected original errorClass is fixture data, including all four management classes; final9988 does not recalculate it using a copied classifier.",
+      "case1": "Nine positive direct codes; management classes, function error/cause, one-level cause, private/boxed/coercion/accessor/inherited/primitive inputs; exact error identity and first close reason; opaque code/cause traps; resolved true/false fields omitted. All subscriptions are removed in finally.",
+      "counterfactual": {
+        "type": "Derived exact original source literals, not separate retained repository objects",
+        "originalSource": "195dabe664b14a2fe5c231e137690db6126c0e05",
+        "run": {
+          "computedGitBlob": "1409b65f9bdad2fd8bf15841e36d4460acce8204",
+          "bytes": 906,
+          "sha256": "c225fad7432f205e57fb1a086c1d84213f30ba900705e11e15c6a5ca0763b13e",
+          "originalCharacterOffset": 17944,
+          "uniqueOriginalOccurrence": true
+        },
+        "publisher": {
+          "computedGitBlob": "ded3bd876233b0fb238559d210d76c7edced8eed",
+          "bytes": 677,
+          "sha256": "339d052a0a4d205dd1f7c57130386635bf5d04d61c9cd542703f125650dfcc91",
+          "originalCharacterOffset": 21464,
+          "uniqueOriginalOccurrence": true
+        },
+        "verification": "JSON-decoded without eval, hashed and matched literally to the fully read original source. The test asserts those SHA256 values. Old wrapper/publisher run with current harmless state declarations so expected absence of new fields is the discriminator, not missing-variable failure.",
+        "runtimeObserved": false
+      },
+      "finiteChild": {
+        "tuple": "Exact process.version v24.21.0 and existing Linuxx64/Darwinx64-or-ARM64/Windowsx64-or-ARM64 assertion before temp allocation. Unsupported tuple fails, never silently passes.",
+        "executable": "process.execPath",
+        "observer": "Actual passive-diagnostics.ts URL via --import",
+        "peer": "One generated finite TEST module in a unique temp directory",
+        "effects": "300 synthetic undici request:create channel events with private query sentinels, then actual current compiled producer run rejection/publication. No network request/provider/real vendor execution.",
+        "resultRequirements": "No spawn error, status0, signalnull, exact completion marker; sanitized bounded raw lines, one trace-limit, one actual parent close carrying codes and original driver-close/unconfirmed classification.",
+        "timeoutMs": 10000,
+        "maxBufferBytes": 262144,
+        "cleanup": "Existing spawnSync ownership/timeout plus finally recursive removal of only the owned unique temporary root. No broader process cleanup or product qualification is asserted.",
+        "limitations": "These child actions are future test code, not actions taken by this review."
+      },
+      "case3": "Extracts actual complete closed helper block and actual projectHostProbeCloseFailure, strips erasable types using node:module, and invokes that real function. Exercises absent legacy keys, accessor/proxy traps, inherited/unrecognized/opaque optional values and invalid mandatory stage; also exercises real exported parent capture.",
+      "parentPressure": "100 known-or-null code pairs and selected serialization maxima; actual parent legacy/malformed input, ordinary saturation, first close retained across epochs, later close ignored, and rejected oversized chunks not consuming the reserved valid close slot.",
+      "sourceEvaluationInReview": false
+    },
+    "dataOnlyBounds": {
+      "classification": "Independent expected-record JSON arithmetic, not execution of target projector/parser",
+      "codeOrNullPairs": 100,
+      "maxEmittedWithNewline": 355,
+      "maxEmittedWithoutNewline": 354,
+      "maxParentWithNewline": 499,
+      "epoch": -0.0000010000000000000002,
+      "atMs": 3600000,
+      "errorClass": "conflict",
+      "stage": "request-drain",
+      "unrelatedParentFields": null,
+      "allWithinOriginal512And513": true,
+      "scope": "Selected fixed scalar shapes only. Actual tests assert these exact values; arbitrary hostile records remain subject to unchanged original guards. No universal epoch/input-size or target runtime proof is claimed."
+    },
+    "typeStrippingDocumentation": {
+      "repository": "nodejs/node",
+      "ref": "v24.21.0",
+      "path": "doc/api/module.md",
+      "bytes": 77941,
+      "sha256": "94647ba08114b86f1b8845f00542ef697b715a16be8bd971ed0bb4504639f3e1",
+      "gitBlob": "91b3631883021274ab6c7e1eb947ebd776c7c97e",
+      "readScope": "Complete body fetched/hashed; relevant stripTypeScriptTypes section fully read. Default strip mode removes erasable types with preserved locations; no transform-only syntax is used in selected snippets. Output is not promised stable across Node versions. Reviewer did not call this API."
+    }
+  },
+  "wholePlatform": {
+    "exactTarget": {
+      "bytes": 20830,
+      "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+      "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+    },
+    "exactHelper": {
+      "bytes": 12389,
+      "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+      "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+    },
+    "exactFixture": {
+      "bytes": 16768,
+      "sha256": "db43609e9394925e3b27f606d8a49ed443e1bcdabeee866dd4fec4b56ed800fb",
+      "gitBlob": "47a1e9cb0efa58479721d8815bfb8dae3f943fb6"
+    },
+    "completePriorReadsReused": true,
+    "importOccurrences": 1,
+    "importAtEnd": true,
+    "unconditionalSpecifier": "../../../scripts/e2e/opencode-diagnostics/platform.test.mjs",
+    "wholeCases": 14,
+    "nativeProspectiveRegistrations": 26,
+    "windowsEligiblePlatform": 14,
+    "linuxEligiblePlatform": 13,
+    "linuxOriginalSkip": 1,
+    "skipIsPass": false,
+    "registration": "Awaited import establishes evaluation/registration after12 local registrations, not completion of prior callbacks. Imported cases share native entry process; other seven Stage1 entries retain isolation.",
+    "route": "Existing Stage1 exact eight-entry command lists native-receipt once and does not separately list platform.test.mjs. Ubuntu24.04 andWindows2022 use Node24.21.0 after existing install/build/typecheck. Existing current-main product lock remains a separate captured input.",
+    "unchangedEffects": "Original loopback binds, lsof/PowerShell/self-PID queries, temp files, copied Node fixture and Unix shim, original5s/15s/30s bounds and timeout child cleanup are preserved. Whole suite is not pure data; no real Claude/Codex/OpenCode binary is invoked by its selected fixture route.",
+    "prerequisites": "Exact historical Ubuntu manifest read was404; lsof availability is not claimed. Missing tools/access, timeout, refusals or cleanup failures remain genuine failures. No install/fallback/new workflow/runner substitution is selected.",
+    "currentRuntimeResult": null
+  },
+  "preservation": {
+    "sixPathsOnly": true,
+    "frozen13Vector": {
+      "bytes": 3481,
+      "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+      "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+    },
+    "fourWindowsPostimagesUnchanged": true,
+    "all17DisjointFromSelectedChanges": true,
+    "whole149Catalog43Runtime85": true,
+    "nativeUi8Unchanged": true,
+    "nonDocLeaves": 8799,
+    "productionFiles": 5020,
+    "cap": 800,
+    "existingExceptions": 141,
+    "workflows": 42,
+    "currentFixedCiHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "qualification": "Current fixed9d results do not qualify these future source postimages. Neither prospective39 registration expressions nor26 native-entry registrations implies GUI/native integration, strictP09, cold renderer, archive or exactNode24.22.1 standaloneRED/GREEN success."
+  },
+  "continuation": {
+    "existingSourceR2PublicationAndActualSequence": true,
+    "noExtraGate": true,
+    "rootSoleExecutor": true,
+    "noVenueSelectedByReview": true
+  },
+  "qualification": {
+    "completeE2E": false,
+    "rootCauseResolved": false,
+    "fixRuntimeProven": false,
+    "archiveQualified": false,
+    "newWindows14Or8CasesExecuted": false,
+    "nativeDarwinP09Resolved": false,
+    "coldRendererResolved": false,
+    "standaloneRedGreen24_22_1Executed": false,
+    "readyMergeReleaseDefaultActivationStage2": false,
+    "wholePlatform14ActuallyExecuted": false,
+    "newDiagnosticsExecuted": false,
+    "wholePlatformImportExecuted": false,
+    "sourceCompiled": false
+  },
+  "checks": [
+    {
+      "id": "S01",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "The complete48,600-byte exact c356b7f7 proposal was read and rehashed; this review pins all six actual after bodies, including final9988 rather than supersededda40."
+    },
+    {
+      "id": "S02",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Complete accepted R1d226 and fully self-read32-check semantic reviewf5bc were reused by exact identity; selected5 GUI+3 native cases and unconditional whole14 import remain the same."
+    },
+    {
+      "id": "S03",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Complete gate7e3c joins the exact R1 publicationc88 and82 actual checks; its10:42:30 closure precedes recorded source authorship10:43:11."
+    },
+    {
+      "id": "S04",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Fresh immutable file reads at exactc88 independently match every complete preimage, six bodies totaling184,703 bytes."
+    },
+    {
+      "id": "S05",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "All six complete after bodies total222,551 bytes; full core bodies were read, and exact old test prefixes plus every appended byte were read by immutable reuse."
+    },
+    {
+      "id": "S06",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "All ten unique core replacements independently invert exactly; both test appends preserve their full literal prefixes and exact append SHA256 identities."
+    },
+    {
+      "id": "S07",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Only six existing selected paths are changed; proposed mode100644 remains, no new/deleted/renamed file, dependency, workflow or executable control is selected."
+    },
+    {
+      "id": "S08",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Four changed core files have431/184/514/578 lines, all below800; the observations test remains its preexisting long test file, with no new exception claimed."
+    },
+    {
+      "id": "S09",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Complete metadata clarification72819 is pinned to this exact proposal and unchanged sources; derived fragment IDs and sparse-word qualification are explicitly resolved without a new gate."
+    },
+    {
+      "id": "S10",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "GUI retainedDialogs explicitly describes a partial post-failure sample with atomicWithFailedWait=false,completeDom=false,actualTruncationKnown=false."
+    },
+    {
+      "id": "S11",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Actual traversal is capped at3 dialogs/24 buttons, reported count sentinels4/25; null/at-limit/overflow remain distinct and zero retained matches is not global DOM absence."
+    },
+    {
+      "id": "S12",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Only exact own-data Launch team text is counted; duplicates retain separate enabled/disabled/unknown totals, while malformed labels are bounded unknownEntries."
+    },
+    {
+      "id": "S13",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "GUI returns only newly constructed primitive/enum/fixed-text-fact data, invokes no getters/coercion or new observation, and preserves original8192 overflow/projection-failed fallback."
+    },
+    {
+      "id": "S14",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Old provisioning/hydration/cleanup projection bytes and all unrelated function/import bytes remain unchanged by exact inverse."
+    },
+    {
+      "id": "S15",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Exactly five non-PASS readiness modes are selected; PASS and unrelated team-ui/extensions routes preserve original summary behavior."
+    },
+    {
+      "id": "S16",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Packaged change is only a named import from an already imported module and final non-PASS spread; receipt write, cleanup, freeze, original rethrow and final success assertion are byte-preserved."
+    },
+    {
+      "id": "S17",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "GUI test preserves66,098-byte original prefix/34 registration expressions and adds exactly5 registrations with real exported projector/summary functions."
+    },
+    {
+      "id": "S18",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "First GUI case checks explicit saved-state counts, duplicates, exact-label negatives, text facts, no provisioning and no ready verdict against actual code."
+    },
+    {
+      "id": "S19",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Second GUI case checks missing/null/malformed collections, capped accessor slots,3/24 and8000 limits and actual overflow fallback; no separate sparse-hole fixture is claimed."
+    },
+    {
+      "id": "S20",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Third GUI case exercises secret exclusion, frozen input, output independence, zero getters/coercion and fixed throwing-descriptor fallback with actual projection."
+    },
+    {
+      "id": "S21",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Fourth GUI case exercises all five modes under both INCOMPLETE/FAIL, their PASS exclusion and two unrelated routes using actual exported summary composition."
+    },
+    {
+      "id": "S22",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Fifth GUI case uniquely extracts the actual packaged final composition, injects the actual projector, verifies original fields/failure-only output/input preservation and source order, without importing CLI main."
+    },
+    {
+      "id": "S23",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Actual producer nine-code allowlist equals actual passive positive code set; passive unknown is normalized to null rather than leaked."
+    },
+    {
+      "id": "S24",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Native metadata observes only original own code and one own cause.code inside the existing run rejection; same original error and held/invalid/conflict/busy classification are preserved."
+    },
+    {
+      "id": "S25",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Producer emits the two new fields only for runState=threw on the original failed-close path; coordination bypass, successful close, subscriber guard and result propagation remain unchanged."
+    },
+    {
+      "id": "S26",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Original request/currentness/deadline/abort/drain/driver/server/namespace decisions and first close stage/reason/outcome are preserved byte for byte outside diagnostic additions."
+    },
+    {
+      "id": "S27",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Passive mandatory fields are validated first; optional descriptor failures are caught independently per field, preserving valid original close records and absent legacy shape."
+    },
+    {
+      "id": "S28",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Both actual child emission and parent entry projection carry the fields; original reserved-slot, row/byte/line/backpressure and across-epoch rules remain unchanged."
+    },
+    {
+      "id": "S29",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Native test preserves19,696-byte nine-case prefix and adds exactly3 local diagnostic registrations before one unconditional final whole14 import."
+    },
+    {
+      "id": "S30",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Actual current compiled declarations/run wrapper/publisher are extracted with unique anchors and only finite run/fulfilled-false-cleanup stubs; no ModelProbe constructor/provider/HTTP/server/native entry is invoked by that harness."
+    },
+    {
+      "id": "S31",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Final9988 supplies expected original errorClass explicitly; it does not reproduce the production classifier as its oracle and includes all four management classes, function values and nonrecursive cause."
+    },
+    {
+      "id": "S32",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Both old source literals decode as exact unique906/677-byte original ModelProbe slices with asserted hashes; they are derived identities, not separately retained objects."
+    },
+    {
+      "id": "S33",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Old-source counterfactual uses current harmless state with exact old wrapper/publisher and predicts missing selected fields, avoiding accidental new-variable ReferenceError as the discriminator."
+    },
+    {
+      "id": "S34",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "First native case exercises nine known codes, opaque/private/primitive/inherited/accessor/coercion/descriptor inputs, original rejection identity, original close classification and resolved true/false omission."
+    },
+    {
+      "id": "S35",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Actual child case asserts Nodev24.21.0 and existing architecture/platform admission before allocation; unsupported tuples fail rather than yield false passive-observation PASS."
+    },
+    {
+      "id": "S36",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Finite child runs process.execPath with actual --import observer, actual producer fragments and300 synthetic channel events; it makes no network or real vendor call."
+    },
+    {
+      "id": "S37",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Child result requires ordinary exit0/null signal, finite marker, sanitized bounded stderr, one trace-limit and one parent-projected close; timeout10s/maxBuffer256KiB/finally root removal are explicit."
+    },
+    {
+      "id": "S38",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Third native case extracts the complete actual closed helper/projector source and uses documented node:module strip mode; reviewer never evaluates or compiles those sources."
+    },
+    {
+      "id": "S39",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Actual projection fixtures preserve legacy shape, accessors/proxies/inherited/invalid optional metadata and reject invalid mandatory stage; both parent capture and helper behavior are exercised."
+    },
+    {
+      "id": "S40",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Independent pure-data100-pair arithmetic reproduces355 emitted including newline/354 without and499 parent including newline, within original512/513 guards; these are selected-shape bounds only."
+    },
+    {
+      "id": "S41",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Actual parent fixtures cover ordinary saturation, first close across epochs, ignored later close and oversized input not consuming the valid close reservation."
+    },
+    {
+      "id": "S42",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "The exact unchanged platform14/helper/fixture and unconditional end import are preserved; native prospective registration26 retains Windows14 versus Linux13 plus original1 SKIP."
+    },
+    {
+      "id": "S43",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Imported registration is not prior callback completion; existing Stage1 eight-entry command has no separate platform entry and retains default process isolation from other entries."
+    },
+    {
+      "id": "S44",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Original platform loopback/OS/temp-file/finite Node effects and bounds remain disclosed; unknown lsof availability and missing-prerequisite failures are not hidden or substituted."
+    },
+    {
+      "id": "S45",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "All17 frozen parity/Windows paths remain outside these six modifications;149/43/85/nativeUI8 and current fixed9d evidence are not promoted into results for these new sources."
+    },
+    {
+      "id": "S46",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Existing source R2 publication/actual continuation alone remains; no target compile/import/run, shell, CI poll, source/ref/PR mutation, new execution venue or extra gate occurred."
+    }
+  ],
+  "conclusion": "Accept the exact six postimages in c356b7f7 for static source R2, with the two fully joined metadata clarifications in72819. Complete source identities/inverses, actual implementation test seams, sanitization/result/close invariants and selected data bounds are sound on static review. No source compile/test/fixture execution or runtime qualification occurred. Proceed only through the already selected source publication and actual-readback sequence; later venue selection remains separate.",
+  "selfReadbackProtocol": "Send retained pin immediately, fresh-fetch full report, verify byte/SHA/Git/literal/parsed equality and read every retained byte before completion."
+}
