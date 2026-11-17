@@ -21,3 +21,5 @@ export {
 } from './TeamProjectContextLaunchGate';
 
 export { projectTeamSummaries } from './projectTeamSummaries';
+
+export { TeamProjectContextCreateCoordinator } from './TeamProjectContextCreateCoordinator';
