@@ -16,10 +16,7 @@ import {
   getTeamsBasePath,
 } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
-import {
-  backupProjectTeamDefinition,
-  recoverMissingProjectTeamDefinitions,
-} from '@features/team-project-context/main/TeamProjectDefinitionBackup';
+import { backupProjectTeamDefinitionSafely, recoverMissingProjectTeamDefinitions } from '@features/team-project-context/main/TeamProjectDefinitionBackup';
 
 import { TeamPermanentDeletionCoordinator } from './permanent-deletion/TeamPermanentDeletionCoordinator';
 import {
@@ -173,12 +170,7 @@ export class TeamBackupService {
     await this.permanentDeletion.initialize();
     await this.reconcileResurrectedTeams();
     await this.workSyncRestore.restoreIfNeeded(onProgress);
-    // Restore only missing logical definitions that still have verified owned
-    // native project histories. An intentionally deleted team stays deleted.
-    const restoredDefinitions = await recoverMissingProjectTeamDefinitions();
-    if (restoredDefinitions > 0) {
-      logger.info(`[Backup] Recovered ${restoredDefinitions} project-team definitions`);
-    }
+    await recoverMissingProjectTeamDefinitions();
     if (this.isShuttingDown) throw new Error('Backup startup interrupted by shutdown');
     void this.pruneStaleBackups().catch((err: unknown) =>
       logger.warn(`[Backup] prune failed: ${String(err)}`)
@@ -392,7 +384,6 @@ export class TeamBackupService {
     );
     return next;
   }
-
   private async runPeriodicBackup(): Promise<void> {
     if (this.isShuttingDown || !this.initialized || this.periodicBackupActive) return;
     this.periodicBackupActive = true;
@@ -412,18 +403,10 @@ export class TeamBackupService {
       this.periodicBackupActive = false;
     }
   }
-
   private async doBackupTeam(teamName: string): Promise<void> {
     const gen = this.backupGeneration;
     if (!(await this.ownership.isManagedByThisProfile(teamName))) return;
-    if (!(await this.isConfigReady(teamName))) {
-      // Native backup requires config.json; metadata-only logical teams need
-      // their own small app-owned snapshot, without a fabricated CLI config.
-      await backupProjectTeamDefinition(teamName).catch((error: unknown) => {
-        logger.warn(`[Backup] definition backup skipped for ${teamName}: ${String(error)}`);
-      });
-      return;
-    }
+    if (!(await this.isConfigReady(teamName))) return backupProjectTeamDefinitionSafely(teamName);
     if (await this.permanentDeletion.isPermanentDeletionFenced(teamName)) return;
 
     const { files: sourceFiles, hasErrors } = await this.enumerateTeamFilesWithErrors(teamName);

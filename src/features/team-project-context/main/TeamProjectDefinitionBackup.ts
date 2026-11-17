@@ -1,4 +1,5 @@
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
+import { createLogger } from '@shared/utils/logger';
 import {
   getBackupsBasePath,
   getTasksBasePath,
@@ -13,6 +14,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
+const logger = createLogger('TeamProjectDefinitionBackup');
 const FILES = ['team.meta.json', 'members.meta.json', TEAM_PROFILE_OWNER_MARKER_FILE] as const;
 const CONTEXT_INDEX = 'project-contexts.json';
 const MAX_FILE_BYTES = 1024 * 1024;
@@ -143,6 +145,15 @@ export async function backupProjectTeamDefinition(teamName: string): Promise<boo
   return true;
 }
 
+/** A broken logical draft must not stop backups of unrelated teams. */
+export async function backupProjectTeamDefinitionSafely(teamName: string): Promise<void> {
+  try {
+    await backupProjectTeamDefinition(teamName);
+  } catch (error) {
+    logger.warn(`[Backup] definition backup skipped for ${teamName}: ${String(error)}`);
+  }
+}
+
 async function readSnapshot(teamName: string): Promise<DefinitionSnapshot | null> {
   const file = backupFilePath(teamName);
   if (!(await exists(file))) return null;
@@ -222,5 +233,6 @@ export async function recoverMissingProjectTeamDefinitions(): Promise<number> {
       // An invalid or foreign backup is never an authority to touch live data.
     }
   }
+  if (recovered > 0) logger.info(`[Backup] Recovered ${recovered} project-team definitions`);
   return recovered;
 }
