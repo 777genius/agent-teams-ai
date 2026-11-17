@@ -4,7 +4,7 @@
  * Synthetic, disposable data only. No provider process or user project is used.
  */
 import assert from 'node:assert/strict';
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { chmod, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -170,8 +170,12 @@ async function fixture() {
 type Fixture = Awaited<ReturnType<typeof fixture>>;
 
 async function start(f: Fixture): Promise<void> {
-  app = spawn('pnpm', ['dev:mcp', ...(process.getuid?.() === 0 ? ['--noSandbox'] : [])], {
+  // CI Chromium's SUID helper is not configured setuid/root. Disable the
+  // sandbox ONLY for this disposable Electron smoke, never in production.
+  // Windows pnpm resolves to pnpm.cmd on Node 22+, requiring cmd.exe.
+  app = spawn('pnpm', ['dev:mcp'], {
     cwd: repoRoot, detached: process.platform !== 'win32',
+    shell: process.platform === 'win32',
     stdio: ['ignore', 'pipe', 'pipe'],
     env: {
       ...process.env, ...f.env,
@@ -180,9 +184,11 @@ async function start(f: Fixture): Promise<void> {
       CLAUDE_TERMINAL_DAEMON_BINARY: f.runtimeCommand,
       CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
       AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
+      ELECTRON_DISABLE_SANDBOX: '1',
       pnpm_config_verify_deps_before_run: 'false',
     },
   });
+  app.on('error', (error) => logs.push('launcher error: ' + String(error)));
   for (const stream of [app.stdout, app.stderr]) {
     stream?.on('data', (chunk: Buffer) => {
       logs.push(chunk.toString());
@@ -353,8 +359,13 @@ async function run() {
   } finally {
     await cdp?.close().catch(() => undefined);
     if (app?.pid) {
-      try { process.kill(process.platform === 'win32' ? app.pid : -app.pid, 'SIGTERM'); }
-      catch { /* owned app already exited */ }
+      try {
+        if (process.platform === 'win32') {
+          spawnSync('taskkill', ['/pid', String(app.pid), '/T', '/F'], { stdio: 'ignore' });
+        } else {
+          process.kill(-app.pid, 'SIGTERM');
+        }
+      } catch { /* owned app already exited */ }
     }
     if (success && !keep && process.env.PROJECT_TEAM_E2E_REMOVE_FIXTURE === '1') {
       await rm(f.root, { recursive: true, force: true });
