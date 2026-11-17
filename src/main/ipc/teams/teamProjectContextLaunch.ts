@@ -28,7 +28,14 @@ export async function prepareTeamContextLaunch(
 ): Promise<PreparedTeamContextLaunch> {
   const parts = createProjectContextRuntimeParts(ports);
   const mode = await parts.resolver.getMode(request.teamName);
-  if (mode === 'shared') return { request };
+  if (mode === 'shared') {
+    // Public launch requests must never bypass logical-team admission by
+    // addressing the physical runtime alias directly (e.g. global tasks).
+    if (await parts.registry.isOwnedExecutionAlias(request.teamName)) {
+      throw new Error('Project runtime alias cannot launch directly; open its logical team');
+    }
+    return { request };
+  }
   const logicalMeta = await new TeamMetaStore().getMeta(request.teamName);
   if (logicalMeta?.deletedAt) {
     throw new Error('TEAM_TRASHED: Restore the team before launching');

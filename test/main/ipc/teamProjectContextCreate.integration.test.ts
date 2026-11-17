@@ -149,6 +149,23 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
     expect(meta.cwd).toBe(await fs.realpath(f.projectPath));
   });
 
+  it('rejects launching a verified native project alias outside its logical team', async () => {
+    const f = await fixture();
+    await createTeamWithProjectContext({
+      teamName: 'builders', cwd: f.projectPath, members: [], projectContextMode: 'per_project',
+    }, f.onProgress, f.ports);
+    const registry = TeamProjectContextRegistry.fromCurrentApp();
+    const alias = await vi.waitFor(async () => {
+      const row = await registry.find('builders', f.projectPath);
+      expect(row).toBeTruthy();
+      return row!.executionTeamName;
+    });
+    await expect(prepareTeamContextLaunch({
+      teamName: alias, cwd: f.projectPath,
+    }, f.ports)).rejects.toThrow('cannot launch directly');
+    expect(f.started).toHaveLength(1);
+  });
+
   it('preserves the native team name and paths in shared mode', async () => {
     const f = await fixture();
     await createTeamWithProjectContext({

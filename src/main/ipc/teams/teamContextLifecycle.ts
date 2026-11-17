@@ -220,7 +220,19 @@ export async function permanentlyDeleteLogicalTeam(
         await registry.listForPermanentDeletion(logicalTeamName);
         const stopped = await ports.stopNative(row.executionTeamName);
         if (!stopped.success) return stopped;
-        await ports.deleteNative(row.executionTeamName, row.state === 'reserved');
+        // A reserved row may already contain a complete native config if the
+        // process failed before readiness. The native deletion transaction
+        // distinguishes draft vs runtime by actual config, not manifest state.
+        const configPresent = await fs.lstat(
+          path.join(getTeamsBasePath(), row.executionTeamName, 'config.json')
+        ).then(
+          () => true,
+          (error: NodeJS.ErrnoException) => {
+            if (error.code === 'ENOENT') return false;
+            throw error;
+          }
+        );
+        await ports.deleteNative(row.executionTeamName, !configPresent);
       }
       const forgotten = await registry.forgetPermanentlyDeletedContext(
         logicalTeamName, row.executionTeamName, row.id
