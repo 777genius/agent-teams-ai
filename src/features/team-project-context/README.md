@@ -8,4 +8,4 @@ The feature separates a team **definition** from its project-specific **work his
 - Do not create physical contexts merely to read, or infer ownership from an alias prefix.
 - Runtime/storage/renderer integration must not expose `per_project` as working until real inbox/task/session isolation is proven.
 
-See [the reviewed implementation plan](../../../docs/plans/project-scoped-team-history-2026-11-17.md) in the plan PR #1215.
+See [the reviewed implementation plan in Draft PR #1215](https://github.com/777genius/agent-teams-ai/pull/1215/files) in the plan PR #1215.
