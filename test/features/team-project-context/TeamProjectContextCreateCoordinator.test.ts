@@ -58,6 +58,14 @@ const progress = (state: TeamProvisioningProgress['state']): TeamProvisioningPro
 });
 
 describe('TeamProjectContextCreateCoordinator', () => {
+  it('rejects launch without a project before writing its logical draft', async () => {
+    const f = fixture();
+    await expect(f.create.create({ ...request, cwd: undefined }, vi.fn()))
+      .rejects.toThrow('Choose a project');
+    expect(f.ports.createLogicalDraft).not.toHaveBeenCalled();
+    expect(f.ports.reserve).not.toHaveBeenCalled();
+  });
+
   it('starts only the project-specific native team and maps progress to the logical team', async () => {
     const f = fixture();
     const onProgress = vi.fn();

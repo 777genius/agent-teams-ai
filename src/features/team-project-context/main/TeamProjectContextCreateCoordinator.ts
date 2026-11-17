@@ -43,6 +43,7 @@ export class TeamProjectContextCreateCoordinator {
     if (request.projectContextMode !== 'per_project') {
       throw new Error('Project-scoped team creation requires per_project mode');
     }
+    if (!request.cwd?.trim()) throw new Error('Choose a project before launching the team');
     const projectPath = request.cwd;
     const address: TeamWorkContextAddress = {
       logicalTeamName: request.teamName,

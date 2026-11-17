@@ -1,3 +1,4 @@
+import { projectTeamSummaries } from '@features/team-project-context/main';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { CROSS_TEAM_SENT_SOURCE, CROSS_TEAM_SOURCE, formatCrossTeamText } from '@shared/constants';
 import { isLeadMember, resolveRuntimeLeadName } from '@shared/utils/leadDetection';
@@ -14,6 +15,7 @@ import {
 } from './CrossTeamOutbox';
 import { resolveCrossTeamRecipientIdentity } from './CrossTeamRecipientIdentity';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
+import { TeamMetaStore } from './TeamMetaStore';
 
 import type { TeamCrossTeamMessagingApi } from './contracts/TeamProvisioningApis';
 import type { TeamConfigReader } from './TeamConfigReader';
@@ -355,7 +357,12 @@ export class CrossTeamService {
       return [];
     }
 
-    const targets: CrossTeamTarget[] = teams
+    // Only an explicit execution context can receive a project-scoped
+    // cross-team message. Hide verified native aliases and do not offer a
+    // context-less logical team as a delivery target.
+    const visible = await projectTeamSummaries(teams, new TeamMetaStore());
+    const targets: CrossTeamTarget[] = visible
+      .filter((team) => team.projectContextMode !== 'per_project')
       .filter((team) => {
         if (excludeTeam && team.teamName === excludeTeam) return false;
         if (!TEAM_NAME_PATTERN.test(team.teamName)) return false;

@@ -1300,6 +1300,17 @@ describe('CrossTeamService', () => {
       expect(result).toEqual([]);
     });
 
+    it('does not offer a project-scoped logical team without an explicit target context', async () => {
+      dataService.listTeams.mockResolvedValue([
+        { teamName: 'scoped-team', displayName: 'Scoped', memberCount: 2,
+          projectContextMode: 'per_project', pendingCreate: false },
+        { teamName: 'legacy-target', displayName: 'Legacy', memberCount: 2,
+          members: [], pendingCreate: false },
+      ]);
+      const result = await service.listAvailableTargets();
+      expect(result.map((target) => target.teamName)).toEqual(['legacy-target']);
+    });
+
     it('uses team summaries instead of verified config reads for target discovery', async () => {
       dataService.listTeams.mockResolvedValue([
         {
