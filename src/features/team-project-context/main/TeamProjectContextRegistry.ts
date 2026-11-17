@@ -194,10 +194,12 @@ export class TeamProjectContextRegistry {
     await this.assertOwnedDirectory(logicalTeamName);
     const { contexts } = await this.readIndex(logicalTeamName);
     for (const row of contexts) {
-      if (row.state !== 'ready') {
-        throw new TeamProjectContextUnavailableError('Project context creation is incomplete');
+      // Reservations are visible to lifecycle admission but are not readable
+      // native histories. Do not suppress the logical team while a launch
+      // is preparing its first physical context.
+      if (row.state === 'ready') {
+        await this.assertOwnedDirectory(row.executionTeamName);
       }
-      await this.assertOwnedDirectory(row.executionTeamName);
     }
     return contexts;
   }
