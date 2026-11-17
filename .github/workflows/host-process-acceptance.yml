@@ -336,10 +336,155 @@ jobs:
             assert.deepEqual(emulated.providers.map(row => row.provider), ['codex', 'opencode']);
             for (const row of emulated.providers) {
               for (const field of ['nativeReady', 'inputCompleted', 'neighborSurvivedPrimary', 'providerSurvivedScopedStops', 'cleanup']) assert.equal(row[field], true);
+              assert.equal(row.status, 'PASS'); assert.equal(row.stage, 'complete'); assert.deepEqual(row.errors, []);
               assert.equal(row.registeredServices, 2); assert.equal(row.scopedStops, 2);
-              for (const field of ['allocate', 'prepare', 'resume', 'release']) assert.equal(row.counts[field], 1);
+              const rootCount = row.provider === 'codex' ? 2 : 1;
+              assert.equal(row.roots.length, rootCount);
+              for (const field of ['allocate', 'prepare', 'resume', 'release']) assert.equal(row.counts[field], rootCount);
               for (const field of ['serviceCapture', 'serviceStop', 'serviceSettle']) assert.equal(row.counts[field], 2);
-              assert.ok(row.counts.stop >= 1 && row.counts.stop <= 4);
+              for (const root of row.roots) {
+                for (const field of ['allocate', 'prepare', 'resume', 'release']) assert.equal(root.counts[field], 1);
+                assert.ok(root.counts.stop >= 1 && root.counts.stop <= 4);
+                assert.ok(Number.isSafeInteger(root.root.pid) && root.root.pid > 0); assert.equal(typeof root.root.birth, 'string');
+                assert.equal(typeof root.capability, 'string'); assert.equal(typeof root.providerGeneration, 'string');
+                assert.deepEqual(row.operationOrder.filter(value => value.capability === root.capability).map(value => value.operation), root.order);
+                assert.equal(root.order[0], 'allocate'); assert.ok(root.order.indexOf('prepare') > 0);
+                assert.ok(root.order.indexOf('resume') > root.order.indexOf('prepare'));
+                assert.ok(root.order.indexOf('release') > root.order.indexOf('stop'));
+              }
+              for (const field of ['allocate', 'prepare', 'resume', 'stop', 'release'])
+                assert.equal(row.counts[field], row.roots.reduce((sum, root) => sum + root.counts[field], 0));
+              assert.equal(row.physical.hostExited, true); assert.equal(row.physical.mainCloseConfirmed, true);
+              assert.deepEqual(row.physical.handleWaits, Array(rootCount + 2).fill(0));
+              if (row.provider === 'codex') {
+                const restart = row.healthyRestart, [previous, successor] = row.roots;
+                assert.equal(restart.status, 'PASS'); assert.equal(restart.stage, 'complete');
+                assert.notEqual(successor.capability, previous.capability); assert.notEqual(successor.providerGeneration, previous.providerGeneration);
+                assert.notDeepEqual(successor.root, previous.root); assert.deepEqual(row.roots.map(root => root.nativeInputs), [1, 0]);
+                assert.notEqual(restart.after.bindingGeneration, restart.before.bindingGeneration);
+                assert.ok(Number.isSafeInteger(restart.before.configGeneration));
+                assert.equal(restart.after.configGeneration, restart.before.configGeneration + 1);
+                for (const field of ['sourceClosedBeforeAllocate', 'oldReleaseBeforeAllocate', 'oldRowsAbsent']) assert.equal(restart[field], true);
+                assert.equal(restart.retirementSourceOrder, 'closeRuntimeMember→retireOriginal→installSelected→startSelected');
+                assert.equal(restart.profileGenerationSource, 'executeMemberAction assigns the selected profile generation to config.generation');
+                const release = row.operationOrder.findIndex(value => value.operation === 'release' && value.capability === previous.capability);
+                const allocate = row.operationOrder.findIndex(value => value.operation === 'allocate' && value.capability === successor.capability);
+                assert.ok(release >= 0 && allocate > release);
+                for (const receipt of [restart.prepared, restart.executed]) {
+                  assert.equal(receipt.commandId, restart.commandId); assert.equal(receipt.sourceGeneration, restart.before.bindingGeneration);
+                  assert.equal(receipt.current, true);
+                }
+                assert.equal(restart.prepared.stage, 'prepared'); assert.equal(restart.prepared.selectedGeneration, null);
+                assert.equal(restart.executed.stage, 'selected'); assert.equal(restart.executed.selectedGeneration, restart.after.bindingGeneration);
+                assert.deepEqual(restart.executed.source, { availability: 'observed', generation: restart.before.bindingGeneration,
+                  phase: 'closed', custody: 'released', attached: false });
+                assert.deepEqual(restart.executed.selected, { availability: 'observed', generation: restart.after.bindingGeneration,
+                  phase: 'allocated', custody: 'owned', attached: true });
+                assert.equal(restart.sourcePins.length, 4);
+                assert.deepEqual(restart.sourcePins.map(pin => pin.path.replaceAll('\\', '/').split('/').at(-1)),
+                  ['nativeEmulatedProviderGate.ts', 'transitionRuntimeMember.ts', 'executeMemberAction.ts', 'RetainedWindowsServices.ts']);
+                for (const pin of restart.sourcePins) assert.match(pin.sha256, /^[a-f0-9]{64}$/);
+                const stale = restart.staleCapture;
+                assert.equal(stale.capability, successor.capability); assert.equal(stale.capture.providerCapability, previous.capability);
+                assert.equal(stale.capture.providerGeneration, previous.providerGeneration); assert.deepEqual(stale.capture.root, previous.root);
+                assert.equal(stale.capture.registrar.generation, restart.before.bindingGeneration);
+                assert.equal(stale.rejection, 'Original service custody unavailable');
+                for (const field of ['oldRootAbsent', 'newRootAlive', 'countsUnchanged']) assert.equal(stale[field], true);
+                assert.equal(restart.oldRows.length, 2);
+                for (const old of restart.oldRows) { assert.equal(old.observation, 'absent'); assert.equal(old.canTerminate, false); }
+                assert.equal(restart.oldRows.filter(old => old.pid === stale.capture.target.pid).length, 1);
+                assert.equal(restart.successorInputs, 0); assert.deepEqual(restart.handleWaits, [0, 0, 0, 0]);
+              } else {
+                assert.ok(row.counts.stop >= 1 && row.counts.stop <= 4);
+                assert.equal(Object.hasOwn(row, 'healthyRestart'), false);
+              }
+            }
+            assert.deepEqual(emulated.ownerLoss.map(row => row.scenario), [
+              'completed-install-before-physical-resume', 'completed-effects-before-runtime-completion']);
+            for (const [index, row] of emulated.ownerLoss.entries()) {
+              const afterEffect = index === 1, handles = afterEffect ? 3 : 1;
+              assert.equal(row.status, 'PASS'); assert.equal(row.stage, 'complete'); assert.equal(row.cleanup, true);
+              assert.equal(row.sourceHead, process.env.HOST_PROCESS_SOURCE_HEAD); assert.equal(row.pinsUnchanged, true);
+              for (const field of ['realProviderExecuted', 'desktopQualified', 'releaseQualified']) assert.equal(row[field], false);
+              assert.deepEqual(row.budgets, { startupMs: 10000, requestMs: 15000, writeMs: 5000,
+                profileShutdownMs: 1000, inputMs: 15000 });
+              for (const field of ['allocated', 'prepared', 'resumeRequests']) assert.equal(row.counts[field], 1);
+              for (const field of ['resumeCompleted', 'resumeForwarded', 'businessInputs', 'nativeTurnStarts', 'registeredRows'])
+                assert.equal(row.counts[field], afterEffect ? 1 : 0);
+              for (const field of ['serviceCapture', 'serviceCaptureACKs', 'completedEffects']) assert.equal(row.counts[field], afterEffect ? 2 : 0);
+              assert.deepEqual(row.openIntents, { original: 1, identicalReplay: afterEffect ? 0 : 1,
+                reconcile: 1, numericPidProbe: 1, commandLookup: afterEffect ? 1 : 0, processList: afterEffect ? 1 : 0 });
+              for (const field of ['reached', 'pendingBeforeCrash', 'originalAttachmentCurrent', 'originalHostExited', 'callbackSettled'])
+                assert.equal(row.barrier[field], true);
+              assert.equal(row.barrier.crashMarkers, 1); assert.equal(row.barrier.terminalForwarded, false);
+              assert.equal(row.barrier.operation, afterEffect ? 'read' : 'resume');
+              assert.equal(row.hosts.length, 2); assert.notEqual(row.hosts[0].hostIncarnation, row.hosts[1].hostIncarnation);
+              assert.equal(row.hosts[0].profileDigest, row.hosts[1].profileDigest);
+              for (const [hostIndex, host] of row.hosts.entries()) {
+                assert.equal(host.epoch, hostIndex === 0 ? 'A' : 'B'); assert.equal(host.mainEpoch, row.mainEpoch);
+                assert.equal(host.helloHostIncarnation, host.hostIncarnation); assert.equal(host.exited, true);
+                assert.deepEqual(host.shutdown, { childExit: 'confirmed', providerCustody: 'unresolved' });
+              }
+              for (const field of ['originalHandleAliveBeforeLoss', 'originalHandleAliveAfterLoss', 'originalHandleAliveAfterRefusals',
+                'mainCloseConfirmed', 'originalHandleAbsent', 'sentinelSurvived']) assert.equal(row.physical[field], true);
+              for (const field of ['handlesAliveBeforeLoss', 'handlesAliveAfterLoss', 'handlesAliveAfterRefusals'])
+                assert.equal(row.physical[field], handles);
+              assert.deepEqual(row.physical.handleWaits, Array(handles).fill(true));
+              for (const field of ['stale-resume', 'stale-write', 'successor-resume', 'successor-write'])
+                assert.equal(row.negatives[field], 'refused');
+              assert.deepEqual(row.negatives.numericPid, { ok: false, code: 'invalid', outcome: 'rejected' });
+              const original = row.states.beforeLoss, retained = row.states.retained, final = row.states.afterCleanup;
+              assert.equal(original.hostIncarnation, row.hosts[0].hostIncarnation);
+              assert.equal(original.phase, afterEffect ? 'allocated' : 'opening');
+              assert.equal(original.custody, afterEffect ? 'owned' : 'unknown');
+              for (const state of [retained, final]) {
+                assert.deepEqual(state.binding, original.binding); assert.equal(state.profileId, original.profileId);
+                assert.equal(state.hostIncarnation, original.hostIncarnation); assert.equal(state.openFingerprint, original.openFingerprint);
+                assert.equal(state.phase, 'held'); assert.equal(state.custody, 'unknown'); assert.equal(state.nativeReady, false);
+                assert.equal(state.inputs, afterEffect ? 1 : 0); assert.equal(state.interactions, 0);
+              }
+              assert.equal(row.states.coldRead.attached, false); assert.equal(row.states.coldRead.nativeReady, false);
+              assert.equal(row.states.reconciled.phase, 'held'); assert.equal(row.states.reconciled.custody, 'unknown');
+              assert.equal(row.allocationsAfterLoss, 0); assert.equal(row.nativeWritesAfterLoss, 0); assert.deepEqual(row.errors, []);
+              if (afterEffect) {
+                assert.ok(row.counts.writeCompleted > 0); assert.equal(row.counts.writeForwarded, row.forwardedAtLoss.write);
+                assert.equal(row.barrier.nativeWriteAcknowledged, true); assert.equal(row.barrier.stream, 'stdout');
+                assert.ok(row.barrier.heldBytes > 0 && row.barrier.heldBytes <= 16384);
+                assert.equal(typeof row.barrier.originalMore, 'boolean');
+                assert.equal(row.barrier.inputCutoff, row.barrier.inputEntered + 15000);
+                assert.ok(row.barrier.beforeLossObserved < row.barrier.inputCutoff);
+                assert.equal(row.nativeTurn.threadId, 'TEST-thread'); assert.equal(row.nativeTurnReply.turnId, 'TEST-turn');
+                assert.equal(row.nativeTurn.requestId, row.nativeTurnReply.requestId);
+                assert.ok(['item/completed', 'turn/completed'].includes(row.barrier.terminal.method));
+                assert.equal(row.barrier.terminal.threadId, row.nativeTurn.threadId);
+                assert.equal(row.barrier.terminal.turnId, row.nativeTurnReply.turnId);
+                assert.ok(['claimed', 'consumed'].includes(original.input.phase)); assert.equal(original.input.terminal, undefined);
+                assert.deepEqual(row.commandLookup, row.commandReceipt); assert.equal(row.commandReceipt.phase, 'completed');
+                assert.equal(row.commandReceipt.effects.deliveryId, original.input.intent.inputId);
+                assert.equal(row.commandReceipt.effects.deliveryId, original.input.intent.deliveryId);
+                for (const state of [retained, final]) {
+                  assert.deepEqual(state.input.intent, original.input.intent); assert.equal(state.input.fingerprint, original.input.fingerprint);
+                  assert.equal(state.input.operationRef, original.input.operationRef); assert.equal(state.input.phase, 'unknown');
+                  assert.equal(state.input.terminal, undefined);
+                }
+                assert.equal(row.captures.length, 2); assert.equal(row.registeredServices.length, 2);
+                assert.equal(row.originalProcessRows.length, 2);
+                for (const capture of row.captures) {
+                  assert.equal(capture.mainEpoch, row.mainEpoch); assert.equal(capture.providerCapability, row.capability);
+                  assert.equal(capture.providerGeneration, row.providerGeneration); assert.deepEqual(capture.root, row.root);
+                  assert.deepEqual(capture.registrar, original.binding);
+                  const service = row.registeredServices.find(value => value.pid === capture.target.pid); assert.ok(service);
+                  const processRow = row.originalProcessRows.find(value => value.processRef === service.processRef); assert.ok(processRow);
+                  assert.equal(processRow.pid, capture.target.pid); assert.equal(processRow.observation, 'same-live');
+                  assert.equal(processRow.canTerminate, true);
+                }
+              } else {
+                assert.equal(row.counts.writeCompleted, 0); assert.equal(row.counts.writeForwarded, 0);
+                assert.equal(row.peerJournalRows, 0); assert.equal(row.captures.length, 0);
+                assert.deepEqual(row.openFailure, { code: 'transport-closed', outcome: 'unknown' });
+                assert.equal(row.states.coldRead.custody, 'unknown'); assert.equal(row.states.replay.phase, 'held');
+                assert.equal(row.states.replay.custody, 'unknown'); assert.deepEqual(row.states.replay.inputs, []);
+              }
             }
             const controllers = rows('windows-emulated-provider.log').filter(row => row.gateController);
             assert.deepEqual(controllers, [{ gateController: 'drained', rootExitCode: 0, activeProcesses: 0 }]);

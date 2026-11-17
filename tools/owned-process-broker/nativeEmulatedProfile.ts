@@ -12,6 +12,8 @@ import type { RuntimeMemberProfile } from '../../packages/legacy-agent-host/dist
 
 export const fileHash = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
 
+export type EmulatedOwnerLossMode = 'owner-loss-before-resume' | 'owner-loss-after-effect';
+
 interface PackagedEmulatedHost {
   nodeExecutable: string;
   nodeVersion: string;
@@ -28,7 +30,11 @@ async function reservePort(): Promise<number> {
 
 /** Every executable is this checkout's Node or C++ actor; no runtime installation/discovery. */
 export async function prepareEmulatedProfile(sandbox: string, broker: string, actor: string,
-  provider: 'codex' | 'opencode', packaged?: PackagedEmulatedHost) {
+  provider: 'codex' | 'opencode', packaged?: PackagedEmulatedHost, loss?: EmulatedOwnerLossMode) {
+  if (loss !== undefined) {
+    assert.ok(loss === 'owner-loss-before-resume' || loss === 'owner-loss-after-effect');
+    assert.equal(provider, 'codex'); assert.equal(packaged, undefined);
+  }
   if (packaged) {
     assert.deepEqual(Object.keys(packaged).sort(), ['hostEntry', 'nodeExecutable', 'nodeVersion']);
     assert.equal(provider, 'codex'); assert.equal(packaged.nodeVersion, 'v24.21.0');
@@ -71,8 +77,8 @@ export async function prepareEmulatedProfile(sandbox: string, broker: string, ac
   const cli = packaged ? realpathSync.native(packaged.hostEntry)
     : realpathSync(fileURLToPath(new URL('../../packages/legacy-agent-host/dist/cli.js', import.meta.url)));
   const hostEntry = join(root, 'TEST-host.mjs');
-  const crash = packaged ? join(root, 'TEST-crash-original-host') : undefined;
-  const hostBirths = packaged ? join(root, 'TEST-host-births.ndjson') : undefined;
+  const crash = packaged || loss ? join(root, 'TEST-crash-original-host') : undefined;
+  const hostBirths = packaged || loss ? join(root, 'TEST-host-births.ndjson') : undefined;
   if (hostBirths) writeFileSync(hostBirths, '', { flag: 'wx' });
   const barrier = crash && hostBirths ? "import { appendFileSync, existsSync } from 'node:fs';\n" +
     `appendFileSync(${JSON.stringify(hostBirths)}, JSON.stringify({ pid: process.pid, parentPid: process.ppid }) + '\\n');\n` +
