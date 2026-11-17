@@ -4,6 +4,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
 import { useStore } from '@renderer/store';
+import { redirectProjectAliasTaskNavigation } from '@renderer/store/team/projectAliasTaskNavigation';
 import { useShallow } from 'zustand/react/shallow';
 
 import { TeamDetailView } from './TeamDetailView';
@@ -157,8 +158,10 @@ export function ProjectScopedTeamDetailView({
     if (!isActive || !redirectTeam || !redirectProject) return;
     // A deep link may still use the physical alias. Navigate through its
     // verified owner; never mount the alias as an independent team editor.
-    useStore.getState().openTeamTab(redirectTeam, redirectProject);
-  }, [isActive, redirectTeam, redirectProject]);
+    redirectProjectAliasTaskNavigation(
+      () => useStore.getState(), teamName, redirectTeam, redirectProject
+    );
+  }, [isActive, redirectTeam, redirectProject, teamName]);
 
   const start = useCallback(async (): Promise<void> => {
     if (!selectedProjectPath || launchingKey !== null) return;
