@@ -4,6 +4,10 @@ import { readFileSync } from 'node:fs';
 import { runInThisContext } from 'node:vm';
 import { mkdtemp, copyFile, writeFile, rm } from 'node:fs/promises';
 import { spawn, spawnSync } from 'node:child_process';
+import { EventEmitter } from 'node:events';
+import { PassThrough } from 'node:stream';
+import { MessageChannel, Worker } from 'node:worker_threads';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import {
@@ -20,6 +24,9 @@ import {
   allocateIsolatedCdpPort,
   assertPortAvailable,
   windowsProcessListenerSnapshot,
+  createWindowsProcessObserver,
+  createWindowsProcessObservationClient,
+  serveWindowsProcessObserver,
 } from './platform.mjs';
 
 test('OS process and listener output parsing fails closed', () => {
@@ -389,3 +396,179 @@ test('Windows listener executor failures never admit partial output or fall back
     assert.deepEqual({ ...failure }, fields);
   }
 });
+
+function observerWorkerFixture() {
+  const channel = new EventEmitter(), messages = [], inputs = [], launches = [];
+  channel.postMessage = value => messages.push(value);
+  channel.close = () => { channel.closed = true; };
+  const child = new EventEmitter();
+  child.pid = 71;
+  child.stdin = new PassThrough(); child.stdout = new PassThrough(); child.stderr = new PassThrough();
+  child.stdin.on('data', part => inputs.push(String(part)));
+  let kills = 0;
+  child.kill = () => { kills++; queueMicrotask(() => child.emit('close', null, 'SIGTERM')); return true; };
+  serveWindowsProcessObserver(channel, new Int32Array(new SharedArrayBuffer(4)),
+    { executable: 'C:\\Windows\\PowerShell.exe', port: 43127 }, (...args) => { launches.push(args); return child; });
+  child.emit('spawn');
+  const reply = (sequence, processes, listeners = '') => JSON.stringify({ sequence,
+    observation: JSON.stringify({ processes: JSON.stringify(processes), listeners }) }) + '\n';
+  return { channel, child, messages, inputs, launches, reply, kills: () => kills,
+    read: (sequence, timeoutMs = 1000) => channel.emit('message', { kind: 'read', sequence, timeoutMs }),
+    close: () => channel.emit('message', { kind: 'close' }) };
+}
+
+test('persistent Windows query owner keeps one child and delivers fresh ordered snapshots without coalescing', async () => {
+  const f = observerWorkerFixture();
+  const first = [{ pid: 1, parent: 0, birth: 'first' }], second = [{ pid: 2, parent: 1, birth: 'second' }];
+  f.read(1);
+  const bytes = Buffer.from(f.reply(1, first, '11\r\n'));
+  f.child.stdout.write(bytes.subarray(0, 17));
+  assert.equal(f.messages.length, 1, 'incomplete output cannot become an observation');
+  f.child.stdout.write(bytes.subarray(17));
+  f.read(2); f.child.stdout.write(f.reply(2, second, '22\r\n'));
+  assert.deepEqual(f.inputs, ['1\n', '2\n']); assert.equal(f.launches.length, 1);
+  assert.deepEqual(f.messages, [{ kind: 'ready', pid: 71 },
+    { kind: 'snapshot', sequence: 1, observation: { processes: first, listeners: [11] } },
+    { kind: 'snapshot', sequence: 2, observation: { processes: second, listeners: [22] } }]);
+  const script = Buffer.from(f.launches[0][1].at(-1), 'base64').toString('utf16le');
+  assert.ok(script.indexOf('while (') < script.indexOf('Get-CimInstance Win32_Process'));
+  assert.ok(script.indexOf('Get-CimInstance Win32_Process') < script.indexOf('MSFT_NetTCPConnection'));
+  assert.ok(script.includes('LocalPort = 43127 AND State = 2'));
+  f.close(); await Promise.resolve();
+  assert.equal(f.kills(), 1); assert.equal(f.channel.closed, true);
+  assert.deepEqual(f.messages.at(-1), { kind: 'closed', pid: 71, code: null, signal: 'SIGTERM', expected: true });
+});
+
+for (const kind of ['duplicate request', 'stale reply', 'malformed envelope', 'extra reply', 'stderr', 'partial close'])
+test('persistent Windows query owner refuses ' + kind + ' and retires only its original child', async () => {
+  const f = observerWorkerFixture(); f.read(1);
+  if (kind === 'duplicate request') f.read(1);
+  else if (kind === 'stale reply') f.child.stdout.write(f.reply(2, []));
+  else if (kind === 'malformed envelope') f.child.stdout.write('{"sequence":1,"observation":null}\n');
+  else if (kind === 'extra reply') f.child.stdout.write(f.reply(1, []) + f.reply(1, []));
+  else if (kind === 'stderr') f.child.stderr.write('TEST query failure');
+  else { f.child.stdout.write(f.reply(1, []).slice(0, -1)); f.child.emit('close', 1, null); }
+  await Promise.resolve();
+  assert.equal(f.launches.length, 1); assert.deepEqual(f.inputs, ['1\n']);
+  assert.equal(f.messages.some(row => row.kind === 'snapshot'), false);
+  assert.equal(f.messages.filter(row => row.kind === 'failure').length, 1);
+  assert.equal(f.messages.at(-1).kind, 'closed'); assert.equal(f.messages.at(-1).expected, false);
+  assert.equal(f.kills(), kind === 'partial close' ? 0 : 1);
+});
+
+test('persistent Windows query timeout closes the original child and never accepts its late output', async () => {
+  const f = observerWorkerFixture(); f.read(1, 5);
+  await new Promise(resolve => setTimeout(resolve, 20));
+  f.child.stdout.write(f.reply(1, []));
+  assert.equal(f.kills(), 1); assert.equal(f.messages.some(row => row.kind === 'snapshot'), false);
+  assert.equal(f.messages.at(-1).kind, 'closed'); assert.equal(f.messages.at(-1).expected, false);
+});
+
+function observerClientFixture(change = value => value) {
+  const owner = { pid: 71, parent: 7, birth: '2026-11-17T00:00:00.0000000Z', executable: 'C:\\Windows\\PowerShell.exe' };
+  const queue = [{ kind: 'ready', pid: 71 }], sent = [];
+  let now = 0, closed = false;
+  const channel = { postMessage(message) {
+    sent.push(message);
+    if (message.kind === 'read') queue.push(change({ kind: 'snapshot', sequence: message.sequence,
+      observation: { processes: [{ ...owner }], listeners: [100 + message.sequence] } }));
+    else queue.push({ kind: 'closed', pid: 71, code: null, signal: 'SIGTERM', expected: true });
+  }, close() { closed = true; } };
+  const client = createWindowsProcessObservationClient({ channel, wake: new Int32Array(new SharedArrayBuffer(4)),
+    executable: owner.executable, driverPid: 7, exited: Promise.resolve({ code: 0 }),
+    receive: () => queue.length ? { message: queue.shift() } : undefined,
+    now: () => now, wait: (_wake, _index, _value, milliseconds) => { now += milliseconds; } });
+  return { client, owner, queue, sent, closed: () => closed, setNow: value => { now = value; } };
+}
+
+test('synchronous Windows observer preserves every fresh invocation and binds the query child birth', async () => {
+  const f = observerClientFixture();
+  assert.deepEqual(f.client.snapshot(50).listeners, [101]);
+  assert.deepEqual(f.client.snapshot(50).listeners, [102]);
+  assert.deepEqual(f.sent.map(row => row.sequence), [1, 2]);
+  assert.deepEqual(await f.client.close(50), { identity: f.owner, pid: 71, closed: true });
+  assert.equal(f.closed(), true);
+  assert.throws(() => f.client.snapshot(50), /closed or failed/);
+});
+
+for (const kind of ['missing', 'duplicate', 'parent', 'executable', 'birth', 'sequence'])
+test('synchronous Windows observer refuses changed query child ' + kind + ' without another read', async () => {
+  const f = observerClientFixture(value => {
+    if (value.sequence === 1) return value;
+    const rows = value.observation.processes;
+    if (kind === 'missing') rows.length = 0;
+    else if (kind === 'duplicate') rows.push({ ...rows[0] });
+    else if (kind === 'sequence') value.sequence = 1;
+    else rows[0][kind] = kind === 'parent' ? 8 : 'TEST changed';
+    return value;
+  });
+  f.client.snapshot(50);
+  assert.throws(() => f.client.snapshot(50));
+  assert.throws(() => f.client.snapshot(50), /closed or failed/);
+  assert.equal(f.sent.length, 2);
+  await f.client.close(50);
+});
+
+test('synchronous Windows observation cannot outlive its original budget; expired close still requests retirement', async () => {
+  const f = observerClientFixture(); f.queue.length = 0;
+  assert.throws(() => f.client.snapshot(5), /Original Windows observation deadline/);
+  assert.deepEqual(f.sent, [], 'no request before the original worker is ready');
+  await assert.rejects(f.client.close(0));
+  assert.deepEqual(f.sent, [{ kind: 'close' }]); assert.equal(f.closed(), true);
+});
+
+test('observer transport keeps real worker and TEST child ownership through synchronous reads and asynchronous close',
+  { timeout: 15000 }, async () => {
+    const childScript = `import { createInterface } from 'node:readline';
+      const birth = new Date().toISOString(); let sequence = 0;
+      for await (const line of createInterface({ input: process.stdin })) {
+        if (line !== String(++sequence)) throw new Error('TEST request order');
+        const processes = JSON.stringify([{ pid: process.pid, parent: process.ppid, birth, executable: process.execPath }]);
+        const observation = JSON.stringify({ processes, listeners: String(9000 + sequence) });
+        process.stdout.write(JSON.stringify({ sequence, observation }) + '\\n');
+      }`;
+    const workerScript = `import { workerData } from 'node:worker_threads';
+      import { spawn } from 'node:child_process';
+      import { serveWindowsProcessObserver } from ${JSON.stringify(new URL('./platform.mjs', import.meta.url).href)};
+      serveWindowsProcessObserver(workerData.channel, workerData.wake,
+        { executable: process.execPath, port: 43127 }, () => spawn(process.execPath,
+          ['--input-type=module', '--eval', ${JSON.stringify(childScript)}], { stdio: ['pipe', 'pipe', 'pipe'] }));`;
+    const { port1, port2 } = new MessageChannel(), wake = new Int32Array(new SharedArrayBuffer(4));
+    const worker = new Worker(new URL('data:text/javascript,' + encodeURIComponent(workerScript)),
+      { workerData: { channel: port2, wake }, transferList: [port2] });
+    let error;
+    worker.once('error', value => { error = value; });
+    const exited = new Promise(resolve => worker.once('exit', code => resolve({ code, error })));
+    const client = createWindowsProcessObservationClient({ channel: port1, wake,
+      executable: process.execPath, driverPid: process.pid, exited });
+    let first;
+    try {
+      first = client.snapshot(5000);
+      const second = client.snapshot(5000);
+      assert.deepEqual(first.listeners, [9001]); assert.deepEqual(second.listeners, [9002]);
+      assert.deepEqual(second.processes, first.processes);
+    } finally {
+      const retired = await client.close(5000);
+      assert.equal(retired.closed, true);
+      if (first) assert.equal(retired.pid, first.processes[0].pid);
+    }
+  });
+
+test('Windows persistent interpreter observes actual listener changes and confirms original child close',
+  { skip: process.platform !== 'win32', timeout: 30000 }, async () => {
+    const port = await allocateIsolatedCdpPort(), observer = createWindowsProcessObserver(port);
+    const server = net.createServer();
+    try {
+      assert.deepEqual(observer.snapshot(15000).listeners, []);
+      await new Promise((resolve, reject) => {
+        server.once('error', reject); server.listen({ port, host: '127.0.0.1', exclusive: true }, resolve);
+      });
+      assert.deepEqual(observer.snapshot(5000).listeners, [process.pid]);
+      await new Promise(resolve => server.close(resolve));
+      assert.deepEqual(observer.snapshot(5000).listeners, []);
+    } finally {
+      if (server.listening) await new Promise(resolve => server.close(resolve));
+      const retired = await observer.close(5000);
+      assert.equal(retired.closed, true); assert.equal(retired.identity.parent, process.pid);
+    }
+  });

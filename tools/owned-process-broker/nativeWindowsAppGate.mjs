@@ -19,7 +19,7 @@ import {
   retainPackagedLineage, packagedOrphanObservation, packagedDrainSnapshot, closePackagedBrowser,
 } from '../../scripts/e2e/opencode-diagnostics/packaged.mjs';
 import {
-  assertPortAvailable, processes, ownedTree, sameIdentity, listeners, windowsProcessListenerSnapshot,
+  assertPortAvailable, processes, ownedTree, sameIdentity, createWindowsProcessObserver,
 } from '../../scripts/e2e/opencode-diagnostics/platform.mjs';
 import { readPackagedOpenCodeV2 } from '../../scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts';
 import { captureDesktopSourceHashes, verifyDesktopSourceFreeze } from '../../scripts/legacy-agent-host/desktop-source-freeze.ts';
@@ -114,7 +114,7 @@ const proof = {
   phases: [], uiSteps: [], screenshots: [], appLog: logPath,
   censusReads: [], censusReadsTruncated: false,
 };
-let app, cdp, appLog, main, hostA, hostB, writerA, exit, exitPromise, binding;
+let app, cdp, appLog, main, hostA, hostB, writerA, exit, exitPromise, binding, censusObserver;
 let lineage = [], startedAt, outerDeadline, activeDeadline, activePhase = 'prepare';
 let acceptingExit = false, completed = false, primaryError;
 let quitStarted = false, shutdownResult;
@@ -151,6 +151,10 @@ const check = () => {
     fixture.assertPeer();
     assert.equal(exit, undefined, 'Original packaged Main must remain alive');
   }
+};
+const freshWindowsObservation = () => {
+  assert.ok(censusObserver, 'Original Windows query owner was created');
+  return censusObserver.snapshot(Math.min(30000, remaining()));
 };
 const poll = async (read, label) => {
   void label;
@@ -199,11 +203,11 @@ const observeCensus = (operation, read) => {
 };
 const captureCensus = () => {
   check();
-  return validateCensus(observeCensus('process-census', processes));
+  return validateCensus(observeCensus('process-census', () => freshWindowsObservation().processes));
 };
 const assertOwnedRenderer = () => {
   check();
-  const observation = observeCensus('process-listener-snapshot', windowsProcessListenerSnapshot);
+  const observation = observeCensus('process-listener-snapshot', freshWindowsObservation);
   const snapshot = validateCensus(observation.processes), ids = observation.listeners;
   assert.ok(ids.length > 0 && ids.every(pid => snapshot.some(current =>
     current.pid === pid && lineage.some(original => original.pid === pid && original.birth === current.birth))),
@@ -319,7 +323,7 @@ const quit = async () => {
         assertOwnership: async () => {
           const current = captureCensus();
           sameIdentity(main, current.find(row => row.pid === main.pid));
-          const ids = listeners();
+          const ids = freshWindowsObservation().listeners;
           assert.ok(ids.length > 0 && ids.every(pid => lineage.some(row => row.pid === pid &&
             current.some(value => value.pid === pid && value.birth === row.birth))));
         },
@@ -331,7 +335,7 @@ const quit = async () => {
   if (exitPromise) proof.appExit = await within(() => exitPromise);
   assert.deepEqual(proof.appExit, { code: 0, signal: null }, 'Actual product Main exits successfully');
   const final = await poll(async () => {
-    const current = captureCensus(), ids = listeners();
+    const current = captureCensus(), ids = freshWindowsObservation().listeners;
     const state = packagedDrainSnapshot(lineage, current, ids);
     if (!state.drained) return false;
     return { ...state, census: current, lineage };
@@ -349,6 +353,7 @@ try {
   await assertPortAvailable();
   startedAt = performance.now(); outerDeadline = startedAt + 300000;
   begin('packaged-App-startup', 120000);
+  censusObserver = createWindowsProcessObserver();
   appLog = createWriteStream(logPath, { flags: 'wx' });
   appLog.on('error', error => { proof.appLogFailure = errorText(error); });
   app = spawn(artifact.app.path, ['--remote-debugging-port=9222'], {
@@ -361,11 +366,11 @@ try {
     app.once('close', (code, signal) => { exit = { code, signal }; resolve(exit); });
   });
   assert.ok(Number.isInteger(app.pid) && app.pid > 1);
-  main = await poll(async () => processes().find(row => row.pid === app.pid) ?? false, 'original actual Main birth');
+  main = await poll(async () => freshWindowsObservation().processes.find(row => row.pid === app.pid) ?? false, 'original actual Main birth');
   assert.equal(String(main.executable).toLowerCase(), artifact.app.path.toLowerCase());
   proof.originalMain = main;
   await poll(async () => {
-    const current = captureCensus(), ids = listeners();
+    const current = captureCensus(), ids = freshWindowsObservation().listeners;
     if (!ids.length) return false;
     assert.ok(ids.every(pid => lineage.some(row => row.pid === pid &&
       current.some(value => value.pid === pid && value.birth === row.birth))));
@@ -595,7 +600,7 @@ try {
   if (app && !quitStarted) {
     try {
       if (!main && app.pid) {
-        const snapshot = processes(), current = snapshot.find(row => row.pid === app.pid);
+        const snapshot = freshWindowsObservation().processes, current = snapshot.find(row => row.pid === app.pid);
         if (current) {
           main = current; lineage = retainPackagedLineage([], ownedTree(snapshot, current)).records;
         }
@@ -608,6 +613,14 @@ try {
   cdp?.close();
   try { await fixture.close(activeDeadline); }
   catch (error) { proof.fixtureCloseFailure = errorText(error); proof.cleanup = false; }
+  if (censusObserver) {
+    try {
+      const left = Math.floor(Math.min(outerDeadline, activeDeadline) - performance.now());
+      proof.censusObserver = await censusObserver.close(Math.max(0, Math.min(30000, left)));
+      remaining();
+    }
+    catch (error) { proof.censusObserverFailure = errorText(error); proof.cleanup = false; }
+  }
   if (appLog) await new Promise(resolve => appLog.end(resolve));
   try { proof.peer = fixture.peerEvidence(); }
   catch (error) { proof.peerEvidenceFailure = errorText(error); }
@@ -627,7 +640,7 @@ try {
   await verifyDesktopSourceFreeze(repository, sources, sourceHashes, proof);
   if (completed && !primaryError && proof.cleanup && proof.packagedAndNativeInputsUnchanged &&
     !proof.sourceFreezeFailure && !proof.appLogFailure && !proof.fixtureCloseFailure && !proof.peerEvidenceFailure &&
-    !proof.hostBirthFailure) {
+    !proof.hostBirthFailure && proof.censusObserver?.closed === true && !proof.censusObserverFailure) {
     try {
       assert.deepEqual(proof.counts, { mainStarts: 1, initialRuntimeOpen: 1, businessInput: 1,
         refreshClicks: 1, retryClicks: 1, uiStops: 2, quit: 1 });
