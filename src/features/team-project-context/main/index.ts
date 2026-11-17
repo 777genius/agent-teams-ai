@@ -14,3 +14,8 @@ export type {
 } from './TeamProjectContextRuntimeResolver';
 
 export { TeamProjectContextDraftMaterializer } from './TeamProjectContextDraftMaterializer';
+
+export {
+  TeamProjectContextLaunchGate,
+  TeamProjectContextLaunchConflictError,
+} from './TeamProjectContextLaunchGate';
