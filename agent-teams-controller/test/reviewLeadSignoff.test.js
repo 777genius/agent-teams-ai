@@ -174,6 +174,24 @@ describe('lead_then_human review flow', () => {
     expect(signoffMessages()).toHaveLength(0);
   });
 
+  it('does not credit an older completion by the Lead after the work was reopened unrecorded', () => {
+    const task = board.createTask({ subject: 'Reopened', owner: 'alice' });
+    board.completeTask(task.id, 'alice');
+    // An outside writer reopened the task without a new completion event.
+    const file = path.join(dir, 'tasks', 'fixture', `${task.id}.json`);
+    const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+    raw.historyEvents.push({
+      id: 'reopen-1', type: 'status_changed', from: 'completed', to: 'in_progress',
+      actor: 'bob', timestamp: new Date().toISOString(),
+    });
+    fs.writeFileSync(file, JSON.stringify(raw));
+    board.requestReview(task.id, { from: 'alice', reviewer: 'carol' });
+    const cycle = events(task.id, 'review_requested').at(-1).id;
+    board.startReview(task.id, { from: 'carol' });
+    expect(board.completeReview(task.id, { from: 'carol', expectedReviewRequestId: cycle }))
+      .toMatchObject({ stage: 'lead_signoff', column: 'review' });
+  });
+
   it('does not notify the Lead about its own decisions', () => {
     const { task, cycle } = reviewedByCarol({ reviewer: 'alice' });
     board.completeReview(task.id, { from: 'alice', expectedReviewRequestId: cycle });

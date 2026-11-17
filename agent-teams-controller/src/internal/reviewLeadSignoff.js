@@ -46,7 +46,10 @@ function createLeadSignoff({
     const found = history.findIndex((event) => event && event.id === request.id);
     for (let i = (found >= 0 ? found : history.length) - 1; i >= 0; i -= 1) {
       const event = history[i];
-      if (event && event.type === 'status_changed' && event.to === 'completed') {
+      // The latest status change decides: a later reopen without a new completion means the
+      // work was not submitted in this cycle, so an older completion must not count.
+      if (event && event.type === 'status_changed') {
+        if (event.to !== 'completed') return null;
         return typeof event.actor === 'string' && event.actor.trim() ? event.actor.trim() : null;
       }
     }

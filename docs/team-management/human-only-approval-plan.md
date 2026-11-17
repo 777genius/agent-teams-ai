@@ -197,8 +197,8 @@ one controller-enforced step between the reviewer and Done.
 - The Lead finishes the sign-off with the same tools: `review_complete` (task goes to
   Done, awaiting the user) or `review_request_changes` (task returns to the owner, and
   the next review request starts a full cycle again from the reviewer).
-- Decisions are bound to a named actor. `review_complete` and `review_request_changes`
-  require an explicit `from` (no inference, no `team-lead` default) in `lead_then_human`,
+- Decisions are bound to a named actor. `review_complete`, `review_request_changes` (and
+  `review_approve` while a sign-off cycle is open) require an explicit `from` (no inference, no `team-lead` default) in `lead_then_human`,
   and also for any open sign-off cycle after the team switched to another flow. The
   explicit `from` must resolve to the assigned reviewer of the open cycle (the Lead, for
   the sign-off); the Lead may also act as any reviewer (existing rule), and a cycle with
