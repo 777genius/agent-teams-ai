@@ -5,7 +5,7 @@ import { settledRuntimeAdmission } from './settledRuntimeAdmission.js';
 import { digest } from './identity.js';
 import { TeamOwnerError } from './contracts.js';
 import type { TeamLifecycleTransitions } from './TeamLifecycleTransitions.js';
-import type { TeamRuntimeDeliveryPort } from './contracts.js';
+import type { TeamRuntimeDeliveryPort, TeamBinding } from './contracts.js';
 import type { TeamStore } from './ports.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 
@@ -14,18 +14,27 @@ export async function continueTeamLifecycleCleanup(options: {
   commandId: string;
   lifecycle: TeamLifecycleTransitions;
   store: TeamStore;
-  runtime: Pick<RuntimeOwner, 'stopCapturedSession' | 'readCapturedSession'>;
+  runtime: Pick<RuntimeOwner, 'stopCapturedSession' | 'readCapturedSession'> & {
+    cancelPreparations?(binding: TeamBinding): Promise<void>;
+  };
   delivery: TeamRuntimeDeliveryPort;
 }): Promise<{ cleanupPending: boolean }> {
   const { commandId, lifecycle, store, runtime, delivery } = options;
   const captured = lifecycle.capturedCleanup(commandId);
   // Invocations synchronously seal every exact original record before the first await.
   let stopsCompleted = captured.runtimeBindings.length === 0;
+  let preparationsCompleted = runtime.cancelPreparations === undefined;
+  let preparations: Promise<void> | undefined;
+  try {
+    preparations = runtime.cancelPreparations?.(captured.binding)
+      .then(() => { preparationsCompleted = true; }, () => { preparationsCompleted = false; });
+  } catch { preparationsCompleted = false; }
   const stopping = Promise.allSettled(captured.runtimeBindings.map(binding => runtime.stopCapturedSession(binding)))
     .then(results => { stopsCompleted = results.every(result => result.status === 'fulfilled'); });
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    await Promise.race([stopping, new Promise<void>(resolve => { timer = setTimeout(resolve, 5000); timer.unref(); })]);
+    await Promise.race([Promise.all([stopping, preparations]),
+      new Promise<void>(resolve => { timer = setTimeout(resolve, 5000); timer.unref(); })]);
   } finally { if (timer) clearTimeout(timer); }
   await cancelRetainedDeliveries({ store, runtime: delivery, targets: captured.targets,
     assertRetained(target) {
@@ -36,7 +45,7 @@ export async function continueTeamLifecycleCleanup(options: {
   });
   try {
     lifecycle.settleCleanup(commandId, receipt => {
-      if (!stopsCompleted) throw new TeamOwnerError('hold');
+      if (!stopsCompleted || !preparationsCompleted) throw new TeamOwnerError('hold');
       // Fresh custody observation under the Team fence; old stop return values are insufficient.
       for (const binding of receipt.runtimeBindings) {
         const current = runtime.readCapturedSession(binding);

@@ -9,7 +9,7 @@ import type {
 
 /** Existing Desktop status conversation; native metadata never extends the Session SPI. */
 export interface RuntimeProviderStatusPort {
-  /** Null preserves the existing installer status only after an explicit native V1 catalog. */
+  /** Missing native evidence is a refusal; it cannot select the separate installer status. */
   readOpenCodeRuntimeStatus?(): Promise<OpenCodeRuntimeStatus | null>;
   getStatus(options?: CliInstallerGetStatusOptions): Promise<CliInstallationStatus>;
   getProviderStatus(

@@ -56,6 +56,7 @@ const codexAccountHookState = {
   cancelChatgptLogin: vi.fn(() => Promise.resolve(true)),
   logout: vi.fn(() => Promise.resolve(true)),
 };
+const ProviderTabsChange = React.createContext<((value: string) => void) | null>(null);
 
 vi.mock('@renderer/api', () => ({
   api: {
@@ -207,29 +208,43 @@ vi.mock('@renderer/components/ui/tabs', () => ({
     onValueChange,
   }: React.PropsWithChildren<{ value: string; onValueChange: (value: string) => void }>) =>
     React.createElement(
-      'div',
-      { 'data-value': value, 'data-on-change': Boolean(onValueChange) },
-      children
+      ProviderTabsChange.Provider,
+      { value: onValueChange },
+      React.createElement(
+        'div',
+        { 'data-value': value, 'data-on-change': Boolean(onValueChange) },
+        children
+      )
     ),
   TabsList: ({ children, className }: React.PropsWithChildren<{ className?: string }>) =>
     React.createElement('div', { role: 'tablist', className }, children),
-  TabsTrigger: ({
+  TabsTrigger: function MockTabsTrigger({
     children,
     value,
     onClick,
     className,
-  }: React.PropsWithChildren<{ value: string; onClick?: () => void; className?: string }>) =>
-    React.createElement(
+    disabled,
+  }: React.PropsWithChildren<{
+    value: string; onClick?: () => void; className?: string; disabled?: boolean;
+  }>) {
+    const onValueChange = React.useContext(ProviderTabsChange);
+    return React.createElement(
       'button',
       {
         type: 'button',
         role: 'tab',
         'data-value': value,
         className,
-        onClick,
+        disabled,
+        onClick: () => {
+          if (disabled) return;
+          onClick?.();
+          onValueChange?.(value);
+        },
       },
       children
-    ),
+    );
+  },
 }));
 
 vi.mock('@renderer/components/runtime/ProviderRuntimeBackendSelector', () => ({
@@ -3052,45 +3067,114 @@ describe('ProviderRuntimeSettingsDialog', () => {
     document.body.appendChild(host);
     const root = createRoot(host);
     const onRefreshProvider = vi.fn(() => Promise.resolve(undefined));
+    const props = {
+      onOpenChange: vi.fn(),
+      providers: [createOpenCodeProvider(), createAnthropicProvider(), createCodexProvider()],
+      projectPath: '/tmp/project-a',
+      onSelectBackend: vi.fn(),
+      onRefreshProvider,
+    };
+    const renderDialog = async (
+      open: boolean,
+      initialProviderId: CliProviderStatus['providerId'],
+      strict = false
+    ): Promise<void> => {
+      await act(async () => {
+        const dialog = React.createElement(ProviderRuntimeSettingsDialog, {
+          ...props, open, initialProviderId,
+        });
+        root.render(strict ? React.createElement(React.StrictMode, null, dialog) : dialog);
+        await Promise.resolve();
+      });
+    };
+    const selectProvider = async (providerId: CliProviderStatus['providerId']): Promise<void> => {
+      await act(async () => {
+        (host.querySelector(`[role="tab"][data-value="${providerId}"]`) as HTMLButtonElement).click();
+        await Promise.resolve();
+      });
+      expect(host.querySelector('[data-on-change="true"]')?.getAttribute('data-value')).toBe(providerId);
+    };
 
-    await act(async () => {
-      root.render(
-        React.createElement(ProviderRuntimeSettingsDialog, {
-          open: true,
-          onOpenChange: vi.fn(),
-          providers: [createOpenCodeProvider()],
-          initialProviderId: 'opencode',
-          projectPath: '/tmp/project-a',
-          onSelectBackend: vi.fn(),
-          onRefreshProvider,
-        })
-      );
-      await Promise.resolve();
-    });
+    try {
+      await renderDialog(true, 'opencode');
+      const panel = host.querySelector('[data-testid="runtime-provider-management-panel"]');
+      expect(panel).not.toBeNull();
+      expect(panel?.getAttribute('data-runtime-id')).toBe('opencode');
+      expect(panel?.getAttribute('data-open')).toBe('true');
+      expect(panel?.getAttribute('data-project-path')).toBe('/tmp/project-a');
+      expect(host.textContent).toContain('Runtime provider management: opencode');
+      expect(host.querySelector('[data-testid="provider-runtime-summary"]')).toBeNull();
+      expect(host.textContent).not.toContain('version 1.4.0 - live resolved-fin');
+      expect(host.textContent).not.toContain('managed teammate agent');
+      expect(host.textContent).not.toContain('behavior abc123');
+      expect(host.textContent).not.toContain('Desktop currently exposes status only.');
+      expect(storeState.fetchApiKeys).not.toHaveBeenCalled();
+      expect(storeState.fetchApiKeyStorageStatus).not.toHaveBeenCalled();
+      await renderDialog(true, 'opencode');
+      expect(storeState.fetchApiKeys).not.toHaveBeenCalled();
+      expect(storeState.fetchApiKeyStorageStatus).not.toHaveBeenCalled();
 
-    const panel = host.querySelector('[data-testid="runtime-provider-management-panel"]');
-    expect(panel).not.toBeNull();
-    expect(panel?.getAttribute('data-runtime-id')).toBe('opencode');
-    expect(panel?.getAttribute('data-open')).toBe('true');
-    expect(panel?.getAttribute('data-project-path')).toBe('/tmp/project-a');
-    expect(host.textContent).toContain('Runtime provider management: opencode');
-    expect(host.querySelector('[data-testid="provider-runtime-summary"]')).toBeNull();
-    expect(host.textContent).not.toContain('version 1.4.0 - live resolved-fin');
-    expect(host.textContent).not.toContain('managed teammate agent');
-    expect(host.textContent).not.toContain('behavior abc123');
-    expect(host.textContent).not.toContain('Desktop currently exposes status only.');
+      await act(async () => {
+        (
+          host.querySelector('[data-testid="runtime-provider-connected"]') as HTMLButtonElement
+        ).click();
+        (
+          host.querySelector('[data-testid="runtime-provider-configured"]') as HTMLButtonElement
+        ).click();
+        await Promise.resolve();
+      });
+      expect(onRefreshProvider).toHaveBeenNthCalledWith(1, 'opencode', 'provider_setup');
+      expect(onRefreshProvider).toHaveBeenNthCalledWith(2, 'opencode', 'provider_change');
 
-    await act(async () => {
-      (
-        host.querySelector('[data-testid="runtime-provider-connected"]') as HTMLButtonElement
-      ).click();
-      (
-        host.querySelector('[data-testid="runtime-provider-configured"]') as HTMLButtonElement
-      ).click();
-      await Promise.resolve();
-    });
-    expect(onRefreshProvider).toHaveBeenNthCalledWith(1, 'opencode', 'provider_setup');
-    expect(onRefreshProvider).toHaveBeenNthCalledWith(2, 'opencode', 'provider_change');
+      await selectProvider('anthropic');
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(1);
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(1);
+      expect(host.querySelector('[data-testid="runtime-provider-management-panel"]')).toBeNull();
+      expect(host.textContent).toContain('API key');
+      await selectProvider('opencode');
+      await selectProvider('codex');
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(1);
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(1);
+
+      await renderDialog(false, 'opencode');
+      await renderDialog(true, 'opencode');
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(1);
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(1);
+      expect(host.querySelector('[data-testid="runtime-provider-management-panel"]')).not.toBeNull();
+      await selectProvider('anthropic');
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(2);
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(2);
+
+      await renderDialog(false, 'anthropic');
+      await renderDialog(true, 'anthropic');
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(3);
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(3);
+      await renderDialog(true, 'anthropic');
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(3);
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(3);
+
+      storeState.fetchApiKeys = vi.fn(() => Promise.resolve(undefined));
+      await renderDialog(true, 'anthropic');
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(1);
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(4);
+      storeState.fetchApiKeyStorageStatus = vi.fn(() => Promise.resolve(undefined));
+      await renderDialog(true, 'anthropic');
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(2);
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(1);
+      await renderDialog(true, 'anthropic');
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(2);
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(1);
+
+      await renderDialog(true, 'anthropic', true);
+      expect(storeState.fetchApiKeys).toHaveBeenCalledTimes(4);
+      expect(storeState.fetchApiKeyStorageStatus).toHaveBeenCalledTimes(3);
+      expect(storeState.saveApiKey).not.toHaveBeenCalled();
+      expect(storeState.deleteApiKey).not.toHaveBeenCalled();
+      expect(storeState.updateConfig).not.toHaveBeenCalled();
+      expect(props.onSelectBackend).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+    }
   });
 
   it('hides the non-actionable OpenCode healthy and passive summary', async () => {

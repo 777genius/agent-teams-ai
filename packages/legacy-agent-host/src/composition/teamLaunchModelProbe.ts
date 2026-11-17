@@ -1,8 +1,11 @@
 import { z } from 'zod';
 
+import { captureReadinessPreparation, originalReadinessSubset } from '../adapters/providers/OpenCodeReadinessOrigin.js';
+import type { LocalModelReadinessPreparation } from '../management/commandRecords.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
+import { actualCaptureReadinessCommandId, modelReadinessMechanismDigest } from '../team-launch/launchReadiness.js';
 import { runtimeDigest } from '../runtime/identity.js';
-import { isCanonicalOpenCodeV2Directory } from './openCodeV2StaticPreflight.js';
+import { isNativeProfilePath } from './nativeProcessProfile.js';
 import {
   resolveTeamModelProbeRecipe,
   applyTeamModelProbeSelection,
@@ -46,13 +49,10 @@ export const teamModelProbeSelectionSchema = z
       })
       .strict()
       .superRefine((value, context) => {
-        // Generation is selected later from the captured recipe. Keep V1's
-        // existing POSIX shape here; the resolved V2 profile enforces canonical
-        // paths again before any native allocation.
+        // Native OS comes from this Host; the captured profile still owns the
+        // executable, broker and directory identity before any allocation.
         if (value.workspace !== undefined &&
-          !(value.workspace.startsWith('/') ||
-            (value.providerId === 'opencode' &&
-             isCanonicalOpenCodeV2Directory(`${process.platform}-${process.arch}`, value.workspace)))) {
+          !isNativeProfilePath(value.workspace)) {
           context.addIssue({ code: 'custom', path: ['workspace'],
             message: 'Model probe workspace must match the selected native platform' });
         }
@@ -75,6 +75,7 @@ export function teamModelProbeProfile(base: RuntimeMemberProfile): ProviderManag
     cwd: base.cwd,
     executable: { ...base.executable },
     environment: { ...base.environment },
+    ...(base.windowsBroker ? { windowsBroker: { ...base.windowsBroker } } : {}),
     accountBinding: base.accountBinding,
     timeoutMs: Math.min(base.limits.timeoutMs, 30000),
     modelProbeTimeoutMs: 90000,
@@ -99,6 +100,7 @@ export function teamModelProbeProfile(base: RuntimeMemberProfile): ProviderManag
       ...common,
       provider: 'opencode',
       endpoint: base.endpoint,
+      ...(base.managedPreferences ? { managedPreferences: structuredClone(base.managedPreferences) } : {}),
       ...(base.nativeOptions.variant === undefined ? {} : { variant: base.nativeOptions.variant }),
       ...(base.nativeGeneration === 'v2' ? {
         nativeGeneration: 'v2' as const, protocolRevision: '2.1.4' as const,
@@ -119,6 +121,11 @@ export function teamModelProbeProfile(base: RuntimeMemberProfile): ProviderManag
 
 export const teamModelProbeContext = (teamId: string, input: TeamModelProbeSelection) =>
   runtimeDigest({ teamId, input });
+
+/** Product publication is committed only by the original retained prospective admission. */
+export const teamModelProbeActionDigest = (commandId: string, context: string, productRosterRevision?: string) =>
+  runtimeDigest(productRosterRevision === undefined
+    ? { commandId, context } : { commandId, context, productRosterRevision });
 
 export function teamModelProbeEffort(
   profile: RuntimeMemberProfile
@@ -152,6 +159,8 @@ export function captureTeamModelProbe(options: {
   entries: readonly MemberEntry[];
   team: import('./MemberEntry.js').HostedTeam;
   runtime: RuntimeProfile | undefined;
+  sources?: import('./runtimeSourceContracts.js').RuntimeRecipeSources;
+  sourceReference?: import('./runtimeSourceContracts.js').RuntimeSourceReference | undefined;
   input: TeamModelProbeSelection;
   action: 'start' | 'read' | 'cancel';
   principalId: string;
@@ -166,10 +175,14 @@ export function captureTeamModelProbe(options: {
       team: options.team,
       input,
       saved: entry?.baseProfile,
+      ...(options.sources ? { sources: options.sources } : {}),
+      sourceReference: options.sourceReference,
     });
   const selected = recipe();
   const source = runtimeDigest({ entry: entry?.profile, recipe: selected });
   const profile = applyTeamModelProbeSelection(selected, input);
+  const productRosterRevision = input.draft && profile.provider === 'opencode'
+    ? options.team.connection.readRoster().revision : undefined;
   const authority = () => ({
     operator: options.team.owner.withLaunchAuthority(
       options.principalId,
@@ -188,7 +201,9 @@ export function captureTeamModelProbe(options: {
   const admittedAuthority = authority();
   const assertSelection = () => {
     options.assertCurrent();
-    const current = launch.read(options.action === 'start' ? 'control' : 'read');
+    const current = launch.readModelProbeSelection(
+      options.action === 'start' ? 'control' : 'read'
+    );
     if (options.action === 'cancel') return;
     if (
       !input.draft &&
@@ -202,7 +217,8 @@ export function captureTeamModelProbe(options: {
     if (
       current.launchId !== input.launchId ||
       current.rosterRevision !== input.rosterRevision ||
-      (!input.draft && !current.members.some((row) => row.memberId === input.memberId)) ||
+      (productRosterRevision !== undefined && options.team.connection.readRoster().revision !== productRosterRevision) ||
+      (!input.draft && !current.memberIds.includes(input.memberId)) ||
       runtimeDigest({ entry: entry?.profile, recipe: recipe() }) !== source ||
       runtimeDigest(authority()) !== runtimeDigest(admittedAuthority)
     )
@@ -211,6 +227,12 @@ export function captureTeamModelProbe(options: {
   assertSelection();
   return {
     profile: teamModelProbeProfile(profile.provider === 'claude' ? selected : profile),
+    ...(productRosterRevision === undefined ? {} : { productRosterRevision }),
+    provenance: { teamBindingDigest: runtimeDigest(options.team.definition.binding),
+      selectionDigest: runtimeDigest(input), sourceRevision: input.launchId, rosterRevision: input.rosterRevision,
+      destinationKeys: [runtimeDigest(input.draft?.target ?? { launchId: input.launchId, memberId: input.memberId })] },
+    readinessCapture: !input.draft && profile.provider === 'opencode' ? launch.readModelReadinessAdmission() : undefined,
+    assertReadinessCapture: () => launch.assertModelReadinessCapture(input.memberId),
     context: input.draft
       ? teamModelProbeContext(options.team.definition.binding.teamId, input)
       : runtimeDigest({
@@ -239,7 +261,9 @@ export async function executeTeamModelProbe(options: {
   action: 'start' | 'read' | 'cancel';
   commandId: string;
   payload: unknown;
+  readiness?: { preparation: LocalModelReadinessPreparation; owner: unknown; handleId: string; scope: unknown };
 }) {
+  const admittedAt = Date.now();
   const input = teamModelProbeSelectionSchema.parse(options.payload);
   const captured = options.runtime.captureLaunchModelProbe(options.teamId, input, options.action);
   const owner = options.management.probes;
@@ -268,9 +292,47 @@ export async function executeTeamModelProbe(options: {
     profileId: captured.profile.profileId,
     configRevision: captured.profile.configRevision,
   };
+  const retained = captured.profile.provider === 'opencode' && options.action === 'start' && owner.read(identity)
+    ? owner.readRetainedProbe(options.commandId, captured.context) : undefined;
+  const prepared = options.action === 'start' && options.readiness ? captureReadinessPreparation(
+    options.readiness.preparation, {
+      kind: 'team', owner: options.readiness.owner,
+      // Main's context ID is trusted composition provenance; scope is independently Host-authorized.
+      contextId: options.readiness.preparation.origin.contextId, commandId: options.commandId,
+      selection: { handleId: options.readiness.handleId, scope: options.readiness.scope, payload: input },
+      workspaces: [captured.profile.cwd], anchorCommandId: options.commandId,
+      targets: [{ workspace: captured.profile.cwd, providerId: captured.providerId }],
+      original: owner.readPreparation(options.commandId), admittedAt,
+    }
+  ) : undefined;
+  if (prepared && captured.profile.provider !== 'opencode') throw new TeamLaunchError('invalid', 'probe-origin');
+  const capture = captured.readinessCapture;
+  const parent = capture && options.commandId ===
+    actualCaptureReadinessCommandId(capture.preparationId, capture.commandId, input.memberId) ? capture : undefined;
+  if (parent && options.action === 'start') {
+    const target = parent.targets.find(row => row.memberId === input.memberId);
+    if (!prepared || parent.phase !== 'captured' || !target || target.retired || target.originalWorkspace === captured.profile.cwd ||
+        options.commandId !== actualCaptureReadinessCommandId(parent.preparationId, parent.commandId, input.memberId) ||
+        Date.now() >= parent.cutoff)
+      throw new TeamLaunchError('hold', 'probe-capture-continuation');
+    if (!captured.assertReadinessCapture) throw new TeamLaunchError('hold', 'probe-capture-continuation');
+    captured.assertReadinessCapture();
+    prepared.anchor.expiresAt = Math.min(prepared.anchor.expiresAt, parent.cutoff);
+  }
+  const origin = prepared ? originalReadinessSubset(prepared.origin, captured.profile.cwd, captured.providerId) : undefined;
+  const legacyActionDigest = teamModelProbeActionDigest(options.commandId, captured.context);
+  const productRosterRevision = 'productRosterRevision' in captured ? captured.productRosterRevision : undefined;
+  const privateScope = captured.profile.provider === 'opencode' && (!retained || retained.readinessScope) ? {
+    schemaVersion: 1 as const, kind: 'team' as const, ...captured.provenance,
+    actionDigest: retained?.readinessScope?.actionDigest === legacyActionDigest ? legacyActionDigest
+      : teamModelProbeActionDigest(options.commandId, captured.context, productRosterRevision),
+    mechanismDigest: modelReadinessMechanismDigest(captured.profile), workspace: captured.profile.cwd,
+    cutoff: retained?.readinessScope?.cutoff ?? Math.min(prepared?.anchor.expiresAt ?? admittedAt + (captured.profile.modelProbeTimeoutMs ?? 90000),
+      parent?.cutoff ?? Infinity),
+  } : undefined;
   const value =
     options.action === 'start'
-      ? owner.start(
+      ? owner.startPrepared(
           {
             ...identity,
             providerId: captured.providerId,
@@ -279,7 +341,12 @@ export async function executeTeamModelProbe(options: {
             ...(captured.modelContext === undefined ? {} : { modelContext: captured.modelContext }),
             context: captured.context,
           },
-          captured.isCurrent
+          () => {
+            if (parent) captured.assertReadinessCapture!();
+            return captured.isCurrent();
+          },
+          prepared && origin ? { anchor: prepared.anchor, origin } : undefined,
+          privateScope
         )
       : options.action === 'cancel'
         ? await owner.cancel(identity)

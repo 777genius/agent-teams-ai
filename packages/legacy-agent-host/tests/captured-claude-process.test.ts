@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { ChildProcess, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import {
@@ -100,6 +100,7 @@ const timer = setInterval(() => {
     const neighbor = spawn('/bin/sleep', ['30'], { stdio: 'ignore' });
     const neighborExit = once(neighbor, 'exit');
     const child = custody.launch(request);
+    assert.ok(child instanceof ChildProcess, 'POSIX fixture retains its actual original Node child');
     const exit = once(child, 'exit');
     try {
       let descendant: number | undefined;
@@ -146,6 +147,7 @@ test('an exited original cannot signal a positively probed replacement group',
     const { root, profile, request } = await setup('#!/bin/sh\nexit 0\n');
     const custody = new CapturedProcess(profile);
     const child = custody.launch(request);
+    assert.ok(child instanceof ChildProcess, 'POSIX fixture retains its actual original Node child');
     await once(child, 'exit');
     assert.ok(child.pid);
     const calls: (NodeJS.Signals | number | undefined)[] = [];

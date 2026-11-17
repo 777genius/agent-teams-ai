@@ -7,6 +7,7 @@ import { chmod, copyFile, mkdir, mkdtemp, readFile, readlink, realpath, rename, 
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { test } from 'node:test';
+import { isDeepStrictEqual } from 'node:util';
 import { candidateDigest } from './candidate-closure.ts';
 import { packagedOpenCodeV2Scenario, preservePackagedOpenCodeV2DependencyLinks, readPackagedOpenCodeV2, renameCapturedPackagedBundle } from './packaged-opencode-v2-inputs.ts';
 import type { PackagedOpenCodeV2Manifest } from './packaged-opencode-v2-inputs.ts';
@@ -394,8 +395,32 @@ throw new Error('TEST-injected-harness-failure');`);
     assert.equal(await readFile(join(f.root, 'TEST-observed-source-absence'), 'utf8'), 'TEST');
     const receipt = JSON.parse(await readFile(receiptPath, 'utf8'));
     assert.equal(receipt.status, 'INCOMPLETE');
+    // Never dump the captured runner stderr or its receipt's private paths on an assertion failure.
+    const stages = new Set(['preparation', 'original-exit', 'receipt-read', 'receipt-binding',
+      'native-cleanup', 'scenario-checks', 'source-restore', 'legacy-restore', 'bundle-restore',
+      'source-verify', 'temporary-cleanup']);
+    const codes = new Set(['EPERM', 'EACCES', 'EBUSY', 'ENOENT', 'ENOTEMPTY',
+      'EEXIST', 'EXDEV', 'ERR_ASSERTION', 'unknown']);
+    const flag = (value: unknown) => typeof value === 'boolean' ? value : 'unknown';
+    const failure = (value: unknown) => {
+      if (value === null) return null;
+      const fields: Record<string, unknown> = typeof value === 'object' ? value as Record<string, unknown> : {};
+      return { stage: typeof fields.stage === 'string' && stages.has(fields.stage) ? fields.stage : 'unknown',
+        code: typeof fields.code === 'string' && codes.has(fields.code) ? fields.code : 'unknown' };
+    };
+    const observed = receipt.cleanupObservation ?? {};
+    const cleanupDiagnostic = JSON.stringify({
+      originalExitObserved: flag(observed.originalExitObserved),
+      nativeReceiptParsed: flag(observed.nativeReceiptParsed),
+      nativeReceiptBound: flag(observed.nativeReceiptBound),
+      nativeCleanupConfirmed: flag(observed.nativeCleanupConfirmed),
+      firstFailure: failure(observed.firstFailure),
+      firstRestorationFailure: failure(observed.firstRestorationFailure),
+      sourceRestored: flag(receipt.sourceRestored), bundleRestored: flag(receipt.bundleRestored),
+      legacyRuntimeRestored: flag(receipt.legacyRuntimeRestored),
+    });
     if (disposition === 'unknown') {
-      assert.equal(receipt.cleanup, false);
+      assert.equal(receipt.cleanup, false, cleanupDiagnostic);
       assert.equal(receipt.sourceRestored, false); assert.equal(receipt.bundleRestored, false);
       assert.equal(receipt.legacyRuntimeRestored, false);
       await assert.rejects(realpath(repo), { code: 'ENOENT' });
@@ -403,7 +428,7 @@ throw new Error('TEST-injected-harness-failure');`);
       assert.equal(await readFile(join(receipt.retainedInputs.root, 'TEST-retained-legacy-runtime/TEST-retained'), 'utf8'), 'TEST-legacy-preserved');
       assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { cwd: receipt.retainedInputs.hiddenSource, encoding: 'utf8' }).trim(), f.manifest.sourceHead);
     } else {
-      assert.equal(receipt.cleanup, true);
+      assert.equal(receipt.cleanup, true, cleanupDiagnostic);
       assert.equal(receipt.sourceRestored, true); assert.equal(receipt.bundleRestored, true);
       assert.equal(receipt.legacyRuntimeRestored, true);
       assert.equal(git(['rev-parse', 'HEAD']), f.manifest.sourceHead);
@@ -413,5 +438,14 @@ throw new Error('TEST-injected-harness-failure');`);
         assert.equal(await readFile(join(f.root, 'TEST-observed-cancellation'), 'utf8'), 'EOF');
       }
     }
+    assert.equal(isDeepStrictEqual(receipt.cleanupObservation, {
+      originalExitObserved: true, nativeReceiptParsed: disposition !== 'unknown',
+      nativeReceiptBound: disposition !== 'unknown', nativeCleanupConfirmed: disposition !== 'unknown',
+      firstFailure: { stage: disposition === 'unknown' ? 'receipt-read' : 'scenario-checks',
+        code: disposition === 'unknown' ? 'ENOENT' : 'ERR_ASSERTION' },
+      firstRestorationFailure: null,
+    }), true, cleanupDiagnostic);
+    assert.equal(cleanupDiagnostic.includes(f.root), false);
+    assert.equal(cleanupDiagnostic.includes('TEST-injected-harness-failure'), false);
   });
   });

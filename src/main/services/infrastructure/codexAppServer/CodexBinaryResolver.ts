@@ -1,15 +1,26 @@
+import { createHash } from 'node:crypto';
 import { constants as fsConstants } from 'node:fs';
 import * as fsp from 'node:fs/promises';
 import path from 'node:path';
 
+import { runtimeSourceNativeSelectionSchema } from '@agent-teams/legacy-agent-host/runtime-sources';
 import {
+  assertCapturedCodexManagedManifest,
+  captureAppManagedCodexRuntime,
+  captureCodexNativeSelection,
   resolveAppManagedCodexRuntimeBinaryPath,
   resolveVerifiedAppManagedCodexRuntimeBinaryPath,
 } from '@features/codex-runtime-installer/main';
 import { execCli } from '@main/utils/childProcess';
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
+import { withCliProcessDefaults } from '@main/utils/cliProcessDefaults';
+import { isLinuxChildLaunchFailure } from '@main/utils/linuxChildLaunchSelection';
+import { createManagedGitEnv } from '@main/utils/managedGit';
 import { getCachedShellEnv } from '@main/utils/shellEnv';
+
+import type { RuntimeSourceNativeSelection } from '@agent-teams/legacy-agent-host/runtime-sources';
+import type { CapturedCodexManagedManifest } from '@features/codex-runtime-installer/main';
 
 const CACHE_VERIFY_TTL_MS = 30_000;
 const STALE_POSITIVE_CACHE_TTL_MS = 5 * 60_000;
@@ -46,17 +57,12 @@ async function binaryCanLaunch(candidate: string): Promise<boolean> {
   }
 }
 
-function expandWindowsExtensions(candidate: string): string[] {
+function expandWindowsExtensions(candidate: string, pathExt = process.env.PATHEXT): string[] {
   if (process.platform !== 'win32') {
     return [candidate];
   }
 
-  const pathext = process.env.PATHEXT?.split(';').filter(Boolean) ?? [
-    '.EXE',
-    '.CMD',
-    '.BAT',
-    '.COM',
-  ];
+  const pathext = pathExt?.split(';').filter(Boolean) ?? ['.EXE', '.CMD', '.BAT', '.COM'];
   const hasKnownExtension = pathext.some((ext) =>
     candidate.toLowerCase().endsWith(ext.toLowerCase())
   );
@@ -142,7 +148,243 @@ async function canReuseStalePositiveBinary(
   return fileExists(candidate);
 }
 
+export interface CapturedCodexResolution {
+  readonly selection: RuntimeSourceNativeSelection;
+  assertCurrent(): Promise<void>;
+}
+
+export interface CapturedCodexResolver {
+  readonly fingerprint: string;
+  assertAuthority(): void;
+  assertCurrent(): void;
+  acceptAcquired(manifest: CapturedCodexManagedManifest): void;
+  resolve(): Promise<CapturedCodexResolution | null>;
+}
+
+function environmentWitness(env: NodeJS.ProcessEnv | null): string {
+  return JSON.stringify(
+    env === null
+      ? null
+      : Object.keys(env)
+          .sort()
+          .map((key) => [key, env[key]])
+  );
+}
+
+function confirmedMissing(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    'code' in error &&
+    ['ENOENT', 'ENOTDIR', 'EACCES', 'EPERM'].includes(String(error.code))
+  );
+}
+
+/** Only original execCli outcomes with no unknown handoff/cleanup may advance the candidate list. */
+function confirmedLaunchFailure(
+  error: unknown,
+  invocation: Awaited<ReturnType<typeof captureCodexNativeSelection>>
+): boolean {
+  if (
+    !(error instanceof Error) ||
+    isLinuxChildLaunchFailure(error) ||
+    error.name === 'AbortError' ||
+    Reflect.get(error, 'killed') === true ||
+    Reflect.get(error, 'signal') != null ||
+    Reflect.get(error, 'processOutcomeUnknown') === true ||
+    Object.hasOwn(error, 'processTerminationError')
+  )
+    return false;
+  const code: unknown = Reflect.get(error, 'code');
+  // An interpreter exit alone does not confirm its native child's cleanup.
+  if (typeof code === 'number' && Number.isInteger(code) && code > 0) return !invocation.indirect;
+  const failedPath: unknown = Reflect.get(error, 'path');
+  return (
+    typeof code === 'string' &&
+    ['ENOENT', 'ENOTDIR', 'EACCES', 'ENOEXEC', 'EPERM'].includes(code) &&
+    (failedPath === invocation.invocationPath ||
+      failedPath === invocation.processPath ||
+      (!invocation.indirect && failedPath === invocation.executable.path)) &&
+    Reflect.get(error, 'syscall') === `spawn ${String(failedPath)}`
+  );
+}
+
 export class CodexBinaryResolver {
+  /** Private captured installer entry. No legacy resolver/cache is read or changed. */
+  static captureSelection(isCurrent: () => boolean): CapturedCodexResolver {
+    const platform = process.platform,
+      arch = process.arch,
+      cwd = process.cwd(),
+      shell = getCachedShellEnv();
+    const processWitness = environmentWitness(process.env),
+      shellWitness = environmentWitness(shell);
+    const environment = Object.freeze({
+      ...withCliProcessDefaults({ env: buildEnrichedEnv(null) }).env,
+    });
+    const environmentKey = environmentWitness(environment);
+    const mergedPath = buildMergedCliPath(null);
+    const pathPrefix = createManagedGitEnv({ PATH: '' }).PATH ?? '';
+    const separator = platform === 'win32' ? ';' : ':';
+    const probe = Object.freeze({
+      cwd,
+      environment,
+      pathPrefix: Object.freeze(pathPrefix.split(separator).filter(Boolean)),
+      pathBase: Object.freeze(mergedPath.split(separator).filter(Boolean)),
+    });
+    const processOverride = process.env.CODEX_CLI_PATH?.trim();
+    const shellOverride = shell?.CODEX_CLI_PATH?.trim();
+    const pathExt = process.env.PATHEXT;
+    const pathEntries = Object.freeze(getPathEntries());
+    let managed = captureAppManagedCodexRuntime();
+    let acquired = false;
+    const fingerprint = createHash('sha256')
+      .update(
+        JSON.stringify({
+          platform,
+          arch,
+          cwd,
+          processWitness,
+          shellWitness,
+          environmentKey,
+          mergedPath,
+          pathPrefix,
+          processOverride,
+          shellOverride,
+          pathExt,
+          pathEntries,
+          managed: managed.fingerprint,
+        })
+      )
+      .digest('hex');
+    const assertAuthority = () => {
+      if (
+        !isCurrent() ||
+        process.platform !== platform ||
+        process.arch !== arch ||
+        process.cwd() !== cwd ||
+        getCachedShellEnv() !== shell ||
+        environmentWitness(process.env) !== processWitness ||
+        environmentWitness(shell) !== shellWitness ||
+        buildMergedCliPath(null) !== mergedPath ||
+        (createManagedGitEnv({ PATH: '' }).PATH ?? '') !== pathPrefix ||
+        environmentWitness(withCliProcessDefaults({ env: buildEnrichedEnv(null) }).env) !==
+          environmentKey
+      )
+        throw new Error('The original Codex installation context changed.');
+    };
+    const assertCurrent = () => {
+      assertAuthority();
+      managed.assertCurrent();
+    };
+    assertCurrent();
+    let resolution: Promise<CapturedCodexResolution | null> | undefined;
+    return Object.freeze({
+      fingerprint,
+      assertAuthority,
+      assertCurrent,
+      acceptAcquired(manifest: CapturedCodexManagedManifest) {
+        assertAuthority();
+        if (acquired || resolution) throw new Error('Codex acquisition was already reconciled.');
+        assertCapturedCodexManagedManifest(manifest);
+        managed = manifest;
+        acquired = true;
+      },
+      resolve() {
+        if (resolution) return resolution;
+        const deadline = performance.now() + BINARY_LAUNCH_VERIFY_TIMEOUT_MS;
+        let resolving = true;
+        const check = () => {
+          assertCurrent();
+          if (resolving && performance.now() >= deadline)
+            throw new Error('The original Codex resolution deadline expired.');
+        };
+        const checked = async <T>(work: () => Promise<T>): Promise<T> => {
+          check();
+          try {
+            return await work();
+          } finally {
+            check();
+          }
+        };
+        resolution = (async () => {
+          const candidates: {
+            candidate: string;
+            sourceKind: 'override' | 'app-managed' | 'path';
+          }[] = [];
+          for (const override of new Set([processOverride, shellOverride]))
+            if (override) candidates.push({ candidate: override, sourceKind: 'override' });
+          if (managed.binaryPath)
+            candidates.push({ candidate: managed.binaryPath, sourceKind: 'app-managed' });
+          candidates.push({ candidate: 'codex', sourceKind: 'path' });
+          for (const { candidate, sourceKind } of candidates) {
+            check();
+            const expanded = expandWindowsExtensions(candidate, pathExt);
+            const paths = isPathLikeCandidate(candidate)
+              ? expanded
+              : pathEntries.flatMap((entry) =>
+                  expanded.map((value) => resolvePathEntryCandidate(entry, value))
+                );
+            for (const selected of paths) {
+              try {
+                await checked(() => fsp.access(selected, fsConstants.X_OK));
+              } catch (error) {
+                if (confirmedMissing(error)) continue;
+                throw error;
+              }
+              let invocation: Awaited<ReturnType<typeof captureCodexNativeSelection>>;
+              try {
+                invocation = await checked(() =>
+                  captureCodexNativeSelection(selected, check, probe)
+                );
+              } catch (error) {
+                // An unreadable image or missing wrapper dependency is not a failed original launch.
+                if (
+                  error instanceof Error &&
+                  Reflect.get(error, 'path') === selected &&
+                  ['ENOENT', 'ENOTDIR'].includes(String(Reflect.get(error, 'code')))
+                )
+                  continue;
+                throw error;
+              }
+              let stdout: string;
+              try {
+                ({ stdout } = await checked(() =>
+                  execCli(invocation.invocationPath, ['--version'], {
+                    cwd,
+                    env: invocation.environment,
+                    timeout: Math.max(1, Math.floor(deadline - performance.now())),
+                    windowsHide: true,
+                  })
+                ));
+              } catch (error) {
+                if (confirmedLaunchFailure(error, invocation)) continue;
+                throw error;
+              }
+              await checked(() => invocation.assertCurrent());
+              const version =
+                /^(?:codex-cli\s+)?((?:0|[1-9]\d{0,8})\.(?:0|[1-9]\d{0,8})\.(?:0|[1-9]\d{0,8}))$/.exec(
+                  stdout.trim()
+                )?.[1];
+              if (!version) throw new Error('The original Codex version could not be confirmed.');
+              const selection = runtimeSourceNativeSelectionSchema.parse({
+                sourceKind,
+                nativeCli: { executable: invocation.executable, version },
+              });
+              return Object.freeze({
+                selection,
+                assertCurrent: () => checked(() => invocation.assertCurrent()),
+              });
+            }
+          }
+          check();
+          return null;
+        })().finally(() => {
+          resolving = false;
+        });
+        return resolution;
+      },
+    });
+  }
+
   static async verifyCandidate(candidate: string): Promise<string | null> {
     const normalizedCandidate = candidate.trim();
     return normalizedCandidate ? verifyBinary(normalizedCandidate) : null;

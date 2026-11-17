@@ -1,8 +1,9 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { constants } from 'node:fs';
 import { open, realpath, stat } from 'node:fs/promises';
-import { posix, win32 } from 'node:path';
 import { types as nodeUtilTypes } from 'node:util';
+import { isCanonicalNativePath as isCanonicalOpenCodeV2Directory } from '../owned-process/nativePath.js';
+export { isCanonicalNativePath as isCanonicalOpenCodeV2Directory } from '../owned-process/nativePath.js';
 
 /**
  * V2.0 qualification boundary, not a native readiness certificate.
@@ -58,28 +59,6 @@ const commit = /^[0-9a-f]{40}$/;
 // Keep Host admission no wider than that executable driver contract.
 const nativeSession = /^ses_[A-Za-z0-9]{1,256}$/;
 const endpoint = /^http:\/\/127\.0\.0\.1:([1-9][0-9]{0,4})$/;
-
-/**
- * Lexical captured-path guard only; native realpath/process ownership still require
- * a separate TEST-owned proof. Do not accept drive-relative, UNC, root or traversal.
- */
-export function isCanonicalOpenCodeV2Directory(platform: string, directory: string): boolean {
-  if (typeof directory !== 'string' || directory.length === 0 ||
-      directory.length > 8192 || directory.includes('\0')) return false;
-  if (platform.startsWith('win32-')) {
-    const root = win32.parse(directory).root;
-    return /^[A-Za-z]:\\/.test(directory) && win32.isAbsolute(directory) &&
-      win32.normalize(directory) === directory && directory.length > root.length &&
-      directory.slice(root.length).split('\\').every(segment =>
-        segment.length > 0 && !/[ .]$/.test(segment) &&
-        // Win32 device aliases and NTFS alternate data streams are not normal
-        // workspace directories even when path.normalize() leaves them unchanged.
-        !/[<>:"|?*\x00-\x1f]/.test(segment) &&
-        !/^(?:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[1-9¹²³]|LPT[1-9¹²³])(?:\.|$)/i.test(segment));
-  }
-  return posix.isAbsolute(directory) && !directory.endsWith('/') &&
-    posix.normalize(directory) === directory && directory !== '/';
-}
 
 const selectionFields = [
   'generation', 'platform', 'version', 'nativeReportedVersion', 'executableSha256',

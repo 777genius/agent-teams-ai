@@ -2,6 +2,7 @@ import { runtimeDigest } from '../runtime/identity.js';
 import { TeamLaunchError } from './contracts.js';
 import type { TeamLaunchDefinition } from './contracts.js';
 import { validateRestoreJournal } from './validateRestoreJournal.js';
+import { liveRosterOriginalDefinition } from './liveRosterMembership.js';
 import type { ActionLaunchRecord } from './memberActions.js';
 /** Cold reconstruction of an SDK-free unconfigured skip only. Configured selections use the normal private binding reader. */
 export function applyUnconfiguredMemberSelections(
@@ -16,6 +17,7 @@ export function applyUnconfiguredMemberSelections(
   )
     throw new TeamLaunchError('hold', 'member-action-record');
   validateRestoreJournal(record);
+  const original = record.liveMembership?.length ? liveRosterOriginalDefinition(record) : record.definition;
   const members = definition.members.map((member) => {
     if (member.configurationDigest !== null) return member;
     const skip = record.memberActions
@@ -31,7 +33,7 @@ export function applyUnconfiguredMemberSelections(
     if (
       runtimeDigest(skip.source) !== runtimeDigest(member) ||
       runtimeDigest(skip.selected) !==
-        runtimeDigest(record.definition.members.find((m) => m.memberId === member.memberId))
+        runtimeDigest(original.members.find((m) => m.memberId === member.memberId))
     )
       throw new TeamLaunchError('hold', 'member-action-source');
     return structuredClone(skip.selected);

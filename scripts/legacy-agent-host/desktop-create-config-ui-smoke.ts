@@ -187,6 +187,9 @@ export async function runDesktopCreateConfigUiSmoke(
   await runDesktopRosterLifecycleUiSmoke(cdp, options);
 }
 
+// The empty Team list also has a Create CTA; retain the original header control.
+export const desktopCreateTeamHeaderButtonSelector = 'div.mb-4 > div > div > button.gap-2';
+
 /** Shared original form navigation, with all edits issued through CDP Input. */
 export async function openOriginalCreateForm(
   cdp: UiCdpPort,
@@ -206,11 +209,11 @@ export async function openOriginalCreateForm(
   );
   await ui.click("button", "open original Teams list", "Teams");
   await ui.waitRead(
-    `Boolean([...document.querySelectorAll('button')].find(e=>e.textContent.trim()==='Create Team'))`,
+    `Boolean([...document.querySelectorAll('${desktopCreateTeamHeaderButtonSelector}')].find(e=>e.textContent.trim()==='Create Team'))`,
     "existing Team list create button",
     90_000,
   );
-  await ui.click("button", "open original Create Team dialog", "Create Team");
+  await ui.click(desktopCreateTeamHeaderButtonSelector, "open original Create Team dialog", "Create Team");
   await ui.waitRead(
     `Boolean(document.querySelector('[data-testid="create-team-page"] #team-name'))`,
     "original Create Team form",

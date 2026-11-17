@@ -15,16 +15,19 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { TeamLaunchError } from '../dist/team-launch/contracts.js';
+import { RuntimeSourceUnavailable } from '../dist/composition/runtimeSourceGrantAuthority.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
 import {
   prepareCapturedRuntimeMcpRecipes,
   loadCapturedRuntimeMcpRecipe,
+  validateCapturedRuntimeMcpRecipe,
   capturedRuntimeMcpReferencesSchema,
 } from '../dist/composition/capturedRuntimeMcpRecipes.js';
 import { capturedMcpSourceCurrent } from '../dist/mcp-catalog/capturedSource.js';
 import { captureRuntimeMcp } from '../dist/composition/captureRuntimeMcp.js';
 import { inheritNativeMemberMcp } from '../dist/composition/inheritNativeMemberMcp.js';
 import { verifyOpenCodeMcpPolicyPlugin } from '../dist/adapters/providers/openCodeMcpPolicy.js';
+import { openCodeV2CapturedMcp } from '../dist/adapters/providers/OpenCodeV2CapturedMcp.js';
 import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
 import type { ClaudeMemberProfile } from '../dist/composition/runtimeProfile.js';
 import type { CodexMemberProfile } from '../dist/composition/runtimeProfile.js';
@@ -114,6 +117,12 @@ function nativeV2(f: ReturnType<typeof fixture>): OpenCodeMemberProfile {
   return profile;
 }
 
+function publishedV2(f: ReturnType<typeof fixture>): OpenCodeMemberProfile {
+  const { embedded: _embedded, ...profile } = nativeV2(f);
+  return { ...profile, protocolRevision: '2.0.21', nativeSessionId: 'ses_TESTpublished',
+    nativeOptions: { providerId: 'TEST-provider', agent: 'TEST-agent' } };
+}
+
 test('V2 empty external MCP capture and cold private artifact retain the native recipe without V1 overlays', { skip: !V2_SUPPORTED }, async (t) => {
   const f = fixture();
   t.after(() => rmSync(f.root, { recursive: true, force: true }));
@@ -152,8 +161,7 @@ test('V2 empty external MCP capture and cold private artifact retain the native 
   assert.equal(readFileSync(f.file, 'utf8'), bytes);
 
   for (const overlay of [
-    { capturedMcpServers: { TEST_external: { type: 'stdio', command: '/TEST/external' } } },
-    { capturedMcpServers: {}, capturedMcpSource: { userConfigPath: '/TEST/source', projectPath: '/TEST/project' } },
+    { capturedMcpServers: { agent_teams: { type: 'stdio', command: '/TEST/external' } } },
     { capturedMcpServers: {}, mcpPolicyPlugin: { path: '/TEST/plugin', sha256: 'd'.repeat(64) } },
     { capturedMcpServers: {}, capturedMcpCatalog: {} },
   ]) {
@@ -164,10 +172,10 @@ test('V2 empty external MCP capture and cold private artifact retain the native 
   }
 });
 
-test('V2 capture refuses external MCP selections and V1 overlays before an empty artifact can hide them', { skip: !V2_SUPPORTED }, async (t) => {
+test('published V2 capture refuses external MCP selections and V1 overlays before an empty artifact can hide them', { skip: !V2_SUPPORTED }, async (t) => {
   const f = fixture();
   t.after(() => rmSync(f.root, { recursive: true, force: true }));
-  const v2 = nativeV2(f), servers = { TEST_external: { type: 'stdio' as const, command: '/TEST/external' } };
+  const v2 = publishedV2(f), servers = { TEST_external: { type: 'stdio' as const, command: '/TEST/external' } };
   const capture = (lead: CodexMemberProfile, selected = v2) => captureRuntimeMcp({
     recipes: [lead, selected], savedCwd: lead.cwd,
     members: [{ role: 'lead', settings: {} }, { role: 'member', settings: {} }],
@@ -196,10 +204,10 @@ test('V2 capture refuses external MCP selections and V1 overlays before an empty
   assert(!readdirSync(f.store.directory).includes('launches'));
 });
 
-test('V2 lead refuses explicit external MCP policy even with no catalog or selected server', { skip: !V2_SUPPORTED }, (t) => {
+test('published V2 lead refuses explicit external MCP policy even with no catalog or selected server', { skip: !V2_SUPPORTED }, (t) => {
   const f = fixture();
   t.after(() => rmSync(f.root, { recursive: true, force: true }));
-  const v2 = nativeV2(f);
+  const v2 = publishedV2(f);
   for (const mode of ['strictAllowlist', 'inheritScopes'] as const) {
     assert.throws(() => captureRuntimeMcp({
       recipes: [v2], savedCwd: f.profile.cwd,
@@ -215,7 +223,7 @@ test('V2 lead refuses explicit external MCP policy even with no catalog or selec
   assert(!readdirSync(f.store.directory).includes('launches'));
 });
 
-test('native member inheritance accepts only absent V2 or captured empty external policy; unconfigured V1 stays held', { skip: !V2_SUPPORTED }, (t) => {
+test('native member inheritance retains the lead selection on embedded V2; published V2 and unconfigured V1 stay held', { skip: !V2_SUPPORTED }, (t) => {
   const f = fixture();
   t.after(() => rmSync(f.root, { recursive: true, force: true }));
   const v2 = nativeV2(f), empty = { ...f.profile, capturedMcpServers: {} };
@@ -224,13 +232,51 @@ test('native member inheritance accepts only absent V2 or captured empty externa
   assert.deepEqual(inheritNativeMemberMcp(f.profile, v2), empty);
   assert.throws(() => inheritNativeMemberMcp(v2, f.profile),
     { code: 'hold', reason: 'native-member-mcp-source-changed' });
-  assert.throws(() => inheritNativeMemberMcp(v2, { ...empty,
-    capturedMcpServers: { TEST_external: { type: 'stdio', command: '/TEST/external' } },
-  }), { code: 'hold', reason: 'native-member-mcp-source-changed' });
-  assert.throws(() => inheritNativeMemberMcp(v2, { ...v2, capturedMcpServers: {} }),
+  const servers = { TEST_external: { type: 'stdio' as const, command: '/TEST/external' } };
+  assert.deepEqual(inheritNativeMemberMcp(v2, { ...empty, capturedMcpServers: servers }),
+    { ...v2, capturedMcpServers: servers });
+  assert.deepEqual(inheritNativeMemberMcp(v2, { ...v2, capturedMcpServers: {} }), v2);
+  assert.deepEqual(inheritNativeMemberMcp({ ...v2, capturedMcpServers: {} }, empty),
+    { ...v2, capturedMcpServers: {} });
+  assert.throws(() => inheritNativeMemberMcp(publishedV2(f), { ...empty, capturedMcpServers: servers }),
     { code: 'hold', reason: 'native-member-mcp-source-changed' });
-  assert.throws(() => inheritNativeMemberMcp({ ...v2, capturedMcpServers: {} }, empty),
-    { code: 'hold', reason: 'native-member-mcp-source-changed' });
+});
+
+test('embedded V2 uses the selected catalog and rejects normalized Team authority collisions', { skip: !V2_SUPPORTED }, (t) => {
+  const f = fixture();
+  t.after(() => rmSync(f.root, { recursive: true, force: true }));
+  const config = join(f.root, 'TEST-v2-mcp.json');
+  writeFileSync(config, JSON.stringify({ mcpServers: {
+    'TEST.docs': { command: '/TEST/docs', args: ['original'], env: { TEST_AUTH: 'private' } },
+    'TEST-remote': { type: 'sse', url: 'https://example.invalid/mcp', headers: { 'X-Test': 'original' } },
+  } }));
+  const v2 = { ...nativeV2(f), mcpCatalogSource: { claudeConfigPath: config } };
+  const select = (settings: Parameters<typeof captureRuntimeMcp>[0]['members'][number]['settings']) =>
+    captureRuntimeMcp({ recipes: [{ ...f.profile, capturedMcpServers: {} }, v2],
+      savedCwd: v2.cwd, members: [{ role: 'lead', settings: {} }, { role: 'member', settings }] })[1]!;
+  const strict = select({ mcpPolicy: { mode: 'strictAllowlist', serverNames: ['test.docs'] } });
+  assert.deepEqual(Object.keys(strict.capturedMcpServers!), ['TEST.docs']);
+  assert.equal(capturedMcpSourceCurrent(strict), true);
+  assert.deepEqual(openCodeV2CapturedMcp(strict.capturedMcpServers).servers['TEST.docs'], {
+    type: 'local', command: ['/TEST/docs', 'original'], environment: { TEST_AUTH: 'private' }, codemode: false,
+  });
+  const scoped = select({ mcpPolicy: { mode: 'inheritScopes', scopes: { user: true, project: false, local: false } } });
+  assert.deepEqual(openCodeV2CapturedMcp(scoped.capturedMcpServers).servers['TEST-remote'], {
+    type: 'remote', url: 'https://example.invalid/mcp', headers: { 'X-Test': 'original' }, oauth: false, codemode: false,
+  });
+  assert.deepEqual(select({ mcpPolicy: { mode: 'appOnly' } }).capturedMcpServers, {});
+  const capacity = Object.fromEntries(Array.from({ length: 255 }, (_, i) =>
+    [`TEST-server-${i}`, { type: 'stdio' as const, command: '/TEST/never' }]));
+  assert.equal(openCodeV2CapturedMcp(capacity).names.length, 255);
+  assert.throws(() => openCodeV2CapturedMcp({ ...capacity,
+    'TEST-one-too-many': { type: 'stdio', command: '/TEST/never' },
+  }), /server limit exceeded/);
+  for (const name of ['agent_teams', 'agent-teams_extra', 'mcp__agent_teams__x', 'mcp', 'agent'])
+    assert.throws(() => openCodeV2CapturedMcp({ [name]: { type: 'stdio', command: '/TEST/never' } }), /namespace conflicts/);
+  assert.throws(() => openCodeV2CapturedMcp({
+    'TEST.docs': { type: 'stdio', command: '/TEST/one' },
+    TEST_docs: { type: 'stdio', command: '/TEST/two' },
+  }), /namespace conflicts/);
 });
 
 test('actual private launch artifact keeps original native census while source references contain digest only', async (t) => {
@@ -298,6 +344,11 @@ test('changed original profile, missing or changed artifact and mismatching refe
       ),
     isHeld
   );
+  validateCapturedRuntimeMcpRecipe(f.store, 'TEST-command', ref, f.profile.cwd);
+  assert.throws(() => loadCapturedRuntimeMcpRecipe(
+    f.store, 'TEST-command', { ...f.profile, model: 'TEST-changed' }, ref, true
+  ), RuntimeSourceUnavailable, 'only restore may isolate a proven original/current base mismatch');
+  assert.equal(readFileSync(f.file, 'utf8'), original);
   assert.throws(
     () =>
       loadCapturedRuntimeMcpRecipe(f.store, 'TEST-command', f.profile, {
@@ -306,6 +357,9 @@ test('changed original profile, missing or changed artifact and mismatching refe
       }),
     isHeld
   );
+  assert.throws(() => loadCapturedRuntimeMcpRecipe(
+    f.store, 'TEST-command', { ...f.profile, model: 'TEST-changed' }, { ...ref, digest: 'c'.repeat(64) }, true
+  ), isHeld, 'a changed current base cannot hide a foreign original reference');
   const corrupt = JSON.parse(original);
   corrupt.overlay.capturedMcpCatalog.digest = 'd'.repeat(64);
   writeFileSync(f.file, JSON.stringify(corrupt));
@@ -313,11 +367,19 @@ test('changed original profile, missing or changed artifact and mismatching refe
     () => loadCapturedRuntimeMcpRecipe(f.store, 'TEST-command', f.profile, ref),
     isHeld
   );
+  assert.throws(() => validateCapturedRuntimeMcpRecipe(f.store, 'TEST-command', ref, f.profile.cwd), isHeld);
+  assert.throws(() => loadCapturedRuntimeMcpRecipe(
+    f.store, 'TEST-command', { ...f.profile, model: 'TEST-changed' }, ref, true
+  ), isHeld, 'corrupt original bytes stay generic hold before unavailable classification');
   unlinkSync(f.file);
   assert.throws(
     () => loadCapturedRuntimeMcpRecipe(f.store, 'TEST-command', f.profile, ref),
     isHeld
   );
+  assert.throws(() => validateCapturedRuntimeMcpRecipe(f.store, 'TEST-command', ref, f.profile.cwd), isHeld);
+  assert.throws(() => loadCapturedRuntimeMcpRecipe(
+    f.store, 'TEST-command', { ...f.profile, model: 'TEST-changed' }, ref, true
+  ), isHeld, 'missing original bytes never permit isolated history to masquerade as valid');
   assert.deepEqual(readdirSync(join(f.store.directory, 'launches/mcp-recipes')), []);
 });
 
@@ -371,7 +433,9 @@ test('symbolic private catalog never becomes adopted input and digest refs rejec
   assert.equal(capturedRuntimeMcpReferencesSchema.safeParse([ref, ref]).success, false);
 });
 
-test('historical private recipe survives real catalog edit while current admission holds and a new explicit command captures new bytes', async (t) => {
+for (const provider of ['claude', 'embedded-v2'] as const)
+test(`${provider} private recipe retains its original bytes after catalog edit and retry`,
+  { skip: provider === 'embedded-v2' && !V2_SUPPORTED }, async (t) => {
   const f = fixture();
   t.after(() => rmSync(f.root, { recursive: true, force: true }));
   const config = join(f.root, 'TEST-claude.json');
@@ -384,12 +448,15 @@ test('historical private recipe survives real catalog edit while current admissi
     })
   );
   const { nativeOptions: _codexOptions, protocolRevision: _codexVersion, ...common } = f.profile;
-  const base: ClaudeMemberProfile = {
+  const claudeBase: ClaudeMemberProfile = {
     ...common,
     provider: 'claude',
     nativeTools: [],
     autoAllowedTools: [],
     mcpCatalogSource: { claudeConfigPath: config },
+  };
+  const base = provider === 'claude' ? claudeBase : {
+    ...nativeV2(f), mcpCatalogSource: { claudeConfigPath: config },
   };
   const select = () =>
     captureRuntimeMcp({
@@ -421,6 +488,10 @@ test('historical private recipe survives real catalog edit while current admissi
   const reopened = loadCapturedRuntimeMcpRecipe(f.store, 'TEST-original-command', base, first[0]!);
   assert.deepEqual(reopened, historical);
   assert(!capturedMcpSourceCurrent(reopened));
+  assert.deepEqual(await prepareCapturedRuntimeMcpRecipes({
+    store: f.store, commandId: 'TEST-original-command', baseRecipes: [base],
+    selectedRecipes: select(), assertCurrent() {}, withAuthority: f.withAuthority,
+  }), first, 'an original retry retains the first artifact after catalog change');
   const next = await prepareCapturedRuntimeMcpRecipes({
     store: f.store,
     commandId: 'TEST-next-command',

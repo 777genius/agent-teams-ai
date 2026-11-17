@@ -5,6 +5,7 @@ import type { BackendHandle } from '../contracts';
 import type {
   BackendLaunchConfiguration,
   BackendLaunchConfigurationView,
+  BackendLaunchModelPreparation,
   BackendLaunchSnapshot,
 } from '../contracts/launch';
 import type { AgentBackendApi } from '../contracts/operations';
@@ -42,7 +43,8 @@ export function createHostTeamLaunch(
   }
   async function capture(
     rosterCommandId: string,
-    commandId: string
+    commandId: string,
+    modelPreparation?: BackendLaunchModelPreparation
   ): Promise<BackendLaunchConfigurationView> {
     const original = await resolveHandle();
     let result;
@@ -51,7 +53,7 @@ export function createHostTeamLaunch(
         handle: original,
         commandId,
         operation: 'team.launch.capture',
-        payload: { rosterCommandId },
+        payload: { rosterCommandId, ...(modelPreparation ? { modelPreparation } : {}) },
       });
     } catch {
       throw new Error('Launch capture result unknown. Retry the same intent.');
@@ -70,7 +72,8 @@ export function createHostTeamLaunch(
   async function start(
     view: BackendLaunchConfigurationView,
     configuration?: BackendLaunchConfiguration,
-    originalCommandId?: string
+    originalCommandId?: string,
+    modelPreparation?: BackendLaunchModelPreparation
   ): Promise<BackendLaunchSnapshot> {
     assertCurrent();
     const original = originalCommandId && view.launch.admission?.commandId === originalCommandId;
@@ -99,6 +102,7 @@ export function createHostTeamLaunch(
         payload: {
           launchId: intent.launchId,
           rosterRevision: intent.rosterRevision,
+          ...(modelPreparation ? { modelPreparation } : {}),
           ...(configuration === undefined ? {} : { configuration }),
         },
       });

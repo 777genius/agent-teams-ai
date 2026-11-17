@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { access, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -99,6 +100,7 @@ if (mode === 'descendant') {
       const request = (mode: string) => ({ command: bun, cwd: root,
         args: ['--no-env-file', '--config=NUL', '--no-install', actor, mode, root] });
       const child = original.launch(request('root')), sibling = neighbor.launch(request('neighbor'));
+      assert.ok(child instanceof ChildProcess, 'Existing V2 trusted bootstrap owns a real Node child');
       child.stdin.on('error', () => {}); sibling.stdin.on('error', () => {});
       child.stdout.resume(); sibling.stdout.resume();
       const rootExit = once(child, 'exit');

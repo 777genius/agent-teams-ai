@@ -8,7 +8,7 @@ import type {
   ManagementTarget,
   StoredOAuthCommand,
 } from './commandRecords.js';
-import type { ProviderOAuthSnapshot } from './contracts.js';
+import type { ProviderOAuthAuthorization, ProviderOAuthSnapshot } from './contracts.js';
 import type { ManagementResourceFence } from './ManagementResourceFence.js';
 
 const id = z.string().min(1).max(256);
@@ -30,15 +30,16 @@ export interface OAuthNativeConversation {
   readonly timeoutMs: number;
   /** Native browser callbacks may complete while the optional paste-code UI remains open. */
   readonly nativeCompletion?: Promise<boolean>;
+  /** Finite native failure witness, independent of whether original cleanup succeeds. */
+  readonly nativeRejectionConfirmed?: boolean;
   authorize(
     fields: Record<string, string> | undefined,
     signal: AbortSignal
-  ): Promise<{
-    authorizationUrl: string;
-    instructions: string;
-    completionMethod: 'auto' | 'code';
-    browserOwner?: 'native';
-  }>;
+  ): Promise<
+    ProviderOAuthAuthorization & {
+      completionMethod: 'auto' | 'code';
+    }
+  >;
   complete(code: string | undefined, signal: AbortSignal): Promise<boolean>;
   close(): Promise<boolean>;
 }
@@ -47,7 +48,7 @@ interface ActiveOAuth {
   saved: StoredOAuthCommand;
   native: OAuthNativeConversation;
   abort: AbortController;
-  authorization?: { authorizationUrl: string; instructions: string; browserOwner?: 'native' };
+  authorization?: ProviderOAuthAuthorization;
   timer?: NodeJS.Timeout;
   closing?: Promise<void>;
   retired: boolean;
@@ -131,9 +132,7 @@ export class OAuthOperationOwner {
   }
 
   /** Private Host→Main reply. Never emit this payload as public progress or journal it. */
-  authorization(
-    raw: unknown
-  ): { authorizationUrl: string; instructions: string; browserOwner?: 'native' } | null {
+  authorization(raw: unknown): ProviderOAuthAuthorization | null {
     const input = identity.parse(raw);
     this.assertAdmission();
     const saved = this.readOriginal(input);
@@ -244,7 +243,7 @@ export class OAuthOperationOwner {
     const current = this.active.get(saved.commandId)?.saved ?? saved;
     const unavailable =
       !this.active.has(saved.commandId) &&
-      !['completed', 'cancelled', 'held'].includes(current.phase);
+      !['completed', 'cancelled', 'failed', 'held'].includes(current.phase);
     return {
       operationId: current.commandId,
       profileId: current.profileId,
@@ -305,13 +304,22 @@ export class OAuthOperationOwner {
         typeof result.instructions !== 'string' ||
         result.instructions.length > 16384 ||
         !['auto', 'code'].includes(result.completionMethod) ||
-        (result.browserOwner !== undefined && result.browserOwner !== 'native')
+        (result.browserOwner !== undefined && result.browserOwner !== 'native') ||
+        (result.userCode !== undefined &&
+          (typeof result.userCode !== 'string' ||
+            !result.userCode.trim() ||
+            result.userCode.length > 256 ||
+            Array.from(result.userCode).some((character) => {
+              const code = character.charCodeAt(0);
+              return code < 32 || code === 127;
+            })))
       )
         throw new ManagementCommandError('invalid');
       entry.authorization = {
         authorizationUrl: url.href,
         instructions: result.instructions,
         ...(result.browserOwner ? { browserOwner: result.browserOwner } : {}),
+        ...(result.userCode === undefined ? {} : { userCode: result.userCode }),
       };
       this.publish(
         entry,
@@ -331,7 +339,8 @@ export class OAuthOperationOwner {
       // An explicit code submission owns its original completion command and native outcome.
       if (entry.saved.completionCommandId) return;
       if (!ok) {
-        await this.stop(entry, 'native-outcome-unknown');
+        await this.stop(entry, entry.native.nativeRejectionConfirmed === true
+          ? 'native-rejected' : 'native-outcome-unknown');
         return;
       }
       if (!['waiting-for-code', 'waiting-for-browser'].includes(entry.saved.phase)) return;
@@ -375,8 +384,9 @@ export class OAuthOperationOwner {
       } catch {
         /* Retain unknown writer custody. */
       }
-      entry.saved.phase =
-        clean && (reason === 'cancelled' || reason === 'expired') ? 'cancelled' : 'held';
+      entry.saved.phase = !clean ? 'held'
+        : reason === 'native-rejected' ? 'failed'
+          : reason === 'cancelled' || reason === 'expired' ? 'cancelled' : 'held';
       entry.saved.resourceHeld = !clean;
       entry.saved.sequence++;
       try {

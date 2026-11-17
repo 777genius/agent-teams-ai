@@ -10,7 +10,7 @@ import { CapturedProcess } from '../dist/adapters/providers/CapturedProcess.js';
 import { ClaudeManagementHost } from '../dist/adapters/providers/ClaudeManagementHost.js';
 import { treeHash } from './fixtures/native-host.ts';
 
-import type { ChildProcess } from 'node:child_process';
+import type { ObservableNativeProcess } from '../dist/owned-process/processFacade.js';
 import type { ClaudeManagementProfile } from '../dist/management/profile.js';
 
 test(
@@ -42,7 +42,7 @@ test(
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     const address = server.address();
     assert.ok(address && typeof address === 'object');
-    const children: ChildProcess[] = [];
+    const children: ObservableNativeProcess[] = [];
     const sourceSha256 = await treeHash(join(import.meta.dirname, '../src'), '.ts');
     const distSha256 = await treeHash(join(import.meta.dirname, '../dist'), '.js');
     let host: ClaudeManagementHost | undefined;

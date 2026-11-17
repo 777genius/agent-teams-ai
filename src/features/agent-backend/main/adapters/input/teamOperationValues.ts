@@ -11,6 +11,7 @@ import { parseTeamLifecyclePayload } from './teamLifecycleValues';
 
 import type {
   BackendLaunchConfiguration,
+  BackendLaunchModelPreparation,
   BackendLaunchModelSelection,
 } from '../../../contracts/launch';
 import type { BackendOperationPayloads } from '../../../contracts/operations';
@@ -57,6 +58,81 @@ function launchConfiguration(value: unknown): BackendLaunchConfiguration {
   if (new Set(members.map((member) => member.memberId)).size !== members.length)
     throw new InvalidBackendOperation();
   return { members };
+}
+
+function launchModelSelection(value: unknown): BackendLaunchModelSelection {
+  const p = object(value, [
+    'launchId',
+    'rosterRevision',
+    'memberId',
+    'model',
+    'effort',
+    'context',
+    'draft',
+  ]);
+  const member = launchConfiguration({
+    members: [
+      {
+        memberId: p.memberId,
+        model: p.model,
+        ...(p.effort === undefined ? {} : { effort: p.effort }),
+        ...(p.context === undefined ? {} : { context: p.context }),
+      },
+    ],
+  }).members[0];
+  if (/[\r\n]/u.test(member.model!)) throw new InvalidBackendOperation();
+  let draft: BackendLaunchModelSelection['draft'];
+  if (p.draft !== undefined) {
+    const raw = object(p.draft, ['providerId', 'target', 'workspace']);
+    if (!['anthropic', 'codex', 'opencode'].includes(String(raw.providerId)))
+      throw new InvalidBackendOperation();
+    const target = object(raw.target, ['kind', 'name', 'originalName']);
+    if (target.kind !== 'lead' && target.kind !== 'member') throw new InvalidBackendOperation();
+    if (
+      target.kind === 'lead' &&
+      (target.name !== undefined || target.originalName !== undefined)
+    )
+      throw new InvalidBackendOperation();
+    const workspace = raw.workspace === undefined ? undefined : text(raw.workspace, 8192);
+    if (workspace !== undefined && (!workspace.startsWith('/') || /[\r\n]/u.test(workspace)))
+      throw new InvalidBackendOperation();
+    draft = {
+      providerId: raw.providerId as NonNullable<typeof draft>['providerId'],
+      target:
+        target.kind === 'lead'
+          ? { kind: 'lead' }
+          : {
+              kind: 'member',
+              name: text(target.name),
+              ...(target.originalName === undefined
+                ? {}
+                : { originalName: text(target.originalName) }),
+            },
+      ...(workspace === undefined ? {} : { workspace }),
+    };
+  }
+  const selection: BackendLaunchModelSelection = {
+    launchId: text(p.launchId),
+    rosterRevision: text(p.rosterRevision),
+    memberId: member.memberId,
+    model: member.model!,
+    ...(draft === undefined ? {} : { draft }),
+    ...(member.effort === undefined ? {} : { effort: member.effort }),
+    ...(member.context === undefined ? {} : { context: member.context }),
+  };
+  return selection;
+}
+
+export function parseLaunchModelPreparation(value: unknown): BackendLaunchModelPreparation {
+  const source = object(value, ['preparationId', 'selections']);
+  const preparationId = text(source.preparationId);
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/.test(preparationId) ||
+      !Array.isArray(source.selections) || !source.selections.length || source.selections.length > 256 ||
+      Buffer.byteLength(JSON.stringify(source)) > 256 * 1024) throw new InvalidBackendOperation();
+  const selections = source.selections.map(launchModelSelection);
+  if (new Set(selections.map(selection => JSON.stringify(selection))).size !== selections.length)
+    throw new InvalidBackendOperation();
+  return { preparationId, selections };
 }
 
 export function parseBackendTeamOperation(
@@ -117,66 +193,7 @@ export function parseBackendTeamOperation(
     case 'team.launch.probe.start':
     case 'team.launch.probe.read':
     case 'team.launch.probe.cancel': {
-      const p = object(value, [
-        'launchId',
-        'rosterRevision',
-        'memberId',
-        'model',
-        'effort',
-        'context',
-        'draft',
-      ]);
-      const member = launchConfiguration({
-        members: [
-          {
-            memberId: p.memberId,
-            model: p.model,
-            ...(p.effort === undefined ? {} : { effort: p.effort }),
-            ...(p.context === undefined ? {} : { context: p.context }),
-          },
-        ],
-      }).members[0];
-      if (/[\r\n]/u.test(member.model!)) throw new InvalidBackendOperation();
-      let draft: BackendLaunchModelSelection['draft'];
-      if (p.draft !== undefined) {
-        const raw = object(p.draft, ['providerId', 'target', 'workspace']);
-        if (!['anthropic', 'codex', 'opencode'].includes(String(raw.providerId)))
-          throw new InvalidBackendOperation();
-        const target = object(raw.target, ['kind', 'name', 'originalName']);
-        if (target.kind !== 'lead' && target.kind !== 'member') throw new InvalidBackendOperation();
-        if (
-          target.kind === 'lead' &&
-          (target.name !== undefined || target.originalName !== undefined)
-        )
-          throw new InvalidBackendOperation();
-        const workspace = raw.workspace === undefined ? undefined : text(raw.workspace, 8192);
-        if (workspace !== undefined && (!workspace.startsWith('/') || /[\r\n]/u.test(workspace)))
-          throw new InvalidBackendOperation();
-        draft = {
-          providerId: raw.providerId as NonNullable<typeof draft>['providerId'],
-          target:
-            target.kind === 'lead'
-              ? { kind: 'lead' }
-              : {
-                  kind: 'member',
-                  name: text(target.name),
-                  ...(target.originalName === undefined
-                    ? {}
-                    : { originalName: text(target.originalName) }),
-                },
-          ...(workspace === undefined ? {} : { workspace }),
-        };
-      }
-      const selection: BackendLaunchModelSelection = {
-        launchId: text(p.launchId),
-        rosterRevision: text(p.rosterRevision),
-        memberId: member.memberId,
-        model: member.model!,
-        ...(draft === undefined ? {} : { draft }),
-        ...(member.effort === undefined ? {} : { effort: member.effort }),
-        ...(member.context === undefined ? {} : { context: member.context }),
-      };
-      return selection;
+      return launchModelSelection(value);
     }
     case 'team.launch.read':
     case 'team.launch.configuration.read': {
@@ -184,14 +201,20 @@ export function parseBackendTeamOperation(
       return p.launchId === undefined ? {} : { launchId: text(p.launchId) };
     }
     case 'team.launch.capture': {
-      const p = object(value, ['rosterCommandId']);
-      return { rosterCommandId: text(p.rosterCommandId) };
+      const p = object(value, ['rosterCommandId', 'modelPreparation']);
+      return { rosterCommandId: text(p.rosterCommandId), ...(p.modelPreparation === undefined
+        ? {} : { modelPreparation: parseLaunchModelPreparation(p.modelPreparation) }) };
     }
     case 'team.launch.start': {
-      const p = object(value, ['launchId', 'rosterRevision', 'configuration']);
+      const p = object(value, ['launchId', 'rosterRevision', 'configuration', 'initialPrompt', 'modelPreparation']);
+      if (p.initialPrompt !== undefined && p.initialPrompt !== null &&
+        (typeof p.initialPrompt !== 'string' || !p.initialPrompt.trim() || p.initialPrompt.includes('\0') || p.initialPrompt.length > 100_000))
+        throw new InvalidBackendOperation();
       return {
         launchId: text(p.launchId),
         rosterRevision: text(p.rosterRevision),
+        ...(p.modelPreparation === undefined ? {} : { modelPreparation: parseLaunchModelPreparation(p.modelPreparation) }),
+        ...(p.initialPrompt === undefined ? {} : { initialPrompt: p.initialPrompt }),
         ...(p.configuration === undefined
           ? {}
           : { configuration: launchConfiguration(p.configuration) }),

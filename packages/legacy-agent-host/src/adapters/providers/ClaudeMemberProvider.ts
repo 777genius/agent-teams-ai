@@ -9,6 +9,7 @@ import { CapturedProcess } from './CapturedProcess.js';
 import { createClaudeCloseDiagnostic } from './createClaudeCloseDiagnostic.js';
 import { claudeSessionExists } from './claudeSessionExists.js';
 import { claudeMcpServers } from './claudeMcpServers.js';
+import { claudeSessionCommands } from './claudeSessionCommands.js';
 import { createTeamMcpTools } from '../../mcp/tools.js';
 
 import type { ClaudeConfig } from '@agent-teams/provider-implementations/claude';
@@ -28,8 +29,13 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
     memberId: selectedBinding.memberId,
     generation: selectedBinding.generation,
   });
+  // Claude only emits next-prompt suggestions while its own account/time dependent rollout flag is on.
+  // When the user's setting selected Claude for this Host, request them explicitly in the launch environment.
+  const environment = context.promptSuggestions
+    ? { ...profile.environment, CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION: 'true' }
+    : { ...profile.environment };
   const custody = new CapturedProcess(
-    profile,
+    { ...profile, environment },
     () => context.canAllocate() && capturedMcpSourceCurrent(profile),
     context.processCustody,
     () =>
@@ -38,21 +44,25 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
   );
   let ready = false;
   let sealed = false;
+  let commands: ReturnType<typeof claudeSessionCommands> = [];
   const required = createTeamMcpTools(context.connection)
     .list()
     .map((tool) => tool.name);
   const config: ClaudeConfig = {
     sessionRef: profile.sessionId,
     observeClose: createClaudeCloseDiagnostic(selectedBinding, profile.sessionId),
+    observeCommands: (value) => { commands = claudeSessionCommands(value); },
     ...(context.toolEvidence ? { capture: context.toolEvidence } : {}),
     ...(context.attachments ? { attachments: context.attachments } : {}),
+    ...(context.promptSuggestions ? { promptSuggestions: context.promptSuggestions } : {}),
     // Stable principal scope across technical generations; MCP and Runtime separately fence generation.
     trustedBinding: `${context.endpoint.binding.backendId}/${context.endpoint.binding.teamId}/${context.endpoint.binding.runId}/${profile.memberId}`,
     cwd: profile.cwd,
+    executablePath: profile.executable.path,
     model: profile.model,
     accountBinding: profile.accountBinding,
     configRevision: profile.configRevision,
-    environment: { ...profile.environment },
+    environment: { ...environment },
     ...(profile.extraArgs ? { extraArgs: [...profile.extraArgs] } : {}),
     ...(profile.configNamespace ? { configNamespace: profile.configNamespace } : {}),
     nativeOptions: {
@@ -109,6 +119,7 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
         ? config
         : undefined,
     readCheckpoint: context.readCheckpoint,
+    ...(context.readCheckpointSource ? { readCheckpointSource: context.readCheckpointSource } : {}),
   });
   return {
     factory: {
@@ -157,6 +168,7 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
       ? { captureRegisteredProcess: custody.captureRegisteredProcess.bind(custody) }
       : {}),
     isReady: () => ready && !sealed && context.isCurrent(),
+    sessionCommands: () => ready && !sealed && context.isCurrent() && capturedMcpSourceCurrent(profile) ? commands : [],
     initialContextEvidence: () =>
       ready && !sealed && context.isCurrent()
         ? {

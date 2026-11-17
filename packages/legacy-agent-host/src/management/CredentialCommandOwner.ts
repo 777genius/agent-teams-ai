@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { assertManagementTarget, ManagementCommandError } from './commandRecords.js';
 import { managementDigest } from './identity.js';
 import { ManagementResourceFence } from './ManagementResourceFence.js';
+import { advanceOpenCodeV2Credential } from './openCodeV2CredentialRecord.js';
+import type { OpenCodeV2CredentialProgress } from './openCodeV2CredentialRecord.js';
 
 import type { ProviderCredentialReceipt } from './contracts.js';
 import type {
@@ -38,6 +40,7 @@ export type CredentialCommand = z.infer<typeof credentialCommandSchema>;
 export type CredentialCommandReceipt = ProviderCredentialReceipt;
 export type CredentialCommandStore = ManagementCommandStore;
 export type CredentialTarget = ManagementTarget;
+export type CredentialProgressWriter = (value: OpenCodeV2CredentialProgress) => void;
 
 /** Durable management intents. Secrets are hashed for matching, never persisted in the journal. */
 export class CredentialCommandOwner {
@@ -50,8 +53,9 @@ export class CredentialCommandOwner {
       select(profileId: string, configRevision: string): CredentialTarget;
       perform(
         command: CredentialCommand,
-        target: CredentialTarget
-      ): Promise<{ ok: boolean; settled: boolean }>;
+        target: CredentialTarget,
+        progress: CredentialProgressWriter,
+      ): Promise<{ ok: boolean; settled: boolean; rejected?: boolean }>;
       fence?: ManagementResourceFence;
       validate?(command: CredentialCommand): void;
     }
@@ -78,11 +82,39 @@ export class CredentialCommandOwner {
     return this.receipt(saved);
   }
 
+  /** Original unfinished set only; no credentials, replay, inferred completion or new journal. */
+  pending(raw: unknown): CredentialCommandReceipt | null {
+    const input = z.object({ profileId: id, configRevision: id, providerId: id }).strict().parse(raw);
+    this.options.assertCurrent();
+    const target = this.options.select(input.profileId, input.configRevision);
+    const matches: StoredCredentialCommand[] = [];
+    for (const row of this.options.store.list()) {
+      if (row.kind !== 'credential.set' || row.profileId !== target.profileId ||
+          row.configRevision !== target.configRevision || row.providerId !== input.providerId ||
+          row.phase === 'completed' || row.terminalRejection === true) continue;
+      assertManagementTarget(row, target);
+      matches.push(row);
+    }
+    if (matches.length > 1) throw new ManagementCommandError('conflict');
+    return matches[0] ? this.receipt(matches[0]) : null;
+  }
+
+  /** Retained control may compare the original secret fingerprint, but can never claim or mutate. */
+  resume(raw: unknown): CredentialCommandReceipt {
+    const command = credentialCommandSchema.parse(raw);
+    this.options.assertCurrent();
+    const target = this.options.select(command.profileId, command.configRevision);
+    const original = this.options.store.read(command.commandId);
+    if (!original || original.kind !== command.kind || original.providerId !== command.providerId ||
+        original.fingerprint !== managementDigest(command)) throw new ManagementCommandError('conflict');
+    assertManagementTarget(original, target);
+    return this.receipt(original);
+  }
+
   async execute(raw: unknown): Promise<CredentialCommandReceipt> {
     const command = credentialCommandSchema.parse(raw);
     this.options.assertCurrent();
     const target = this.options.select(command.profileId, command.configRevision);
-    this.options.validate?.(command);
     const fingerprint = managementDigest(command);
     const previous = this.options.store.read(command.commandId);
     if (previous) {
@@ -96,6 +128,7 @@ export class CredentialCommandOwner {
       if (previous.fingerprint !== fingerprint) throw new ManagementCommandError('conflict');
       return this.receipt(previous);
     }
+    this.options.validate?.(command);
     this.fence.reserve(target.resourceId, command.commandId);
     const saved: StoredCredentialCommand = {
       schemaVersion: 1,
@@ -124,7 +157,14 @@ export class CredentialCommandOwner {
       const reused = this.reusableRefresh(command, target);
       const result = reused
         ? { ok: true, settled: true }
-        : await this.options.perform(command, target);
+        : await this.options.perform(command, target, (progress) => {
+          this.options.assertCurrent();
+          assertManagementTarget(saved, this.options.select(command.profileId, command.configRevision));
+          const next = advanceOpenCodeV2Credential(saved.openCodeV2, progress);
+          if (command.kind !== 'credential.set' || !next) throw new ManagementCommandError('conflict');
+          saved.openCodeV2 = next;
+          this.options.store.write(saved);
+        });
       settled = result.settled;
       this.options.assertCurrent();
       assertManagementTarget(saved, this.options.select(command.profileId, command.configRevision));
@@ -132,6 +172,8 @@ export class CredentialCommandOwner {
       saved.resourceHeld = !settled;
       const completedAt = Date.now();
       saved.finishedAtMs = this.finishTime(target.resourceId);
+      if (!result.ok && settled && 'rejected' in result && result.rejected === true)
+        saved.terminalRejection = true;
       if (saved.phase === 'completed' && command.kind === 'credential.refresh')
         saved.refreshCompletedAtMs = reused?.refreshCompletedAtMs ?? completedAt;
       this.options.store.write(saved);
@@ -140,6 +182,7 @@ export class CredentialCommandOwner {
       // A lost response/publication is UNKNOWN. Never replay the mutation under a new process.
       saved.phase = 'held';
       delete saved.refreshCompletedAtMs;
+      delete saved.terminalRejection;
       saved.resourceHeld = !settled;
       try {
         this.options.assertCurrent();
@@ -192,6 +235,8 @@ export class CredentialCommandOwner {
       kind: saved.kind,
       providerId: saved.providerId,
       phase: saved.phase === 'completed' ? 'completed' : 'held',
+      ...(saved.terminalRejection && saved.openCodeV2?.phase === 'probe-completed' &&
+        saved.openCodeV2.verification?.ok === false ? { reason: 'verification-rejected' as const } : {}),
     };
   }
 }

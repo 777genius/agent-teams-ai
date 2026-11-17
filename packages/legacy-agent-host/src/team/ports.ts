@@ -15,9 +15,20 @@ export interface TeamRuntimeSelection {
   /** Private admitted launch options, without credentials or native process selectors. */
   configuration?: JsonValue;
   restore?: { commandId: string; reference: string; sourceBinding: RuntimeMemberBinding };
+  /** Original claimed predecessor of this exact restore; private composition only. */
+  checkpointSource?: {
+    commandId: string;
+    reference: string;
+    sourceBinding: RuntimeMemberBinding;
+    attemptId: string;
+    hostIncarnation: string;
+    baseConfigurationDigest: string;
+    configurationDigest?: string;
+    generation?: number;
+  };
 }
 export interface TeamRuntimeBindings {
-  current(initial: RuntimeMemberBinding): TeamRuntimeSelection | undefined;
+  current(initial: RuntimeMemberBinding, checkpointRef?: string): TeamRuntimeSelection | undefined;
   retained(initial: RuntimeMemberBinding, binding: RuntimeMemberBinding): boolean;
 }
 

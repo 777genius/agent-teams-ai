@@ -14,7 +14,7 @@ import type {
 export function validateRestoreJournal(record: TeamLaunchRecord): void {
   try {
     const actions = (record as ActionLaunchRecord).memberActions;
-    if (actions !== undefined) {
+    if (actions !== undefined || record.liveMembership !== undefined) {
       validateMemberSelectionChain(record as ActionLaunchRecord);
       const rows = record.restorations ?? [];
       if (!Array.isArray(rows) || rows.length > 64) throw new Error();
@@ -24,7 +24,7 @@ export function validateRestoreJournal(record: TeamLaunchRecord): void {
         commands.add(row.commandId);
         // The legacy atom validator still owns every checkpoint-specific invariant.
         // The combined validator owns ordering/current selection across fresh and restore edges.
-        const { memberActions: _actions, ...legacy } = record as ActionLaunchRecord;
+        const { memberActions: _actions, liveMembership: _live, ...legacy } = record as ActionLaunchRecord;
         validateRestoreJournal({
           ...legacy,
           definition: { ...legacy.definition, members: [row.member] },

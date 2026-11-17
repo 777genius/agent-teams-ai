@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { isCanonicalOpenCodeV2Directory } from './openCodeV2StaticPreflight.js';
+import { openCodeConfigurationReferenceSchema } from './openCodeConfigurationReference.js';
 
 /** Trusted delivery selection only. A model or renderer cannot choose executable code. */
 export const openCodeV2EmbeddedProfileSchema = z.object({
@@ -11,6 +12,8 @@ export const openCodeV2EmbeddedProfileSchema = z.object({
   externalDirectory: z.enum(['deny', 'ask']),
   /** Native configuration for this one captured provider, never a whole user config. */
   providerConfiguration: z.record(z.string(), z.json()).optional(),
+  /** Host-owned source references; selected bytes are materialized only in a private native operation. */
+  configurationSource: openCodeConfigurationReferenceSchema.optional(),
 }).strict().superRefine((value, context) => {
   if (value.platform !== process.platform || value.arch !== process.arch ||
       (value.platform === 'linux' && value.arch === 'arm64') ||

@@ -75,6 +75,21 @@ export class OpenCodeV2SupportInstaller {
     }
   }
 
+  /** Private source publication uses the exact verified instance; cheap UI status is not evidence. */
+  async captureInstalled(nativeVersion: string, engineVersion: string) {
+    const descriptor = this.descriptor(nativeVersion);
+    if (!descriptor || !descriptor.engineVersions.includes(engineVersion))
+      throw new Error('The selected OpenCode engine is not in the qualified support delivery');
+    const directory = await this.readInstalled(descriptor, true);
+    return Object.freeze({
+      version: engineVersion,
+      directory,
+      manifestSha256: descriptor.manifest.sha256,
+      platform: descriptor.platform,
+      arch: descriptor.arch,
+    });
+  }
+
   async install(
     nativeVersion: string,
     progress: (value: OpenCodeRuntimeInstallProgress) => void

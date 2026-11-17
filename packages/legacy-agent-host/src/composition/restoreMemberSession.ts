@@ -6,6 +6,7 @@ import type { MemberEntry } from './MemberEntry.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import type { RuntimeBinding, RuntimeSessionRecord } from '../runtime/contracts.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
+import { attachCheckpointModelReadiness } from './prepareTeamModelReadiness.js';
 
 interface RestoreOptions {
   entry: MemberEntry;
@@ -59,6 +60,7 @@ async function restoreSelectedMember(options: RestoreOptions): Promise<RestoreRe
     if (known.restore?.sourceBinding.generation !== options.expectedGeneration)
       throw new RuntimeOwnerError('conflict');
     if (runtimeDigest(known.binding) === runtimeDigest(entry.binding)) {
+      attachCheckpointModelReadiness(launch, entry, commandId, () => options.assertAuthority?.());
       const opening = launch.startMember(entry.profile.memberId, options.assertAuthority);
       if (opening) await opening;
     }
@@ -70,6 +72,11 @@ async function restoreSelectedMember(options: RestoreOptions): Promise<RestoreRe
   const source = runtime.readSession(sourceBinding);
   if (source.record?.phase !== 'closed' || source.record.custody !== 'released' || source.attached)
     throw new RuntimeOwnerError('hold');
+  const policy = entry.profile.provider === 'opencode' ? launch.readModelReadinessSource({
+    binding: sourceBinding, configRevision: entry.profile.configRevision,
+    configurationDigest: runtimeDigest(entry.profile),
+  })?.reference : undefined;
+  launch.retireModelReadiness(entry.profile.memberId);
   // Retire only this exact already-stopped capture. A failed cleanup cannot select a new generation.
   if (entry.provider && !(await entry.provider.cleanup())) throw new RuntimeOwnerError('hold');
   entry.endpoint?.revoke();
@@ -131,6 +138,7 @@ async function restoreSelectedMember(options: RestoreOptions): Promise<RestoreRe
   delete entry.endpoint;
   delete entry.endpointExpiresAtMs;
   options.rekey(sourceBinding, entry);
+  attachCheckpointModelReadiness(launch, entry, commandId, () => options.assertAuthority?.(), policy?.commandId);
   const opening = launch.startMember(profile.memberId, options.assertAuthority);
   if (opening) await opening;
   return { binding, record: runtime.readSession(binding).record };

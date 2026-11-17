@@ -23,18 +23,37 @@ export type RuntimeProviderQuickPlanState =
 
 const MINIMUM_OPENCODE_PROVIDER_OAUTH_VERSION = [1, 15, 7] as const;
 
-/** A managed install cannot replace an explicit binary override or a captured Host engine. */
+/** An explicit override remains selected; a current Host source supports managed future launches. */
 export function canManagedInstallChangeOpenCodeRuntime(
   runtimeStatus: OpenCodeRuntimeStatus | null
 ): boolean {
-  return runtimeStatus?.source !== 'override' && runtimeStatus?.source !== 'captured-host';
+  return (
+    runtimeStatus?.source !== 'override' &&
+    (runtimeStatus?.source !== 'captured-host' || runtimeStatus.sourceRevision !== undefined)
+  );
+}
+
+/** Presentation of an attested V1 engine never invents a selecting CLI version. */
+export function isCapturedOpenCodeV1Runtime(runtimeStatus: OpenCodeRuntimeStatus | null): boolean {
+  return (
+    runtimeStatus?.installed === true &&
+    runtimeStatus.state === 'ready' &&
+    runtimeStatus.source === 'captured-host' &&
+    runtimeStatus.nativeGeneration === 'v1' &&
+    runtimeStatus.version === undefined &&
+    runtimeStatus.engineVersion === undefined &&
+    runtimeStatus.v2Support === undefined &&
+    runtimeStatus.compatibleV2Version === undefined &&
+    runtimeStatus.v2Maintenance === undefined
+  );
 }
 
 export function isOpenCodeRuntimeUsable(runtimeStatus: OpenCodeRuntimeStatus | null): boolean {
   return (
-    runtimeStatus?.installed === true &&
-    runtimeStatus.v2Support !== 'required' &&
-    isOpenCodeVersionServedByRuntime(runtimeStatus.version)
+    isCapturedOpenCodeV1Runtime(runtimeStatus) ||
+    (runtimeStatus?.installed === true &&
+      runtimeStatus.v2Support !== 'required' &&
+      isOpenCodeVersionServedByRuntime(runtimeStatus.version))
   );
 }
 
@@ -113,7 +132,13 @@ export function resolveOpenCodeQuickConnectRuntimeRevision(input: {
   if (gate !== 'ready') {
     return 'unavailable';
   }
-  return JSON.stringify(['ready', runtimeStatus.version ?? null, runtimeStatus.binaryPath ?? null]);
+  return JSON.stringify([
+    'ready',
+    runtimeStatus.version ?? null,
+    runtimeStatus.binaryPath ?? null,
+    ...(runtimeStatus.sourceRevision ? [runtimeStatus.sourceRevision] : []),
+    ...(runtimeStatus.nativeGeneration ? [runtimeStatus.nativeGeneration] : []),
+  ]);
 }
 
 export function isOAuthCredentialHint(authHint: string | null | undefined): boolean {

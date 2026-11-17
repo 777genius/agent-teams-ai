@@ -23,6 +23,7 @@ import {
 } from './openCodeMcpPolicy.js';
 import { createTeamMcpTools } from '../../mcp/tools.js';
 import { initialContextDigest } from '../../team-launch/context.js';
+import { selectedOpenCodeManagedLimits } from '../../composition/openCodeManagedPreferences.js';
 
 import type {
   OpenCodeClient,
@@ -246,6 +247,15 @@ export function createOpenCodeMemberProvider(
       !Object.hasOwn(selected[0].models, profile.model)
     )
       return false;
+    const expectedLimits = selectedOpenCodeManagedLimits(profile.managedPreferences,
+      `${profile.nativeOptions.providerId}/${profile.model}`);
+    if (expectedLimits) {
+      const effectiveLimit = record(record(selected[0].models[profile.model]).limit);
+      if (effectiveLimit.context !== expectedLimits.contextTokens ||
+          effectiveLimit.output !== expectedLimits.outputTokens ||
+          (typeof effectiveLimit.input === 'number' && effectiveLimit.input > expectedLimits.contextTokens))
+        return false;
+    }
     const references = [...nativeMediaSubmits].flatMap((input) => input.attachments ?? []);
     if (references.length) {
       const declaration = readOpenCodeInputModalities(selected[0].models[profile.model]);

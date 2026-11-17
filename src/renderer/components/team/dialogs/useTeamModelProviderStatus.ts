@@ -10,7 +10,7 @@ export function useTeamModelProviderStatus(
   providerId: CliProviderId | undefined,
   projectPath: string | null | undefined,
   prefetch = false
-): ReturnType<typeof useEffectiveCliProviderStatus> {
+): ReturnType<typeof useEffectiveCliProviderStatus> & { scopesAnthropic: boolean } {
   const scopedPath = projectPath?.trim() || null;
   const fetchProviderStatus = useStore((state) => state.fetchCliProviderStatus);
   const scopeRevision = useStore((state) => state.cliProviderStatusScopeRevision);
@@ -38,5 +38,5 @@ export function useTeamModelProviderStatus(
     scopedPath,
     scopeRevision,
   ]);
-  return snapshot;
+  return { ...snapshot, scopesAnthropic };
 }

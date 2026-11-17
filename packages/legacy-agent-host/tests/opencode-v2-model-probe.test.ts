@@ -1,12 +1,17 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, readdirSync, realpathSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
 import { OpenCodeManagementHost } from '../dist/adapters/providers/OpenCodeManagementHost.js';
 import { createOpenCodeV2ModelProbe } from '../dist/adapters/providers/OpenCodeV2ModelProbe.js';
+import { attestOpenCodeV2ModelSelection } from '../dist/adapters/providers/OpenCodeV2ModelSelection.js';
+import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
+import { captureOpenCodeV2Configuration } from '../dist/adapters/providers/OpenCodeV2CapturedConfiguration.js';
+import { openCodeV2NoToolConfig } from '../dist/adapters/providers/OpenCodeV2EmbeddedConfig.js';
 import { applyLaunchConfiguration } from '../dist/composition/launchConfiguration.js';
+import { selectOpenCodeV2ManagementModel } from '../dist/composition/openCodeV2ModelSelection.js';
 import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
 import { teamModelProbeProfile } from '../dist/composition/teamLaunchModelProbe.js';
 import { applyTeamModelProbeSelection } from '../dist/composition/teamModelProbeRecipe.js';
@@ -108,10 +113,51 @@ test(
   }
 );
 
+test('private native config preserves selected declarations and running A while a new source B invalidates pending captures',
+  { skip: !supported }, t => {
+    const f = fixture();
+    t.after(f.cleanup);
+    mkdirSync(join(f.root, 'opencode'));
+    writeFileSync(join(f.root, 'opencode/opencode.json'), JSON.stringify({
+      provider: { 'TEST-provider': { npm: '@ai-sdk/openai-compatible',
+        options: { baseURL: 'http://127.0.0.1:12345/v1' }, models: {
+          'TEST-model': { name: 'global A', limit: { context: 32000 } },
+          'TEST-B': { name: 'global B', headers: { 'x-test-config': 'TEST-original-private-header' },
+            body: { test_scope: 'global' }, limit: { context: 64000, output: 256 } },
+        } },
+      },
+    }), { mode: 0o600 });
+    const project = join(f.root, 'opencode.json');
+    writeFileSync(project, JSON.stringify({ provider: { 'TEST-provider': {
+      models: { 'TEST-B': { body: { test_scope: 'project-A' }, limit: { output: 128 } } },
+    } } }), { mode: 0o600 });
+    f.management.embedded!.configurationSource = captureOpenCodeConfigurationSource(f.management).reference;
+    let current = true;
+    const choice = { providerId: 'TEST-provider', modelId: 'TEST-B' };
+    const running = captureOpenCodeV2Configuration(f.management, choice, () => current);
+    const pending = captureOpenCodeV2Configuration(f.management, choice, () => current, 'catalog');
+    assert.deepEqual(Object.keys(running.configuration!.models!), ['TEST-B']);
+    assert.deepEqual(Object.keys(pending.configuration!.models!), ['TEST-model', 'TEST-B']);
+    const native = openCodeV2NoToolConfig(f.management, running.configuration).config;
+    assert.deepEqual(native.providers!['TEST-provider']!.models, {
+      'TEST-B': { name: 'global B', headers: { 'x-test-config': 'TEST-original-private-header' },
+        body: { test_scope: 'project-A' }, limit: { context: 64000, output: 128 } },
+    });
+    assert.ok(!JSON.stringify(f.management).includes('TEST-original-private-header'));
+    running.bindRunningSession();
+    writeFileSync(project, '{"model":"TEST-provider/TEST-replacement"}', { mode: 0o600 });
+    assert.equal(pending.isCurrent(), false);
+    assert.equal(running.isCurrent(), true, 'native A already owns its immutable private input');
+    assert.throws(() => captureOpenCodeV2Configuration(f.management, choice, () => true),
+      { reason: 'configuration-changed' });
+    current = false;
+    assert.equal(running.isCurrent(), false, 'source pinning never widens the original owner');
+  });
+
 test(
-  'embedded V2 cannot enter the V1 catalog/auth host or silently switch a probe model',
+  'embedded V2 derives an explicit probe choice without allocation or foreign provider configuration',
   { skip: !supported },
-  (t) => {
+  async (t) => {
     const f = fixture();
     t.after(f.cleanup);
     let allocations = 0;
@@ -134,6 +180,34 @@ test(
       { providerId: 'foreign' },
       { modelId: 'foreign' },
       { effort: 'low' as const },
+    ]) {
+      const probe = createOpenCodeV2ModelProbe(f.management, { ...f.input, ...change }, () => true);
+      assert.equal(await probe.close(), true);
+    }
+    const configured = { ...f.management, embedded: { ...f.management.embedded!,
+      providerConfiguration: { settings: { apiKey: 'TEST-must-not-cross-provider' } } } };
+    const foreign = selectOpenCodeV2ManagementModel(configured,
+      { providerId: 'TEST-other', modelId: 'TEST-other/TEST-next', effort: 'low' });
+    assert.equal(foreign.embedded?.providerConfiguration, undefined);
+    assert.deepEqual(foreign.nativeModel, { providerId: 'TEST-other', modelId: 'TEST-next' });
+    assert.equal(foreign.variant, 'low');
+    assert.equal(foreign.profileId, configured.profileId);
+    assert.equal(foreign.accountBinding, configured.accountBinding);
+    assert.deepEqual(foreign.environment, configured.environment);
+    assert.ok(configured.embedded.providerConfiguration);
+    const originalPair = selectOpenCodeV2ManagementModel(configured,
+      { providerId: configured.nativeModel!.providerId, modelId: configured.nativeModel!.modelId });
+    assert.equal(originalPair.variant, configured.variant);
+    for (const providerId of [configured.nativeModel!.providerId, 'TEST-other']) {
+      const fallback = selectOpenCodeV2ManagementModel(configured,
+        { providerId, modelId: `${providerId}/TEST-fallback` });
+      assert.equal(fallback.variant, undefined, 'a credential fallback cannot inherit another model variant');
+      assert.equal(Boolean(fallback.embedded?.providerConfiguration), providerId === configured.nativeModel!.providerId);
+    }
+    assert.equal(configured.variant, 'high', 'selection does not mutate the original profile');
+    for (const change of [
+      { providerId: '' },
+      { modelId: '' },
       { limits: { contextTokens: 4096, outputTokens: 128 } },
       { modelContext: 'one-million' as const },
     ])
@@ -144,7 +218,7 @@ test(
     assert.deepEqual(
       readdirSync(f.root),
       [],
-      'rejected preparation must allocate no namespace or process'
+      'selection preparation must allocate no namespace or process'
     );
   }
 );
@@ -153,17 +227,51 @@ test(
   'V2 model probe preparation is effect-free and revoked run cannot allocate or replay',
   { skip: !supported },
   async (t) => {
-    const f = fixture();
-    t.after(f.cleanup);
-    const probe = createOpenCodeV2ModelProbe(f.management, f.input, () => false);
-    assert.deepEqual(readdirSync(f.root), []);
-    const signal = new AbortController().signal;
-    const original = probe.run(signal);
-    assert.equal(probe.run(signal), original, 'one private attempt, never retry a failed run');
-    await assert.rejects(original, { code: 'held' });
-    assert.equal(await probe.close(), true);
-    assert.equal(await probe.close(), true);
-    assert.deepEqual(readdirSync(f.root), []);
+    for (const change of ['owner', 'auth', 'configuration', 'manual-owner', 'manual-configuration'] as const) {
+      const f = fixture();
+      t.after(f.cleanup);
+      const manual = change.startsWith('manual-');
+      if (manual) f.management.environment.USERPROFILE = f.root;
+      if (change === 'configuration' || manual) {
+        writeFileSync(join(f.root, 'opencode.json'), JSON.stringify({
+          model: 'TEST-provider/TEST-model',
+          ...(manual ? { provider: { 'TEST-provider': { npm: '@ai-sdk/openai-compatible',
+            options: { baseURL: 'http://127.0.0.1:9/v1', apiKey: '{file:TEST-missing-manual.key}' },
+            models: { 'TEST-model': { name: 'TEST-model' } } } } } : {}),
+        }), { mode: 0o600 });
+        f.management.embedded!.configurationSource =
+          captureOpenCodeConfigurationSource(f.management).reference;
+      }
+      if (change === 'owner')
+        assert.throws(() => createOpenCodeV2ModelProbe(f.management, f.input, () => false),
+          { code: 'held' });
+      const before = readdirSync(f.root);
+      let current = true;
+      const probe = createOpenCodeV2ModelProbe(f.management, f.input, () => current);
+      assert.equal(probe.nativeFileKeyWitness?.(), undefined, 'preparation cannot issue a native file witness');
+      assert.deepEqual(readdirSync(f.root), before, 'preparation is allocation-free');
+      if (change === 'owner' || change === 'manual-owner') current = false;
+      else if (change === 'auth') {
+        mkdirSync(join(f.root, 'opencode'));
+        writeFileSync(join(f.root, 'opencode/auth.json'), JSON.stringify({
+          'TEST-provider': { type: 'api', key: 'TEST-new-original-namespace-key' },
+        }), { mode: 0o600 });
+      } else {
+        writeFileSync(join(f.root, 'opencode.json'), JSON.stringify({
+          model: 'TEST-provider/TEST-replacement',
+        }), { mode: 0o600 });
+      }
+      const changed = readdirSync(f.root);
+      const signal = new AbortController().signal;
+      const original = probe.run(signal);
+      assert.equal(probe.run(signal), original, 'one private attempt, never retry a failed run');
+      await assert.rejects(original, { code: 'held' });
+      assert.deepEqual(readdirSync(f.root), changed,
+        change + ' must refuse before creating a native probe namespace, not hide it in cleanup');
+      assert.equal(await probe.close(), true);
+      assert.equal(await probe.close(), true);
+      assert.deepEqual(readdirSync(f.root), changed);
+    }
   }
 );
 
@@ -179,6 +287,27 @@ test(
     assert.deepEqual(readdirSync(f.root), []);
   }
 );
+
+test('native model admission requires its declared variant and a still-current owner', async () => {
+  const selection = { providerID: 'TEST-provider', id: 'TEST-model', variant: 'high' };
+  const model = { id: selection.id, enabled: true, variants: ['high'], supportsTools: true };
+  const catalog = { provider: { id: selection.providerID, activation: 'active' },
+    defaultModel: { providerId: selection.providerID, modelId: selection.id }, models: [model] };
+  let current = true;
+  const options = { signal: new AbortController().signal, deadline: Date.now() + 1000,
+    isCurrent: () => current, requireTools: true };
+  const client = { readCatalog: async () => catalog };
+  await attestOpenCodeV2ModelSelection(client, selection, options);
+  await assert.rejects(attestOpenCodeV2ModelSelection(client,
+    { ...selection, variant: 'max' }, options), { code: 'invalid' });
+  model.supportsTools = false;
+  await assert.rejects(attestOpenCodeV2ModelSelection(client, selection, options),
+    { code: 'invalid' });
+  await assert.rejects(attestOpenCodeV2ModelSelection({ readCatalog: async () => {
+    current = false;
+    return catalog;
+  } }, selection, options), { code: 'held' });
+});
 
 test(
   'only embedded 2.1.4 maps the existing Launch manual/bypass choice to native tool approval',
@@ -204,14 +333,20 @@ test(
     }
     for (const choice of [
       { model: 'TEST-model' },
-      { model: 'foreign/TEST-model' },
-      { effort: 'high' },
       { fastMode: true },
       { context: 'one-million' },
     ])
       assert.throws(() => applyLaunchConfiguration(f.profile, choice), {
         reason: 'launch-option-unsupported',
       });
+    const changed = applyLaunchConfiguration(f.profile,
+      { model: 'TEST-provider/TEST-next', effort: 'low' });
+    assert.equal(changed.provider, 'opencode');
+    if (changed.provider !== 'opencode') throw Error('TEST expected OpenCode');
+    assert.equal(changed.model, 'TEST-next');
+    assert.equal(changed.nativeOptions.variant, 'low');
+    assert.deepEqual(changed.environment, f.profile.environment);
+    assert.deepEqual(changed.executable, f.profile.executable);
     const old = runtimeMemberProfileSchema.parse({
       ...f.profile,
       protocolRevision: '2.0.21',
@@ -253,12 +388,7 @@ test(
         assert.deepEqual(readdirSync(f.root), [], 'Default probe preparation allocates no child or namespace');
         assert.equal(await probe.close(), true);
       }
-      for (const modelId of [
-        'auto',
-        'TEST-provider/foreign',
-        'foreign/' + selectedModel,
-        'TEST-provider/TEST-provider/' + selectedModel,
-      ])
+      for (const modelId of ['', 'x'.repeat(257), 'TEST-provider/'])
         assert.throws(
           () => createOpenCodeV2ModelProbe(management, { ...f.input, modelId }, () => true),
           { code: 'invalid' }
@@ -266,9 +396,10 @@ test(
       assert.equal(selected.model, model, 'native model identity remains unchanged');
       assert.deepEqual(management.nativeModel, { providerId: 'TEST-provider', modelId: model });
       assert.deepEqual(readdirSync(f.root), [], 'accepted and rejected preparation leave no effects');
-      assert.throws(() => applyTeamModelProbeSelection(f.profile, { ...input, effort: 'low' }), {
-        reason: 'launch-option-unsupported',
-      });
+      const changed = applyTeamModelProbeSelection(f.profile, { ...input, effort: 'low' });
+      if (changed.provider !== 'opencode') throw Error('TEST expected OpenCode');
+      assert.equal(changed.nativeOptions.variant, 'low');
+      assert.equal(changed.model, model);
     }
   }
 );

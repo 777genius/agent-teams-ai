@@ -1,3 +1,4 @@
+import type { LocalModelReadinessAction } from './prepareTeamModelReadiness.js';
 import { createTeamMemberActionMethods } from './createTeamMemberActionMethods.js';
 import type { RuntimeMemberActionOperation } from './executeRuntimeMemberAction.js';
 import { z } from 'zod';
@@ -16,10 +17,13 @@ export function createRuntimeHostMethods(options: {
       teamId: string,
       operation: RuntimeMemberActionOperation,
       commandId: string,
-      raw: unknown
+      raw: unknown,
+      nativeSource?: undefined,
+      readiness?: LocalModelReadinessAction
     ): Promise<unknown>;
   };
-  parse(raw: unknown): { teamId: string; commandId: string; payload: unknown };
+  parse(raw: unknown, method: string): { teamId: string; commandId: string; payload: unknown;
+    readiness?: LocalModelReadinessAction };
 }): Record<string, HostMethod> {
   const methods: Record<string, HostMethod> = {};
   for (const operation of RUNTIME_CONTROL_OPERATIONS) {
@@ -27,14 +31,15 @@ export function createRuntimeHostMethods(options: {
       lane: ['open', 'dispatch', 'restore'].includes(operation) ? 'work' : 'control',
       async handle(raw): Promise<JsonValue> {
         try {
-          const input = options.parse(raw);
+          const input = options.parse(raw, `runtime.${operation}`);
           return {
             ok: true,
             value: await options.runtime.execute(
               input.teamId,
               operation,
               input.payload,
-              input.commandId
+              input.commandId,
+              input.readiness
             ),
           };
         } catch (error) {
@@ -56,8 +61,8 @@ export function createRuntimeHostMethods(options: {
       methods,
       createTeamMemberActionMethods({
         parse: options.parse,
-        execute: (teamId, operation, commandId, raw) =>
-          options.runtime.executeMemberAction!(teamId, operation, commandId, raw),
+        execute: (teamId, operation, commandId, raw, readiness) =>
+          options.runtime.executeMemberAction!(teamId, operation, commandId, raw, undefined, readiness),
       })
     );
   return methods;

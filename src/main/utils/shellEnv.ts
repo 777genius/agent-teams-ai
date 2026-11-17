@@ -11,9 +11,11 @@
 
 import { getHomeDir } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
-import { spawn } from 'child_process';
 import { randomUUID } from 'crypto';
 import { accessSync, constants as fsConstants } from 'fs';
+
+import { observeLinuxChildLaunchFailure, remainingLinuxChildLaunchTime, spawnWithLinuxChildLaunch } from './linuxChildLaunch';
+import { isLinuxChildLaunchFailure } from './linuxChildLaunchSelection';
 
 const logger = createLogger('Utils:shellEnv');
 
@@ -187,12 +189,13 @@ async function readShellEnv(shellPath: string, mode: '-lic' | '-ic'): Promise<No
   // Quoted printable constants and && work in sh, bash, zsh and modern fish.
   const command = `command printf '\\0%s\\0' '${nonce}_START' && env -0 && command printf '\\0%s\\0' '${nonce}_END'`;
   const envDump = await new Promise<string>((resolve, reject) => {
-    const child = spawn(shellPath, [mode, command], {
+    const child = spawnWithLinuxChildLaunch(shellPath, [mode, command], {
       env: process.env,
       stdio: ['ignore', 'pipe', 'ignore'],
       windowsHide: true,
     });
     const chunks: Buffer[] = [];
+    let launchFailure: Error | undefined;
     let settled = false;
     let timeoutHandle: NodeJS.Timeout | null = setTimeout(() => {
       timeoutHandle = null;
@@ -207,9 +210,13 @@ async function readShellEnv(shellPath: string, mode: '-lic' | '-ic'): Promise<No
       }, 3000);
       if (!settled) {
         settled = true;
-        reject(new Error('shell env resolve timeout'));
+        reject(launchFailure ?? new Error('shell env resolve timeout'));
       }
-    }, SHELL_ENV_TIMEOUT_MS);
+    }, remainingLinuxChildLaunchTime(child, SHELL_ENV_TIMEOUT_MS));
+    observeLinuxChildLaunchFailure(child, (error) => {
+      launchFailure = error;
+      try { child.kill(); } catch { /* Keep the original timer and close owner. */ }
+    });
 
     child.stdout?.on('data', (chunk: Buffer) => {
       chunks.push(chunk);
@@ -230,6 +237,7 @@ async function readShellEnv(shellPath: string, mode: '-lic' | '-ic'): Promise<No
       }
       if (!settled) {
         settled = true;
+        if (launchFailure) { reject(launchFailure); return; }
         const content = Buffer.concat(chunks).toString('utf8');
         const startIndex = content.indexOf(startMarker);
         const dumpStart = startIndex + startMarker.length;
@@ -287,6 +295,7 @@ export async function resolveInteractiveShellEnv(
       clearShellEnvFailure();
       return loginEnv;
     } catch (loginError) {
+      if (isLinuxChildLaunchFailure(loginError)) throw loginError;
       const loginMessage = loginError instanceof Error ? loginError.message : String(loginError);
       try {
         emitProgress(options, 'shell-env-interactive', 'Trying interactive shell environment...');
@@ -295,6 +304,7 @@ export async function resolveInteractiveShellEnv(
         clearShellEnvFailure();
         return interactiveEnv;
       } catch (interactiveError) {
+        if (isLinuxChildLaunchFailure(interactiveError)) throw interactiveError;
         const interactiveMessage =
           interactiveError instanceof Error ? interactiveError.message : String(interactiveError);
         logger.warn(

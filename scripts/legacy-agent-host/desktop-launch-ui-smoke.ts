@@ -1,13 +1,21 @@
+import { createDesktopCodexSourceSelection } from './desktop-codex-source-selection.ts';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileDigest } from './desktop-backend-fixture.ts';
-import { readDesktopNativeStopSessions, readDesktopNativeHostProcesses, separateDesktopOpenCodeRuntimeChildren } from './desktop-native-stop-fixture.ts';
+import { replaceRosterSchema } from '../../packages/legacy-agent-host/dist/team/rosterSchema.js';
+import { readDesktopNativeStopSessions, readDesktopNativeHostProcesses, separateDesktopOpenCodeRuntimeChildren, observeDesktopOpenCodeMetadata, captureDesktopOpenCodeGlobalMetadata, captureDesktopOpenCodeProjectMetadata } from './desktop-native-stop-fixture.ts';
 import { command, processTable } from './desktop-backend-observations.ts';
 import { captureCodexCodeModeProcess, observeCodexCodeModeProcess } from '../../packages/legacy-agent-host/tests/fixtures/codex-native-closure.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { runDesktopRelaunchUiSmoke } from './desktop-relaunch-ui-smoke.ts';
+import { runDesktopNativeCommandsUiProof } from './desktop-native-commands-ui-proof.ts';
+import { runDesktopCodexCostUiProof } from './desktop-codex-cost-ui-proof.ts';
+import { prepareDesktopNativeExtensionSkillsUi } from './desktop-native-extension-skills-ui.ts';
+import { runDesktopNativeExtensionCommandsUi } from './desktop-native-extension-consumption-ui-proof.ts';
+import { runDesktopNativeExtensionsUiSmoke } from './desktop-native-extensions-ui-smoke.ts';
 import { codexRuntimeEndpointHash, runDesktopResumeUiSmoke } from './desktop-resume-ui-smoke.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
@@ -20,6 +28,86 @@ const record = (raw: unknown): Record<string, unknown> => {
   return raw as Record<string, unknown>;
 };
 const json = async (path: string) => JSON.parse(await readFile(path, 'utf8')) as unknown;
+
+/** Renderer source only: the Main normalization and original Host envelope remain unobserved. */
+function projectSubmittedRoster(raw: unknown, handleId: string): Record<string, unknown> {
+  const value = record(raw);
+  if ('unavailable' in value) {
+    const reasons = ['submitted-ref-missing', 'submitted-ref-ambiguous', 'submitted-ref-malformed',
+      'submitted-signature-limit', 'submitted-source-mismatch', 'submitted-form-detached',
+      'submitted-hook-traversal-truncated'];
+    return { unavailable: typeof value.unavailable === 'string' && reasons.includes(value.unavailable)
+      ? value.unavailable : 'submitted-diagnostic-unavailable' };
+  }
+  assert.equal(typeof value.commandId, 'string');
+  assert.equal(typeof value.signature, 'string');
+  const commandId = value.commandId as string, signature = value.signature as string;
+  assert.ok(commandId.startsWith('roster:') && commandId.length <= 256 &&
+    commandId.trim() === commandId && !commandId.includes('\0'));
+  assert.ok(Buffer.byteLength(signature, 'utf8') <= 256 * 1024);
+  const submitted = record(JSON.parse(signature));
+  const request = record(submitted.request), metadata = record(submitted.metadata);
+  const command = record(metadata.command), configuration = record(metadata.configuration);
+  assert.equal(request.teamName, 'host-team:' + encodeURIComponent(handleId));
+  assert.equal(command.commandId, commandId);
+  assert.equal(command.idempotencyKey, commandId);
+  const payload = {
+    expectedRevision: configuration.expectedRevision,
+    members: submitted.members,
+    ...(configuration.savedSettings === undefined ? {} : { savedSettings: configuration.savedSettings }),
+    ...(submitted.intent === undefined ? {} : { memberSettingsRelaunch: submitted.intent }),
+  };
+  const hash = (text: string) => createHash('sha256').update(text).digest('hex');
+  const type = (item: unknown) => item === null ? 'null' : Array.isArray(item) ? 'array' : typeof item;
+  const settings = configuration.savedSettings;
+  const configured = settings && typeof settings === 'object' && !Array.isArray(settings)
+    ? settings as Record<string, unknown> : undefined;
+  const fields = ['runtimeSelectionVersion', 'cwd', 'displayName', 'description', 'color', 'prompt',
+    'providerId', 'providerBackendId', 'model', 'effort', 'fastMode', 'syncModelsWithLead',
+    'limitContext', 'skipPermissions', 'worktree', 'extraCliArgs', 'allowExperimentalLocalModels'];
+  const present = (source: Record<string, unknown> | undefined, key: string) =>
+    source && Object.hasOwn(source, key) ? type(source[key]) : 'absent';
+  const admitted = (source: Record<string, unknown> | undefined, key: string, values: string[]) =>
+    typeof source?.[key] === 'string' && values.includes(source[key] as string) ? source[key] : null;
+  const providers = ['anthropic', 'codex', 'gemini', 'opencode'];
+  const backends = ['auto', 'adapter', 'api', 'cli-sdk', 'codex-native', 'opencode-cli'];
+  const version = (source: Record<string, unknown> | undefined) =>
+    !source || !Object.hasOwn(source, 'runtimeSelectionVersion') ? 'absent'
+      : source.runtimeSelectionVersion === 1 ? 'exactly-1' : 'other-type-or-value';
+  const checked = replaceRosterSchema.safeParse({ commandId, ...payload });
+  const knownFields = new Set([...fields, 'commandId', 'expectedRevision', 'members', 'name',
+    'savedSettings', 'memberSettingsRelaunch', 'role', 'workflow', 'isolation', 'mcpPolicy',
+    'mode', 'scopes', 'user', 'project', 'local', 'serverNames', 'memberName', 'targetKind',
+    'expectedFingerprint', 'expectedTeamSettingsFingerprint', 'baseline']);
+  const knownCodes = new Set(['invalid_type', 'invalid_value', 'invalid_format', 'too_big',
+    'too_small', 'custom', 'unrecognized_keys', 'invalid_union', 'not_multiple_of',
+    'invalid_key', 'invalid_element', 'invalid_enum_value', 'invalid_literal', 'invalid_string']);
+  return {
+    commandId, signatureSha256: hash(signature), payloadSha256: hash(JSON.stringify(payload)),
+    expectedRevisionDigest: typeof payload.expectedRevision === 'string' &&
+      /^[a-f0-9]{64}$/.test(payload.expectedRevision) ? payload.expectedRevision : null,
+    expectedRevisionType: type(payload.expectedRevision),
+    memberCount: Array.isArray(submitted.members) ? submitted.members.length : null,
+    membersType: type(submitted.members), savedSettingsType: type(settings),
+    configuredFields: Object.fromEntries(fields.map(key => [key, present(configured, key)])),
+    requestFields: Object.fromEntries(fields.map(key => [key, present(request, key)])),
+    configuredProvider: admitted(configured, 'providerId', providers),
+    configuredBackend: admitted(configured, 'providerBackendId', backends),
+    requestProvider: admitted(request, 'providerId', providers),
+    requestBackend: admitted(request, 'providerBackendId', backends),
+    runtimeSelectionVersion: version(configured), requestRuntimeSelectionVersion: version(request),
+    rendererSourceSchemaCheck: checked.success ? { accepted: true } : {
+      accepted: false, truncated: checked.error.issues.length > 8,
+      issues: checked.error.issues.slice(0, 8).map(issue => ({
+        code: knownCodes.has(issue.code) ? issue.code : 'other-code',
+        path: issue.path.slice(0, 8).map(segment => typeof segment === 'string' && knownFields.has(segment)
+          ? segment : typeof segment === 'number' && Number.isInteger(segment) &&
+            segment >= 0 && segment < 256 ? segment : 'other-field'),
+        pathTruncated: issue.path.length > 8,
+      })),
+    },
+  };
+}
 
 /** Private React-layout-dependent TEST diagnosis only; never a workflow qualification. */
 export async function captureReadiness(
@@ -36,6 +124,7 @@ export async function captureReadiness(
     const snapshot = await Promise.race([
       cdp.evaluate(`(() => {
           const teamName=${JSON.stringify('host-team:' + encodeURIComponent(handleId))};
+          const captureSubmitted=${phase === 'original-submit-failed'};
           const prompt=document.querySelector('[role="dialog"] #dialog-prompt'),dialog=prompt?.closest('[role="dialog"]');
           if(!prompt||!dialog)return {unavailable:'original-launch-dialog-unavailable',now:Date.now()};
           const field=(value,key)=>value&&(typeof value==='object'||typeof value==='function')
@@ -92,10 +181,13 @@ export async function captureReadiness(
                 capturedTeamReadiness:proof?Object.fromEntries(['handleId','preparationId','launchId','rosterRevision','selectionSignature','expiresAt'].map(key=>[key,field(proof,key)])):null};
             })});
           };
+          const submitted=[];
           let hook=field(component,'memoizedState'),count=0;
           for(;hook&&count<1024;hook=field(hook,'next'),count++){
             const value=field(hook,'memoizedState'),current=field(value,'current');
             projectChecks(value,count,'state');projectChecks(current,count,'ref');
+            if(captureSubmitted&&current&&typeof current==='object'&&!Array.isArray(current)&&
+              Object.hasOwn(current,'commandId')&&Object.hasOwn(current,'signature'))submitted.push(current);
             if(typeof current!=='string'||current.length>65536)continue;
             try{const scope=JSON.parse(current);
               if(Array.isArray(scope)&&scope.length===7&&scope[0]===true&&scope[1]===teamName&&
@@ -103,12 +195,53 @@ export async function captureReadiness(
                 result.currentDraftSignatures.push({hookIndex:count,signature:current});
             }catch{}
           }
+          if(captureSubmitted){
+            const unavailable=reason=>{result.submittedSource={unavailable:reason};};
+            if(hook)unavailable('submitted-hook-traversal-truncated');
+            else if(!prompt.isConnected||!dialog.isConnected||prompt.closest('[role="dialog"]')!==dialog||
+              document.querySelector('[role="dialog"] #dialog-prompt')!==prompt||
+              field(field(root,'stateNode'),'current')!==currentRoot||!matches(component))
+              unavailable('submitted-form-detached');
+            else if(submitted.length!==1)unavailable(submitted.length?'submitted-ref-ambiguous':'submitted-ref-missing');
+            else{
+              const original=submitted[0],keys=Reflect.ownKeys(original);
+              const data=key=>Object.hasOwn(Object.getOwnPropertyDescriptor(original,key)??{},'value');
+              const commandId=field(original,'commandId'),signature=field(original,'signature');
+              if(keys.length>4||keys.some(key=>!['commandId','signature','intent','relaunch'].includes(key))||
+                !['commandId','signature','intent'].every(data)||keys.some(key=>!data(key))||
+                typeof commandId!=='string'||!commandId.startsWith('roster:')||commandId.length>256||
+                commandId.trim()!==commandId||commandId.includes('\\0')||typeof signature!=='string')
+                unavailable('submitted-ref-malformed');
+              else if(signature.length>262144||new TextEncoder().encode(signature).byteLength>262144)
+                unavailable('submitted-signature-limit');
+              else{
+                try{
+                  const source=JSON.parse(signature),request=field(source,'request'),metadata=field(source,'metadata');
+                  const command=field(metadata,'command');
+                  if(field(request,'teamName')!==teamName||field(command,'commandId')!==commandId||
+                    field(command,'idempotencyKey')!==commandId)unavailable('submitted-source-mismatch');
+                  else result.submittedSource={commandId,signature};
+                }catch{unavailable('submitted-ref-malformed');}
+              }
+            }
+          }
           return {...result,hookCount:count,...(hook?{unavailable:'hook-traversal-truncated'}:{})};
         })()`),
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => reject(new Error('Readiness diagnostic timed out')), 3000);
       }),
     ]);
+    if (phase === 'original-submit-failed') {
+      const captured = record(snapshot);
+      const submitted = captured.submittedSource;
+      delete captured.submittedSource;
+      try {
+        captured.submittedIntent = submitted === undefined
+          ? { unavailable: 'submitted-diagnostic-unavailable' } : projectSubmittedRoster(submitted, handleId);
+      } catch {
+        captured.submittedIntent = { unavailable: 'submitted-projection-failed' };
+      }
+    }
     diagnostics.push({ phase, snapshot });
   } catch {
     diagnostics.push({ phase, unavailable: 'readiness-diagnostic-read-failed' });
@@ -127,16 +260,26 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   openCodeModel?: Awaited<ReturnType<typeof startOpenCodeModel>>;
   assertOwnedRenderer(): void;
   capturedGroup(): number;
-  restartAfterStop?(): Promise<UiCdpPort>;
+  restartSameProfile?(codexSourceSelectionRestart?: typeof import('./desktop-captured-app.ts').restartCapturedDesktopApp): Promise<UiCdpPort>;
+  currentFixture?(): Awaited<ReturnType<typeof prepareDesktopProofFixture>>;
 }): Promise<void> {
-  const { fixture, evidence } = options;
+  let fixture = options.fixture;
+  const { evidence } = options;
   const model = options.openCodeModel ?? options.codexResumeModel ?? options.model;
   assert.ok(model);
+  const extensions = process.env.LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI === '1';
+  if (extensions) assert.ok(options.model && !fixture.codexResume && !fixture.openCodeV2 &&
+    evidence.mode === 'native-launch-ui' && options.restartSameProfile);
   const codex = fixture.codexResume;
   const opencode = fixture.openCodeV2;
   assert.equal(Boolean(codex), Boolean(options.codexResumeModel));
   assert.equal(Boolean(opencode), Boolean(options.openCodeModel));
   if (codex) assert.equal(evidence.mode, 'native-resume-ui');
+  const sourceSelection = codex?.sourceSelection ? createDesktopCodexSourceSelection(cdp, {
+    fixture, model: options.codexResumeModel!, seed: options.seed, evidence,
+    assertOwnedRenderer: options.assertOwnedRenderer, capturedGroup: options.capturedGroup,
+    restartSameProfile: options.restartSameProfile,
+  }) : undefined;
   const provider = opencode ? 'opencode' : codex ? 'codex' : 'claude';
   const firstPrompt = opencode ? 'OPENCODE_TEAM_ONE' : codex ? 'CODEX_TEAM_ONE' : 'NATIVE_TEAM_ONE';
   const firstReply = opencode ? 'REPLY_OPENCODE_ONE' : codex ? 'REPLY_CODEX_ONE' : 'REPLY_NATIVE_ONE';
@@ -150,7 +293,9 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   };
   evidence.launchDialogProof = proof;
   const step = (value: Record<string, unknown>) => steps.push({ monotonicMs: Math.round(performance.now()), ...value });
-  let ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step });
+  let ui = createDesktopUiControls(cdp, { assertOwnedRenderer: () => {
+    options.assertOwnedRenderer(); sourceSelection?.observe();
+  }, step });
   const teamRoot = join(fixture.root, 'hoststore/teams/test-desktop-backend');
   const ownerState = async () => record(await json(join(teamRoot, '.host-owner/state.json')));
   const poll = async <T>(read: () => Promise<T>, accept: (value: T) => boolean, label: string, ms = 60000) => {
@@ -175,6 +320,18 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
       await ui.click(`[role="dialog"] button[aria-controls=${JSON.stringify(value.id)}]`, 'expand original launch settings');
     await ui.waitRead(`Boolean(document.querySelector('[role="dialog"] #dialog-prompt'))`, 'original prompt field');
   };
+  if (extensions) {
+    assert.equal(model.observations.length, 0);
+    await prepareDesktopNativeExtensionSkillsUi(cdp, {
+      root: fixture.root, seed: options.seed, evidence, assertOwnedRenderer: options.assertOwnedRenderer,
+    });
+    cdp = await options.restartSameProfile!();
+    ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step });
+    proof.coldStartupBeforeFirstLaunch = true;
+  }
+  const globalMetadata = opencode
+    ? await captureDesktopOpenCodeGlobalMetadata(cdp, fixture, options.capturedGroup(), options.assertOwnedRenderer) : undefined;
+  if (globalMetadata) proof.originalGlobalMetadata = globalMetadata;
   await ui.observeInput();
   await ui.clickSidebar(options.seed.subject);
   await ui.click('button', 'open original Launch dialog', 'Launch');
@@ -218,14 +375,14 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   assert.equal(await cdp.evaluate(`document.querySelector('[role="dialog"] #dialog-skip-permissions')?.getAttribute('data-state')`), 'checked');
   // Do not click the optional preflight bypass: readiness must settle first.
   await ui.scrollTo('[role="dialog"] button', 'visible original Launch team control', 'Launch team');
-  let originalMetadata: ReturnType<typeof readDesktopNativeHostProcesses> | undefined;
+  let metadataObservation: ReturnType<typeof readDesktopNativeHostProcesses> | undefined;
   if (opencode) {
     await ui.waitRead(`[...document.querySelectorAll('[role="dialog"] button')].some(e=>e.textContent.trim()==='Launch team'&&!e.disabled)`, 'original preflight completes before any runtime allocation');
-    originalMetadata = await poll(async () => readDesktopNativeHostProcesses(fixture, options.capturedGroup()),
-      row => row.children.length === 1, 'one original metadata child before Launch');
-    assert.equal(originalMetadata.children[0]!.command, process.env.OPENCODE_V2_EMBEDDED_BUN);
+    assert.ok(globalMetadata);
+    const selected = await captureDesktopOpenCodeProjectMetadata(fixture, options.capturedGroup(), globalMetadata);
+    metadataObservation = selected.captured; proof.metadataSources = selected.metadataSources;
     assert.equal(((await ownerState()).runtimeCaptures as unknown[] | undefined)?.length ?? 0, 0);
-    proof.originalMetadataBeforeLaunch = originalMetadata;
+    proof.originalMetadataBeforeLaunch = metadataObservation;
   }
   await captureReadiness(
     cdp,
@@ -236,6 +393,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   );
   try {
     await ui.click('[role="dialog"] button', 'submit original Launch team once', 'Launch team');
+    await ui.waitRead(`!document.querySelector('[role="dialog"] #dialog-prompt')`, 'original launch dialog closes', 60000);
   } catch (error) {
     await captureReadiness(
       cdp,
@@ -246,7 +404,6 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
     );
     throw error;
   }
-  await ui.waitRead(`!document.querySelector('[role="dialog"] #dialog-prompt')`, 'original launch dialog closes', 60000);
   const state = await poll(ownerState, value => Array.isArray(value.runtimeCaptures) && value.runtimeCaptures.length === 1, 'one fresh Team capture');
   const captures = state.runtimeCaptures as unknown[];
   const capture = record(captures[0]);
@@ -269,6 +426,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   proof.capture = capture;
   const capturedSessions = async () => (await readDesktopNativeStopSessions(fixture.root))
     .filter(session => record(session.binding).runId === capture.launchId);
+  await sourceSelection?.beforeTerminal(capture);
   const sessions = await poll(
     capturedSessions,
     rows => rows.length === 1 && Array.isArray(rows[0]!.inputs) &&
@@ -277,6 +435,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
     'one prompt reaches actual native terminal without duplicate input'
   );
   proof.nativeSessionBeforeStop = sessions[0];
+  let firstSession = sessions[0]!;
   assert.equal(model.observations.length, 8);
   assert.ok(model.probes.length >= 1 && model.probes.length <= 8);
   assert.ok(model.observations.every(row => row.requestedModel === (opencode?.modelId ?? selectedModel) &&
@@ -308,12 +467,36 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   const screenshotPath = join(fixture.root, 'ui-original-launch-native.png');
   await writeFile(screenshotPath, Buffer.from(screenshot.data, 'base64'), { mode: 0o600 });
   proof.screenshot = { path: screenshotPath, sha256: await fileDigest(screenshotPath) };
+  if (process.env.LEGACY_DESKTOP_COMMANDS_UI === '1') {
+    assert.ok(options.model && !codex && !opencode && options.model.commandRequests);
+    await runDesktopNativeCommandsUiProof(cdp, {
+      root: fixture.root, seed: options.seed, session: sessions[0]!,
+      model: { ...options.model, commandRequests: options.model.commandRequests },
+      evidence, assertOwnedRenderer: options.assertOwnedRenderer,
+    });
+  }
+  if (extensions) {
+    assert.ok(options.model?.extensionRequests);
+    firstSession = await runDesktopNativeExtensionCommandsUi(cdp, {
+      root: fixture.root, session: firstSession,
+      model: { ...options.model, extensionRequests: options.model.extensionRequests },
+      evidence, assertOwnedRenderer: options.assertOwnedRenderer,
+    });
+    proof.nativeSessionAfterExtensionCommands = firstSession;
+  }
+  if (codex) await runDesktopCodexCostUiProof(cdp, {
+    root: fixture.root, handleId: fixture.handleId, session: sessions[0]!, model, evidence,
+    assertOwnedRenderer: options.assertOwnedRenderer,
+  });
   const hostRows = processTable().filter(row => row.pgid === options.capturedGroup() && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
   assert.equal(hostRows.length, 1, 'only this TEST Host executable may be selected');
   const hostPid = hostRows[0]!.pid;
-  const children = originalMetadata
-    ? separateDesktopOpenCodeRuntimeChildren(originalMetadata, readDesktopNativeHostProcesses(fixture, options.capturedGroup()), 1)
-    : processTable().filter(row => row.ppid === hostPid);
+  const nativeObservation = metadataObservation
+    ? await observeDesktopOpenCodeMetadata(fixture, options.capturedGroup(), metadataObservation, 1) : undefined;
+  if (nativeObservation) {
+    metadataObservation = nativeObservation.captured; proof.metadataAtRuntimeObservation = metadataObservation;
+  }
+  const children = nativeObservation?.runtime ?? processTable().filter(row => row.ppid === hostPid);
   assert.ok(children.length >= 1, 'actual native child present before Stop');
   if (codex) proof.codeModeHost = { status: 'capture-attempted' };
   const helper = codex ? await captureCodexCodeModeProcess(hostPid, codex.nativeInputs) : undefined;
@@ -321,26 +504,45 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   if (codex) proof.runtimeMcpEndpointSha256 = await codexRuntimeEndpointHash(fixture, options.capturedGroup());
   await ui.scrollTo('button[aria-label="Stop"]', 'visible original Stop control');
   await ui.click('button[aria-label="Stop"]', 'original Stop once', 'Stop');
-  await poll(async () => { const rows = await capturedSessions(); if (helper) observeCodexCodeModeProcess(helper); return rows; }, rows => rows.length === 1 && rows[0]!.phase === 'closed' && rows[0]!.custody === 'released', 'native cleanup released');
+  const stoppedSessions = await poll(async () => { const rows = await capturedSessions(); if (helper) observeCodexCodeModeProcess(helper); return rows; }, rows => rows.length === 1 && rows[0]!.phase === 'closed' && rows[0]!.custody === 'released', 'native cleanup released');
   await poll(async () => {
     const rows = processTable(), observed = helper && observeCodexCodeModeProcess(helper);
     return { rows, helperAbsent: !observed || observed.state === 'absent' };
   }, value => value.helperAbsent && children.every(child => !value.rows.some(row => row.pid === child.pid)), 'captured native children and original helper physically absent');
-  if (originalMetadata) {
-    const remaining = readDesktopNativeHostProcesses(fixture, options.capturedGroup());
-    separateDesktopOpenCodeRuntimeChildren(originalMetadata, remaining, 0);
+  if (metadataObservation) {
+    const remaining = (await observeDesktopOpenCodeMetadata(fixture, options.capturedGroup(), metadataObservation, 0)).captured;
+    separateDesktopOpenCodeRuntimeChildren(metadataObservation, remaining, 0);
+    metadataObservation = remaining;
     proof.metadataAfterStop = remaining;
   }
   proof.stop = { nativeChildren: children, releasedBeforeQuit: true };
-  if (options.restartAfterStop) {
+  if (sourceSelection) {
+    assert.ok(helper);
+    await sourceSelection.afterStop({ capture, session: stoppedSessions[0]!, saved, nativeTask, helper });
+    proof.probes = model.probes; proof.status = 'PASS'; return;
+  }
+  if (extensions) await runDesktopNativeExtensionsUiSmoke(cdp, {
+    root: fixture.root, evidence, assertOwnedRenderer: options.assertOwnedRenderer, pluginPhase: 'uninstall',
+  });
+  if (options.restartSameProfile && !extensions) {
     assert.equal(evidence.mode, 'native-resume-ui', 'cold boundary belongs only to explicit Resume proof');
-    cdp = await options.restartAfterStop();
+    cdp = await options.restartSameProfile();
+    fixture = options.currentFixture?.() ?? fixture;
     ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step });
     await ui.waitRead(`Boolean(window.electronAPI)&&!document.getElementById('splash')`, 'cold same-profile real renderer');
   } else {
     const beforeReload = await cdp.evaluate('performance.timeOrigin');
     await cdp.send('Page.reload', { ignoreCache: false });
     await ui.waitRead(`performance.timeOrigin!==${JSON.stringify(beforeReload)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`, 'reloaded real renderer');
+  }
+  const resumeGlobalMetadata = opencode && options.restartSameProfile && !extensions && evidence.mode === 'native-resume-ui'
+    ? await captureDesktopOpenCodeGlobalMetadata(cdp, fixture, options.capturedGroup(), options.assertOwnedRenderer) : undefined;
+  if (opencode && !resumeGlobalMetadata) {
+    assert.ok(metadataObservation, 'renderer reload retains the original metadata owners');
+    const retained = (await observeDesktopOpenCodeMetadata(fixture, options.capturedGroup(), metadataObservation, 0)).captured;
+    separateDesktopOpenCodeRuntimeChildren(metadataObservation, retained, 0);
+    metadataObservation = retained;
+    proof.metadataAfterRendererReload = retained;
   }
   await ui.observeInput();
   if (!(await cdp.evaluate(`Boolean(document.querySelector('.kanban-task-card'))`)))
@@ -355,12 +557,13 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   assert.deepEqual(model.failures, []);
   proof.status = 'PASS';
   proof.probes = model.probes;
-  if (options.restartAfterStop) proof.settingsRetainedAfterColdStartup = true;
+  if (options.restartSameProfile && !extensions) proof.settingsRetainedAfterColdStartup = true;
   else proof.settingsRetainedAfterReload = true;
   if (evidence.mode === 'native-resume-ui')
-    await runDesktopResumeUiSmoke(cdp, { ...options, model, firstCapture: capture, savedSettings: saved, nativeTask: nativeTask!, firstSession: sessions[0]! });
-  if (evidence.mode === 'native-relaunch-ui') {
+    await runDesktopResumeUiSmoke(cdp, { ...options, fixture, model, firstCapture: capture, savedSettings: saved, nativeTask: nativeTask!, firstSession: sessions[0]!,
+      ...(resumeGlobalMetadata ? { metadataGlobal: resumeGlobalMetadata } : {}) });
+  if (evidence.mode === 'native-relaunch-ui' || extensions) {
     assert.ok(options.model && !codex);
-    await runDesktopRelaunchUiSmoke(cdp, { ...options, model: options.model, firstCapture: capture, savedSettings: saved, nativeTask: nativeTask!, firstSession: sessions[0]! });
+    await runDesktopRelaunchUiSmoke(cdp, { ...options, model: options.model, firstCapture: capture, savedSettings: saved, nativeTask: nativeTask!, firstSession });
   }
 }

@@ -11,6 +11,8 @@
   },
   "include": [
     "scripts/legacy-agent-host/**/*.ts",
+    "scripts/e2e/native-prompt-suggestions-real/*.ts",
+    "scripts/legacy-agent-host/verify-native-suggestions-adopted-pin.mts",
     "scripts/ci/prefill-legacy-host-macos-node.mts"
   ]
 }

@@ -12,6 +12,11 @@ import { readSavedDesktopFixture } from './desktop-readback-fixture.ts';
 import { prepareDesktopCodexResumeFixture } from './desktop-codex-resume-fixture.ts';
 import { prepareControlledProcessFixture } from './desktop-controlled-process-fixture.ts';
 import { reserveMixedOpenCodeEndpoint } from './desktop-mixed-native-fixture.ts';
+import { prepareDesktopScheduleFixture } from './desktop-schedule-fixture.ts';
+import { prepareDesktopNativeCommandsFixture } from './desktop-native-commands-fixture.ts';
+import { prepareDesktopClaudeCheckpointUpgrade, type DesktopClaudeCheckpointUpgrade } from './desktop-claude-checkpoint-upgrade.ts';
+
+import { prepareDesktopNativeExtensionConsumptionFixture } from './desktop-native-extension-consumption-fixture.ts';
 
 /** TEST fixture composition; no app or provider process starts here. */
 export async function prepareDesktopProofFixture(
@@ -38,15 +43,59 @@ export async function prepareDesktopProofFixture(
     modelUrl?: string;
     codexResumeMode?: boolean;
     openCodeLifecycleMode?: boolean;
+    capturedMcpNonce?: string;
   }
 ): Promise<
   Awaited<ReturnType<typeof prepareDesktopBackendFixture>> & {
     activitySource?: CapturedActivitySource;
+    claudeCheckpointUpgrade?: DesktopClaudeCheckpointUpgrade;
     codexResume?: Awaited<ReturnType<typeof prepareDesktopCodexResumeFixture>>['codexResume'];
     openCodeV2?: { model: string; modelId: string; displayName: string };
     controlledProcess?: Awaited<ReturnType<typeof prepareControlledProcessFixture>>['controlledProcess'];
   }
 > {
+  const donorSavedOnly = process.env.LEGACY_DESKTOP_DONOR_SAVED_ONLY === '1';
+  if (donorSavedOnly) {
+    assert.equal(mode, 'stopped-import-ui');
+    assert.ok(options.legacyImportMode && options.modelUrl && !options.candidateRuntime &&
+      !options.openCodeLifecycleMode && !options.codexResumeMode && !options.readbackMode &&
+      !options.reviewReadbackMode && !options.nativeReviewReadbackMode && !options.nativeReviewContinuationMode &&
+      !options.controlledProcessMode && !options.processUiMode && !options.processReadbackMode && !options.capturedMcpNonce);
+    assert.equal(process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH ?? '', '');
+  }
+  if (process.env.LEGACY_DESKTOP_CLAUDE_CHECKPOINT_UPGRADE === '1') {
+    assert.equal(mode, 'native-resume-ui');
+    assert.ok(options.modelUrl && options.launchDialogMode && !options.codexResumeMode &&
+      !options.openCodeLifecycleMode && !options.candidateRuntime && !options.capturedMcpNonce);
+    for (const key of ['LEGACY_DESKTOP_COMMANDS_UI', 'LEGACY_DESKTOP_SCHEDULE_UI',
+      'LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI', 'LEGACY_DESKTOP_DIAGNOSTIC_HOST_ENTRY',
+      'LEGACY_DESKTOP_CODEX_PATH'])
+      assert.ok(!process.env[key], 'checkpoint upgrade has only the original Claude source');
+    return prepareDesktopClaudeCheckpointUpgrade(repo, pnpm, options.modelUrl);
+  }
+  if (options.capturedMcpNonce !== undefined) {
+    assert.equal(mode, 'native-launch-ui');
+    assert.ok(options.openCodeLifecycleMode && !options.candidateRuntime && options.modelUrl);
+    assert.equal(process.env.LEGACY_DESKTOP_OPENCODE_MCP_UI, '1');
+  }
+  if (process.env.LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI === '1') {
+    assert.equal(mode, 'native-launch-ui');
+    assert.notEqual(process.env.LEGACY_DESKTOP_SCHEDULE_UI, '1');
+    assert.notEqual(process.env.LEGACY_DESKTOP_COMMANDS_UI, '1');
+    assert.ok(options.modelUrl && !options.candidateRuntime);
+    return prepareDesktopNativeExtensionConsumptionFixture(repo, pnpm, options.modelUrl);
+  }
+  if (process.env.LEGACY_DESKTOP_COMMANDS_UI === '1') {
+    assert.equal(mode, 'native-launch-ui');
+    assert.notEqual(process.env.LEGACY_DESKTOP_SCHEDULE_UI, '1');
+    assert.ok(options.modelUrl && !options.candidateRuntime);
+    return prepareDesktopNativeCommandsFixture(repo, pnpm, options.modelUrl);
+  }
+  if (process.env.LEGACY_DESKTOP_SCHEDULE_UI === '1') {
+    assert.equal(mode, 'native-launch-ui');
+    assert.ok(options.modelUrl && !options.candidateRuntime);
+    return prepareDesktopScheduleFixture(repo, pnpm, options.modelUrl);
+  }
   if (options.controlledProcessMode) {
     assert.equal(mode, 'process-cold-ui');
     return prepareControlledProcessFixture(repo, pnpm);
@@ -96,7 +145,10 @@ export async function prepareDesktopProofFixture(
       manifestSha256: process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256! },
   } : undefined;
   const fixture = await prepareDesktopBackendFixture(repo, {
+    ...(donorSavedOnly ? { donorSavedOnly: true as const } : {}),
     ...(selectedV2 ? { nativeOpenCodeV2: selectedV2 } : {}),
+    ...(options.nativeStopMode ? { configuredLaunchSetup: true as const } : {}),
+    ...(options.capturedMcpNonce ? { capturedMcpNonce: options.capturedMcpNonce } : {}),
     ...(options.candidateRuntime ? { candidateRuntime: options.candidateRuntime } : {}),
     ...(process.env.LEGACY_DESKTOP_DIAGNOSTIC_HOST_ENTRY
       ? {

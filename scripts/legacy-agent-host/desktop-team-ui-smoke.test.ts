@@ -625,6 +625,32 @@ test('original desktop click waits for stable target geometry, without repeating
   }
 });
 
+test('original Task hover waits through layout and unavailability before its one physical move', { timeout: 5000 }, async () => {
+  const expression = 'TEST_originalTaskHitPoint()';
+  const points = [
+    { x: 100, y: 100 }, { x: 100, y: 200 }, { x: 100, y: 200 },
+    null, { x: 100, y: 200 }, { x: 100, y: 200 }, { x: 100, y: 200 },
+  ];
+  const dispatched: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [];
+  let reads = 0;
+  const ui = createDesktopUiControls({
+    async evaluate(actual: string) {
+      assert.equal(actual, expression);
+      reads++;
+      return points.shift();
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      assert.equal(method, 'Input.dispatchMouseEvent');
+      assert.equal(reads, 7, 'no move at a stale or temporarily ineligible target');
+      dispatched.push({ ...params });
+      return {};
+    },
+  }, { assertOwnedRenderer() {}, step(value) { steps.push(value); } });
+  await ui.hoverExpression(expression, 'TEST original Task');
+  assert.deepEqual(dispatched, [{ type: 'mouseMoved', x: 100, y: 200 }]);
+  assert.deepEqual(steps, [{ action: 'mouseMoved', label: 'TEST original Task', target: { x: 100, y: 200 } }]);
+});
+
 test('original desktop click refuses a constantly moving target before dispatch', { timeout: 5000 }, async () => {
   let reads = 0;
   const dispatched: string[] = [];

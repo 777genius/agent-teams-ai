@@ -346,7 +346,7 @@ export const TaskDetailHeader = ({
             variant="ghost"
             size="sm"
             className="h-6 text-xs"
-            disabled={!sessionController.isOwner}
+            disabled={!sessionController.canResolveClarification}
             onClick={actions.markClarificationResolved}
           >
             {t('taskDetail.actions.markResolved')}

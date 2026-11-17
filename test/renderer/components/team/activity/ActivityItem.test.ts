@@ -463,20 +463,24 @@ describe('ActivityItem compact header preview', () => {
       read: true,
       source: 'lead_process',
     };
+    const toggled: string[] = [];
+    function OriginalCard() {
+      const [collapsed, setCollapsed] = React.useState(true);
+      return React.createElement(ActivityItem, {
+        message,
+        teamName: 'my-team',
+        memberColor: 'green',
+        compactHeader: true,
+        collapseMode: 'managed',
+        isCollapsed: collapsed,
+        canToggleCollapse: true,
+        collapseToggleKey: 'message-key',
+        onToggleCollapse: (key) => { toggled.push(key); setCollapsed(false); },
+      });
+    }
 
     await act(async () => {
-      root.render(
-        React.createElement(ActivityItem, {
-          message,
-          teamName: 'my-team',
-          memberColor: 'green',
-          compactHeader: true,
-          collapseMode: 'managed',
-          isCollapsed: true,
-          canToggleCollapse: true,
-          collapseToggleKey: 'message-key',
-        })
-      );
+      root.render(React.createElement(OriginalCard));
       await Promise.resolve();
     });
 
@@ -497,6 +501,18 @@ describe('ActivityItem compact header preview', () => {
     expect(accent?.style.backgroundColor).toBe('#22c55e');
     expect(accent?.parentElement?.className).toContain('relative');
     expect((accent?.parentElement as HTMLElement | null)?.style.backgroundImage).toBe('');
+
+    const card = host.querySelector('article.activity-timeline-card');
+    expect(card?.getAttribute('data-expanded')).toBe('false');
+    const header = card?.firstElementChild;
+    expect(header?.getAttribute('role')).toBe('button');
+    await act(async () => {
+      header?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(toggled).toEqual(['message-key']);
+    expect(card?.getAttribute('data-expanded')).toBe('true');
+    expect(host.querySelector('.line-clamp-2')).toBeNull();
+    expect(host.querySelector('[data-markdown-renderer="full"]')?.textContent).toContain(summary);
 
     await act(async () => {
       root.unmount();

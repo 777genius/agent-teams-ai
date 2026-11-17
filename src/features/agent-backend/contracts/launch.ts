@@ -27,6 +27,12 @@ export interface BackendLaunchModelSelection {
   context?: 'model-default' | 'one-million';
 }
 
+/** Original dialog routing references only; the Host owns all model observations. */
+export interface BackendLaunchModelPreparation {
+  preparationId: string;
+  selections: BackendLaunchModelSelection[];
+}
+
 /** Selected Team/member model observation; no global authentication or launch grant. */
 export interface BackendLaunchModelProbe extends BackendLaunchModelSelection {
   commandId: string;

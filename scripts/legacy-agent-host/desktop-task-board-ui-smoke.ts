@@ -653,13 +653,10 @@ export async function runDesktopTaskBoardUiSmoke(
       `!document.querySelector('.kanban-task-card[data-state="open"]')`,
       'original Task hover cards closed after pointer leave and Escape'
     );
-    const point = record(
-      await ui.waitRead(
-        pointOf(`return document.querySelector(${desktopJsLiteral(card(id))});`),
-        'visible original card'
-      )
+    await ui.hoverExpression(
+      pointOf(`return document.querySelector(${desktopJsLiteral(card(id))});`),
+      'stable visible original Task card'
     );
-    await input('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
     const hovered = record(
       await ui.waitRead(
         `(() => {const e=document.querySelector(${desktopJsLiteral(card(id))});const open=[...document.querySelectorAll('.kanban-task-card[data-state="open"]')];return e&&open.length===1&&open[0]===e?{taskId:e.dataset.taskId,title:e.querySelector('h5')?.textContent.trim(),state:e.dataset.state}:null;})()`,

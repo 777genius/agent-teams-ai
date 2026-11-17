@@ -1,15 +1,19 @@
 import { createHash, randomBytes } from 'node:crypto';
+import { ChildProcess } from 'node:child_process';
 import { lstat, readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CapturedProcess } from './CapturedProcess.js';
 import { createWindowsJobCustody } from './WindowsJobCustody.js';
+import { AcceptedOpenCodeV2FileKey, DeferredOpenCodeV2FileKey,
+  openCodeV2SelectedSourceReference } from './OpenCodeV2SelectedFileKey.js';
+import type { OpenCodeV2SelectedFileMode } from './OpenCodeV2SelectedFileKey.js';
 import {
   verifyOpenCodeV2EmbeddedGraph,
   verifyOpenCodeV2EmbeddedManifest,
 } from './OpenCodeV2EmbeddedGraph.js';
 
-import type { ChildProcessWithoutNullStreams } from 'node:child_process';
+import type { ObservableNativeProcess } from '../../owned-process/processFacade.js';
 import type { CapturedProcessProfile, CapturedProcessTreeSource } from './CapturedProcess.js';
 import type { OpenCodeV2EmbeddedSelection } from './OpenCodeV2EmbeddedGraph.js';
 import type {
@@ -51,6 +55,7 @@ export interface OpenCodeV2EmbeddedServerOptions {
   processCustody?: RegisteredProcessRootSource;
   startupTimeoutMs?: number;
   endpoint?: string;
+  selectedFile?: Readonly<{ source: DeferredOpenCodeV2FileKey; mode: OpenCodeV2SelectedFileMode }>;
 }
 export interface OpenCodeV2EmbeddedReady {
   endpoint: string;
@@ -107,6 +112,10 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
   const databasePath = options.databasePath;
   const startupTimeoutMs = options.startupTimeoutMs ?? 120_000;
   const requestedEndpoint = options.endpoint;
+  const selectedFile = options.selectedFile;
+  if (selectedFile && (!DeferredOpenCodeV2FileKey.is(selectedFile.source) ||
+      !selectedFile.source.isCurrent() || selectedFile.source.descriptor.cwd !== profile.cwd ||
+      !['fresh', 'restore', 'catalog'].includes(selectedFile.mode))) return fail();
   if (
     requestedEndpoint !== undefined &&
     (!/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(requestedEndpoint) ||
@@ -118,6 +127,11 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
   profile.environment = Object.fromEntries(
     Object.entries(profile.environment).filter(([key]) => environmentKeys.has(key))
   );
+  // Native 2.1.4 migrates every Global.data/auth.json entry when creating a DB.
+  // Keep that source inside this owned DB namespace. Host imports only its
+  // captured selected key through the finite native credential mechanism.
+  profile.environment.XDG_DATA_HOME = path.dirname(databasePath);
+  profile.environment.XDG_CONFIG_HOME = configDirectory;
   if (!profile.environment.HOME) return fail();
   let windowsCustody: CapturedProcessTreeSource | undefined;
   const custody = new CapturedProcess(
@@ -137,10 +151,12 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
   const password = randomBytes(32).toString('base64url');
   const nonce = randomBytes(32).toString('hex');
   const lifecycle = new AbortController();
-  let child: ChildProcessWithoutNullStreams | undefined;
+  let child: ObservableNativeProcess | undefined;
   let ready: OpenCodeV2EmbeddedReady | undefined;
+  let readyChild: ObservableNativeProcess | undefined;
   let starting: Promise<OpenCodeV2EmbeddedReady> | undefined;
   let stopping: Promise<boolean> | undefined;
+  let selectedIntegration: string | undefined;
   const alive = () =>
     child?.pid !== undefined && child.exitCode === null && child.signalCode === null;
 
@@ -150,8 +166,10 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
     const pid = child.pid;
     if (process.platform === 'darwin' || process.platform === 'win32') {
       await verifyOpenCodeV2EmbeddedManifest(embedded);
+      // Darwin custody consumes the real original Node child, never a broker IO facade.
+      if (process.platform === 'darwin' && !(child instanceof ChildProcess)) return fail();
       const actual =
-        process.platform === 'darwin'
+        process.platform === 'darwin' && child instanceof ChildProcess
           ? readDarwinExecutable!(child, profile.executable)
           : custody.readNativeExecutable(child);
       if (
@@ -265,6 +283,7 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
           configDirectory,
           databasePath,
           config,
+          ...(selectedFile ? { selectedFile: { descriptor: selectedFile.source.descriptor, mode: selectedFile.mode } } : {}),
         });
         if (Buffer.byteLength(input) + 1 > 256 * 1024) return fail();
         combined.throwIfAborted();
@@ -355,6 +374,7 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
         });
         launched.stdout.resume();
         const observed = await measure(combined);
+        readyChild = launched;
         ready = Object.freeze({
           endpoint,
           pid: observed.pid,
@@ -374,6 +394,30 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
 
   return {
     start,
+    /** Only the original catalog-selected relation and nonce-checked ready object can issue this reference. */
+    selectedFileKey(capture: Readonly<OpenCodeV2EmbeddedReady>, integrationId: string) {
+      const current = () => !!selectedFile && selectedFile.source.isCurrent() && ready !== undefined &&
+        capture === ready && child === readyChild && !stopping && !lifecycle.signal.aborted && alive();
+      if (!selectedFile || selectedFile.mode === 'catalog' || !current() ||
+          !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/u.test(integrationId) ||
+          selectedIntegration !== undefined && selectedIntegration !== integrationId) return fail();
+      selectedIntegration = integrationId;
+      const reference = openCodeV2SelectedSourceReference(selectedFile.source.descriptor, nonce, integrationId, selectedFile.mode);
+      return Object.freeze({ reference,
+        acceptProof(proof: Readonly<{ schemaVersion: 1; sourceReference: string; witness: string }>) {
+          if (!current() || proof.schemaVersion !== 1 || proof.sourceReference !== reference ||
+              Object.keys(proof).length !== 3) return fail();
+          return AcceptedOpenCodeV2FileKey.accept(selectedFile.source, proof.witness,
+            { nonce, pid: capture.pid, integrationId, reference }, current);
+        },
+      });
+    },
+    // This is lifetime evidence for a nonce-checked original ready object, not
+    // an executable digest or a new PID capture. Read snapshots still bracket
+    // their requests with the full native/image measure below.
+    isOriginalLive: (capture: Readonly<OpenCodeV2EmbeddedReady>): boolean =>
+      ready !== undefined && capture === ready && readyChild !== undefined &&
+      child === readyChild && !stopping && !lifecycle.signal.aborted && alive(),
     readPassword: () => password,
     readNativeCustody: async (signal: AbortSignal): Promise<NativeCustody | undefined> => {
       if (!ready || stopping) return undefined;

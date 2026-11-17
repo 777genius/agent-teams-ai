@@ -1,8 +1,9 @@
-import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { constants, createReadStream } from 'node:fs';
 import { access, realpath, stat } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
+
+import { execFileWithLinuxChildLaunch } from '@main/utils/linuxChildLaunch';
 
 import type { HostClientFailureCode, HostRequestOutcome } from '../../contracts';
 import type { HostReviewTransportProfile } from '@agent-teams/legacy-agent-host/contracts';
@@ -81,7 +82,7 @@ export async function validateHostProfile(profile: SelectedHostProfile): Promise
       throw new HostClientError('invalid-profile', 'not-dispatched');
     }
     const version = await new Promise<string>((resolve, reject) => {
-      execFile(
+      execFileWithLinuxChildLaunch(
         profile.nodeExecutable,
         ['--version'],
         {
@@ -91,7 +92,7 @@ export async function validateHostProfile(profile: SelectedHostProfile): Promise
           maxBuffer: 1024,
           windowsHide: true,
         },
-        (error, stdout) => (error ? reject(error) : resolve(stdout.trim()))
+        (error, stdout) => (error ? reject(error) : resolve(String(stdout).trim()))
       );
     });
     if (version !== profile.nodeVersion)

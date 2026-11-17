@@ -27,6 +27,7 @@ export * from './connections';
 export * from './creation';
 export type * from './launch';
 export * from './operations';
+export type { ProcessStopSelection } from './processes';
 export type * from './review';
 export * from './reviewWatch';
 export type * from './roster';

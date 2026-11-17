@@ -87,6 +87,31 @@ const inbox = (f: ReturnType<typeof fixture>, name: string) =>
 const require = createRequire(import.meta.url);
 const { protocols } = require('agent-teams-controller');
 
+test('scheduled task stays silent and checks its exact recipient inside first-admission fence', (t) => {
+  const f = fixture(t);
+  const expected = { name: 'alice', memberId: 'alice-id', runId: 'TEST-run', generation: '1', requireIdle: true as const };
+  const create: TeamCommand = { commandId: 'TEST-scheduled-create', operation: 'task.create',
+    payload: { subject: 'TEST scheduled task', owner: 'alice', prompt: 'TEST instructions',
+      startImmediately: false, notifyOwner: false, expectedRecipient: expected } };
+  const made = f.human.execute(create);
+  assert.equal(made.phase, 'completed');
+  assert.equal(f.human.pendingDeliveries().length, 0, 'task-first cannot send work before bootstrap');
+  const id = made.effects.taskId;
+  assert.equal(JSON.parse(readFileSync(f.taskPath(id), 'utf8')).status, 'pending');
+  const wrong: TeamCommand = { commandId: 'TEST-stale-start', operation: 'task.start',
+    payload: { taskId: id, notification: 'user', expectedRecipient: { ...expected, generation: '2' } } };
+  assert.throws(() => f.human.execute(wrong), hold);
+  assert.equal(f.human.lookup(wrong.commandId), undefined, 'stale target is refused before receipt/effects');
+  const command: TeamCommand = { ...wrong, commandId: 'TEST-original-start',
+    payload: { ...wrong.payload, expectedRecipient: expected } };
+  const started = f.human.execute(command);
+  assert.equal(value(started).notifiedOwner, true);
+  assert.equal(inbox(f, 'alice').filter(row => row.messageId === started.effects.messageId).length, 1);
+  assert.deepEqual(f.human.execute(command), started, 'same original command is lookup-compatible');
+  assert.throws(() => f.human.execute({ ...create, commandId: 'TEST-busy-create' }), hold);
+  assert.equal(f.human.lookup('TEST-busy-create'), undefined);
+});
+
 test('user task start commits exact owner inbox, stable outbox and truthful completed receipt', (t) => {
   const f = fixture(t);
   const created = f.human.execute(f.create('create-start'));

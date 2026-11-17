@@ -1,5 +1,5 @@
-import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { type ChildProcessWithoutNullStreams } from 'node:child_process';
+import { createHash, randomUUID } from 'node:crypto';
 import { TextDecoder } from 'node:util';
 
 import {
@@ -16,6 +16,7 @@ import {
   type RpcRequest,
   TEAM_HOST_DISPOSE_TIMEOUT_MS,
 } from '@agent-teams/legacy-agent-host/contracts';
+import { observeLinuxChildLaunchFailure, remainingLinuxChildLaunchTime, spawnWithLinuxChildLaunch } from '@main/utils/linuxChildLaunch';
 import { createLogger } from '@shared/utils/logger';
 
 import { decodeClaudeCloseDiagnostics } from './decodeClaudeCloseDiagnostics';
@@ -25,6 +26,8 @@ import {
   type SelectedHostProfile,
   validateHostProfile,
 } from './selectedHostProfile';
+
+import type { NativeNextPromptProvider } from '@features/native-prompt-suggestions/contracts';
 
 let startupProbeCount = 0;
 export const observeCapturedHostStartup = (
@@ -100,10 +103,23 @@ export class CapturedHostClient {
     },
     (observation) => {
       createLogger('Host:ClaudeManagement').diagnostic('Claude management stage', observation);
+    },
+    (observation) => {
+      if (this.child?.pid !== undefined)
+        createLogger('Host:OpenCodeMetadata').diagnostic('OpenCode metadata stage', {
+          profileHash: observation.profileHash, mode: observation.mode,
+          providerHash: observation.providerHash, pid: observation.pid,
+          startIdentityHash: createHash('sha256').update(observation.startIdentity, 'utf8').digest('hex'),
+          stage: observation.stage, hostPid: this.child.pid,
+        });
     }
   );
 
-  constructor(profile: SelectedHostProfile) {
+  constructor(
+    profile: SelectedHostProfile,
+    private readonly onNativePromptSuggestion?: (value: unknown) => void,
+    private readonly capturedNativeNextPromptProviders: readonly NativeNextPromptProvider[] = []
+  ) {
     this.profile = captureHostProfile(profile);
   }
 
@@ -119,9 +135,14 @@ export class CapturedHostClient {
       await validateHostProfile(this.profile);
       observeCapturedHostStartup('profile-validation-complete');
       if (this.sealed) throw new HostClientError('shutting-down', 'not-dispatched');
-      const child = spawn(this.profile.nodeExecutable, [this.profile.hostEntry], {
+      const child = spawnWithLinuxChildLaunch(this.profile.nodeExecutable, [this.profile.hostEntry], {
         cwd: this.profile.cwd,
-        env: { ...this.profile.env },
+        env: {
+          ...this.profile.env,
+          // Only trusted Main captures this setting. It overrides any legacy
+          // profile flag at process startup, never while a session is active.
+          AGENT_TEAMS_NATIVE_NEXT_PROMPT_PROVIDERS: this.capturedNativeNextPromptProviders.join(','),
+        },
         stdio: ['pipe', 'pipe', 'pipe'],
         windowsHide: true,
       });
@@ -135,6 +156,7 @@ export class CapturedHostClient {
         });
       });
       child.once('error', () => this.fail(new HostClientError('transport-closed', 'unknown')));
+      observeLinuxChildLaunchFailure(child, () => this.fail(new HostClientError('transport-closed', 'unknown')));
       child.stdin.on('error', () => this.fail(new HostClientError('transport-closed', 'unknown')));
       child.stdout.on('error', () => this.fail(new HostClientError('transport-closed', 'unknown')));
       child.stdout.on('data', (chunk: Buffer) => this.decode(chunk));
@@ -147,11 +169,13 @@ export class CapturedHostClient {
         this.diagnosticTail = Buffer.concat([this.diagnosticTail, chunk]).subarray(-8192);
         this.retainCloseDiagnostic(chunk);
       });
+      const handshakeRemaining = remainingLinuxChildLaunchTime(child, this.profile.startupTimeoutMs);
+      if (handshakeRemaining <= 0) throw new HostClientError('request-timeout', 'unknown');
       const result = await this.send(
         'host.handshake',
         { protocolVersion: HOST_PROTOCOL_VERSION },
         true,
-        this.profile.startupTimeoutMs
+        handshakeRemaining
       );
       const handshake = this.validateHandshake(result);
       if (this.sealed) throw new HostClientError('shutting-down', 'not-dispatched');
@@ -202,14 +226,24 @@ export class CapturedHostClient {
   request(
     method: string,
     params?: JsonValue,
-    options: { control?: boolean } = {}
+    options: { control?: boolean; remainingMs?: () => number } = {}
   ): Promise<JsonValue> {
     if (!this.ready || this.sealed) {
       return Promise.reject(
         new HostClientError(this.sealed ? 'shutting-down' : 'transport-closed', 'not-dispatched')
       );
     }
-    return this.send(method, params, options.control ?? false, this.profile.requestTimeoutMs);
+    let timeoutMs = this.profile.requestTimeoutMs;
+    if (options.remainingMs) {
+      try {
+        const remaining = Math.floor(options.remainingMs());
+        if (!Number.isSafeInteger(remaining) || remaining <= 0) throw new Error('expired');
+        timeoutMs = Math.min(timeoutMs, remaining);
+      } catch {
+        return Promise.reject(new HostClientError('request-timeout', 'not-dispatched'));
+      }
+    }
+    return this.send(method, params, options.control ?? false, timeoutMs);
   }
 
   private send(
@@ -367,7 +401,14 @@ export class CapturedHostClient {
         if (typeof message.method !== 'string' || !('params' in message))
           throw new Error('notification');
         if (message.method === HOST_GAP_METHOD) this.notificationGap = true;
-        else if (
+        else if (message.method === 'runtime.prompt-suggestion.updated' && this.onNativePromptSuggestion) {
+          // The selected Main owner consumes this ephemeral offer synchronously.
+          // Do not also retain it in the unrelated pull buffer: there is no
+          // pending-data reader for prompt suggestions, and that would
+          // eventually overflow and drop future valid offers.
+          try { this.onNativePromptSuggestion(message.params); }
+          catch { /* Auxiliary observations never change a Host result. */ }
+        } else if (
           this.notifications.length >= this.limits.maxDataNotifications ||
           this.notificationBytes + frame.length > this.limits.maxDataBytes
         ) {

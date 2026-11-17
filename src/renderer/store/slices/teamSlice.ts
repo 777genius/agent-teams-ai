@@ -107,6 +107,7 @@ import {
 import {
   areTeamLaunchParamsEqual,
   buildLaunchParamsFromRuntimeRequest,
+  loadAllLaunchParams,
   saveTeamLaunchParams,
   type TeamLaunchParams,
 } from '../team/teamLaunchParams';
@@ -1641,9 +1642,6 @@ export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
   setMessagesPanelWidth: (width: number) => void;
 }
 
-// --- Per-team launch params persistence ---
-const LAUNCH_PARAMS_PREFIX = 'team:launchParams:';
-
 export function getCurrentProvisioningProgressForTeam(
   state: Pick<TeamSlice, 'currentProvisioningRunIdByTeam' | 'provisioningRuns'>,
   teamName: string
@@ -1718,36 +1716,6 @@ export function isTeamProvisioningActive(
 ): boolean {
   const current = getCurrentProvisioningProgressForTeam(state, teamName);
   return current != null && isActiveProvisioningState(current.state);
-}
-
-function loadAllLaunchParams(): Record<string, TeamLaunchParams> {
-  const result: Record<string, TeamLaunchParams> = {};
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (!key?.startsWith(LAUNCH_PARAMS_PREFIX)) {
-        continue;
-      }
-
-      try {
-        const raw = localStorage.getItem(key);
-        if (!raw) {
-          continue;
-        }
-
-        const teamName = key.slice(LAUNCH_PARAMS_PREFIX.length);
-        const parsed = JSON.parse(raw) as TeamLaunchParams;
-        if (parsed && typeof parsed === 'object') {
-          result[teamName] = parsed;
-        }
-      } catch {
-        // ignore this entry - best-effort restore
-      }
-    }
-  } catch {
-    // ignore — best-effort restore
-  }
-  return result;
 }
 
 const sendingMessageState = {
@@ -4527,6 +4495,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     let responseRunId: string | null = null;
     try {
       const response = await unwrapIpc('team:launch', () => api.teams.launchTeam(request));
+      if (response.launchStatus === 'unconfirmed')
+        throw new Error(
+          'Team saved. Launch was not confirmed. Check this team before launching again.'
+        );
       responseRunId = response.runId;
       teamLaunchAnalyticsByRunId.set(response.runId, launchAnalyticsContext);
       saveTeamLaunchParams(request.teamName, optimisticLaunchParams);

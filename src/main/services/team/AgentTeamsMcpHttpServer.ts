@@ -1,4 +1,4 @@
-import { type ChildProcess, execFile, type ExecFileException } from 'node:child_process';
+import { type ChildProcess } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import http from 'node:http';
@@ -12,7 +12,12 @@ import {
 import { type RuntimeProcessTableRow } from '@features/tmux-installer/main';
 import { applyAgentTeamsIdentityEnv } from '@main/services/identity/AgentTeamsIdentityStore';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
-import { killProcessTree, spawnCli, untrackCliProcess } from '@main/utils/childProcess';
+import { killProcessTree, killProcessTreeAndWait, spawnCli, untrackCliProcess } from '@main/utils/childProcess';
+import {
+  execFileTextWithLinuxChildLaunch as execFileText, observeLinuxChildLaunchFailure,
+  remainingLinuxChildLaunchTime,
+} from '@main/utils/linuxChildLaunch';
+import { isLinuxChildLaunchFailure } from '@main/utils/linuxChildLaunchSelection';
 import { ensureMinimumNodeOldSpaceEnv } from '@main/utils/nodeOptions';
 import { getAppDataPath, getClaudeBasePath, getMcpServerBasePath } from '@main/utils/pathDecoder';
 import { forceKillProcessByPidNoWait, killProcessByPid } from '@main/utils/processKill';
@@ -638,32 +643,6 @@ async function listNativeProcessRows(
   return rows;
 }
 
-function execFileText(
-  command: string,
-  args: string[],
-  timeout: number,
-  maxBuffer: number
-): Promise<string | null> {
-  return new Promise((resolve) => {
-    execFile(
-      command,
-      args,
-      {
-        encoding: 'utf8',
-        timeout,
-        maxBuffer,
-        windowsHide: true,
-      },
-      (error: ExecFileException | null, stdout: string | Buffer) => {
-        if (error) {
-          resolve(null);
-          return;
-        }
-        resolve(String(stdout));
-      }
-    );
-  });
-}
 
 export class AgentTeamsMcpHttpServer {
   readonly appContext = createOpenCodeMcpAppContext(() =>
@@ -1132,6 +1111,7 @@ export class AgentTeamsMcpHttpServer {
 
     let startupSettled = false;
     const startupFailure = new Promise<never>((_, reject) => {
+      observeLinuxChildLaunchFailure(child, reject);
       child.once('exit', (code, signal) => {
         const expectedStop = this.expectedStopChildren.delete(child);
         clearIfCurrent();
@@ -1150,7 +1130,7 @@ export class AgentTeamsMcpHttpServer {
         }
       });
       child.once('error', (error) => {
-        clearIfCurrent();
+        if (!isLinuxChildLaunchFailure(error) || child.pid === undefined) clearIfCurrent();
         const message = `Agent Teams MCP HTTP server process error: ${
           error instanceof Error ? error.message : String(error)
         }`;
@@ -1163,7 +1143,7 @@ export class AgentTeamsMcpHttpServer {
 
     try {
       await Promise.race([
-        waitForPort(MCP_HTTP_HOST, port, MCP_HTTP_READY_TIMEOUT_MS),
+        waitForPort(MCP_HTTP_HOST, port, remainingLinuxChildLaunchTime(child, MCP_HTTP_READY_TIMEOUT_MS)),
         startupFailure,
       ]);
       if (this.child !== child) {
@@ -1171,12 +1151,15 @@ export class AgentTeamsMcpHttpServer {
       }
     } catch (error) {
       startupSettled = true;
-      if (this.child === child) {
+      if (this.child === child && !isLinuxChildLaunchFailure(error)) {
         this.child = null;
         this.handle = null;
       }
       this.expectedStopChildren.add(child);
-      killProcessTree(child, 'SIGKILL');
+      if (isLinuxChildLaunchFailure(error)) {
+        try { await killProcessTreeAndWait(child, 'SIGKILL'); }
+        catch (cleanup) { throw new AggregateError([error, cleanup], 'MCP startup cleanup remains unknown'); }
+      } else killProcessTree(child, 'SIGKILL');
       throw error;
     }
 

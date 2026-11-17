@@ -15,6 +15,7 @@ import type {
 } from '../../../contracts/operations';
 import type { BackendRequestGuard } from '../../application/backendBinding';
 import type { BackendOwnerRouter } from '../../application/BackendOwnerRouter';
+import type { CapturedRuntimeReadinessTarget, LocalModelReadinessContext } from '../../infrastructure/CapturedLocalModelReadiness';
 import type { CapturedRosterCommands } from '../../infrastructure/CapturedRosterCommands';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 
@@ -30,7 +31,8 @@ export class BackendOperationsFacade {
     return parseBackendOperation(value);
   }
 
-  async invoke(value: unknown, guard?: BackendRequestGuard): Promise<BackendOperationResult> {
+  async invoke(value: unknown, guard?: BackendRequestGuard, readiness?: LocalModelReadinessContext,
+    target?: CapturedRuntimeReadinessTarget): Promise<BackendOperationResult> {
     let request: BackendOperationRequest;
     try {
       request = this.validate(value);
@@ -46,7 +48,7 @@ export class BackendOperationsFacade {
         return await this.rosterCommands.invoke(request, guard, (original) =>
           this.dispatch(original, guard)
         );
-      return await this.dispatch(request, guard);
+      return await this.dispatch(request, guard, readiness, target);
     } catch (error) {
       return this.failure(error);
     }
@@ -54,10 +56,15 @@ export class BackendOperationsFacade {
 
   private async dispatch(
     request: BackendOperationRequest,
-    guard?: BackendRequestGuard
+    guard?: BackendRequestGuard,
+    readiness?: LocalModelReadinessContext,
+    target?: CapturedRuntimeReadinessTarget
   ): Promise<BackendOperationResult> {
     try {
       assertBackendRequestGuard(guard);
+      if (readiness && request.operation !== 'team.launch.probe.start')
+        throw new BackendRoutingError('invalid-binding');
+      if (target && request.operation !== 'runtime.open') throw new BackendRoutingError('invalid-binding');
       let raw: JsonValue;
       if (request.operation === 'crossTeam.send') {
         if (!this.router.requestPair) throw new BackendRoutingError('unavailable');
@@ -161,6 +168,8 @@ export class BackendOperationsFacade {
               request.operation !== 'runtime.dispatch' &&
               request.operation !== 'runtime.restore'),
           ...(guard ? { guard } : {}),
+          ...(readiness ? { localModelReadinessContext: readiness } : {}),
+          ...(target ? { localModelReadinessTarget: structuredClone(target) } : {}),
         });
       }
       assertBackendRequestGuard(guard, 'unknown');

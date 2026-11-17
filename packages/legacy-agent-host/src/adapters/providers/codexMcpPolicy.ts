@@ -13,6 +13,22 @@ export function codexMcpPolicy(
   endpoint: MemberProviderContext['endpoint'],
   required: readonly string[]
 ): CodexMcpPolicy | undefined {
+  const policy = codexExternalMcpPolicy(profile);
+  if (!policy) return undefined;
+  const selected = { ...policy.selected };
+  selected.team = {
+    url: endpoint.url,
+    bearer_token_env_var: 'LEGACY_AGENT_HOST_TEAM_MCP_TOKEN',
+    enabled_tools: [...required],
+    startup_timeout_sec: Math.ceil(profile.limits.timeoutMs / 1000),
+    tool_timeout_sec: Math.ceil(profile.limits.timeoutMs / 1000),
+    tools: Object.fromEntries(required.map(name => [name, { approval_mode: 'approve' as const }])),
+  };
+  return captureCodexMcpPolicy({ catalog: policy.catalog, selected });
+}
+
+/** The same selected external configuration without granting a standalone run Team tools. */
+export function codexExternalMcpPolicy(profile: CodexMemberProfile): CodexMcpPolicy | undefined {
   if (profile.capturedMcpServers === undefined) return undefined;
   if (!profile.capturedMcpCatalog) throw new Error('Captured Codex MCP census unavailable');
   const selected: CodexSelectedMcpServers = Object.create(null);
@@ -28,15 +44,5 @@ export function codexMcpPolicy(
           }
         : { url: server.url, ...(server.headers ? { http_headers: { ...server.headers } } : {}) };
   }
-  selected.team = {
-    url: endpoint.url,
-    bearer_token_env_var: 'LEGACY_AGENT_HOST_TEAM_MCP_TOKEN',
-    enabled_tools: [...required],
-    startup_timeout_sec: Math.ceil(profile.limits.timeoutMs / 1000),
-    tool_timeout_sec: Math.ceil(profile.limits.timeoutMs / 1000),
-    tools: Object.fromEntries(
-      required.map((name) => [name, { approval_mode: 'approve' as const }])
-    ),
-  };
   return captureCodexMcpPolicy({ catalog: profile.capturedMcpCatalog, selected });
 }

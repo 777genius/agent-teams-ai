@@ -7,9 +7,11 @@ import { memberSettingsSchema, savedTeamSettingsSchema } from '../team/rosterSch
 import { runtimeDigest } from '../runtime/identity.js';
 import { captureRuntimeExtraArgs } from './runtimeExtraArgs.js';
 import { resolveRuntimeRecipe } from './runtimeRecipe.js';
+import { RuntimeSourceUnavailable } from './runtimeSourceGrantAuthority.js';
 import { compileRuntimeMemberProfile, runtimeCaptureSourceSchema } from './runtimeCaptureSource.js';
 import {
   loadCapturedRuntimeMcpRecipe,
+  validateCapturedRuntimeMcpRecipe,
   capturedRuntimeMcpReferencesSchema,
 } from './capturedRuntimeMcpRecipes.js';
 import type { HostedTeam } from './MemberEntry.js';
@@ -81,13 +83,15 @@ export function nativeMemberCaptureSource(
 export function nativeMemberBaseRecipe(
   profile: TeamHostProfile,
   teamId: string,
-  source: Omit<NativeMemberRuntimeCapture, 'mcpRecipeReference' | 'recipeDigest'>
+  source: Omit<NativeMemberRuntimeCapture, 'mcpRecipeReference' | 'recipeDigest'>,
+  restoring = false
 ) {
   const recipe = resolveRuntimeRecipe(
     profile.runtime,
     teamId,
     source.member.memberId,
-    source.member.settings.providerId
+    source.member.settings.providerId,
+    restoring
   );
   return {
     ...captureRuntimeExtraArgs([recipe], source.savedSettings.extraCliArgs)[0]!,
@@ -98,18 +102,28 @@ export function nativeMemberBaseRecipe(
 export function compileNativeMemberRuntimeCapture(
   profile: TeamHostProfile,
   team: HostedTeam,
-  raw: unknown
+  raw: unknown,
+  restoring = false
 ) {
   const capture = nativeMemberRuntimeCaptureSchema.parse(raw);
-  const base = nativeMemberBaseRecipe(profile, team.definition.binding.teamId, capture);
+  if (capture.mcpRecipeReference.memberId !== capture.member.memberId)
+    throw new TeamLaunchError('hold', 'native-member-binding');
+  const store = new TeamOwnerStore(profile.owner.storageRoot, team.definition.binding.teamName);
+  if (restoring) validateCapturedRuntimeMcpRecipe(
+    store, capture.commandId, capture.mcpRecipeReference, capture.savedSettings.cwd
+  );
+  const base = nativeMemberBaseRecipe(profile, team.definition.binding.teamId, capture, restoring);
   const selected = loadCapturedRuntimeMcpRecipe(
-    new TeamOwnerStore(profile.owner.storageRoot, team.definition.binding.teamName),
+    store,
     capture.commandId,
     base,
-    capture.mcpRecipeReference
+    capture.mcpRecipeReference,
+    restoring
   );
-  if (runtimeDigest(selected) !== capture.recipeDigest)
+  if (runtimeDigest(selected) !== capture.recipeDigest) {
+    if (restoring) throw new RuntimeSourceUnavailable();
     throw new TeamLaunchError('hold', 'native-member-recipe');
+  }
   const compiled = compileRuntimeMemberProfile(
     selected,
     capture,

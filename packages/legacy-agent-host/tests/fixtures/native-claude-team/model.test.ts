@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { request } from 'node:http';
 import { test } from 'node:test';
 import { nativeToolReceipt } from './model.ts';
 
@@ -58,10 +59,12 @@ test('model probe admission is opt-in, exact, tool-free, and independently bound
     for (let count = 0; count < 8; count++) {
       const response = await request(
         enabled.url,
-        count % 2 ? [
-          { type: 'text', text: '<system-reminder>TEST SDK reminder</system-reminder>' },
-          { type: 'text', text: probePrompt },
-        ] : probePrompt
+        count % 2
+          ? [
+              { type: 'text', text: '<system-reminder>TEST SDK reminder</system-reminder>' },
+              { type: 'text', text: probePrompt },
+            ]
+          : probePrompt
       );
       assert.equal(response.status, 200);
       assert.match(await response.text(), /"text":"OK"/);
@@ -78,6 +81,135 @@ test('model probe admission is opt-in, exact, tool-free, and independently bound
     assert.match(enabled.failures[0]!, /probe request budget/);
   } finally {
     await enabled.close();
+  }
+});
+
+test('current legacy source has one text turn and closes before ordinary Host probes', async () => {
+  const { startNativeTeamModel } = await import('./model.ts');
+  const source = {
+    teamName: 'test-legacy',
+    prompt: 'TEST_CURRENT_LEGACY_SOURCE',
+    reply: 'TEST_SOURCE_REPLY',
+  };
+  const model = await startNativeTeamModel({ allowModelProbes: true, currentLegacySource: source });
+  const preconnect = () => fetch(model.url, { method: 'HEAD' });
+  const catalog = (query = '') => fetch(model.url + '/v1/models' + query, {
+    headers: { 'x-api-key': 'TEST-current-legacy-only-key' },
+  });
+  const post = (content: string, tools: unknown[] = []) =>
+    fetch(model.url + '/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        messages: [{ role: 'user', content }],
+        tools,
+      }),
+    });
+  const prompt =
+    'You are "team-lead", the team lead.\n- Your team is "test-legacy".\n\nUser instructions:\n' +
+    source.prompt;
+  try {
+    assert.equal(model.currentLegacyCatalogRequests, 0);
+    const warmed = await preconnect();
+    assert.equal(warmed.status, 204);
+    assert.equal(await warmed.text(), '');
+    const listed = await catalog();
+    assert.equal(listed.status, 200);
+    assert.equal(model.currentLegacyCatalogRequests, 1);
+    const listing = await listed.json() as { data: { id: string }[]; has_more: boolean };
+    assert.deepEqual(listing.data.map(row => row.id), ['claude-sonnet-4-6', 'claude-opus-4-6']);
+    assert.equal(listing.has_more, false);
+    assert.equal((await catalog('?limit=1000')).status, 200);
+    assert.equal(model.currentLegacyCatalogRequests, 2);
+    assert.equal((await post('Output only the single word PONG.', [{ name: 'Bash' }])).status, 200);
+    const response = await post(prompt, [{ name: 'Bash' }]);
+    assert.equal(response.status, 200);
+    const text = await response.text();
+    assert.ok(text.includes(source.reply));
+    assert.equal(text.includes('tool_use'), false);
+    assert.deepEqual(model.observations, []);
+    assert.deepEqual(model.probes, []);
+    const frozen = await model.finishCurrentLegacySource!();
+    assert.equal(frozen.turns.length, 1);
+    assert.equal(frozen.probes.length, 1);
+    assert.equal(frozen.catalogRequests, 2);
+    assert.equal(frozen.preconnectRequests, 1);
+    assert.equal(
+      (await post('Reply only OK. Do not use tools, access files or run commands.')).status,
+      200
+    );
+    assert.equal(model.probes.length, 1);
+    await assert.rejects(model.finishCurrentLegacySource!(), /once/);
+    assert.equal(
+      (await post(prompt)).status,
+      400,
+      'the old source cannot submit after the consumer boundary'
+    );
+    assert.equal((await catalog()).status, 400, 'closed/failed source never reopens for a catalog read');
+    assert.equal(model.currentLegacyCatalogRequests, 2);
+    assert.deepEqual(model.currentLegacyTurns, frozen.turns);
+  } finally {
+    await model.close();
+  }
+  const capped = await startNativeTeamModel({ currentLegacySource: source });
+  try {
+    assert.equal(capped.currentLegacyCatalogRequests, 0);
+    const readCatalog = () => fetch(capped.url + '/v1/models?limit=1000', {
+      headers: { 'x-api-key': 'TEST-current-legacy-only-key' },
+    });
+    for (let count = 1; count <= 8; count++) {
+      const accepted = await readCatalog();
+      assert.equal(accepted.status, 200);
+      await accepted.text();
+      assert.equal(capped.currentLegacyCatalogRequests, count);
+    }
+    assert.deepEqual(capped.failures, []);
+    const ninth = await readCatalog();
+    assert.equal(ninth.status, 400); await ninth.text();
+    assert.equal(capped.currentLegacyCatalogRequests, 9);
+    assert.deepEqual(capped.failures, ['bounded original legacy catalog reads']);
+    const sealed = await readCatalog();
+    assert.equal(sealed.status, 400); await sealed.text();
+    assert.equal(capped.currentLegacyCatalogRequests, 9, 'sealed reads never increment the original counter');
+    assert.equal(capped.failures.length, 2);
+    assert.equal(capped.failures[0], 'bounded original legacy catalog reads');
+    assert.match(capped.failures[1]!, /oracle is sealed after its first protocol failure/);
+    assert.deepEqual(capped.observations, []); assert.deepEqual(capped.probes, []);
+    assert.deepEqual(capped.currentLegacyTurns, []); assert.deepEqual(capped.currentLegacyProbes, []);
+  } finally { await capped.close(); }
+  for (const mode of ['path', 'body', 'auth', 'overflow', 'ordinary', 'closed-donor', 'closed'] as const) {
+    const refused = await startNativeTeamModel(mode === 'ordinary' ? {}
+      : mode === 'closed-donor' ? { donorSavedProbes: true } : { currentLegacySource: source });
+    try {
+      if (mode === 'ordinary' || mode === 'closed-donor')
+        assert.equal(Object.hasOwn(refused, 'currentLegacyCatalogRequests'), false);
+      if (mode === 'closed-donor') assert.deepEqual(await refused.finishDonorSavedProbes!(), []);
+      if (mode === 'closed') {
+        const original = await fetch(refused.url + '/v1/messages', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ model: 'claude-sonnet-4-6', messages: [{ role: 'user', content: prompt }], tools: [] }),
+        });
+        assert.equal(original.status, 200); assert.ok((await original.text()).includes(source.reply));
+        const finished = await refused.finishCurrentLegacySource!();
+        assert.equal(finished.turns.length, 1); assert.equal(finished.preconnectRequests, 0);
+      }
+      if (mode === 'overflow')
+        for (let count = 0; count < 32; count++)
+          assert.equal((await fetch(refused.url, { method: 'HEAD' })).status, 204);
+      const status = mode === 'body' ? await new Promise<number | undefined>((resolve, reject) => {
+        const outgoing = request(refused.url, { method: 'HEAD', headers: { 'content-length': '1' } }, response => {
+          response.resume(); response.once('end', () => resolve(response.statusCode));
+        });
+        outgoing.once('error', reject); outgoing.end('x');
+      }) : (await fetch(refused.url + (mode === 'path' ? '/v1/models' : ''), {
+        method: 'HEAD', ...(mode === 'auth' ? { headers: { 'x-api-key': 'TEST-current-legacy-only-key' } } : {}),
+      })).status;
+      assert.equal(status, 400, mode + ' HEAD is refused without consumer input');
+      assert.equal(refused.failures.length, 1);
+      assert.deepEqual(refused.observations, []); assert.deepEqual(refused.probes, []);
+      assert.equal(refused.currentLegacyTurns?.length ?? 0, mode === 'closed' ? 1 : 0);
+    } finally { await refused.close(); }
   }
 });
 
@@ -100,10 +232,16 @@ test('model probe accepts the SDK system envelope while rejecting additional inp
   for (const [messages, tools, status] of cases) {
     const fixture = await startNativeTeamModel({ allowModelProbes: true });
     try {
-      const response = await fetch(`${fixture.url}/v1/messages`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: 'claude-opus-5-5', messages, tools }) });
+      const response = await fetch(`${fixture.url}/v1/messages`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ model: 'claude-opus-5-5', messages, tools }),
+      });
       assert.equal(response.status, status);
       assert.equal(fixture.probes.length, status === 200 ? 1 : 0);
-    } finally { await fixture.close(); }
+    } finally {
+      await fixture.close();
+    }
   }
 });
 
@@ -298,4 +436,66 @@ test('additive member oracle requires current roster once and retains exact acto
       tools
     )
   );
+});
+
+
+test('saved donor catalogue and PONG stay inside the original producer epoch', async () => {
+  const { startNativeTeamModel } = await import('./model.ts');
+  const model = await startNativeTeamModel({ donorSavedProbes: true });
+  const catalog = (query = '') => fetch(model.url + '/v1/models' + query, {
+    headers: { 'x-api-key': 'TEST-donor-saved-only-key' },
+  });
+  try {
+    const warmed = await fetch(model.url, { method: 'HEAD' });
+    assert.equal(warmed.status, 204);
+    assert.equal(await warmed.text(), '');
+    assert.equal((await catalog()).status, 200);
+    const listed = await catalog('?limit=1000');
+    assert.equal(listed.status, 200);
+    const listing = await listed.json() as { data: { id: string }[]; has_more: boolean };
+    assert.deepEqual(listing.data.map(row => row.id), ['claude-sonnet-4-6', 'claude-opus-4-6']);
+    assert.equal(listing.has_more, false);
+    const probe = await fetch(model.url + '/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        messages: [{ role: 'user', content: 'Output only the single word PONG.' }],
+        tools: [],
+      }),
+    });
+    assert.equal(probe.status, 200);
+    assert.equal((await model.finishDonorSavedProbes!()).length, 1);
+    assert.deepEqual(model.observations, []);
+    assert.deepEqual(model.probes, []);
+    assert.equal((await catalog('?limit=1000')).status, 400);
+    await assert.rejects(model.finishDonorSavedProbes!(), /once/);
+  } finally {
+    await model.close();
+  }
+  for (const mode of ['path', 'query', 'body', 'authorization', 'api-key', 'overflow', 'closed'] as const) {
+    const refused = await startNativeTeamModel({ donorSavedProbes: true });
+    const headers: Record<string, string> = {};
+    if (mode === 'authorization') headers.authorization = 'Bearer TEST-donor';
+    if (mode === 'api-key') headers['x-api-key'] = 'TEST-donor-saved-only-key';
+    try {
+      if (mode === 'closed') assert.deepEqual(await refused.finishDonorSavedProbes!(), []);
+      if (mode === 'overflow')
+        for (let count = 0; count < 32; count++)
+          assert.equal((await fetch(refused.url, { method: 'HEAD' })).status, 204);
+      const status = mode === 'body' ? await new Promise<number | undefined>((resolve, reject) => {
+        const outgoing = request(refused.url, { method: 'HEAD', headers: { 'content-length': '1' } }, response => {
+          response.resume(); response.once('end', () => resolve(response.statusCode));
+        });
+        outgoing.once('error', reject); outgoing.end('x');
+      }) : (await fetch(refused.url + (mode === 'path' ? '/v1/models' : mode === 'query' ? '?probe=1' : ''), {
+        method: 'HEAD', headers,
+      })).status;
+      assert.equal(status, 400, mode + ' donor HEAD is the first failure');
+      assert.equal(refused.failures.length, 1);
+      assert.deepEqual(refused.donorSavedProbes, []);
+      assert.deepEqual(refused.observations, []);
+      assert.deepEqual(refused.probes, []);
+    } finally { await refused.close(); }
+  }
 });

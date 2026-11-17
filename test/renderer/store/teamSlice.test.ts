@@ -7798,34 +7798,52 @@ describe('teamSlice actions', () => {
       expect(store.getState().launchParamsByTeam['my-team']).toEqual(previousParams);
     });
 
-    it('rolls back staged launch params when launchTeam fails before provisioning starts', async () => {
-      const store = createSliceStore();
-      const previousParams = {
-        providerId: 'codex',
-        providerBackendId: 'codex-native',
-        model: 'gpt-5.5',
-        effort: 'medium',
-        limitContext: false,
-      } satisfies TeamLaunchParams;
-      store.setState({
-        launchParamsByTeam: {
-          'my-team': previousParams,
-        },
-      });
-      hoisted.launchTeam.mockRejectedValueOnce(new Error('launch failed'));
+    it.each(['rejected', 'unconfirmed'] as const)(
+      'rolls back staged launch state without claiming a confirmed run (%s)',
+      async (outcome) => {
+        const store = createSliceStore();
+        const previousParams = {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.5',
+          effort: 'medium',
+          limitContext: false,
+        } satisfies TeamLaunchParams;
+        store.setState({
+          launchParamsByTeam: {
+            'my-team': previousParams,
+          },
+        });
+        const message =
+          outcome === 'unconfirmed'
+            ? 'Team saved. Launch was not confirmed. Check this team before launching again.'
+            : 'launch failed';
+        if (outcome === 'unconfirmed')
+          hoisted.launchTeam.mockResolvedValueOnce({
+            runId: 'run-unconfirmed',
+            launchStatus: 'unconfirmed',
+          });
+        else hoisted.launchTeam.mockRejectedValueOnce(new Error(message));
 
-      await expect(
-        store.getState().launchTeam({
-          teamName: 'my-team',
-          cwd: '/tmp/project',
-          providerId: 'anthropic',
-          model: 'sonnet',
-          effort: 'low',
-        })
-      ).rejects.toThrow('launch failed');
+        await expect(
+          store.getState().launchTeam({
+            teamName: 'my-team',
+            cwd: '/tmp/project',
+            providerId: 'anthropic',
+            model: 'sonnet',
+            effort: 'low',
+          })
+        ).rejects.toThrow(message);
 
-      expect(store.getState().launchParamsByTeam['my-team']).toEqual(previousParams);
-    });
+        expect(store.getState().launchParamsByTeam['my-team']).toEqual(previousParams);
+        expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBeUndefined();
+        expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBeUndefined();
+        expect(store.getState().provisioningRuns['run-unconfirmed']).toBeUndefined();
+        expect(store.getState().provisioningErrorByTeam['my-team']).toBe(message);
+        expect(hoisted.launchTeam).toHaveBeenCalledTimes(1);
+        expect(hoisted.getProvisioningStatus).not.toHaveBeenCalled();
+      }
+    );
 
     it('clears a real provisioning run promoted before launchTeam rejects', async () => {
       const store = createSliceStore();

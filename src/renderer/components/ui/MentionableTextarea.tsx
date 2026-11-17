@@ -15,10 +15,7 @@ import {
 } from '@renderer/utils/chipUtils';
 import { handleComposerEnterKey } from '@renderer/utils/composerEnterKey';
 import { isImeComposing } from '@renderer/utils/imeComposition';
-import {
-  doesSuggestionMatchQuery,
-  getSuggestionInsertionText,
-} from '@renderer/utils/mentionSuggestions';
+import { doesSuggestionMatchQuery } from '@renderer/utils/mentionSuggestions';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { findTaskReferenceMatches } from '@renderer/utils/taskReferenceUtils';
 import {
@@ -31,6 +28,7 @@ import { getKnownSlashCommand, parseStandaloneSlashCommand } from '@shared/utils
 import { AutoResizeTextarea } from './auto-resize-textarea';
 import { ChipInteractionLayer } from './ChipInteractionLayer';
 import { CodeChipBadge } from './CodeChipBadge';
+import { parseMentionSegments } from './mentionableSegments';
 import { MentionInteractionLayer } from './MentionInteractionLayer';
 import { MentionSuggestionsPopup } from './MentionSuggestionsPopup';
 import { SlashCommandInteractionLayer } from './SlashCommandInteractionLayer';
@@ -85,80 +83,6 @@ type Segment =
   | UrlSegment
   | ChipSegment
   | SlashCommandSegment;
-
-// Mention segment parsing (splits text into plain text + @mention segments)
-
-/**
- * Splits text into alternating text / @mention segments.
- *
- * Rules:
- * - `@` must be at start of text or preceded by whitespace
- * - The name after `@` must exactly match a suggestion name (case-insensitive)
- * - The character after the name must be whitespace, punctuation, or end-of-text
- * - Longer names are tried first (greedy matching)
- */
-function parseMentionSegments(text: string, suggestions: MentionSuggestion[]): Segment[] {
-  if (!text || suggestions.length === 0) return [{ type: 'text', value: text }];
-
-  // Sort by name length descending for greedy matching
-  const sorted = [...suggestions]
-    .filter((suggestion) => suggestion.type !== 'task')
-    .sort((a, b) => b.name.length - a.name.length);
-
-  const segments: Segment[] = [];
-  let i = 0;
-  let textStart = 0;
-
-  while (i < text.length) {
-    if (text[i] !== '@') {
-      i++;
-      continue;
-    }
-
-    // @ must be at start or after whitespace
-    if (i > 0) {
-      const ch = text[i - 1];
-      if (ch !== ' ' && ch !== '\t' && ch !== '\n' && ch !== '\r') {
-        i++;
-        continue;
-      }
-    }
-
-    let matched = false;
-    for (const suggestion of sorted) {
-      const insertionText = getSuggestionInsertionText(suggestion);
-      const end = i + 1 + insertionText.length;
-      if (end > text.length) continue;
-      if (text.slice(i + 1, end).toLowerCase() !== insertionText.toLowerCase()) continue;
-
-      // Character after name must be boundary
-      if (end < text.length) {
-        const after = text[end];
-        // eslint-disable-next-line no-useless-escape -- escaped chars needed for regex character class
-        if (!/[\s,.:;!?\)\]\}\-]/.test(after)) continue;
-      }
-
-      // Flush preceding text
-      if (i > textStart) {
-        segments.push({ type: 'text', value: text.slice(textStart, i) });
-      }
-
-      segments.push({ type: 'mention', value: text.slice(i, end), suggestion });
-      i = end;
-      textStart = i;
-      matched = true;
-      break;
-    }
-
-    if (!matched) i++;
-  }
-
-  if (textStart < text.length) {
-    segments.push({ type: 'text', value: text.slice(textStart) });
-  }
-
-  return segments;
-}
 
 function parseSuggestionSegments(
   text: string,
@@ -354,6 +278,9 @@ interface MentionableTextareaProps extends Omit<
   onQueue?: () => void;
   /** Called when Shift+Tab is pressed. */
   onShiftTab?: () => void;
+  /** Optional last-priority native follow-up accept; cannot override editor menus or IME. */
+  onNativeNextPromptTab?: (event: React.KeyboardEvent<HTMLTextAreaElement>) => boolean;
+  onNativeNextPromptEscape?: () => boolean;
   /** Ref that receives the dismiss callback to close mention dropdown from outside */
   dismissMentionsRef?: React.MutableRefObject<(() => void) | null>;
   /** Additional rotating tips to append after the defaults */
@@ -387,6 +314,8 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       onModEnter,
       onQueue,
       onShiftTab,
+      onNativeNextPromptTab,
+      onNativeNextPromptEscape,
       dismissMentionsRef,
       extraTips = [],
       style,
@@ -940,6 +869,20 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           });
           if (e.defaultPrevented) return;
         }
+        // Native follow-up accepts only an empty editor with no active menu or
+        // chip. No listener means unchanged native browser Tab navigation.
+        if (
+          e.key === 'Tab' && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey &&
+          !isOpen && value.length === 0 && chips.length === 0 &&
+          onNativeNextPromptTab?.(e)
+        ) {
+          e.preventDefault();
+          return;
+        }
+        if (e.key === 'Escape' && !isOpen && onNativeNextPromptEscape?.()) {
+          e.preventDefault();
+          return;
+        }
         // Shift+Tab → cycle action mode
         if (e.key === 'Tab' && e.shiftKey && onShiftTab) {
           e.preventDefault();
@@ -957,6 +900,10 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
         onQueue,
         suggestionPlacement,
         onShiftTab,
+        onNativeNextPromptTab,
+        onNativeNextPromptEscape,
+        value,
+        chips.length,
         handleChipKeyDown,
         mentionHandleKeyDown,
         isOpen,

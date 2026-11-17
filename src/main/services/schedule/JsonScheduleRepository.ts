@@ -24,6 +24,8 @@ const READ_TIMEOUT_MS = 5_000;
 const MAX_RUNS_PER_SCHEDULE = 50;
 
 export class JsonScheduleRepository implements ScheduleRepository {
+  private metadataWrites: Promise<unknown> = Promise.resolve();
+
   private get basePath(): string {
     return getSchedulesBasePath();
   }
@@ -58,23 +60,26 @@ export class JsonScheduleRepository implements ScheduleRepository {
     return schedules.filter((s) => s.teamName === teamName);
   }
 
-  async saveSchedule(schedule: Schedule): Promise<void> {
-    const schedules = await this.readSchedulesFile();
-    const idx = schedules.findIndex((s) => s.id === schedule.id);
-    if (idx >= 0) {
-      schedules[idx] = schedule;
-    } else {
-      schedules.push(schedule);
-    }
-    await this.writeSchedulesFile(schedules);
+  async saveSchedule(schedule: Schedule, options?: { mustExist: true }): Promise<void> {
+    await this.writeMetadata(async () => {
+      const schedules = await this.readSchedulesFile(true);
+      const idx = schedules.findIndex((s) => s.id === schedule.id);
+      if (idx < 0 && options?.mustExist) throw new Error(`Schedule no longer exists: ${schedule.id}`);
+      if (idx >= 0) schedules[idx] = schedule;
+      else schedules.push(schedule);
+      await this.writeSchedulesFile(schedules);
+    });
   }
 
-  async deleteSchedule(id: string): Promise<void> {
-    const schedules = await this.readSchedulesFile();
-    const filtered = schedules.filter((s) => s.id !== id);
-    if (filtered.length !== schedules.length) {
-      await this.writeSchedulesFile(filtered);
-    }
+  async deleteSchedule(id: string, onCommitted?: () => void | Promise<void>): Promise<void> {
+    const { cleanup } = await this.writeMetadata(async () => {
+      const schedules = await this.readSchedulesFile(true);
+      const filtered = schedules.filter((s) => s.id !== id);
+      if (filtered.length !== schedules.length) await this.writeSchedulesFile(filtered);
+      // Fence admission at commit, but do not hold metadata writes during native cleanup.
+      return { cleanup: onCommitted?.() };
+    });
+    await cleanup;
     // Clean up runs and logs
     const runsFile = this.runsFilePath(id);
     await fs.promises.unlink(runsFile).catch(() => undefined);
@@ -135,8 +140,14 @@ export class JsonScheduleRepository implements ScheduleRepository {
   // Internal I/O
   // ---------------------------------------------------------------------------
 
-  private async readSchedulesFile(): Promise<Schedule[]> {
-    return this.readJsonFile<Schedule[]>(this.schedulesFilePath, []);
+  private writeMetadata<T>(action: () => Promise<T>): Promise<T> {
+    const write = this.metadataWrites.then(action);
+    this.metadataWrites = write.catch(() => undefined);
+    return write;
+  }
+
+  private async readSchedulesFile(requireReadable = false): Promise<Schedule[]> {
+    return this.readJsonFile<Schedule[]>(this.schedulesFilePath, [], requireReadable);
   }
 
   private async writeSchedulesFile(schedules: Schedule[]): Promise<void> {
@@ -151,7 +162,7 @@ export class JsonScheduleRepository implements ScheduleRepository {
     await atomicWriteAsync(this.runsFilePath(scheduleId), JSON.stringify(runs, null, 2));
   }
 
-  private async readJsonFile<T>(filePath: string, defaultValue: T): Promise<T> {
+  private async readJsonFile<T>(filePath: string, defaultValue: T, requireReadable = false): Promise<T> {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), READ_TIMEOUT_MS);
@@ -168,6 +179,7 @@ export class JsonScheduleRepository implements ScheduleRepository {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return defaultValue;
       }
+      if (requireReadable) throw error;
       logger.warn(
         `Failed to read ${filePath}: ${error instanceof Error ? error.message : String(error)}`
       );

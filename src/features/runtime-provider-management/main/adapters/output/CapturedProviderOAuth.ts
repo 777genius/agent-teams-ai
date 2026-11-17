@@ -145,6 +145,7 @@ export class CapturedProviderOAuth {
         'cancelling',
         'completed',
         'cancelled',
+        'failed',
         'held',
       ].includes(String(snapshot.phase)) ||
       ![null, 'code', 'auto'].includes(snapshot.completionMethod as string | null) ||
@@ -221,7 +222,7 @@ export class CapturedProviderOAuth {
         sequence = snapshot.sequence;
       }
       if (snapshot.phase === 'completed') return;
-      if (snapshot.phase === 'held' || snapshot.phase === 'cancelled')
+      if (snapshot.phase === 'held' || snapshot.phase === 'cancelled' || snapshot.phase === 'failed')
         throw new Error('OAuth outcome unconfirmed');
       if (Date.now() >= snapshot.expiresAt) {
         await target.request('oauth.cancel', { operationId: intent.operationId });

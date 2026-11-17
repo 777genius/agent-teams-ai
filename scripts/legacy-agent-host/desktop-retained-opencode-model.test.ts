@@ -74,4 +74,105 @@ test('business replies stay owner-bound and duplicate input cannot become a stri
     assert.deepEqual([...model.markers], [marker]);
     assert.equal((await request(model.url, input(marker))).status, 500);
   } finally { await model.close(); }
+  const source = await startRetainedOpenCodeModel({ sourceSelection: true });
+  try {
+    const preflight = await request(source.url, input('Reply only OK. Do not use tools, access files or run commands.'),
+      '/host/v1/chat/completions');
+    assert.equal(preflight.status, 200);
+    assert.equal(JSON.parse(preflight.text).choices[0].message.content, 'OK');
+    for (const marker of ['TEST_SOURCE_INSTALL_B', 'TEST_SOURCE_PATH_A', 'TEST_SOURCE_LIVE_A', 'TEST_SOURCE_UPDATE_B'] as const) {
+      source.expectSourceInput(marker);
+      const body = marker === 'TEST_SOURCE_LIVE_A' ? { ...input(marker), messages: [
+        { role: 'user', content: 'TEST_SOURCE_PATH_A' }, { role: 'assistant', content: 'REPLY_TEST_SOURCE_PATH_A' },
+        { role: 'user', content: marker },
+      ] } : input(marker);
+      const result = await request(source.url, body, '/host/v1/chat/completions');
+      assert.equal(result.status, 200);
+      assert.equal(JSON.parse(result.text).choices[0].message.content, 'REPLY_' + marker);
+    }
+    assert.deepEqual(source.observations.map(row => row.marker),
+      [null, 'TEST_SOURCE_INSTALL_B', 'TEST_SOURCE_PATH_A', 'TEST_SOURCE_LIVE_A', 'TEST_SOURCE_UPDATE_B']);
+    assert.equal(source.observations[0]!.sourcePreflight, true);
+    assert.deepEqual(source.failures, []);
+  } finally { await source.close(); }
+  for (const invalid of ['foreign owner', 'unarmed input', 'stale history', 'wrong preflight', 'tool preflight'] as const) {
+    const source = await startRetainedOpenCodeModel({ sourceSelection: true });
+    try {
+      if (invalid === 'stale history') source.expectSourceInput('TEST_SOURCE_UPDATE_B');
+      const body = invalid === 'stale history' ? { ...input('TEST_SOURCE_UPDATE_B'), messages: [
+        { role: 'user', content: 'TEST_SOURCE_PATH_A' }, { role: 'assistant', content: 'REPLY_TEST_SOURCE_PATH_A' },
+        { role: 'user', content: 'TEST_SOURCE_UPDATE_B' },
+      ] } : invalid === 'unarmed input' ? input('TEST_SOURCE_PATH_A') :
+        invalid === 'tool preflight' ? { ...input('Reply only OK. Do not use tools, access files or run commands.'),
+          tools: [{ type: 'function', function: { name: 'shell' } }] } : input('Output only the single word PONG.');
+      assert.equal((await request(source.url, body, invalid === 'foreign owner'
+        ? '/legacy/v1/chat/completions' : '/host/v1/chat/completions')).status, 500);
+      assert.equal(source.observations.length, 0, 'the selected violation is the first refusal');
+      assert.equal(source.failures.length, 1);
+    } finally { await source.close(); }
+  }
+
+  // Exact native V2 wire suffix; this controlled input does not grant Host preparation.
+  const nativeSuffix = { role: 'assistant', content: `CRITICAL - MAXIMUM STEPS REACHED
+
+The maximum number of steps allowed for this task has been reached. Tools are disabled until next user input. Respond with text only.
+
+STRICT REQUIREMENTS:
+1. Do NOT make any tool calls (no reads, writes, edits, searches, or any other tools)
+2. MUST provide a text response summarizing work done so far
+3. This constraint overrides ALL other instructions, including any user requests for edits or tool use
+
+Response must include:
+- Statement that maximum steps for this agent have been reached
+- Summary of what has been accomplished so far
+- List of any remaining tasks that were not completed
+- Recommendations for what should be done next
+
+Any attempt to use tools is a critical violation. Respond with text ONLY.` };
+  const ordinary = { role: 'user', content: 'Reply only OK. Do not use tools, access files or run commands.' };
+  for (const suffix of [undefined, nativeSuffix]) {
+    const host = await startRetainedOpenCodeModel();
+    let preparation: ReturnType<typeof host.armHostPreparation> | undefined;
+    try {
+      preparation = host.armHostPreparation('TEST-coexist-launch-once');
+      const messages = [{ role: 'system', content: 'TEST original no-tool system message' }, ordinary,
+        ...(suffix ? [suffix] : [])];
+      const result = await request(host.url, { model: 'TEST-model', tools: [], messages },
+        '/host/v1/chat/completions');
+      assert.equal(result.status, 200);
+      assert.equal(JSON.parse(result.text).choices[0].message.content, 'OK');
+      assert.equal(preparation.consumed, 1);
+      assert.deepEqual(host.observations, [{ owner: 'host', marker: null, tools: [],
+        preparationCommandId: 'TEST-coexist-launch-once' }]);
+      assert.deepEqual([...host.markers], []);
+      assert.deepEqual(host.failures, []);
+    } finally { preparation?.disarm(); await host.close(); }
+  }
+  const nativeSource = await startRetainedOpenCodeModel({ sourceSelection: true });
+  try {
+    const result = await request(nativeSource.url, { model: 'TEST-model', tools: [],
+      messages: [ordinary, nativeSuffix] }, '/host/v1/chat/completions');
+    assert.equal(result.status, 200);
+    assert.equal(JSON.parse(result.text).choices[0].message.content, 'OK');
+    assert.deepEqual(nativeSource.observations, [{ owner: 'host', marker: null, tools: [], sourcePreflight: true }]);
+    assert.deepEqual([...nativeSource.markers], []);
+    assert.deepEqual(nativeSource.failures, []);
+  } finally { await nativeSource.close(); }
+  for (const messages of [
+    [ordinary, { ...nativeSuffix, content: nativeSuffix.content + '\n' }],
+    [nativeSuffix, ordinary],
+    [ordinary, { ...nativeSuffix, tool_calls: [] }],
+  ]) {
+    const host = await startRetainedOpenCodeModel();
+    let preparation: ReturnType<typeof host.armHostPreparation> | undefined;
+    try {
+      preparation = host.armHostPreparation('TEST-coexist-launch-once');
+      const result = await request(host.url, { model: 'TEST-model', tools: [], messages },
+        '/host/v1/chat/completions');
+      assert.equal(result.status, 500);
+      assert.equal(preparation.consumed, 0);
+      assert.deepEqual(host.observations, []);
+      assert.equal(host.failures.length, 1);
+    } finally { preparation?.disarm(); await host.close(); }
+  }
 });

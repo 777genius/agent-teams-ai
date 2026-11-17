@@ -1,0 +1,68 @@
+{
+  "sourceCommit": "b4499afb7a48c4efb67e4a494690aca0921672ef",
+  "sourceTree": "42b470230ab98a085f5b7bffe8c063cc09bd4818",
+  "sourceWorkingTreeClean": true,
+  "toolchain": {
+    "node": "26.11.1",
+    "pnpm": "11.18.0"
+  },
+  "fullChecks": [
+    {
+      "node": "24.21.0",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "log": "parity-v2-key-p04-d-check24.log"
+    },
+    {
+      "node": "26.11.1",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "log": "parity-v2-key-p04-d-check26.log"
+    }
+  ],
+  "qualification": "source-and-packed-consumer-only",
+  "nativeHostQualified": false,
+  "packagedElectronQualified": false,
+  "recipe": "pnpm check; AGENT_TEAMS_PROVIDER_PACK_TEST_RETAIN_DIR=<archives> pnpm --filter @agent-teams/provider-implementations test:package",
+  "nativeProtocolReference": {
+    "package": "@opencode/client@2.1.4",
+    "tarball": "https://registry.npmjs.org/@opencode/client/-/client-2.1.4.tgz",
+    "sha256": "bf888e996a3cc8e2884ca1d5503b00de4d8253af012facc62305c9156451e197",
+    "integrityVerified": true
+  },
+  "packages": {
+    "provider-implementations": {
+      "oldSha256": "ceafcfc99defd2a402cef7091041bf46bd828c3baeff8bc05529f06f397fd384",
+      "newSha256": "659039aad0693903555be363ce055bf0c50864b385486f8313f6f3b6600a1cc2",
+      "changed": [
+        "package/dist/features/provider-session-implementation/adapters/claude-sdk/config.d.ts",
+        "package/dist/features/provider-session-implementation/adapters/claude-sdk/config.js",
+        "package/dist/features/provider-session-implementation/adapters/claude-sdk/factory.js",
+        "package/dist/features/provider-session-implementation/adapters/claude-sdk/open-session.js",
+        "package/dist/features/provider-session-implementation/adapters/claude-sdk/session.js",
+        "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-catalog.d.ts",
+        "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-catalog.js",
+        "package/dist/features/provider-session-implementation/internal.d.ts",
+        "package/dist/features/provider-session-implementation/internal.js",
+        "package/dist/opencode.d.ts",
+        "package/dist/opencode.js"
+      ],
+      "added": [
+        "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-client.d.ts",
+        "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-client.js",
+        "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-wire.d.ts",
+        "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-wire.js"
+      ],
+      "removed": []
+    },
+    "provider-session-contracts": {
+      "oldSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+      "newSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+      "changed": [],
+      "added": [],
+      "removed": []
+    }
+  }
+}

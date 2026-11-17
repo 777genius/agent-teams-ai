@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { OpenCodeManagementError } from '../adapters/providers/OpenCodeManagementHost.js';
+import { OpenCodeConfigurationError } from '../adapters/providers/OpenCodeConfigurationSource.js';
 import { ManagementCommandError } from '../management/commandRecords.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import type { HostMethod } from '../index.js';
@@ -32,6 +33,8 @@ export function createProviderManagementMethods(
       catalog: (raw) => management!.catalog(raw),
       credential: (raw) => management!.credentials.execute(raw),
       'credential.lookup': (raw) => management!.credentials.lookup(raw),
+      'credential.pending': (raw) => management!.pendingCredential(raw),
+      'credential.resume': (raw) => management!.credentials.resume(raw),
       'oauth.start': (raw) => management!.oauth.start(raw),
       'oauth.read': (raw) => management!.oauth.read(raw),
       'oauth.authorization': (raw) => management!.oauth.authorization(raw),
@@ -50,6 +53,8 @@ export function createProviderManagementMethods(
           operation === 'extension.lookup' ||
           operation === 'extension.pending' ||
           operation === 'credential.lookup' ||
+          operation === 'credential.pending' ||
+          operation === 'credential.resume' ||
           operation === 'probe.read' ||
           operation === 'probe.cancel' ||
           (operation.startsWith('oauth.') && operation !== 'oauth.start')
@@ -58,10 +63,14 @@ export function createProviderManagementMethods(
         async handle(raw): Promise<JsonValue> {
           try {
             if (isSealed()) throw new OpenCodeManagementError('unavailable');
+            // Pure original readbacks already project pending cold operations as held.
+            if (operation !== 'probe.read' && operation !== 'oauth.read')
+              management.assertTargetAvailable(raw);
             return { ok: true, value: JSON.parse(JSON.stringify(await action(raw))) as JsonValue };
           } catch (error) {
             return {
               ok: false,
+              ...(error instanceof OpenCodeConfigurationError ? { reason: error.reason } : {}),
               code:
                 error instanceof OpenCodeManagementError || error instanceof ManagementCommandError
                   ? error.code

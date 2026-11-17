@@ -88,7 +88,7 @@ import {
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
-import type { CliInstallationStatus } from '@shared/types';
+import type { CliInstallationStatus, OpenCodeRuntimeStatus } from '@shared/types';
 
 function createMultimodelProvider(
   overrides: Partial<CliInstallationStatus['providers'][number]> & {
@@ -965,6 +965,36 @@ describe('cliInstallerSlice', () => {
   });
 
   describe('OpenCode runtime installer actions', () => {
+    it('keeps download completion pending until the original install and Host selection return', async () => {
+      let release!: (status: OpenCodeRuntimeStatus) => void;
+      vi.mocked(api.openCodeRuntime.install).mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            release = resolve;
+          })
+      );
+      vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(
+        createReadyOpenCodeCatalogProvider('opencode/big-pickle')
+      );
+      const install = useStore.getState().installOpenCodeRuntime();
+      await vi.waitFor(() => expect(release).toBeTypeOf('function'));
+      const downloaded: OpenCodeRuntimeStatus = {
+        installed: true,
+        state: 'ready',
+        source: 'app-managed',
+        version: '1.19.5',
+      };
+      useStore.getState().applyOpenCodeRuntimeProgress(downloaded);
+      expect(useStore.getState().openCodeRuntimeStatus?.state).toBe('checking');
+      expect(useStore.getState().openCodeRuntimeStatusLoading).toBe(true);
+      release({ ...downloaded, sourceRevision: 'TEST-published-source' });
+      await install;
+      expect(useStore.getState().openCodeRuntimeStatus).toMatchObject({
+        state: 'ready',
+        sourceRevision: 'TEST-published-source',
+      });
+    });
+
     it('refreshes OpenCode provider status after a successful app-managed install', async () => {
       const placeholder = createMultimodelProvider({
         providerId: 'opencode',

@@ -133,6 +133,38 @@ test(
       [],
       'composition creates no Team state'
     );
+
+    const setup = await prepareDesktopBackendFixture(repo, {
+      pnpmEntry: join(root, 'dist/pnpm.js'),
+      nativeOpenCodeV2: selection,
+      configuredLaunchSetup: true,
+    });
+    t.after(() => rm(setup.root, { recursive: true, force: true }));
+    const setupProfile = readTeamHostProfile(setup.profilePath, setup.pins.profileSha256);
+    assert.equal(setupProfile.creation, undefined, 'configured setup does not enable Create or Launch-dialog defaults');
+    assert.equal(setupProfile.runtime!.initialModelAdmissions, undefined, 'Main setup cannot borrow native bootstrap admission');
+    assert.deepEqual(setupProfile.teams[0]!.members.map(({ memberId, name, role }) => ({ memberId, name, role })),
+      [{ memberId: 'alice-id', name: 'alice', role: 'lead' }]);
+    const setupMember = setupProfile.runtime!.members[0]!, setupManagement = setupProfile.management![0]!;
+    assert.equal(setupMember.memberId, 'alice-id');
+    assert.equal(setupMember.principalId, 'alice-session');
+    assert.equal(setupMember.generation, member.generation);
+    assert.equal(setupMember.provider, 'opencode');
+    assert.equal(setupManagement.provider, 'opencode');
+    if (setupMember.provider !== 'opencode' || setupManagement.provider !== 'opencode')
+      throw new Error('Missing exact configured V2 setup');
+    assert.equal(setupMember.nativeGeneration, 'v2');
+    assert.deepEqual(setupMember.executable, member.executable);
+    assert.deepEqual(setupManagement.executable, setupMember.executable);
+    assert.deepEqual(setupManagement.embedded, setupMember.embedded);
+    assert.deepEqual(setupManagement.nativeModel, management.nativeModel);
+    const setupDescriptor = JSON.parse(await readFile(setup.descriptorPath, 'utf8'));
+    assert.equal(setupDescriptor.owners[0].profile.env.LEGACY_AGENT_HOST_PROFILE_SHA256, setup.pins.profileSha256);
+    assert.equal(hash(await readFile(setup.descriptorPath)), setup.pins.descriptorSha256);
+    assert.deepEqual(setupDescriptor.management.map((entry: { projectPath: string | null }) => entry.projectPath),
+      [null, join(setup.root, 'workspace')]);
+    assert.deepEqual(await readdir(setupMember.environment.XDG_DATA_HOME!), []);
+    assert.deepEqual(await readdir(join(setup.root, 'hoststore')), []);
     const input = { repo, root: fixture.root, node: fixture.node, identity: member, selection };
     await assert.rejects(
       prepareDesktopOpenCodeV2Recipe({

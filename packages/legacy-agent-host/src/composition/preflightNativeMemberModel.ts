@@ -1,3 +1,6 @@
+import { captureOpenCodeProbeAccount, capturePreparedModelReference } from './prepareTeamModelReadiness.js';
+import { modelReadinessMechanismDigest } from '../team-launch/launchReadiness.js';
+import type { ModelReadinessReference } from '../management/commandRecords.js';
 import { effectId } from '../team/identity.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
@@ -11,12 +14,14 @@ import type {
 
 /** The existing one-off model owner remains the only probe journal/resource owner. */
 export async function preflightNativeMemberModel(options: {
-  management: Pick<ProviderManagementCoordinator, 'admitTeamProbeProfile' | 'probes'>;
+  management: Pick<ProviderManagementCoordinator, 'admitTeamProbeProfile' | 'probes' | 'readinessTarget'>;
   profile: RuntimeMemberProfile;
   source: NativeMemberCreationAuthority;
   input: NativeMemberCreationInput;
+  teamBindingDigest: string;
   assertCurrent(): void;
-}): Promise<void> {
+}): Promise<ModelReadinessReference | undefined> {
+  const admittedAt = Date.now();
   const profile = structuredClone(options.profile),
     input = structuredClone(options.input);
   const selected = teamModelProbeProfile(profile),
@@ -51,7 +56,12 @@ export async function preflightNativeMemberModel(options: {
   current();
   options.management.admitTeamProbeProfile(selected);
   const owner = options.management.probes;
-  let value = owner.start(
+  const retained = selected.provider === 'opencode' && owner.read(identity)
+    ? owner.readRetainedProbe(identity.commandId, context) : undefined;
+  const account = selected.provider === 'opencode'
+    ? captureOpenCodeProbeAccount(selected, { providerId: profile.provider === 'opencode' ? profile.nativeOptions.providerId : '',
+      modelId: profile.model }, isCurrent) : undefined;
+  let value = owner.startPrepared(
     {
       ...identity,
       providerId:
@@ -65,7 +75,15 @@ export async function preflightNativeMemberModel(options: {
       ...(effort === undefined ? {} : { effort }),
       ...(modelContext === undefined ? {} : { modelContext }),
     },
-    isCurrent
+    isCurrent, undefined, selected.provider === 'opencode' && (!retained || retained.readinessScope) ? {
+      schemaVersion: 1, kind: 'native', teamBindingDigest: options.teamBindingDigest,
+      actionDigest: runtimeDigest({ input, authority: options.source.fingerprint }),
+      selectionDigest: runtimeDigest(input), sourceRevision: options.source.team.source.runId,
+      rosterRevision: input.expectedRosterRevision, mechanismDigest: modelReadinessMechanismDigest(selected),
+      workspace: selected.cwd, cutoff: retained?.readinessScope?.cutoff ?? admittedAt + (selected.modelProbeTimeoutMs ?? 90000),
+      destinationKeys: [runtimeDigest({ launchId: options.source.team.source.runId, memberId: profile.memberId })],
+      ...(account ? { accountDigest: account.digest } : {}),
+    } : undefined
   );
   try {
     while (value.phase === 'running') {
@@ -90,6 +108,8 @@ export async function preflightNativeMemberModel(options: {
     current();
     if (value.phase !== 'completed' || !value.ok)
       throw new TeamLaunchError('hold', 'native-member-model-preflight');
+    return profile.provider === 'opencode' ? capturePreparedModelReference({ management: options.management,
+      profile, commandId: identity.commandId, context, kind: 'native', isCurrent }) : undefined;
   } catch (error) {
     // Cleanup only the exact original probe; never replace its command or retry inference.
     if (value.phase === 'running') {

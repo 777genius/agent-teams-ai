@@ -25,6 +25,7 @@ test(
     for (const directory of ['home', 'tmp', 'workspace']) await mkdir(join(root, directory));
     await prepareDesktopStoppedImport(root, { priorRun: true, node: process.execPath });
     const seed = await readDesktopStoppedImportSeed(root);
+    assert.ok(seed.sourceKind !== 'actual-current-native-solo');
     assert.equal(seed.sourceKind, 'captured-stopped-solo');
     assert.ok(seed.priorRun);
     const preparation = await json(seed.priorRun.path);
@@ -60,6 +61,7 @@ test('stopped import UI fixture stages only never-launched legacy product data w
   });
   t.after(() => rm(fixture.root, { recursive: true, force: true }));
   const seed = await readDesktopStoppedImportSeed(fixture.root);
+  assert.ok(seed.sourceKind !== 'actual-current-native-solo');
   const descriptor = await json(fixture.descriptorPath);
   const profile = await json(fixture.profilePath);
   assert.equal(descriptor.creation.importAuthority.principalId, profile.principalId);
@@ -157,6 +159,38 @@ test('import UI model proof permits finite exact preflight receipts while refusi
     unexpectedNoToolsRequests: [],
   };
   assert.doesNotThrow(() => assertStoppedImportModelChecks([receipt], model, selected));
+  const omittedSelection = { model: selected.model };
+  const omittedReceipt = {
+    commandId: receipt.commandId,
+    kind: receipt.kind,
+    modelId: selected.model,
+    phase: receipt.phase,
+    ok: true,
+    resourceHeld: false,
+  };
+  const omittedModel = {
+    ...model, probes: [{ requestedModel: selected.model, requestedEffort: 'high' }],
+  };
+  assert.doesNotThrow(() =>
+    assertStoppedImportModelChecks([omittedReceipt], omittedModel, omittedSelection)
+  );
+  assert.throws(() => assertStoppedImportModelChecks([receipt], omittedModel, omittedSelection));
+  assert.throws(() => assertStoppedImportModelChecks([omittedReceipt], model, omittedSelection));
+  assert.throws(() =>
+    assertStoppedImportModelChecks([{ ...omittedReceipt, effort: 'high' }], omittedModel, omittedSelection)
+  );
+  assert.throws(() =>
+    assertStoppedImportModelChecks(
+      [omittedReceipt], { ...model, probes: [{ requestedModel: selected.model }] }, omittedSelection
+    )
+  );
+  assert.throws(() =>
+    assertStoppedImportModelChecks(
+      [{ ...omittedReceipt, modelId: 'claude-opus-4-6' }],
+      { ...model, probes: [{ requestedModel: 'claude-opus-4-6', requestedEffort: 'high' }] },
+      { model: 'claude-opus-4-6' }
+    )
+  );
   assert.doesNotThrow(() =>
     assertStoppedImportModelChecks(
       [receipt, { ...receipt, commandId: 'TEST-probe-2' }],

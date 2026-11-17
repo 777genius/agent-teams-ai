@@ -38,11 +38,12 @@ export function createHostTeamLaunchSubmission(options: {
     try {
       const view = await launch.capture(
         request.savedRosterCommandId,
-        `capture:${command.commandId}`
+        `capture:${command.commandId}`,
+        request.modelPreparation
       );
       if (!current())
         throw new HostTeamOperationError('context-changed', 'unknown', command.commandId);
-      const result = await launch.start(view, undefined, command.commandId);
+      const result = await launch.start(view, undefined, command.commandId, request.modelPreparation);
       if (!current())
         throw new HostTeamOperationError('context-changed', 'unknown', command.commandId);
       return {

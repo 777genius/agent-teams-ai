@@ -24,6 +24,7 @@ import {
 import { afterEach, expect, test, vi } from 'vitest';
 
 import { FileManagementCommandStore } from '../packages/legacy-agent-host/src/adapters/providers/FileManagementCommandStore';
+import { OpenCodeManagementError } from '../packages/legacy-agent-host/src/adapters/providers/OpenCodeManagementHost';
 import { createProviderManagementMethods } from '../packages/legacy-agent-host/src/composition/createProviderManagementMethods';
 import { ProviderManagementCoordinator } from '../packages/legacy-agent-host/src/composition/ProviderManagementCoordinator';
 import { ManagementResourceFence } from '../packages/legacy-agent-host/src/management/ManagementResourceFence';
@@ -977,6 +978,8 @@ test('existing real watcher observes only captured sandbox roots and suppresses 
 test('actual management composition shares durable Skills admission with credentials and never returns a Trash dispatch on lookup', async () => {
   const f = fixture();
   const root = join(f.config, 'skills');
+  const journalDirectory = join(f.storage, 'management-commands');
+  let originalJournal: { name: string; bytes: string } | undefined;
   mkdirSync(join(root, 'demo'), { recursive: true });
   writeFileSync(join(root, 'demo/SKILL.md'), md());
   let sealed = false;
@@ -1026,7 +1029,17 @@ test('actual management composition shares durable Skills admission with credent
     })) as Awaited<ReturnType<SkillCoordinator['mutate']>>;
     assert.equal(result.receipt.phase, 'held');
     assert.ok(result.nativeTrash);
-    assert.equal([...f.store.list()][0]!.kind, 'skill.mutation');
+    const original = [...f.store.list()][0]!;
+    assert.equal(original.kind, 'skill.mutation');
+    assert.equal(original.commandId, 'TEST-composed-trash');
+    assert.ok(original.kind === 'skill.mutation' && original.action === 'trash');
+    assert.equal(original.resourceHeld, true);
+    const files = readdirSync(journalDirectory);
+    assert.equal(files.length, 1);
+    originalJournal = {
+      name: files[0]!,
+      bytes: readFileSync(join(journalDirectory, files[0]!), 'utf8'),
+    };
     await assert.rejects(
       management.credentials.execute({
         commandId: 'TEST-must-not-run-provider',
@@ -1051,6 +1064,16 @@ test('actual management composition shares durable Skills admission with credent
       { ok: false, code: 'unavailable' }
     );
   } finally {
-    await management.close();
+    if (originalJournal) {
+      await assert.rejects(
+        management.close(),
+        (error) => error instanceof OpenCodeManagementError && error.code === 'held'
+      );
+      assert.deepEqual(readdirSync(journalDirectory), [originalJournal.name]);
+      assert.equal(
+        readFileSync(join(journalDirectory, originalJournal.name), 'utf8'),
+        originalJournal.bytes
+      );
+    } else await management.close();
   }
 });

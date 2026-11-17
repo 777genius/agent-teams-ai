@@ -31,3 +31,14 @@ An absent external descriptor retains the old bundled runtime mode; malformed
 or incomplete new metadata fails closed. Focused coverage is in
 `test/features/opencode-runtime-installer/v2Support.test.ts` and the existing
 installer, quick-connect, environment, and packaged-runtime suites.
+
+When the desktop Host is selected, the existing Install and Refresh actions use
+`CapturedOpenCodeRuntimeInstaller`. Native acquisition is followed by publication
+through the original private source grant. The Host retains the exact candidate
+in its existing command receipt and verifies native identity before new launches
+can capture it. A restarted installer recovers that original receipt before a new
+acquisition; an unknown native outcome never starts a replacement check.
+CLI version, engine version and source revision are distinct status fields.
+Running captures keep their original selection. This route retains the selected
+V1/V2 generation; transitions and provider versions outside the Host qualification
+contract fail explicitly.

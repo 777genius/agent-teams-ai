@@ -31,11 +31,17 @@ try {
   if (path || digest) {
     if (!path || !digest) throw new Error('Invalid host profile');
     // Transport-only hosts do not load provider SDKs or Team persistence machinery.
-    const [{ createTeamHost }, { readTeamHostProfile }] = await Promise.all([
+    const [{ createTeamHost }, { readTeamHostProfile }, { parsePromptSuggestionProviders }] = await Promise.all([
       import('./composition/TeamHost.js'),
       import('./composition/readProfile.js'),
+      import('./composition/createCapturedPromptSuggestionBinding.js'),
     ]);
-    server = createTeamHost(readTeamHostProfile(path, digest), streams);
+    // Trusted Main passes a captured user preference at Host startup.
+    // No renderer command or alteration of an already-running SDK Query.
+    // Throws on anything but a comma separated subset of the known providers (empty = none).
+    const providers = process.env.AGENT_TEAMS_NATIVE_NEXT_PROMPT_PROVIDERS;
+    server = createTeamHost(readTeamHostProfile(path, digest), streams,
+      providers === undefined ? undefined : { promptSuggestionProviders: parsePromptSuggestionProviders(providers) });
   } else {
     server = createHostServer({ ...streams, buildId: 'legacy-agent-host/0.1.0' });
   }

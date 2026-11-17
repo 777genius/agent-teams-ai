@@ -2364,7 +2364,8 @@ export class TeamDataService {
   async startTaskByUser(
     teamName: string,
     taskId: string,
-    admission?: { expectedOwner: string; canStart: () => Promise<boolean> }
+    admission?: { expectedOwner: string; expectedRunId: string;
+      isCurrent: () => boolean; canStart: () => Promise<boolean> }
   ): Promise<{ notifiedOwner: boolean }> {
     const tasks = await this.taskReader.getTasks(teamName);
     let task = tasks.find((t) => t.id === taskId);
@@ -2392,6 +2393,7 @@ export class TeamDataService {
       }
       task = latestTask; // Notify using the actual post-admission task contents.
     }
+    if (admission && !admission.isCurrent()) throw new Error('Scheduled task start superseded');
     this.getTaskBoard(teamName).startTask(taskId, 'user');
     this.invalidateGlobalTaskProjectionCache();
     const notifiedOwner = task.owner

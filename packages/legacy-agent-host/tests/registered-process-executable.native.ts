@@ -16,7 +16,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { mock, test } from 'node:test';
 import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-source.ts';
-import type { ChildProcessWithoutNullStreams } from 'node:child_process';
+import type { ObservableNativeProcess } from '../dist/owned-process/processFacade.js';
 
 const candidateBuild = process.env.OPENCODE_V2_EMBEDDED_DARWIN_CANDIDATE_BUILD;
 if (candidateBuild) {
@@ -43,7 +43,7 @@ const digest = async (file: string) =>
     .update(await readFile(file))
     .digest('hex');
 
-function readReady(child: ChildProcessWithoutNullStreams): Promise<void> {
+function readReady(child: ObservableNativeProcess): Promise<void> {
   return new Promise((resolve, reject) => {
     let bytes = Buffer.alloc(0);
     const done = (error?: Error) => {
@@ -101,7 +101,7 @@ test(
     const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-native-darwin-executable-')));
     const owned: {
       custody: InstanceType<typeof CapturedProcess>;
-      child: ChildProcessWithoutNullStreams;
+      child: ChildProcess & ObservableNativeProcess;
     }[] = [];
     let failure: unknown,
       cleanup = false;
@@ -149,6 +149,7 @@ test(
             "process.stdin.resume();process.stdin.on('end',()=>process.exit(0));setTimeout(()=>process.exit(1),60000).unref();process.stdout.write(JSON.stringify({pid:process.pid,version:Bun.version})+'\\n');",
           ],
         });
+        assert.ok(child instanceof ChildProcess, 'Darwin native capture requires the actual Node child');
         child.stdin.on('error', () => {});
         const row = { custody, child };
         owned.push(row);

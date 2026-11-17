@@ -39,7 +39,7 @@ export function readHostTeamActivity(
       query ?? raw
     );
     const result = query
-      ? { kind: 'team-activity-stats', stats: summarizeTeamActivity(query.memberName, logs) }
+      ? { kind: 'team-activity-stats', stats: summarizeTeamActivity(query.memberName, logs, options.entries) }
       : { kind: 'team-activity-logs', logs };
     return JSON.parse(JSON.stringify(result)) as JsonValue;
   } catch (error) {

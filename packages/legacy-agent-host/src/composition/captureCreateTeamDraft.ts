@@ -3,15 +3,22 @@ import { digest, effectId } from '../team/identity.js';
 import { teamRosterRevision } from '../team/rosterSchema.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
 import { createTeamLaunchPreparationInputSchema } from '../team-registry/createLaunchContracts.js';
-import { captureRuntimeSource, compileRuntimeCapture } from './runtimeCaptureSource.js';
+import {
+  captureRuntimeSource,
+  compileRuntimeCapture,
+  runtimeCaptureSourceSelections,
+} from './runtimeCaptureSource.js';
 import { teamModelProbeProfile, teamModelProbeEffort } from './teamLaunchModelProbe.js';
+import { resolveCapturedRuntimeRecipe } from './runtimeRecipe.js';
 import type { TeamHostProfile } from './TeamHost.js';
+import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
 
 /** Compile product intent with the existing launch mapper before any Team namespace exists. */
 export function captureCreateTeamDraft(
   profile: TeamHostProfile,
   raw: unknown,
-  validateWorkspace = true
+  validateWorkspace = true,
+  sources?: RuntimeRecipeSources
 ) {
   const input = createTeamLaunchPreparationInputSchema.parse(raw);
   const { draft } = input;
@@ -19,17 +26,15 @@ export function captureCreateTeamDraft(
     throw new TeamLaunchError('forbidden', 'creation-context');
   const templates = profile.runtime?.providerTemplates ?? [];
   if (!templates.length) throw new TeamLaunchError('invalid', 'creation-provider-unconfigured');
-  if (
-    draft.members.some(({ name }) => Number(name.match(/-(\d+)$/)?.[1] ?? 0) >= 2)
-  )
+  if (draft.members.some(({ name }) => Number(name.match(/-(\d+)$/)?.[1] ?? 0) >= 2))
     throw new TeamLaunchError('invalid', 'creation-option-unconfigured');
-  const draftDigest = digest({
+  const seedDraftDigest = digest({
     owner: profile.owner,
     principalId: profile.principalId,
     draft,
     templates,
   });
-  const teamId = effectId('creation-preflight', draftDigest);
+  const teamId = effectId('creation-preflight', seedDraftDigest);
   const members = [
     {
       memberId: 'lead',
@@ -67,13 +72,29 @@ export function captureCreateTeamDraft(
     ...profile,
     runtime: { members: [], providerTemplates: templates },
   };
-  const source = captureRuntimeSource(explicit, { definition }, 'preflight', 'preflight', {
-    revision: teamRosterRevision(members, 0, draft.savedSettings),
-    members,
-    removedMembers: [],
-    savedSettings: draft.savedSettings,
-  });
-  const compiled = compileRuntimeCapture(explicit, { definition }, source, 'model-preflight');
+  const source = captureRuntimeSource(
+    explicit,
+    { definition },
+    'preflight',
+    'preflight',
+    {
+      revision: teamRosterRevision(members, 0, draft.savedSettings),
+      members,
+      removedMembers: [],
+      savedSettings: draft.savedSettings,
+    },
+    sources ? { sources } : {}
+  );
+  const compiled = compileRuntimeCapture(
+    explicit,
+    { definition },
+    source,
+    'model-preflight',
+    sources
+  );
+  const draftDigest = source.recipeSources?.length
+    ? digest({ seedDraftDigest, sourceReferences: source.recipeSources })
+    : seedDraftDigest;
   const selections = compiled.profiles.map((row, index) => {
     const selected = row;
     const effort = teamModelProbeEffort(selected);
@@ -85,7 +106,13 @@ export function captureCreateTeamDraft(
       throw new TeamLaunchError('invalid', 'creation-workspace');
     const template = templates.find((candidate) => candidate.provider === selected.provider);
     if (!template) throw new TeamLaunchError('invalid', 'creation-provider-unconfigured');
-    const probeRecipe = structuredClone(template);
+    const probeRecipe = resolveCapturedRuntimeRecipe(
+      structuredClone(template),
+      source.recipeSources?.find((reference) => reference.memberId === members[index]!.memberId),
+      definition.scope,
+      draft.savedSettings.cwd,
+      sources
+    );
     probeRecipe.cwd = selected.cwd;
     if (
       probeRecipe.provider === 'claude' &&
@@ -119,5 +146,11 @@ export function captureCreateTeamDraft(
       key: digest(selection),
     };
   });
-  return { input, draftDigest, selections };
+  return {
+    input,
+    draftDigest,
+    seedDraftDigest,
+    selections,
+    sourceSelections: runtimeCaptureSourceSelections(source),
+  };
 }

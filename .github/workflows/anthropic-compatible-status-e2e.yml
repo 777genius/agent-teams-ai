@@ -65,16 +65,15 @@ jobs:
       - run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Assert pinned Windows runtime archive SHA-256
         shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
         run: |
           $lock = Get-Content runtime.lock.json | ConvertFrom-Json
           $asset = $lock.assets.'win32-x64'
           if ($asset.sha256 -notmatch '^[a-f0-9]{64}$') { throw 'Invalid win32-x64 runtime lock hash' }
+          if ($lock.releaseRepository -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') { throw 'Invalid runtime release repository' }
           $archiveDir = Join-Path $env:RUNNER_TEMP 'issue684-runtime-archive'
           New-Item -ItemType Directory -Force -Path $archiveDir | Out-Null
-          gh release download $lock.releaseTag --repo $lock.releaseRepository --pattern $asset.file --dir $archiveDir
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $releaseUrl = "https://github.com/$($lock.releaseRepository)/releases/download/$([Uri]::EscapeDataString($lock.releaseTag))/$([Uri]::EscapeDataString($asset.file))"
+          Invoke-WebRequest -Uri $releaseUrl -OutFile (Join-Path $archiveDir $asset.file) -TimeoutSec 300
           $actual = (Get-FileHash (Join-Path $archiveDir $asset.file) -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($actual -ne $asset.sha256) { throw "Pinned runtime archive SHA-256 mismatch for $($asset.file)" }
       - name: Stage pinned runtime from runtime.lock.json

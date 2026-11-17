@@ -32,9 +32,20 @@ export type ScheduleRunStatus =
 /** Omitted means a legacy standalone one-shot schedule; never infer a new mode on read. */
 export type ScheduleExecutionMode = 'agent' | 'team';
 
+/** Main-captured reference to the existing immutable owner-router binding. */
+export interface HostScheduleTarget {
+  kind: 'host';
+  contextId: string;
+  handleId: string;
+  ownerResourceRef: string;
+  teamResourceRef: string;
+}
+
 export interface Schedule {
   id: string;
   teamName: string;
+  /** Absent old Host records require explicit rebind before execution. */
+  hostTarget?: HostScheduleTarget;
   /** Optional for existing persisted JSON schedules. */
   executionMode?: ScheduleExecutionMode;
   /** Empty/missing means the team's current lead when executionMode is agent. */
@@ -50,7 +61,7 @@ export interface Schedule {
   warmUpMinutes: number;
   maxConsecutiveFailures: number;
   consecutiveFailures: number;
-  maxTurns: number;
+  maxTurns?: number;
   maxBudgetUsd?: number;
   createdAt: string;
   updatedAt: string;
@@ -77,6 +88,8 @@ export interface ScheduleRun {
   id: string;
   scheduleId: string;
   teamName: string;
+  /** Original target is published with the occurrence, before any Host effect. */
+  hostTarget?: HostScheduleTarget;
   status: ScheduleRunStatus;
   scheduledFor: string;
   startedAt: string;
@@ -89,6 +102,8 @@ export interface ScheduleRun {
   retryCount: number;
   /** Linked Task Board item, including when a newer occurrence is skipped. */
   linkedTaskId?: string;
+  /** Carries an original unknown create receipt through bounded run-history retention. */
+  pendingTaskCommandId?: string;
   /** First ~500 chars of stdout for quick UI display */
   summary?: string;
 }
@@ -139,7 +154,8 @@ export interface UpdateSchedulePatch {
   cronExpression?: string;
   timezone?: string;
   warmUpMinutes?: number;
-  maxTurns?: number;
-  maxBudgetUsd?: number;
+  /** Null explicitly removes a saved limit. */
+  maxTurns?: number | null;
+  maxBudgetUsd?: number | null;
   launchConfig?: Partial<ScheduleLaunchConfig>;
 }

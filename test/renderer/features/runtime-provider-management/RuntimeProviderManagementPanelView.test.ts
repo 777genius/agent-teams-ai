@@ -3026,6 +3026,50 @@ describe('RuntimeProviderManagementPanelView', () => {
     });
 
     expect(actions.startConnect).toHaveBeenCalledWith('openrouter');
+
+    const configuredActions = createActions();
+    const configured = {
+      ...state.view!.providers[0],
+      state: 'not-connected' as const,
+      actions: [
+        ...state.view!.providers[0].actions,
+        {
+          id: 'test' as const,
+          label: 'Test',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: false,
+          ownershipScope: 'runtime' as const,
+        },
+      ],
+    };
+    await act(async () => {
+      root.render(React.createElement(RuntimeProviderManagementPanelView, {
+        state: {
+          ...state,
+          view: { ...state.view!, providers: [configured] },
+          providers: [configured],
+          selectedProviderId: null,
+        },
+        actions: configuredActions,
+        disabled: false,
+      }));
+    });
+    const configuredRow = host.querySelector('[data-testid="runtime-provider-row-openrouter"]');
+    await act(async () => configuredRow?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    await act(async () =>
+      configuredRow?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    );
+    expect(configuredActions.selectProvider).toHaveBeenNthCalledWith(1, 'openrouter');
+    expect(configuredActions.selectProvider).toHaveBeenNthCalledWith(2, 'openrouter');
+    expect(configuredActions.startConnect).not.toHaveBeenCalled();
+    const connect = Array.from(configuredRow?.querySelectorAll('button') ?? []).find(
+      (button) => button.textContent === 'Connect'
+    );
+    expect(connect).toBeDefined();
+    await act(async () => connect?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    expect(configuredActions.startConnect).toHaveBeenCalledExactlyOnceWith('openrouter');
+    expect(configuredActions.selectProvider).toHaveBeenCalledTimes(2);
   });
 
   it('filters providers from the local provider search', async () => {
@@ -3516,6 +3560,48 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(
       host.querySelector('[data-testid="runtime-provider-directory-row-opencode-content"]')
     ).not.toBeNull();
+
+    const configuredActions = createActions();
+    const configured = {
+      ...state.directoryEntries[0],
+      providerId: 'TEST-configured',
+      displayName: 'TEST configured',
+      state: 'not-connected' as const,
+      setupKind: 'connect-api-key' as const,
+      sources: ['opencode-provider', 'config-provider'] as const,
+      sourceLabel: 'OpenCode',
+      providerSource: 'api',
+      detail: null,
+      actions: [
+        { ...state.directoryEntries[0].actions[0], id: 'test' as const, label: 'Test' },
+        state.directoryEntries[0].actions[1],
+      ],
+    };
+    await act(async () => {
+      root.render(React.createElement(RuntimeProviderManagementPanelView, {
+        state: { ...state, directoryEntries: [configured] },
+        actions: configuredActions,
+        disabled: false,
+      }));
+    });
+    const configuredRow = host.querySelector(
+      '[data-testid="runtime-provider-directory-row-TEST-configured"]'
+    );
+    expect(configuredRow?.getAttribute('role')).toBe('button');
+    await act(async () => configuredRow?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    await act(async () =>
+      configuredRow?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    );
+    expect(configuredActions.selectDirectoryProvider).toHaveBeenNthCalledWith(1, 'TEST-configured');
+    expect(configuredActions.selectDirectoryProvider).toHaveBeenNthCalledWith(2, 'TEST-configured');
+    expect(configuredActions.startConnect).not.toHaveBeenCalled();
+    const configuredConnect = Array.from(configuredRow?.querySelectorAll('button') ?? []).find(
+      (button) => button.textContent === 'Connect'
+    );
+    expect(configuredConnect).toBeDefined();
+    await act(async () => configuredConnect?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    expect(configuredActions.startConnect).toHaveBeenCalledExactlyOnceWith('TEST-configured');
+    expect(configuredActions.selectDirectoryProvider).toHaveBeenCalledTimes(2);
   });
 
   it('opens model list for configured authless local directory providers', async () => {

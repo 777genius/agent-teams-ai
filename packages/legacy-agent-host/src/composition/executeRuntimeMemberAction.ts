@@ -11,6 +11,8 @@ import { readMemberActionView, readMemberActions } from './readMemberActions.js'
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import type { HostedTeam, MemberEntry } from './MemberEntry.js';
+import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
+import type { LocalModelReadinessAction } from './prepareTeamModelReadiness.js';
 const id = z
   .string()
   .min(1)
@@ -25,14 +27,17 @@ export async function executeRuntimeMemberAction(
     runtime: RuntimeOwner;
     principalId: string;
     nativeSource?: NativeMemberActionSource;
+    modelReadiness?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget' | 'admitTeamProbeProfile'>;
     assertCurrent(): void;
     isSealed(): boolean;
   },
   teamId: string,
   operation: RuntimeMemberActionOperation | 'retry',
   commandId: string,
-  raw: unknown
+  raw: unknown,
+  readiness?: LocalModelReadinessAction
 ) {
+  if (readiness && (operation !== 'execute' || options.nativeSource)) throw new RuntimeOwnerError('invalid');
   if (options.nativeSource)
     return executeNativeRuntimeMemberAction(
       options,
@@ -73,15 +78,21 @@ export async function executeRuntimeMemberAction(
   const input = parseMemberAction(commandId, raw);
   if (options.isSealed()) throw new RuntimeOwnerError('hold');
   assertCapturedRosterCurrent(team);
-  const entry = [...options.entries.values()].find(
-    (e) => e.team === team && e.binding.memberId === input.memberId
-  );
+  const selected = actions.source(input.memberId);
+  const entry = selected.binding ? options.entries.get(runtimeDigest(selected.binding)) : undefined;
+  if (entry && (entry.team.owner !== team.owner ||
+      runtimeDigest(entry.team.definition.binding) !== runtimeDigest(team.definition.binding) ||
+      entry.binding.runId !== input.launchId || entry.profile.memberId !== input.memberId ||
+      selected.configurationDigest !== runtimeDigest(entry.profile) ||
+      selected.baseConfigurationDigest !== runtimeDigest(entry.baseProfile)))
+    throw new RuntimeOwnerError('conflict');
   if (entry) {
     const action = await executeMemberAction(
       {
         entry,
         launch,
         runtime: options.runtime,
+        ...(options.modelReadiness ? { modelReadiness: options.modelReadiness } : {}),
         principalId: options.principalId,
         assertWriter: options.assertCurrent,
         isSealed: options.isSealed,
@@ -96,7 +107,8 @@ export async function executeRuntimeMemberAction(
       },
       operation,
       input.commandId,
-      raw
+      raw,
+      readiness
     );
     options.assertCurrent();
     return action

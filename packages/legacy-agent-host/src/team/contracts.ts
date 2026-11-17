@@ -46,6 +46,15 @@ export interface TaskRef {
   teamName: string;
 }
 
+/** Optional caller precondition, checked inside the original Team fence before first admission. */
+export interface ExpectedTaskRecipient {
+  name: string;
+  memberId: string;
+  runId: string;
+  generation: string;
+  requireIdle?: true;
+}
+
 export type TeamCommand = { commandId: string } & (
   | {
       operation: 'task.create';
@@ -59,6 +68,8 @@ export type TeamCommand = { commandId: string } & (
         prompt?: string;
         promptTaskRefs?: TaskRef[];
         startImmediately?: boolean;
+        notifyOwner?: false;
+        expectedRecipient?: ExpectedTaskRecipient;
         descriptionTaskRefs?: TaskRef[];
       };
     }
@@ -95,7 +106,7 @@ export type TeamCommand = { commandId: string } & (
       payload: { taskId: string; attachment: AttachmentReference };
     }
   | { operation: 'task.attachment.remove'; payload: { taskId: string; attachmentId: string } }
-  | { operation: 'task.start'; payload: { taskId: string; notification: 'legacy' | 'user' } }
+  | { operation: 'task.start'; payload: { taskId: string; notification: 'legacy' | 'user'; expectedRecipient?: ExpectedTaskRecipient } }
   | { operation: 'task.assign'; payload: { taskId: string; owner: string | null } }
   | {
       operation: 'task.lifecycle';
@@ -137,6 +148,8 @@ export type TeamCommand = { commandId: string } & (
         messageId?: string;
         summary?: string;
         actionMode?: 'do' | 'ask' | 'delegate';
+        /** Explicit raw native format; the captured Host separately proves actor and capability. */
+        nativeCommand?: true;
         attachments?: readonly AttachmentReference[];
       };
     }
@@ -150,6 +163,8 @@ export interface PreparedEffects {
 }
 
 export interface CommandReceipt {
+  /** Private prepared Host output; never accepted in a public command or native delivery. */
+  hostCommand?: import('./hostCostCommand.js').HostCostCommand;
   group?: CapturedGroupIntent;
   /** Private Host pair admission; ordinary commands never accept this field. */
   crossTeam?: CapturedCrossTeamIntent;

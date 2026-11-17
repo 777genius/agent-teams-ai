@@ -7,6 +7,11 @@ on:
       - '.github/workflows/sentry-owned-process-native.yml'
       - 'tools/owned-process-broker/**'
       - 'src/main/utils/ownedProcess/**'
+      - 'packages/legacy-agent-host/src/owned-process/**'
+      - 'packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts'
+      - 'packages/legacy-agent-host/src/adapters/providers/WindowsCapturedProcess.ts'
+      - 'packages/legacy-agent-host/src/composition/nativeProcessProfile.ts'
+      - 'packages/legacy-agent-host/package.json'
       - 'scripts/build/buildOwnedProcessBroker.ts'
       - 'eslint.config.js'
   workflow_dispatch:
@@ -57,6 +62,10 @@ jobs:
           $head | Set-Content native-evidence/source-sha.txt
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build shared Host process primitive
+        run: |
+          pnpm --filter @agent-teams/legacy-agent-host build
+          if ($LASTEXITCODE -ne 0) { throw 'Host process primitive build failed' }
       - name: Check typed protocol and policy
         run: |
           node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json
@@ -78,7 +87,7 @@ jobs:
           $node = (Get-Command node.exe -ErrorAction Stop).Source
           $runner = Join-Path $PWD 'node_modules\tsx\dist\cli.mjs'
           $gate = Join-Path $PWD 'tools\owned-process-broker\nativeGate.ts'
-          & $controller $node $runner $gate "$env:NATIVE_STAGE\owned-process-broker.exe" "$env:NATIVE_BUILD\Release\owned-process-fixture.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-birth-failure.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-accounting-failure.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-release-delay.exe" 2>&1 | Tee-Object native-evidence/node-native.log
+          & $controller $node $runner $gate "$env:NATIVE_STAGE\owned-process-broker.exe" "$env:NATIVE_BUILD\Release\owned-process-fixture.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-birth-failure.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-accounting-failure.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-release-delay.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-debug-service.exe" 2>&1 | Tee-Object native-evidence/node-native.log
           if ($LASTEXITCODE -ne 0) { throw 'Node native controller gate failed' }
       - name: Genuine pinned Electron fd3 and control gates
         env:
@@ -89,8 +98,20 @@ jobs:
           if (-not (Test-Path $electron -PathType Leaf)) { throw 'Pinned Electron is absent' }
           $runner = Join-Path $PWD 'node_modules\tsx\dist\cli.mjs'
           $gate = Join-Path $PWD 'tools\owned-process-broker\nativeGate.ts'
-          & $controller $electron $runner $gate "$env:NATIVE_STAGE\owned-process-broker.exe" "$env:NATIVE_BUILD\Release\owned-process-fixture.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-birth-failure.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-accounting-failure.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-release-delay.exe" 2>&1 | Tee-Object native-evidence/electron-native.log
+          & $controller $electron $runner $gate "$env:NATIVE_STAGE\owned-process-broker.exe" "$env:NATIVE_BUILD\Release\owned-process-fixture.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-birth-failure.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-accounting-failure.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-release-delay.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-debug-service.exe" 2>&1 | Tee-Object native-evidence/electron-native.log
           if ($LASTEXITCODE -ne 0) { throw 'Electron native controller gate failed' }
+      - name: Select supported Host Node runtime
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24.21.0
+      - name: Genuine Host Node SDK facade and custody gates
+        run: |
+          $controller = "$env:NATIVE_BUILD\Release\owned-process-gate-controller.exe"
+          $node = (Get-Command node.exe -ErrorAction Stop).Source
+          $runner = Join-Path $PWD 'node_modules\tsx\dist\cli.mjs'
+          $gate = Join-Path $PWD 'tools\owned-process-broker\nativeGate.ts'
+          & $controller $node $runner $gate "$env:NATIVE_STAGE\owned-process-broker.exe" "$env:NATIVE_BUILD\Release\owned-process-fixture.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-birth-failure.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-accounting-failure.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-release-delay.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-debug-service.exe" 2>&1 | Tee-Object native-evidence/host-node-native.log
+          if ($LASTEXITCODE -ne 0) { throw 'Host Node native controller gate failed' }
       - name: Retain exact-source binary and independent controller evidence
         if: always()
         uses: actions/upload-artifact@v7.0.1

@@ -258,6 +258,7 @@ function makeAppConfig(multimodelEnabled: boolean): AppConfig {
       anthropic: {
         authMode: 'auto',
         fastModeDefault: false,
+        nativeNextPromptSuggestionsEnabled: true,
         compatibleEndpoint: {
           enabled: false,
           baseUrl: '',
@@ -265,6 +266,7 @@ function makeAppConfig(multimodelEnabled: boolean): AppConfig {
       },
       codex: {
         preferredAuthMode: 'auto',
+        nativeNextPromptSuggestionsEnabled: true,
         customProvider: {
           enabled: false,
           baseUrl: '',

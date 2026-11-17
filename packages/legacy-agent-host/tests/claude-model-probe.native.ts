@@ -17,7 +17,7 @@ import { ClaudeManagementHost } from '../dist/adapters/providers/ClaudeManagemen
 import { startNativeClaudeModelProbeFixture } from './fixtures/native-claude-model-probe.ts';
 import { treeHash } from './fixtures/native-host.ts';
 
-import type { ChildProcess } from 'node:child_process';
+import type { ObservableNativeProcess } from '../dist/owned-process/processFacade.js';
 import type { ClaudeManagementProfile } from '../dist/management/profile.js';
 
 test(
@@ -50,7 +50,7 @@ test(
       { mode: 0o600 }
     );
     const model = await startNativeClaudeModelProbeFixture();
-    const children: ChildProcess[] = [];
+    const children: ObservableNativeProcess[] = [];
     const hosts: ClaudeManagementHost[] = [];
     let completed = false;
     const receipt = join(root, 'receipt.json');

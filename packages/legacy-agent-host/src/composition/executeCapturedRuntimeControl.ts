@@ -1,14 +1,22 @@
 import { z } from 'zod';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
+import { runtimeDigest } from '../runtime/identity.js';
+import { attachMemberModelReadiness, captureActionModelReadiness,
+  capturePreparedModelReference, inspectMemberModelReadiness } from './prepareTeamModelReadiness.js';
+import { attachInitialRuntimeModelAdmission } from './initialRuntimeModelAdmission.js';
+import type { LocalModelReadinessAction } from './prepareTeamModelReadiness.js';
+import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import { assertRuntimeWorktree } from './runtimeWorktreeCapture.js';
 import { captureRuntimeControlAuthority } from './runtimeControlAuthority.js';
 import { resolveRuntimeControlEntry } from './resolveRuntimeControlEntry.js';
+import { checkCapturedPromptOperation } from './checkCapturedPromptOperation.js';
 import { interactionPreviewInput } from './HostInteractionControls.js';
 import {
   runtimeMember as member,
   runtimeControlId as id,
   runtimeActivityCursor as activityCursor,
   runtimeInteraction as interaction,
+  runtimeReadWithPromptProof,
 } from './runtimeControlValues.js';
 import { decodeActivityCursor } from './runtimeActivityProjection.js';
 import { restoreMemberSession } from './restoreMemberSession.js';
@@ -33,9 +41,12 @@ export async function executeCapturedRuntimeControl(
     capturedTeams: ReadonlyMap<string, HostedTeam>;
     entries: ReadonlyMap<string, MemberEntry>;
     launches: ReadonlyMap<string, TeamLaunchOwner>;
+    retainedLaunches: ReadonlyMap<string, { team: HostedTeam; launch: TeamLaunchOwner }>;
+    modelReadiness?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget' | 'admitTeamProbeProfile'>;
     runtime: RuntimeOwner;
     interactionControls: HostInteractionControls;
     principalId: string;
+    hostIncarnation: string;
     isSealed(): boolean;
     assertWriter(): void;
     kick(): void;
@@ -56,9 +67,11 @@ export async function executeCapturedRuntimeControl(
   teamId: string,
   operation: string,
   raw: unknown,
-  commandId?: string
+  commandId?: string,
+  readiness?: LocalModelReadinessAction
 ): Promise<JsonValue> {
   if (options.isSealed()) throw new RuntimeOwnerError('hold');
+  if (readiness && operation !== 'open') throw new RuntimeOwnerError('invalid');
   if (operation === 'approval.settings.read' || operation === 'approval.settings.update')
     return options.interactionControls.executeSettings(options.teams.get(teamId), operation, raw);
   const parsed =
@@ -83,7 +96,9 @@ export async function executeCapturedRuntimeControl(
                 ? member.extend({ checkpointId: id }).strict().parse(raw)
                 : operation === 'activity.feed'
                   ? member.extend({ cursor: activityCursor }).strict().parse(raw)
-                  : member.parse(raw);
+                  : operation === 'read'
+                    ? runtimeReadWithPromptProof.parse(raw)
+                    : member.parse(raw);
   const entry = resolveRuntimeControlEntry({
     entries: options.entries.values(),
     capturedTeam: options.capturedTeams.get(teamId),
@@ -178,13 +193,61 @@ export async function executeCapturedRuntimeControl(
   }
   let record: RuntimeSessionRecord | undefined;
   if (operation === 'open') {
+    const retained = options.retainedLaunches.get(runtimeDigest({ teamId, launchId: entry.binding.runId }));
+    const launch = retained?.launch ?? options.launches.get(teamId)!;
+    let preparation: ReturnType<typeof captureActionModelReadiness> | undefined;
+    let actorDigest: string | undefined;
+    if (entry.profile.provider === 'opencode') {
+      if (!retained || retained.team.owner !== entry.team.owner ||
+          runtimeDigest(retained.team.definition.binding) !== runtimeDigest(entry.team.definition.binding) ||
+          !assertAuthority) throw new RuntimeOwnerError('hold');
+      const current = options.runtime.readSession(entry.binding);
+      // The original seed has no Runtime row until the first launch claim.
+      const initialBeforeOpen = current.record === undefined && !current.attached &&
+        entry.initialModelAdmission !== undefined && entry.selection === undefined;
+      if (initialBeforeOpen || current.record?.phase === 'unopened' && current.record.custody === 'owned' && !current.attached) {
+        actorDigest = runtimeDigest(entry.team.owner.withLaunchAuthority(options.principalId, 'control',
+          revision => ({ principalId: options.principalId, revision })));
+        if (!readiness && entry.initialModelAdmission && !entry.selection) {
+          if (!commandId) throw new RuntimeOwnerError('hold');
+          attachInitialRuntimeModelAdmission({ launch, entries: [entry], method: 'runtime.open',
+            teamId, commandId, payload: raw, actorDigest, hostIncarnation: options.hostIncarnation,
+            captureReference: capturePreparedModelReference,
+            ...(options.modelReadiness ? { management: options.modelReadiness } : {}), assertCurrent: assertAuthority });
+        }
+        let qualified = false;
+        try {
+          const selected = inspectMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),
+            launch, entry, hostIncarnation: options.hostIncarnation, assertCurrent: assertAuthority });
+          const reference = selected.reference;
+          const initialReference = reference && entry.initialModelAdmission?.admissions.some(admission =>
+            admission.targets.some(target => target.memberId === entry.profile.memberId &&
+              target.source.kind === 'native-local-readiness' && target.source.probe.commandId === reference.commandId &&
+              target.source.probe.profileId === reference.profileId && target.source.probe.configRevision === reference.configRevision &&
+              target.source.probe.context === reference.context));
+          qualified = !readiness || selected.kind !== 'initial' && !initialReference;
+        } catch { assertAuthority(); }
+        if (!qualified) {
+          if (!options.modelReadiness || !commandId || !readiness || parsed.expectedGeneration !== entry.binding.generation)
+            throw new RuntimeOwnerError('hold');
+          preparation = captureActionModelReadiness({ management: options.modelReadiness, launch,
+            targets: [{ entry, profile: entry.profile, binding: entry.binding }], commandId,
+            payload: raw, actorDigest, readiness, assertCurrent: assertAuthority });
+        }
+      }
+    }
     await assertRuntimeWorktree(entry);
     assertAuthority?.();
     if (!entry.team.owner.authorizeMemberBinding(entry.binding, 'admit'))
       throw new RuntimeOwnerError('forbidden');
-    const opening = options.launches
-      .get(teamId)!
-      .startMember(entry.profile.memberId, assertAuthority);
+    if (preparation) {
+      const reference = (await preparation.prepare()).get(entry.profile.memberId);
+      assertAuthority?.();
+      if (!reference) throw new RuntimeOwnerError('hold');
+      attachMemberModelReadiness({ launch, entry, reference, commandId: commandId!, actorDigest: actorDigest!,
+        inputDigest: preparation.inputDigest, cutoff: preparation.cutoff });
+    }
+    const opening = launch.startMember(entry.profile.memberId, assertAuthority);
     if (opening) await opening;
     record = options.runtime.readSession(entry.binding).record;
     options.kick();
@@ -194,8 +257,22 @@ export async function executeCapturedRuntimeControl(
     await options.dispatchSettled();
     record = options.runtime.readSession(entry.binding).record;
   } else if (operation === 'stop') {
-    record = await options.runtime.stopSession(entry.binding, assertAuthority);
-    await options.closeEndpoint(entry);
+    if (entry.profile.provider === 'opencode') {
+      const launch = options.retainedLaunches.get(runtimeDigest({ teamId, launchId: entry.binding.runId }))?.launch;
+      launch?.retireModelReadiness(entry.profile.memberId);
+      const cancellation = options.modelReadiness?.probes.cancelTeamPreparations(
+        runtimeDigest(entry.team.definition.binding), undefined,
+        runtimeDigest({ launchId: entry.binding.runId, memberId: entry.profile.memberId }));
+      const [stopped, preparations] = await Promise.allSettled([
+        options.runtime.stopSession(entry.binding, assertAuthority), cancellation,
+      ]);
+      await options.closeEndpoint(entry);
+      if (stopped.status !== 'fulfilled' || preparations.status !== 'fulfilled') throw new RuntimeOwnerError('hold');
+      record = stopped.value;
+    } else {
+      record = await options.runtime.stopSession(entry.binding, assertAuthority);
+      await options.closeEndpoint(entry);
+    }
   } else if (operation === 'reconcile') record = options.runtime.reconcileSession(entry.binding);
   else if (operation === 'interrupt')
     record = await options.runtime.interrupt(
@@ -231,5 +308,16 @@ export async function executeCapturedRuntimeControl(
       : entry.team.owner.authorizeRuntimeAccess(options.principalId, entry.binding, 'control'))
   )
     throw new RuntimeOwnerError('forbidden');
-  return options.projection(entry, record);
+  const projected = options.projection(entry, record);
+  if (operation !== 'read') return projected;
+  const proof = runtimeReadWithPromptProof.parse(raw).nativePromptProof;
+  if (!proof) return projected;
+  if (!projected || typeof projected !== 'object' || Array.isArray(projected))
+    return { nativePromptCurrent: false };
+  return {
+    ...projected,
+    nativePromptCurrent: checkCapturedPromptOperation({
+      entry, record, projection: projected, hostIncarnation: options.hostIncarnation, proof,
+    }),
+  };
 }

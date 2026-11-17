@@ -11,6 +11,7 @@ import {
   createEmptyMemberLogStreamResponse,
   createEmptyMemberRuntimeLogTailResponse,
 } from '@features/member-log-stream/contracts';
+import { NATIVE_NEXT_PROMPT_UPDATED, type NativeNextPromptApi } from '@features/native-prompt-suggestions/contracts';
 import {
   type AssignOrganizationTeamRequest,
   type CreateOrganizationRequest,
@@ -566,6 +567,7 @@ export class HttpAPIClient implements ElectronAPI {
     },
   };
 
+  nativePromptSuggestions: NativeNextPromptApi = { onUpdated: callback => this.addEventListener(NATIVE_NEXT_PROMPT_UPDATED, callback) };
   tokenUsage: TokenUsageElectronApi['tokenUsage'] = {
     getSnapshot: (request?: TokenUsageSnapshotRequest): Promise<TokenUsageAnalyticsSnapshotDto> =>
       this.get<TokenUsageAnalyticsSnapshotDto>(buildTokenUsageSnapshotRoute(request)),

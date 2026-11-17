@@ -1,6 +1,7 @@
 import { desktopProofSupplementarySources, desktopProofProcessSources } from './desktop-proof-supplementary-sources.ts';
 import { desktopProofIntegratedSources } from './desktop-proof-integrated-sources.ts';
 import { desktopProofManagementSources } from './desktop-proof-management-sources.ts';
+import { desktopNativeNextPromptSources } from './desktop-native-next-prompt-sources.ts';
 
 const desktopProofBaseSources = [
   'scripts/legacy-agent-host/startup-passive-observer.ts',
@@ -38,6 +39,7 @@ const desktopProofBaseSources = [
   'scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-mixed-native-fixture.ts',
   'scripts/legacy-agent-host/desktop-mixed-dialog-settings.ts',
+  'scripts/legacy-agent-host/desktop-mixed-provider-settings.ts',
   'scripts/legacy-agent-host/desktop-mixed-create-launch-ui-smoke.ts',
   'packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts',
   'packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts',
@@ -90,6 +92,7 @@ const desktopProofBaseSources = [
   'src/features/agent-backend/main/application/prepareCapturedTeamModels.ts',
   'scripts/legacy-agent-host/desktop-proof-mode.ts',
   'scripts/legacy-agent-host/desktop-launch-ui-smoke.ts',
+  'scripts/legacy-agent-host/desktop-codex-source-selection.ts',
   'scripts/legacy-agent-host/desktop-relaunch-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-resume-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-resume-records.ts',
@@ -151,6 +154,7 @@ const desktopProofBaseSources = [
   'src/features/agent-backend/contracts/teamChanges.ts',
   'src/features/agent-backend/contracts/operations.ts',
   'scripts/legacy-agent-host/desktop-composer-ui-smoke.ts',
+  ...desktopNativeNextPromptSources,
   'scripts/legacy-agent-host/desktop-native-group-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-native-chat-attachments-ui.ts',
   'scripts/legacy-agent-host/desktop-backend-bridge-proof.ts',
@@ -552,6 +556,7 @@ const desktopProofBaseSources = [
   'packages/legacy-agent-host/src/composition/projectRuntimeMember.ts',
   'packages/legacy-agent-host/src/composition/readHostTeamActivity.ts',
   'packages/legacy-agent-host/src/composition/readProfile.ts',
+  'packages/legacy-agent-host/src/composition/createClaudeCheckpointSource.ts',
   'packages/legacy-agent-host/src/composition/readTeamActivity.ts',
   'packages/legacy-agent-host/src/composition/resolveRuntimeControlEntry.ts',
   'packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts',
@@ -628,8 +633,10 @@ const desktopProofBaseSources = [
   'scripts/legacy-agent-host/desktop-codex-question-fixture.ts',
   'scripts/legacy-agent-host/desktop-approval-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-backend-fixture.ts',
+  'scripts/legacy-agent-host/desktop-runtime-source-fixture.ts',
   'scripts/legacy-agent-host/desktop-backend-smoke.ts',
   'scripts/legacy-agent-host/desktop-captured-app.ts',
+  'scripts/legacy-agent-host/desktop-claude-checkpoint-upgrade.ts',
   'scripts/legacy-agent-host/desktop-cross-team-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-team-ui-smoke.ts',

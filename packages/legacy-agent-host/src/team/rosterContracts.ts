@@ -80,4 +80,57 @@ export interface StoredRosterReceipt extends TeamRosterReceipt {
   principalId: string;
   fingerprint: string;
   nativeCreation?: import('./nativeMemberCreationContracts.js').NativeMemberCreationRecord;
+  /** Private admin membership decision on this original receipt, never a public success flag. */
+  liveMembership?: LiveRosterMembershipRecord;
+}
+
+export interface LiveRosterDelta {
+  kind: 'add' | 'remove' | 'restore';
+  targetId: string;
+  position: number;
+  before: TeamMember | null;
+  after: TeamMember | null;
+  removedBefore?: TeamMember & { removedAt: string };
+  removedPosition?: number;
+}
+
+/** One exact target publication/inverse, with the original peer and Team setting commitments. */
+export interface LiveRosterEdge {
+  beforeRevision: string;
+  afterRevision: string;
+  beforeVersion: number;
+  afterVersion: number;
+  before: TeamMember | null;
+  after: TeamMember | null;
+  position: number;
+  removedBefore?: TeamMember & { removedAt: string };
+  removedAfter?: TeamMember & { removedAt: string };
+}
+
+export interface LiveRosterSelection {
+  principalId: string;
+  delivery: import('./contracts.js').DeliveryBinding;
+  configurationDigest: string;
+}
+
+export interface LiveRosterMembershipRecord {
+  schemaVersion: 1;
+  phase: 'pending' | 'captured' | 'preparing' | 'published' | 'compensating' | 'held' | 'completed' | 'rejected';
+  input: ReplaceTeamRoster;
+  requestDigest: string;
+  authorityRevision: number;
+  launchId: string;
+  sourceCaptureDigest: string;
+  hostIncarnation: string;
+  /** Original first Host admission; metadata reads and continuations never extend it. */
+  cutoff: number;
+  beforeVersion: number;
+  delta: LiveRosterDelta;
+  peerDigest: string;
+  savedSettingsDigest: string;
+  capture?: import('./liveRosterMembership.js').LiveRosterCaptureView;
+  selection?: LiveRosterSelection;
+  publication?: LiveRosterEdge;
+  compensation?: LiveRosterEdge;
+  rejection?: import('./contracts.js').TeamOwnerErrorCode;
 }

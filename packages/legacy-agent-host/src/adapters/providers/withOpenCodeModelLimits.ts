@@ -1,4 +1,3 @@
-import type { OpenCodeManagementProfile } from '../../management/profile.js';
 import type { ProviderModelProbeLimits } from '../../management/contracts.js';
 
 const record = (value: unknown): Record<string, unknown> => {
@@ -7,10 +6,10 @@ const record = (value: unknown): Record<string, unknown> => {
     throw new Error('Invalid native model config');
   return value as Record<string, unknown>;
 };
-export function withOpenCodeModelLimits(
-  profile: OpenCodeManagementProfile,
+export function withOpenCodeModelLimits<T extends { environment: Record<string, string> }>(
+  profile: T,
   input: { providerId: string; modelId: string; limits: ProviderModelProbeLimits }
-): OpenCodeManagementProfile {
+): T {
   const config = record(JSON.parse(profile.environment.OPENCODE_CONFIG_CONTENT ?? '{}'));
   const providers = record(config.provider);
   const provider = record(

@@ -4,6 +4,16 @@ import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import type { MemberEntry, HostedTeam } from './MemberEntry.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
+import { inspectMemberModelReadiness } from './prepareTeamModelReadiness.js';
+import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
+import { restoreNativeRuntimeEntries } from './restoreNativeRuntimeEntries.js';
+import { restoreLiveRosterRuntimeEntries } from './captureLiveRosterMember.js';
+import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
+import { TeamLaunchError } from '../team-launch/contracts.js';
+import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
+import type { TeamHostProfile } from './TeamHost.js';
+import type { RetainedNativeLaunch } from './createRuntimeNativeMemberCreation.js';
+import type { LiveReadinessCapture } from '../team-launch/launchReadiness.js';
 
 /** Aggregate launch wiring. Both fresh open and selected restore retain Runtime allocation ownership. */
 export function createRuntimeTeamLaunch(options: {
@@ -13,6 +23,7 @@ export function createRuntimeTeamLaunch(options: {
   principalId: string;
   hostIncarnation: string;
   runtime: RuntimeOwner;
+  modelReadiness?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget'>;
   isCurrent(entry: MemberEntry): boolean;
   isSealed(): boolean;
   assertWriter(): void;
@@ -47,6 +58,16 @@ export function createRuntimeTeamLaunch(options: {
       };
     }),
     runtime: {
+      assertModelReadiness(memberId) {
+        const entry = entries.find(candidate => candidate.profile.memberId === memberId);
+        if (!entry || entry.profile.provider !== 'opencode') return;
+        inspectMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),
+          launch, entry, hostIncarnation: options.hostIncarnation,
+          assertCurrent: () => {
+            options.assertWriter();
+            if (options.isSealed() || !options.isCurrent(entry)) throw new RuntimeOwnerError('hold');
+          } });
+      },
       captureAuthority(memberId) {
         const entry = entries.find((candidate) => candidate.profile.memberId === memberId);
         if (!entry) throw new RuntimeOwnerError('invalid');
@@ -119,4 +140,43 @@ export function createRuntimeTeamLaunch(options: {
     onProgress: options.onProgress,
   });
   return launch;
+}
+
+/** Original coordinator installation body; the same maps and restore order remain authoritative. */
+export function installRuntimeTeamLaunch(options: {
+  profile: TeamHostProfile; runtime: RuntimeOwner; hostIncarnation: string;
+  sources?: RuntimeRecipeSources;
+  registry: Map<string, MemberEntry>;
+  retainedLaunches: Map<string, RetainedNativeLaunch>;
+  capturedTeams: Map<string, HostedTeam>; launches: Map<string, TeamLaunchOwner>;
+  modelReadiness?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget'>;
+  isCurrent(entry: MemberEntry): boolean; isSealed(): boolean; assertWriter(): void;
+  trackOpening<T>(pending: Promise<T>): Promise<T>; onProgress(): void;
+}, team: HostedTeam, entries: MemberEntry[], active: boolean, prepare = false,
+  liveReadinessCapture?: LiveReadinessCapture): void {
+  const launchId = team.launchId ?? team.definition.scope.runId;
+  const key = runtimeDigest({ teamId: team.definition.binding.teamId, launchId });
+  let captured = options.retainedLaunches.get(key);
+  if (!captured) {
+    restoreNativeRuntimeEntries({ profile: options.profile, team, entries, registry: options.registry });
+    captured = { team, entries, launch: createRuntimeTeamLaunch({
+      root: options.profile.owner.storageRoot, team, entries,
+      principalId: options.profile.principalId, hostIncarnation: options.hostIncarnation,
+      runtime: options.runtime,
+      ...(options.modelReadiness ? { modelReadiness: options.modelReadiness } : {}),
+      isCurrent: options.isCurrent, isSealed: options.isSealed, assertWriter: options.assertWriter,
+      trackOpening: options.trackOpening, onProgress: options.onProgress,
+    }) };
+    restoreLiveRosterRuntimeEntries({ profile: options.profile, team, entries, registry: options.registry,
+      ...(options.sources ? { sources: options.sources } : {}), restoring: true });
+    if (!prepare) options.retainedLaunches.set(key, captured);
+  }
+  if (active) {
+    options.capturedTeams.set(team.definition.binding.teamId, captured.team);
+    options.launches.set(team.definition.binding.teamId, captured.launch);
+  }
+  if (liveReadinessCapture) {
+    if (!active || prepare) throw new TeamLaunchError('hold', 'capture-readiness-unavailable');
+    captured.launch.admitModelReadinessCapture(liveReadinessCapture);
+  }
 }

@@ -1,5 +1,6 @@
 import { readCodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';
 import { CapturedProcess } from './CapturedProcess.js';
+import type { CapturedProcessPort } from './CapturedProcess.js';
 import type { CodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';
 import type { CodexMemberProfile } from '../../composition/runtimeProfile.js';
 
@@ -7,7 +8,8 @@ import type { CodexMemberProfile } from '../../composition/runtimeProfile.js';
 export async function readCodexMcpCatalog(
   profile: CodexMemberProfile,
   assertCurrent: () => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  createProcess?: (selected: CodexMemberProfile, current: () => boolean) => CapturedProcessPort
 ): Promise<CodexConfiguredMcpCatalog> {
   assertCurrent();
   const current = () => {
@@ -18,7 +20,7 @@ export async function readCodexMcpCatalog(
       return false;
     }
   };
-  const custody = new CapturedProcess(profile, current);
+  const custody = createProcess ? createProcess(profile, current) : new CapturedProcess(profile, current);
   return readCodexConfiguredMcpCatalog(
     {
       cwd: profile.cwd,

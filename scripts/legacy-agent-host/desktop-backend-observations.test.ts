@@ -4,12 +4,41 @@ import { EventEmitter } from 'node:events';
 import { createRequire, syncBuiltinESMExports } from 'node:module';
 import childProcess from 'node:child_process';
 import {
+  groupMembers,
   isCapturedOriginalNodeZombie,
+  processTable,
+  safeGroupSnapshot,
   observeExitedAppGroup,
   observeOriginalAppReap,
   readRendererBackendConnections,
   settledGroupMembers,
 } from './desktop-backend-observations.ts';
+
+test('Linux zero-group rows remain observable without becoming owned app groups; malformed census stays an error', (t) => {
+  let output = '1 0 1\n2 0 0\n4100 4000 4100\n';
+  t.mock.method(childProcess, 'execFileSync', (file: string, args: readonly string[]) => {
+    assert.equal(file, '/bin/ps');
+    assert.deepEqual(args, ['-ax', '-o', 'pid=,ppid=,pgid=']);
+    return output;
+  });
+  syncBuiltinESMExports();
+  t.after(() => {
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+  });
+  t.mock.method(process, 'kill', () => assert.fail('a census never signals'));
+  assert.deepEqual(processTable(), [
+    { pid: 1, ppid: 0, pgid: 1 }, { pid: 2, ppid: 0, pgid: 0 },
+    { pid: 4100, ppid: 4000, pgid: 4100 },
+  ]);
+  assert.deepEqual(groupMembers(4100), [{ pid: 4100, ppid: 4000, pgid: 4100 }]);
+  assert.throws(() => groupMembers(0), /Captured app group must be positive/);
+  assert.throws(() => safeGroupSnapshot(0), /Captured app group must be positive/);
+  for (const malformed of ['0 0 0', '2 0', '2 0 0 9', '2 nope 0', '2 -1 0', '9007199254740992 0 0']) {
+    output = malformed + '\n';
+    assert.throws(() => processTable(), /Malformed process table row|Invalid process table identity/);
+  }
+});
 
 test('read-only discovery survives navigation during the actual IPC read, then reads the new context', async () => {
   let reads = 0;

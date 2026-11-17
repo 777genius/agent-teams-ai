@@ -7,6 +7,10 @@ import { OpenCodeClientFactory } from '@agent-teams/provider-implementations/ope
 
 import { CapturedProcess } from './CapturedProcess.js';
 import { runOpenCodeModelProbe } from './runOpenCodeModelProbe.js';
+import { closeCoordinationByDeadline } from './OpenCodeCoordinationEndpoint.js';
+import { assertCoordinationDeadline, openV1CoordinationSession, runNativeCoordination, readNativeCoordination } from './OpenCodeCoordinationProbe.js';
+import type { OpenCodeV1Coordination, NativeCoordinationObservation } from './OpenCodeCoordinationProbe.js';
+import type { Session } from '@agent-teams/provider-session-contracts';
 import { openCodeManagementProfileSchema } from '../../management/profile.js';
 
 import type { ProviderModelProbeLimits } from '../../management/contracts.js';
@@ -49,6 +53,13 @@ export class OpenCodeManagementHost {
   private readonly witnessAgent = `management_${randomBytes(12).toString('hex')}`;
   private readonly abort = new AbortController();
   private readonly factory: OpenCodeClientFactory;
+  private readonly fetchImpl: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  private readonly coordination: OpenCodeV1Coordination | undefined;
+  private coordinationDriver?: Session;
+  private coordinationRun?: Promise<boolean>;
+  private coordinationResult: NativeCoordinationObservation | undefined;
+  private admittedDeadline?: number;
+  private stopping?: Promise<boolean>;
   private opening?: Promise<void>;
   private closing?: Promise<boolean>;
   private sealed = false;
@@ -64,11 +75,13 @@ export class OpenCodeManagementHost {
         canAllocate: () => boolean
       ): CapturedProcessPort;
       fetchImpl?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+      coordination?: OpenCodeV1Coordination;
     } = {}
   ) {
     const selected = openCodeManagementProfileSchema.safeParse(profile);
     if (!selected.success) throw new OpenCodeManagementError('invalid-profile');
     this.profile = structuredClone(selected.data);
+    this.coordination = options.coordination;
     let endpoint: URL;
     try {
       endpoint = new URL(this.profile.endpoint);
@@ -112,13 +125,14 @@ export class OpenCodeManagementHost {
     } catch {
       throw new OpenCodeManagementError('invalid-profile');
     }
+    if (this.coordination) config = structuredClone(this.coordination.config);
     const agents = config.agent === undefined ? {} : object(config.agent);
     this.profile.environment = {
       ...this.profile.environment,
       OPENCODE_CONFIG_CONTENT: JSON.stringify({
         ...config,
         // Management conversations are explicit model probes and never execute tools.
-        permission: { '*': 'deny' },
+        permission: this.coordination ? config.permission : { '*': 'deny' },
         // A private disabled agent witnesses this exact server's effective config.
         // It is not a conversation or a Team member and never executes.
         agent: {
@@ -134,10 +148,11 @@ export class OpenCodeManagementHost {
       ((selection, canAllocate) => new CapturedProcess(selection, canAllocate))
     )(
       structuredClone(this.profile),
-      () => !this.sealed && this.authority.canAllocate() && this.authority.isCurrent()
+      () => !this.sealed && this.authority.canAllocate() && this.authority.isCurrent() &&
+        (!this.coordination || this.coordination.isCurrent() && Date.now() < this.coordination.deadline) &&
+        (this.admittedDeadline === undefined || Date.now() < this.admittedDeadline)
     );
-    this.factory = new OpenCodeClientFactory({
-      fetchImpl: async (input, init) => {
+    this.fetchImpl = async (input, init) => {
         this.assertCurrent();
         const request = new Request(input, init);
         if (new URL(request.url).origin !== this.profile.endpoint)
@@ -148,8 +163,13 @@ export class OpenCodeManagementHost {
           'Basic ' + Buffer.from(`opencode:${this.password}`).toString('base64')
         );
         headers.set('x-opencode-directory', this.profile.cwd);
+        const deadline = this.coordination?.deadline ?? this.admittedDeadline;
+        if (deadline !== undefined) assertCoordinationDeadline(deadline, this.abort.signal,
+          this.coordination?.isCurrent ?? (() => this.authority.isCurrent()));
+        const signal = deadline !== undefined ? AbortSignal.any([request.signal, this.abort.signal,
+          AbortSignal.timeout(Math.max(1, deadline - Date.now()))]) : request.signal;
         const response = await (options.fetchImpl ?? fetch)(
-          new Request(request, { headers, redirect: 'error' })
+          new Request(request, { headers, redirect: 'error', signal })
         );
         try {
           this.assertCurrent();
@@ -158,12 +178,16 @@ export class OpenCodeManagementHost {
           throw error;
         }
         return response;
-      },
-    });
+      };
+    this.factory = new OpenCodeClientFactory({ fetchImpl: this.fetchImpl });
   }
 
   private assertCurrent(): void {
     if (this.sealed || !this.authority.isCurrent() || !this.custody.isRunning())
+      throw new OpenCodeManagementError('unavailable');
+    if (this.coordination)
+      assertCoordinationDeadline(this.coordination.deadline, this.abort.signal, this.coordination.isCurrent);
+    if (this.admittedDeadline !== undefined && Date.now() >= this.admittedDeadline)
       throw new OpenCodeManagementError('unavailable');
     this.verifyDirectories();
   }
@@ -218,6 +242,7 @@ export class OpenCodeManagementHost {
       if (!this.authority.canAllocate() || !this.authority.isCurrent())
         throw new OpenCodeManagementError('unavailable');
       this.verifyDirectories();
+      this.coordination?.beforeAllocation();
       const endpoint = new URL(this.profile.endpoint);
       const child = this.custody.launch({
         command: this.profile.executable.path,
@@ -226,7 +251,9 @@ export class OpenCodeManagementHost {
         signal: this.abort.signal,
       });
       child.stdout.resume();
-      const deadline = performance.now() + this.profile.timeoutMs;
+      const admitted = this.coordination?.deadline ?? this.admittedDeadline;
+      const deadline = performance.now() + (admitted !== undefined
+        ? Math.min(this.profile.timeoutMs, admitted - Date.now()) : this.profile.timeoutMs);
       while (performance.now() < deadline) {
         this.assertCurrent();
         const client = this.factory.create(this.profile.endpoint, {
@@ -258,7 +285,7 @@ export class OpenCodeManagementHost {
 
   async run<T>(
     action: (client: OpenCodeManagementClient) => Promise<T>,
-    options: { signal?: AbortSignal; timeoutMs?: number } = {}
+    options: { signal?: AbortSignal; timeoutMs?: number; deadline?: number } = {}
   ): Promise<T> {
     return this.runNative(
       (client) =>
@@ -285,33 +312,113 @@ export class OpenCodeManagementHost {
     },
     signal: AbortSignal,
     timeoutMs: number,
-    isCurrent?: () => boolean
+    isCurrent?: () => boolean,
+    readiness?: { deadline: number; observeProvider(provider: unknown): boolean }
   ): Promise<boolean> {
+    let selectedProvider: Record<string, unknown> | undefined;
     return this.runNative(
       (client) =>
-        runOpenCodeModelProbe(client, {
+        runOpenCodeModelProbe(readiness ? {
+          getConfig: async () => {
+            const config = await client.getConfig(); this.assertConfig(config);
+            const providers = object(object(config).provider ?? {});
+            selectedProvider = object(providers[input.providerId] ?? {});
+            return config;
+          },
+          getProviders: async () => {
+            const providers = await client.getProviders();
+            const selected = providers.all?.filter(provider => provider.id === input.providerId);
+            if (!selectedProvider || selected?.length !== 1) throw new OpenCodeManagementError('unavailable');
+            const native = object(selected[0]), models = object(native.models);
+            const modelId = input.modelId.startsWith(input.providerId + '/')
+              ? input.modelId.slice(input.providerId.length + 1) : input.modelId;
+            const api = object(object(models[modelId]).api), options = object(native.options);
+            const configuredModel = object(object(selectedProvider.models ?? {})[modelId] ?? {});
+            if (typeof api.npm !== 'string' || !api.npm || typeof api.id !== 'string' || !api.id ||
+                native.key !== undefined && typeof native.key !== 'string' ||
+                options.apiKey !== undefined && typeof options.apiKey !== 'string')
+              throw new OpenCodeManagementError('unavailable');
+            // Preserve the pinned native SDK's selected URL/key precedence; unknown routes cannot qualify.
+            const applicable = readiness.observeProvider({ ...selectedProvider, npm: api.npm, options: {
+              ...options, baseURL: typeof options.baseURL === 'string' && options.baseURL !== '' ? options.baseURL : api.url,
+              ...(options.apiKey === undefined && native.key ? { apiKey: native.key } : {}),
+            } });
+            if (applicable && api.id !== (configuredModel.id ?? modelId))
+              throw new OpenCodeManagementError('unavailable');
+            return providers;
+          },
+          listExperimentalToolIds: client.listExperimentalToolIds.bind(client),
+          createSession: client.createSession.bind(client),
+          sendSessionMessage: client.sendSessionMessage.bind(client),
+        } : client, {
           ...input,
           cwd: this.profile.cwd,
           ...(isCurrent ? { isCurrent } : {}),
         }),
-      { signal, timeoutMs }
+      { signal, timeoutMs, ...(readiness ? { deadline: readiness.deadline } : {}) }
     );
+  }
+
+  /** Private purpose only; startup and the public Session driver share the admitted absolute deadline. */
+  probeCoordination(signal: AbortSignal): Promise<boolean> {
+    return this.coordinationRun ??= (async () => {
+      const selected = this.coordination;
+      if (!selected) throw new OpenCodeManagementError('invalid-profile');
+      const check = () => assertCoordinationDeadline(selected.deadline, signal, selected.isCurrent);
+      check();
+      await this.start();
+      check(); this.assertCurrent();
+      const client = this.factory.create(this.profile.endpoint, {
+        signal: AbortSignal.any([signal, this.abort.signal]),
+        remainingMs: () => selected.deadline - Date.now(),
+      });
+      const opened = await openV1CoordinationSession({
+        profile: this.profile, input: selected.input, endpoint: selected.endpoint, client,
+        fetchImpl: this.fetchImpl, signal, deadline: selected.deadline,
+        isCurrent: () => { try { this.assertCurrent(); return true; } catch { return false; } },
+        confirmStopped: () => this.stopOwned(), ...(selected.readiness ? { readiness: true } : {}),
+      });
+      this.coordinationDriver = opened.driver;
+      check(); this.assertCurrent();
+      if (selected.readiness) {
+        this.coordinationResult = await readNativeCoordination(opened.driver, opened.nativeSessionId, selected.endpoint,
+          opened.identity, signal, selected.deadline, selected.isCurrent);
+        return this.coordinationResult?.status === 'compatible';
+      }
+      return runNativeCoordination(opened.driver, opened.nativeSessionId, selected.endpoint,
+        opened.identity, signal, selected.deadline, selected.isCurrent);
+    })();
+  }
+
+  coordinationObservation(): NativeCoordinationObservation | undefined {
+    return this.coordinationResult === undefined ? undefined : { ...this.coordinationResult };
+  }
+
+  private stopOwned(): Promise<boolean> {
+    return this.stopping ??= this.custody.confirmStopped();
   }
 
   private async runNative<T>(
     action: (client: OpenCodeClient) => Promise<T>,
-    options: { signal?: AbortSignal; timeoutMs?: number }
+    options: { signal?: AbortSignal; timeoutMs?: number; deadline?: number }
   ): Promise<T> {
     try {
       const timeoutMs = options.timeoutMs ?? this.profile.timeoutMs;
       if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 17 * 60_000)
         throw new OpenCodeManagementError('invalid-profile');
+      if (options.deadline !== undefined) {
+        if (!Number.isSafeInteger(options.deadline) || options.deadline <= Date.now() ||
+            this.admittedDeadline !== undefined && this.admittedDeadline !== options.deadline)
+          throw new OpenCodeManagementError('held');
+        this.admittedDeadline = options.deadline;
+      }
       options.signal?.throwIfAborted();
       await this.start();
       options.signal?.throwIfAborted();
       this.assertCurrent();
       if (!this.ready) throw new OpenCodeManagementError('unavailable');
-      const deadline = performance.now() + timeoutMs;
+      const deadline = performance.now() + (options.deadline === undefined ? timeoutMs :
+        Math.min(timeoutMs, options.deadline - Date.now()));
       const client = this.factory.create(this.profile.endpoint, {
         signal: options.signal
           ? AbortSignal.any([this.abort.signal, options.signal])
@@ -336,7 +443,18 @@ export class OpenCodeManagementHost {
     this.ready = false;
     this.custody.seal();
     this.abort.abort();
-    this.closing ??= this.custody.confirmStopped();
+    if (this.coordination) {
+      this.coordination.endpoint.seal();
+      this.closing ??= closeCoordinationByDeadline((async () => {
+        let clean = true;
+        try {
+          if (this.coordinationDriver) clean = (await this.coordinationDriver.close()).cleanup === 'confirmed';
+        } catch { clean = false; }
+        try { clean = await this.stopOwned() && clean; } catch { clean = false; }
+        return clean;
+      })(), this.coordination.deadline);
+    } else this.closing ??= this.admittedDeadline === undefined ? this.custody.confirmStopped()
+      : closeCoordinationByDeadline(this.stopOwned(), this.admittedDeadline);
     return this.closing;
   }
 }

@@ -1,15 +1,18 @@
 /** TEST-only native model probe through the existing Host management journal. */
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
-import { mkdir, mkdtemp, readFile, realpath, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 
 import { fileHash, startHost, tick } from './fixtures/native-host.ts';
+import { createPassiveNativeDiagnosticCapture } from './fixtures/native-opencode-team/passive-diagnostics.ts';
 import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-source.ts';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { ProviderManagementCatalog, ProviderModelProbeSnapshot } from '../dist/management/contracts.js';
+import type { RuntimeSourceGrant, RuntimeSourcePublication, RuntimeSourceSummary } from '../dist/composition/runtimeSourceContracts.js';
 
 const value = <T>(result: Record<string, unknown>): T => {
   assert.equal(result.ok, true, JSON.stringify(result));
@@ -47,17 +50,25 @@ test(
     };
     assert.equal(digests.manifest, process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256);
     const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-native-v2-model-probe-')));
-    const requests: { tools: number; promptMatched: boolean; model: string }[] = [];
+    const requests: { tools: number; promptMatched: boolean; model: string; effort?: string; configScope: string }[] = [];
     const gates: (() => void)[] = [];
     const failures: string[] = [];
     const nativePids: number[] = [];
     const steps: string[] = [];
     const hosts: ReturnType<ReturnType<typeof startHost>['facts']>[] = [];
+    const passive = createPassiveNativeDiagnosticCapture();
+    let hostEpoch = 0;
     let host: ReturnType<typeof startHost> | undefined;
     let originalFailure: unknown,
       passed = false,
       cleanup = false;
     const cleanupErrors: unknown[] = [];
+    let unknownProbeCancelled = false, catalogAttempted = false, catalogCompleted = false;
+    let catalogPhase: 'not-started' | 'first-call' | 'first-assertions' | 'repeat-call' | 'complete' = 'not-started';
+    let catalogReply = 'unavailable';
+    const catalogCode = (reply: Record<string, unknown>): string => reply.ok === true ? 'ok'
+      : typeof reply.code === 'string' && ['held', 'conflict', 'invalid', 'busy', 'forbidden', 'not_found'].includes(reply.code)
+        ? reply.code : 'unknown';
     const selectedRuntimeEndpoint = createServer((_request, response) => {
       failures.push('TEST_catalog_used_selected_runtime_endpoint');
       response.writeHead(409); response.end();
@@ -75,7 +86,14 @@ test(
           chunks.push(data);
         }
         const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as Record<string, unknown>;
-        assert.equal(body.model, 'TEST-model');
+        const expectedModel = requests.length === 0 ? 'TEST-model' : 'TEST-model-B';
+        const expectedEffort = requests.length === 0 ? undefined : 'high';
+        const configScope = requests.length === 0 ? 'global' : 'project';
+        assert.equal(body.model, expectedModel);
+        assert.equal(body.reasoning_effort, expectedEffort);
+        assert.equal(body.test_config_scope, configScope);
+        assert.equal(request.headers['x-test-config-scope'], configScope);
+        assert.equal(request.headers.authorization, 'Bearer TEST-LOCALHOST-ONLY');
         assert.ok(
           body.tools === undefined || (Array.isArray(body.tools) && body.tools.length === 0),
           'the actual native inference request must advertise zero tools'
@@ -84,21 +102,22 @@ test(
           'Reply only OK. Do not use tools, access files or run commands.'
         );
         assert.equal(promptMatched, true);
-        assert.ok(requests.length < 2, 'no native inference replay');
+        assert.ok(requests.length < 3, 'no native inference replay');
         let release!: () => void;
         const gate = new Promise<void>((done) => {
           release = done;
         });
         gates.push(release);
         response.once('close', release);
-        requests.push({ tools: 0, promptMatched, model: 'TEST-model' });
+        requests.push({ tools: 0, promptMatched, model: expectedModel, configScope,
+          ...(expectedEffort ? { effort: expectedEffort } : {}) });
         await gate;
         if (response.destroyed) return;
         const event = (delta: Record<string, unknown>, finish: string | null) => ({
           id: 'TEST-native-v2-probe-reply',
           object: 'chat.completion.chunk',
           created: 1700000000,
-          model: 'TEST-model',
+          model: expectedModel,
           choices: [{ index: 0, delta, finish_reason: finish }],
         });
         response.writeHead(200, { 'content-type': 'text/event-stream' });
@@ -152,6 +171,7 @@ test(
             nativeModel: { providerId: 'TEST-local', modelId: 'TEST-model' },
             environment: {
               HOME: join(root, 'home'),
+              USERPROFILE: join(root, 'home'),
               TMPDIR: join(root, 'tmp'),
               XDG_CONFIG_HOME: join(root, 'config'),
               XDG_DATA_HOME: join(root, 'data'),
@@ -166,33 +186,78 @@ test(
               directory: engine,
               manifestSha256: digests.manifest,
               externalDirectory: 'deny',
-              providerConfiguration: {
-                package: 'aisdk:@ai-sdk/openai-compatible',
-                settings: {
-                  baseURL: `http://127.0.0.1:${address.port}/v1`,
-                  apiKey: 'TEST-LOCALHOST-ONLY',
-                },
-                models: {
-                  'TEST-model': {
-                    name: 'TEST-model',
-                    limit: { context: 200000, output: 128 },
-                    capabilities: { tools: true, input: ['text'], output: ['text'] },
-                  },
-                },
-              },
             },
           },
         ],
       };
+      const globalDirectory = join(root, 'home/.config/opencode');
+      await mkdir(globalDirectory, { recursive: true, mode: 0o700 });
+      const globalConfig = join(root, 'TEST-global-native-config.json');
+      const absoluteKey = join(root, 'TEST-manual-absolute.key');
+      await writeFile(absoluteKey, 'TEST-', { mode: 0o600 });
+      await writeFile(join(root, 'home/TEST-manual-home.key'), 'LOCALHOST-', { mode: 0o600 });
+      await writeFile(join(globalDirectory, 'TEST-manual-relative.key'), 'ONLY', { mode: 0o600 });
+      await writeFile(globalConfig, JSON.stringify({
+        model: 'TEST-local/TEST-model', provider: { 'TEST-local': {
+          npm: '@ai-sdk/openai-compatible',
+          options: { baseURL: `http://127.0.0.1:${address.port}/v1`,
+            apiKey: '{file:' + absoluteKey + '}{file:~/TEST-manual-home.key}{file:TEST-manual-relative.key}' },
+          models: Object.fromEntries(['TEST-model', 'TEST-model-B'].map(id => [id, {
+            name: id, limit: { context: 200000, output: 128 },
+            capabilities: { tools: true, input: ['text'], output: ['text'] },
+            headers: { 'x-test-config-scope': 'global' }, body: { test_config_scope: 'global' },
+            ...(id.endsWith('-B') ? { variants: [{ id: 'high', body: { reasoning_effort: 'high' } }] } : {}),
+          }])),
+        } },
+      }), { mode: 0o600 });
+      await symlink(globalConfig, join(globalDirectory, 'opencode.json'));
+      const projectConfig = join(root, 'workspace/opencode.jsonc');
+      const credentialDirectory = join(globalDirectory, 'agent-teams-credentials');
+      await mkdir(credentialDirectory, { mode: 0o700 });
+      const filename = 'TEST-local-' + createHash('sha256').update(projectConfig).digest('hex').slice(0, 16) + '.key';
+      await writeFile(join(credentialDirectory, filename), 'TEST-LOCALHOST-ONLY', { mode: 0o600 });
+      await writeFile(projectConfig, JSON.stringify({
+        model: 'TEST-local/TEST-model-B#high', provider: { 'TEST-local': {
+          options: { apiKey: '{file:~/.config/opencode/agent-teams-credentials/' + filename + '}' }, models: {
+          'TEST-model-B': { limit: { context: 64000, output: 96 },
+            headers: { 'x-test-config-scope': 'project' }, body: { test_config_scope: 'project' } },
+        } } },
+      }), { mode: 0o600 });
+      await mkdir(join(root, 'data/opencode'), { mode: 0o700 });
+      await writeFile(join(root, 'data/opencode/auth.json'), JSON.stringify({
+        'TEST-unrelated': { type: 'api', key: 'TEST-UNSELECTED-ONLY' },
+      }), { mode: 0o600 });
       const profilePath = join(root, 'profile.json');
       await writeFile(profilePath, JSON.stringify(profile), { mode: 0o600 });
       const profileHash = await fileHash(profilePath);
-      const start = () => startHost({ node, entry, root, profile: profilePath, profileHash });
+      const start = () => {
+        const epoch = ++hostEpoch;
+        return startHost({ node, entry, root, profile: profilePath, profileHash,
+          testImports: [new URL('./fixtures/native-opencode-team/passive-diagnostics.ts', import.meta.url).href],
+          onDiagnostic: (chunk: Buffer) => passive.accept(chunk, epoch) });
+      };
       host = start();
       await host.rpc('host.handshake', { protocolVersion: 1 });
+      const capture = async (scope: 'global' | 'project') => {
+        const grant: RuntimeSourceGrant = {
+          targetId: (scope === 'global' ? 'a' : 'b').repeat(64),
+          ownerId: profile.owner.ownerId, ownerRevision: profile.owner.revision,
+          contextId: 'TEST-context', projectPath: scope === 'global' ? null : join(root, 'workspace'),
+          runtimeId: 'opencode', profileId: 'TEST-management', configRevision: 'TEST-config', teamScopes: [],
+        };
+        const before = value<RuntimeSourceSummary>(await host!.rpc('runtime.source.current', { grant }));
+        const command = { grant, commandId: `TEST-${scope}-configuration`, expectedRevision: before.revision };
+        const result = value<RuntimeSourcePublication>(await host!.rpc('runtime.source.refreshConfiguration', command));
+        assert.equal(result.phase, 'published');
+        assert.deepEqual(value(await host!.rpc('runtime.source.refreshConfiguration', command)), result);
+        assert.equal(value<RuntimeSourceSummary>(await host!.rpc('runtime.source.current', { grant })).configurationCurrent, true);
+        return result.selection!;
+      };
+      const global = await capture('global'), project = await capture('project');
+      assert.ok(!(await readFile(join(root, 'store/runtime-sources/index.json'), 'utf8')).includes('TEST-LOCALHOST-ONLY'));
       const base = {
-        profileId: 'TEST-management',
-        configRevision: 'TEST-config',
+        profileId: project.profileId,
+        configRevision: project.configRevision,
         providerId: 'TEST-local',
         modelId: 'TEST-local/TEST-model',
       };
@@ -205,17 +270,22 @@ test(
         } while (Date.now() < deadline);
         throw Error('TEST native model probe did not settle');
       };
-      for (const [commandId, cancel] of [
-        ['TEST-original', false],
-        ['TEST-cancelled', true],
-      ] as const) {
-        const request = { ...base, commandId };
+      const cases = [
+        { commandId: 'TEST-original', cancel: false, modelId: base.modelId,
+          profileId: global.profileId, configRevision: global.configRevision },
+        { commandId: 'TEST-selected-B', cancel: false, modelId: 'TEST-local/TEST-model-B', effort: 'high' as const },
+        { commandId: 'TEST-cancelled', cancel: true, modelId: 'TEST-local/TEST-model-B', effort: 'high' as const },
+      ];
+      let expectedRequests = 0;
+      for (const { cancel, ...choice } of cases) {
+        const { commandId } = choice;
+        const request = { ...base, ...choice };
         const lookup = {
           commandId,
-          profileId: base.profileId,
-          configRevision: base.configRevision,
+          profileId: request.profileId,
+          configRevision: request.configRevision,
         };
-        const expectedRequests = cancel ? 2 : 1;
+        expectedRequests++;
         assert.equal(
           value<ProviderModelProbeSnapshot>(await host.rpc('management.probe.start', request))
             .phase,
@@ -258,7 +328,7 @@ test(
           assert.equal(cancelled.phase, 'cancelled');
           assert.equal(cancelled.ok, false);
         } else {
-          gates[0]!();
+          gates[expectedRequests - 1]!();
           await wait(
             async () =>
               value<ProviderModelProbeSnapshot>(await host!.rpc('management.probe.read', lookup))
@@ -289,23 +359,49 @@ test(
         steps.push(
           cancel
             ? 'original_probe_cancelled_and_owned_child_gone_no_replay'
-            : 'actual_native_no_tool_request_completed_once_and_owned_child_gone'
+            : commandId === 'TEST-original'
+              ? 'actual_native_no_tool_request_completed_once_and_owned_child_gone'
+              : 'selected_model_B_declared_high_variant_observed_in_native_request'
         );
       }
+      const refused = { ...base, commandId: 'TEST-unknown-variant',
+        modelId: 'TEST-local/TEST-model-B', effort: 'max' as const };
+      const refusedLookup = { commandId: refused.commandId,
+        profileId: base.profileId, configRevision: base.configRevision };
+      assert.equal(value<ProviderModelProbeSnapshot>(await host.rpc('management.probe.start', refused)).phase, 'running');
+      await wait(async () => value<ProviderModelProbeSnapshot>(await host!.rpc('management.probe.read', refusedLookup)).phase !== 'running');
+      assert.equal(value<ProviderModelProbeSnapshot>(await host.rpc('management.probe.read', refusedLookup)).ok, false);
+      assert.equal(requests.length, 3, 'unlisted native variant is refused before session input');
+      assert.equal(value<ProviderModelProbeSnapshot>(await host.rpc('management.probe.cancel', refusedLookup)).phase, 'cancelled');
+      unknownProbeCancelled = true;
+      steps.push('unlisted_variant_refused_without_model_request_and_owned_cleanup_confirmed');
       const catalogInput = { profileId: base.profileId, configRevision: base.configRevision,
         providerId: base.providerId };
-      const catalog = value<ProviderManagementCatalog>(await host.rpc('management.catalog', catalogInput));
+      catalogAttempted = true; catalogPhase = 'first-call';
+      const firstCatalogReply = await host.rpc('management.catalog', catalogInput);
+      catalogCompleted = true;
+      catalogReply = catalogCode(firstCatalogReply);
+      const catalog = value<ProviderManagementCatalog>(firstCatalogReply);
+      catalogPhase = 'first-assertions';
       assert.deepEqual(catalog.runtime, { generation: 'v2', version: '2.1.4' });
-      assert.equal(catalog.configuredDefaultModelId, 'TEST-local/TEST-model');
+      assert.equal(catalog.configuredDefaultModelId, 'TEST-local/TEST-model-B');
       assert.equal(catalog.providers.length, 1);
-      assert.deepEqual(catalog.providers[0]!.models, [{ modelId: 'TEST-model', displayName: 'TEST-model',
-        contextTokens: 200000, outputTokens: 128, free: null, declaredInputModalities: ['text'] }]);
+      assert.deepEqual(catalog.providers[0]!.models, ['TEST-model', 'TEST-model-B'].map(modelId => ({
+        modelId, displayName: modelId, contextTokens: modelId.endsWith('-B') ? 64000 : 200000,
+        outputTokens: modelId.endsWith('-B') ? 96 : 128,
+        free: null, declaredInputModalities: ['text'],
+      })));
       assert.equal(catalog.providers[0]!.connected, false, 'read-only inventory does not certify credentials');
       assert.equal(catalog.providers[0]!.configuredAuthless, true, 'captured loopback route requires a separate model probe');
-      assert.deepEqual(catalog.providers[0]!.authMethods, []);
+      assert.deepEqual(catalog.providers[0]!.authMethods, ['api']);
       assert.ok(!JSON.stringify(catalog).includes('TEST-LOCALHOST-ONLY'));
-      assert.deepEqual(value(await host.rpc('management.catalog', catalogInput)), catalog);
-      assert.equal(requests.length, 2, 'metadata reads do not execute a model request');
+      catalogPhase = 'repeat-call'; catalogReply = 'unavailable';
+      const repeatedCatalogReply = await host.rpc('management.catalog', catalogInput);
+      catalogReply = catalogCode(repeatedCatalogReply);
+      assert.deepEqual(value(repeatedCatalogReply), catalog);
+      catalogPhase = 'complete';
+      assert.equal(requests.length, 3, 'metadata reads do not execute a model request');
+      steps.push('published_global_and_project_sources_reached_native_body_headers_limits_and_default');
       const metadataChildren: number[] = [];
       for (const candidate of (await readdir('/proc')).filter(name => /^\d+$/.test(name))) {
         const stat = await readFile(`/proc/${candidate}/stat`, 'utf8').catch(() => undefined);
@@ -325,17 +421,15 @@ test(
       await assertNativeV1Build(repo, sourceHead, build);
       host = start();
       await host.rpc('host.handshake', { protocolVersion: 1 });
-      for (const [commandId, phase, ok] of [
-        ['TEST-original', 'completed', true],
-        ['TEST-cancelled', 'cancelled', false],
-      ] as const) {
+      for (const { cancel, ...choice } of cases) {
         const result: ProviderModelProbeSnapshot = value(
-          await host.rpc('management.probe.start', { ...base, commandId })
+          await host.rpc('management.probe.start', { ...base, ...choice })
         );
-        assert.equal(result.phase, phase);
-        assert.equal(result.ok, ok);
+        assert.equal(result.phase, cancel ? 'cancelled' : 'completed');
+        assert.equal(result.ok, !cancel);
       }
-      assert.equal(requests.length, 2);
+      assert.equal(value<ProviderModelProbeSnapshot>(await host.rpc('management.probe.start', refused)).phase, 'cancelled');
+      assert.equal(requests.length, 3);
       assert.deepEqual(failures, []);
       await host.close();
       hosts.push(host.facts());
@@ -387,6 +481,7 @@ test(
               status: passed && cleanup && !originalFailure ? 'PASS' : 'INCOMPLETE',
               cleanup,
               version: '2.1.4',
+              configurationSource: 'global-symlink-project-regular',
               digests,
               steps,
               requests,
@@ -396,6 +491,7 @@ test(
                 signalCode,
                 stdoutValid,
               })),
+              passiveNativeDiagnostics: passive.entries,
               vendorAuthQualified: false,
               desktopQualified: false,
               releaseQualified: false,
@@ -407,6 +503,18 @@ test(
         );
       } catch (error) {
         cleanupErrors.push(error);
+      }
+      if (originalFailure || cleanupErrors.length) {
+        try {
+          const failure = passive.entries.find(row => row.event === 'metadata-read-failed');
+          // Already twice-projected fixed fields only; never print the original error/receipt/entry.
+          const line = JSON.stringify({ kind: 'TEST_NATIVE_V2_CATALOG_FAILURE', diagnosticOnly: true, sourceHead,
+            unknownProbeCancelled, catalogAttempted, catalogCompleted, catalogPhase, catalogReply,
+            modelRequests: requests.length, cleanup, traceLimited: passive.limited,
+            metadataFailure: failure ? { epoch: failure.epoch, stage: failure.stage, code: failure.code,
+              elapsedMs: failure.durationMs, deadlineExpired: failure.deadlineExpired, aborted: failure.aborted } : null });
+          if (Buffer.byteLength(line) <= 2048) console.log(line);
+        } catch { /* Best-effort evidence never replaces the original failure or cleanup outcome. */ }
       }
     }
     if (originalFailure && cleanupErrors.length)

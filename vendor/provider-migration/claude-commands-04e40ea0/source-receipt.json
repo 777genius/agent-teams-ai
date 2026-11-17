@@ -1,0 +1,53 @@
+{
+  "sourceCommit": "04e40ea05f93ca6fd1b73010d680f579ff14a9d0",
+  "sourceTree": "4adbeaa8a888f166b14fbe533a83933707ed4d46",
+  "sourceWorkingTreeClean": true,
+  "toolchain": {
+    "node": "24.21.0",
+    "pnpm": "11.18.0"
+  },
+  "fullChecks": [
+    {
+      "node": "24.21.0",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "log": "parity-p03-d-final24.log"
+    },
+    {
+      "node": "26.11.1",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "log": "parity-p03-d-final26.log"
+    }
+  ],
+  "qualification": "source-and-packed-consumer-only",
+  "nativeHostQualified": false,
+  "packagedElectronQualified": false,
+  "recipe": "pnpm check; AGENT_TEAMS_PROVIDER_PACK_TEST_RETAIN_DIR=<archives> pnpm --filter @agent-teams/provider-implementations test:package",
+  "packages": {
+    "provider-implementations": {
+      "oldSha256": "c035a09d5b6795e5f440b0d5ffef52d23604f31618232a36356c7133f63b11e6",
+      "newSha256": "dc3c3d50ab47fe54985436e3647e85c62987dfce6fc11da58ecbe317d82d92ec",
+      "changed": [
+        "package/dist/features/provider-session-implementation/adapters/claude-sdk/config.d.ts",
+        "package/dist/features/provider-session-implementation/adapters/claude-sdk/config.js",
+        "package/dist/features/provider-session-implementation/adapters/claude-sdk/session.d.ts",
+        "package/dist/features/provider-session-implementation/adapters/claude-sdk/session.js"
+      ],
+      "added": [
+        "package/dist/features/provider-session-implementation/adapters/claude-sdk/commands.d.ts",
+        "package/dist/features/provider-session-implementation/adapters/claude-sdk/commands.js"
+      ],
+      "removed": []
+    },
+    "provider-session-contracts": {
+      "oldSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+      "newSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+      "changed": [],
+      "added": [],
+      "removed": []
+    }
+  }
+}

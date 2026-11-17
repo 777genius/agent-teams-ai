@@ -1,6 +1,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define _WIN32_WINNT 0x0A00
 #include "protocol.h"
+#include "ownedJob.h"
 #include <io.h>
 #include <fcntl.h>
 #include <algorithm>
@@ -11,6 +12,9 @@
 #include <mutex>
 #include <map>
 #include <thread>
+#ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
+#include "debugServiceTest.h"
+#endif
 
 namespace {
 enum Creation : uint8_t { Never=0, Suspended=1, Running=2, Uncertain=3 };
@@ -165,13 +169,7 @@ void admit(wire::Frame frame) {
   if(sealed) { admissionDone=true; closeTargetCopies(); failure(frame.id,Never,ERROR_CANCELLED); return; }
   try {
     auto spec=wire::launch(frame.payload);
-    job=CreateJobObjectW(nullptr,nullptr);
-    if(!job) throw GetLastError();
-    if(!SetHandleInformation(job,HANDLE_FLAG_INHERIT,0)) throw GetLastError();
-    JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits{};
-    limits.BasicLimitInformation.LimitFlags=JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-    if(!SetInformationJobObject(job,JobObjectExtendedLimitInformation,&limits,sizeof(limits)))
-      throw GetLastError();
+    job=owned_job::create();
     HANDLE inherited[3]={reinterpret_cast<HANDLE>(_get_osfhandle(0)),
       reinterpret_cast<HANDLE>(_get_osfhandle(1)),reinterpret_cast<HANDLE>(_get_osfhandle(2))};
     for(auto h:inherited) {
@@ -196,8 +194,12 @@ void admit(wire::Frame frame) {
     BOOL ok=FALSE; DWORD error=ERROR_CANCELLED;
     if(!sealed) {
       creation=Uncertain; // any interrupted admission is uncertain until positively returned
+      DWORD flags=EXTENDED_STARTUPINFO_PRESENT|CREATE_SUSPENDED|CREATE_UNICODE_ENVIRONMENT|CREATE_NO_WINDOW;
+#ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
+      flags|=DEBUG_PROCESS;
+#endif
       ok=CreateProcessW(spec.executable.c_str(),spec.command.data(),nullptr,nullptr,TRUE,
-        EXTENDED_STARTUPINFO_PRESENT|CREATE_SUSPENDED|CREATE_UNICODE_ENVIRONMENT|CREATE_NO_WINDOW,
+        flags,
         spec.env.data(),spec.cwd.c_str(),&startup.StartupInfo,&process);
       error=GetLastError();
     }
@@ -214,6 +216,11 @@ void admit(wire::Frame frame) {
     birthKnown=true; admissionDone=true;
     std::vector<uint8_t> p; wire::append(p,process.dwProcessId); wire::append(p,birth);
     reply(wire::Prepared,frame.id,p);
+#ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
+    // Preserve the existing admission worker as the creating/debugging thread.
+    // The command reader, root watcher and Stop worker remain independent.
+    if(!debug_service_test::run(process.dwProcessId,root,job,lock)) abandon();
+#endif
   } catch(DWORD error) {
     admissionDone=true; closeTargetCopies(); failure(frame.id,creation,error);
   } catch(...) {
@@ -318,6 +325,20 @@ int main() {
         if(launched.exchange(true)) abandon();
         std::thread(admit,std::move(frame)).detach();
       } else if(frame.op==wire::Stop) {
+#ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
+        if(frame.payload.size()==17&&frame.payload[4]==2) {
+          if(wire::get<DWORD>(frame.payload.data())>60000) abandon();
+          std::thread([selected=std::move(frame)] {
+            try {
+              reply(wire::Stopped,selected.id,debug_service_test::stop(
+                wire::get<DWORD>(selected.payload.data()+5),wire::get<uint64_t>(selected.payload.data()+9),
+                wire::get<DWORD>(selected.payload.data())));
+            } catch(DWORD error) { failure(selected.id,Running,error); }
+            catch(...) { failure(selected.id,Running,ERROR_INVALID_DATA); }
+          }).detach();
+          continue; // Service Stop cannot seal or terminate the provider Job.
+        }
+#endif
         sealed=true; // before state lock / stalled admission / any asynchronous wait
         if(frame.payload.size()!=5||frame.payload[4]!=1||wire::get<uint32_t>(frame.payload.data())>60000)
           abandon();

@@ -8,16 +8,25 @@ import {
 } from '@agent-teams/provider-implementations/opencode';
 
 import { hasUntrustedOpenCodeBinaryOverride } from '../../composition/openCodeV2Environment.js';
+import { selectOpenCodeV2ManagementModel } from '../../composition/openCodeV2ModelSelection.js';
 import { ManagementCommandError } from '../../management/commandRecords.js';
 import { managementDigest } from '../../management/identity.js';
 import { openCodeManagementProfileSchema } from '../../management/profile.js';
 import { createOpenCodeV2EmbeddedServer } from './OpenCodeV2EmbeddedServer.js';
-import { openCodeV2NoToolConfig } from './OpenCodeV2EmbeddedConfig.js';
+import type { AcceptedOpenCodeV2FileKey } from './OpenCodeV2SelectedFileKey.js';
+import { openCodeV2NoToolConfig, openCodeV2CoordinationConfig } from './OpenCodeV2EmbeddedConfig.js';
+import { OpenCodeCoordinationEndpoint, coordinationServer, closeCoordinationByDeadline } from './OpenCodeCoordinationEndpoint.js';
+import { captureCoordinationConfiguration, runNativeCoordination, readNativeCoordination } from './OpenCodeCoordinationProbe.js';
+import { attestOpenCodeV2ModelSelection } from './OpenCodeV2ModelSelection.js';
+import { captureOpenCodeV2SessionCredential } from './OpenCodeV2SessionCredential.js';
+import { captureOpenCodeV2Configuration } from './OpenCodeV2CapturedConfiguration.js';
 
+import type { NativeCoordinationObservation } from './OpenCodeCoordinationProbe.js';
 import type { Session } from '@agent-teams/provider-session-contracts';
 import type { ModelProbeInput, NativeModelProbe } from '../../management/ModelProbeOwner.js';
 import type { OpenCodeManagementProfile } from '../../management/profile.js';
 import type { RegisteredProcessRootSource } from '../../process/registeredProcessContracts.js';
+import type { OpenCodeV2OwnedSessionSelection, OpenCodeV2TransportConfig } from '@agent-teams/provider-implementations/opencode';
 
 const unavailable = (): never => {
   throw new ManagementCommandError('held');
@@ -32,9 +41,10 @@ export function createOpenCodeV2ModelProbe(
   raw: OpenCodeManagementProfile,
   input: ModelProbeInput,
   isCurrent: () => boolean,
-  options: { processCustody?: RegisteredProcessRootSource } = {}
-): NativeModelProbe {
-  const profile = structuredClone(openCodeManagementProfileSchema.parse(raw));
+  options: { processCustody?: RegisteredProcessRootSource; coordination?: true;
+    readiness?: { observeProvider?(provider: unknown, fileProof?: AcceptedOpenCodeV2FileKey): void; expectedProvider?: Record<string, unknown> } } = {}
+): NativeModelProbe & { wasRejected(): boolean; coordinationObservation(): NativeCoordinationObservation | undefined } {
+  const profile = selectOpenCodeV2ManagementModel(openCodeManagementProfileSchema.parse(raw), input);
   if (
     profile.nativeGeneration !== 'v2' ||
     profile.protocolRevision !== '2.1.4' ||
@@ -42,19 +52,15 @@ export function createOpenCodeV2ModelProbe(
     !profile.nativeModel ||
     input.limits ||
     input.modelContext !== undefined ||
-    input.providerId !== profile.nativeModel.providerId ||
-    (input.effort !== undefined && input.effort !== profile.variant) ||
     hasUntrustedOpenCodeBinaryOverride(profile.environment)
   )
     throw new ManagementCommandError('invalid');
-  const { embedded, nativeModel } = profile;
-  if (
-    input.modelId !== nativeModel.modelId &&
-    input.modelId !== `${nativeModel.providerId}/${nativeModel.modelId}`
-  )
-    throw new ManagementCommandError('invalid');
-  const captured = managementDigest({ profile, commandId: input.commandId });
-  const timeoutMs = profile.modelProbeTimeoutMs ?? 90000;
+  const { embedded } = profile;
+  const captured = managementDigest({ profile, commandId: input.commandId,
+    ...(options.readiness ? { readinessPhase: options.coordination ? 'coordination' : 'ordinary' } : {}) });
+  const purposeBound = options.coordination || options.readiness !== undefined;
+  const timeoutMs = purposeBound ? Math.min(profile.modelProbeTimeoutMs ?? 90000, 90000)
+    : profile.modelProbeTimeoutMs ?? 90000;
   const directories = new Map<string, { dev: bigint; ino: bigint }>();
   try {
     for (const directory of [
@@ -74,19 +80,21 @@ export function createOpenCodeV2ModelProbe(
   const namespaceRoots = new Map<string, { dev: bigint; ino: bigint }>();
   const abort = new AbortController();
   let closed = false;
+  let released = false;
   let starting: Promise<void> | undefined;
   let running: Promise<boolean> | undefined;
   let closing: Promise<boolean> | undefined;
   let activeSignal: AbortSignal | undefined;
   let ownerCleanupUnknown = false;
+  let rejected = false;
+  let coordinationResult: NativeCoordinationObservation | undefined;
   const requests = new Set<Promise<void>>();
   let driver: Session | undefined;
   let server: ReturnType<typeof createOpenCodeV2EmbeddedServer> | undefined;
   let ready: Awaited<ReturnType<NonNullable<typeof server>['start']>> | undefined;
   let deadline = 0;
   const nativeSessionId = 'ses_' + captured.slice(0, 40);
-  const { config, selection } = openCodeV2NoToolConfig(profile);
-  const current = () => {
+  const contextCurrent = () => {
     if (
       closed ||
       abort.signal.aborted ||
@@ -112,6 +120,25 @@ export function createOpenCodeV2ModelProbe(
       return false;
     }
   };
+  const coordination = options.coordination ? new OpenCodeCoordinationEndpoint() : undefined;
+  const coordinationSource = coordination && !options.readiness
+    ? captureCoordinationConfiguration(profile, input, contextCurrent) : undefined;
+  const configuration = captureOpenCodeV2Configuration(profile, profile.nativeModel, contextCurrent);
+  const noTool = openCodeV2NoToolConfig(profile, configuration.configuration);
+  const configured = configuration.configuration;
+  const observedProvider: Record<string, unknown> = configured ? {
+    npm: typeof configured.package === 'string' ? configured.package.replace(/^aisdk:/, '') : undefined,
+    options: configured.settings ?? {}, models: configured.models ?? {},
+  } : {};
+  if (options.readiness?.expectedProvider && managementDigest(observedProvider) !==
+      managementDigest(options.readiness.expectedProvider)) return unavailable();
+  let config: Record<string, unknown> = noTool.config;
+  let selection: OpenCodeV2OwnedSessionSelection = noTool.selection;
+  const credential = captureOpenCodeV2SessionCredential(profile, input.providerId,
+    configuration.isCurrent, configuration.key, configuration.selectedFile);
+  const current = coordinationSource
+    ? () => credential.isCurrent() && coordinationSource.isCurrent() : credential.isCurrent;
+  let nativeCredential: OpenCodeV2OwnedSessionSelection['credential'];
   const assertCurrent = (signal?: AbortSignal) => {
     signal?.throwIfAborted();
     if (!current() || Date.now() >= deadline) unavailable();
@@ -149,11 +176,11 @@ export function createOpenCodeV2ModelProbe(
   };
   async function withClient<T>(
     signal: AbortSignal,
-    action: (client: ReturnType<typeof createOpenCodeV2OwnedSessionClient>) => Promise<T>
+    action: (client: ReturnType<typeof createOpenCodeV2OwnedSessionClient>, config: OpenCodeV2TransportConfig) => Promise<T>
   ): Promise<T> {
     assertCurrent(signal);
     if (!ready) return unavailable();
-    const client = createOpenCodeV2OwnedSessionClient({
+    const config: OpenCodeV2TransportConfig = {
       endpoint: ready.endpoint,
       directory: profile.cwd,
       nativeSessionId,
@@ -162,12 +189,13 @@ export function createOpenCodeV2ModelProbe(
       readPassword,
       signal: AbortSignal.any([signal, abort.signal]),
       deadline,
-    });
+    };
+    const client = createOpenCodeV2OwnedSessionClient(config);
     let failed = false;
     let originalFailure: unknown;
     let result!: T;
     try {
-      result = await action(client);
+      result = await action(client, config);
       assertCurrent(signal);
     } catch (error) {
       failed = true;
@@ -195,27 +223,45 @@ export function createOpenCodeV2ModelProbe(
   }
   async function start(signal: AbortSignal): Promise<void> {
     assertCurrent(signal);
+    if (coordination) {
+      coordinationSource?.beforeAllocation();
+      await coordination.start(deadline, signal, current);
+      assertCurrent(signal);
+      ({ config, selection } = openCodeV2CoordinationConfig(profile, coordination, configuration.configuration));
+    }
     const data = await namespace(profile.environment.XDG_DATA_HOME!);
     assertCurrent(signal);
-    const configuration = await namespace(profile.environment.XDG_CONFIG_HOME!);
+    const configDirectory = await namespace(profile.environment.XDG_CONFIG_HOME!);
     assertCurrent(signal);
     server = createOpenCodeV2EmbeddedServer({
       profile,
       embedded,
       databasePath: join(data, 'probe.sqlite'),
-      configDirectory: configuration,
-      startupTimeoutMs: Math.min(profile.timeoutMs, timeoutMs),
+      configDirectory,
+      startupTimeoutMs: Math.min(profile.timeoutMs, purposeBound ? deadline - Date.now() : timeoutMs),
       canAllocate: current,
       ...(options.processCustody ? { processCustody: options.processCustody } : {}),
+      ...(configuration.selectedFile ? { selectedFile: { source: configuration.selectedFile, mode: 'fresh' as const } } : {}),
       config,
     });
+    coordinationSource?.beforeAllocation();
     ready = await server.start(signal);
     assertCurrent(signal);
-    await withClient(signal, async (client) => {
+    await withClient(signal, async (client, wire) => {
       const identity = await client.identity();
       if (identity.pid !== ready!.pid || identity.version !== '2.1.4') return unavailable();
-      await client.createSession(selection);
+      nativeCredential = await credential.prepare(wire, client, undefined,
+        integrationId => server!.selectedFileKey(ready!, integrationId));
+      await attestOpenCodeV2ModelSelection(client, selection.model,
+        { signal, deadline, isCurrent: current });
+      options.readiness?.observeProvider?.({
+        ...observedProvider,
+        ...(nativeCredential ? { credentialScopeDigest: nativeCredential.scopeDigest } : {}),
+      }, credential.fileProof());
+      assertCurrent(signal);
+      await client.createSession({ ...selection, ...(nativeCredential ? { credential: nativeCredential } : {}) });
     });
+    coordination?.bindSession(nativeSessionId);
     const binding = {
       tenantId: 'provider-management',
       projectId: profile.profileId,
@@ -223,7 +269,7 @@ export function createOpenCodeV2ModelProbe(
       generation: 1,
     };
     const factory = createOpenCodeV2DriverFactory({
-      capabilities: ['text'],
+      capabilities: coordination ? ['text', 'tools'] : ['text'],
       readCheckpoint: async () => unavailable(),
       resolveConfiguration: async (request) => {
         assertCurrent(signal);
@@ -245,7 +291,7 @@ export function createOpenCodeV2ModelProbe(
             outputBytes: 32768,
             outputEvents: 128,
             pendingInteractions: 1,
-            timeoutMs,
+            timeoutMs: purposeBound ? Math.max(1, deadline - Date.now()) : timeoutMs,
           },
           probe: async (probeSignal) =>
             withClient(probeSignal, async (client) => {
@@ -255,10 +301,15 @@ export function createOpenCodeV2ModelProbe(
                   agent: observed.agent,
                   model: observed.model,
                   permissions: observed.permissions,
-                }) === managementDigest(selection) &&
+                  ...(observed.credential ? { credential: observed.credential } : {}),
+                }) === managementDigest({ ...selection, ...(nativeCredential ? { credential: nativeCredential } : {}) }) &&
                 (await client.savedPermissionsEmpty()) &&
                 (await client.builtinPluginsOnly()) &&
-                (await client.readMcp()).length === 0
+                await (async () => {
+                  const mcp = await client.readMcp();
+                  return coordination ? mcp.length === 1 && mcp[0]?.name === coordinationServer &&
+                    mcp[0].status === 'connected' && coordination.catalogCurrent() : mcp.length === 0;
+                })()
               );
             }),
           confirmStopped: () => server!.stopOwned(),
@@ -268,19 +319,30 @@ export function createOpenCodeV2ModelProbe(
     const opened = await factory.open({
       ...binding,
       configRevision: profile.configRevision,
-      requiredCapabilities: ['text'],
+      requiredCapabilities: coordination ? ['text', 'tools'] : ['text'],
     });
     driver = opened.driver;
     assertCurrent(signal);
   }
-  async function run(signal: AbortSignal): Promise<boolean> {
-    deadline = Date.now() + timeoutMs;
-    const combined = AbortSignal.any([signal, abort.signal, AbortSignal.timeout(timeoutMs)]);
+  async function run(signal: AbortSignal, originalDeadline?: number): Promise<boolean> {
+    if (purposeBound && (originalDeadline === undefined || !Number.isSafeInteger(originalDeadline) ||
+        originalDeadline <= Date.now() || originalDeadline - Date.now() > timeoutMs)) unavailable();
+    deadline = purposeBound ? originalDeadline! : Date.now() + timeoutMs;
+    const combined = AbortSignal.any([signal, abort.signal,
+      AbortSignal.timeout(purposeBound ? Math.max(1, deadline - Date.now()) : timeoutMs)]);
     activeSignal = combined;
     starting = start(combined);
     await starting;
     assertCurrent(combined);
     if (!driver) return unavailable();
+    if (coordination) {
+      if (options.readiness) {
+        coordinationResult = await readNativeCoordination(driver, nativeSessionId, coordination,
+          captured, combined, deadline, current);
+        return coordinationResult?.status === 'compatible';
+      }
+      return runNativeCoordination(driver, nativeSessionId, coordination, captured, combined, deadline, current);
+    }
     const inputId = 'model-probe-' + captured.slice(0, 32);
     const operationRef = 'model-probe-operation-' + captured.slice(0, 32);
     const handed = await driver.submit({ inputId, operationRef, content: prompt });
@@ -295,18 +357,33 @@ export function createOpenCodeV2ModelProbe(
       )
         return false;
       if (event.kind === 'text') hasText ||= event.text.trim().length > 0;
-      else if (event.kind === 'result') return event.outcome === 'succeeded' && hasText;
+      else if (event.kind === 'result') {
+        // V2 emits failed only for the original qualified execution.failed + idle
+        // cut. Transport/cancellation/output failures are not a rejection proof.
+        rejected = event.outcome === 'failed' && event.code === undefined;
+        return event.outcome === 'succeeded' && hasText;
+      }
       else if (event.kind !== 'usage') return false;
     }
     return false;
   }
   return {
     timeoutMs,
-    run: (signal) => (running ??= run(signal)),
-    close: () => {
+    wasRejected: () => rejected,
+    coordinationObservation: () => coordinationResult === undefined ? undefined : { ...coordinationResult },
+    nativeFileKeyWitness: () => {
+      if (!released) return undefined;
+      const proof = credential.fileProof();
+      if (configuration.selectedFile && !proof) return unavailable();
+      return proof;
+    },
+    run: (signal, originalDeadline) => (running ??= run(signal, originalDeadline)),
+    close: originalDeadline => {
       closed = true;
+      coordination?.seal();
       abort.abort();
-      return (closing ??= (async () => {
+      if (closing) return closing;
+      const work = (async () => {
         await starting?.catch(() => {});
         // Rejected late custody checks cannot send credentials. Give their
         // original finite requests time to settle before SPI abort; a missing
@@ -317,7 +394,8 @@ export function createOpenCodeV2ModelProbe(
           clean = await Promise.race([
             Promise.all([...requests]).then(() => true),
             new Promise<false>((resolve) => {
-              timer = setTimeout(() => resolve(false), Math.min(timeoutMs, 5000));
+              timer = setTimeout(() => resolve(false), Math.min(timeoutMs, 5000,
+                purposeBound ? Math.max(0, (originalDeadline ?? deadline) - Date.now()) : 5000));
             }),
           ]);
         } finally {
@@ -333,6 +411,9 @@ export function createOpenCodeV2ModelProbe(
           if (server) clean = (await server.stopOwned()) && clean;
         } catch {
           clean = false;
+        }
+        if (coordination) {
+          try { clean = await coordination.close() && clean; } catch { clean = false; }
         }
         if (!clean) return false;
         try {
@@ -352,7 +433,10 @@ export function createOpenCodeV2ModelProbe(
         } catch {
           return false;
         }
-      })());
+      })();
+      closing = (purposeBound ? closeCoordinationByDeadline(work, originalDeadline ?? deadline) : work)
+        .then(clean => { released = clean; return clean; });
+      return closing;
     },
   };
 }

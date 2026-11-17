@@ -145,7 +145,8 @@ export class RuntimeActivityCoordinator implements RuntimeStore {
     return this.options.store.fenced(binding, (tx) => {
       this.authorize(binding);
       const record = tx.get(),
-        feed = this.read(binding, record);
+        feed = this.read(binding, record),
+        lastObservedAt = feed.events.at(-1)?.observedAt;
       const latest: RuntimeActivitySnapshot['latest'] = {
         text: [],
         tools: [],
@@ -191,6 +192,7 @@ export class RuntimeActivityCoordinator implements RuntimeStore {
       }
       return {
         ...feed,
+        ...(lastObservedAt === undefined ? {} : { lastObservedAt }),
         events: [],
         state,
         latest,

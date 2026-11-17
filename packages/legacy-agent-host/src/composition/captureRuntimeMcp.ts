@@ -7,6 +7,7 @@ import { selectMcpCatalog } from '../mcp-catalog/catalog.js';
 import { normalizeTeamMemberMcpPolicy } from '../mcp-catalog/memberPolicy.js';
 import { captureSelectedMcpServers } from '../mcp-catalog/capturedServer.js';
 import { captureOpenCodeMcpPolicyPlugin } from '../adapters/providers/openCodeMcpPolicy.js';
+import { openCodeV2CapturedMcp } from '../adapters/providers/OpenCodeV2CapturedMcp.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
 import type { ConfiguredMcpServer } from '../mcp-catalog/catalog.js';
 import type { CapturedMcpServers } from '../mcp-catalog/capturedServer.js';
@@ -72,19 +73,23 @@ export function captureRuntimeMcp(options: {
                   : {}),
               };
       if (recipe.provider === 'opencode' && recipe.nativeGeneration === 'v2') {
-        // V2's native configuration owns its Team MCP binding. An empty external
-        // policy needs no V1 plugin or overlay; a requested external policy must
-        // remain refused until that separate V2 capability is qualified.
-        if (policy?.mode === 'strictAllowlist' || policy?.mode === 'inheritScopes' ||
-            Object.keys(servers).length || source !== undefined ||
-            recipe.mcpPolicyPlugin !== undefined || recipe.capturedMcpServers !== undefined ||
-            recipe.capturedMcpSource !== undefined || recipe.mcpCatalogSource !== undefined ||
+        const embedded = recipe.protocolRevision === '2.1.4' && recipe.embedded !== undefined;
+        if (recipe.mcpPolicyPlugin !== undefined ||
             ('capturedMcpCatalog' in recipe && recipe.capturedMcpCatalog !== undefined))
           throw new TeamLaunchError('invalid', 'member-mcp-configuration');
-        return structuredClone(recipe);
+        if (!embedded && (policy?.mode === 'strictAllowlist' || policy?.mode === 'inheritScopes' ||
+            Object.keys(servers).length || source !== undefined || recipe.capturedMcpServers !== undefined ||
+            recipe.capturedMcpSource !== undefined || recipe.mcpCatalogSource !== undefined))
+          throw new TeamLaunchError('invalid', 'member-mcp-configuration');
+        openCodeV2CapturedMcp(servers);
+        // Preserve original empty V2 recipe bytes and checkpoint identities.
+        if (!Object.keys(servers).length && source === undefined &&
+            recipe.capturedMcpServers === undefined && recipe.capturedMcpSource === undefined &&
+            recipe.mcpCatalogSource === undefined) return structuredClone(recipe);
       }
       const selected =
-        recipe.provider === 'opencode' ? captureOpenCodeMcpPolicyPlugin(recipe) : recipe;
+        recipe.provider === 'opencode' && recipe.nativeGeneration !== 'v2'
+          ? captureOpenCodeMcpPolicyPlugin(recipe) : recipe;
       const { capturedMcpSource: _oldSource, ...base } = structuredClone(selected);
       return {
         ...base,

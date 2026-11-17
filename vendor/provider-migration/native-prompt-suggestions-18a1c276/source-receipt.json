@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "agent-teams-ai/old-provider-implementations",
+  "sourceCommit": "18a1c276474388a38e2bb00e5a11958c936566e0",
+  "qualification": "source-and-packed-consumer-only",
+  "nativeHostQualified": false,
+  "packagedElectronQualified": false,
+  "fullChecks": [
+    {
+      "node": "24.21.0",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "runId": 43640593139
+    },
+    {
+      "node": "26.11.1",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "runId": 43640593139
+    }
+  ],
+  "checkedArtifact": {
+    "id": 14130999557,
+    "name": "opencode-v2-spi-consumer-checked-18a1c276474388a38e2bb00e5a11958c936566e0",
+    "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43640593139/artifacts/14130999557"
+  },
+  "packages": {
+    "provider-implementations": {
+      "file": "agent-teams-provider-implementations-0.0.0.tgz",
+      "newSha256": "26f8fc7083dbc470dd9d3a656e24873b73c78af3da3ffeea802a09a98f253e3c",
+      "bytes": 185855,
+      "integrity": "sha512-1RgxBOuB7dpv72ydx1BkurlDAI+VNDuTGqlDDi2emVqTsnZzOPC+GKJSBGAuWYy4k1MEGwvbYMVvIAULW7M3Hw=="
+    },
+    "provider-session-contracts": {
+      "file": "agent-teams-provider-session-contracts-0.0.0.tgz",
+      "existingPath": "../opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "newSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db"
+    }
+  }
+}
