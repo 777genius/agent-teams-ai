@@ -16,6 +16,8 @@ import {
 } from '@renderer/components/ui/tooltip';
 import { Info } from 'lucide-react';
 
+import type { JSX } from 'react';
+
 import type { TeamProjectContextMode } from '@shared/types';
 
 interface Props {
@@ -31,7 +33,7 @@ export function TeamHistoryAndLaunchControls({
   onProjectContextModeChange,
   launchTeam,
   onLaunchTeamChange,
-}: Props): React.JSX.Element {
+}: Props): JSX.Element {
   const { t } = useAppTranslation('team');
   return (
     <>
