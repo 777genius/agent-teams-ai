@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { projectAliveTeamNames, stopLogicalTeam, permanentlyDeleteLogicalTeam } from '../../../src/main/ipc/teams/teamContextLifecycle';
+import { projectAliveTeamNames, stopLogicalTeam, permanentlyDeleteLogicalTeam, restoreLogicalTeamWithContexts } from '../../../src/main/ipc/teams/teamContextLifecycle';
 
 import type { TeamMetaFile } from '../../../src/main/services/team/TeamMetaStore';
 import type { TeamSummary } from '../../../src/shared/types/team';
@@ -83,9 +83,14 @@ describe('project team lifecycle projection', () => {
       return { success: true as const, data: undefined };
     });
     const { deleteLogicalTeamWithContexts } = await import('../../../src/main/ipc/teams/teamContextLifecycle');
-    const result = await deleteLogicalTeamWithContexts('builders', stop, perform, f.meta, f.registry as never);
+    const result = await deleteLogicalTeamWithContexts(
+      'builders', stop,
+      async (name) => { order.push('trash:' + name); },
+      perform, f.meta, f.registry as never,
+      async () => false
+    );
     expect(result.success).toBe(true);
-    expect(order).toEqual(['stop:ptc-a', 'delete:builders']);
+    expect(order).toEqual(['stop:ptc-a', 'trash:ptc-a', 'delete:builders']);
   });
 
   it('does not soft-delete an unfinished project context', async () => {
@@ -93,7 +98,10 @@ describe('project team lifecycle projection', () => {
     f.registry.list.mockResolvedValue([{ ...entry, state: 'reserved' }]);
     const perform = vi.fn(async () => ({ success: true as const, data: undefined }));
     const { deleteLogicalTeamWithContexts } = await import('../../../src/main/ipc/teams/teamContextLifecycle');
-    const result = await deleteLogicalTeamWithContexts('builders', vi.fn(), perform, f.meta, f.registry as never);
+    const result = await deleteLogicalTeamWithContexts(
+      'builders', vi.fn(), vi.fn(), perform, f.meta, f.registry as never,
+      async () => false
+    );
     expect(result.success).toBe(false);
     expect(perform).not.toHaveBeenCalled();
   });
@@ -112,6 +120,7 @@ describe('project team lifecycle projection', () => {
       meta: f.meta,
       registry: registry as never,
       isNativePresent: vi.fn(async () => true),
+      hasAnySchedules: vi.fn(async () => false),
       stopNative: vi.fn(async () => {
         actions.push('stop');
         return { success: true as const, data: undefined };
@@ -137,6 +146,7 @@ describe('project team lifecycle projection', () => {
         forgetPermanentlyDeletedContext: forget,
       } as never,
       isNativePresent: vi.fn(async () => true),
+      hasAnySchedules: vi.fn(async () => false),
       stopNative: vi.fn(async () => ({ success: true as const, data: undefined })),
       deleteNative: vi.fn(async () => { throw new Error('disk busy'); }),
       deleteLogical: logical,
@@ -157,6 +167,7 @@ describe('project team lifecycle projection', () => {
         forgetPermanentlyDeletedContext: forget,
       } as never,
       isNativePresent: vi.fn(async () => false),
+      hasAnySchedules: vi.fn(async () => false),
       stopNative: vi.fn(),
       deleteNative: del,
       deleteLogical: vi.fn(async () => ({ success: true as const, data: undefined })),
@@ -164,6 +175,21 @@ describe('project team lifecycle projection', () => {
     expect(result.success).toBe(true);
     expect(del).not.toHaveBeenCalled();
     expect(forget).toHaveBeenCalledWith('builders', 'ptc-a', entry.id);
+  });
+
+  it('restores each native project before making the logical team visible', async () => {
+    const f = fixture('per_project');
+    const actions: string[] = [];
+    const restore = vi.fn(async (name: string) => { actions.push('restore:' + name); });
+    const logical = vi.fn(async () => {
+      actions.push('restore:builders');
+      return { success: true as const, data: undefined };
+    });
+    const result = await restoreLogicalTeamWithContexts(
+      'builders', restore, logical, f.meta, f.registry as never
+    );
+    expect(result.success).toBe(true);
+    expect(actions).toEqual(['restore:ptc-a', 'restore:builders']);
   });
 
   it('projects only verified native aliases to the logical team in the UI alive list', async () => {

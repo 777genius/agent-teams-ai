@@ -25,7 +25,7 @@ import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
 import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
-import { stopLogicalTeam, projectAliveTeamNames, deleteLogicalTeamWithContexts, permanentlyDeleteLogicalTeam } from './teams/teamContextLifecycle';
+import { stopLogicalTeam, projectAliveTeamNames, deleteLogicalTeamWithContexts, restoreLogicalTeamWithContexts, permanentlyDeleteLogicalTeam } from './teams/teamContextLifecycle';
 import { buildTeamProgressReporter, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
 import { withTeamLaunchAdmission } from './teams/teamLaunchAdmission';
 import type { ProjectContextProgressMapper } from './teams/teamProjectContextLaunch';
@@ -734,8 +734,8 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_UPDATE_TASK_STATUS, handleUpdateTaskStatus);
   ipcMain.handle(TEAM_UPDATE_TASK_OWNER, handleUpdateTaskOwner);
   ipcMain.handle(TEAM_UPDATE_TASK_FIELDS, handleUpdateTaskFields);
-  ipcMain.handle(TEAM_DELETE_TEAM, (e, n) => deleteLogicalTeamWithContexts(n, (t) => handleStopTeam(e, t), () => handleDeleteTeam(e, n)));
-  ipcMain.handle(TEAM_RESTORE, handleRestoreTeam);
+  ipcMain.handle(TEAM_DELETE_TEAM, (e, n) => deleteLogicalTeamWithContexts(n, (t) => handleStopTeam(e, t), (t) => getTeamDataService().deleteTeam(t), () => handleDeleteTeam(e, n)));
+  ipcMain.handle(TEAM_RESTORE, (e, n) => restoreLogicalTeamWithContexts(n, (t) => getTeamDataService().restoreTeam(t), () => handleRestoreTeam(e, n)));
   ipcMain.handle(TEAM_PERMANENTLY_DELETE, (event, name) =>
     permanentlyDeleteLogicalTeam(name, {
       stopNative: (alias) => handleStopTeam(event, alias),
