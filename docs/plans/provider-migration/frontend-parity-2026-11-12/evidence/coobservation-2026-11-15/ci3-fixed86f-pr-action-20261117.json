@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_SINGLE_ACTION_ISSUANCE",
+  "repository": "777genius/agent-teams-ai",
+  "action": "draftPr",
+  "tool": "github_create_pull_request",
+  "arguments": {
+    "repository_full_name": "777genius/agent-teams-ai",
+    "base": "ci/frontend-parity-c714-20261117-3-base",
+    "head": "ci/frontend-parity-c714-20261117-3-head",
+    "title": "test: validate Claude readiness and cross-platform provider parity",
+    "body": "## Purpose\n\nValidate the published frontend/Host/provider parity changes at fixed commit 86f52244b5375834a4040cbc63803d68cc708087 against its real ancestor 9d79abcf1f5c498687c2e5c443e3edf220070aa6.\n\n## Changes\n\nThe source delta contains 15 files: four Windows process/diagnostic fixes, six bounded diagnostic and regression changes, and five Claude fixture/peer changes. The Claude peer now supports the guarded auth-status contract, and the runtime and collaboration fixtures use the catalog's resolved TEST model ID. Three settings regressions and one renderer regression were added while preserving all earlier cases.\n\n## Validation scope\n\nExisting workflows select 18 Host Desktop lanes, four full frontend shards, five Host process platforms, five packaged platforms and the existing Stage 1 OpenCode checks, plus announcements and CI fast feedback. The whole 149-case UI module, 43-case model catalog and 85-case provider-management file remain intact. The settings file has 11 cases and captured Claude status has seven; the existing whole native receipt entry includes its 14 platform cases.\n\nClaude and Codex use finite TEST peers only, including metadata and version paths. Actual OpenCode stays within the existing pinned localhost-model paths. Workflow bytes, dependencies, filters, original deadlines and strict native assertions are unchanged.\n\nFull qualification is expected to fail the existing Draft policy; explicit Draft skips stay visible. Every other failure, skip, cancelled or unreached step remains non-PASS. Earlier cold-renderer, Darwin P09, OpenCode credentials and Settings failures remain open until exact new evidence resolves them.\n\nBoth snapshot refs and this PR's metadata stay fixed while selected runs are active. PRs #1218 and #1219 are terminal and are not replayed. The separately pinned local RED/GREEN supervisor remains uninvoked and unrebound. This scope excludes Ready conversion, merge, release, Stage 2 and broad native/vendor qualification.\n",
+    "draft": true,
+    "maintainer_can_modify": false
+  },
+  "issuedAt": "2026-11-17 13:27:32 UTC",
+  "maximumAttempts": 1,
+  "admission": {
+    "bytes": 49703,
+    "sha256": "eb3ea3a06028b9f432a6e01656c344f16abf2130a2bbe6f0d5471c6bf59aee88",
+    "gitBlob": "4d024e83678c004961705bec8e1b311507c342f7"
+  },
+  "preflight": {
+    "bytes": 65129,
+    "sha256": "b7b1ab7652087d0c07c8de9415afad08a7db44fb450802684dce1122c2cc7e8d",
+    "gitBlob": "7be00f3d34a7e27f3abf68dea421e564b72433b2"
+  },
+  "bothExactRefsVerified": true,
+  "unknownOrRefusedIsSpent": true,
+  "returnedPrNumberUnknown": true,
+  "futureRunOrMergeIdsUnknown": true
+}

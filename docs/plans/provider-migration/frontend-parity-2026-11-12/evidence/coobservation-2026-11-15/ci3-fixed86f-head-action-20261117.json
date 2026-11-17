@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_SINGLE_ACTION_ISSUANCE",
+  "repository": "777genius/agent-teams-ai",
+  "action": "headRef",
+  "tool": "github_create_branch",
+  "arguments": {
+    "repository_full_name": "777genius/agent-teams-ai",
+    "branch_name": "ci/frontend-parity-c714-20261117-3-head",
+    "sha": "86f52244b5375834a4040cbc63803d68cc708087"
+  },
+  "issuedAt": "2026-11-17 13:27:14 UTC",
+  "maximumAttempts": 1,
+  "admission": {
+    "bytes": 49703,
+    "sha256": "eb3ea3a06028b9f432a6e01656c344f16abf2130a2bbe6f0d5471c6bf59aee88",
+    "gitBlob": "4d024e83678c004961705bec8e1b311507c342f7"
+  },
+  "preflight": {
+    "bytes": 65129,
+    "sha256": "b7b1ab7652087d0c07c8de9415afad08a7db44fb450802684dce1122c2cc7e8d",
+    "gitBlob": "7be00f3d34a7e27f3abf68dea421e564b72433b2"
+  },
+  "precedingBaseRefVerified": true,
+  "unknownOrRefusedIsSpent": true
+}

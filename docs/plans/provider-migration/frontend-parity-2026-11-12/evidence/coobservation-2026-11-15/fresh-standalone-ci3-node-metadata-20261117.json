@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_FRESH_STANDALONE_CANDIDATE_METADATA_ONLY",
+  "repository": "777genius/agent-teams-ai",
+  "observed": {
+    "at": "2026-11-17T13:39:49.202853+00:00",
+    "kind": "read-only-candidate-venue-metadata",
+    "node_executed": false,
+    "paths": [
+      {
+        "bytes": 126939688,
+        "ctime_ns": "1794515386000000000",
+        "device": "27",
+        "directory": false,
+        "exists": true,
+        "gid": "65534",
+        "inode": "9223372036854818268",
+        "mode": "0o755",
+        "mtime_ns": "1794515386000000000",
+        "nlink": "1",
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "regular_file": true,
+        "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+        "symlink": false,
+        "uid": "65534"
+      },
+      {
+        "exists": false,
+        "path": "/workspace/scratch/c714f5bce554"
+      },
+      {
+        "exists": false,
+        "path": "/workspace/scratch/c714-waitread-ci3-20261117"
+      },
+      {
+        "exists": false,
+        "path": "/workspace/scratch/c714-waitread-ci3-controls-20261117"
+      }
+    ],
+    "source_or_stage_created": false
+  },
+  "previousNodePin": {
+    "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+    "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+    "bytes": 126939688,
+    "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+    "device": "27",
+    "inode": "9223372036854818252",
+    "uid": "65534",
+    "gid": "65534",
+    "mode": "0o755",
+    "mtimeNs": "1794515386000000000",
+    "ctimeNs": "1794515386000000000",
+    "versionPreviouslyObserved": "v24.22.1"
+  },
+  "comparison": {
+    "samePathAndRealpath": true,
+    "sameBytesAndSha256": true,
+    "sameDevice": true,
+    "inodeChanged": true,
+    "previousInode": "9223372036854818252",
+    "currentInode": "9223372036854818268",
+    "sameOwnerModeAndTimes": true
+  },
+  "probe": {
+    "shell": "/bin/bash",
+    "login": false,
+    "workdir": "/",
+    "program": "/usr/bin/python3",
+    "purpose": "Read-only lstat/realpath/hash. No Node or target invocation; no files/directories created.",
+    "issuedAt": "2026-11-17 13:39:48 UTC",
+    "exitCode": 0,
+    "wallTimeSeconds": 0.356060674
+  },
+  "nodeVersionClaim": "Pinned bytes match the previously observed v24.22.1 binary; no fresh --version execution occurred.",
+  "oldAttemptsSpent": true,
+  "oldScopesNotRecreated": true,
+  "newCandidateRootsAbsent": [
+    {
+      "exists": false,
+      "path": "/workspace/scratch/c714f5bce554"
+    },
+    {
+      "exists": false,
+      "path": "/workspace/scratch/c714-waitread-ci3-20261117"
+    },
+    {
+      "exists": false,
+      "path": "/workspace/scratch/c714-waitread-ci3-controls-20261117"
+    }
+  ],
+  "newVenueSelected": false,
+  "newControlAuthored": false,
+  "executionAdmitted": false,
+  "qualification": "Metadata evidence only; neither a supervisor run nor test result nor rebound admission."
+}

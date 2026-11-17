@@ -1,0 +1,258 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_FIXED_86F_THIRD_CI_R1_ACTUAL_PUBLICATION_GATE",
+  "closedAt": "2026-11-17 13:25:19 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "commit": "59e8d621717314d3fc3525af559a2a3beb9a7602",
+  "soleParent": "86f52244b5375834a4040cbc63803d68cc708087",
+  "root": "31d58584fc77f7b26a9658cae55fddb74e23ac23",
+  "docs": "e421ec00b524ee11ec050e35b5f32b0d49c73c05",
+  "manifest": {
+    "bytes": 12590,
+    "sha256": "30e0713238b336cb5c53135eabbadb1edc83846ed98926caaf530cfde1792c8a",
+    "gitBlob": "2cc2a167220d306ec68d23aad9bc57e44997b496"
+  },
+  "subject": {
+    "bytes": 88097,
+    "sha256": "86e51d82ac055045ce1682afd942f28a4f682be354acf629f7c02dc1929fbebe",
+    "gitBlob": "d9da20d5123dd4bfec6c400508e2409e783f346d"
+  },
+  "precedingSourceGate": {
+    "bytes": 8975,
+    "sha256": "70cbc7861cf6b7781600a76eec8df62486be3ee1e657c2694db4c3b4d1357725",
+    "gitBlob": "246e59b55ed2d395524f40f466c1ef7c8362a553"
+  },
+  "sourceGateClosedAt": "2026-11-17 12:43:15 UTC",
+  "staticReviews": [
+    {
+      "role": "rootReview",
+      "pin": {
+        "bytes": 71519,
+        "sha256": "ea03d37f9676a7618b01c61fd0c700af3f45703ed66523996f759ed191890ad3",
+        "gitBlob": "e095c058c9e2f02268dd6459083c1a03deb26ed0"
+      },
+      "checks": 42,
+      "decision": "ACCEPT_EXACT_CI_R1_FOR_DOCUMENTATION_PUBLICATION_ONLY",
+      "completeBodyRead": true,
+      "selfReadConfirmed": true
+    },
+    {
+      "role": "guardReview",
+      "pin": {
+        "bytes": 84373,
+        "sha256": "4e92f16494d4da7200cfa4ab9403b3e9cd658f7c27c97dba69c317ad67ba17c1",
+        "gitBlob": "b6ea038954d943981da7119f3f3c86dc77dfce77"
+      },
+      "checks": 45,
+      "decision": "ACCEPT_EXACT_CI3_R1_SCOPE_ONLY_PENDING_EXISTING_PUBLICATION_AND_ADMISSION",
+      "completeBodyRead": true,
+      "selfReadConfirmed": true
+    },
+    {
+      "role": "semanticReview",
+      "pin": {
+        "bytes": 63139,
+        "sha256": "96e065caee14e8b3194964887d7243b6b78ffc2832c868f452f467bf47bd93da",
+        "gitBlob": "a6f86825012567b7b3dca65a6cca42e80344d0bd"
+      },
+      "checks": 43,
+      "decision": "ACCEPT_EXACT_CI3_R1_STATIC_SEMANTICS_ONLY",
+      "completeBodyRead": true,
+      "selfReadConfirmed": true,
+      "wordingClarification": {
+        "field": "checks.S18.evidence",
+        "authorAt": "2026-11-17 13:05:23 UTC",
+        "meaning": "The phrase original139 bytes means the entire164965-byte139-case prefix plus57-byte import =165022 bytes and149expanded cases, as the complete R1 actual tuples state. It does not assert a139-byte prefix.",
+        "reportBodyChanged": false
+      }
+    },
+    {
+      "role": "bindingReview",
+      "pin": {
+        "bytes": 343813,
+        "sha256": "beba2aa568aa6cef0b293f971a389c1e85ec1e0157cfc16d0c58e9a40c6c3a7e",
+        "gitBlob": "5e3404934c98557891b0abde6dc7ea50cc99cec6"
+      },
+      "checks": 50,
+      "decision": "ACCEPT_EXACT_CI3_R1_BINDING_SCOPE_ONLY",
+      "completeBodyRead": true,
+      "selfReadConfirmed": true
+    }
+  ],
+  "staticChecks": 180,
+  "staticReviewsClosedAt": "2026-11-17 13:11:46 UTC",
+  "rootActual": {
+    "bytes": 538486,
+    "sha256": "2a14a68f07748713468dda86e2e6165b53b0b09a0d489a043b6264bc2a28f940",
+    "gitBlob": "8386d8007ed28320dd2c01d6edc0be0f9c087692"
+  },
+  "independentActual": {
+    "bytes": 678736,
+    "sha256": "f2f13c8411fcf5cdaa0150e71307d8e72d88d4169a3853fba0614455427e2b85",
+    "gitBlob": "18c873be55b9e6a83e892e7f3664bbbc3853156e"
+  },
+  "rootChecks": 37,
+  "independentChecks": 45,
+  "actualChecks": 82,
+  "allFullBodyReadbacks": true,
+  "allSelfReadsConfirmed": true,
+  "currentBodies": {
+    "count": 14,
+    "bytes": 6635046
+  },
+  "parentBodies": {
+    "count": 3,
+    "bytes": 3522870
+  },
+  "completeCurrentUtf8Tuples": {
+    "count": 475,
+    "bytes": 68340318,
+    "unresolved": 0
+  },
+  "repositoryContextDisambiguations": {
+    "count": 19,
+    "mainReportBodies": 2,
+    "mainCurrentSourcePaths": 16,
+    "mainRuntimeLock": 1,
+    "basis": "Actual main-repository docs/source leaves and complete exact body reads. Surrounding repository names scope the distinct bundled runtime route.",
+    "sourceOrReportBytesChanged": false,
+    "wrongRepositoryFetches": 0,
+    "fullRecordsInBothActualReports": true
+  },
+  "unreadBinaryMetadataReferences": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3",
+        "bytes": 186398,
+        "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+      },
+      "locations": [
+        "file:sourceActualGate.unreadBinaryMetadataReferences.0.pin",
+        "file:sourceRootActual.unreadBinaryMetadataReferences.0.pin",
+        "file:sourceIndependentActual.unreadBinaryMetadataReferences.0.pin",
+        "file:sourceIndependentActual.checks.36.evidence.pin"
+      ]
+    }
+  ],
+  "exactDelta": {
+    "changed": 14,
+    "added": 11,
+    "modified": 3,
+    "deleted": 0,
+    "modesChanged": 0,
+    "sourceChanged": 0,
+    "workflowChanged": 0
+  },
+  "census": {
+    "parentTotal": 12193,
+    "parentDocs": 3394,
+    "total": 12204,
+    "docs": 3405,
+    "nonDocs": 8799,
+    "rootEntries": 54,
+    "unchangedNonDocRootEntries": 53
+  },
+  "preservation": {
+    "catalogBefore": 99,
+    "catalogAfter": 101,
+    "all99ValuesPreserved": true,
+    "bundles": 27,
+    "originalTotals": true,
+    "commonAppend": {
+      "bytes": 5496,
+      "sha256": "5177f34a497d5879d5a545cc0482f447df8383e47f859ccfb16111d5032787fd",
+      "gitBlob": "95d48919e638234cb8bc33f6dcf1e91f2b3bc9fa",
+      "kind": "derived-identical-document-suffix-not-separately-retained-blob"
+    },
+    "all28CriticalSourceBodiesUnchanged": true,
+    "selectedSourceFiles": 15,
+    "workflows": 42,
+    "production": 5020,
+    "sourceCap": 800,
+    "exceptions": 141
+  },
+  "fixedCiSource": {
+    "head": "86f52244b5375834a4040cbc63803d68cc708087",
+    "headTree": "11ccb7c57cc49af613c62620a1d348bf6de8aa3d",
+    "base": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "baseTree": "aefd0dfc3ceb7b9e4812cc4e532b128c21c3e295",
+    "actualComparison": {
+      "bytes": 1157915,
+      "sha256": "ceb09d0f69370e9bacefee3dfa0afc273e3904b9193afccf9fa9613e979f9b9b",
+      "gitBlob": "f26308ac78e47a41ff8cd88f983944a8caeeb32e"
+    },
+    "evidenceCommitIsDifferent": true
+  },
+  "pendingExactActions": {
+    "baseRef": "ci/frontend-parity-c714-20261117-3-base",
+    "headRef": "ci/frontend-parity-c714-20261117-3-head",
+    "prDraft": true,
+    "maintainerCanModify": false,
+    "maximumAttemptsEach": 1,
+    "namesProbed": false,
+    "refsCreated": [],
+    "newPrNumber": null,
+    "newRunIds": [],
+    "externalAdmissionAuthored": false
+  },
+  "oldWork": {
+    "originalNineTerminal": true,
+    "pr1218AllSevenTerminal": true,
+    "pr1219AllSevenTerminal": true,
+    "noOldPolling": true,
+    "frozenPRs": [
+      1206,
+      1207,
+      1208,
+      1211,
+      1212,
+      1213
+    ],
+    "rootOnlyPublisherExecutor": true
+  },
+  "environment": {
+    "latestAvailabilityNotification": {
+      "at": "2026-11-17 12:19:47 UTC",
+      "kind": "environment-availability-notification",
+      "cwd": "/workspace/scratch/c714f5bce554",
+      "status": "availability notified, filesystem and process identity not probed",
+      "priorUnavailableRecordedAt": "2026-11-17 11:31:41 UTC",
+      "sourceR2At": "2026-11-17 12:15:30 UTC",
+      "priorUnavailableFieldHistorical": true,
+      "localProbePerformed": false,
+      "standaloneRebound": false,
+      "runtimeAdmitted": false,
+      "noCua": true,
+      "noSequenceChange": true
+    },
+    "filesystemAndProcessIdentityProbedSinceNotification": false,
+    "standaloneRunner": {
+      "bytes": 25819,
+      "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+      "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+    },
+    "standaloneBinding": {
+      "bytes": 107295,
+      "sha256": "d8626f22a432926350c4d69c657313a61b935764dae972159a1a88fc03163b5b",
+      "gitBlob": "381c51a331b9d03f5aab87835af3dad5a6643d3c"
+    },
+    "standaloneInvoked": false,
+    "standaloneRebound": false,
+    "notReplacement": "Existing workflow-selected runtimes do not qualify or replace the separate Node24.22.1/inode-pinned RED/GREEN supervisor. Old attempts remain spent.",
+    "artifactAccess": "Actual new artifact bytes/member/CRC/receipt/image reads are required. Current availability notification is not proof of restored scratch or source/runtime identity; no target local execution is authorized here.",
+    "noCUA": true
+  },
+  "qualification": {
+    "actualDocsPublicationAccepted": true,
+    "sourceChanged": false,
+    "runtimeAdmitted": false,
+    "targetExecuted": false,
+    "newTestsPassed": false,
+    "completeE2E": false,
+    "readyMergeReleaseDefaultStage2": false
+  },
+  "decision": "CLOSE_EXACT_CI3_R1_DOCUMENTATION_ACTUAL_GATE_ONLY",
+  "next": "Root may now retain and fully self-read the existing external immutable action-admission record, binding this real publication and its reports/gate to the fixed86f/base9d source and exact reviewed structured arguments. Then and only then root may issue the single-attempt new-name preflight and ref/PR actions. No additional executable R2 or gate."
+}

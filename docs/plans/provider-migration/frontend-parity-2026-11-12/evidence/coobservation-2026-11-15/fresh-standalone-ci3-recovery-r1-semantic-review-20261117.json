@@ -1,0 +1,866 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_FRESH_STANDALONE_R1_INDEPENDENT_SEMANTIC_REVIEW",
+  "at": "2026-11-17 13:58:36 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_semantic",
+  "subject": {
+    "bytes": 23198,
+    "sha256": "d51a9c97849dae83885d8339cfbc77fb1a1803a509fd3ba27af6ae447b63a0ac",
+    "gitBlob": "7f214219f9c757b73c3fad164bf4db04223f9594"
+  },
+  "subjectAuthoredAt": "2026-11-17 13:49:24 UTC",
+  "decision": "ACCEPT_EXACT_FRESH_STANDALONE_R1_STATIC_SEMANTICS_ONLY",
+  "blockers": [],
+  "authority": {
+    "readOnlyImmutableGit": true,
+    "pureDataOnly": true,
+    "targetSourceEvaluated": false,
+    "localFilesOrProcessesAccessed": false,
+    "liveCiAccessed": false,
+    "sourceControlRefPrCiMutated": false,
+    "bareReviewRetentionOnly": true,
+    "rootSoleAuthorExecutor": true
+  },
+  "evidence": {
+    "currentBaseGate": {
+      "bytes": 9265,
+      "sha256": "7c5683da8c6f883ab2b711989505cc566123358260dc3c97fa1adc71c1e62976",
+      "gitBlob": "3ac1c92c134848d826d60ea0257fadfe54957b95"
+    },
+    "currentSourceCommit": "86f52244b5375834a4040cbc63803d68cc708087",
+    "currentDocumentationCommit": "59e8d621717314d3fc3525af559a2a3beb9a7602",
+    "retainedMetadataObservation": {
+      "bytes": 3143,
+      "sha256": "eff46eb861c0fa5fcf0ca4963d2b9fb61b8ad08fd3dbe0d7742e573d914afffa",
+      "gitBlob": "d3351aede3fe4031408d518e48d161aa1d700a4c"
+    },
+    "baselineSupervisor": {
+      "bytes": 25819,
+      "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+      "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+    },
+    "baselineBinding": {
+      "bytes": 107295,
+      "sha256": "d8626f22a432926350c4d69c657313a61b935764dae972159a1a88fc03163b5b",
+      "gitBlob": "381c51a331b9d03f5aab87835af3dad5a6643d3c"
+    },
+    "fourCompleteBodies": [
+      {
+        "path": "package.json",
+        "identity": {
+          "bytes": 26839,
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+          "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        "fullReadAndRehash": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "identity": {
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        },
+        "fullReadAndRehash": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "identity": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        "fullReadAndRehash": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "identity": {
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        "fullReadAndRehash": true
+      }
+    ],
+    "selectedFileReadsAtBothCommits": {
+      "commits": [
+        "86f52244b5375834a4040cbc63803d68cc708087",
+        "59e8d621717314d3fc3525af559a2a3beb9a7602"
+      ],
+      "files": [
+        {
+          "path": "package.json",
+          "mode": "100644",
+          "bytes": 26839,
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+          "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "mode": "100644",
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        }
+      ],
+      "allSixFullBodiesEqualEmbedded": true,
+      "modeBasis": "Binding and accepted actual publication gate; fetch_file full-body results do not expose modes."
+    },
+    "retainedCiContext": {
+      "bytes": 297085,
+      "sha256": "f03bde72d0e17a317d5aba188bffd762b644c02f8c101a22712015fa3235c5ec",
+      "gitBlob": "5dc802f90b7118dbba8deeba3c7bb4aacee1a84e"
+    },
+    "originalSourceEvidence": {
+      "originalSourceCommit": "674d32a84644f87544910c28bb4d2a4214958fb5",
+      "originalSourceActualGate": {
+        "bytes": 5512,
+        "sha256": "6a7448cf1d88673af3c65741c51e2faf07703a99dfee37bf4fccd5383a943bf7",
+        "gitBlob": "be45f8ee4cd349456d196f6cfb1a1038c218c80c"
+      },
+      "rest": "The unchanged full sourceAnchorEvidence remains in the retained baseline binding. Its old actualR1Root/actualR1Independent/meaning are the three planned provenance replacements, not the current actual gate."
+    },
+    "priorSourceR2": {
+      "bytes": 19187,
+      "sha256": "8bb84de228b570dfc121233893d32209a9389da44aa1747c7924dff936fa4c1a",
+      "gitBlob": "1318b887473a61e1cbfb3960812fbc84e3b4df13"
+    },
+    "priorSourceBeforeVector": {
+      "bytes": 2552,
+      "sha256": "647b7a268b8b8921d875327e3394726916d54cc3c10c1bb8d2e2e9538db2d496",
+      "gitBlob": "ae0aa3e814cb90d9568cef5f35be6a0d8f46a361"
+    },
+    "priorSourceAfterVector": {
+      "bytes": 2784,
+      "sha256": "6a212eb715b312ae74c25e58078fd26b1247695d94f5c47536dc2a20aed49ce1",
+      "gitBlob": "fff972049718ae5ddaa7000e17341fade490233e"
+    },
+    "method": "Complete exact proposal, metadata observation, current gate, old supervisor/binding and all four embedded source bodies read; full body hashes and current file equality checked using the previously verified pure-JS hash helper. No target source execution. Historical full-source reviews reused only for identical bytes. Future controls were not constructed."
+  },
+  "plannedScope": {
+    "sourceChanges": 0,
+    "supervisorLogicChanges": 0,
+    "supervisorPathLiteralChanges": [
+      {
+        "before": "/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117",
+        "after": "/workspace/scratch/c714-waitread-ci3-controls-20261117"
+      },
+      {
+        "before": "/workspace/scratch/c714-waitread-inode64-20261117",
+        "after": "/workspace/scratch/c714-waitread-ci3-20261117"
+      }
+    ],
+    "bindingChangedLeaves": [
+      "attemptToken",
+      "sourceCommit",
+      "sourceTree",
+      "sourceActualGate",
+      "r1",
+      "r1ActualGate",
+      "scope",
+      "stage",
+      "runner",
+      "node.inode",
+      "sourceAnchorEvidence.actualR1Root",
+      "sourceAnchorEvidence.actualR1Independent",
+      "sourceAnchorEvidence.meaning"
+    ],
+    "scope": "/workspace/scratch/c714-waitread-ci3-20261117",
+    "stage": "/workspace/scratch/c714-waitread-ci3-controls-20261117",
+    "attemptToken": "c714-waitread-ci3-20261117-original-one-shot",
+    "budgets": {
+      "phaseWallMs": 60000,
+      "supervisorWallMs": 135000,
+      "cleanupWallMs": 4000,
+      "outputLimitBytes": 8388608,
+      "perTestMs": 5000,
+      "originalUiDefaultMs": 30000,
+      "originalPollMs": 100
+    },
+    "completeCaseInventory": {
+      "expectedExitCodes": {
+        "RED": 1,
+        "GREEN": 0
+      },
+      "rows": [
+        {
+          "number": 1,
+          "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+          "RED": "FAIL",
+          "redSignature": "missing-rejection",
+          "GREEN": "PASS"
+        },
+        {
+          "number": 2,
+          "title": "generic UI read refuses its first fulfilled value after the original deadline",
+          "RED": "FAIL",
+          "redSignature": "missing-rejection",
+          "GREEN": "PASS"
+        },
+        {
+          "number": 3,
+          "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+          "RED": "FAIL",
+          "redSignature": "missing-rejection",
+          "GREEN": "PASS"
+        },
+        {
+          "number": 4,
+          "title": "generic UI read refuses a later fulfilled value after the original deadline",
+          "RED": "FAIL",
+          "redSignature": "missing-rejection",
+          "GREEN": "PASS"
+        },
+        {
+          "number": 5,
+          "title": "generic UI read does not admit or poll again after a late false observation",
+          "RED": "FAIL",
+          "redSignature": "late-false-readiness",
+          "GREEN": "PASS"
+        },
+        {
+          "number": 6,
+          "title": "generic UI read preserves a timely first value and its exact identity",
+          "RED": "PASS",
+          "redSignature": null,
+          "GREEN": "PASS"
+        },
+        {
+          "number": 7,
+          "title": "generic UI read preserves its original cadence and a timely later value",
+          "RED": "PASS",
+          "redSignature": null,
+          "GREEN": "PASS"
+        },
+        {
+          "number": 8,
+          "title": "generic UI read honors a supplied budget at its strict boundary",
+          "RED": "FAIL",
+          "redSignature": "missing-rejection",
+          "GREEN": "PASS"
+        },
+        {
+          "number": 9,
+          "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+          "RED": "FAIL",
+          "redSignature": "missing-rejection",
+          "GREEN": "PASS"
+        },
+        {
+          "number": 10,
+          "title": "generic UI hover preserves one movement after three timely stable points",
+          "RED": "PASS",
+          "redSignature": null,
+          "GREEN": "PASS"
+        }
+      ],
+      "fullRecordsEqualBaselineBinding": true
+    },
+    "provenance": "Fresh actual R1 docs publication supplies sourceCommit/sourceTree/sourceActualGate/r1ActualGate and later controlParent; unchanged86f corpus is joined separately; historical674 sourceR2/vector anchor remains unchanged."
+  },
+  "checks": [
+    {
+      "id": "S01",
+      "status": "PASS_STATIC_R1",
+      "claim": "Exact complete R1 subject and review authority are bound.",
+      "evidence": {
+        "subject": {
+          "bytes": 23198,
+          "sha256": "d51a9c97849dae83885d8339cfbc77fb1a1803a509fd3ba27af6ae447b63a0ac",
+          "gitBlob": "7f214219f9c757b73c3fad164bf4db04223f9594"
+        },
+        "authoredAt": "2026-11-17 13:49:24 UTC",
+        "read": "Complete UTF-8 body fetched, independently hashed and fully read. No source/control candidate was constructed or evaluated.",
+        "authority": "Immutable Git and pure data only; root remains sole author/publisher/executor."
+      }
+    },
+    {
+      "id": "S02",
+      "status": "PASS_STATIC_R1",
+      "claim": "The current documentation base is accepted before this new R1.",
+      "evidence": {
+        "gate": {
+          "bytes": 9265,
+          "sha256": "7c5683da8c6f883ab2b711989505cc566123358260dc3c97fa1adc71c1e62976",
+          "gitBlob": "3ac1c92c134848d826d60ea0257fadfe54957b95"
+        },
+        "closedAt": "2026-11-17 13:25:19 UTC",
+        "commit": "59e8d621717314d3fc3525af559a2a3beb9a7602",
+        "soleParent": "86f52244b5375834a4040cbc63803d68cc708087",
+        "root": "31d58584fc77f7b26a9658cae55fddb74e23ac23",
+        "actualChecks": 82
+      },
+      "limits": "The full gate is joined. Its root/independent broad publication census is attributed to those accepted reports, not claimed as a fresh exhaustive repository census by this review."
+    },
+    {
+      "id": "S03",
+      "status": "PASS_STATIC_R1",
+      "claim": "The selected three complete fixed inputs are identical at both current source and documentation commits.",
+      "evidence": {
+        "evidenceIndex": "evidence.selectedFileReadsAtBothCommits",
+        "method": "Six immutable complete file reads at86f52244 and59e8d621; every body equals its embedded counterpart. Modes are joined from the accepted gate/binding rather than invented from fetch_file metadata."
+      }
+    },
+    {
+      "id": "S04",
+      "status": "PASS_STATIC_R1",
+      "claim": "Fresh provenance uses the actual new R1 documentation commit as control parent without replacing the historical source corpus.",
+      "evidence": {
+        "rule": "Future binding.sourceCommit is the actual publication commit of this R1; sourceTree is its actual root. sourceActualGate and r1ActualGate identify its closed actual gate. The later actual control publication has that R1 commit as sole parent.",
+        "supervisor": "main lines333–337 compare admission.sourceCommit/sourceActualGate and admission.controlParent to binding.sourceCommit.",
+        "corpus": "86f52244 is the unchanged current source-corpus join; original674 sourceR2/vectors remain historical evidence."
+      },
+      "limits": "No future commit, root, gate, runner pin, control proposal or admission identity is guessed or approved here."
+    },
+    {
+      "id": "S05",
+      "status": "PASS_STATIC_R1",
+      "claim": "The new physical Node binding is supported only by the retained metadata observation.",
+      "evidence": {
+        "observation": {
+          "bytes": 3143,
+          "sha256": "eff46eb861c0fa5fcf0ca4963d2b9fb61b8ad08fd3dbe0d7742e573d914afffa",
+          "gitBlob": "d3351aede3fe4031408d518e48d161aa1d700a4c"
+        },
+        "observedAt": "2026-11-17T13:39:49.202853+00:00",
+        "nodeExecuted": false,
+        "sourceOrStageCreated": false,
+        "oldCwdAbsent": "/workspace/scratch/c714f5bce554",
+        "freshRootsAbsent": [
+          "/workspace/scratch/c714-waitread-ci3-20261117",
+          "/workspace/scratch/c714-waitread-ci3-controls-20261117"
+        ],
+        "sameBytesAndSha256": true,
+        "changedRecordedField": "inode"
+      },
+      "limits": "The absence observation is not a reservation. This reviewer performed no local probe. Exact pre-admission metadata/hash checks remain necessary under the existing plan."
+    },
+    {
+      "id": "S06",
+      "status": "PASS_STATIC_R1",
+      "claim": "Only the observed inode pin changes; the existing signed-to-unsigned comparison remains valid and bounded.",
+      "evidence": {
+        "oldUnsigned": "9223372036854818252",
+        "newUnsigned": "9223372036854818268",
+        "newSigned64": "-9223372036854733348",
+        "pureDataRoundTrip": "9223372036854818268",
+        "unchangedNodeFields": [
+          "path",
+          "realpath",
+          "bytes",
+          "sha256",
+          "device",
+          "uid",
+          "gid",
+          "mode",
+          "mtimeNs",
+          "ctimeNs",
+          "versionPreviouslyObserved"
+        ],
+        "node": {
+          "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "bytes": 126939688,
+          "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+          "device": "27",
+          "inode": "9223372036854818268",
+          "uid": "65534",
+          "gid": "65534",
+          "mode": "0o755",
+          "mtimeNs": "1794515386000000000",
+          "ctimeNs": "1794515386000000000",
+          "versionPreviouslyObserved": "v24.22.1"
+        }
+      },
+      "limits": "Previously observed v24.22.1 is linked by unchanged full executable bytes, not a fresh version process. No Number coercion or weaker identity comparison is selected."
+    },
+    {
+      "id": "S07",
+      "status": "PASS_STATIC_R1",
+      "claim": "Exactly two existing unique path literals need substitution for the fresh scope.",
+      "evidence": {
+        "baseline": {
+          "bytes": 25819,
+          "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+          "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+        },
+        "literals": [
+          {
+            "before": "/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117",
+            "after": "/workspace/scratch/c714-waitread-ci3-controls-20261117"
+          },
+          {
+            "before": "/workspace/scratch/c714-waitread-inode64-20261117",
+            "after": "/workspace/scratch/c714-waitread-ci3-20261117"
+          }
+        ],
+        "observedCounts": [
+          {
+            "before": "/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117",
+            "count": 1,
+            "afterAlreadyPresent": false
+          },
+          {
+            "before": "/workspace/scratch/c714-waitread-inode64-20261117",
+            "count": 1,
+            "afterAlreadyPresent": false
+          }
+        ],
+        "logicChangesAllowed": 0
+      },
+      "limits": "The future runner postimage has not been authored, hashed or accepted. Derived paths may change solely through these two constants. Every old scope and attempt remains spent."
+    },
+    {
+      "id": "S08",
+      "status": "PASS_STATIC_R1",
+      "claim": "The planned binding update is a closed thirteen-leaf change set.",
+      "evidence": {
+        "changedLeaves": "The exact13 leaves are listed once in plannedScope.bindingChangedLeaves.",
+        "preserved": "All other fields remain byte/structure-identical: complete embedded bodies and pins, original sourceR2/vectors/674 anchor, selectedFixedInputs, schema/kind, phases/signatures, argv/env/budgets/classifications."
+      },
+      "limits": "Actual new values exist only after the existing R1 publication/actual gate and root authorship. This is a plan-level scope check."
+    },
+    {
+      "id": "S09",
+      "status": "PASS_STATIC_R1",
+      "claim": "All four complete embedded bodies match their original identities.",
+      "evidence": {
+        "evidenceIndex": "evidence.fourCompleteBodies",
+        "totalDistinctBodyBytes": 92713,
+        "redThreeFileBytes": 63696,
+        "greenThreeFileBytes": 63739,
+        "method": "Complete package, old controls, fixed controls and whole ten-case fixture were read and independently hashed; the fixed body was also fully reread."
+      }
+    },
+    {
+      "id": "S10",
+      "status": "PASS_STATIC_R1",
+      "claim": "The three-file standalone entry uses actual controls and Node builtins without an installed dependency tree.",
+      "evidence": {
+        "packageType": "module",
+        "fixtureImports": [
+          "node:assert/strict",
+          "node:test",
+          "./desktop-ui-controls.ts"
+        ],
+        "controlsValueImports": [
+          "node:assert/strict"
+        ],
+        "argv": [
+          "--test",
+          "--test-reporter=tap",
+          "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+        ],
+        "packageBehavior": "The full package.json is preserved; Node --test does not run its package-manager scripts or install dependencies."
+      },
+      "limits": "This narrow closure does not make the separate whole149 file dependency-free. Native Node TypeScript execution is still a future actual runtime result."
+    },
+    {
+      "id": "S11",
+      "status": "PASS_STATIC_R1",
+      "claim": "The controls after-body has an exact whole-byte inverse consisting of one 43-byte insertion.",
+      "evidence": {
+        "line": "        if (Date.now() >= deadline) break;\n",
+        "occurrencesInFixed": 1,
+        "absentFromOld": true,
+        "removeOnceRestoresWholeOldBody": true,
+        "before": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        "after": {
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        }
+      },
+      "limits": "The insertion is already published source; no source change is selected by this fresh standalone R1."
+    },
+    {
+      "id": "S12",
+      "status": "PASS_STATIC_R1",
+      "claim": "The cutoff is the original deadline, checked after a fulfilled evaluate and before any readiness predicate.",
+      "evidence": {
+        "behavior": "At equality or later, break exits the loop before isReady and the polling sleep; the original timeout error is thrown. Before the cutoff, exact value identity, original isReady, original exception branch, ownership checks and 100ms cadence remain unchanged.",
+        "defaultMs": 30000,
+        "suppliedBudgetPreserved": true
+      },
+      "limits": "This does not cancel an active pending evaluate, guarantee asynchronous operation preemption, or add a new clock check after an arbitrary stateful predicate. Error/currentness branch preservation is established by whole-byte identity; these ten cases do not newly execute every such branch."
+    },
+    {
+      "id": "S13",
+      "status": "PASS_STATIC_R1",
+      "claim": "The first four cases discriminate late first and later fulfilled truthy reads at and beyond the original deadline.",
+      "evidence": {
+        "numbers": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "settlements": [
+          [
+            30000
+          ],
+          [
+            30001
+          ],
+          [
+            0,
+            30000
+          ],
+          [
+            0,
+            30001
+          ]
+        ],
+        "red": "Each old implementation returns the late truthy value, so assert.rejects fails with the specific missing-rejection signature.",
+        "green": "The fulfilled cutoff rejects before the late predicate. Later cases retain the one original 100ms poll and only the earlier false predicate."
+      }
+    },
+    {
+      "id": "S14",
+      "status": "PASS_STATIC_R1",
+      "claim": "The fifth case discriminates late false readiness and the extra poll.",
+      "evidence": {
+        "number": 5,
+        "settlement": 30000,
+        "red": "The old implementation calls isReady(false), sleeps once, then rejects. The test reaches the deepStrictEqual predicate assertion and fails actual [false] versus expected [].",
+        "green": "The new cutoff rejects without invoking readiness or adding a poll.",
+        "signature": "late-false-readiness"
+      },
+      "limits": "The expected old failure is the predicate assertion; the later tick assertion is not falsely claimed to have executed after that failure."
+    },
+    {
+      "id": "S15",
+      "status": "PASS_STATIC_R1",
+      "claim": "The sixth and seventh cases preserve timely identity and the original real polling cadence.",
+      "evidence": {
+        "numbers": [
+          6,
+          7
+        ],
+        "firstValueAt": 29999,
+        "laterFrames": [
+          0,
+          101
+        ],
+        "redAndGreen": "Both pass statically: exact offered object identity, exact read/guard counts, expected predicate sequence, zero or one original 100ms timer, no input steps or sends."
+      }
+    },
+    {
+      "id": "S16",
+      "status": "PASS_STATIC_R1",
+      "claim": "The supplied-budget case covers success below and refusal at the strict custom boundary.",
+      "evidence": {
+        "number": 8,
+        "budgetMs": 73,
+        "settlements": [
+          72,
+          73
+        ],
+        "red": "The 72ms half passes; the 73ms half returns a value and fails the expected rejection.",
+        "green": "72ms preserves exact identity; 73ms rejects before readiness; each fixture is restored independently."
+      }
+    },
+    {
+      "id": "S17",
+      "status": "PASS_STATIC_R1",
+      "claim": "The ninth and tenth cases exercise the actual hover helper instead of a copied classifier.",
+      "evidence": {
+        "numbers": [
+          9,
+          10
+        ],
+        "lateFrames": [
+          0,
+          100,
+          30000
+        ],
+        "timelyFrames": [
+          0,
+          100,
+          29999
+        ],
+        "redLate": "Old waitRead feeds the third stable point to the real hover predicate, permits the finite recorded movement and fails assert.rejects.",
+        "greenLate": "No late third predicate admission, no step and no send; three original read guards and two original real 100ms waits.",
+        "timely": "Exactly one mouseMoved step/send, original post-read ownership guard, target object identity, four guards and two waits."
+      },
+      "limits": "The CDP port is a finite recording fixture. This is real helper composition, not a GUI or native input qualification."
+    },
+    {
+      "id": "S18",
+      "status": "PASS_STATIC_R1",
+      "claim": "Fixture clocks and restoration preserve the intended distinction between observed time and real polling.",
+      "evidence": {
+        "dateOnlyMock": true,
+        "realOriginalSetTimeout": true,
+        "finiteFrames": true,
+        "backwardClockRefused": true,
+        "setupInsideTry": true,
+        "finally": "Capture pending-timer count, restore method mocks, reset Date timers, then assert zero pending timers.",
+        "moduleEvaluation": "Only declarations, constants and test registration; no Date/global mutation until a test callback runs.",
+        "perTestTimeoutMs": 5000
+      },
+      "limits": "The test timeout and outer supervisor are bounds, not proof of hard preemption. No fixture or test source was imported or executed in this review."
+    },
+    {
+      "id": "S19",
+      "status": "PASS_STATIC_R1",
+      "claim": "The complete ordered phase inventories and exact TAP classification remain unchanged.",
+      "evidence": {
+        "fullPhaseRecordsEqual": true,
+        "caseCount": 10,
+        "red": {
+          "exitCode": 1,
+          "failNumbers": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            8,
+            9
+          ],
+          "passNumbers": [
+            6,
+            7,
+            10
+          ],
+          "fail": 7,
+          "pass": 3
+        },
+        "green": {
+          "exitCode": 0,
+          "pass": 10,
+          "fail": 0
+        },
+        "parser": "Exact ten titles/results/numbers, one 1..10 plan and summary counters; required failure type/code/operator/signature; no cancellation, skip, todo, bailout or nested replacement."
+      },
+      "limits": "These are source-derived predictions. No expected failure is accepted merely because a process exits nonzero."
+    },
+    {
+      "id": "S20",
+      "status": "PASS_STATIC_R1",
+      "claim": "Every selected budget and original poll interval is unchanged.",
+      "evidence": {
+        "phaseWallMs": 60000,
+        "supervisorWallMs": 135000,
+        "cleanupWallMs": 4000,
+        "outputLimitBytes": 8388608,
+        "perTestMs": 5000,
+        "originalUiDefaultMs": 30000,
+        "originalPollMs": 100
+      }
+    },
+    {
+      "id": "S21",
+      "status": "PASS_STATIC_R1",
+      "claim": "Parent/stage/admission constraints stay bound to actual reviewed controls.",
+      "evidence": {
+        "parent": "cwd /, exact execPath and __filename, no execArgv, empty exec-c environment, exactly two SHA256 arguments.",
+        "stage": "Exactly three regular0644/nlink1 files in a fresh0755 stage, no linked ancestors; complete runner/binding/admission bytes and stage/root metadata retained.",
+        "admission": "Exact runner/binding/sourceCommit/sourceActualGate/scope/stage/attemptToken/controlParent joins plus actual control commit/tree/docs/proposal and root/independent actual reports."
+      },
+      "limits": "The supervisor's string/schema comparisons do not themselves re-query Git. The existing external publication and actual-readback procedure establishes those immutable facts."
+    },
+    {
+      "id": "S22",
+      "status": "PASS_STATIC_R1",
+      "claim": "Each phase launches only the original pinned Node argv and fixed child environment.",
+      "evidence": {
+        "argv": [
+          "--test",
+          "--test-reporter=tap",
+          "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+        ],
+        "childEnvironment": {
+          "PATH": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin",
+          "LANG": "C.UTF-8",
+          "TZ": "UTC"
+        },
+        "launch": "Detached Node session, shell:false, ignored stdin, raw stdout/stderr pipes.",
+        "forbidden": "No package installation, extra harness, provider, browser, application, network or version invocation is added."
+      }
+    },
+    {
+      "id": "S23",
+      "status": "PASS_STATIC_R1",
+      "claim": "Phase acceptance still requires ordinary process completion and full before/after identity evidence.",
+      "evidence": {
+        "conditions": "Original wall cutoff; no interruption, signal, spawn error or overflow; exact ordinary exit and EOF; accepted TAP; fully observed leader and cohort; no surviving captured PID/start, group or session; full source, stage, root and Node metadata/hash equality."
+      },
+      "limits": "An exit code or TAP summary alone is insufficient."
+    },
+    {
+      "id": "S24",
+      "status": "PASS_STATIC_R1",
+      "claim": "The original absolute supervisor deadline guards each admission point without claiming synchronous-I/O preemption.",
+      "evidence": {
+        "outerMs": 135000,
+        "phaseMs": 60000,
+        "checks": "Synchronous monotonic checks before exclusive scope, each source materialization, RED→GREEN transition, fixed open/write and each spawn; final PASS also checks strict original elapsed time.",
+        "unchanged": true
+      },
+      "limits": "A blocked synchronous filesystem/hash operation is not forcibly interrupted by a JavaScript timer. Late admission/PASS is refused when control returns."
+    },
+    {
+      "id": "S25",
+      "status": "PASS_STATIC_R1",
+      "claim": "Exceptional cleanup retains one original interval and never renews signaling authority.",
+      "evidence": {
+        "cleanupMs": 4000,
+        "termToKillMs": 250,
+        "behavior": "Stored absolute cleanup deadline across reentry; no repeated TERM/KILL pass; signals require the observed PID/start and current owned group/session; complete census and observed identity map retained in finally."
+      },
+      "limits": "Unknown/unowned survivors, errors or unconfirmed cleanup remain failure; this review does not convert them to absence."
+    },
+    {
+      "id": "S26",
+      "status": "PASS_STATIC_R1",
+      "claim": "GREEN remains conditional on exact accepted RED and the owned controls-file transition.",
+      "evidence": {
+        "gate": "RED PASS_EXPECTED_DISCRIMINATOR and ordinary empty cohort before transition.",
+        "transition": "Full original census equals RED after-census; O_NOFOLLOW open; fstat same original inode/device/nlink1; full fixed body write/truncate/fsync; every other source row identical; only then GREEN.",
+        "frozenSources": "No repository source file is edited by this plan; the transient controls transition is confined to the new exclusive test scope."
+      }
+    },
+    {
+      "id": "S27",
+      "status": "PASS_STATIC_R1",
+      "claim": "Failure evidence and one-shot spent classification remain intact.",
+      "evidence": {
+        "raw": "Complete raw stdout/stderr are retained; complete process samples precede validation; phase/source/control/root/cleanup observations survive failure.",
+        "outputLimitBytes": 8388608,
+        "classification": "Any refusal, timeout, interruption, unknown, incorrect TAP, nonordinary exit, cleanup or retention failure spends the attempt. Pre-scope refusal and post-scope incomplete remain distinct."
+      },
+      "limits": "The existing output limit is an acceptance/refusal threshold; a received chunk is written before overflow is detected, so it is not a claim of byte-perfect hard truncation at8MiB. No old replay or narrowed rerun is permitted."
+    },
+    {
+      "id": "S28",
+      "status": "PASS_STATIC_R1",
+      "claim": "The unchanged whole149, catalog43 and renderer85 remain separate from this ten-case entry.",
+      "evidence": {
+        "whole149": "The complete prior139-case file prefix is164965 bytes, followed by its57-byte awaited import:165022 bytes and149 expanded cases. That whole suite is not this standalone invocation.",
+        "catalog43": 43,
+        "renderer85": 85,
+        "standalone10": 10,
+        "sourceEdits": 0
+      },
+      "limits": "A future10/10 result would not qualify whole149,43,85, typecheck, canonical behavior, GUI, provider, native or full E2E."
+    },
+    {
+      "id": "S29",
+      "status": "PASS_STATIC_R1",
+      "claim": "The plan preserves source/workflow inventories and unresolved product/native outcomes.",
+      "evidence": {
+        "sourceEdits": 0,
+        "sourceAddsDeletesRenamesModes": 0,
+        "dependencyWorkflowBudgetChanges": 0,
+        "productionFiles": 5020,
+        "productionLineCap": 800,
+        "exceptions": 141,
+        "nonDocLeaves": 8799,
+        "workflows": 42,
+        "meaning": "No source, deadline, selector, currentness, authority, case or strict native assertion is weakened. Historical failure/unknown/unreached status is retained."
+      },
+      "limits": "Repository-wide counts are inherited from the accepted actual gate; this bounded review independently rejoined only the three selected complete inputs."
+    },
+    {
+      "id": "S30",
+      "status": "PASS_STATIC_R1",
+      "claim": "Retained CI3 context is historical and does not substitute for the standalone attempt.",
+      "evidence": {
+        "packet": {
+          "bytes": 297085,
+          "sha256": "f03bde72d0e17a317d5aba188bffd762b644c02f8c101a22712015fa3235c5ec",
+          "gitBlob": "5dc802f90b7118dbba8deeba3c7bb4aacee1a84e"
+        },
+        "observation": 4,
+        "at": "2026-11-17 13:46:35 UTC",
+        "head": "86f52244b5375834a4040cbc63803d68cc708087",
+        "base": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "pr": 1223,
+        "allSixWorkflowStatuses": "queued",
+        "specificProgress": "Host process WindowsARM64 job134072511664 had setup/source binding completed and frozen workspace installation in progress; no completed test result.",
+        "artifactsAcrossSix": 0,
+        "threeCiJobs": "completed/skipped",
+        "terminalFiveExcluded": true
+      },
+      "limits": "The whole retained packet was fetched/hashed and its observation/request JSON parsed. This review examined relevant tuple/status/job-step/artifact facts, not a new live CI result or independent audit of every historical raw field."
+    },
+    {
+      "id": "S31",
+      "status": "PASS_STATIC_R1",
+      "claim": "Frozen CI refs/PR metadata and old terminal exclusions remain unchanged.",
+      "evidence": {
+        "headRef": "ci/frontend-parity-c714-20261117-3-head",
+        "baseRef": "ci/frontend-parity-c714-20261117-3-base",
+        "head": "86f52244b5375834a4040cbc63803d68cc708087",
+        "base": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "policy": "Working documentation branch may advance independently. No rerun/cancel/dispatch, Ready, title/body/base/label event, ref movement or live polling is part of this review or standalone plan."
+      }
+    },
+    {
+      "id": "S32",
+      "status": "PASS_STATIC_R1",
+      "claim": "The existing review/publication/actual/admission sequence is preserved without an extra gate.",
+      "evidence": {
+        "orderedGates": "Exact five-step orderedGates from the subject are preserved: current R1 reviews; docs publication/actual gate; root-only bounded controls and existing R2; control publication/actual/external admission; staging and one original invocation.",
+        "distinction": "This R1 permits planning/publication only. Root authors the two-literal runner and specified binding changes only after this R1 actual gate; the existing exact control R2, actual readbacks and external admission then precede staging and one invocation."
+      }
+    },
+    {
+      "id": "S33",
+      "status": "PASS_STATIC_R1",
+      "claim": "Documentation retention does not rewrite earlier evidence or create a runtime claim.",
+      "evidence": {
+        "catalogValuesPreserved": 101,
+        "bundlesPreserved": 27,
+        "originalTotalsPreserved": true,
+        "planStatusPrefixesPreserved": true,
+        "ciPacketClarification": "Discovery empty PR arrays and exact attempt1 PR associations are different observations; retained earlier packets are not rewritten.",
+        "oldAttemptsSpent": true
+      }
+    },
+    {
+      "id": "S34",
+      "status": "PASS_STATIC_R1",
+      "claim": "This decision accepts only the exact R1 semantics and leaves every actual execution obligation open.",
+      "evidence": {
+        "status": {
+          "r1Authored": true,
+          "controlPostimagesAuthored": false,
+          "sourcePostimagesAuthored": false,
+          "newStageCreated": false,
+          "newScopeCreated": false,
+          "newRuntimeInvoked": false,
+          "standaloneRuntimeQualified": false,
+          "fullE2EQualified": false
+        },
+        "decision": "ACCEPT_EXACT_FRESH_STANDALONE_R1_STATIC_SEMANTICS_ONLY",
+        "blockers": [],
+        "newGateAdded": false
+      },
+      "limits": "No source/control postimage, stage, scope, target process, test result or qualification was created by this review."
+    }
+  ],
+  "checkCount": 34,
+  "allChecksStaticPass": true,
+  "conclusions": {
+    "minimalRecovery": "The retained old runner requires exactly the two new root literals; its inode conversion is already suitable. Binding changes the actual observed inode and the thirteen specified provenance/path/pin leaves. Source/test bytes and prediction records remain identical.",
+    "semanticDiscriminator": "Cases1–4,8,9 produce the specific old missing-rejection assertion; case5 produces the late-false predicate assertion;6,7,10 preserve timely behavior. The exact same ten cases predict10 GREEN passes.",
+    "limit": "Prediction and R1 scope acceptance only. No fresh runtime result, hard I/O/CDP preemption, whole-suite result or GUI/provider/native/E2E qualification is asserted.",
+    "next": "Root may complete the existing R1 publication and actual-readback sequence. No additional gate is introduced by this review.",
+    "selfReadProtocol": "After bare retention the exact pin is sent immediately; a separate fresh full read/hash/literal comparison and complete report reread will be confirmed. This report is not amended afterward."
+  }
+}
