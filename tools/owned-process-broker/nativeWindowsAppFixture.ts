@@ -418,9 +418,9 @@ export async function prepareNativeWindowsAppFixture(options: {
         let receipt: ProcessCommandReceipt;
         for (;;) {
           remaining(stop.deadline); assertPeer();
-          const found = processReceipts().filter(row => row.operation === 'terminate' && row.processRef === selected.view.processRef);
+          const found: ProcessCommandReceipt[] = processReceipts().filter(row => row.operation === 'terminate' && row.processRef === selected.view.processRef);
           assert.ok(found.length <= 1, 'One original UI command for this exact processRef');
-          const candidate = found[0];
+          const candidate: ProcessCommandReceipt | undefined = found[0];
           if (candidate?.phase === 'completed' && candidate.state.phase === 'completed' &&
             candidate.state.native === 'observed-absent') {
             if (candidate.nativeSettlement !== undefined) { receipt = candidate; break; }

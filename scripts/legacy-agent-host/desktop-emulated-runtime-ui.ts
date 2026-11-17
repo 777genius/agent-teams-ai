@@ -644,7 +644,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   await ui.scrollTo('button[aria-label="Back to chats"]', 'original scheduled conversation list');
   await ui.click('button[aria-label="Back to chats"]', 'return to original chats before scheduled reply');
   await ui.scrollTo('button[aria-label^="alice,"]', 'original scheduled lead chat');
-  await ui.click('button[aria-label^="alice,"]', 'show original scheduled reply'); await visible('TEST scheduled reply');
+  await ui.click('button[aria-label^="alice,"]', 'show original scheduled reply', undefined, 'TEST scheduled '); await visible('TEST scheduled reply');
   await openSection();
   await ui.scrollTo(`${scheduleRow(edited)} button[aria-label=${literal(edited)}]`, 'original schedule history');
   await ui.click(`${scheduleRow(edited)} button[aria-label=${literal(edited)}]`, 'expand original schedule history');
