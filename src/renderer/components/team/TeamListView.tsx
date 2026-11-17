@@ -264,12 +264,16 @@ const ActiveTeamCard = ({
   onDeleteTeam,
   t,
 }: Readonly<ActiveTeamCardProps>): React.JSX.Element => {
+  const targetProjectPath =
+    team.projectContextMode === 'per_project'
+      ? (currentProjectPath ?? team.projectPath)
+      : team.projectPath;
   const canLaunch =
     (status === 'offline' ||
       status === 'partial_failure' ||
       status === 'partial_skipped' ||
       status === 'partial_pending') &&
-    Boolean(team.projectPath);
+    Boolean(targetProjectPath);
   const launchMode: TeamLaunchDialogMode = status === 'offline' ? 'launch' : 'relaunch';
   const launchLabel =
     launchMode === 'relaunch' ? t('list.actions.relaunchTeam') : t('list.actions.launchTeam');
@@ -285,11 +289,11 @@ const ActiveTeamCard = ({
       role="button"
       tabIndex={0}
       className="team-row-zebra-card group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-[var(--color-border)] p-4 transition-colors duration-200 hover:border-[var(--color-border-emphasis)]"
-      onClick={() => onOpenTeam(team.teamName, team.projectPath ?? undefined)}
+      onClick={() => onOpenTeam(team.teamName, targetProjectPath ?? undefined)}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
-          onOpenTeam(team.teamName, team.projectPath ?? undefined);
+          onOpenTeam(team.teamName, targetProjectPath ?? undefined);
         }
       }}
     >
@@ -328,7 +332,7 @@ const ActiveTeamCard = ({
                   type="button"
                   className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-emerald-500/10 hover:text-emerald-300 disabled:opacity-50 group-hover:opacity-100"
                   onClick={(event) =>
-                    onLaunchTeam(team.teamName, team.projectPath ?? undefined, launchMode, event)
+                    onLaunchTeam(team.teamName, targetProjectPath ?? undefined, launchMode, event)
                   }
                   disabled={launchingTeamName === team.teamName}
                   aria-label={launchTitle}
