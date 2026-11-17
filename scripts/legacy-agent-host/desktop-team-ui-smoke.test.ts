@@ -2775,3 +2775,331 @@ test('finite V2 terminal completion retains original finally precedence and refu
   assert.equal(complete({ evidence: { status: 'PASS' }, finiteMembership: true }), 1);
   assert.equal(complete({ evidence: { status: 'INCOMPLETE' }, finiteMembership: false }), 1);
 });
+
+type NativeSetupStep = 'global-catalog' | 'global-source' | 'global-lineage' | 'global-digest' |
+  'initial-read' | 'project-catalog' | 'project-lineage' | 'start' | 'progress' | 'sessions' | 'native' | 'digest';
+
+async function originalNativeSetupWindow(options: {
+  clock: { now: number }; openCode?: boolean; opening?: boolean; startReady?: boolean; progressReady?: boolean;
+  readyCount?: number; actorCount?: number; tickMs?: number; sessions?: Record<string, unknown>[];
+  preparationProof?: { consumed: number; probes: { requestedModel: string }[] };
+  onStep?: (step: NativeSetupStep, count: number) => void | Promise<void>;
+  guard?: (count: number) => void; arm?: () => void; disarm?: () => void;
+}) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = (await readFile(new URL('./desktop-native-stop-fixture.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const markers = ['const object = (value: unknown): Record<string, unknown> => {',
+    'export async function prepareDesktopNativeStop(', '/** Closed diagnostic projection of one already completed Runtime file read. */',
+    'export async function captureDesktopOpenCodeGlobalMetadata(',
+    '/** Preserve the full original lineage and correlate both captured scopes with their actual native owners. */'];
+  for (const marker of markers) assert.equal(source.split(marker).length, 2, 'one original native setup source boundary');
+  const positions = markers.map(marker => source.indexOf(marker));
+  assert.deepEqual([...positions].sort((a, b) => a - b), positions);
+  const actual = stripTypeScriptTypes(source.slice(positions[0], positions[1]) +
+    source.slice(positions[1], positions[2]).replace(/^export /u, '') +
+    source.slice(positions[3], positions[4]).replace(/^export /u, ''));
+  const trace: string[] = [], calls: { step: NativeSetupStep; timeoutMs: number | undefined }[] = [];
+  const counts = new Map<NativeSetupStep, number>(), evidence: Record<string, unknown> = {};
+  let guards = 0, arms = 0, disarms = 0;
+  const fixture = { handleId: 'TEST-handle', node: 'TEST-node', hostEntry: 'TEST-host', root: 'TEST-root' }, group = 7;
+  const host = { pid: 10, parentPid: 7, groupId: group, birth: 'TEST-host-birth', command: 'TEST-node TEST-host' };
+  const globalSource = { sourceId: 'TEST-global', revision: 'TEST-revision', profileId: 'TEST-profile',
+    configRevision: 'TEST-config', scope: 'global', projectPath: null };
+  const globalCaptured = { host, children: [{ pid: 11 }] }, projectCaptured = { host, children: [{ pid: 11 }, { pid: 12 }] };
+  const runtimeCaptured = { host, children: [...projectCaptured.children, { pid: 31 }] };
+  const metadataSources = [{ scope: 'global' }, { scope: 'project' }];
+  const selection = { launchId: 'TEST-launch', rosterRevision: 'TEST-roster', members: [{ memberId: 'alice-id' }] };
+  const openingSession = { binding: { runId: selection.launchId, memberId: 'alice-id' },
+    phase: 'opening', nativeReady: false, sealed: false, inputs: [] };
+  const actors = Array.from({ length: options.actorCount ?? 1 }, (_, index) => ({ pid: 31 + index, parentPid: host.pid, groupId: group }));
+  const configuration = { members: [{ memberId: 'alice-id', model: options.openCode === false ? 'claude-opus-4-6' : 'test-local/TEST-model',
+    ...(options.openCode === false ? { effort: 'medium', fastMode: false, context: 'model-default' } : {}), permissions: 'bypass' }] };
+  const catalog = { runtimeId: 'opencode', models: { providerId: 'test-local', catalogState: 'fresh',
+    models: [{ modelId: 'test-local/TEST-model', providerId: 'test-local', declaredInputModalities: ['image'] }] } };
+  const armPayloads: unknown[] = [], probes: { requestedModel: string }[] = [];
+  const preparation = { consumed: 0, arm(payload: unknown) {
+    trace.push('arm'); arms++; armPayloads.push(payload); options.arm?.();
+    return () => { trace.push('disarm'); disarms++; options.disarm?.(); };
+  } };
+  async function observe<T>(step: NativeSetupStep, value: T): Promise<T> {
+    trace.push(step); const count = (counts.get(step) ?? 0) + 1; counts.set(step, count);
+    assert.ok(count <= (step === 'progress' || step === 'sessions' ? 3 : 1), 'no setup operation replay or unbounded read loop');
+    await options.onStep?.(step, count); return value;
+  }
+  function guard() { trace.push('guard'); guards++; options.guard?.(guards); }
+  const cdp = {
+    async evaluate(expression: string, timeoutMs?: number): Promise<unknown> {
+      const prefix = 'window.electronAPI.runtimeProviderManagement.loadModels(';
+      if (expression.startsWith(prefix)) {
+        assert.ok(expression.endsWith(')'));
+        const request = JSON.parse(expression.slice(prefix.length, -1)) as Record<string, unknown>;
+        const step = request.projectPath === null ? 'global-catalog' : 'project-catalog';
+        assert.deepEqual(request, { runtimeId: 'opencode', providerId: 'test-local',
+          projectPath: step === 'global-catalog' ? null : join(fixture.root, 'workspace') });
+        calls.push({ step, timeoutMs }); return observe(step, catalog);
+      }
+      const invoke = 'window.electronAPI.agentBackend.invoke(';
+      assert.ok(expression.startsWith(invoke) && expression.endsWith(')'));
+      const request = JSON.parse(expression.slice(invoke.length, -1)) as Record<string, unknown>;
+      assert.deepEqual(request.handle, { handleId: fixture.handleId });
+      if (request.commandId === 'TEST-setup-read' || request.commandId === 'TEST-setup-progress') {
+        assert.equal(request.operation, 'team.launch.read'); assert.deepEqual(request.payload, {});
+        const step = request.commandId === 'TEST-setup-read' ? 'initial-read' : 'progress';
+        calls.push({ step, timeoutMs });
+        return observe(step, { ok: true, value: step === 'initial-read' ? selection : {
+          status: options.progressReady === false ? 'starting' : 'ready', ready: options.readyCount ?? 1 } });
+      }
+      assert.equal(request.commandId, 'TEST-explicit-sandbox-setup-launch', 'no input, retry or second launch command');
+      assert.equal(request.operation, 'team.launch.start');
+      assert.deepEqual(request.payload, { launchId: selection.launchId, rosterRevision: selection.rosterRevision, configuration });
+      calls.push({ step: 'start', timeoutMs });
+      const result = await observe('start', { ok: true, value: { status: options.startReady ? 'ready' : 'starting',
+        ready: options.startReady ? options.readyCount ?? 1 : 0 } });
+      preparation.consumed = options.preparationProof?.consumed ?? 1;
+      probes.push(...(options.preparationProof?.probes ?? [{ requestedModel: 'TEST-model' }]));
+      return result;
+    },
+    async send() { assert.fail('native setup must not add a CDP action or input'); },
+  };
+  const make = Function('environment', `'use strict';
+    const {assert,Date,setTimeout,process,join,desktopJsLiteral,assertOwnedCdpListener,
+      readDesktopOpenCodeMetadataSource,desktopMetadataProfileHash,captureMetadataObservation,metadataOnlyRuntimeDigest,
+      captureDesktopOpenCodeProjectMetadata,observeDesktopOpenCodeMetadata,readDesktopNativeStopSessions,fileDigest,processTable,command}=environment;
+    ${actual}
+    return {prepareDesktopNativeStop,captureDesktopOpenCodeGlobalMetadata};`) as (environment: Record<string, unknown>) => {
+      prepareDesktopNativeStop: (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
+      captureDesktopOpenCodeGlobalMetadata: (...args: unknown[]) => Promise<Record<string, unknown>>;
+    };
+  const functions = make({ assert, Date: { now: () => options.clock.now }, process: { env: {} }, join,
+    setTimeout(done: () => void, ms: number) { assert.equal(ms, 100); trace.push('tick'); options.clock.now += options.tickMs ?? ms; done(); },
+    desktopJsLiteral: JSON.stringify,
+    assertOwnedCdpListener(value: number) { assert.equal(value, group); guard(); },
+    readDesktopOpenCodeMetadataSource(root: string, projectPath: null) {
+      assert.equal(root, fixture.root); assert.equal(projectPath, null); return observe('global-source', globalSource);
+    },
+    desktopMetadataProfileHash(value: unknown) { assert.equal(value, globalSource); return 'TEST-global-profile-hash'; },
+    captureMetadataObservation(value: unknown, observedGroup: number, hashes: string[], original: unknown, expected: number) {
+      assert.deepEqual(value, fixture); assert.equal(observedGroup, group); assert.deepEqual(hashes, ['TEST-global-profile-hash']);
+      assert.equal(original, undefined); assert.equal(expected, 0); return observe('global-lineage', { captured: globalCaptured });
+    },
+    metadataOnlyRuntimeDigest(root: string) { assert.equal(root, fixture.root); return observe('global-digest', 'TEST-runtime-digest'); },
+    captureDesktopOpenCodeProjectMetadata(value: unknown, observedGroup: number, global: unknown) {
+      assert.deepEqual(value, fixture); assert.equal(observedGroup, group);
+      assert.deepEqual(global, { source: globalSource, captured: globalCaptured, runtimeDigest: 'TEST-runtime-digest' });
+      return observe('project-lineage', { captured: projectCaptured, metadataSources });
+    },
+    observeDesktopOpenCodeMetadata(value: unknown, observedGroup: number, original: unknown) {
+      assert.deepEqual(value, fixture); assert.equal(observedGroup, group); assert.equal(original, projectCaptured);
+      return observe('native', { captured: runtimeCaptured, runtime: actors });
+    },
+    readDesktopNativeStopSessions(root: string) { assert.equal(root, fixture.root); return observe('sessions', options.sessions ?? [openingSession]); },
+    fileDigest(executable: string) { assert.equal(executable, 'TEST-native'); return observe('digest', 'a'.repeat(64)); },
+    processTable() { trace.push('native-table'); return [{ pid: host.pid, ppid: 7, pgid: group },
+      ...actors.map(row => ({ pid: row.pid, ppid: row.parentPid, pgid: row.groupId }))]; },
+    command(pid: number) { assert.ok(pid === host.pid || actors.some(row => row.pid === pid));
+      return pid === host.pid ? `${fixture.node} ${fixture.hostEntry}` : 'TEST-native --original'; },
+  });
+  return { trace, calls, counts, evidence, armPayloads, configuration, globalSource, globalCaptured, openingSession,
+    projectCaptured, runtimeCaptured, metadataSources, countsOfPreparation: () => ({ arms, disarms }),
+    run: () => functions.prepareDesktopNativeStop({ cdp, fixture, group, evidence, executable: 'TEST-native',
+      ...(options.openCode === false ? {} : { openCode: { model: { configuredLaunchPreparation: preparation, probes } } }),
+      ...(options.opening ? { returnAt: 'opening' } : {}) }),
+    global: () => functions.captureDesktopOpenCodeGlobalMetadata(cdp, fixture, group, guard) };
+}
+
+test('original native setup carries one live OpenCode window through actual global metadata and one configured start', { timeout: 5000 }, async () => {
+  const clock = { now: 1000 }, elapsed: Partial<Record<NativeSetupStep, number>> = { 'global-catalog': 35_000,
+    'global-source': 5000, 'global-lineage': 7000, 'global-digest': 3000, 'initial-read': 1000,
+    'project-catalog': 20_000, 'project-lineage': 4000, start: 5000, progress: 1000, native: 2000, digest: 500 };
+  const f = await originalNativeSetupWindow({ clock, onStep(step) { clock.now += elapsed[step] ?? 0; } });
+  assert.deepEqual(await f.run(), { hostPid: 10, nativeChildren: [{ pid: 31, ppid: 10, pgid: 7 }] });
+  assert.deepEqual(f.calls, [{ step: 'global-catalog', timeoutMs: 180_000 }, { step: 'initial-read', timeoutMs: 30_000 },
+    { step: 'project-catalog', timeoutMs: 129_000 }, { step: 'start', timeoutMs: 105_000 }, { step: 'progress', timeoutMs: 30_000 }]);
+  assert.deepEqual(f.armPayloads, [{ commandId: 'TEST-explicit-sandbox-setup-launch', launchId: 'TEST-launch',
+    rosterRevision: 'TEST-roster', memberId: 'alice-id', model: 'test-local/TEST-model' }]);
+  assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
+  assert.ok(f.trace.indexOf('project-lineage') < f.trace.indexOf('arm'));
+  assert.ok(f.trace.indexOf('disarm') < f.trace.indexOf('tick'));
+  assert.deepEqual(f.evidence.nativeConfiguredPreparation, { commandId: 'TEST-explicit-sandbox-setup-launch',
+    consumed: 1, probe: { requestedModel: 'TEST-model' } });
+  const setup = f.evidence.nativeSetup as Record<string, unknown>;
+  assert.equal(setup.status, 'ready'); assert.deepEqual(setup.configuration, f.configuration);
+  assert.equal(setup.metadataBeforeLaunch, f.projectCaptured); assert.equal(setup.metadataAtRuntimeObservation, f.runtimeCaptured);
+  assert.equal(setup.metadataSources, f.metadataSources); assert.equal(setup.nativeExecutableSha256, 'a'.repeat(64));
+  assert.ok([...f.counts.values()].every(count => count === 1));
+});
+
+test('original native setup never replenishes the start window and clamps ordinary reads to its smaller remainder', { timeout: 5000 }, async () => {
+  const clock = { now: 0 };
+  const f = await originalNativeSetupWindow({ clock, onStep(step) {
+    if (step === 'project-lineage') clock.now = 160_000;
+    if (step === 'start') clock.now += 5000;
+  } });
+  await f.run();
+  assert.deepEqual(f.calls.map(row => [row.step, row.timeoutMs]), [
+    ['global-catalog', 180_000], ['initial-read', 30_000], ['project-catalog', 180_000], ['start', 20_000], ['progress', 14_900]]);
+  assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
+});
+
+test('actual global metadata awaits one deferred response and refuses a successful response at the common cutoff', { timeout: 5000 }, async () => {
+  for (const elapsed of [35_000, 180_000, 180_001]) {
+    const clock = { now: 0 }, entered = deferred<void>(), release = deferred<void>();
+    const f = await originalNativeSetupWindow({ clock, onStep(step) {
+      if (step === 'global-catalog') { entered.resolve(); return release.promise; }
+    } });
+    const pending = f.run();
+    const completed = elapsed < 180_000 ? pending : assert.rejects(pending, /Original OpenCode setup observation deadline expired/u);
+    await entered.promise;
+    assert.deepEqual(f.calls, [{ step: 'global-catalog', timeoutMs: 180_000 }]);
+    assert.equal(f.counts.get('global-source'), undefined); clock.now = elapsed; release.resolve(); await completed;
+    assert.equal(f.counts.get('global-catalog'), 1);
+    assert.equal(f.counts.get('global-source'), elapsed < 180_000 ? 1 : undefined);
+    assert.deepEqual(f.countsOfPreparation(), elapsed < 180_000 ? { arms: 1, disarms: 1 } : { arms: 0, disarms: 0 });
+  }
+});
+
+test('original setup rejects exact and late successful observations before a following request or accepted setup', { timeout: 5000 }, async () => {
+  const boundaries: [NativeSetupStep, string][] = [['global-catalog', 'global-source'], ['global-source', 'global-lineage'],
+    ['global-lineage', 'global-digest'], ['global-digest', 'initial-read'], ['initial-read', 'project-catalog'],
+    ['project-catalog', 'project-lineage'], ['project-lineage', 'arm'], ['start', 'tick'], ['progress', 'native'],
+    ['native', 'digest'], ['digest', 'accepted-setup']];
+  for (const [step, next] of boundaries) for (const late of [0, 1]) {
+    const clock = { now: 0 }, f = await originalNativeSetupWindow({ clock, onStep(observed) {
+      if (observed === step) clock.now = 180_000 + late;
+    } });
+    await assert.rejects(f.run(), /Original OpenCode setup observation deadline expired/u, `${step}/${late}`);
+    assert.equal(f.evidence.nativeSetup, undefined); assert.equal(f.trace.includes(next), false, `${step} cannot reach ${next}`);
+    assert.ok([...f.counts.values()].every(count => count === 1), 'no replay after a successful late observation');
+    const armed = ['start', 'progress', 'native', 'digest'].includes(step);
+    assert.deepEqual(f.countsOfPreparation(), { arms: Number(armed), disarms: Number(armed) });
+  }
+});
+
+test('pending-open setup checks the same cutoff after session native and digest observations', { timeout: 5000 }, async () => {
+  for (const step of ['sessions', 'native', 'digest'] as const) for (const late of [0, 1]) {
+    const clock = { now: 0 }, f = await originalNativeSetupWindow({ clock, opening: true, onStep(observed) {
+      if (observed === 'project-lineage') clock.now = 160_000;
+      if (observed === 'start') clock.now += 5000;
+      if (observed === step) clock.now = 180_000 + late;
+    } });
+    await assert.rejects(f.run(), /Original OpenCode setup observation deadline expired/u);
+    assert.equal(f.evidence.nativeSetup, undefined); assert.equal(f.counts.get('progress'), undefined);
+    if (step === 'sessions') assert.equal(f.counts.get('native'), undefined);
+    if (step !== 'digest') assert.equal(f.counts.get('digest'), undefined);
+    assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
+  }
+});
+
+test('pending-open keeps original session identity empty-input and native actor predicates', { timeout: 5000 }, async () => {
+  const good = await originalNativeSetupWindow({ clock: { now: 0 }, opening: true }); await good.run();
+  const setup = good.evidence.nativeSetup as Record<string, unknown>;
+  assert.equal(setup.status, 'opening'); assert.equal(setup.session, good.openingSession);
+  assert.equal(setup.nativeExecutableSha256, 'a'.repeat(64)); assert.equal(good.counts.get('progress'), undefined);
+  assert.ok(good.trace.indexOf('disarm') < good.trace.indexOf('sessions'));
+  const original = good.openingSession;
+  for (const sessions of [[{ ...original, binding: { ...original.binding, runId: 'TEST-foreign' } }],
+    [{ ...original, binding: { ...original.binding, memberId: 'TEST-foreign' } }], [{ ...original, phase: 'ready' }],
+    [{ ...original, nativeReady: true }], [{ ...original, sealed: true }], [{ ...original, inputs: ['TEST-unselected-input'] }],
+    [original, original]]) {
+    const f = await originalNativeSetupWindow({ clock: { now: 0 }, opening: true, sessions });
+    await assert.rejects(f.run(), assert.AssertionError);
+    assert.equal(f.counts.get('native'), undefined); assert.equal(f.counts.get('digest'), undefined);
+    assert.equal(f.evidence.nativeSetup, undefined); assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
+  }
+  for (const variant of [{ actorCount: 0 }, { actorCount: 2 }, { readyCount: 0 }, { readyCount: 2 }, { opening: true, actorCount: 2 }]) {
+    const f = await originalNativeSetupWindow({ clock: { now: 0 }, ...variant });
+    await assert.rejects(f.run(), assert.AssertionError); assert.equal(f.counts.get('digest'), undefined);
+    assert.equal(f.evidence.nativeSetup, undefined); assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
+  }
+});
+
+test('owned guards and the original polling tick cannot dispatch after the setup cutoff', { timeout: 5000 }, async () => {
+  for (const [guardIndex, denied] of [[1, 'global-catalog'], [2, 'global-source'], [3, 'initial-read'],
+    [4, 'project-catalog'], [5, 'start'], [6, 'progress']] as const) {
+    const clock = { now: 0 }, f = await originalNativeSetupWindow({ clock, guard(count) { if (count === guardIndex) clock.now = 180_000; } });
+    await assert.rejects(f.run(), /Original OpenCode setup observation deadline expired/u);
+    assert.equal(f.trace.includes(denied), false); assert.equal(f.evidence.nativeSetup, undefined);
+    assert.deepEqual(f.countsOfPreparation(), guardIndex < 5 ? { arms: 0, disarms: 0 } : { arms: 1, disarms: 1 });
+  }
+  const clock = { now: 0 }, armed = await originalNativeSetupWindow({ clock, arm() { clock.now = 180_000; } });
+  await assert.rejects(armed.run(), /Original OpenCode setup observation deadline expired/u);
+  assert.equal(armed.counts.get('start'), undefined); assert.deepEqual(armed.countsOfPreparation(), { arms: 1, disarms: 1 });
+  for (const opening of [false, true]) {
+    const tickClock = { now: 0 }, f = await originalNativeSetupWindow({ clock: tickClock, opening,
+      ...(opening ? { sessions: [] } : {}), onStep(step) { if (step === (opening ? 'sessions' : 'start')) tickClock.now = 179_950; } });
+    await assert.rejects(f.run(), /Original OpenCode setup observation deadline expired/u);
+    assert.equal(f.trace.filter(value => value === 'tick').length, 1); assert.equal(f.counts.get('progress'), undefined);
+    assert.equal(f.counts.get('sessions'), opening ? 1 : undefined); assert.equal(f.counts.get('native'), undefined);
+    assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
+  }
+});
+
+test('rejected original setup awaits and guards retain their exact Error even after the common cutoff', { timeout: 5000 }, async () => {
+  const steps: NativeSetupStep[] = ['global-catalog', 'global-source', 'global-lineage', 'global-digest', 'initial-read',
+    'project-catalog', 'project-lineage', 'start', 'progress', 'native', 'digest'];
+  for (const step of steps) {
+    const clock = { now: 0 }, original = new Error(`TEST original ${step}`);
+    const f = await originalNativeSetupWindow({ clock, onStep(observed) { if (observed === step) { clock.now = 180_001; throw original; } } });
+    await assert.rejects(f.run(), error => error === original); assert.equal(f.evidence.nativeSetup, undefined);
+    assert.ok([...f.counts.values()].every(count => count === 1));
+    const armed = ['start', 'progress', 'native', 'digest'].includes(step);
+    assert.deepEqual(f.countsOfPreparation(), { arms: Number(armed), disarms: Number(armed) });
+  }
+  for (const step of ['sessions', 'native', 'digest'] as const) {
+    const clock = { now: 0 }, original = new Error(`TEST original opening ${step}`);
+    const f = await originalNativeSetupWindow({ clock, opening: true, onStep(observed) {
+      if (observed === step) { clock.now = 180_001; throw original; }
+    } });
+    await assert.rejects(f.run(), error => error === original); assert.equal(f.evidence.nativeSetup, undefined);
+    assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
+  }
+  for (const guardIndex of [1, 5]) {
+    const clock = { now: 0 }, original = new Error('TEST original ownership guard');
+    const f = await originalNativeSetupWindow({ clock, guard(count) { if (count === guardIndex) { clock.now = 180_001; throw original; } } });
+    await assert.rejects(f.run(), error => error === original);
+    assert.deepEqual(f.countsOfPreparation(), guardIndex === 1 ? { arms: 0, disarms: 0 } : { arms: 1, disarms: 1 });
+  }
+});
+
+test('configured setup retains its original probe assertions and finally error precedence', { timeout: 5000 }, async () => {
+  for (const preparationProof of [{ consumed: 0, probes: [{ requestedModel: 'TEST-model' }] }, { consumed: 1, probes: [] },
+    { consumed: 1, probes: [{ requestedModel: 'TEST-other-model' }] }]) {
+    const f = await originalNativeSetupWindow({ clock: { now: 0 }, preparationProof });
+    await assert.rejects(f.run(), assert.AssertionError); assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
+    assert.equal(f.trace.includes('tick'), false); assert.equal(f.evidence.nativeSetup, undefined);
+  }
+  for (const rejectStart of [false, true]) {
+    const clock = { now: 0 }, original = new Error('TEST original start failure'), finalError = new Error('TEST original disarm failure');
+    const f = await originalNativeSetupWindow({ clock, onStep(step) {
+      if (step === 'start' && rejectStart) { clock.now = 180_001; throw original; }
+    }, disarm() { throw finalError; } });
+    await assert.rejects(f.run(), error => error === finalError); assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
+    assert.equal(f.trace.includes('tick'), false); assert.equal(f.evidence.nativeSetup, undefined);
+  }
+});
+
+test('legacy native setup keeps undefined CDP overrides and its separate 45-second post-start readiness window', { timeout: 5000 }, async () => {
+  const clock = { now: 0 }, f = await originalNativeSetupWindow({ clock, openCode: false, onStep(step) {
+    if (step === 'initial-read') clock.now += 40_000;
+    if (step === 'start') clock.now += 60_000;
+    if (step === 'progress') clock.now += 44_000;
+  } });
+  await f.run(); assert.equal(clock.now, 144_100);
+  assert.deepEqual(f.calls, [{ step: 'initial-read', timeoutMs: undefined }, { step: 'start', timeoutMs: undefined },
+    { step: 'progress', timeoutMs: undefined }]);
+  assert.deepEqual(f.countsOfPreparation(), { arms: 0, disarms: 0 });
+  assert.equal(f.counts.get('global-catalog'), undefined); assert.equal(f.counts.get('project-catalog'), undefined);
+  assert.equal((f.evidence.nativeSetup as Record<string, unknown>).status, 'ready');
+  const expired = await originalNativeSetupWindow({ clock: { now: 0 }, openCode: false, progressReady: false, tickMs: 45_000 });
+  await assert.rejects(expired.run(), { name: 'AssertionError', message: /starting/u });
+  assert.equal(expired.counts.get('progress'), 1, 'the unchanged legacy polling boundary retains its original last read');
+  assert.equal(expired.evidence.nativeSetup, undefined); assert.equal(expired.trace.includes('native-table'), false);
+});
+
+test('standalone actual global metadata retains its default CDP override without selecting a setup window', { timeout: 5000 }, async () => {
+  const clock = { now: 0 }, f = await originalNativeSetupWindow({ clock, onStep() { clock.now += 200_000; } });
+  assert.deepEqual(await f.global(), { captured: f.globalCaptured, source: f.globalSource, runtimeDigest: 'TEST-runtime-digest' });
+  assert.deepEqual(f.calls, [{ step: 'global-catalog', timeoutMs: undefined }]);
+  assert.deepEqual(f.trace, ['guard', 'global-catalog', 'guard', 'global-source', 'global-lineage', 'global-digest']);
+  assert.deepEqual(f.countsOfPreparation(), { arms: 0, disarms: 0 }); assert.deepEqual(f.evidence, {});
+});
