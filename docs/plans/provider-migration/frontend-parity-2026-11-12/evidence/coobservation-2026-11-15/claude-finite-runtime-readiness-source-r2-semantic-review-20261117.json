@@ -1,0 +1,1324 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CLAUDE_FINITE_RUNTIME_READINESS_SOURCE_R2_INDEPENDENT_SEMANTIC_REVIEW",
+  "at": "2026-11-17 12:26:43 UTC",
+  "reviewer": "/root/producer_r2_semantic",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "bytes": 56517,
+    "sha256": "59133615a781c82b97a5e2ed132ff5d5a9795b6d1b400d4d520761b31ca5b561",
+    "gitBlob": "682377734948765268a3cd07b4b966a97abac1e4"
+  },
+  "parent": "01ed56f756b385b91afcffcb31dafe7750bb4162",
+  "parentRoot": "181ac1545f21983dfe9b754ef23ae79b0e2caac2",
+  "decision": "ACCEPT_EXACT_SOURCE_R2_STATIC_ONLY",
+  "blockingFindings": [],
+  "checks": [
+    {
+      "id": "01",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Exact full subject",
+      "finding": "The complete 56,517-byte proposal hashes to 682377734948765268a3cd07b4b966a97abac1e4 / SHA256 59133615a781c82b97a5e2ed132ff5d5a9795b6d1b400d4d520761b31ca5b561. This review accepts only that exact static source subject and its five declared postimages."
+    },
+    {
+      "id": "02",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Accepted R1 retained unchanged",
+      "finding": "Exact f44edc6c R1 was rehashed and its selected changes/test limits rejoined to this proposal. The prior 40-check semantic R1 report abbf255c is fully self-read. No hypothetical implementation approval is substituted for this actual postimage review."
+    },
+    {
+      "id": "03",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Original authorship gate and parent",
+      "finding": "Complete gate 61314527 binds parent 01ed56f756b385b91afcffcb31dafe7750bb4162, root 181ac1545f21983dfe9b754ef23ae79b0e2caac2 and R1 f44edc6c. Its 12:08:55 closure precedes declared source authorship 12:11:49–12:13:42. The gate records 164 static and 81 actual checks; this reviewer joins the gate, not a fresh audit of every publication pointer."
+    },
+    {
+      "id": "04",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Five current preimages anchored independently",
+      "finding": "All five source paths were independently fetched at exact parent 01ed56f7 and their complete strings equal the five declared preimages. No branch-name-only or copied diff-statistics evidence is used."
+    },
+    {
+      "id": "05",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Complete ten source identities",
+      "finding": "Five complete before bodies total 104,295 bytes; five complete after bodies total 123,221 bytes. Each body was fetched and independently hashed. Full original bodies, full changed fixture/peer bodies, and every appended test/helper byte were read. The test postimages reuse byte-identical fully read prefixes."
+    },
+    {
+      "id": "06",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Whole-byte inverse closure",
+      "finding": "Removing the sole 12-byte runtime model delta, three 12-byte collaboration deltas, the sole 1,006-byte peer insertion and the two exact appended suffixes reconstructs all original bytes. No import, helper, statement, whitespace or test edit exists outside those exact transformations."
+    },
+    {
+      "id": "07",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Original test prefixes preserved",
+      "finding": "The complete 24,968-byte Settings file and 8,570-byte captured-status file remain literal prefixes. Their original eight and six expanded cases, existing fixtures, imports, assertions, deadlines and cleanup are unchanged."
+    },
+    {
+      "id": "08",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Derived append identities are not fetched objects",
+      "finding": "Settings suffix ca891a53 / 15,032 bytes and captured-status suffix 324f333d / 2,840 bytes are independently reconstructed as after.slice(before.length) and hash-verified. They are derived literal identities, not separately fetched or claimed retained Git objects."
+    },
+    {
+      "id": "09",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Exactly selected five existing files",
+      "finding": "The declared source delta contains exactly the five R1 paths, no added source file and no production/workflow/dependency/control postimage. All five resulting files have fewer than 800 lines; this does not replace the inherited whole-repository census."
+    },
+    {
+      "id": "10",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Runtime fixture uses the offered model coherently",
+      "finding": "Only the existing Claude model expression becomes TEST-claude-sonnet. Existing savedModel, saved settings, runtime member, provider template and legacy schedule consume that same variable. Codex/OpenCode choices, provider identities, roles, profile/descriptor hashing, deadlines and cleanup stay byte-identical."
+    },
+    {
+      "id": "11",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Collaboration substitutions stay bounded",
+      "finding": "Exactly savedSettings.model, the Claude runtime/template expression, and returned savedModel become TEST-claude-sonnet. Mixed roster/delivery/grants/generations/endpoints and all other providers are unchanged. The existing sonnet-containing hydration predicate still admits that spelling; the original 90-second enabled-Launch condition and single submit are not changed."
+    },
+    {
+      "id": "12",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Auth branch begins after original guards",
+      "finding": "The new branch follows the original TEST environment/scenario/provider/role, canonical TEST roots, workspace/cwd, owned HOME/config, proof-file type and argv count/byte guards. It precedes SDK parsing, so only the selected finite auth path exits before SDK state/input/history/MCP setup."
+    },
+    {
+      "id": "13",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Exact auth argv, role and namespace",
+      "finding": "Only argv exactly ['auth','status','--json'] is admitted, only for role management. HOME must equal root/home and configRoot must equal root/config; both must be directories and already passed canonical inside-root checks. Extra/missing argv, runtime role, and foreign owned namespace refuse."
+    },
+    {
+      "id": "14",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Finite auth payload matches the real parser",
+      "finding": "The response is loggedIn true, authMethod api_key, apiProvider firstParty and the exact configDirectory, plus newline, bounded at 65,536 bytes. Real parseClaudeAuthStatus requires this config identity and exit0. No API key, token, login, logout, network call, SDK business input or Host command receipt is introduced by this branch."
+    },
+    {
+      "id": "15",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Flushed output and original exit journal",
+      "finding": "The branch writes launch/auth-status under the existing PID/role/provider journal, registers an original exit row, awaits the stdout write callback and only then exits0. The original 512-event limit remains. Journal facts alone do not qualify cleanup; the positive test also awaits actual conversation/coordinator closure."
+    },
+    {
+      "id": "16",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "All other SDK behavior is byte-identical",
+      "finding": "Removing the insertion restores the entire original parser, metadata rows, stream framing, input/currentness/authority checks, MCP and interaction paths, original failure handling and SDK exit handling. No fallback to another executable is introduced."
+    },
+    {
+      "id": "17",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Model and beta allowlists preserved",
+      "finding": "The SDK peer still admits exactly its prior model spellings sonnet, sonnet[1m], TEST-claude-sonnet and the original context-1m-2025-08-07 beta. No TEST-claude-sonnet[1m] spelling or new alias authority is added."
+    },
+    {
+      "id": "18",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "New helper selects actual shared peer",
+      "finding": "The appended helper hashes the real claudeProviderPeer source and generated wrapper, uses existing desktopNodeScriptHeader and actual schema/coordinator/store classes, and creates a fresh owned TEST root/workspace/home/config/tmp namespace. It does not route through claudeSettingsAuthPeer or a Settings variant."
+    },
+    {
+      "id": "19",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "No API-key environment carryover",
+      "finding": "The new profile environment is an explicit finite object, without ANTHROPIC_API_KEY or ANTHROPIC_BASE_URL. Actual CapturedProcess spawns with the captured profile environment rather than parent process.env. Existing old Settings fixture environment remains unchanged in the preserved prefix."
+    },
+    {
+      "id": "20",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Cleanup failure cannot disappear",
+      "finding": "The new helper retains each actual owner, closes in reverse order, gathers false/throw results, and asserts no failures before removing its root. Failure leaves the owned root intact. Explicit closes in test bodies join actual owner idempotence; they do not create replacement cleanup owners."
+    },
+    {
+      "id": "21",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Positive auth test uses the real path",
+      "finding": "The first appended case uses actual ClaudeAuthenticationCoordinator -> ClaudeAuthConversation -> default uninstrumented CapturedProcess -> selected peer. AuthConversation waits the original child's close event, parses stdout, and requires actual closed custody; the coordinator rechecks its original target/profile."
+    },
+    {
+      "id": "22",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Auth outcome and no-mutation assertions",
+      "finding": "The case requires exactly one launch/auth-status/exited0 sequence with one positive original PID, current parent PID, management role, exact argv, false canLogin/canLogout, empty test command store and byte-identical credential/settings sentinels. Its 15-second test/5-second profile limits are explicit."
+    },
+    {
+      "id": "23",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Meaningful counterfactual classification",
+      "finding": "The old peer deterministically rejects positional auth before the original SDK loop; the positive auth regression therefore discriminates the repair. Refusal, metadata/probe and composition cases are preservation/contract coverage. This report does not claim every new case fails the old source or that any new case has run."
+    },
+    {
+      "id": "24",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Eight finite refusals are concrete",
+      "finding": "The second case covers login, logout, missing --json, extra arg, finite-wrapper --version, runtime-role auth, wrong config and wrong HOME. Exactly eight direct TEST children use 3,000 ms and 65,536-byte bounds under a 30-second test. Only status1 with no signal/error, empty stdout and the selected AssertionError guard counts as refusal; timeout/spawn/output failure does not."
+    },
+    {
+      "id": "25",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Changed executable exercises actual custody",
+      "finding": "The case constructs actual ClaudeAuthConversation against the original wrapper, changes only that owned wrapper afterward, and requires the original Native executable unavailable failure before launch plus true actual close. It restores the wrapper in finally. Empty journals alone are not treated as custody proof."
+    },
+    {
+      "id": "26",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Metadata uses actual locked SDK/provider",
+      "finding": "The third case calls actual ClaudeManagementCoordinator.read with the selected shared peer, requiring modelId sonnet/resolvedModel TEST-claude-sonnet and original efforts. It requires no model input or durable probe receipt from metadata alone. No copied decoder or synthetic ModelProbeOwner result is used."
+    },
+    {
+      "id": "27",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Process observer preserves original execution",
+      "finding": "The typed factory constructs real CapturedProcess(profile,current,custody), forwards the original launch request object including signal, and delegates seal/isRunning/confirmStopped. It only records bounded actual argv/cwd/role and original stop booleans. It does not supply a fake process, fake successful stop or replacement native request."
+    },
+    {
+      "id": "28",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Exact runtime/profile selection retained",
+      "finding": "Actual runtimeMemberProfileSchema and teamModelProbeProfile receive TEST-claude-sonnet, original effort low and context one-million with the selected executable/environment and runtime role. The test uses actual ClaudeManagementCoordinator admission and target selection."
+    },
+    {
+      "id": "29",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Five-second bound is new-test-only",
+      "finding": "Complete original teamModelProbeProfile source still derives modelProbeTimeoutMs 90,000 and timeoutMs min(base limit,30,000). Only this new test parses its derived profile with modelProbeTimeoutMs 5,000 before admission. Production derivation and all old test deadlines are unchanged. The 7,000-ms observation loop/20-ms cadence and outer 15-second test are finite bounds, not a new hard-preemption claim."
+    },
+    {
+      "id": "30",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Provider translation is exactly source-supported",
+      "finding": "At old-provider-implementations c79b81bf, full model-probe.ts 57fdf897 passes captured.model unchanged and adds the original one-million beta; effort remains low. Its actual consumer requires matching assistant/result model, valid text/usage and one-million context. Pinned sdk.mjs implementation was not available; concrete SDK argv is an execution obligation checked by the new test, not a static PASS assertion."
+    },
+    {
+      "id": "31",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Actual durable owner and fence remain decisive",
+      "finding": "The third case uses actual ModelProbeOwner, FileManagementCommandStore and ManagementResourceFence. It requires one completed/ok model.probe record with resourceHeld false and exact command/model/effort/context. Original owner cancellation, held/debt, target revalidation and close rules remain intact."
+    },
+    {
+      "id": "32",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Same command cannot become another input",
+      "finding": "A fresh store must read the identical durable record; original read and start of the same identity must return the same receipt. After actual owners close, exactly one runtime TEST_MODEL_PROBE input and one terminal must share PID/inputId; no auth-status/failure event or extra command record is allowed."
+    },
+    {
+      "id": "33",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Actual argv and stops are checked, not fabricated",
+      "finding": "The third case requires exactly management then runtime launch, exact selected command/cwd, one actual --model TEST-claude-sonnet, --effort low and --betas context-1m-2025-08-07, then two true original stop confirmations. ClaudeManagementHost caches each close, so ordinary repeated retire/teardown joins the same stop rather than creating extra assertions or native activity."
+    },
+    {
+      "id": "34",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Captured-status case exercises real consumers",
+      "finding": "The appended Vitest case uses the existing controlled transport boundary and actual status client/capturedClaudeMetadata, then dynamically imports the actual teamModelAvailability functions. It does not copy model matching or authority logic into the test."
+    },
+    {
+      "id": "35",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Resolved launch value does not expand alias authority",
+      "finding": "The case requires the exact sonnet/TEST-claude-sonnet row to produce only the resolved offered value; TEST-claude-sonnet is available, while sonnet and TEST-unoffered-model are rejected. Current production catalog43 semantics, hidden/unavailable handling and fallback rules are unchanged."
+    },
+    {
+      "id": "36",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Auth and catalog remain separate from launch",
+      "finding": "Even successful independent api_key auth and exact-ready metadata must leave modelVerificationState idle and teamLaunch/oneShot false. Both direct and reconciled statuses must lack authoritative launch evidence. Existing exact currentness/expiry/profile/duplicate guards remain unchanged; old captured-status negatives remain in the prefix."
+    },
+    {
+      "id": "37",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Prospective test inventory is exact",
+      "finding": "Settings has seven old registration expressions expanding to eight cases plus exactly three new cases = eleven. Captured status has five old expressions including a two-value it.each, expanding to six plus one = seven. No filter, skip, todo, new runner or new executable test file is added."
+    },
+    {
+      "id": "38",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Existing broader suites remain independent",
+      "finding": "Whole149, catalog43, runtime85 and existing Claude management5 are outside the five changed paths and retain their exact protected identities. New 11/7 prospective component inventories do not qualify those suites, any native lane, or complete E2E."
+    },
+    {
+      "id": "39",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Protected source scopes stay disjoint",
+      "finding": "The five paths are disjoint from all thirteen parity bodies, four Windows postimages and six diagnostic postimages. The inherited 8,799 non-doc leaves, 5,020 production files, 800-line cap, 141 exceptions and 42 workflows are unchanged by the selected delta; actual publication verification remains the existing later step."
+    },
+    {
+      "id": "40",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Primary evidence is reused with exact identities",
+      "finding": "All 63 sourceProofIndex/testDesignSourceIndex rows were rehashed against retained complete immutable bodies with no unresolved row; three additional current source bodies were fetched and fully read. Prior original archive/profile/peer/model mapping is reused from the fully read R1 and readiness advisories, with unread binary metadata still excluded."
+    },
+    {
+      "id": "41",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Source-only acceptance and causal limits",
+      "finding": "No compile, import, target execution, live CI read, archive download, real vendor CLI or source/ref/PR/CI mutation occurred. The prior lifecycle/collaboration mismatches support these finite fixture repairs, but Host mutation-boundary/final readiness, other lanes and complete E2E remain unresolved. No sole-cause or all-lanes repair claim is made."
+    },
+    {
+      "id": "42",
+      "status": "PASS_STATIC_SOURCE",
+      "title": "Existing publication sequence only",
+      "finding": "This is acceptance of exact SOURCE R2 semantics. Root remains sole author/applier/publisher/executor. Existing publication plus root/independent actual readbacks and separately selected execution authority remain; this report adds no extra gate, venue, replay or workflow change."
+    }
+  ],
+  "checkSummary": {
+    "count": 42,
+    "PASS_STATIC_SOURCE": 42,
+    "blockers": 0,
+    "runtimePassesClaimed": 0
+  },
+  "authority": {
+    "rootSoleAuthorApplierPublisherExecutor": true,
+    "readOnlyImmutableGitAndPureData": true,
+    "bareReportRetentionOnly": true,
+    "noSourceEvaluationCompilationOrRuntime": true,
+    "noShellLocalReadsRefPrCiActionsOrLivePolling": true,
+    "noRealClaudeCodexOrVersion": true
+  },
+  "r1": {
+    "subject": {
+      "bytes": 37389,
+      "sha256": "588f6ce9b006b458ce7a896dc4ab46985493c54911eec2beedcf0874b33163ca",
+      "gitBlob": "f44edc6cdfde700e570423176fc00d11b2275c43"
+    },
+    "priorSemanticReview": {
+      "bytes": 54419,
+      "sha256": "b2a28f1bce6f4f30415a395f536a4bedf16be211a0346c2162a3ed67dde0b263",
+      "gitBlob": "abbf255c350c30959a5d97f51eda4329e02d8281"
+    },
+    "priorSemanticFullSelfRead": true,
+    "gate": {
+      "bytes": 3974,
+      "sha256": "efa9f2091d7f776e1370fe7b0220b98dc03f8ca56dcf3a9e17cbecdfae9d781b",
+      "gitBlob": "613145275d09f78b0da7c7aa4c6ce231212d765d"
+    },
+    "gateFullyRead": true,
+    "gateClosedAt": "2026-11-17 12:08:55 UTC",
+    "sourceAuthorship": {
+      "rootOnly": true,
+      "startedAt": "2026-11-17 12:11:49 UTC",
+      "completedAt": "2026-11-17 12:13:42 UTC",
+      "afterR1FullActualClosure": true,
+      "allPostimagesRetained": true,
+      "allPostimagesFullySelfRead": true,
+      "noSourceRefMutationYet": true
+    },
+    "gateScope": "Existing R1 publication closure joined; no new audit or gate invented."
+  },
+  "completeSources": {
+    "preimages": 5,
+    "postimages": 5,
+    "beforeBytes": 104295,
+    "afterBytes": 123221,
+    "method": "Complete preimage reads and complete postimage unique bodies; test postimages' identical literal prefixes rejoined to fully read preimages, plus complete suffix reads; no source evaluation",
+    "additionalBodies": 3,
+    "parentPathJoins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "parent": "01ed56f756b385b91afcffcb31dafe7750bb4162",
+        "identity": {
+          "bytes": 21981,
+          "sha256": "d0d00254e7e39ab8b5163e02cc93754775a8efe56ff28b8c87f07d02e0292c7e",
+          "gitBlob": "7b5edfbd4967debe454387c7a8b6246e67216dc8"
+        },
+        "wholeBodyEqual": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+        "parent": "01ed56f756b385b91afcffcb31dafe7750bb4162",
+        "identity": {
+          "bytes": 16555,
+          "sha256": "8340911817fb4228e8d948425a1f85796fba16d244b6763b04e307ed6f290713",
+          "gitBlob": "97e14385a298a38a9b81b8805dc3f6d2da66545c"
+        },
+        "wholeBodyEqual": true
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+        "parent": "01ed56f756b385b91afcffcb31dafe7750bb4162",
+        "identity": {
+          "bytes": 32221,
+          "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+          "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01"
+        },
+        "wholeBodyEqual": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+        "parent": "01ed56f756b385b91afcffcb31dafe7750bb4162",
+        "identity": {
+          "bytes": 24968,
+          "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+          "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57"
+        },
+        "wholeBodyEqual": true
+      },
+      {
+        "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+        "parent": "01ed56f756b385b91afcffcb31dafe7750bb4162",
+        "identity": {
+          "bytes": 8570,
+          "sha256": "37d0b61e60dd4f175c9c2d34e1f8aa399becac018e970655dd7f5595713f2fb6",
+          "gitBlob": "6e84953e1d1a08b705b4000f47d8d51177047ff3"
+        },
+        "wholeBodyEqual": true
+      }
+    ],
+    "beforeAfterAndInverses": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "before": {
+          "bytes": 21981,
+          "sha256": "d0d00254e7e39ab8b5163e02cc93754775a8efe56ff28b8c87f07d02e0292c7e",
+          "gitBlob": "7b5edfbd4967debe454387c7a8b6246e67216dc8"
+        },
+        "after": {
+          "bytes": 21993,
+          "sha256": "2f929c1f5cfd1a9a3c9ec16d35f7197856c79a61adf166d30eebb8a1bd086f67",
+          "gitBlob": "adf5b4c418195e0fc4ab38ba7fde2b3436a6b835"
+        },
+        "completeInverse": true,
+        "deltas": [
+          {
+            "kind": "replace",
+            "count": 1,
+            "removedBytes": 12
+          }
+        ],
+        "linesBefore": 280,
+        "linesAfter": 280
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+        "before": {
+          "bytes": 16555,
+          "sha256": "8340911817fb4228e8d948425a1f85796fba16d244b6763b04e307ed6f290713",
+          "gitBlob": "97e14385a298a38a9b81b8805dc3f6d2da66545c"
+        },
+        "after": {
+          "bytes": 16591,
+          "sha256": "bd4b8bec56e93cd7c17ec04d5c09b93a8115097af57224d28e954c3f06cdb0c8",
+          "gitBlob": "6d267c1531fd741c4abee8b27ef501f28098d782"
+        },
+        "completeInverse": true,
+        "deltas": [
+          {
+            "kind": "replace",
+            "count": 1,
+            "removedBytes": 12
+          },
+          {
+            "kind": "replace",
+            "count": 1,
+            "removedBytes": 12
+          },
+          {
+            "kind": "replace",
+            "count": 1,
+            "removedBytes": 12
+          }
+        ],
+        "linesBefore": 199,
+        "linesAfter": 199
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+        "before": {
+          "bytes": 32221,
+          "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+          "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01"
+        },
+        "after": {
+          "bytes": 33227,
+          "sha256": "dc9ba0c735ea763a24bb06d93590373cf1072d5737c7fba67a31df1356c44dd5",
+          "gitBlob": "1430de1a6666a22a7582d38a21273d61d2f745b7"
+        },
+        "completeInverse": true,
+        "deltas": [
+          {
+            "kind": "replace",
+            "count": 1,
+            "removedBytes": 1006
+          }
+        ],
+        "linesBefore": 463,
+        "linesAfter": 481
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+        "before": {
+          "bytes": 24968,
+          "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+          "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57"
+        },
+        "after": {
+          "bytes": 40000,
+          "sha256": "58978cb43fac34697163fa9c30c6d3b14e26cf91e051a05085eab3d476260d61",
+          "gitBlob": "c1a42df62de987b1632365400f7359f65510dff3"
+        },
+        "completeInverse": true,
+        "deltas": [
+          {
+            "kind": "append",
+            "identity": {
+              "bytes": 15032,
+              "sha256": "5e24b59666e7864c1fab98c6d121dbea406eae882f73a350d956c4bdd45ac88e",
+              "gitBlob": "ca891a53111c5a22059228bbb1e180f71d03dc7b"
+            },
+            "derivedOnly": true
+          }
+        ],
+        "linesBefore": 333,
+        "linesAfter": 570
+      },
+      {
+        "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+        "before": {
+          "bytes": 8570,
+          "sha256": "37d0b61e60dd4f175c9c2d34e1f8aa399becac018e970655dd7f5595713f2fb6",
+          "gitBlob": "6e84953e1d1a08b705b4000f47d8d51177047ff3"
+        },
+        "after": {
+          "bytes": 11410,
+          "sha256": "e781760fcaf1aeb3a04694ab8d5c213017add94853a8835b096b4f9f79f81279",
+          "gitBlob": "bf0a54d585ef1dcd94a2649cebd75cb20da43339"
+        },
+        "completeInverse": true,
+        "deltas": [
+          {
+            "kind": "append",
+            "identity": {
+              "bytes": 2840,
+              "sha256": "f9d2f5a18b59ceaf1c54c6798c5b0fc11705abbac63f9db410d98169ab77cc31",
+              "gitBlob": "324f333dce19b83f514ceaff417449904c37783d"
+            },
+            "derivedOnly": true
+          }
+        ],
+        "linesBefore": 210,
+        "linesAfter": 258
+      }
+    ]
+  },
+  "testCoverage": {
+    "settings": {
+      "before": {
+        "bytes": 24968,
+        "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+        "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57"
+      },
+      "after": {
+        "bytes": 40000,
+        "sha256": "58978cb43fac34697163fa9c30c6d3b14e26cf91e051a05085eab3d476260d61",
+        "gitBlob": "c1a42df62de987b1632365400f7359f65510dff3"
+      },
+      "originalCases": 8,
+      "newCases": 3,
+      "prospectiveCases": 11,
+      "oldPrefixPreserved": true,
+      "cases": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "name": "shared finite runtime peer answers the original Host auth status and closes its original child",
+          "timeoutMs": 15000,
+          "bodyBoundary": "actual ClaudeAuthenticationCoordinator -> actual ClaudeAuthConversation -> default actual CapturedProcess -> hash-pinned shared TEST peer",
+          "assertions": [
+            "exact original auth/status/--json argv",
+            "one launch/auth-status/exited sequence, same original PID and parent, exit0",
+            "api_key cannotLogin/cannotLogout",
+            "empty Host command store and unchanged owned .credentials.json/settings.json"
+          ],
+          "counterfactual": "Old shared peer deterministically rejects positional auth argv; this positive auth test necessarily fails before repair."
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "name": "shared finite runtime auth refuses other argv, roles, namespaces and a changed captured executable",
+          "timeoutMs": 30000,
+          "directChildren": 8,
+          "childTimeoutMs": 3000,
+          "childMaxBufferBytes": 65536,
+          "matrix": [
+            "auth login --claudeai",
+            "auth logout",
+            "auth status without --json",
+            "auth status --json --extra",
+            "--version of the finite TEST wrapper only",
+            "exact auth with runtime role",
+            "exact auth with wrong owned canonical config",
+            "exact auth with wrong owned canonical HOME"
+          ],
+          "refusalAcceptance": "No spawn error, signal, timeout or buffer exhaustion; status exactly1, empty stdout, AssertionError stderr containing the selected argv/environment guard. Zero peer events and Host receipts.",
+          "capturedNegative": "Actual ClaudeAuthConversation captures the original test wrapper; only owned wrapper bytes are changed afterward. Actual CapturedProcess rejects Native executable unavailable before child allocation, original close must returntrue; wrapper restored in finally.",
+          "counterfactual": "Refusal preservation coverage, no universal red claim."
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "name": "shared finite SDK metadata and one resolved model probe preserve effort, context and original custody",
+          "timeoutMs": 15000,
+          "profileTimeoutMs": 5000,
+          "probeObservationDeadlineMs": 7000,
+          "probePollMs": 20,
+          "bodyBoundary": "actual locked SDK/provider -> original runtimeMemberProfileSchema/teamModelProbeProfile -> ClaudeManagementCoordinator -> ModelProbeOwner/store/fence -> real CapturedProcess/shared peer",
+          "profileBound": "The original teamModelProbeProfile derives a 90000ms model-probe timeout. Only this new test's derived profile is parsed with modelProbeTimeoutMs5000 before admission; no production derivation or old deadline is changed.",
+          "model": "TEST-claude-sonnet",
+          "effort": "low",
+          "modelContext": "one-million",
+          "expectedBeta": "context-1m-2025-08-07",
+          "actualProcessObservation": "A typed factory constructs real CapturedProcess(profile,current,custody), delegates original launch request/signal, seal/isRunning/confirmStopped without substitution, and records at most two actual launch argv arrays plus original stop booleans. Positive auth test remains on the default uninstrumented factory.",
+          "assertions": [
+            "metadata keeps sonnet/TEST-claude-sonnet row and no model execution receipt/input",
+            "one original durable completed/ok model.probe, resourceHeldfalse, exact model/effort/context",
+            "fresh FileManagementCommandStore reads identical durable result",
+            "same-command read/start returns original result, no second native input or terminal",
+            "one TEST_MODEL_PROBE input/terminal from same runtime PID/inputId",
+            "actual SDK --model/--effort/--betas values and two original stop confirmations",
+            "no auth-status/failure event and unchanged owned sentinels"
+          ],
+          "counterfactual": "Resolved/context contract coverage. No actual pinned sdk.mjs body or passing invocation is claimed."
+        }
+      ],
+      "noCasesExecuted": true
+    },
+    "capturedStatus": {
+      "before": {
+        "bytes": 8570,
+        "sha256": "37d0b61e60dd4f175c9c2d34e1f8aa399becac018e970655dd7f5595713f2fb6",
+        "gitBlob": "6e84953e1d1a08b705b4000f47d8d51177047ff3"
+      },
+      "after": {
+        "bytes": 11410,
+        "sha256": "e781760fcaf1aeb3a04694ab8d5c213017add94853a8835b096b4f9f79f81279",
+        "gitBlob": "bf0a54d585ef1dcd94a2649cebd75cb20da43339"
+      },
+      "originalCases": 6,
+      "newCases": 1,
+      "prospectiveCases": 7,
+      "oldPrefixPreserved": true,
+      "cases": [
+        {
+          "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+          "name": "the exact finite runtime catalog offers its resolved model while auth and metadata keep launch unqualified",
+          "bodyBoundary": "existing transport-controlled captured request boundary -> actual status client/capturedClaudeMetadata -> dynamically imported actual teamModelAvailability consumers",
+          "assertions": [
+            "catalog exactready and only TEST-claude-sonnet offered",
+            "offered resolved spelling accepted",
+            "sonnet and unoffered model refused",
+            "independent successful api_key auth does not grant model execution/teamLaunch/oneShot",
+            "same captured request order"
+          ],
+          "limit": "Composition coverage paired with real-peer tests; not one end-to-end provider invocation or replacement of catalog43/original GUI readiness."
+        }
+      ],
+      "noCasesExecuted": true
+    },
+    "distinctScopes": [
+      "Default actual CapturedProcess auth status and original child close",
+      "Eight direct finite refusal children plus actual changed-executable refusal",
+      "Actual locked SDK/provider metadata and one real ModelProbeOwner/store/fence invocation",
+      "Controlled transport composition through actual metadata/renderer functions"
+    ],
+    "oldFailurePrediction": "Only the positive shared-peer auth test is necessarily discriminating against old peer argv parsing. Other new cases are contract/preservation checks, not a universal old-RED claim.",
+    "independentSuites": {
+      "wholeNode149": "unchanged and not executed here",
+      "catalog43": "unchanged and not executed here",
+      "runtime85": "unchanged and not executed here",
+      "claudeManagement5": "unchanged and not executed here"
+    },
+    "timingLimit": "Ordinary original test timers and observation-loop bounds are preserved; no claim of hard synchronous I/O preemption or new cancellation authority."
+  },
+  "mechanism": {
+    "auth": {
+      "argv": [
+        "auth",
+        "status",
+        "--json"
+      ],
+      "role": "management",
+      "home": "join(root,'home')",
+      "config": "join(root,'config')",
+      "maxStdoutBytes": 65536,
+      "journal": [
+        "launch",
+        "auth-status",
+        "exited"
+      ],
+      "flushBeforeExit": true,
+      "actualCloseRequired": true,
+      "noCredentialsMutation": true,
+      "noSdkBusinessInput": true
+    },
+    "model": {
+      "metadataId": "sonnet",
+      "offeredLaunchModel": "TEST-claude-sonnet",
+      "fixtureSelectedModel": "TEST-claude-sonnet",
+      "effort": "low",
+      "modelContext": "one-million",
+      "beta": "context-1m-2025-08-07",
+      "modelAllowlistUnchanged": [
+        "sonnet",
+        "sonnet[1m]",
+        "TEST-claude-sonnet"
+      ],
+      "sdkArgvVerifiedByExecution": false
+    },
+    "probeTimeout": {
+      "originalProductionDerivedMs": 90000,
+      "newTestOnlyDerivedMs": 5000,
+      "helperMetadataMs": 5000,
+      "observationMs": 7000,
+      "pollMs": 20,
+      "testMs": 15000,
+      "productionChanged": false
+    },
+    "observer": "Actual request, original signal and original CapturedProcess are delegated unchanged. Recorded argv/stops are observations, never replacement outputs.",
+    "canonicalSelection": "No production alias admission change; exact offered launchModel repairs the fixture/catalog contract mismatch.",
+    "authority": "Status authentication/model catalog do not grant model execution or team launch. Original currentness, expiry, hidden/unavailable, dynamic catalog and captured launch guards remain authoritative."
+  },
+  "primarySourceIndex": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "pin": {
+        "bytes": 21981,
+        "sha256": "d0d00254e7e39ab8b5163e02cc93754775a8efe56ff28b8c87f07d02e0292c7e",
+        "gitBlob": "7b5edfbd4967debe454387c7a8b6246e67216dc8"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "pin": {
+        "bytes": 32221,
+        "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+        "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeAuthConversation.ts",
+      "pin": {
+        "bytes": 10334,
+        "sha256": "709d66ffc366f0b83d9af0a49a1b9126bda1e33e72f796da0458356349b18880",
+        "gitBlob": "a4d47563cffaed2ea48381887e47820ed727422e"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/src/adapters/providers/claudeAuthStatus.ts",
+      "pin": {
+        "bytes": 2618,
+        "sha256": "588b932ed1427203a6ff27690787799cb43cb5f7aaee115f7aaab4d4cc1cd388",
+        "gitBlob": "3ce5814e42e72d0a46f229791dfec25668e22896"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/src/composition/ClaudeAuthenticationCoordinator.ts",
+      "pin": {
+        "bytes": 7797,
+        "sha256": "c5004da14dbf88f92a8a56984f7d0c6e31f4cff27e1f00f3b3f2a5e382f35a81",
+        "gitBlob": "5f129052b232eed045304284167bc9258141b720"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+      "pin": {
+        "bytes": 7477,
+        "sha256": "c4d8333cc5b562b7eb8de8398bde8275d579fdb7775c59c3d1ae5123e88cfdc8",
+        "gitBlob": "c0bd14811e8cd76dd34bcf42afac2785769e37ad"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/features/runtime-provider-management/main/adapters/output/capturedClaudeAuthentication.ts",
+      "pin": {
+        "bytes": 3092,
+        "sha256": "c4ca2ee17177e804122d551d55c80b91c8fbba59b9bbc87465819cad130cb4e7",
+        "gitBlob": "7ee86041e36d33033ede953ba05e76244f9586ca"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/features/agent-backend/main/infrastructure/CapturedProviderManagement.ts",
+      "pin": {
+        "bytes": 5433,
+        "sha256": "8ea983e9aec5c56ca5e2438a39e4272c0133ae6c2d4839bbcb6926afb605b760",
+        "gitBlob": "60b08011e5aa2df1a6d2215155d7dabf0b2b15af"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts",
+      "pin": {
+        "bytes": 15353,
+        "sha256": "606098a4895f1715ea58677cfff11337790d5bbcf1be3fcdf3efcdf171b59aab",
+        "gitBlob": "500b04c5a0b9e15bc8f4401d5f7bdc0d4267e2a6"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/renderer/store/slices/cliInstallerStatusReconciliation.ts",
+      "pin": {
+        "bytes": 9017,
+        "sha256": "363bd187bf5ac466c9e8e9bd5b535c7b9a7e52f62bbadd1d6db01ba8317f732e",
+        "gitBlob": "c3347aaded7d5705b775b8aa1ca29f6d37a58c8e"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/renderer/store/slices/cliInstallerSlice.ts",
+      "pin": {
+        "bytes": 59054,
+        "sha256": "c7194f07ac40c75f3a13bd09b0a2be71b9b4c0d0bde887ca5fccd083b24f5714",
+        "gitBlob": "38de9ccec33c7b9b1250a17173003e1e6fb96d9c"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/shared/utils/providerStatusAuthority.ts",
+      "pin": {
+        "bytes": 4567,
+        "sha256": "67241d584fdbef940ad2a0ef7eb459eb85af618bd907710d42c005821c2fa4fa",
+        "gitBlob": "56a1d52d3ba392ec00f60ccf6b7aedaffe6ba570"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/renderer/utils/providerReadiness.ts",
+      "pin": {
+        "bytes": 2022,
+        "sha256": "4c68a3835384f0358b884930965719286d40ded7cce4a0f47ba63ad50937d297",
+        "gitBlob": "b912faca5caef24aebf1ce4105556e2dc8b3bdaf"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/renderer/hooks/useEffectiveCliProviderStatus.ts",
+      "pin": {
+        "bytes": 9697,
+        "sha256": "d7db83f4787e51b205fae22b5399d6b19cfe478bda586efb86bfc39ed38be1f1",
+        "gitBlob": "4a4c5150cc13bc59a914d34f29033890a2541697"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/renderer/hooks/useProviderReadinessRevalidation.ts",
+      "pin": {
+        "bytes": 6495,
+        "sha256": "8aadcca8af81d9aaa2031aa4eeffa5db2c1f0bc01d82932487719c176c0d7c6b",
+        "gitBlob": "ba9aab03f3830fd865a606699100ea002329cd91"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "pin": {
+        "bytes": 32077,
+        "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "test/renderer/utils/teamModelAvailability.test.ts",
+      "pin": {
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/renderer/utils/teamProviderRuntimeStatusLoading.ts",
+      "pin": {
+        "bytes": 4395,
+        "sha256": "623fb0291c50dd43016d08b54635d5ec4b4cbb582fd1a7768efba904980d175c",
+        "gitBlob": "305aea0b97d3b2b59dd897e06e39cc2c82406ee9"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/renderer/components/team/dialogs/memberModelScope.ts",
+      "pin": {
+        "bytes": 12942,
+        "sha256": "0033354db6b28e7b69eaa8f10db35332883707b9a6576c80e55c78f997a670a8",
+        "gitBlob": "d24060b3c0440b4ed6cf62c87e83098529d951c4"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "pin": {
+        "bytes": 132317,
+        "sha256": "af7b6f9da352008ef014dad120b868090626e071cd5d94037fd03385e2234d40",
+        "gitBlob": "4bd95a0f2e5636a21d1f0d83dd45f228b054b048"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/renderer/components/team/dialogs/providerLaunchAuthority.ts",
+      "pin": {
+        "bytes": 8286,
+        "sha256": "7c122f43c764f438d9c9d78413f5e3912e83f29a3c30f72631333dc34d6e44d0",
+        "gitBlob": "a6dbcf114109c75f5a0dfad9ca20e71884956f31"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/renderer/components/team/dialogs/capturedTeamLaunchReadiness.ts",
+      "pin": {
+        "bytes": 1376,
+        "sha256": "5a3e24af0a051afe0e8736e4d79e21239ef23b3aeb7a972c59fe5e79655db09e",
+        "gitBlob": "7a78f0791a54d09bcdda9c466b4df9c8b3b569d1"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/renderer/components/team/dialogs/useCapturedTeamLaunchReadiness.ts",
+      "pin": {
+        "bytes": 5710,
+        "sha256": "7327fb6ed0504e412dcdafe4989c91625c2ef0712edf0705c767c5bfc52775af",
+        "gitBlob": "e8f5137ea0b7b69f4c098203d797780be99a5c01"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/renderer/components/team/dialogs/withCapturedTeamReadiness.ts",
+      "pin": {
+        "bytes": 1500,
+        "sha256": "9777cab955f2dbe26d2226a9848adc032d62d51d331ab63a3c319b6269198091",
+        "gitBlob": "9321399f64afdb461bdbfdb59b532b29523da96d"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/features/agent-backend/main/application/prepareCapturedTeamModels.ts",
+      "pin": {
+        "bytes": 20613,
+        "sha256": "c49452670a14256b257478f1f4a2532b3df19fb11175e51e11472c1921e9c8a6",
+        "gitBlob": "c1432a74804a9382d0137ed040e49b3ed51316fd"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/features/agent-backend/main/adapters/output/projectLaunchModelProbe.ts",
+      "pin": {
+        "bytes": 2538,
+        "sha256": "c20d555192061bb985bc3245a59b0277d289c8f69e08c7d4e4ff04f4c75c5a99",
+        "gitBlob": "b4d23d44696675a45f98bae19ed451354ad16be7"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+      "pin": {
+        "bytes": 22845,
+        "sha256": "135cd81f2edde1f087b231d4dcbed83d8cc8beade5a0230a093e6cbfcb1923ee",
+        "gitBlob": "b33e5290e4ed86a48b902a24ffc80509f1c89236"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-boundary.ts",
+      "pin": {
+        "bytes": 9825,
+        "sha256": "aa936c996a96c12c6728cbf1bca27f94e428b691e0fa2baabcd8fd74c449a499",
+        "gitBlob": "41d42274a468f086941eb4b9435fa4ff09adf2be"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "scripts/legacy-agent-host/desktop-emulated-claude-settings-fixture.ts",
+      "pin": {
+        "bytes": 5663,
+        "sha256": "0370ef4c293ffc173d5952cc04671459022dfff2782b5c915209c6d93195c7b6",
+        "gitBlob": "5f18c861f297cbf62b9acaceba615079d0b77d0d"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "tools/owned-process-broker/fixtures/claudeSettingsAuthPeer.ts",
+      "pin": {
+        "bytes": 2154,
+        "sha256": "e21bfb7f4b548ad37d6f07d2cc8e9b61407822b11cb8c0e5051a68e34b1b382d",
+        "gitBlob": "329a0d3b3c35f5c6736bd214c3ed9717248c1d7d"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "pin": {
+        "bytes": 24968,
+        "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+        "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/tests/claude-management-host.test.ts",
+      "pin": {
+        "bytes": 13620,
+        "sha256": "0c90e1992310021a746897425e4440dff4116dcb8a7a19651def8a47563925be",
+        "gitBlob": "7f7ee01121e64f0ab55c127f62c796bf20b3fc70"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "pin": {
+        "bytes": 165022,
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+      "pin": {
+        "bytes": 8570,
+        "sha256": "37d0b61e60dd4f175c9c2d34e1f8aa399becac018e970655dd7f5595713f2fb6",
+        "gitBlob": "6e84953e1d1a08b705b4000f47d8d51177047ff3"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts",
+      "pin": {
+        "bytes": 11502,
+        "sha256": "ccf4bd25cb828b6ea08b437337552f7a8d662dd49fb6aeabb2d7af4d9c29897f",
+        "gitBlob": "c3670e3828e2b9470a2997d29d6cad225107d8fc"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/src/adapters/providers/capturedNativeProcessFactory.ts",
+      "pin": {
+        "bytes": 1288,
+        "sha256": "f0479cc89a9cfc9ab144e50382c41b3146caececb01a8489be3fb9417d49dee3",
+        "gitBlob": "6eed54e3253a8e714cdc984835c74474d7edb054"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeManagementHost.ts",
+      "pin": {
+        "bytes": 6977,
+        "sha256": "62e74e6cbdf1bdb94d828b84b31eff58e9a36a5b2290c6578a3b266dd19da568",
+        "gitBlob": "12d3ce0c8b8423cc86abbe1f39feb0cdd46562d2"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/src/composition/ClaudeManagementCoordinator.ts",
+      "pin": {
+        "bytes": 8939,
+        "sha256": "63612e0762f67f1631795547fb57e35eb72007352d52369181a57f1461b3482d",
+        "gitBlob": "40e4b8297dfcddeea4685b6f0187d598e1071c4c"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "pin": {
+        "bytes": 33737,
+        "sha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+        "gitBlob": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "vitest.config.ts",
+      "pin": {
+        "bytes": 1187,
+        "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+        "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "test/setup.ts",
+      "pin": {
+        "bytes": 5297,
+        "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b",
+        "gitBlob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/package.json",
+      "pin": {
+        "bytes": 12355,
+        "sha256": "4e567d64af0c5a0d85e155e90fd4eec9a6ca720e89edfe9923d7e4cc9a1b4f81",
+        "gitBlob": "42093f5cb1be431e383a2bbf97223a2bd8d54b49"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/source-receipt.json",
+      "pin": {
+        "bytes": 5740,
+        "sha256": "93ef58e01044287252668396c2bd7cd8da4f628c7265f73185d89893fd65ba34",
+        "gitBlob": "a78d8a6619a358c79f88fc66886754eb2b6de9b2"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/checked-artifact-receipt.json",
+      "pin": {
+        "bytes": 597,
+        "sha256": "7a0fa91e187e337e315820cade9790b089c2c001f197594345aa6b11ac12575b",
+        "gitBlob": "2136bb2a37863e4182ff264bf012220a8ae1bc13"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "path": "packages/provider-implementations/src/claude.ts",
+      "pin": {
+        "bytes": 1393,
+        "sha256": "e7b1913a4a5b01721be30daa86d875e5fcc28f6e00ab92e6ead2039be5d70564",
+        "gitBlob": "4f4074de9b5546eefc9318d61a83e35b8bd142cb"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/internal.ts",
+      "pin": {
+        "bytes": 8772,
+        "sha256": "998e371706d91c5656ebf89008da12f0391de76a67f77016961704b05096a0ed",
+        "gitBlob": "ebe2086008ca32692438da4d79c5172fd443da9d"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/model-probe.ts",
+      "pin": {
+        "bytes": 9891,
+        "sha256": "f7fd3848b46ea66776dfeeec7307129ec86819c79a158cd8e52a61e36291a89d",
+        "gitBlob": "57fdf89754d1592511a9acf264859282e9745d4f"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/native-management-config.ts",
+      "pin": {
+        "bytes": 2019,
+        "sha256": "f7f7d3cde90e3e7e5f307a27f3ef3da813e044806cbdb8f0e81c503997af727c",
+        "gitBlob": "44970a080d96dafbe3b88d5e7a29412e99034875"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "path": "packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/model-probe.test.ts",
+      "pin": {
+        "bytes": 11684,
+        "sha256": "0bdc24660bae89a423361522305b435ae9ee0ab0a6c57a2d5d35726aab648a0a",
+        "gitBlob": "a6b47329f25cbac3e3033706e72309d2de4bc4db"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "path": "packages/provider-implementations/package.json",
+      "pin": {
+        "bytes": 2457,
+        "sha256": "6de207907fe0a49376b7533c166b579214ea3b173772bbd477e4d4882ec923f4",
+        "gitBlob": "4628124ce991ab036fbb2923297b179bdb107d25"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "path": "pnpm-workspace.yaml",
+      "pin": {
+        "bytes": 341,
+        "sha256": "6643d45ed7c8e4ed725932178dde24dfe8a5d5b581e426ca06b5b056a4aafbb3",
+        "gitBlob": "9c266920737055006a13d5aa767cc61c73ed3f05"
+      },
+      "fullIdentityJoined": true,
+      "semanticBasis": "Previously complete immutable primary read under accepted R1/advisories; relevant core paths freshly reread for this review."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "01ed56f756b385b91afcffcb31dafe7750bb4162",
+      "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "pin": {
+        "bytes": 30721,
+        "sha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+        "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e"
+      },
+      "fullIdentityJoined": true,
+      "fullBodyReadThisReview": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "01ed56f756b385b91afcffcb31dafe7750bb4162",
+      "path": "packages/legacy-agent-host/src/composition/teamLaunchModelProbe.ts",
+      "pin": {
+        "bytes": 17385,
+        "sha256": "4e8f91bf7231f41a9cdc80ec40fc36d75bf41ef2573ec432967f039e05c5f2c7",
+        "gitBlob": "7e377e0b51ea453e90f4f2dde5c9bb782c983c99"
+      },
+      "fullIdentityJoined": true,
+      "fullBodyReadThisReview": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "01ed56f756b385b91afcffcb31dafe7750bb4162",
+      "path": "packages/legacy-agent-host/src/composition/runtimeProfile.ts",
+      "pin": {
+        "bytes": 10369,
+        "sha256": "8d01aa3189e83512c25b1b5f2a5fc3f0a427da7be979291127179914489b9cc8",
+        "gitBlob": "7dcaecc2d76bf568347082b5f82f0d738e0bfaa1"
+      },
+      "fullIdentityJoined": true,
+      "fullBodyReadThisReview": true
+    }
+  ],
+  "primarySourceJoinSummary": {
+    "proposalIndexRows": 63,
+    "allRowsHashJoined": true,
+    "uniquePrimaryPaths": 54,
+    "additionalFullBodies": 3,
+    "targetSourcesExecuted": 0
+  },
+  "preserved": {
+    "frozenVector": {
+      "bytes": 3481,
+      "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+      "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+    },
+    "selectedFiveDisjointFromProtected23": true,
+    "all13Parity": true,
+    "fourWindows": true,
+    "sixDiagnostic": true,
+    "whole149": true,
+    "catalog43": true,
+    "runtime85": true,
+    "productionFiles": 5020,
+    "nonDocLeaves": 8799,
+    "cap": 800,
+    "exceptions": 141,
+    "workflows": 42,
+    "noNewSourceFiles": true,
+    "noProductionSourceEdits": true,
+    "noWorkflowFilterDependencyEdits": true,
+    "oldUiReadinessWaitMs": 90000,
+    "noExtraSubmitRetryOrFallback": true
+  },
+  "limits": {
+    "noRuntimeOutcome": true,
+    "noNewVenueSelected": true,
+    "noPublishedSourceActualClaim": true,
+    "SDK": "Complete c79b provider source establishes unchanged model and original beta, not the unavailable pinned sdk.mjs implementation. The new actual component test must observe the concrete argv and successful original custody when independently admitted.",
+    "archive": "Prior actual lifecycle profile/effects/model command mappings are reused from exact accepted R1/advisories. No binary archive was newly fetched, unpacked or executed.",
+    "readiness": "The tests do not fabricate captured team launch authority or establish a successful GUI submit. Other retained failures are not merged into one cause.",
+    "environment": "Proposal environment statement is its authorship-time snapshot. A later environment notification does not authorize or cause any local probe in this review.",
+    "sequence": "Existing source publication/actual readback and later execution selection only; no added protocol or gate."
+  },
+  "selfReadProtocol": "Retain exact bare report, immediately send pin, then fresh complete fetch/literal/hash/JSON equality and complete report reread before final confirmation."
+}

@@ -11560,3 +11560,55 @@ The later test-design advisory's vendor TGZ reference remains declared binary me
 This documentation-only R1 publication follows the four exact static reviews and retains their complete bodies. It adds 22 evidence files and its manifest, modifies only the complete plan/status/catalog documents, and preserves every non-documentation root entry. The catalog retains all 95 prior values and original 27 bundles while adding only this R1 stage and evidence-file map. Expected census is 12,184 total leaves, 3,385 documentation leaves and 8,799 non-documentation leaves. Production-file count 5,020, cap 800, exception count 141 and all 42 workflows remain unchanged.
 
 After immediate expected-parent force:false push, root and independent full actual readbacks must close before root authors the five source postimages. Source R2 and its four reviews, immediate push and complete actual readbacks then precede the separately selected execution venue. Failed, skipped, unknown and unreached results are not converted to PASS. No complete E2E, Ready/merge, release/default activation or Stage2 is claimed.
+
+## 2026-11-17: exact Claude finite runtime readiness source R2
+
+The preceding R1 documentation publication is `01ed56f756b385b91afcffcb31dafe7750bb4162`, root `181ac1545f21983dfe9b754ef23ae79b0e2caac2`, docs `08ba85ad8af15cad38cdb62173f7b25a17aa9fb8`. Its existing full actual gate closed at 2026-11-17 12:08:55 UTC with 37 root and 44 independent checks (81 total). All 419 complete repository-scoped UTF-8 tuples / 54,051,123 bytes were joined; the one explicitly unread binary TGZ metadata reference stayed separate.
+
+Only after that gate did root author the five selected source/test postimages (2026-11-17 12:11:49 UTC through 2026-11-17 12:13:42 UTC). All five complete preimages / 104,295 bytes and postimages / 123,221 bytes were read and hash-bound, including complete inverse reconstruction. No source compilation, execution, new test pass or E2E qualification is claimed here.
+
+| Selected existing source | Before Git blob | After Git blob | After bytes |
+|---|---|---|---:|
+| `scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts` | `7b5edfbd4967debe454387c7a8b6246e67216dc8` | `adf5b4c418195e0fc4ab38ba7fde2b3436a6b835` | 21993 |
+| `scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts` | `97e14385a298a38a9b81b8805dc3f6d2da66545c` | `6d267c1531fd741c4abee8b27ef501f28098d782` | 16591 |
+| `tools/owned-process-broker/fixtures/claudeProviderPeer.mjs` | `920b40fa594f7aa65e11d1ec1f31d2aa69581a01` | `1430de1a6666a22a7582d38a21273d61d2f745b7` | 33227 |
+| `scripts/legacy-agent-host/desktop-emulated-settings.test.ts` | `bd427fbe8bdcba5a80674d220becd75d8bd6ef57` | `c1a42df62de987b1632365400f7359f65510dff3` | 40000 |
+| `test/features/runtime-provider-management/capturedClaudeStatus.test.ts` | `6e84953e1d1a08b705b4000f47d8d51177047ff3` | `bf0a54d585ef1dcd94a2649cebd75cb20da43339` | 11410 |
+
+The runtime fixture changes one Claude model value, and collaboration changes three, to the catalog's offered resolved value `TEST-claude-sonnet`. Codex/OpenCode values and the production catalog/authority validators remain the accepted original bodies. The shared peer adds one exact management-only `auth status --json` branch after the existing TEST namespace and argv bounds. It requires the exact owned HOME/config directories, emits bounded finite api_key/firstParty status, journals its original PID/parent/exit, flushes stdout, and exits zero. Removing only that insertion reconstructs the entire original SDK peer, including model/beta allowlists and all input/MCP/cleanup behavior.
+
+The entire original Settings test body (24,968 bytes, eight cases) and captured-status test body (8,570 bytes, six cases) are literal prefixes. Exactly three Node cases and one Vitest case are appended: prospective inventories are 11 and seven, all unexecuted at publication.
+
+The Node cases exercise actual Host authentication with default CapturedProcess ownership; eight finite direct refusal cases plus an actual captured-executable identity refusal; and actual SDK metadata plus one durable model probe for `TEST-claude-sonnet`, effort `low`, context `one-million`. The last case delegates real captured processes and records the actual SDK argv/close result; it requires one completed/ok resourceHeld=false receipt, identical durable reread, and no extra native input on same-command lookup/start. Only this new finite derived test profile sets modelProbeTimeoutMs to 5,000; the production builder's 90,000 value and all old cases/deadlines are unchanged. Spawn errors, timeout, signals, buffer failure or uncertain cleanup never count as refusal/PASS.
+
+The appended status case composes the real captured metadata/status projection with real model consumers through the existing controlled transport boundary. It accepts the offered resolved value, refuses `sonnet` and an unoffered value, and keeps model execution/teamLaunch unqualified even after successful finite auth. This is composition coverage paired with actual-peer Node tests, not one end-to-end provider invocation. Only the positive auth case necessarily fails the old positional-argv parser; no blanket four-case red counterfactual is claimed.
+
+Four exact-subject static source reviews closed at 2026-11-17 12:30:34 UTC (185 accepted checks):
+
+| Review | Retained Git blob | Bytes | Checks |
+|---|---|---:|---:|
+| root | `b934e59c5342efd8147b445bc2524e581b7d4c01` | 69676 | 45 |
+| guard | `3570557075d71e7fd054a39e51a6c148632ac1e8` | 51832 | 44 |
+| semantic | `37badd86620af611e59409a0c8a2f1c41aa439b9` | 67425 | 42 |
+| binding | `89384f06e73a1767f74f9d6e23e2bf53e3d57c0e` | 174578 | 54 |
+
+All reports were fully root-read and self-read by their owners. The source R2 proposal's complete direct closure is 94 repository-scoped tuples / 3,900,355 bytes with zero unresolved pointers; the two test suffix identities are explicitly derived from whole pre/post bodies. The publication includes the exact R2 proposal/reviews and preceding R1 actual proofs below:
+
+| Evidence | Retained Git blob | Bytes |
+|---|---|---:|
+| r2 | `682377734948765268a3cd07b4b966a97abac1e4` | 56517 |
+| rootReview | `b934e59c5342efd8147b445bc2524e581b7d4c01` | 69676 |
+| guardReview | `3570557075d71e7fd054a39e51a6c148632ac1e8` | 51832 |
+| semanticReview | `37badd86620af611e59409a0c8a2f1c41aa439b9` | 67425 |
+| bindingReview | `89384f06e73a1767f74f9d6e23e2bf53e3d57c0e` | 174578 |
+| r1ActualGate | `613145275d09f78b0da7c7aa4c6ce231212d765d` | 3974 |
+| r1RootActual | `801451c05537dd6316f2a1ceb700c6fc3b6e3184` | 542644 |
+| r1IndependentActual | `484596c69ecf9b470d81226e31da897fe0743a2f` | 670881 |
+
+The full parent plan/status prefixes, all 97 prior catalog values and original 27 bundles/totals are preserved. This publication adds exactly two catalog keys, nine documentation leaves and modifies three existing documentation leaves plus the five selected source leaves. No source leaf is added/deleted and no mode changes. The expected census is 12,193 total leaves / 3,394 docs / 8,799 non-doc leaves, with 54 root entries and 50 other root entries unchanged. All 13 frozen parity bodies, four Windows postimages, six diagnostic postimages, whole149, catalog43, runtime85, SDK-management5, production5020, cap800, exceptions141 and workflows42 remain preserved.
+
+PR1219's seven runs remain terminal on old source `9d79abcf1f5c498687c2e5c443e3edf220070aa6`; its 18 successful and five failed Host jobs include the failed aggregate. This source has not been exercised by that cohort. No old run is polled or retried, no old result is promoted, and frozen PR1206/1207/1208/1211/1212/1213 remain untouched.
+
+Environment unavailability in the immutable proposal describes its authorship time. A later availability notification was recorded at 2026-11-17 12:19:47 UTC; no filesystem/process identity probe, standalone rebinding or runtime admission followed it. The old standalone attempt remains spent; no standalone target test has been invoked or rebound, and no current inode is qualified.
+
+Root immediately pushes every created commit with the exact expected parent and force:false. Existing root and independent full source-publication actual readbacks must close before a separately selected execution venue/admission. The retained fifteen-path Draft venue advisory is not itself a selection. Other old GUI/native/cold-renderer failures remain unresolved; original waits, cases, cleanup and UNKNOWN semantics stay binding. No Ready, main/default merge, release/default activation, Stage2 or complete E2E claim.

@@ -208,3 +208,51 @@ it('wrong auth revision and a context change during auth cannot create authorita
     expect(hasAuthoritativeProviderLaunchEvidence(status)).toBe(false);
   }
 });
+
+it('the exact finite runtime catalog offers its resolved model while auth and metadata keep launch unqualified', async () => {
+  const { getAvailableTeamProviderModels, isTeamModelAvailableForUi, getTeamModelSelectionError } =
+    await import('../../../src/renderer/utils/teamModelAvailability');
+  const f = fixture();
+  f.value.models = [{
+    modelId: 'sonnet', resolvedModel: 'TEST-claude-sonnet', displayName: 'TEST Claude Sonnet',
+    description: 'Subscription-free protocol emulation', supportedEffortLevels: ['low', 'medium', 'high'],
+    supportsFastMode: false,
+  }];
+  f.request.mockImplementation(async (operation): ReturnType<CapturedProviderManagement['request']> => {
+    if (operation === 'claude.metadata') return { ok: true, value: f.value };
+    if (operation === 'claude.auth') return { ok: true, value: {
+      profileId: f.target.profileId, configRevision: f.target.configRevision,
+      loggedIn: true, authMethod: 'api_key', canLogin: false, canLogout: false,
+    } };
+    if (operation === 'extension.capture') return { ok: false, code: 'unavailable' };
+    throw new Error('TEST unexpected management request');
+  });
+  const status = await f.port.getProviderStatus('anthropic', { projectPath: '/TEST-workspace' });
+  expect(f.captureClaude).toHaveBeenCalledWith('/TEST-workspace');
+  expect(f.capture).not.toHaveBeenCalled();
+  expect(status.models).toEqual(['TEST-claude-sonnet']);
+  expect(status.modelCatalog?.models).toEqual([
+    expect.objectContaining({ id: 'sonnet', launchModel: 'TEST-claude-sonnet', isDefault: false }),
+  ]);
+  expect(isProviderModelCatalogExactReady(status, f.now)).toBe(true);
+  expect(getAvailableTeamProviderModels('anthropic', status)).toEqual(['TEST-claude-sonnet']);
+  expect(isTeamModelAvailableForUi('anthropic', 'TEST-claude-sonnet', status)).toBe(true);
+  expect(getTeamModelSelectionError('anthropic', 'TEST-claude-sonnet', status)).toBeNull();
+  for (const unoffered of ['sonnet', 'TEST-unoffered-model']) {
+    expect(isTeamModelAvailableForUi('anthropic', unoffered, status)).toBe(false);
+    expect(getTeamModelSelectionError('anthropic', unoffered, status)).not.toBeNull();
+  }
+  expect(status).toMatchObject({
+    authenticated: true, authMethod: 'api_key', canLoginFromUi: false,
+    statusCheckOutcome: 'authoritative', verificationState: 'verified', modelVerificationState: 'idle',
+    capabilities: { teamLaunch: false, oneShot: false },
+  });
+  expect(hasAuthoritativeProviderLaunchEvidence(status)).toBe(false);
+  expect(hasAuthoritativeProviderLaunchEvidence(reconcileCliProviderSnapshot(undefined, status))).toBe(false);
+  expect(f.request.mock.calls).toEqual([
+    ['claude.metadata', {}],
+    ['claude.auth', {}],
+    ['extension.capture', { panel: 'plugins', scope: 'project' }],
+    ['extension.capture', { panel: 'mcp', scope: 'project' }],
+  ]);
+});

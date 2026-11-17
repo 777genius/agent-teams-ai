@@ -104,7 +104,7 @@ ${provider === 'codex' ? `if(process.argv.length===3&&process.argv[2]==='--versi
   team.members[0]!.role = 'lead';
   team.members[0]!.delivery = { ...team.binding, runId: team.scope.runId, memberId: 'alice-id', generation: '1' };
   team.grants.push({ principalId: 'alice-session', memberName: 'alice', permissions: ['read', 'task.write', 'message.write'] });
-  const model = provider === 'claude' ? 'sonnet' : 'TEST-model';
+  const model = provider === 'claude' ? 'TEST-claude-sonnet' : 'TEST-model';
   const savedModel = provider === 'opencode' ? 'test-provider/' + model : model;
   team.savedSettings = { cwd: join(fixture.root, 'workspace'), providerId: provider === 'claude' ? 'anthropic' : provider, model: savedModel,
     ...(provider === 'claude' ? { effort: 'low' as const, fastMode: 'off' as const } : {}),

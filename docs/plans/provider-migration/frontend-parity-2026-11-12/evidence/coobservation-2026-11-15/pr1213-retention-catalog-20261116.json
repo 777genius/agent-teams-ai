@@ -16244,5 +16244,858 @@
       "sha256": "20cfdb1372d37de073bde33487569457564bbd0dd74fb593dd38a0fcb3eb0482",
       "gitBlob": "6a01cdfae9068654cc95b4bbdd665f041b318125"
     }
+  ],
+  "claudeFiniteRuntimeReadinessSourceR2Stage": {
+    "schemaVersion": 1,
+    "kind": "C714_CLAUDE_FINITE_RUNTIME_READINESS_SOURCE_R2_STAGE",
+    "at": "2026-11-17 12:30:34 UTC",
+    "repository": "777genius/agent-teams-ai",
+    "branch": "fix/frontend-parity-coobservation-c714-20261115",
+    "parent": "01ed56f756b385b91afcffcb31dafe7750bb4162",
+    "parentRoot": "181ac1545f21983dfe9b754ef23ae79b0e2caac2",
+    "parentDocs": "08ba85ad8af15cad38cdb62173f7b25a17aa9fb8",
+    "subject": {
+      "bytes": 56517,
+      "sha256": "59133615a781c82b97a5e2ed132ff5d5a9795b6d1b400d4d520761b31ca5b561",
+      "gitBlob": "682377734948765268a3cd07b4b966a97abac1e4"
+    },
+    "reviews": [
+      {
+        "role": "root",
+        "pin": {
+          "bytes": 69676,
+          "sha256": "b9683736f3c83bf69c4f87e611aa4dd48c6800a59a84e3f8535814b4d31077a0",
+          "gitBlob": "b934e59c5342efd8147b445bc2524e581b7d4c01"
+        },
+        "checks": 45,
+        "decision": "ACCEPT_EXACT_FIVE_SOURCE_POSTIMAGES_STATIC_ONLY",
+        "fullRootRead": true,
+        "fullSelfReadConfirmed": true
+      },
+      {
+        "role": "guard",
+        "pin": {
+          "bytes": 51832,
+          "sha256": "373267011f603a3fd190bd01a0607227b68ebd3d5155d043d0d339da94d9f07d",
+          "gitBlob": "3570557075d71e7fd054a39e51a6c148632ac1e8"
+        },
+        "checks": 44,
+        "decision": "ACCEPT_EXACT_FIVE_SOURCE_POSTIMAGES_ONLY",
+        "fullRootRead": true,
+        "fullSelfReadConfirmed": true
+      },
+      {
+        "role": "semantic",
+        "pin": {
+          "bytes": 67425,
+          "sha256": "723437e92fe63d2a9d333708c662e71c3053f7636afdcce0500c2d08ce8a04cd",
+          "gitBlob": "37badd86620af611e59409a0c8a2f1c41aa439b9"
+        },
+        "checks": 42,
+        "decision": "ACCEPT_EXACT_SOURCE_R2_STATIC_ONLY",
+        "fullRootRead": true,
+        "fullSelfReadConfirmed": true
+      },
+      {
+        "role": "binding",
+        "pin": {
+          "bytes": 174578,
+          "sha256": "5a3cb75af887173d4dc6dac4e076e553e89000f83645660354a2ecea105295ca",
+          "gitBlob": "89384f06e73a1767f74f9d6e23e2bf53e3d57c0e"
+        },
+        "checks": 54,
+        "decision": "ACCEPT_EXACT_FIVE_SOURCE_POSTIMAGES_BINDING_STATIC_ONLY",
+        "fullRootRead": true,
+        "fullSelfReadConfirmed": true
+      }
+    ],
+    "reviewsClosedAt": "2026-11-17 12:30:34 UTC",
+    "staticChecks": 185,
+    "precedingR1Actual": {
+      "gate": {
+        "bytes": 3974,
+        "sha256": "efa9f2091d7f776e1370fe7b0220b98dc03f8ca56dcf3a9e17cbecdfae9d781b",
+        "gitBlob": "613145275d09f78b0da7c7aa4c6ce231212d765d"
+      },
+      "root": {
+        "bytes": 542644,
+        "sha256": "3b2025ced142e6ec1cf9e70a193442074a8a078c9139ee3b1d4d4923cf81db8c",
+        "gitBlob": "801451c05537dd6316f2a1ceb700c6fc3b6e3184"
+      },
+      "independent": {
+        "bytes": 670881,
+        "sha256": "5f73f5c9fb4ee38f393c3adb5e6d13a64d5dcb545929b49005752ccb86cf07fa",
+        "gitBlob": "484596c69ecf9b470d81226e31da897fe0743a2f"
+      },
+      "closedAt": "2026-11-17 12:08:55 UTC",
+      "checks": 81,
+      "currentCompleteUtf8Tuples": 419,
+      "currentCompleteUtf8Bytes": 54051123
+    },
+    "authorship": {
+      "rootOnly": true,
+      "startedAt": "2026-11-17 12:11:49 UTC",
+      "completedAt": "2026-11-17 12:13:42 UTC",
+      "afterR1FullActualClosure": true,
+      "allPostimagesRetained": true,
+      "allPostimagesFullySelfRead": true,
+      "noSourceRefMutationYet": true
+    },
+    "sourceChanges": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "mode": "100644",
+        "before": {
+          "bytes": 21981,
+          "sha256": "d0d00254e7e39ab8b5163e02cc93754775a8efe56ff28b8c87f07d02e0292c7e",
+          "gitBlob": "7b5edfbd4967debe454387c7a8b6246e67216dc8"
+        },
+        "after": {
+          "bytes": 21993,
+          "sha256": "2f929c1f5cfd1a9a3c9ec16d35f7197856c79a61adf166d30eebb8a1bd086f67",
+          "gitBlob": "adf5b4c418195e0fc4ab38ba7fde2b3436a6b835"
+        },
+        "changes": [
+          {
+            "kind": "replace",
+            "before": "  const model = provider === 'claude' ? 'sonnet' : 'TEST-model';",
+            "after": "  const model = provider === 'claude' ? 'TEST-claude-sonnet' : 'TEST-model';",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+        "mode": "100644",
+        "before": {
+          "bytes": 16555,
+          "sha256": "8340911817fb4228e8d948425a1f85796fba16d244b6763b04e307ed6f290713",
+          "gitBlob": "97e14385a298a38a9b81b8805dc3f6d2da66545c"
+        },
+        "after": {
+          "bytes": 16591,
+          "sha256": "bd4b8bec56e93cd7c17ec04d5c09b93a8115097af57224d28e954c3f06cdb0c8",
+          "gitBlob": "6d267c1531fd741c4abee8b27ef501f28098d782"
+        },
+        "changes": [
+          {
+            "kind": "replace",
+            "before": "providerId: 'anthropic', model: 'sonnet', effort: 'low'",
+            "after": "providerId: 'anthropic', model: 'TEST-claude-sonnet', effort: 'low'",
+            "count": 1
+          },
+          {
+            "kind": "replace",
+            "before": "model: provider === 'claude' ? 'sonnet' : 'TEST-model'",
+            "after": "model: provider === 'claude' ? 'TEST-claude-sonnet' : 'TEST-model'",
+            "count": 1
+          },
+          {
+            "kind": "replace",
+            "before": "savedModel: 'sonnet', installer: undefined",
+            "after": "savedModel: 'TEST-claude-sonnet', installer: undefined",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+        "mode": "100644",
+        "before": {
+          "bytes": 32221,
+          "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+          "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01"
+        },
+        "after": {
+          "bytes": 33227,
+          "sha256": "dc9ba0c735ea763a24bb06d93590373cf1072d5737c7fba67a31df1356c44dd5",
+          "gitBlob": "1430de1a6666a22a7582d38a21273d61d2f745b7"
+        },
+        "changes": [
+          {
+            "kind": "replace",
+            "before": "assert.ok(argv.length <= 64 && Buffer.byteLength(JSON.stringify(argv)) <= 128 * 1024, 'argv');\n",
+            "after": "assert.ok(argv.length <= 64 && Buffer.byteLength(JSON.stringify(argv)) <= 128 * 1024, 'argv');\n// The selected runtime peer also serves the original Host's finite auth-status read.\nif (argv[0] === 'auth') {\n  assert.deepEqual(argv, ['auth', 'status', '--json'], 'argv');\n  assert.equal(role, 'management', 'argv');\n  assert.equal(process.env.HOME, join(root, 'home'), 'environment');\n  assert.equal(configRoot, join(root, 'config'), 'environment');\n  assert.ok(lstatSync(process.env.HOME).isDirectory() && lstatSync(configRoot).isDirectory(), 'environment');\n  const output = JSON.stringify({ loggedIn: true, authMethod: 'api_key',\n    apiProvider: 'firstParty', configDirectory: configRoot }) + '\\n';\n  assert.ok(Buffer.byteLength(output) <= 64 * 1024, 'limit');\n  effect({ event: 'launch', parentPid: process.ppid, command: argv });\n  effect({ event: 'auth-status', command: argv });\n  process.once('exit', code => effect({ event: 'exited', code }));\n  await new Promise((resolve, reject) => {\n    process.stdout.write(output, error => error ? reject(error) : resolve());\n  });\n  process.exit(0);\n}\n",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+        "mode": "100644",
+        "before": {
+          "bytes": 24968,
+          "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+          "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57"
+        },
+        "after": {
+          "bytes": 40000,
+          "sha256": "58978cb43fac34697163fa9c30c6d3b14e26cf91e051a05085eab3d476260d61",
+          "gitBlob": "c1a42df62de987b1632365400f7359f65510dff3"
+        },
+        "changes": [
+          {
+            "kind": "append",
+            "prefix": {
+              "bytes": 24968,
+              "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+              "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57"
+            },
+            "append": {
+              "bytes": 15032,
+              "sha256": "5e24b59666e7864c1fab98c6d121dbea406eae882f73a350d956c4bdd45ac88e",
+              "gitBlob": "ca891a53111c5a22059228bbb1e180f71d03dc7b"
+            },
+            "newTests": 3
+          }
+        ]
+      },
+      {
+        "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+        "mode": "100644",
+        "before": {
+          "bytes": 8570,
+          "sha256": "37d0b61e60dd4f175c9c2d34e1f8aa399becac018e970655dd7f5595713f2fb6",
+          "gitBlob": "6e84953e1d1a08b705b4000f47d8d51177047ff3"
+        },
+        "after": {
+          "bytes": 11410,
+          "sha256": "e781760fcaf1aeb3a04694ab8d5c213017add94853a8835b096b4f9f79f81279",
+          "gitBlob": "bf0a54d585ef1dcd94a2649cebd75cb20da43339"
+        },
+        "changes": [
+          {
+            "kind": "append",
+            "prefix": {
+              "bytes": 8570,
+              "sha256": "37d0b61e60dd4f175c9c2d34e1f8aa399becac018e970655dd7f5595713f2fb6",
+              "gitBlob": "6e84953e1d1a08b705b4000f47d8d51177047ff3"
+            },
+            "append": {
+              "bytes": 2840,
+              "sha256": "f9d2f5a18b59ceaf1c54c6798c5b0fc11705abbac63f9db410d98169ab77cc31",
+              "gitBlob": "324f333dce19b83f514ceaff417449904c37783d"
+            },
+            "newTests": 1
+          }
+        ]
+      }
+    ],
+    "completeBodies": {
+      "preimages": 5,
+      "preimageBytes": 104295,
+      "postimages": 5,
+      "postimageBytes": 123221,
+      "allWholeBodies": true,
+      "fullInverseReconstruction": true,
+      "testPrefixes": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "bytes": 24968,
+          "unchanged": true
+        },
+        {
+          "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+          "bytes": 8570,
+          "unchanged": true
+        }
+      ],
+      "appendIdentities": {
+        "class": "derived literal UTF-8 suffixes, not independently fetched repository objects",
+        "method": "after.slice(before.length), with full byte-identical before prefix; no normalization",
+        "settings": {
+          "bytes": 15032,
+          "sha256": "5e24b59666e7864c1fab98c6d121dbea406eae882f73a350d956c4bdd45ac88e",
+          "gitBlob": "ca891a53111c5a22059228bbb1e180f71d03dc7b"
+        },
+        "capturedStatus": {
+          "bytes": 2840,
+          "sha256": "f9d2f5a18b59ceaf1c54c6798c5b0fc11705abbac63f9db410d98169ab77cc31",
+          "gitBlob": "324f333dce19b83f514ceaff417449904c37783d"
+        }
+      }
+    },
+    "directR2Pointers": {
+      "count": 94,
+      "bytes": 3900355,
+      "unresolved": 0
+    },
+    "implementation": {
+      "runtimeModelSubstitutions": 1,
+      "collaborationModelSubstitutions": 3,
+      "resolvedModel": "TEST-claude-sonnet",
+      "peerAuth": {
+        "location": "after existing TEST root/workspace/home/config/proof guards and original argv count/byte bound, before original SDK argv loop",
+        "exactArgv": [
+          "auth",
+          "status",
+          "--json"
+        ],
+        "exactRole": "management",
+        "exactHome": "join(root,'home')",
+        "exactConfig": "join(root,'config')",
+        "canonicalDirectoryGuardsPreserved": true,
+        "response": {
+          "loggedIn": true,
+          "authMethod": "api_key",
+          "apiProvider": "firstParty",
+          "configDirectory": "exactConfig"
+        },
+        "maxOutputBytes": 65536,
+        "flushBeforeExit0": true,
+        "journal": [
+          "launch with original PID/parent and command",
+          "auth-status with same original PID/command",
+          "original exit code"
+        ],
+        "noSdkInputOrNetwork": true,
+        "noCredentialOrHostMutation": true,
+        "originalSdkBodyRecoveredByRemovingOnlyInsertion": true,
+        "modelAndBetaAllowlistsUnchanged": true
+      },
+      "testHelper": {
+        "isolatedOwnedTemporaryRoots": true,
+        "existingNodeScriptHeader": true,
+        "actualPeerSourceAndWrapperSha256": true,
+        "noSettingsAuthShim": true,
+        "noFakeSettingsVariant": true,
+        "noApiKeyOrBaseUrlEnvironment": true,
+        "originalOwnersClosedBeforeOwnedRemoval": true,
+        "cleanupFailureIsFailureAndDoesNotRemoveOwnedRoot": true
+      }
+    },
+    "tests": {
+      "cases": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "name": "shared finite runtime peer answers the original Host auth status and closes its original child",
+          "timeoutMs": 15000,
+          "bodyBoundary": "actual ClaudeAuthenticationCoordinator -> actual ClaudeAuthConversation -> default actual CapturedProcess -> hash-pinned shared TEST peer",
+          "assertions": [
+            "exact original auth/status/--json argv",
+            "one launch/auth-status/exited sequence, same original PID and parent, exit0",
+            "api_key cannotLogin/cannotLogout",
+            "empty Host command store and unchanged owned .credentials.json/settings.json"
+          ],
+          "counterfactual": "Old shared peer deterministically rejects positional auth argv; this positive auth test necessarily fails before repair."
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "name": "shared finite runtime auth refuses other argv, roles, namespaces and a changed captured executable",
+          "timeoutMs": 30000,
+          "directChildren": 8,
+          "childTimeoutMs": 3000,
+          "childMaxBufferBytes": 65536,
+          "matrix": [
+            "auth login --claudeai",
+            "auth logout",
+            "auth status without --json",
+            "auth status --json --extra",
+            "--version of the finite TEST wrapper only",
+            "exact auth with runtime role",
+            "exact auth with wrong owned canonical config",
+            "exact auth with wrong owned canonical HOME"
+          ],
+          "refusalAcceptance": "No spawn error, signal, timeout or buffer exhaustion; status exactly1, empty stdout, AssertionError stderr containing the selected argv/environment guard. Zero peer events and Host receipts.",
+          "capturedNegative": "Actual ClaudeAuthConversation captures the original test wrapper; only owned wrapper bytes are changed afterward. Actual CapturedProcess rejects Native executable unavailable before child allocation, original close must returntrue; wrapper restored in finally.",
+          "counterfactual": "Refusal preservation coverage, no universal red claim."
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+          "name": "shared finite SDK metadata and one resolved model probe preserve effort, context and original custody",
+          "timeoutMs": 15000,
+          "profileTimeoutMs": 5000,
+          "probeObservationDeadlineMs": 7000,
+          "probePollMs": 20,
+          "bodyBoundary": "actual locked SDK/provider -> original runtimeMemberProfileSchema/teamModelProbeProfile -> ClaudeManagementCoordinator -> ModelProbeOwner/store/fence -> real CapturedProcess/shared peer",
+          "profileBound": "The original teamModelProbeProfile derives a 90000ms model-probe timeout. Only this new test's derived profile is parsed with modelProbeTimeoutMs5000 before admission; no production derivation or old deadline is changed.",
+          "model": "TEST-claude-sonnet",
+          "effort": "low",
+          "modelContext": "one-million",
+          "expectedBeta": "context-1m-2025-08-07",
+          "actualProcessObservation": "A typed factory constructs real CapturedProcess(profile,current,custody), delegates original launch request/signal, seal/isRunning/confirmStopped without substitution, and records at most two actual launch argv arrays plus original stop booleans. Positive auth test remains on the default uninstrumented factory.",
+          "assertions": [
+            "metadata keeps sonnet/TEST-claude-sonnet row and no model execution receipt/input",
+            "one original durable completed/ok model.probe, resourceHeldfalse, exact model/effort/context",
+            "fresh FileManagementCommandStore reads identical durable result",
+            "same-command read/start returns original result, no second native input or terminal",
+            "one TEST_MODEL_PROBE input/terminal from same runtime PID/inputId",
+            "actual SDK --model/--effort/--betas values and two original stop confirmations",
+            "no auth-status/failure event and unchanged owned sentinels"
+          ],
+          "counterfactual": "Resolved/context contract coverage. No actual pinned sdk.mjs body or passing invocation is claimed."
+        },
+        {
+          "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+          "name": "the exact finite runtime catalog offers its resolved model while auth and metadata keep launch unqualified",
+          "bodyBoundary": "existing transport-controlled captured request boundary -> actual status client/capturedClaudeMetadata -> dynamically imported actual teamModelAvailability consumers",
+          "assertions": [
+            "catalog exactready and only TEST-claude-sonnet offered",
+            "offered resolved spelling accepted",
+            "sonnet and unoffered model refused",
+            "independent successful api_key auth does not grant model execution/teamLaunch/oneShot",
+            "same captured request order"
+          ],
+          "limit": "Composition coverage paired with real-peer tests; not one end-to-end provider invocation or replacement of catalog43/original GUI readiness."
+        }
+      ],
+      "existingSettings8Preserved": true,
+      "prospectiveSettingsCases": 11,
+      "existingCapturedStatus6Preserved": true,
+      "prospectiveCapturedStatusCases": 7,
+      "existingSdkManagement5Unchanged": {
+        "path": "packages/legacy-agent-host/tests/claude-management-host.test.ts",
+        "pin": {
+          "bytes": 13620,
+          "sha256": "0c90e1992310021a746897425e4440dff4116dcb8a7a19651def8a47563925be",
+          "gitBlob": "7f7ee01121e64f0ab55c127f62c796bf20b3fc70"
+        }
+      },
+      "noOldTestEdit": true,
+      "noFilterOrSkip": true,
+      "noNewExecutableFile": true,
+      "compiled": false,
+      "executed": false,
+      "actualPassCount": null
+    },
+    "preservation": {
+      "frozenParityVector": {
+        "bytes": 3481,
+        "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+        "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+      },
+      "all13": true,
+      "fourWindowsPostimages": true,
+      "sixPublishedDiagnosticPostimages": true,
+      "productionFiles": 5020,
+      "cap": 800,
+      "exceptions": 141,
+      "nonDocLeaves": 8799,
+      "workflows": 42,
+      "noNewSourceFiles": true,
+      "noProductionSourceEdits": true,
+      "noDependencyOrWorkflowEdits": true,
+      "uiReadinessWaitMs": 90000,
+      "noMutationRetry": true,
+      "noExtraLaunchSubmit": true,
+      "noDefaultFallback": true,
+      "productionAuthCatalogCurrentnessExpiryAndCustodyUnchanged": true,
+      "originalCleanupUnchanged": true,
+      "frozenPrs": [
+        1206,
+        1207,
+        1208,
+        1211,
+        1212,
+        1213
+      ],
+      "allOldCohortsTerminal": true,
+      "pr1219AllSevenTerminal": true,
+      "terminalRunsNeverPoll": true
+    },
+    "sourceProtection": {
+      "frozenVector": {
+        "bytes": 3481,
+        "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+        "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+      },
+      "frozen13": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+          "mode": "100644",
+          "bytes": 69370,
+          "sha256": "62fcd3b6d62e1bafc16cfedc4270c3fab15e1a4817a8ab72f5393562a44d8f00",
+          "gitBlob": "ff991b68481fbf4da8a9ed36476f7c2e142c5f4f"
+        },
+        {
+          "bytes": 24759,
+          "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b"
+        },
+        {
+          "bytes": 45795,
+          "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+          "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b"
+        },
+        {
+          "bytes": 36260,
+          "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38"
+        },
+        {
+          "bytes": 8457,
+          "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b"
+        },
+        {
+          "bytes": 33036,
+          "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+          "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9"
+        },
+        {
+          "bytes": 165022,
+          "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581"
+        },
+        {
+          "bytes": 7883,
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda"
+        },
+        {
+          "bytes": 29017,
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+          "mode": "100644",
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b"
+        },
+        {
+          "bytes": 74340,
+          "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+          "mode": "100644",
+          "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+          "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c"
+        },
+        {
+          "bytes": 32077,
+          "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+          "mode": "100644",
+          "path": "src/renderer/utils/teamModelAvailability.ts",
+          "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43"
+        },
+        {
+          "bytes": 187890,
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+          "mode": "100644",
+          "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9"
+        },
+        {
+          "bytes": 56775,
+          "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+          "mode": "100644",
+          "path": "test/renderer/utils/teamModelAvailability.test.ts",
+          "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8"
+        }
+      ],
+      "fourWindows": [
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "after": {
+            "bytes": 12389,
+            "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+            "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+          }
+        },
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+          "after": {
+            "bytes": 20830,
+            "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+            "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+          }
+        },
+        {
+          "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+          "after": {
+            "bytes": 37970,
+            "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+            "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3"
+          }
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+          "after": {
+            "bytes": 50377,
+            "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+            "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+          }
+        }
+      ],
+      "sixDiagnostic": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+          "after": {
+            "bytes": 28804,
+            "sha256": "4a7c87a47283521da47d83edec445e883341802013f6da2fb2f991509dcd82a4",
+            "gitBlob": "9984c6ab4da539e8dc2a0cb922ad06a22ee5df28"
+          }
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+          "after": {
+            "bytes": 13466,
+            "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056",
+            "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c"
+          }
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+          "after": {
+            "bytes": 23312,
+            "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+            "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+          }
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+          "after": {
+            "bytes": 37953,
+            "sha256": "a553197e108b574e9ff1c0e082014d4224baffeba21cec65a1b16f0fa17edbb6",
+            "gitBlob": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa"
+          }
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+          "after": {
+            "bytes": 77457,
+            "sha256": "af9de97ec8da68ef394c5ce5b08ca7bfbfd4b099178bd6ae3c9c8c20831cbc3b",
+            "gitBlob": "cd74eecf610858412022bbd2c69f62c910465bad"
+          }
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+          "after": {
+            "bytes": 41559,
+            "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+            "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+          }
+        }
+      ],
+      "selectedFiveDisjoint": true
+    },
+    "currentCI": {
+      "pr": 1219,
+      "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "allSevenTerminal": true,
+      "active": [],
+      "terminalRunIds": [
+        44042341370,
+        44042341121,
+        44042341149,
+        44042341120,
+        44042341241,
+        44042341284,
+        44042341273
+      ],
+      "latestObservation": 16,
+      "packet": {
+        "bytes": 214577,
+        "sha256": "1fd9ca0681ef00d5ddea2372130fec9d4bd16e8205751ec1e07f2ce0473b5018",
+        "gitBlob": "f1a13ab23806afb9d006f1647f6624a5eb784165"
+      },
+      "noFurtherPolling": true,
+      "noMetadataMutation": true,
+      "noSnapshotRefMutation": true
+    },
+    "venueAdvisory": {
+      "bytes": 159554,
+      "sha256": "4ec3156d3dfc2848a3006e220a95781f91215cc4f9196f37f6f24c3a65ca5cda",
+      "gitBlob": "baf38aac0044afa5efc1aa5aff648ec831fb3f6b"
+    },
+    "unreadBinaryMetadataReferences": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "declaredPin": {
+          "gitBlob": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3",
+          "bytes": 186398,
+          "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+        },
+        "locations": [
+          "evidence.testDesignAdvisory.providerTranslation.archive"
+        ],
+        "class": "unchanged unread binary metadata, explicitly excluded from complete UTF-8 body claims",
+        "clarification": {
+          "bytes": 3213,
+          "sha256": "45c32bb3b2512f3dfe09ae6a3de751e147f363dbd3d07d6024db8ff9383201e2",
+          "gitBlob": "7829b248e38d441a1b95d263f628ae611b2889c7"
+        },
+        "bytesRead": false,
+        "extracted": false,
+        "qualified": false
+      }
+    ],
+    "environmentAtProposal": {
+      "status": "unavailable",
+      "noProbeReplay": true,
+      "noLocalShellExecution": true,
+      "standaloneUninvokedAndUnrebound": true
+    },
+    "laterEnvironmentNotification": {
+      "at": "2026-11-17 12:19:47 UTC",
+      "kind": "environment-availability-notification",
+      "cwd": "/workspace/scratch/c714f5bce554",
+      "status": "availability notified, filesystem and process identity not probed",
+      "priorUnavailableRecordedAt": "2026-11-17 11:31:41 UTC",
+      "sourceR2At": "2026-11-17 12:15:30 UTC",
+      "priorUnavailableFieldHistorical": true,
+      "localProbePerformed": false,
+      "standaloneRebound": false,
+      "runtimeAdmitted": false,
+      "noCua": true,
+      "noSequenceChange": true
+    },
+    "sourceCompiled": false,
+    "sourceExecuted": false,
+    "newVenueSelected": false,
+    "runtimeAdmitted": false,
+    "qualification": {
+      "sourceCompiled": false,
+      "sourceExecuted": false,
+      "newTestsExecuted": false,
+      "runtimeAdmitted": false,
+      "newVenueSelected": false,
+      "completeE2E": false,
+      "soleCauseResolved": false,
+      "failuresWaived": false,
+      "readyMergeReleaseDefaultActivationStage2": false
+    },
+    "next": "Immediately publish the exact five postimages plus these documents with expected parent and force:false; close root and independent full source-publication actual readbacks before separately selecting/admitting a new execution venue.",
+    "evidenceFiles": [
+      {
+        "role": "r2",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-20261117.json",
+        "mode": "100644",
+        "bytes": 56517,
+        "sha256": "59133615a781c82b97a5e2ed132ff5d5a9795b6d1b400d4d520761b31ca5b561",
+        "gitBlob": "682377734948765268a3cd07b4b966a97abac1e4"
+      },
+      {
+        "role": "rootReview",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-root-review-20261117.json",
+        "mode": "100644",
+        "bytes": 69676,
+        "sha256": "b9683736f3c83bf69c4f87e611aa4dd48c6800a59a84e3f8535814b4d31077a0",
+        "gitBlob": "b934e59c5342efd8147b445bc2524e581b7d4c01"
+      },
+      {
+        "role": "guardReview",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-guard-review-20261117.json",
+        "mode": "100644",
+        "bytes": 51832,
+        "sha256": "373267011f603a3fd190bd01a0607227b68ebd3d5155d043d0d339da94d9f07d",
+        "gitBlob": "3570557075d71e7fd054a39e51a6c148632ac1e8"
+      },
+      {
+        "role": "semanticReview",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-semantic-review-20261117.json",
+        "mode": "100644",
+        "bytes": 67425,
+        "sha256": "723437e92fe63d2a9d333708c662e71c3053f7636afdcce0500c2d08ce8a04cd",
+        "gitBlob": "37badd86620af611e59409a0c8a2f1c41aa439b9"
+      },
+      {
+        "role": "bindingReview",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-binding-review-20261117.json",
+        "mode": "100644",
+        "bytes": 174578,
+        "sha256": "5a3cb75af887173d4dc6dac4e076e553e89000f83645660354a2ecea105295ca",
+        "gitBlob": "89384f06e73a1767f74f9d6e23e2bf53e3d57c0e"
+      },
+      {
+        "role": "r1ActualGate",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-r1-actual-gate-20261117.json",
+        "mode": "100644",
+        "bytes": 3974,
+        "sha256": "efa9f2091d7f776e1370fe7b0220b98dc03f8ca56dcf3a9e17cbecdfae9d781b",
+        "gitBlob": "613145275d09f78b0da7c7aa4c6ce231212d765d"
+      },
+      {
+        "role": "r1RootActual",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-r1-root-actual-20261117.json",
+        "mode": "100644",
+        "bytes": 542644,
+        "sha256": "3b2025ced142e6ec1cf9e70a193442074a8a078c9139ee3b1d4d4923cf81db8c",
+        "gitBlob": "801451c05537dd6316f2a1ceb700c6fc3b6e3184"
+      },
+      {
+        "role": "r1IndependentActual",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-r1-independent-actual-20261117.json",
+        "mode": "100644",
+        "bytes": 670881,
+        "sha256": "5f73f5c9fb4ee38f393c3adb5e6d13a64d5dcb545929b49005752ccb86cf07fa",
+        "gitBlob": "484596c69ecf9b470d81226e31da897fe0743a2f"
+      }
+    ]
+  },
+  "claudeFiniteRuntimeReadinessSourceR2EvidenceFiles": [
+    {
+      "role": "r2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-20261117.json",
+      "mode": "100644",
+      "bytes": 56517,
+      "sha256": "59133615a781c82b97a5e2ed132ff5d5a9795b6d1b400d4d520761b31ca5b561",
+      "gitBlob": "682377734948765268a3cd07b4b966a97abac1e4"
+    },
+    {
+      "role": "rootReview",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-root-review-20261117.json",
+      "mode": "100644",
+      "bytes": 69676,
+      "sha256": "b9683736f3c83bf69c4f87e611aa4dd48c6800a59a84e3f8535814b4d31077a0",
+      "gitBlob": "b934e59c5342efd8147b445bc2524e581b7d4c01"
+    },
+    {
+      "role": "guardReview",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-guard-review-20261117.json",
+      "mode": "100644",
+      "bytes": 51832,
+      "sha256": "373267011f603a3fd190bd01a0607227b68ebd3d5155d043d0d339da94d9f07d",
+      "gitBlob": "3570557075d71e7fd054a39e51a6c148632ac1e8"
+    },
+    {
+      "role": "semanticReview",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-semantic-review-20261117.json",
+      "mode": "100644",
+      "bytes": 67425,
+      "sha256": "723437e92fe63d2a9d333708c662e71c3053f7636afdcce0500c2d08ce8a04cd",
+      "gitBlob": "37badd86620af611e59409a0c8a2f1c41aa439b9"
+    },
+    {
+      "role": "bindingReview",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-binding-review-20261117.json",
+      "mode": "100644",
+      "bytes": 174578,
+      "sha256": "5a3cb75af887173d4dc6dac4e076e553e89000f83645660354a2ecea105295ca",
+      "gitBlob": "89384f06e73a1767f74f9d6e23e2bf53e3d57c0e"
+    },
+    {
+      "role": "r1ActualGate",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-r1-actual-gate-20261117.json",
+      "mode": "100644",
+      "bytes": 3974,
+      "sha256": "efa9f2091d7f776e1370fe7b0220b98dc03f8ca56dcf3a9e17cbecdfae9d781b",
+      "gitBlob": "613145275d09f78b0da7c7aa4c6ce231212d765d"
+    },
+    {
+      "role": "r1RootActual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-r1-root-actual-20261117.json",
+      "mode": "100644",
+      "bytes": 542644,
+      "sha256": "3b2025ced142e6ec1cf9e70a193442074a8a078c9139ee3b1d4d4923cf81db8c",
+      "gitBlob": "801451c05537dd6316f2a1ceb700c6fc3b6e3184"
+    },
+    {
+      "role": "r1IndependentActual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-r1-independent-actual-20261117.json",
+      "mode": "100644",
+      "bytes": 670881,
+      "sha256": "5f73f5c9fb4ee38f393c3adb5e6d13a64d5dcb545929b49005752ccb86cf07fa",
+      "gitBlob": "484596c69ecf9b470d81226e31da897fe0743a2f"
+    }
   ]
 }
