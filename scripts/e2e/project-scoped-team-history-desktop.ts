@@ -299,6 +299,10 @@ async function verifyUi(f: Fixture) {
     'document.querySelector(' + JSON.stringify('[data-team-name="' + alias + '"]') +
     ')?.textContent?.includes(' + JSON.stringify(task) + ')';
   await waitFor(visibleTask(f.nativeA, 'PROJECT_A_TASK_ONLY'), 'A task through UI');
+  const friendlyHeading = await cdp.evaluate('(() => document.querySelector(' +
+    JSON.stringify('[data-team-name="' + f.nativeA + '"] h2') +
+    ')?.textContent?.trim() === "History fixture")()');
+  assert.equal(friendlyHeading, true, 'Project runtime alias leaked as the visible team title');
   assert.equal(await cdp.evaluate('Boolean(document.querySelector(' +
     JSON.stringify('[data-team-name="' + f.nativeB + '"]') + '))'), false);
   await cdp.screenshot(path.join(f.screenshots, 'history-a.png'));

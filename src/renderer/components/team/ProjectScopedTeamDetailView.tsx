@@ -205,6 +205,7 @@ export function ProjectScopedTeamDetailView({
             key={context.workContextId}
             teamName={context.executionTeamName}
             logicalTeamName={teamName}
+            teamDisplayName={logicalDisplayName}
             isActive={isActive}
             isPaneFocused={isPaneFocused}
           />

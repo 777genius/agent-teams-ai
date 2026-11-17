@@ -381,10 +381,10 @@ TaskDetailDialogHost.displayName = 'TaskDetailDialogHost';
 interface TeamDetailViewProps {
   teamName: string;
   logicalTeamName?: string;
+  teamDisplayName?: string;
   isActive?: boolean;
   isPaneFocused?: boolean;
 }
-
 interface TeamReviewDialogState {
   open: boolean;
   mode: 'agent' | 'task';
@@ -393,7 +393,6 @@ interface TeamReviewDialogState {
   initialFilePath?: string;
   taskChangeRequestOptions?: TaskChangeRequestOptions;
 }
-
 const TEAM_PENDING_REPLY_REFRESH_DELAY_MS = 10_000;
 const EMPTY_SESSION_HISTORY: readonly string[] = [];
 const MEMBER_ROSTER_HYDRATION_RETRY_DELAY_MS = 1_200;
@@ -1290,6 +1289,7 @@ const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge(
 export const TeamDetailView = memo(function TeamDetailView({
   teamName,
   logicalTeamName,
+  teamDisplayName,
   isActive = true,
   isPaneFocused = false,
 }: TeamDetailViewProps): React.JSX.Element {
@@ -2914,7 +2914,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-1 items-center gap-2">
                     <h2 className="min-w-0 truncate text-base font-semibold text-[var(--color-text)]">
-                      {data.config.name}
+                      {teamDisplayName ?? data.config.name}
                     </h2>
                     {(data.isAlive || isTeamProvisioning) && (
                       <span className="shrink-0">
