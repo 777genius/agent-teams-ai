@@ -1,0 +1,9 @@
+[
+  {
+    "advisory": "GHSA-fc5q-39xc-vjpf",
+    "package": "picomatch",
+    "versions": ["2.3.2", "4.0.4"],
+    "expires": "2026-12-15",
+    "reason": "ReDoS in picomatch <=4.0.7 (CVE-2026-112366); no patched release exists yet (latest is 4.0.7, upstream fix is not merged). Only build/dev tooling reaches it (vite, vitest, eslint plugins, tailwindcss, electron-builder) and it only matches trusted, repository-defined globs, never user input. Replace with the patched release as soon as it ships."
+  }
+]

@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
-import { assessAuditReport } from '../../scripts/ci/audit-dependencies.mjs';
+import { assessAuditReport, loadAcceptedRisks } from '../../scripts/ci/audit-dependencies.mjs';
 import { BACKPORTS } from '../../scripts/ci/transitive-security.ts';
 
 const [spec] = BACKPORTS;
@@ -89,4 +92,72 @@ test('empty reports pass, errors and malformed reports fail closed', () => {
     'nuxt',
     'builder',
   ]);
+});
+
+const risk = {
+  advisory: 'GHSA-fc5q-39xc-vjpf',
+  package: 'picomatch',
+  versions: ['2.3.2', '4.0.4'],
+  expires: '2026-12-15',
+  reason: 'No patched release yet; reachable only through trusted build tooling globs.',
+};
+const riskAdvisory = (versions = ['2.3.2', '4.0.4']) => ({
+  module_name: 'picomatch',
+  severity: 'high',
+  url: `https://github.com/advisories/${risk.advisory}`,
+  findings: versions.map((version) => ({ version })),
+});
+
+test('an accepted risk covers only its advisory, package and listed versions', () => {
+  const accepted = [risk];
+  assert.deepEqual(assessAuditReport(pnpmReport({ 1: riskAdvisory() })).blocked, ['1']);
+  assert.deepEqual(assessAuditReport(pnpmReport({ 1: riskAdvisory() }), { accepted }), {
+    blocked: [],
+    excepted: ['1'],
+  });
+  // A newly installed, unlisted version is not covered.
+  assert.deepEqual(
+    assessAuditReport(pnpmReport({ 1: riskAdvisory(['2.3.2', '4.0.7']) }), { accepted }).blocked,
+    ['1']
+  );
+  // Another package under the same advisory id, or another advisory, is not covered.
+  assert.deepEqual(
+    assessAuditReport(pnpmReport({ 1: { ...riskAdvisory(), module_name: 'other' } }), { accepted })
+      .blocked,
+    ['1']
+  );
+  assert.deepEqual(
+    assessAuditReport(pnpmReport({ 1: riskAdvisory(), 2: unrelated() }), { accepted }).blocked,
+    ['2']
+  );
+  // npm reports carry no installed versions, so they never take the accepted-risk path.
+  assert.deepEqual(assessAuditReport(npmReport(), { npm: true, accepted }).excepted, []);
+});
+
+test('accepted risks expire and are validated', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'TEST-accepted-risks-'));
+  try {
+    const file = join(directory, 'risks.json');
+    const write = (value) => writeFileSync(file, JSON.stringify(value));
+    write([risk]);
+    assert.equal(loadAcceptedRisks({ file, now: new Date('2026-12-15T12:00:00Z') }).length, 1);
+    assert.equal(loadAcceptedRisks({ file, now: new Date('2026-12-16T00:00:00Z') }).length, 0);
+    for (const broken of [
+      { ...risk, advisory: 'CVE-2026-1' },
+      { ...risk, versions: [] },
+      { ...risk, versions: ['^4.0.0'] },
+      { ...risk, expires: 'soon' },
+      { ...risk, reason: 'x' },
+      { ...risk, package: undefined },
+    ]) {
+      write([broken]);
+      assert.throws(() => loadAcceptedRisks({ file }), /Invalid audit report/);
+    }
+    write({});
+    assert.throws(() => loadAcceptedRisks({ file }), /Invalid audit report/);
+    // The committed file must itself be well formed.
+    assert.ok(Array.isArray(loadAcceptedRisks({ now: new Date('2026-11-18T00:00:00Z') })));
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
