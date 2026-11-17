@@ -37,6 +37,7 @@ export {
 
 export {
   backupProjectTeamDefinition,
+  backupProjectTeamDefinitionSafely,
   recoverMissingProjectTeamDefinition,
   recoverMissingProjectTeamDefinitions,
 } from './TeamProjectDefinitionBackup';

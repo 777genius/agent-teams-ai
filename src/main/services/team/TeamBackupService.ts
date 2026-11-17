@@ -16,7 +16,7 @@ import {
   getTeamsBasePath,
 } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
-import { backupProjectTeamDefinitionSafely, recoverMissingProjectTeamDefinitions } from '@features/team-project-context/main/TeamProjectDefinitionBackup';
+import { backupProjectTeamDefinitionSafely, recoverMissingProjectTeamDefinitions } from '@features/team-project-context/main';
 
 import { TeamPermanentDeletionCoordinator } from './permanent-deletion/TeamPermanentDeletionCoordinator';
 import {
